@@ -225,7 +225,7 @@ export const AssistantPage = (): JSX.Element => {
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={onKeyDown}
+                  onKeyDown={handleKeyDown}
                   className="absolute inset-0 bg-transparent text-white text-base [font-family:'Gilroy-Medium',Helvetica] outline-none resize-none px-4 pt-[14px] pb-12 w-full"
                 />
                 <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
