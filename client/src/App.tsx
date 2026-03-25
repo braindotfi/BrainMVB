@@ -17,12 +17,14 @@ import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 import { CreateAgentModal } from "@/components/CreateAgentModal";
 import { SendModal } from "@/components/SendModal";
+import { ExchangeModal } from "@/components/ExchangeModal";
 
 function AppLayout() {
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [createAgentOpen, setCreateAgentOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [exchangeOpen, setExchangeOpen] = useState(false);
 
   return (
     <div className="bg-shared-colorsheaderfooterbg w-full min-h-screen flex flex-col">
@@ -52,6 +54,7 @@ function AppLayout() {
           onToggle={() => setAccountCollapsed((v) => !v)}
           onCreateAgent={() => setCreateAgentOpen(true)}
           onSend={() => setSendOpen(true)}
+          onExchange={() => setExchangeOpen(true)}
         />
       </div>
 
@@ -76,6 +79,10 @@ function AppLayout() {
       <SendModal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
+      />
+      <ExchangeModal
+        open={exchangeOpen}
+        onClose={() => setExchangeOpen(false)}
       />
     </div>
   );

@@ -41,9 +41,10 @@ interface Props {
   onToggle: () => void;
   onCreateAgent: () => void;
   onSend?: () => void;
+  onExchange?: () => void;
 }
 
-export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend }: Props): JSX.Element => {
+export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange }: Props): JSX.Element => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeTab, setActiveTab] = useState("Assets");
   const [transactionFilter, setTransactionFilter] = useState("All");
@@ -240,6 +241,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   onClick={
                     action.label === "Send" ? onSend :
                     action.label === "Add" ? () => setAddOpen(true) :
+                    action.label === "Exchange" ? onExchange :
                     undefined
                   }
                   className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"
