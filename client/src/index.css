@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css?family=JetBrains+Mono:500,700");
+
 @tailwind components;
 @tailwind utilities;
 
@@ -6,8 +8,6 @@
     all: unset;
   }
 }
-
-@import url("https://fonts.googleapis.com/css?family=JetBrains+Mono:500,700");
 
 :root {
   --brain-v1baby-blue-100: rgba(168, 185, 244, 1);
