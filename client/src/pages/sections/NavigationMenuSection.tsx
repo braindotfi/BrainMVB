@@ -17,12 +17,20 @@ const mainMenuItems = [
 ];
 
 const initialNotifications = [
-  { id: "1", title: "AlphaFlow executed a trade", body: "Bought 0.45 ETH at $2,498", time: "2m ago", read: false, icon: "⚡" },
-  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live on the Launchpad", time: "8m ago", read: false, icon: "🚀" },
-  { id: "3", title: "Risk Sentinel: Anomaly detected", body: "Unusual volatility in BNB/USDC pair", time: "22m ago", read: false, icon: "⚠️" },
-  { id: "4", title: "Capital rebalanced successfully", body: "Portfolio adjusted to target weights", time: "1h ago", read: true, icon: "✅" },
-  { id: "5", title: "New agent available on Marketplace", body: "YieldMax v2 is now available", time: "3h ago", read: true, icon: "🤖" },
+  { id: "1", title: "AlphaFlow executed a trade", body: "Bought 0.45 ETH at $2,498", time: "2m ago", read: false },
+  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live on the Launchpad", time: "15m ago", read: false },
+  { id: "3", title: "Risk Sentinel: Anomaly detected", body: "Unusual volatility in BNB/USDC pair", time: "3h ago", read: true },
+  { id: "4", title: "Capital rebalanced successfully", body: "Portfolio adjusted to target weights", time: "12h ago", read: true },
 ];
+
+const EthIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2L5 12.5L12 9.5L19 12.5L12 2Z" fill="#6b7db3"/>
+    <path d="M5 12.5L12 16L19 12.5L12 9.5L5 12.5Z" fill="#4a5a8a"/>
+    <path d="M12 16L5 13.5L12 22L19 13.5L12 16Z" fill="#6b7db3"/>
+    <path d="M12 9.5L19 12.5L12 16L5 12.5L12 9.5Z" fill="#384870"/>
+  </svg>
+);
 
 interface Props {
   collapsed: boolean;
@@ -88,71 +96,92 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
     loadSessions();
   };
 
-  // ── Slide-in notifications panel ──
+  // ── Notifications popup panel ──
   const NotificationsPanel = () => (
     <>
-      {/* Dim overlay behind the panel */}
       <div
-        className={`fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-300 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         onClick={() => setNotificationsOpen(false)}
       />
-    <div
-      ref={notifPanelRef}
-      className={`fixed z-40 top-[72px] flex flex-col gap-0 w-[300px] rounded-2xl border border-[#1d2131] bg-[#0d1017] shadow-2xl
-        transition-all duration-300 ease-out
-        ${notificationsOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
-      `}
-      style={{ left: collapsed ? "76px" : "280px" }}
-    >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2131]">
-        <div className="flex items-center gap-2">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Notifications</span>
-          {unreadCount > 0 && (
-            <div className="inline-flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-orange rounded-full">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3">{unreadCount}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button onClick={markAllRead} className="text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors">Mark all read</button>
-          )}
-          <button onClick={() => setNotificationsOpen(false)} className="w-6 h-6 flex items-center justify-center rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors text-brain-v1baby-blue-60 hover:text-brain-v1white">
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-col overflow-y-auto max-h-[420px]">
-        {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-2 text-brain-v1baby-blue-30">
-            <span className="text-2xl">🔔</span>
-            <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No notifications</span>
+      <div
+        ref={notifPanelRef}
+        className={`fixed z-40 top-[68px] flex flex-col w-[340px] rounded-2xl border border-[#1e2235] bg-[#0d1017] shadow-[0_20px_60px_rgba(0,0,0,0.7)]
+          transition-all duration-300 ease-out overflow-hidden
+          ${notificationsOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"}
+        `}
+        style={{ left: collapsed ? "76px" : "280px" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-base">Notifications</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={markAllRead}
+              className="px-3 py-1 rounded-full bg-[#1a1f30] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[11px] hover:text-white transition-colors"
+            >
+              Mark all read
+            </button>
+            <button
+              onClick={() => setNotificationsOpen(false)}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
-        ) : notifications.map((n, i) => (
-          <div key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-brain-v1baby-blue-15 group ${i < notifications.length - 1 ? "border-b border-[#1d2131]" : ""} ${!n.read ? "bg-brain-v1baby-blue-5" : ""}`}>
-            <div className="w-8 h-8 rounded-xl bg-brain-v1baby-blue-15 flex items-center justify-center text-base flex-shrink-0 mt-0.5">{n.icon}</div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs leading-relaxed [font-family:'Gilroy-SemiBold',Helvetica] ${n.read ? "text-brain-v1baby-blue-60" : "text-brain-v1white"}`}>{n.title}</p>
-              <p className="text-[11px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 leading-relaxed">{n.body}</p>
-              <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-1">{n.time}</p>
+        </div>
+
+        {/* Notification rows */}
+        <div className="flex flex-col">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
+              <span className="text-2xl">🔔</span>
+              <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No notifications</span>
             </div>
-            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-              {!n.read && <div className="w-2 h-2 bg-brain-v1dark-orange rounded-full" />}
-              <button onClick={(e) => { e.stopPropagation(); dismiss(n.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" /></svg>
+          ) : notifications.map((n, i) => (
+            <div
+              key={n.id}
+              className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-[#131927] group ${
+                i < notifications.length - 1 ? "border-b border-[#1a1f2e]" : ""
+              } ${!n.read ? "bg-[#0f1420]" : ""}`}
+            >
+              {/* Ethereum circle avatar */}
+              <div className="w-9 h-9 rounded-full bg-[#1a1f30] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <EthIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[13px] leading-snug [font-family:'Gilroy-SemiBold',Helvetica] ${!n.read ? "text-[#f97316]" : "text-[#8899bb]"}`}>
+                  {n.title}
+                </p>
+                <p className="text-[11px] text-[#6c779d] [font-family:'Gilroy-Medium',Helvetica] mt-1 leading-relaxed">{n.body}</p>
+                <p className="text-[11px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] mt-1">{n.time}</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white flex-shrink-0 mt-1"
+              >
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
               </button>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* View All button */}
+        <div className="px-4 py-4">
+          <Link href="/notifications">
+            <button
+              onClick={() => setNotificationsOpen(false)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#131927] hover:bg-[#1a2133] transition-colors rounded-xl"
+            >
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm">View All Notifications</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </Link>
+        </div>
       </div>
-      <div className="px-4 py-3 border-t border-[#1d2131]">
-        <Link href="/notifications">
-          <button onClick={() => setNotificationsOpen(false)} className="w-full py-2 text-[11px] text-brain-v1baby-blue-30 hover:text-brain-v1white [font-family:'Gilroy-SemiBold',Helvetica] transition-colors text-center rounded-xl hover:bg-brain-v1baby-blue-15">
-            View all notifications →
-          </button>
-        </Link>
-      </div>
-    </div>
     </>
   );
 
