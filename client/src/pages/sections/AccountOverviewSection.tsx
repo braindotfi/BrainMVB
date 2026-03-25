@@ -69,13 +69,34 @@ const agentAccounts = [
 ];
 
 /* ─── Card sub-components ─── */
-const CardGlowBg = () => (
+
+/* Glow blobs */
+const OrangeGlow = () => (
   <div className="absolute top-[-110px] left-[68px] w-[451px] h-[246px] bg-brain-v1light-orange rounded-[225.41px/123.04px] rotate-[-52.17deg] blur-[37px] opacity-60 pointer-events-none" />
 );
+const GreenGlow = () => (
+  <div className="absolute top-[-110px] left-[68px] w-[451px] h-[246px] bg-brain-v1green rounded-[225.41px/123.04px] rotate-[-52.17deg] blur-[37px] opacity-40 pointer-events-none" />
+);
 
-const CardHeader = ({ balance, currency }: { balance: string; currency: string }) => (
+/* Card header — swappable icon */
+const CardHeader = ({
+  balance, currency, icon,
+}: { balance: string; currency: string; icon: "wallet" | "agent" }) => (
   <div className="flex w-[338px] items-center justify-center gap-4 absolute top-4 left-4">
-    <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
+    {icon === "agent" ? (
+      /* Green rounded square with robot icon */
+      <div className="w-12 h-12 rounded-2xl bg-brain-v1dark-green flex items-center justify-center flex-shrink-0">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="8" y="12" width="12" height="10" rx="2" stroke="#42bf23" strokeWidth="1.5"/>
+          <circle cx="11" cy="16" r="1.5" fill="#42bf23"/>
+          <circle cx="17" cy="16" r="1.5" fill="#42bf23"/>
+          <path d="M14 8V12M12 8H16" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M8 18H6M22 18H20M11 22V24M17 22V24" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </div>
+    ) : (
+      <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
+    )}
     <div className="flex items-center gap-2 flex-1">
       <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1white text-[32px] text-center leading-8 whitespace-nowrap">
         {balance}
@@ -96,24 +117,19 @@ const CopyIcon = () => (
   </svg>
 );
 
-/* Wallet Address Card */
+/* ── Personal account cards (orange theme) ── */
+
 const WalletAddressCard = () => (
   <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
-    <CardGlowBg />
-    <CardHeader balance="$2,040.30" currency="USD" />
-    {/* Wallet address */}
+    <OrangeGlow />
+    <CardHeader balance="$2,040.30" currency="USD" icon="wallet" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">
-        Wallet Address
-      </span>
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Wallet Address</span>
       <div className="flex items-center gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">
-          0x7cB5.....486A8
-        </span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">0x7cB5.....486A8</span>
         <CopyIcon />
       </div>
     </div>
-    {/* Name row */}
     <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
       <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
@@ -123,24 +139,17 @@ const WalletAddressCard = () => (
   </div>
 );
 
-/* Debit Card */
 const DebitCardView = () => (
   <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
-    <CardGlowBg />
-    <CardHeader balance="865,040.30" currency="AED" />
-    {/* Card number */}
+    <OrangeGlow />
+    <CardHeader balance="865,040.30" currency="AED" icon="wallet" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">
-        Debit Card
-      </span>
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Debit Card</span>
       <div className="flex items-start gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">
-          1652 0400 3201 6995
-        </span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">1652 0400 3201 6995</span>
         <img className="w-6 h-6" alt="Icons" src="/figmaAssets/icons-8.svg" />
       </div>
     </div>
-    {/* Name / Expiry / CVC / Mastercard */}
     <div className="absolute top-[136px] left-4 w-[338px] h-8 flex">
       <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
@@ -162,28 +171,71 @@ const DebitCardView = () => (
   </div>
 );
 
-/* Bank Account Card */
 const BankAccountCard = () => (
   <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
-    <CardGlowBg />
-    <CardHeader balance="$2,040.30" currency="USD" />
-    {/* IBAN */}
+    <OrangeGlow />
+    <CardHeader balance="$2,040.30" currency="USD" icon="wallet" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">
-        IBAN Account Number
-      </span>
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">IBAN Account Number</span>
       <div className="flex items-center gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-[15px] leading-6 whitespace-nowrap tracking-tight">
-          AE070331234567890123456
-        </span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-[15px] leading-6 whitespace-nowrap tracking-tight">AE070331234567890123456</span>
         <CopyIcon />
       </div>
     </div>
-    {/* Name row */}
     <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
       <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">Adam Jones</span>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── AI Agent cards (green theme) ── */
+
+const AgentWalletCard = ({ agentName }: { agentName: string }) => (
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+    <GreenGlow />
+    <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
+    <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Wallet Address</span>
+      <div className="flex items-center gap-2 self-stretch">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">0x7cB5.....486A8</span>
+        <CopyIcon />
+      </div>
+    </div>
+    <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start gap-[84px]">
+      <div className="inline-flex flex-col items-start gap-1">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3">Name</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">{agentName}</span>
+      </div>
+      <div className="inline-flex flex-col items-start gap-1">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3">Status</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">Active</span>
+      </div>
+    </div>
+  </div>
+);
+
+const AgentDebitCard = ({ agentName }: { agentName: string }) => (
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+    <GreenGlow />
+    <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
+    <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Debit Card</span>
+      <div className="flex items-center gap-2 self-stretch">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">1652 0400 3201 6995</span>
+        <CopyIcon />
+      </div>
+    </div>
+    <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start gap-[84px]">
+      <div className="inline-flex flex-col items-start gap-1">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3">Name</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">{agentName}</span>
+      </div>
+      <div className="inline-flex flex-col items-start gap-1">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3">Status</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">Active</span>
       </div>
     </div>
   </div>
@@ -219,10 +271,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownOpen]);
 
-  // When switching to "Your Account", reset card to wallet
+  // Reset card to wallet whenever switching account (personal or any agent)
   const handleSwitchAccount = (id: string | null) => {
     setActiveAccount(id);
-    if (id === null) setActiveCard(0);
+    setActiveCard(0);
     setDropdownOpen(false);
   };
 
@@ -230,8 +282,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const isYourAccount = activeAccount === null;
   const currentCardData = isYourAccount ? CARDS[activeCard].data : null;
 
-  // Only the Wallet Address card (index 0) supports the Crypto filter tab
-  const filterTabs = isYourAccount && activeCard === 0
+  // Both personal and agent wallet (card index 0) support the Crypto filter tab
+  const filterTabs = activeCard === 0
     ? ["All", "Cash", "Crypto"]
     : ["All", "Cash"];
 
@@ -392,14 +444,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               </div>
             </div>
 
-            {/* ── Card carousel (only for "Your Account") ── */}
+            {/* ── Card carousel ── */}
             {isYourAccount ? (
               <>
+                {/* Personal account: 3 cards, orange pagination */}
                 {activeCard === 0 && <WalletAddressCard />}
                 {activeCard === 1 && <DebitCardView />}
                 {activeCard === 2 && <BankAccountCard />}
-
-                {/* Pagination dots — same style as FeaturedCarousel */}
                 <div className="absolute top-[182px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1">
                   {CARDS.map((_, i) => (
                     <button
@@ -418,32 +469,31 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 </div>
               </>
             ) : (
-              /* Agent account card — single static card */
-              <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1headerfooterbg rounded-2xl overflow-hidden border border-[#1d2131]">
-                <div className="flex w-[338px] items-center justify-center gap-4 absolute top-4 left-4">
-                  <div className="w-12 h-12 rounded-xl bg-brain-v1dark-orange flex items-center justify-center text-2xl">
-                    {agentAccounts.find((a) => a.id === activeAccount)?.icon ?? "🤖"}
-                  </div>
-                  <div className="flex flex-col gap-1 flex-1">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">
-                      {agentAccounts.find((a) => a.id === activeAccount)?.name}
-                    </span>
-                    <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-sm">
-                      {agentAccounts.find((a) => a.id === activeAccount)?.ticker}
-                    </span>
-                  </div>
+              <>
+                {/* Agent account: 2 cards (Wallet + Debit), green pagination */}
+                {activeCard === 0 && (
+                  <AgentWalletCard agentName={agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Agent"} />
+                )}
+                {activeCard === 1 && (
+                  <AgentDebitCard agentName={agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Agent"} />
+                )}
+                <div className="absolute top-[182px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1">
+                  {[0, 1].map((i) => (
+                    <button
+                      key={i}
+                      data-testid={`agent-card-dot-${i}`}
+                      onClick={() => setActiveCard(i)}
+                      className="transition-all"
+                      style={{
+                        width:        i === activeCard ? "18px" : "6px",
+                        height:       "6px",
+                        borderRadius: "40px",
+                        background:   i === activeCard ? "rgba(66,191,35,0.9)" : "rgba(66,191,35,0.35)",
+                      }}
+                    />
+                  ))}
                 </div>
-                <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Type</span>
-                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6">
-                    {agentAccounts.find((a) => a.id === activeAccount)?.type}
-                  </span>
-                </div>
-                <div className="absolute top-[136px] left-4">
-                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Balance</span>
-                  <div className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1green text-sm mt-0.5">$354.00</div>
-                </div>
-              </div>
+              </>
             )}
           </div>
 
