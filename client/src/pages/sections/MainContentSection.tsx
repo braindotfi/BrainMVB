@@ -97,9 +97,36 @@ export const MainContentSection = (): JSX.Element => {
     : null;
 
   return (
-    <div className="relative w-full h-full flex flex-col">
+    <div className="relative w-full bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-0 gap-3">
+        <div className="flex-1 flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl px-3 py-2 focus-within:border-[#414965] transition-colors">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+            <circle cx="6" cy="6" r="4.5" stroke="#414965" strokeWidth="1.2" />
+            <path d="M10 10L13 13" stroke="#414965" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search agents..."
+            className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className="w-8 h-8 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-[100px] flex-shrink-0">
+          <img className="w-4 h-4" alt="Icons" src="/figmaAssets/icons-19.svg" />
+        </div>
+      </div>
+
       {/* Main scrollable content */}
-      <ScrollArea className="w-full flex-1">
+      <ScrollArea className="w-full">
         <div className="flex flex-col items-start gap-8 px-4 pt-4 pb-6">
 
           {/* Search results */}

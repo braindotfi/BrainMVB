@@ -37,9 +37,9 @@ function AppLayout() {
           onCreateAgent={() => setCreateAgentOpen(true)}
         />
 
-        <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)] flex flex-col bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2132] overflow-hidden">
-          <div className="flex items-center justify-between px-3 pt-3 pb-0 flex-shrink-0">
-            {!navCollapsed ? (
+        <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)] flex flex-col gap-2">
+          {!navCollapsed && (
+            <div className="flex items-center h-10 flex-shrink-0">
               <button
                 onClick={() => setNavCollapsed(true)}
                 title="Collapse menu"
@@ -47,15 +47,9 @@ function AppLayout() {
               >
                 <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse menu" className="w-9 h-9" />
               </button>
-            ) : (
-              <div className="w-9 h-9" />
-            )}
-            <div className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-full cursor-pointer hover:bg-brain-v1baby-blue-30 transition-colors">
-              <img className="w-4 h-4" alt="Search" src="/figmaAssets/icons-19.svg" />
             </div>
-          </div>
-
-          <div className="flex-1 overflow-hidden">
+          )}
+          <div className="flex-1 min-h-0">
             <Switch>
               <Route path="/" component={Marketplace} />
               <Route path="/assistant" component={AssistantPage} />
