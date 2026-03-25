@@ -65,7 +65,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
   if (collapsed) {
     return (
-      <div className="flex items-start gap-0 flex-shrink-0">
+      <div className="flex self-stretch items-stretch gap-0 flex-shrink-0">
         {/* Separate expand button tab — sits outside the panel on the left */}
         <button
           onClick={onToggle}
@@ -90,7 +90,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   return (
     <>
     <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
-    <div className="flex items-start gap-0 flex-shrink-0">
+    <div className="flex self-stretch items-stretch gap-0 flex-shrink-0">
       {/* Separate collapse button tab — sits outside the panel on the left */}
       <button
         onClick={onToggle}
@@ -103,7 +103,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       </button>
 
       {/* Main panel */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[386px]">
+      <div className="flex flex-col rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[386px] overflow-hidden">
         {/* Header bar */}
         <div className="flex mx-2 mt-2 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
           <div className="flex items-center gap-2 flex-1 min-w-0">

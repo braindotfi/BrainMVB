@@ -354,8 +354,17 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
         <NotificationsPanel />
         <ChatHistoryPanel />
-        <nav className="flex flex-col w-[60px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
-          <div className="flex flex-col flex-1 items-center mt-2 gap-1 pt-2 w-full px-2">
+        <nav className="flex flex-col w-[60px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
+          {/* Logo icon (collapsed) */}
+          <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
+            <img
+              className="w-8 h-8 object-contain"
+              alt="Brain"
+              src="/figmaAssets/frame-1000002163.svg"
+            />
+          </div>
+
+          <div className="flex flex-col flex-1 items-center mt-1 gap-1 w-full px-2">
             <button onClick={onToggle} title="Expand menu" className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
@@ -431,8 +440,22 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <NotificationsPanel />
       <ChatHistoryPanel />
-      <nav className="flex flex-col w-[264px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
-        <div className="flex flex-col flex-1 mx-2 mt-2 gap-4 pt-2 pb-0 overflow-y-auto">
+      <nav className="flex flex-col w-[264px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
+        {/* Brain logo */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
+          <img
+            className="w-[36px] h-[37px] object-contain flex-shrink-0"
+            alt="Brain"
+            src="/figmaAssets/frame-1000002163.svg"
+          />
+          <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[26px] leading-7 whitespace-nowrap select-none">
+            <span className="text-[#7631ee]">br</span>
+            <span className="text-[#ffffff]">ai</span>
+            <span className="text-[#7631ee]">n</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1 mx-2 gap-4 pb-0 overflow-y-auto min-h-0">
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center justify-between px-2 py-0 w-full">
