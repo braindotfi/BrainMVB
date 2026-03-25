@@ -7,6 +7,7 @@ import {
   formatSessionTime,
   type ChatSession,
 } from "@/lib/chatHistory";
+import { ShareModal } from "@/components/ShareModal";
 
 const mainMenuItems = [
   { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-3.svg", path: "/launchpad", emoji: "🚀" },
@@ -32,6 +33,7 @@ interface Props {
 export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Props): JSX.Element => {
   const [location, navigate] = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -238,6 +240,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
   if (collapsed) {
     return (
       <>
+        <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
@@ -284,6 +287,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               )}
             </button>
 
+            <button
+              title="Invite Friends"
+              onClick={() => setShareOpen(true)}
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="7" cy="6" r="3" stroke="#8899bb" strokeWidth="1.3" />
+                <path d="M1 15c0-3.314 2.686-5 6-5" stroke="#8899bb" strokeWidth="1.3" strokeLinecap="round" />
+                <path d="M14 10v6M11 13h6" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+
             <Link href="/settings">
               <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
                 <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
@@ -306,6 +321,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
   return (
     <>
+      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <NotificationsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
@@ -379,6 +395,23 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                   <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3 whitespace-nowrap">{unreadCount}</span>
                 </div>
               )}
+            </button>
+
+            <button
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
+            >
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <circle cx="8" cy="7" r="3.5" stroke="#8899bb" strokeWidth="1.3" />
+                  <path d="M1 17c0-3.866 3.134-6 7-6" stroke="#8899bb" strokeWidth="1.3" strokeLinecap="round" />
+                  <path d="M16 11v7M12.5 14.5h7" stroke="#42bf23" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Invite Friends</span>
+              <div className="flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-green rounded-full flex-shrink-0">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
+              </div>
             </button>
 
             <Link href="/settings" className="w-full">
