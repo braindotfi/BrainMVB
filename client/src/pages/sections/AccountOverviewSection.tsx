@@ -105,7 +105,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       {/* Main panel */}
       <div className="flex flex-col rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[386px] overflow-hidden">
         {/* Header bar */}
-        <div className="flex mx-2 mt-2 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
+        <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
             <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
@@ -306,7 +306,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         </div>
 
         {/* Assets / Transactions section */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 mt-4">
           <div className="flex mx-2 flex-col items-start gap-4 w-[370px] pb-4">
             <div className="flex flex-col items-start gap-2 self-stretch w-full">
               {/* Main tab switcher */}

@@ -40,7 +40,7 @@ function AppLayout() {
 
         <div className="flex-1 min-w-0 min-h-0">
           <Switch>
-            <Route path="/" component={Marketplace} />
+            <Route path="/" component={AssistantPage} />
             <Route path="/assistant" component={AssistantPage} />
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/launchpad" component={LaunchpadPage} />

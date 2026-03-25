@@ -441,32 +441,34 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
       <NotificationsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
-        {/* Brain logo */}
-        <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
-          <img
-            className="w-[36px] h-[37px] object-contain flex-shrink-0"
-            alt="Brain"
-            src="/figmaAssets/frame-1000002163.svg"
-          />
-          <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[26px] leading-7 whitespace-nowrap select-none">
-            <span className="text-[#7631ee]">br</span>
-            <span className="text-[#ffffff]">ai</span>
-            <span className="text-[#7631ee]">n</span>
+        {/* Brain logo row — collapse button lives here on the right */}
+        <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <img
+              className="w-6 h-6 object-contain flex-shrink-0"
+              alt="Brain"
+              src="/figmaAssets/frame-1000002163.svg"
+            />
+            <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
+              <span className="text-[#7631ee]">br</span>
+              <span className="text-[#ffffff]">ai</span>
+              <span className="text-[#7631ee]">n</span>
+            </div>
           </div>
+          <button
+            onClick={onToggle}
+            title="Collapse menu"
+            className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+          >
+            <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
+          </button>
         </div>
 
-        <div className="flex flex-col flex-1 mx-2 gap-4 pb-0 overflow-y-auto min-h-0">
+        <div className="flex flex-col flex-1 mx-2 mt-4 gap-4 pb-0 overflow-y-auto min-h-0">
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
-            <div className="flex items-center justify-between px-2 py-0 w-full">
+            <div className="flex items-center px-2 py-0 w-full">
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
-              <button
-                onClick={onToggle}
-                title="Collapse menu"
-                className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
-              >
-                <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
-              </button>
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">

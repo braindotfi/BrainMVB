@@ -110,7 +110,7 @@ export const MainContentSection = (): JSX.Element => {
   };
 
   return (
-    <div className="relative w-full bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
+    <div className="relative w-full h-full flex flex-col bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
       {/* Top bar: search expands from the right */}
       <div className="flex items-center px-4 pt-4 pb-0 gap-3">
         {/* Expandable search — grows to fill space when open */}
@@ -159,7 +159,7 @@ export const MainContentSection = (): JSX.Element => {
       </div>
 
       {/* Main scrollable content */}
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full flex-1">
         <div className="flex flex-col items-start gap-8 px-4 pt-4 pb-6">
 
           {/* Search results */}
