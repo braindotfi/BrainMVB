@@ -121,7 +121,11 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
       if (state.recipientType === "wallet") return state.walletAddress.length > 10;
       if (state.recipientType === "agent") return state.selectedAgentId !== null;
     }
-    if (state.step === 3) return parseFloat(state.amount || "0") > 0;
+    if (state.step === 3) {
+      const amt = parseFloat(state.amount || "0");
+      const bal = parseFloat(selectedAsset.balance.replace(/,/g, ""));
+      return amt > 0 && amt <= bal;
+    }
     return true;
   })();
 
@@ -434,6 +438,12 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
                     className="flex-1 bg-transparent text-white text-2xl [font-family:'JetBrains_Mono',Helvetica] font-bold placeholder-[#414965] outline-none min-w-0"
                   />
                 </div>
+
+                {parseFloat(state.amount || "0") > parseFloat(selectedAsset.balance.replace(/,/g, "")) && parseFloat(state.amount || "0") > 0 && (
+                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-red-400 text-xs">
+                    Amount exceeds your available balance of {selectedAsset.balance} {selectedAsset.ticker}
+                  </p>
+                )}
 
                 {/* Quick amounts */}
                 <div className="flex gap-2">

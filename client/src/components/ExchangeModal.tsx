@@ -252,9 +252,13 @@ export function ExchangeModal({ open, onClose }: Props) {
 
   const currentSelected = searchTarget === "from" ? fromAsset : toAsset;
 
+  const fromBalanceNum = fromAsset ? parseFloat(fromAsset.balance.split(" ")[0].replace(/,/g, "")) : 0;
+  const amountNum = parseFloat(amount || "0");
+  const amountExceedsBalance = fromAsset !== null && amountNum > 0 && amountNum > fromBalanceNum;
+
   const canContinue = (() => {
     if (step === 1) return fromAsset !== null;
-    if (step === 2) return parseFloat(amount || "0") > 0;
+    if (step === 2) return amountNum > 0 && !amountExceedsBalance;
     if (step === 3) return toAsset !== null && toAsset.id !== fromAsset?.id;
     return true;
   })();
@@ -405,6 +409,11 @@ export function ExchangeModal({ open, onClose }: Props) {
                     {fromAsset && (
                       <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-1.5">
                         Available: {fromAsset.balance}
+                      </p>
+                    )}
+                    {amountExceedsBalance && (
+                      <p className="[font-family:'Gilroy-Medium',Helvetica] text-red-400 text-xs mt-1">
+                        Amount exceeds your available balance of {fromAsset?.balance}
                       </p>
                     )}
                   </div>

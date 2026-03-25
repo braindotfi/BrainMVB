@@ -292,11 +292,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               onClick={() => setShareOpen(true)}
               className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors"
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="7" cy="6" r="3" stroke="#8899bb" strokeWidth="1.3" />
-                <path d="M1 15c0-3.314 2.686-5 6-5" stroke="#8899bb" strokeWidth="1.3" strokeLinecap="round" />
-                <path d="M14 10v6M11 13h6" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <img src="/figmaAssets/invite-friends-icon.png" alt="Invite Friends" className="w-5 h-5" />
             </button>
 
             <Link href="/settings">
@@ -307,7 +303,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button title="Create an Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
+            <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             </button>
             <button title="Logout" className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
@@ -347,6 +343,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                             <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                               {item.label}
                             </span>
+                            {isActive(item.path) && (
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                                <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
                           </button>
                         </Link>
                         {/* History toggle chevron */}
@@ -368,6 +369,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                         <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                           {item.emoji ? `${item.emoji} ` : ""}{item.label}
                         </span>
+                        {isActive(item.path) && (
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                            <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </button>
                     </Link>
                   )}
@@ -386,14 +392,19 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
             <button
               onClick={() => setNotificationsOpen((v) => !v)}
-              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-15" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
               <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src="/figmaAssets/notif-icon.svg" />
-              <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Notifications</span>
+              <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
               {unreadCount > 0 && (
-                <div className="flex items-center justify-center p-[2px] bg-[#414965] rounded-[4px]">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[12px] leading-[12px] whitespace-nowrap">{unreadCount}</span>
+                <div className={`flex items-center justify-center p-[2px] rounded-[4px] ${notificationsOpen ? "bg-[#7631ee]" : "bg-[#414965]"}`}>
+                  <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[12px] leading-[12px] whitespace-nowrap ${notificationsOpen ? "text-[#240757]" : "text-[#a8b9f4]"}`}>{unreadCount}</span>
                 </div>
+              )}
+              {notificationsOpen && (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                  <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               )}
             </button>
 
@@ -401,13 +412,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               onClick={() => setShareOpen(true)}
               className="flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
             >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="8" cy="7" r="3.5" stroke="#8899bb" strokeWidth="1.3" />
-                  <path d="M1 17c0-3.866 3.134-6 7-6" stroke="#8899bb" strokeWidth="1.3" strokeLinecap="round" />
-                  <path d="M16 11v7M12.5 14.5h7" stroke="#42bf23" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </div>
+              <img src="/figmaAssets/invite-friends-icon.png" alt="Invite Friends" className="w-6 h-6 flex-shrink-0" />
               <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Invite Friends</span>
               <div className="flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-green rounded-full flex-shrink-0">
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
@@ -427,7 +432,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
           <button onClick={onCreateAgent} className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create an Agent</span>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>
           </button>
           <button className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Logout" src="/figmaAssets/logout-icon.svg" />
