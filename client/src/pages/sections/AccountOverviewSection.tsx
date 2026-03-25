@@ -52,8 +52,7 @@ const CARDS = [
   { id: "bank",   label: "Bank",    data: bankData    },
 ];
 
-// filterTabs is derived per-card (see below, not used as a top-level const)
-const txFilterTabs = ["All", "Trades", "Deposits", "Withdrawals"];
+// filterTabs and txFilterTabs are derived per-card inside the component
 const mainTabs     = ["Assets", "Transactions"];
 
 const cardActions = [
@@ -287,10 +286,20 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     ? ["All", "Cash", "Crypto"]
     : ["All", "Cash"];
 
+  // Debit card (card index 1) has no Trades in the transaction filters
+  const txFilterTabs = activeCard === 1
+    ? ["All", "Deposits", "Withdrawals"]
+    : ["All", "Trades", "Deposits", "Withdrawals"];
+
   // Reset activeFilter to "All" if current filter isn't available on this card
   useEffect(() => {
     if (!filterTabs.includes(activeFilter)) setActiveFilter("All");
   }, [filterTabs, activeFilter]);
+
+  // Reset transactionFilter to "All" if it's "Trades" and Debit card is active
+  useEffect(() => {
+    if (!txFilterTabs.includes(transactionFilter)) setTransactionFilter("All");
+  }, [txFilterTabs, transactionFilter]);
 
   const assetsData   = currentCardData?.assets   ?? walletData.assets;
   const txData       = currentCardData?.transactions ?? walletData.transactions;
