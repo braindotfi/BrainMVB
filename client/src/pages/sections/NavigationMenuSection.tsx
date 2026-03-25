@@ -324,11 +324,8 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <div className="flex flex-col flex-1 mx-2 mt-2 gap-4 pt-2 pb-0 overflow-y-auto">
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
-            <div className="flex items-center justify-between gap-2 px-2 py-0 w-full">
+            <div className="flex items-center gap-2 px-2 py-0 w-full">
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
-              <button onClick={onToggle} title="Collapse menu" className="w-5 h-5 flex items-center justify-center rounded hover:bg-brain-v1baby-blue-15 transition-colors">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L3 6L8 10" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">
