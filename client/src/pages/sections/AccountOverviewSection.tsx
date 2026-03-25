@@ -77,9 +77,9 @@ const cardActions = [
 ];
 
 const agentAccounts = [
-  { id: "1", name: "AlphaFlow",     ticker: "$ALPHA", icon: "⚡", type: "Trading"   },
-  { id: "2", name: "SwarmAlpha",    ticker: "$SWRM",  icon: "🤖", type: "Analytics" },
-  { id: "3", name: "Risk Sentinel", ticker: "$RSKX",  icon: "🛡",  type: "Risk"      },
+  { id: "1", name: "AlphaFlow",     ticker: "$ALPHA", icon: "⚡", type: "Trading",   avatar: "/figmaAssets/avatars-3.svg" },
+  { id: "2", name: "SwarmAlpha",    ticker: "$SWRM",  icon: "🤖", type: "Analytics", avatar: "/figmaAssets/avatars-7.svg" },
+  { id: "3", name: "Risk Sentinel", ticker: "$RSKX",  icon: "🛡",  type: "Risk",      avatar: "/figmaAssets/avatars-5.svg" },
 ];
 
 /* ─── Card sub-components ─── */
@@ -356,7 +356,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── Header bar ── */}
           <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
+              {activeAccount ? (
+                <img
+                  className="w-8 h-8 flex-shrink-0 rounded-xl object-cover"
+                  alt="Agent"
+                  src={agentAccounts.find((a) => a.id === activeAccount)?.avatar ?? "/figmaAssets/wallet-icons-1.svg"}
+                />
+              ) : (
+                <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
+              )}
               <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
                 {activeAccount
                   ? agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Your Account"
@@ -425,7 +433,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       onClick={() => handleSwitchAccount(agent.id)}
                       className={`flex items-center gap-3 px-4 py-2.5 w-full transition-colors ${activeAccount === agent.id ? "bg-brain-v1baby-blue-15" : "hover:bg-brain-v1baby-blue-15"}`}
                     >
-                      <div className="w-8 h-8 rounded-xl bg-brain-v1headerfooterbg flex items-center justify-center text-base flex-shrink-0">{agent.icon}</div>
+                      <img className="w-8 h-8 rounded-xl object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
                       <div className="text-left flex-1 min-w-0">
                         <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm truncate">{agent.name}</div>
                         <div className="flex items-center gap-1.5">
