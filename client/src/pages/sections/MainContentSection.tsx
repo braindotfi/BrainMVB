@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNav } from "@/lib/navContext";
 
 const trendingAgentsRow1 = [
   { id: "alphaflow", name: "AlphaFlow", description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.", avatarSrc: "/figmaAssets/avatars-3.svg", avatarType: "img" },
@@ -86,7 +87,10 @@ const AgentSection = ({ title, row1, row2 }: { title: string; row1: Agent[]; row
 );
 
 export const MainContentSection = (): JSX.Element => {
+  const { toggleNav } = useNav();
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const filtered = search.trim()
     ? allAgents.filter(
@@ -96,33 +100,71 @@ export const MainContentSection = (): JSX.Element => {
       )
     : null;
 
+  const handleSearchToggle = () => {
+    if (searchOpen) {
+      setSearchOpen(false);
+      setSearch("");
+    } else {
+      setSearchOpen(true);
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
+  };
+
   return (
     <div className="relative w-full bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
-      {/* Top bar */}
+      {/* Top bar: collapse btn left, search icon right */}
       <div className="flex items-center justify-between px-4 pt-4 pb-0 gap-3">
-        <div className="flex-1 flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl px-3 py-2 focus-within:border-[#414965] transition-colors">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
-            <circle cx="6" cy="6" r="4.5" stroke="#414965" strokeWidth="1.2" />
-            <path d="M10 10L13 13" stroke="#414965" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search agents..."
-            className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-            </button>
+        {/* Collapse nav button */}
+        <button
+          onClick={toggleNav}
+          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+        >
+          <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
+        </button>
+
+        {/* Expandable search */}
+        {searchOpen && (
+          <div className="flex-1 flex items-center gap-2 bg-[#0a0c10] border border-[#1d2131] rounded-full px-3 py-2 focus-within:border-[#414965] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+              <circle cx="6" cy="6" r="4.5" stroke="#414965" strokeWidth="1.2" />
+              <path d="M10 10L13 13" stroke="#414965" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search agents..."
+              className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors flex-shrink-0">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Search toggle button */}
+        <button
+          onClick={handleSearchToggle}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+            searchOpen
+              ? "bg-brain-v1dark-orange text-white"
+              : "bg-[#0a0c10] text-[#6c779d] hover:text-brain-v1white"
+          }`}
+        >
+          {searchOpen ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M10 10L13 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
           )}
-        </div>
-        <div className="w-8 h-8 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-[100px] flex-shrink-0">
-          <img className="w-4 h-4" alt="Icons" src="/figmaAssets/icons-19.svg" />
-        </div>
+        </button>
       </div>
 
       {/* Main scrollable content */}

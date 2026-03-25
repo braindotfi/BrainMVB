@@ -18,6 +18,7 @@ import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection"
 import { CreateAgentModal } from "@/components/CreateAgentModal";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
+import { NavContext } from "@/lib/navContext";
 
 function AppLayout() {
   const [navCollapsed, setNavCollapsed] = useState(false);
@@ -27,6 +28,7 @@ function AppLayout() {
   const [exchangeOpen, setExchangeOpen] = useState(false);
 
   return (
+    <NavContext.Provider value={{ navCollapsed, toggleNav: () => setNavCollapsed((v) => !v) }}>
     <div className="bg-shared-colorsheaderfooterbg w-full min-h-screen flex flex-col">
       <HeaderFooterSection />
 
@@ -85,6 +87,7 @@ function AppLayout() {
         onClose={() => setExchangeOpen(false)}
       />
     </div>
+    </NavContext.Provider>
   );
 }
 

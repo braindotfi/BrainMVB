@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNav } from "@/lib/navContext";
 
 type AgentStatus = "active" | "inactive" | "paused";
 
@@ -201,6 +202,7 @@ const AgentCard = ({ agent }: { agent: Agent }) => {
 };
 
 export const AgentsActivityPage = (): JSX.Element => {
+  const { toggleNav } = useNav();
   const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -216,6 +218,7 @@ export const AgentsActivityPage = (): JSX.Element => {
     return matchesTab && matchesSearch;
   });
 
+  const allCount = agents.length;
   const activeCount = agents.filter((a) => a.status === "active").length;
   const inactiveCount = agents.filter((a) => a.status !== "active").length;
 
@@ -231,19 +234,20 @@ export const AgentsActivityPage = (): JSX.Element => {
 
   return (
     <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1d2131]">
-        <div>
-          <h1 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-xl">
-            Agent Activity
-          </h1>
-          <p className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-60 text-sm mt-0.5">
-            {activeCount} active · {inactiveCount} inactive
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {searchOpen && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-brain-v1baby-blue-15 border border-[#1d2131] focus-within:border-brain-v1baby-blue-30 rounded-xl transition-colors">
+      {/* Header row: collapse btn + pill tabs + search */}
+      <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
+        {/* Collapse nav button */}
+        <button
+          onClick={toggleNav}
+          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+        >
+          <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
+        </button>
+
+        {/* Pill filter tabs — centered */}
+        <div className="flex-1 flex items-center justify-center">
+          {searchOpen ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#0a0c10] border border-[#1d2131] focus-within:border-brain-v1baby-blue-30 rounded-full transition-colors w-full max-w-[280px]">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-brain-v1baby-blue-30 flex-shrink-0">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
                 <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -254,7 +258,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search agents..."
-                className="bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none w-40"
+                className="bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none flex-1"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors flex-shrink-0">
@@ -262,38 +266,50 @@ export const AgentsActivityPage = (): JSX.Element => {
                 </button>
               )}
             </div>
+          ) : (
+            <div className="inline-flex items-center bg-[#0a0c10] rounded-full p-1 gap-1">
+              {([
+                { key: "all", label: "All", count: allCount },
+                { key: "active", label: "Active", count: activeCount },
+                { key: "inactive", label: "Inactive", count: inactiveCount },
+              ] as const).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all ${
+                    activeTab === key
+                      ? "bg-[#3a0d0d] text-[#f04438]"
+                      : "text-[#6c779d] hover:text-brain-v1white"
+                  }`}
+                >
+                  {label}
+                  <span className={`text-xs [font-family:'Gilroy-Medium',Helvetica] ${activeTab === key ? "text-[#f04438]" : "text-[#414965]"}`}>
+                    {count}
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
-          <button
-            onClick={handleSearchToggle}
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${searchOpen ? "bg-brain-v1dark-orange text-brain-v1light-orange" : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:text-brain-v1white hover:bg-brain-v1baby-blue-30"}`}
-          >
-            {searchOpen ? (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
         </div>
-      </div>
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 px-6 py-3 border-b border-[#1d2131]">
-        {(["all", "active", "inactive"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 rounded-full text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors capitalize ${
-              activeTab === tab
-                ? "bg-brain-v1baby-blue-15 text-brain-v1white"
-                : "text-brain-v1baby-blue-30 hover:text-brain-v1baby-blue-60"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+        {/* Search toggle button */}
+        <button
+          onClick={handleSearchToggle}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+            searchOpen
+              ? "bg-brain-v1dark-orange text-white"
+              : "bg-[#0a0c10] text-[#6c779d] hover:text-brain-v1white"
+          }`}
+        >
+          {searchOpen ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* Agent grid */}

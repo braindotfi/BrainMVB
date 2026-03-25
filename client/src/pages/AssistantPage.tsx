@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useNav } from "@/lib/navContext";
 import {
   getChatSession,
   saveChatSession,
@@ -34,6 +35,7 @@ const newSession = (): ChatSession => ({
 });
 
 export const AssistantPage = (): JSX.Element => {
+  const { toggleNav } = useNav();
   const [location] = useLocation();
   const [session, setSession] = useState<ChatSession>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -162,45 +164,14 @@ export const AssistantPage = (): JSX.Element => {
       {/* Landing / empty state */}
       {isOnlyWelcome ? (
         <div className="flex flex-col h-full overflow-hidden">
-          {/* Landing header */}
-          <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8L10 12" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              <button
-                onClick={() => inputRef.current?.focus()}
-                className="flex items-center gap-2 bg-[#0a0c10] pl-1 pr-3 py-1 rounded-full hover:bg-[#1d2131] transition-colors"
-              >
-                <div className="w-6 h-6 rounded-full bg-brain-v1dark-purple flex items-center justify-center flex-shrink-0">
-                  <div className="w-3 h-3 bg-brain-v1purple rounded-full opacity-80" />
-                </div>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-sm whitespace-nowrap">Ask BRAIN...</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleNewChat}
-                className="bg-[#240757] px-3 py-2 rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-xs hover:opacity-80 transition-opacity"
-              >
-                New Chat
-              </button>
-              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="1.5" rx="0.75" fill="#6c779d"/>
-                  <rect x="2" y="7.25" width="8" height="1.5" rx="0.75" fill="#6c779d"/>
-                  <rect x="2" y="11.5" width="10" height="1.5" rx="0.75" fill="#6c779d"/>
-                </svg>
-              </button>
-              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="4" cy="8" r="1.5" fill="#6c779d"/>
-                  <circle cx="12" cy="4" r="1.5" fill="#6c779d"/>
-                  <circle cx="12" cy="12" r="1.5" fill="#6c779d"/>
-                  <path d="M5.5 7.5L10.5 4.5M5.5 8.5L10.5 11.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
+          {/* Landing header — collapse button only */}
+          <div className="flex items-center px-4 py-4 flex-shrink-0">
+            <button
+              onClick={toggleNav}
+              className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+            >
+              <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
+            </button>
           </div>
 
           {/* Centered content */}
@@ -229,24 +200,29 @@ export const AssistantPage = (): JSX.Element => {
                   className="absolute inset-0 bg-transparent text-white text-base [font-family:'Gilroy-Medium',Helvetica] outline-none resize-none px-4 pt-[14px] pb-12 w-full"
                 />
                 <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  {/* Attachment button */}
                   <button className="w-8 h-8 rounded-full bg-[#1d2131] flex items-center justify-center hover:bg-[#222737] transition-colors">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M9.5 5.5A3.5 3.5 0 1 0 5.5 9.5V11a1 1 0 0 0 2 0V9.5A3.5 3.5 0 0 0 9.5 5.5Z" stroke="#6c779d" strokeWidth="1.2"/>
+                      <path d="M12 6.5L6.5 12C5.12 13.38 2.88 13.38 1.5 12C0.12 10.62 0.12 8.38 1.5 7L7.5 1C8.46 0.04 10.04 0.04 11 1C11.96 1.96 11.96 3.54 11 4.5L5 10.5C4.45 11.05 3.55 11.05 3 10.5C2.45 9.95 2.45 9.05 3 8.5L8.5 3" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
                   <div className="flex items-center gap-2">
-                    <button className="w-8 h-8 rounded-full bg-[#1d2131] flex items-center justify-center hover:bg-[#222737] transition-colors">
+                    {/* Mic button — orange */}
+                    <button className="w-8 h-8 rounded-full bg-brain-v1dark-orange flex items-center justify-center hover:opacity-80 transition-opacity">
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M2 7h10M7 2v10" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/>
+                        <rect x="4.5" y="1" width="5" height="7" rx="2.5" fill="white"/>
+                        <path d="M2 7.5C2 10.26 4.24 12.5 7 12.5C9.76 12.5 12 10.26 12 7.5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+                        <line x1="7" y1="12.5" x2="7" y2="13.5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
                       </svg>
                     </button>
+                    {/* Send button — purple */}
                     <button
                       onClick={() => handleSend()}
                       disabled={!input.trim() || chatMutation.isPending}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${input.trim() && !chatMutation.isPending ? "bg-brain-v1dark-orange hover:opacity-80" : "bg-[#1d2131]"}`}
+                      className="w-8 h-8 rounded-full bg-brain-v1purple flex items-center justify-center hover:opacity-80 transition-opacity disabled:opacity-50"
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M12 7L2 2L4.5 7L2 12L12 7Z" fill={input.trim() && !chatMutation.isPending ? "white" : "#414965"} />
+                        <path d="M2 7H12M8 3L12 7L8 11" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
                   </div>
