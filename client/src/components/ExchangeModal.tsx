@@ -344,6 +344,14 @@ export function ExchangeModal({ open, onClose }: Props) {
                   {stepLabels[step - 1]}
                 </p>
               </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {[1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className={`w-6 h-1.5 rounded-full transition-colors ${n <= step ? "bg-brain-v1green" : "bg-[#1d2131]"}`}
+                  />
+                ))}
+              </div>
               <button
                 onClick={handleClose}
                 className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
@@ -353,13 +361,6 @@ export function ExchangeModal({ open, onClose }: Props) {
                   <path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
-            </div>
-
-            {/* Step progress */}
-            <div className="flex items-center justify-center gap-0 px-6 py-4 border-b border-[#1d2131] flex-shrink-0">
-              {[1, 2, 3, 4].map((n) => (
-                <StepDot key={n} n={n} current={step} />
-              ))}
             </div>
 
             {/* Body */}
@@ -387,17 +388,17 @@ export function ExchangeModal({ open, onClose }: Props) {
                     Enter the amount you'd like to exchange.
                   </p>
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Amount</p>
-                    <div className="flex items-center bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl px-4 py-3.5 focus-within:border-[#414965] transition-colors">
+                    <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base block mb-2">Amount</label>
+                    <div className="flex items-center bg-[#222737] rounded-2xl px-4 h-14">
                       <input
                         type="number"
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="flex-1 bg-transparent outline-none text-brain-v1white text-lg [font-family:'Gilroy-SemiBold',Helvetica] font-semibold placeholder:text-brain-v1baby-blue-30 min-w-0"
+                        className="flex-1 bg-transparent outline-none text-white text-xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold placeholder:text-[#414965] min-w-0"
                         data-testid="input-exchange-amount"
                       />
-                      <span className="text-brain-v1baby-blue-60 text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ml-2 flex-shrink-0">
+                      <span className="text-[#414965] text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ml-2 flex-shrink-0">
                         {fromAsset?.ticker ?? ""}
                       </span>
                     </div>
@@ -523,24 +524,12 @@ export function ExchangeModal({ open, onClose }: Props) {
             </div>
 
             {/* Footer */}
-            <div className={`flex gap-3 px-6 py-5 border-t border-[#1d2131] flex-shrink-0 ${step === 1 ? "justify-end" : "justify-between"}`}>
-              {step > 1 && (
-                <button
-                  onClick={() => setStep((s) => (s - 1) as Step)}
-                  className="flex items-center gap-2 px-5 py-3 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-sm hover:text-brain-v1white hover:border-[#414965] transition-colors"
-                  data-testid="btn-exchange-back"
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  Back
-                </button>
-              )}
+            <div className="px-6 py-5 border-t border-[#1d2131] flex-shrink-0">
               {step < 4 ? (
                 <button
                   onClick={() => setStep((s) => (s + 1) as Step)}
                   disabled={!canContinue}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-all ${
+                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
                     canContinue
                       ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                       : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -556,7 +545,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                 <button
                   onClick={handleConfirm}
                   disabled={confirming}
-                  className="flex items-center gap-2 px-6 py-3 bg-brain-v1dark-green rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-sm hover:opacity-80 transition-opacity disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-green rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-base hover:opacity-80 transition-opacity disabled:opacity-50"
                   data-testid="btn-exchange-confirm"
                 >
                   {confirming ? (

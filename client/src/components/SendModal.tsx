@@ -164,35 +164,46 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
       <div className="relative z-10 w-[520px] max-h-[90vh] flex flex-col bg-[#0d1017] border border-[#1d2131] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-[#1d2131] flex-shrink-0">
-          <div className="flex-1">
-            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-xl">
+        <div className="flex items-center gap-3 px-6 pt-6 pb-5 border-b border-[#1d2131] flex-shrink-0">
+          {!sent && state.step > 1 && (
+            <button
+              onClick={handleBack}
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M8 2L4 6L8 10" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
               {sent ? "Transfer Complete" : "Send Money"}
             </h2>
             {!sent && (
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">
+              <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">
                 {stepLabels[state.step - 1]}
               </p>
             )}
           </div>
+          {!sent && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className={`w-6 h-1.5 rounded-full transition-colors ${n <= state.step ? "bg-brain-v1green" : "bg-[#1d2131]"}`}
+                />
+              ))}
+            </div>
+          )}
           <button
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
         </div>
-
-        {/* Step progress */}
-        {!sent && (
-          <div className="flex items-center justify-center gap-0 px-6 py-4 border-b border-[#1d2131] flex-shrink-0">
-            {[1, 2, 3, 4].map((n) => (
-              <StepDot key={n} n={n} current={state.step} />
-            ))}
-          </div>
-        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -318,14 +329,14 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
               </p>
               <div className="flex flex-col gap-2 mt-1">
                 <div className="flex flex-col gap-1">
-                  <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Wallet Address</label>
-                  <div className="flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] focus-within:border-[#414965] rounded-2xl px-4 py-3 transition-colors">
+                  <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">Wallet Address</label>
+                  <div className="flex items-center gap-2 bg-[#222737] rounded-2xl px-4 h-14">
                     <input
                       type="text"
                       value={state.walletAddress}
                       onChange={(e) => set({ walletAddress: e.target.value })}
                       placeholder="0x... or bnb1... or sol..."
-                      className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'JetBrains_Mono',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+                      className="flex-1 bg-transparent text-white text-lg [font-family:'JetBrains_Mono',Helvetica] placeholder-[#414965] outline-none"
                     />
                     <button
                       onClick={async () => {
@@ -410,9 +421,9 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
 
               {/* Amount input */}
               <div className="flex flex-col gap-2">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Amount</label>
-                <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] focus-within:border-[#414965] rounded-2xl transition-colors">
-                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1baby-blue-30 text-xl">$</span>
+                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">Amount</label>
+                <div className="flex items-center gap-3 px-4 h-14 bg-[#222737] rounded-2xl">
+                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#414965] text-xl flex-shrink-0">$</span>
                   <input
                     type="number"
                     min="0"
@@ -420,7 +431,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
                     value={state.amount}
                     onChange={(e) => set({ amount: e.target.value })}
                     placeholder="0.00"
-                    className="flex-1 bg-transparent text-brain-v1white text-3xl [font-family:'JetBrains_Mono',Helvetica] font-bold placeholder-brain-v1baby-blue-30 outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white text-2xl [font-family:'JetBrains_Mono',Helvetica] font-bold placeholder-[#414965] outline-none min-w-0"
                   />
                 </div>
 
@@ -556,21 +567,12 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
 
         {/* Footer */}
         {!sent && (
-          <div className={`flex gap-3 px-6 py-5 border-t border-[#1d2131] flex-shrink-0 ${state.step === 1 ? "justify-end" : "justify-between"}`}>
-            {state.step > 1 && (
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-2 px-5 py-3 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-sm hover:text-brain-v1white hover:border-[#414965] transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                Back
-              </button>
-            )}
+          <div className="px-6 py-5 border-t border-[#1d2131] flex-shrink-0">
             {state.step < 4 ? (
               <button
                 onClick={handleNext}
                 disabled={!canContinue}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-all ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
                   canContinue
                     ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -583,7 +585,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
               <button
                 onClick={handleConfirm}
                 disabled={sending}
-                className="flex items-center gap-2 px-6 py-3 bg-brain-v1dark-orange rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-sm hover:opacity-80 transition-opacity disabled:opacity-50"
+                className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-orange rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-base hover:opacity-80 transition-opacity disabled:opacity-50"
               >
                 {sending ? (
                   <>
