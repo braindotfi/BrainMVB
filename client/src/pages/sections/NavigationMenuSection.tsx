@@ -184,10 +184,13 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
           ) : (
             <div className="flex flex-col">
               {chatSessions.map((sess, i) => (
-                <button
+                <div
                   key={sess.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openSession(sess.id)}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-brain-v1baby-blue-15 transition-colors text-left group w-full ${i < chatSessions.length - 1 ? "border-b border-[#1d2131]" : ""}`}
+                  onKeyDown={(e) => e.key === "Enter" && openSession(sess.id)}
+                  className={`flex items-start gap-3 px-4 py-3 hover:bg-brain-v1baby-blue-15 transition-colors text-left group w-full cursor-pointer ${i < chatSessions.length - 1 ? "border-b border-[#1d2131]" : ""}`}
                 >
                   <div className="w-8 h-8 rounded-xl bg-brain-v1dark-purple flex items-center justify-center flex-shrink-0 mt-0.5">
                     <div className="w-3 h-3 bg-brain-v1purple rounded-full opacity-80" />
@@ -198,13 +201,16 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                       {formatSessionTime(sess.updatedAt)} · {sess.messages.length - 1} messages
                     </p>
                   </div>
-                  <button
-                    onClick={(e) => removeSession(e, sess.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1dark-pink-red"
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); removeSession(e as unknown as React.MouseEvent<HTMLButtonElement>, sess.id); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); removeSession(e as unknown as React.MouseEvent<HTMLButtonElement>, sess.id); } }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1dark-pink-red cursor-pointer"
                   >
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                  </button>
-                </button>
+                  </span>
+                </div>
               ))}
             </div>
           )}

@@ -28,9 +28,10 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onCreateAgent: () => void;
+  onSend?: () => void;
 }
 
-export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent }: Props): JSX.Element => {
+export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend }: Props): JSX.Element => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeTab, setActiveTab] = useState("Assets");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -211,14 +212,18 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent }: P
           <div className="absolute top-[152px] left-0 w-[370px] h-[138px] flex bg-brain-v1headerfooterbg rounded-2xl">
             <div className="flex mt-16 w-[338px] h-[58px] ml-4 items-center gap-2">
               {cardActions.map((action) => (
-                <div key={action.label} className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer">
-                  <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center">
+                <button
+                  key={action.label}
+                  onClick={action.label === "Send" ? onSend : undefined}
+                  className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"
+                >
+                  <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center group-hover:opacity-80 transition-opacity">
                     <img className="w-6 h-6" alt={action.label} src={action.icon} />
                   </div>
-                  <span className="self-stretch [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs text-center tracking-[0] leading-[14px]">
+                  <span className="self-stretch [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-xs text-center tracking-[0] leading-[14px] transition-colors">
                     {action.label}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

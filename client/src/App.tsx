@@ -16,11 +16,13 @@ import { HeaderFooterSection } from "@/pages/sections/HeaderFooterSection";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 import { CreateAgentModal } from "@/components/CreateAgentModal";
+import { SendModal } from "@/components/SendModal";
 
 function AppLayout() {
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [createAgentOpen, setCreateAgentOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
   return (
     <div className="bg-shared-colorsheaderfooterbg w-full min-h-screen flex flex-col">
@@ -49,6 +51,7 @@ function AppLayout() {
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
           onCreateAgent={() => setCreateAgentOpen(true)}
+          onSend={() => setSendOpen(true)}
         />
       </div>
 
@@ -69,6 +72,10 @@ function AppLayout() {
       <CreateAgentModal
         open={createAgentOpen}
         onClose={() => setCreateAgentOpen(false)}
+      />
+      <SendModal
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
       />
     </div>
   );
