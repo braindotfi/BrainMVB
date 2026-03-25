@@ -2,11 +2,21 @@ import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const assetsData = [
-  { icon: "/figmaAssets/crypto-icons.svg", name: "Ethereum", ticker: "ETH", value: "$2,500", amount: "1.245", iconSize: "w-10 h-10" },
-  { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dollar", ticker: "USD", value: "$10,000", amount: "10,000", iconSize: "w-10 h-10" },
-  { icon: "/figmaAssets/crypto-icons-1.svg", name: "Polygon", ticker: "MATIC", value: "$16,832.85", amount: "295.23", iconSize: "w-10 h-10" },
-  { icon: "/figmaAssets/crypto-icons-2.svg", name: "Binance", ticker: "BNB", value: "$2,500", amount: "1.245", iconSize: "w-10 h-10" },
-  { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dollar", ticker: "USD", value: "$10,000", amount: "10,000", iconSize: "w-10 h-10" },
+  { icon: "/figmaAssets/crypto-icons.svg", name: "Ethereum", ticker: "ETH", value: "$2,500", amount: "1.245", category: "crypto" },
+  { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dollar", ticker: "USD", value: "$10,000", amount: "10,000", category: "cash" },
+  { icon: "/figmaAssets/crypto-icons-1.svg", name: "Polygon", ticker: "MATIC", value: "$16,832.85", amount: "295.23", category: "crypto" },
+  { icon: "/figmaAssets/crypto-icons-2.svg", name: "Binance", ticker: "BNB", value: "$2,500", amount: "1.245", category: "crypto" },
+];
+
+const transactionsData = [
+  { id: "1", type: "withdrawal", label: "Sent 240 USDC", time: "8:49pm", date: "20 Sat", amount: "-$240", positive: false },
+  { id: "2", type: "deposit", label: "Deposited 1,000 USDT", time: "3:51pm", date: "18 Thur", amount: "+$1,000", positive: true },
+  { id: "3", type: "withdrawal", label: "Withdrawal 514 USDT", time: "2:33pm", date: "18 Thur", amount: "-$514.45", positive: false },
+  { id: "4", type: "trade", label: "Bought 0.45 ETH", time: "11:20am", date: "17 Wed", amount: "-$898.10", positive: false },
+  { id: "5", type: "deposit", label: "Deposited 5,000 AED", time: "9:00am", date: "16 Tue", amount: "+$5,000", positive: true },
+  { id: "6", type: "trade", label: "Sold 100 MATIC", time: "4:15pm", date: "15 Mon", amount: "+$57.80", positive: true },
+  { id: "7", type: "withdrawal", label: "Sent 0.2 BNB", time: "1:02pm", date: "13 Sat", amount: "-$52.00", positive: false },
+  { id: "8", type: "deposit", label: "Deposited 2,500 USDC", time: "10:30am", date: "10 Wed", amount: "+$2,500", positive: true },
 ];
 
 const cardActions = [
@@ -16,6 +26,7 @@ const cardActions = [
 ];
 
 const filterTabs = ["All", "Cash", "Crypto"];
+const txFilterTabs = ["All", "Trades", "Deposits", "Withdrawals"];
 const mainTabs = ["Assets", "Transactions"];
 
 const agentAccounts = [
@@ -34,6 +45,7 @@ interface Props {
 export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend }: Props): JSX.Element => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeTab, setActiveTab] = useState("Assets");
+  const [transactionFilter, setTransactionFilter] = useState("All");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -276,10 +288,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           </div>
         </div>
 
-        {/* Assets section */}
+        {/* Assets / Transactions section */}
         <ScrollArea className="flex-1">
           <div className="flex mx-2 flex-col items-start gap-4 w-[370px] pb-4">
             <div className="flex flex-col items-start gap-2 self-stretch w-full">
+              {/* Main tab switcher */}
               <div className="flex items-start gap-[17px] self-stretch w-full">
                 {mainTabs.map((tab) => (
                   <button
@@ -293,55 +306,155 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   </button>
                 ))}
               </div>
-              <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
-                {filterTabs.map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`flex items-center justify-center gap-[17px] px-4 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${
-                      activeFilter === filter ? "bg-brain-v1dark-green" : "bg-brain-v1headerfooterbg"
-                    }`}
-                  >
-                    <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm tracking-[0] leading-4 whitespace-nowrap ${
-                      activeFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"
-                    }`}>
-                      {filter}
-                    </span>
-                  </button>
-                ))}
-              </div>
+
+              {/* Sub-filter tabs */}
+              {activeTab === "Assets" ? (
+                <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
+                  {filterTabs.map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setActiveFilter(filter)}
+                      className={`flex items-center justify-center px-4 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${
+                        activeFilter === filter ? "bg-brain-v1dark-green" : "bg-brain-v1headerfooterbg"
+                      }`}
+                    >
+                      <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${
+                        activeFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"
+                      }`}>
+                        {filter}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
+                  {txFilterTabs.map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setTransactionFilter(filter)}
+                      className={`flex items-center justify-center px-3 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${
+                        transactionFilter === filter ? "bg-[#123509]" : "bg-brain-v1headerfooterbg"
+                      }`}
+                    >
+                      <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${
+                        transactionFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"
+                      }`}>
+                        {filter}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col items-start gap-4 self-stretch w-full">
-              {assetsData.map((asset, index) => (
-                <div key={`${asset.ticker}-${index}`} className="flex flex-col self-stretch w-full gap-4">
-                  <div className="flex items-center gap-2 self-stretch w-full">
-                    <img className={`${asset.iconSize} flex-shrink-0`} alt={`${asset.name} icon`} src={asset.icon} />
-                    <div className="flex items-center justify-center gap-2 flex-1">
-                      <div className="inline-flex flex-col items-start gap-1 flex-shrink-0">
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap">
-                          {asset.name}
-                        </span>
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap tracking-[0]">
-                          {asset.ticker}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-start justify-center gap-1 flex-1">
-                        <span className="self-stretch [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1green text-base text-right leading-5 tracking-[0]">
-                          {asset.value}
-                        </span>
-                        <span className="self-stretch [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1baby-blue-30 text-sm text-right tracking-[0] leading-4">
-                          {asset.amount}
-                        </span>
-                      </div>
+            {/* Assets list */}
+            {activeTab === "Assets" && (() => {
+              const filtered = assetsData.filter(a =>
+                activeFilter === "Cash" ? a.category === "cash" :
+                activeFilter === "Crypto" ? a.category === "crypto" : true
+              );
+              return (
+                <div className="flex flex-col items-start gap-4 self-stretch w-full">
+                  {filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 w-full gap-2 text-brain-v1baby-blue-30">
+                      <span className="text-2xl">💼</span>
+                      <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No {activeFilter.toLowerCase()} assets</span>
                     </div>
-                  </div>
-                  {index < assetsData.length - 1 && (
-                    <img className="self-stretch w-full h-px" alt="Vector" src="/figmaAssets/vector-933.svg" />
-                  )}
+                  ) : filtered.map((asset, index) => (
+                    <div key={`${asset.ticker}-${index}`} className="flex flex-col self-stretch w-full gap-4">
+                      <div className="flex items-center gap-2 self-stretch w-full">
+                        <img className="w-10 h-10 flex-shrink-0" alt={`${asset.name} icon`} src={asset.icon} />
+                        <div className="flex items-center justify-center gap-2 flex-1">
+                          <div className="inline-flex flex-col items-start gap-1 flex-shrink-0">
+                            <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap">
+                              {asset.name}
+                            </span>
+                            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap tracking-[0]">
+                              {asset.ticker}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-start justify-center gap-1 flex-1">
+                            <span className="self-stretch [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1green text-base text-right leading-5 tracking-[0]">
+                              {asset.value}
+                            </span>
+                            <span className="self-stretch [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1baby-blue-30 text-sm text-right tracking-[0] leading-4">
+                              {asset.amount}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {index < filtered.length - 1 && (
+                        <img className="self-stretch w-full h-px" alt="divider" src="/figmaAssets/vector-933.svg" />
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
+
+            {/* Transactions list */}
+            {activeTab === "Transactions" && (() => {
+              const filtered = transactionsData.filter(t =>
+                transactionFilter === "Trades" ? t.type === "trade" :
+                transactionFilter === "Deposits" ? t.type === "deposit" :
+                transactionFilter === "Withdrawals" ? t.type === "withdrawal" : true
+              );
+              return (
+                <div className="flex flex-col items-start self-stretch w-full">
+                  {filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 w-full gap-2 text-brain-v1baby-blue-30">
+                      <span className="text-2xl">📋</span>
+                      <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No {transactionFilter.toLowerCase()} found</span>
+                    </div>
+                  ) : filtered.map((tx, index) => (
+                    <div key={tx.id} className="flex flex-col self-stretch w-full">
+                      <div className="flex items-center gap-2 self-stretch w-full py-4">
+                        {/* Transaction icon */}
+                        <div className="w-10 h-10 bg-[#0a0c10] rounded-full flex items-center justify-center flex-shrink-0">
+                          {tx.type === "deposit" ? (
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                              <path d="M15 5L5 15M5 15H13M5 15V7" stroke={tx.positive ? "#42bf23" : "#d20344"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tx.type === "withdrawal" ? (
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                              <path d="M5 15L15 5M15 5H7M15 5V13" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                              <path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        {/* Label + time */}
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <div className="flex flex-col gap-1 flex-shrink-0">
+                            <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">
+                              {tx.label}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">
+                                {tx.time}
+                              </span>
+                              <div className="w-1 h-1 bg-brain-v1baby-blue-30 rounded-full flex-shrink-0" />
+                              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">
+                                {tx.date}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Amount */}
+                          <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-xl text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
+                            {tx.amount}
+                          </span>
+                        </div>
+                      </div>
+                      {index < filtered.length - 1 && (
+                        <img className="self-stretch w-full h-px" alt="divider" src="/figmaAssets/vector-933.svg" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </ScrollArea>
       </div>

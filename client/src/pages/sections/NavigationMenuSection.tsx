@@ -88,6 +88,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
   // ── Slide-in notifications panel ──
   const NotificationsPanel = () => (
+    <>
+      {/* Dim overlay behind the panel */}
+      <div
+        className={`fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setNotificationsOpen(false)}
+      />
     <div
       ref={notifPanelRef}
       className={`fixed z-40 top-[72px] flex flex-col gap-0 w-[300px] rounded-2xl border border-[#1d2131] bg-[#0d1017] shadow-2xl
@@ -145,6 +151,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         </Link>
       </div>
     </div>
+    </>
   );
 
   // ── Chat history slide-out panel ──
