@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNav } from "@/lib/navContext";
 
 const trendingAgentsRow1 = [
   { id: "alphaflow", name: "AlphaFlow", description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.", avatarSrc: "/figmaAssets/avatars-3.svg", avatarType: "img" },
@@ -87,7 +86,6 @@ const AgentSection = ({ title, row1, row2 }: { title: string; row1: Agent[]; row
 );
 
 export const MainContentSection = (): JSX.Element => {
-  const { toggleNav } = useNav();
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -114,14 +112,6 @@ export const MainContentSection = (): JSX.Element => {
     <div className="relative w-full bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
       {/* Top bar: collapse btn left, search icon right */}
       <div className="flex items-center justify-between px-4 pt-4 pb-0 gap-3">
-        {/* Collapse nav button */}
-        <button
-          onClick={toggleNav}
-          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
-        >
-          <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
-        </button>
-
         {/* Expandable search */}
         {searchOpen && (
           <div className="flex-1 flex items-center gap-2 bg-[#0a0c10] border border-[#1d2131] rounded-full px-3 py-2 focus-within:border-[#414965] transition-colors">

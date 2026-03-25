@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNav } from "@/lib/navContext";
 
 type AgentStatus = "active" | "inactive" | "paused";
 
@@ -214,7 +213,6 @@ const AgentCard = ({
 };
 
 export const AgentsActivityPage = (): JSX.Element => {
-  const { toggleNav } = useNav();
   const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -278,14 +276,6 @@ export const AgentsActivityPage = (): JSX.Element => {
     <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
       {/* Header row: collapse btn + pill tabs + search */}
       <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
-        {/* Collapse nav button */}
-        <button
-          onClick={toggleNav}
-          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
-        >
-          <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
-        </button>
-
         {/* Pill filter tabs — centered */}
         <div className="flex-1 flex items-center justify-center">
           {searchOpen ? (

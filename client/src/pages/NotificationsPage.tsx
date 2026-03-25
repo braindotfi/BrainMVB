@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNav } from "@/lib/navContext";
 
 interface Notification {
   id: string;
@@ -35,7 +34,6 @@ const EthAvatar = () => (
 );
 
 export const NotificationsPage = (): JSX.Element => {
-  const { toggleNav } = useNav();
   const [notifications, setNotifications] = useState(initialNotifications);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -52,14 +50,6 @@ export const NotificationsPage = (): JSX.Element => {
     <div className="flex flex-col h-full bg-[#080b14] rounded-3xl border border-solid border-[#1a1f2e] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
-        {/* Collapse nav button */}
-        <button
-          onClick={toggleNav}
-          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
-        >
-          <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
-        </button>
-
         {/* Mark all as read */}
         {unreadCount > 0 && (
           <button

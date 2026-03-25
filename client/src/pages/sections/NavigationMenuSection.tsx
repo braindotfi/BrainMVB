@@ -353,8 +353,15 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <div className="flex flex-col flex-1 mx-2 mt-2 gap-4 pt-2 pb-0 overflow-y-auto">
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
-            <div className="flex items-center gap-2 px-2 py-0 w-full">
+            <div className="flex items-center justify-between px-2 py-0 w-full">
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
+              <button
+                onClick={onToggle}
+                title="Collapse menu"
+                className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+              >
+                <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
+              </button>
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">

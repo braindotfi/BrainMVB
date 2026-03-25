@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useNav } from "@/lib/navContext";
 import {
   getChatSession,
   saveChatSession,
@@ -35,7 +34,6 @@ const newSession = (): ChatSession => ({
 });
 
 export const AssistantPage = (): JSX.Element => {
-  const { toggleNav } = useNav();
   const [location] = useLocation();
   const [session, setSession] = useState<ChatSession>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -164,16 +162,6 @@ export const AssistantPage = (): JSX.Element => {
       {/* Landing / empty state */}
       {isOnlyWelcome ? (
         <div className="flex flex-col h-full overflow-hidden">
-          {/* Landing header — collapse button only */}
-          <div className="flex items-center px-4 py-4 flex-shrink-0">
-            <button
-              onClick={toggleNav}
-              className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
-            >
-              <img src="/figmaAssets/nav-collapse-icon.png" alt="Menu" className="w-full h-full" />
-            </button>
-          </div>
-
           {/* Centered content */}
           <div className="flex flex-col flex-1 items-center justify-center gap-10 px-16">
             {/* Headline */}
