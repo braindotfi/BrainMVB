@@ -2,17 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { launchpadAgents } from "./LaunchpadPage";
-
-const MOCK_CHART = [
-  { t: "00:00", p: 0.0050 }, { t: "01:00", p: 0.0048 }, { t: "02:00", p: 0.0052 },
-  { t: "03:00", p: 0.0055 }, { t: "04:00", p: 0.0060 }, { t: "05:00", p: 0.0058 },
-  { t: "06:00", p: 0.0064 }, { t: "07:00", p: 0.0071 }, { t: "08:00", p: 0.0068 },
-  { t: "09:00", p: 0.0075 }, { t: "10:00", p: 0.0082 }, { t: "11:00", p: 0.0079 },
-  { t: "12:00", p: 0.0085 }, { t: "13:00", p: 0.0090 }, { t: "14:00", p: 0.0088 },
-  { t: "15:00", p: 0.0092 }, { t: "16:00", p: 0.0098 }, { t: "17:00", p: 0.0095 },
-  { t: "18:00", p: 0.0100 }, { t: "19:00", p: 0.0108 }, { t: "20:00", p: 0.0115 },
-  { t: "21:00", p: 0.0112 }, { t: "22:00", p: 0.0120 }, { t: "23:00", p: 0.0118 },
-];
+import { TradingViewChart } from "@/components/TradingViewChart";
 
 const MOCK_TRADES = [
   { wallet: "0xab1...2c3d", type: "buy", amount: "42,000 $ALPHA", value: "$354", time: "2m ago" },
@@ -30,45 +20,13 @@ const MOCK_REPLIES = [
   { user: "0x44a...f291", avatar: "/figmaAssets/avatars-2.svg", msg: "What's the fee structure for this agent?", time: "1h ago", likes: 2 },
 ];
 
-const MiniChart = ({ positive }: { positive: boolean }) => {
-  const h = 80;
-  const w = 500;
-  const prices = MOCK_CHART.map((d) => d.p);
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const range = max - min || 1;
-  const pts = MOCK_CHART.map((d, i) => {
-    const x = (i / (MOCK_CHART.length - 1)) * w;
-    const y = h - ((d.p - min) / range) * h;
-    return `${x},${y}`;
-  }).join(" ");
-
-  const color = positive ? "#22c55e" : "#ef4444";
-  const fillId = `grad-${positive}`;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full">
-      <defs>
-        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon
-        points={`0,${h} ${pts} ${w},${h}`}
-        fill={`url(#${fillId})`}
-      />
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-};
 
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const [tradeTab, setTradeTab] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
-  const [chartPeriod, setChartPeriod] = useState("1D");
+  const [chartInterval, setChartInterval] = useState("60");
   const [replyText, setReplyText] = useState("");
 
   const agent = launchpadAgents.find((a) => a.id === params.id);
@@ -140,21 +98,26 @@ export const AgentDetailPage = (): JSX.Element => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 p-1 bg-brain-v1baby-blue-15 rounded-xl">
-                  {["1H", "1D", "1W", "1M"].map((p) => (
+                  {[
+                    { label: "1H", interval: "60" },
+                    { label: "1D", interval: "D" },
+                    { label: "1W", interval: "W" },
+                    { label: "1M", interval: "M" },
+                  ].map((p) => (
                     <button
-                      key={p}
-                      onClick={() => setChartPeriod(p)}
-                      className={`px-2.5 py-1 rounded-lg text-xs [font-family:'Gilroy-SemiBold',Helvetica] transition-colors ${chartPeriod === p ? "bg-brain-v1headerfooterbg text-brain-v1white" : "text-brain-v1baby-blue-30 hover:text-brain-v1white"}`}
+                      key={p.label}
+                      onClick={() => setChartInterval(p.interval)}
+                      className={`px-2.5 py-1 rounded-lg text-xs [font-family:'Gilroy-SemiBold',Helvetica] transition-colors ${chartInterval === p.interval ? "bg-brain-v1headerfooterbg text-brain-v1white" : "text-brain-v1baby-blue-30 hover:text-brain-v1white"}`}
                     >
-                      {p}
+                      {p.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Chart */}
-              <div className="w-full h-36 bg-brain-v1baby-blue-15 rounded-xl overflow-hidden border border-[#1d2131]">
-                <MiniChart positive={isPositive} />
+              {/* TradingView Chart */}
+              <div className="w-full h-80 rounded-xl overflow-hidden border border-[#1d2131] bg-[#0d1017]">
+                <TradingViewChart symbol="BTCUSDT" interval={chartInterval} />
               </div>
 
               {/* Market stats */}

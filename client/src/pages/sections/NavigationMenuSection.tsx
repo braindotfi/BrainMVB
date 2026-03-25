@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Separator } from "@/components/ui/separator";
+import {
+  getChatSessions,
+  deleteChatSession,
+  formatSessionTime,
+  type ChatSession,
+} from "@/lib/chatHistory";
 
 const mainMenuItems = [
   { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-3.svg", path: "/launchpad", emoji: "🚀" },
@@ -24,10 +30,13 @@ interface Props {
 }
 
 export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Props): JSX.Element => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+  const historyPanelRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/" || location === "";
@@ -39,115 +48,98 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
   const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
-  // Close panel on outside click
+  const loadSessions = () => setChatSessions(getChatSessions());
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    loadSessions();
+    window.addEventListener("chat-sessions-updated", loadSessions);
+    return () => window.removeEventListener("chat-sessions-updated", loadSessions);
+  }, []);
+
+  // Refresh sessions when history panel opens
+  useEffect(() => {
+    if (chatHistoryOpen) loadSessions();
+  }, [chatHistoryOpen]);
+
+  // Close panels on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
         setNotificationsOpen(false);
       }
+      if (historyPanelRef.current && !historyPanelRef.current.contains(e.target as Node)) {
+        setChatHistoryOpen(false);
+      }
     };
-    if (notificationsOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [notificationsOpen]);
+    if (notificationsOpen || chatHistoryOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [notificationsOpen, chatHistoryOpen]);
 
-  // ── Slide-in notifications panel (rendered as fixed overlay) ──
+  const openSession = (id: string) => {
+    setChatHistoryOpen(false);
+    navigate(`/assistant?session=${id}`);
+  };
+
+  const removeSession = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteChatSession(id);
+    loadSessions();
+  };
+
+  // ── Slide-in notifications panel ──
   const NotificationsPanel = () => (
     <div
-      ref={panelRef}
+      ref={notifPanelRef}
       className={`fixed z-40 top-[72px] flex flex-col gap-0 w-[300px] rounded-2xl border border-[#1d2131] bg-[#0d1017] shadow-2xl
         transition-all duration-300 ease-out
         ${notificationsOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
       `}
       style={{ left: collapsed ? "76px" : "280px" }}
     >
-      {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2131]">
         <div className="flex items-center gap-2">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">
-            Notifications
-          </span>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Notifications</span>
           {unreadCount > 0 && (
             <div className="inline-flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-orange rounded-full">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3">
-                {unreadCount}
-              </span>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3">{unreadCount}</span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              className="text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors"
-            >
-              Mark all read
-            </button>
+            <button onClick={markAllRead} className="text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors">Mark all read</button>
           )}
-          <button
-            onClick={() => setNotificationsOpen(false)}
-            className="w-6 h-6 flex items-center justify-center rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors text-brain-v1baby-blue-60 hover:text-brain-v1white"
-          >
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-              <path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
+          <button onClick={() => setNotificationsOpen(false)} className="w-6 h-6 flex items-center justify-center rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors text-brain-v1baby-blue-60 hover:text-brain-v1white">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
           </button>
         </div>
       </div>
-
-      {/* Notification items */}
       <div className="flex flex-col overflow-y-auto max-h-[420px]">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 gap-2 text-brain-v1baby-blue-30">
             <span className="text-2xl">🔔</span>
             <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No notifications</span>
           </div>
-        ) : (
-          notifications.map((n, i) => (
-            <div
-              key={n.id}
-              className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-brain-v1baby-blue-15 group ${
-                i < notifications.length - 1 ? "border-b border-[#1d2131]" : ""
-              } ${!n.read ? "bg-brain-v1baby-blue-5" : ""}`}
-            >
-              <div className="w-8 h-8 rounded-xl bg-brain-v1baby-blue-15 flex items-center justify-center text-base flex-shrink-0 mt-0.5">
-                {n.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs leading-relaxed [font-family:'Gilroy-SemiBold',Helvetica] ${n.read ? "text-brain-v1baby-blue-60" : "text-brain-v1white"}`}>
-                  {n.title}
-                </p>
-                <p className="text-[11px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 leading-relaxed">
-                  {n.body}
-                </p>
-                <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-1">
-                  {n.time}
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                {!n.read && (
-                  <div className="w-2 h-2 bg-brain-v1dark-orange rounded-full" />
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30"
-                >
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                    <path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
+        ) : notifications.map((n, i) => (
+          <div key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-brain-v1baby-blue-15 group ${i < notifications.length - 1 ? "border-b border-[#1d2131]" : ""} ${!n.read ? "bg-brain-v1baby-blue-5" : ""}`}>
+            <div className="w-8 h-8 rounded-xl bg-brain-v1baby-blue-15 flex items-center justify-center text-base flex-shrink-0 mt-0.5">{n.icon}</div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs leading-relaxed [font-family:'Gilroy-SemiBold',Helvetica] ${n.read ? "text-brain-v1baby-blue-60" : "text-brain-v1white"}`}>{n.title}</p>
+              <p className="text-[11px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 leading-relaxed">{n.body}</p>
+              <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-1">{n.time}</p>
             </div>
-          ))
-        )}
+            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+              {!n.read && <div className="w-2 h-2 bg-brain-v1dark-orange rounded-full" />}
+              <button onClick={(e) => { e.stopPropagation(); dismiss(n.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" /></svg>
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
-
-      {/* Footer */}
       <div className="px-4 py-3 border-t border-[#1d2131]">
         <Link href="/notifications">
-          <button
-            onClick={() => setNotificationsOpen(false)}
-            className="w-full py-2 text-[11px] text-brain-v1baby-blue-30 hover:text-brain-v1white [font-family:'Gilroy-SemiBold',Helvetica] transition-colors text-center rounded-xl hover:bg-brain-v1baby-blue-15"
-          >
+          <button onClick={() => setNotificationsOpen(false)} className="w-full py-2 text-[11px] text-brain-v1baby-blue-30 hover:text-brain-v1white [font-family:'Gilroy-SemiBold',Helvetica] transition-colors text-center rounded-xl hover:bg-brain-v1baby-blue-15">
             View all notifications →
           </button>
         </Link>
@@ -155,45 +147,122 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
     </div>
   );
 
+  // ── Chat history slide-out panel ──
+  const ChatHistoryPanel = () => (
+    <>
+      {/* Dim overlay */}
+      {chatHistoryOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-opacity duration-300"
+          onClick={() => setChatHistoryOpen(false)}
+        />
+      )}
+
+      <div
+        ref={historyPanelRef}
+        className={`fixed z-40 top-[72px] bottom-[72px] flex flex-col w-[280px] rounded-2xl border border-[#1d2131] bg-[#0d1017] shadow-2xl
+          transition-all duration-300 ease-out
+          ${chatHistoryOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
+        `}
+        style={{ left: collapsed ? "76px" : "280px" }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2131] flex-shrink-0">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Chat History</span>
+          <button onClick={() => setChatHistoryOpen(false)} className="w-6 h-6 flex items-center justify-center rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors text-brain-v1baby-blue-60 hover:text-brain-v1white">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {chatSessions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-brain-v1baby-blue-30 px-4 text-center">
+              <span className="text-3xl">💬</span>
+              <p className="text-xs [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">
+                No chat history yet. Start a conversation with Brain AI.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {chatSessions.map((sess, i) => (
+                <button
+                  key={sess.id}
+                  onClick={() => openSession(sess.id)}
+                  className={`flex items-start gap-3 px-4 py-3 hover:bg-brain-v1baby-blue-15 transition-colors text-left group w-full ${i < chatSessions.length - 1 ? "border-b border-[#1d2131]" : ""}`}
+                >
+                  <div className="w-8 h-8 rounded-xl bg-brain-v1dark-purple flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-3 h-3 bg-brain-v1purple rounded-full opacity-80" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1white truncate">{sess.title}</p>
+                    <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5">
+                      {formatSessionTime(sess.updatedAt)} · {sess.messages.length - 1} messages
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => removeSession(e, sess.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1dark-pink-red"
+                  >
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                  </button>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-[#1d2131] flex-shrink-0">
+          <button
+            onClick={() => { setChatHistoryOpen(false); navigate("/assistant"); window.dispatchEvent(new Event("new-chat")); }}
+            className="w-full py-2.5 bg-brain-v1dark-orange rounded-xl text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity"
+          >
+            + New Chat
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   if (collapsed) {
     return (
       <>
         <NotificationsPanel />
+        <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
           <div className="flex flex-col flex-1 items-center mt-2 gap-1 pt-2 w-full px-2">
-            <button
-              onClick={onToggle}
-              title="Expand menu"
-              className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <button onClick={onToggle} title="Expand menu" className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
 
             {mainMenuItems.map((item) => (
-              <Link key={item.id} href={item.path}>
-                <button
-                  title={item.label}
-                  className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                    isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
-                  }`}
-                >
-                  <img className="w-5 h-5" alt={item.label} src={item.icon} />
-                </button>
-              </Link>
+              <div key={item.id} className="w-full flex flex-col items-center">
+                {item.id === "assistant" ? (
+                  <div className="relative w-full flex flex-col items-center">
+                    <Link href={item.path}>
+                      <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <img className="w-5 h-5" alt={item.label} src={item.icon} />
+                      </button>
+                    </Link>
+                    <button
+                      title="Chat History"
+                      onClick={() => setChatHistoryOpen((v) => !v)}
+                      className={`w-5 h-3 flex items-center justify-center rounded transition-colors ${chatHistoryOpen ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-30 hover:text-brain-v1white"}`}
+                    >
+                      <svg width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <Link href={item.path}>
+                    <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                      <img className="w-5 h-5" alt={item.label} src={item.icon} />
+                    </button>
+                  </Link>
+                )}
+              </div>
             ))}
 
             <div className="w-8 h-px bg-[#1d2132] my-1" />
 
-            {/* Notifications icon */}
-            <button
-              title="Notifications"
-              onClick={() => setNotificationsOpen((v) => !v)}
-              className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
-              }`}
-            >
+            <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
               <img className="w-5 h-5" alt="Notifications" src="/figmaAssets/navbar-icons-2.svg" />
               {unreadCount > 0 && (
                 <div className="absolute top-0 right-0 w-4 h-4 bg-brain-v1dark-orange rounded-full flex items-center justify-center">
@@ -202,23 +271,15 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               )}
             </button>
 
-            {/* Settings icon */}
             <Link href="/settings">
-              <button
-                title="Settings"
-                className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors"
-              >
+              <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
                 <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
               </button>
             </Link>
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button
-              title="Create an Agent"
-              onClick={onCreateAgent}
-              className="flex items-center justify-center w-9 h-9 bg-brain-v1dark-orange rounded-full hover:opacity-80 transition-opacity"
-            >
+            <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-brain-v1dark-orange rounded-full hover:opacity-80 transition-opacity">
               <img className="w-4 h-4" alt="Create" src="/figmaAssets/icons-24.svg" />
             </button>
             <button title="Logout" className="flex items-center justify-center w-9 h-9 bg-brain-v1dark-pink-red rounded-full hover:opacity-80 transition-opacity">
@@ -233,41 +294,55 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
   return (
     <>
       <NotificationsPanel />
+      <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] min-h-[calc(100vh-130px)] rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
         <div className="flex flex-col flex-1 mx-2 mt-2 gap-4 pt-2 pb-0 overflow-y-auto">
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center justify-between gap-2 px-2 py-0 w-full">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">
-                Main Menu
-              </span>
-              <button
-                onClick={onToggle}
-                title="Collapse menu"
-                className="w-5 h-5 flex items-center justify-center rounded hover:bg-brain-v1baby-blue-15 transition-colors"
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M8 2L3 6L8 10" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
+              <button onClick={onToggle} title="Collapse menu" className="w-5 h-5 flex items-center justify-center rounded hover:bg-brain-v1baby-blue-15 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L3 6L8 10" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">
               {mainMenuItems.map((item) => (
-                <Link key={item.id} href={item.path} className="w-full">
-                  <button
-                    className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${
-                      isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
-                    }`}
-                  >
-                    <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} />
-                    <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${
-                      isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"
-                    }`}>
-                      {item.emoji ? `${item.emoji} ` : ""}{item.label}
-                    </span>
-                  </button>
-                </Link>
+                <div key={item.id} className="w-full">
+                  {item.id === "assistant" ? (
+                    <div className="flex flex-col w-full">
+                      <div className="flex items-center w-full group">
+                        <Link href={item.path} className="flex-1">
+                          <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                            <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} />
+                            <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                              {item.label}
+                            </span>
+                          </button>
+                        </Link>
+                        {/* History toggle chevron */}
+                        <button
+                          onClick={() => setChatHistoryOpen((v) => !v)}
+                          title="Chat History"
+                          className={`w-7 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${chatHistoryOpen ? "text-brain-v1light-orange bg-brain-v1baby-blue-15" : "text-brain-v1baby-blue-30 hover:text-brain-v1white hover:bg-brain-v1baby-blue-15"}`}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-200 ${chatHistoryOpen ? "rotate-180" : ""}`}>
+                            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Link href={item.path} className="w-full">
+                      <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} />
+                        <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                          {item.emoji ? `${item.emoji} ` : ""}{item.label}
+                        </span>
+                      </button>
+                    </Link>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -277,42 +352,26 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
           {/* Other section */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center justify-center gap-2 px-2 py-0 w-full">
-              <span className="flex-1 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">
-                Other
-              </span>
+              <span className="flex-1 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Other</span>
             </div>
 
-            {/* Notifications button — slides in panel */}
             <button
               onClick={() => setNotificationsOpen((v) => !v)}
-              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${
-                notificationsOpen ? "bg-brain-v1baby-blue-15" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
-              }`}
+              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-15" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
               <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src="/figmaAssets/navbar-icons-2.svg" />
-              <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">
-                Notifications
-              </span>
+              <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Notifications</span>
               {unreadCount > 0 && (
                 <div className="inline-flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-orange rounded-full">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3 whitespace-nowrap">
-                    {unreadCount}
-                  </span>
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-[10px] leading-3 whitespace-nowrap">{unreadCount}</span>
                 </div>
               )}
             </button>
 
-            {/* Settings */}
             <Link href="/settings" className="w-full">
-              <button
-                className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${
-                  isActive("/settings") ? "bg-brain-v1baby-blue-15" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
-                }`}
-              >
+              <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1baby-blue-15" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                 <img className="w-6 h-6 flex-shrink-0" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
-                <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">
-                  Settings
-                </span>
+                <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Settings</span>
               </button>
             </Link>
           </div>
@@ -320,20 +379,13 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
         {/* Bottom buttons */}
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
-          <button
-            onClick={onCreateAgent}
-            className="flex items-center justify-center gap-1 px-3 py-2 w-full bg-brain-v1dark-orange rounded-[100px] hover:opacity-80 transition-opacity"
-          >
+          <button onClick={onCreateAgent} className="flex items-center justify-center gap-1 px-3 py-2 w-full bg-brain-v1dark-orange rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-4 h-4 flex-shrink-0" alt="Create" src="/figmaAssets/icons-24.svg" />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1light-orange text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">
-              Create an Agent
-            </span>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1light-orange text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">Create Agent</span>
           </button>
           <button className="flex items-center justify-center gap-1 px-3 py-2 w-full bg-brain-v1dark-pink-red rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-4 h-4 flex-shrink-0" alt="Logout" src="/figmaAssets/icons-10.svg" />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1pink-red text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">
-              Logout
-            </span>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1pink-red text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">Logout</span>
           </button>
         </div>
       </nav>

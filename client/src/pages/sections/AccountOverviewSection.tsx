@@ -134,7 +134,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent }: P
                     </svg>
                   </div>
                   <div className="text-left">
-                    <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Create New Agent</div>
+                    <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Create Agent</div>
                     <div className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-30 text-xs">Launch a new AI agent</div>
                   </div>
                 </button>
