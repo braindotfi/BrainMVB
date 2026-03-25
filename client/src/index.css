@@ -1,0 +1,235 @@
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .all-\[unset\] {
+    all: unset;
+  }
+}
+
+@import url("https://fonts.googleapis.com/css?family=JetBrains+Mono:500,700");
+
+:root {
+  --brain-v1baby-blue-100: rgba(168, 185, 244, 1);
+  --brain-v1baby-blue-15: rgba(34, 39, 55, 1);
+  --brain-v1baby-blue-30: rgba(65, 73, 101, 1);
+  --brain-v1baby-blue-5: rgba(17, 20, 27, 1);
+  --brain-v1baby-blue-60: rgba(108, 119, 157, 1);
+  --brain-v1dark-dark-purple: rgba(18, 3, 45, 1);
+  --brain-v1dark-green: rgba(18, 53, 9, 1);
+  --brain-v1dark-orange: rgba(74, 35, 0, 1);
+  --brain-v1dark-pink-red: rgba(53, 0, 17, 1);
+  --brain-v1dark-purple: rgba(36, 7, 87, 1);
+  --brain-v1green: rgba(66, 191, 35, 1);
+  --brain-v1headerfooterbg: rgba(6, 7, 10, 1);
+  --brain-v1highlight-dropdown-bg: rgba(10, 12, 16, 1);
+  --brain-v1light-orange: rgba(255, 149, 0, 1);
+  --brain-v1pink-red: rgba(210, 3, 68, 1);
+  --brain-v1purple: rgba(118, 49, 238, 1);
+  --brain-v1stroke-2: rgba(29, 33, 50, 1);
+  --brain-v1white: rgba(255, 255, 255, 1);
+  --brain-v1white-30: rgba(255, 255, 255, 0.3);
+  --braindark-purple: rgba(36, 7, 87, 1);
+  --brainpurple: rgba(118, 49, 238, 1);
+  --shared-colorsbaby-blue-5: rgba(17, 20, 27, 1);
+  --shared-colorsbaby-blue-60: rgba(108, 119, 157, 1);
+  --shared-colorsheaderfooterbg: rgba(6, 7, 10, 1);
+  --shared-colorsstroke-2: rgba(29, 33, 50, 1);
+  --subheading-2x-small-font-family: "Inter", Helvetica;
+  --subheading-2x-small-font-size: 11px;
+  --subheading-2x-small-font-style: normal;
+  --subheading-2x-small-font-weight: 500;
+  --subheading-2x-small-letter-spacing: 0.22px;
+  --subheading-2x-small-line-height: 12px;
+  --white: rgba(255, 255, 255, 1);
+}
+
+:root {
+  --animate-spin: spin 1s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+  animation: var(--animate-spin);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes image-glow {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.74, 0.25, 0.76, 1);
+  }
+
+  10% {
+    opacity: 0.7;
+    animation-timing-function: cubic-bezier(0.12, 0.01, 0.08, 0.99);
+  }
+
+  to {
+    opacity: 0.4;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  90%,
+  to {
+    background-position: calc(-100% - var(--shimmer-width)) 0;
+  }
+
+  30%,
+  60% {
+    background-position: calc(100% + var(--shimmer-width)) 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --card: transparent;
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 215 20.2% 65.1%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+
+    --card: transparent;
+    --card-foreground: 213 31% 91%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 216 34% 17%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
