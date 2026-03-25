@@ -111,9 +111,9 @@ export const MainContentSection = (): JSX.Element => {
 
   return (
     <div className="relative w-full bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
-      {/* Top bar: collapse btn left, search icon right */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-0 gap-3">
-        {/* Expandable search */}
+      {/* Top bar: search expands from the right */}
+      <div className="flex items-center px-4 pt-4 pb-0 gap-3">
+        {/* Expandable search — grows to fill space when open */}
         {searchOpen && (
           <div className="flex-1 flex items-center gap-2 bg-[#0a0c10] border border-[#1d2131] rounded-full px-3 py-2 focus-within:border-[#414965] transition-colors">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
@@ -138,10 +138,10 @@ export const MainContentSection = (): JSX.Element => {
           </div>
         )}
 
-        {/* Search toggle button */}
+        {/* Search toggle button — always on the right */}
         <button
           onClick={handleSearchToggle}
-          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ml-auto ${
             searchOpen
               ? "bg-brain-v1dark-orange text-white"
               : "bg-[#0a0c10] text-[#6c779d] hover:text-brain-v1white"

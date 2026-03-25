@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
@@ -313,83 +313,124 @@ const AgentTrioRow = ({ agents, onAgentClick }: { agents: LaunchpadAgent[]; onAg
 export const LaunchpadPage = (): JSX.Element => {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("trending");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const filtered = getFiltered(activeTab);
+  const handleSearchToggle = () => {
+    if (searchOpen) {
+      setSearchOpen(false);
+      setSearchQuery("");
+    } else {
+      setSearchOpen(true);
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
+  };
+
+  const baseAgents = getFiltered(activeTab);
+  const filtered = searchQuery.trim()
+    ? baseAgents.filter(
+        (a) =>
+          a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          a.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          a.description.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : baseAgents;
+
   const rows: LaunchpadAgent[][] = [];
   for (let i = 0; i < filtered.length; i += 3) rows.push(filtered.slice(i, i + 3));
 
-  const sectionLabel = activeTab === "trending" ? "Trending Agents" : activeTab === "new" ? "New Agents" : "All Agents";
+  const sectionLabel = searchQuery.trim()
+    ? `Results (${filtered.length})`
+    : activeTab === "trending" ? "Trending Agents" : activeTab === "new" ? "New Agents" : "All Agents";
 
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
       style={{ background: "#11141b", border: "1px solid #1d2132", borderRadius: "24px" }}
     >
-      {/* ── Header bar (64px, bg-[#11141b]) ── */}
-      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
-        <div className="absolute flex items-center" style={{ top: "16px", left: "16px", right: "16px" }}>
-          {/* Left: lines/filter icon button */}
-          <button
-            data-testid="filter-btn"
-            className="flex items-center justify-center flex-shrink-0 transition-colors hover:opacity-80"
-            style={{ width: "32px", height: "32px", borderRadius: "100px", background: "#1d2132" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M13 4H3M11 8H5M9 12H7" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-          </button>
-
-          {/* Center: pill tabs — All / Trending / New */}
-          <div
-            className="absolute flex items-center"
-            style={{
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "#06070a",
-              borderRadius: "400px",
-              padding: "2px",
-              gap: "2px",
-              width: "300px",
-            }}
-          >
-            {(["all", "trending", "new"] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                data-testid={`tab-${tab}`}
-                onClick={() => setActiveTab(tab)}
-                className="flex flex-[1_0_0] items-center justify-center transition-colors"
-                style={{
-                  padding: "6px 16px",
-                  borderRadius: "100px",
-                  background: activeTab === tab ? "#240757" : "transparent",
-                  fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  lineHeight: "16px",
-                  color: activeTab === tab ? "#7631ee" : "#414965",
-                  whiteSpace: "nowrap",
-                  cursor: "pointer",
-                }}
-              >
-                {tab === "all" ? "All" : tab === "trending" ? "Trending" : "New"}
-              </button>
-            ))}
-          </div>
-
-          {/* Right: grid icon button */}
-          <button
-            data-testid="create-btn"
-            className="flex items-center justify-center flex-shrink-0 transition-colors hover:opacity-80 ml-auto"
-            style={{ width: "32px", height: "32px", borderRadius: "100px", background: "#1d2132" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="5" height="5" rx="1" fill="#6c779d" />
-              <rect x="9" y="2" width="5" height="5" rx="1" fill="#6c779d" />
-              <rect x="2" y="9" width="5" height="5" rx="1" fill="#6c779d" />
-              <rect x="9" y="9" width="5" height="5" rx="1" fill="#6c779d" />
-            </svg>
-          </button>
+      {/* ── Header bar (64px) ── */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-4" style={{ height: "64px", background: "#11141b" }}>
+        {/* Center: tabs OR search bar */}
+        <div className="flex-1 flex items-center justify-center">
+          {searchOpen ? (
+            /* Search bar replaces tabs */
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#06070a] border border-[#1d2132] focus-within:border-[#414965] rounded-full transition-colors w-full max-w-[320px]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#414965] flex-shrink-0">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search agents, tickers..."
+                data-testid="search-input"
+                className="bg-transparent text-white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-[#414965] outline-none flex-1"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-[#414965] hover:text-white transition-colors flex-shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Tab pills */
+            <div
+              className="flex items-center"
+              style={{ background: "#06070a", borderRadius: "400px", padding: "2px", gap: "2px" }}
+            >
+              {(["all", "trending", "new"] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  data-testid={`tab-${tab}`}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex items-center justify-center transition-colors"
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: "100px",
+                    background: activeTab === tab ? "#240757" : "transparent",
+                    fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "14px",
+                    lineHeight: "16px",
+                    color: activeTab === tab ? "#7631ee" : "#414965",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                  }}
+                >
+                  {tab === "all" ? "All" : tab === "trending" ? "Trending" : "New"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Right: search toggle button */}
+        <button
+          data-testid="search-toggle-btn"
+          onClick={handleSearchToggle}
+          className={`flex items-center justify-center flex-shrink-0 transition-colors ${
+            searchOpen
+              ? "bg-brain-v1dark-orange text-white"
+              : "text-[#6c779d] hover:text-white"
+          }`}
+          style={{ width: "32px", height: "32px", borderRadius: "100px", background: searchOpen ? undefined : "#1d2132" }}
+        >
+          {searchOpen ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* ── Scrollable content (left-[15px] equivalent padding, gap-[32px]) ── */}
