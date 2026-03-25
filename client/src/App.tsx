@@ -1,4 +1,5 @@
-import { Switch, Route, useLocation } from "wouter";
+import { useState } from "react";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,20 +11,24 @@ import { AssistantPage } from "@/pages/AssistantPage";
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
 import { LaunchpadPage } from "@/pages/LaunchpadPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
+import { NotificationsPage } from "@/pages/NotificationsPage";
 import { HeaderFooterSection } from "@/pages/sections/HeaderFooterSection";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 
 function AppLayout() {
-  const [location] = useLocation();
-  const isFullLayout = location === "/" || location === "";
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [accountCollapsed, setAccountCollapsed] = useState(false);
 
   return (
     <div className="bg-shared-colorsheaderfooterbg w-full min-h-screen flex flex-col">
       <HeaderFooterSection />
 
       <div className="flex flex-row flex-1 w-full gap-2 px-2 py-2">
-        <NavigationMenuSection collapsed={!isFullLayout} />
+        <NavigationMenuSection
+          collapsed={navCollapsed}
+          onToggle={() => setNavCollapsed((v) => !v)}
+        />
 
         <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)]">
           <Switch>
@@ -32,11 +37,15 @@ function AppLayout() {
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/launchpad" component={LaunchpadPage} />
             <Route path="/agent/:id" component={AgentDetailPage} />
+            <Route path="/notifications" component={NotificationsPage} />
             <Route component={NotFound} />
           </Switch>
         </div>
 
-        {isFullLayout && <AccountOverviewSection />}
+        <AccountOverviewSection
+          collapsed={accountCollapsed}
+          onToggle={() => setAccountCollapsed((v) => !v)}
+        />
       </div>
 
       <footer className="flex w-full h-14 items-center justify-between px-6 py-3 bg-shared-colorsheaderfooterbg">
@@ -50,11 +59,7 @@ function AppLayout() {
             Copyright © 2025 Brain Finance. All rights reserved.
           </span>
         </div>
-        <img
-          className="flex-[0_0_auto]"
-          alt="Socials"
-          src="/figmaAssets/socials.svg"
-        />
+        <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
     </div>
   );
