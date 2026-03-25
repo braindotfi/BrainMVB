@@ -52,7 +52,7 @@ const CARDS = [
   { id: "bank",   label: "Bank",    data: bankData    },
 ];
 
-const filterTabs   = ["All", "Cash", "Crypto"];
+// filterTabs is derived per-card (see below, not used as a top-level const)
 const txFilterTabs = ["All", "Trades", "Deposits", "Withdrawals"];
 const mainTabs     = ["Assets", "Transactions"];
 
@@ -229,6 +229,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   /* Contextual data: if "Your Account" use card-specific data, else fixed agent data */
   const isYourAccount = activeAccount === null;
   const currentCardData = isYourAccount ? CARDS[activeCard].data : null;
+
+  // Only the Wallet Address card (index 0) supports the Crypto filter tab
+  const filterTabs = isYourAccount && activeCard === 0
+    ? ["All", "Cash", "Crypto"]
+    : ["All", "Cash"];
+
+  // Reset activeFilter to "All" if current filter isn't available on this card
+  useEffect(() => {
+    if (!filterTabs.includes(activeFilter)) setActiveFilter("All");
+  }, [filterTabs, activeFilter]);
 
   const assetsData   = currentCardData?.assets   ?? walletData.assets;
   const txData       = currentCardData?.transactions ?? walletData.transactions;
