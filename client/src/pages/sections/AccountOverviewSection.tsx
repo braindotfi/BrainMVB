@@ -52,6 +52,21 @@ const CARDS = [
   { id: "bank",   label: "Bank",    data: bankData    },
 ];
 
+/* Mock data for agent debit card */
+const agentDebitData = {
+  assets: [
+    { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dollar", ticker: "USD", value: "$2,040.30",     amount: "2,040.30", category: "cash" },
+    { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dirham", ticker: "AED", value: "AED 7,496.00",  amount: "7,496",    category: "cash" },
+  ],
+  transactions: [
+    { id: "ad1", type: "deposit",    label: "Agent Revenue Credit",  time: "10:00am", date: "20 Sat", amount: "+$820.00",  positive: true  },
+    { id: "ad2", type: "withdrawal", label: "Gas Fee Settlement",    time: "4:30pm",  date: "18 Thur",amount: "-$14.20",   positive: false },
+    { id: "ad3", type: "deposit",    label: "Strategy Payout",       time: "9:15am",  date: "16 Tue", amount: "+$350.00",  positive: true  },
+    { id: "ad4", type: "withdrawal", label: "Platform Fee",          time: "2:00pm",  date: "13 Sat", amount: "-$25.00",   positive: false },
+    { id: "ad5", type: "deposit",    label: "Arbitrage Profit",      time: "7:45am",  date: "10 Wed", amount: "+$198.60",  positive: true  },
+  ],
+};
+
 // filterTabs and txFilterTabs are derived per-card inside the component
 const mainTabs     = ["Assets", "Transactions"];
 
@@ -301,8 +316,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     if (activeCard !== 0 && transactionFilter === "Trades") setTransactionFilter("All");
   }, [activeCard, transactionFilter]);
 
-  const assetsData   = currentCardData?.assets   ?? walletData.assets;
-  const txData       = currentCardData?.transactions ?? walletData.transactions;
+  // For agent accounts: wallet card (0) uses crypto data, debit card (1) uses cash data
+  const agentCardData = !isYourAccount
+    ? (activeCard === 1 ? agentDebitData : walletData)
+    : null;
+  const assetsData = isYourAccount ? (currentCardData?.assets ?? walletData.assets) : agentCardData!.assets;
+  const txData     = isYourAccount ? (currentCardData?.transactions ?? walletData.transactions) : agentCardData!.transactions;
 
   /* ── collapsed state ── */
   if (collapsed) {
@@ -526,24 +545,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   ))}
                 </div>
 
-                {/* Sub-filter pills */}
-                {activeTab === "Assets" ? (
-                  !isYourAccount && (
-                    <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
-                      {filterTabs.map((filter) => (
-                        <button
-                          key={filter}
-                          onClick={() => setActiveFilter(filter)}
-                          className={`flex items-center justify-center px-4 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${activeFilter === filter ? "bg-brain-v1dark-green" : "bg-brain-v1headerfooterbg"}`}
-                        >
-                          <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${activeFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"}`}>
-                            {filter}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )
-                ) : (
+                {/* Sub-filter pills — only shown in Transactions tab */}
+                {activeTab === "Assets" ? null : (
                   <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
                     {txFilterTabs.map((filter) => (
                       <button
