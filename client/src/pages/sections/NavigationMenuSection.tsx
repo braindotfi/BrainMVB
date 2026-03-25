@@ -255,7 +255,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                   <div className="relative w-full flex flex-col items-center">
                     <Link href={item.path}>
                       <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                        <img className="w-5 h-5" alt={item.label} src={item.icon} />
+                        <img className="w-5 h-5" alt={item.label} src={item.icon} style={isActive(item.path) ? { filter: "brightness(0) invert(1)" } : undefined} />
                       </button>
                     </Link>
                     <button
@@ -269,7 +269,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                 ) : (
                   <Link href={item.path}>
                     <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                      <img className="w-5 h-5" alt={item.label} src={item.icon} />
+                      <img className="w-5 h-5" alt={item.label} src={item.icon} style={isActive(item.path) ? { filter: "brightness(0) invert(1)" } : undefined} />
                     </button>
                   </Link>
                 )}
@@ -279,7 +279,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
             <div className="w-8 h-px bg-[#1d2132] my-1" />
 
             <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-              <img className="w-5 h-5" alt="Notifications" src="/figmaAssets/notif-icon.svg" />
+              <img className="w-5 h-5" alt="Notifications" src="/figmaAssets/notif-icon.svg" style={notificationsOpen ? { filter: "brightness(0) invert(1)" } : undefined} />
               {unreadCount > 0 && (
                 <div className="absolute top-0 right-0 flex items-center justify-center p-[2px] bg-[#414965] rounded-[4px] min-w-[14px]">
                   <span className="text-[9px] text-[#a8b9f4] [font-family:'Gilroy-SemiBold',Helvetica] leading-none">{unreadCount}</span>
@@ -290,9 +290,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
             <button
               title="Invite Friends"
               onClick={() => setShareOpen(true)}
-              className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors"
+              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <img src="/figmaAssets/invite-friends-icon.png" alt="Invite Friends" className="w-5 h-5" />
+              <img src={shareOpen ? "/figmaAssets/invite-friends-active.png" : "/figmaAssets/invite-friends-icon.png"} alt="Invite Friends" className="w-5 h-5" />
             </button>
 
             <Link href="/settings">
@@ -339,7 +339,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                       <div className="flex items-center w-full group">
                         <Link href={item.path} className="flex-1">
                           <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                            <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} />
+                            <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} style={isActive(item.path) ? { filter: "brightness(0) invert(1)" } : undefined} />
                             <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                               {item.label}
                             </span>
@@ -365,7 +365,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                   ) : (
                     <Link href={item.path} className="w-full">
                       <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} />
+                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={item.icon} style={isActive(item.path) ? { filter: "brightness(0) invert(1)" } : undefined} />
                         <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                           {item.emoji ? `${item.emoji} ` : ""}{item.label}
                         </span>
@@ -394,7 +394,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               onClick={() => setNotificationsOpen((v) => !v)}
               className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src="/figmaAssets/notif-icon.svg" />
+              <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src="/figmaAssets/notif-icon.svg" style={notificationsOpen ? { filter: "brightness(0) invert(1)" } : undefined} />
               <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
               {unreadCount > 0 && (
                 <div className={`flex items-center justify-center p-[2px] rounded-[4px] ${notificationsOpen ? "bg-[#7631ee]" : "bg-[#414965]"}`}>
@@ -410,10 +410,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
             <button
               onClick={() => setShareOpen(true)}
-              className="flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"
+              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <img src="/figmaAssets/invite-friends-icon.png" alt="Invite Friends" className="w-6 h-6 flex-shrink-0" />
-              <span className="text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1">Invite Friends</span>
+              <img src={shareOpen ? "/figmaAssets/invite-friends-active.png" : "/figmaAssets/invite-friends-icon.png"} alt="Invite Friends" className="w-6 h-6 flex-shrink-0" />
+              <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${shareOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Invite Friends</span>
               <div className="flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-green rounded-full flex-shrink-0">
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
               </div>

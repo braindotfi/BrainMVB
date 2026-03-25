@@ -161,48 +161,111 @@ export const AssistantPage = (): JSX.Element => {
 
       {/* Landing / empty state */}
       {isOnlyWelcome ? (
-        <div className="flex flex-col flex-1 items-center justify-center px-8 gap-8 overflow-y-auto">
-          {/* Brain AI graphic */}
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="relative w-24 h-24">
-              <div className="absolute inset-0 bg-brain-v1dark-purple rounded-full blur-xl opacity-60" />
-              <div className="relative w-24 h-24 bg-brain-v1dark-purple rounded-full flex items-center justify-center border border-[#1d2131]">
-                <div className="w-12 h-12 bg-brain-v1purple rounded-full opacity-70 flex items-center justify-center">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a3 3 0 11.001 6.001A3 3 0 0112 6zm0 14a7.959 7.959 0 01-4.95-1.72C7.22 16.82 9.5 16 12 16s4.78.82 4.95 2.28A7.959 7.959 0 0112 20z" fill="white" />
-                  </svg>
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Landing header */}
+          <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8L10 12" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <button
+                onClick={() => inputRef.current?.focus()}
+                className="flex items-center gap-2 bg-[#0a0c10] pl-1 pr-3 py-1 rounded-full hover:bg-[#1d2131] transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-brain-v1dark-purple flex items-center justify-center flex-shrink-0">
+                  <div className="w-3 h-3 bg-brain-v1purple rounded-full opacity-80" />
+                </div>
+                <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-sm whitespace-nowrap">Ask BRAIN...</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNewChat}
+                className="bg-[#240757] px-3 py-2 rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-xs hover:opacity-80 transition-opacity"
+              >
+                New Chat
+              </button>
+              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="2" y="3" width="12" height="1.5" rx="0.75" fill="#6c779d"/>
+                  <rect x="2" y="7.25" width="8" height="1.5" rx="0.75" fill="#6c779d"/>
+                  <rect x="2" y="11.5" width="10" height="1.5" rx="0.75" fill="#6c779d"/>
+                </svg>
+              </button>
+              <button className="w-8 h-8 rounded-full bg-[#0a0c10] flex items-center justify-center hover:bg-[#1d2131] transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="4" cy="8" r="1.5" fill="#6c779d"/>
+                  <circle cx="12" cy="4" r="1.5" fill="#6c779d"/>
+                  <circle cx="12" cy="12" r="1.5" fill="#6c779d"/>
+                  <path d="M5.5 7.5L10.5 4.5M5.5 8.5L10.5 11.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Centered content */}
+          <div className="flex flex-col flex-1 items-center justify-center gap-10 px-16">
+            {/* Headline */}
+            <div className="w-full max-w-[560px]">
+              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white leading-[40px] text-[32px]">Hi. I'm Brain.</p>
+              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] leading-[40px] text-[32px]">What can I help you with today?</p>
+            </div>
+
+            {/* Input + chips */}
+            <div className="flex flex-col gap-2 w-full max-w-[560px]">
+              {/* Big input field */}
+              <div className="bg-[#0a0c10] h-[100px] rounded-2xl relative overflow-hidden">
+                {!input && (
+                  <div className="absolute left-4 top-[14px] flex items-center gap-1 pointer-events-none">
+                    <div className="w-0.5 h-[18px] bg-white/70 rounded-full animate-pulse" />
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-base ml-1">Ask me a question...</span>
+                  </div>
+                )}
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  className="absolute inset-0 bg-transparent text-white text-base [font-family:'Gilroy-Medium',Helvetica] outline-none resize-none px-4 pt-[14px] pb-12 w-full"
+                />
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <button className="w-8 h-8 rounded-full bg-[#1d2131] flex items-center justify-center hover:bg-[#222737] transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M9.5 5.5A3.5 3.5 0 1 0 5.5 9.5V11a1 1 0 0 0 2 0V9.5A3.5 3.5 0 0 0 9.5 5.5Z" stroke="#6c779d" strokeWidth="1.2"/>
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button className="w-8 h-8 rounded-full bg-[#1d2131] flex items-center justify-center hover:bg-[#222737] transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2 7h10M7 2v10" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim() || chatMutation.isPending}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${input.trim() && !chatMutation.isPending ? "bg-brain-v1dark-orange hover:opacity-80" : "bg-[#1d2131]"}`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M12 7L2 2L4.5 7L2 12L12 7Z" fill={input.trim() && !chatMutation.isPending ? "white" : "#414965"} />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div>
-              <h1 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-3xl mb-1">
-                Brain AI
-              </h1>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm leading-relaxed max-w-sm">
-                Your intelligent assistant for AI agent markets, DeFi protocols, and crypto trading.
-              </p>
-            </div>
-          </div>
 
-          {/* Suggested queries grid */}
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xl">
-            {suggestedQueries.map((q) => (
-              <button
-                key={q.label}
-                onClick={() => handleSend(q.prompt)}
-                className="flex items-start gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl hover:border-[#414965] hover:bg-brain-v1baby-blue-30 transition-all text-left group"
-              >
-                <span className="text-xl flex-shrink-0">{q.icon}</span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-sm leading-relaxed transition-colors">
-                  {q.label}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Input bar on landing */}
-          <div className="w-full max-w-xl">
-            <LandingInput input={input} setInput={setInput} onSend={handleSend} onKeyDown={handleKeyDown} inputRef={inputRef} isPending={chatMutation.isPending} />
+              {/* Suggested chips */}
+              <div className="flex flex-wrap gap-2 items-center justify-center">
+                {["Send USDT to", "Show last 10 transactions", "Review subscriptions", "My wallet balance"].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleSend(chip)}
+                    className="bg-[#222737] flex items-center justify-center px-[10px] py-1 rounded-full hover:bg-[#2d3347] transition-colors"
+                  >
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-xs whitespace-nowrap">{chip}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
