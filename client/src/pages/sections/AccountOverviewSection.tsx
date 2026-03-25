@@ -116,6 +116,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
           {/* Dropdown trigger */}
           <div className="relative flex-shrink-0" ref={dropdownRef}>
+            {/* Shade overlay when dropdown is open */}
+            {dropdownOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+                onClick={() => setDropdownOpen(false)}
+              />
+            )}
             <button
               onClick={() => setDropdownOpen((v) => !v)}
               title="Account options"
@@ -136,7 +143,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
             {/* Dropdown menu */}
             {dropdownOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] w-[240px] z-50 bg-[#11141b] border border-[#1d2131] rounded-2xl shadow-2xl overflow-hidden">
+              <div className="absolute right-0 top-[calc(100%+6px)] w-[240px] z-[51] bg-[#11141b] border border-[#1d2131] rounded-2xl shadow-2xl overflow-hidden">
                 {/* Create New Agent option */}
                 <button
                   onClick={() => {
