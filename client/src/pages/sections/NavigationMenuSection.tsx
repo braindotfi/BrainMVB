@@ -211,7 +211,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         {/* Dim overlay */}
         {chatHistoryOpen && (
           <div
-            className="fixed inset-0 z-30 transition-opacity duration-300"
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-opacity duration-300"
             onClick={() => setChatHistoryOpen(false)}
           />
         )}
