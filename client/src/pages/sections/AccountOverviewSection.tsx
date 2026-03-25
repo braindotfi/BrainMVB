@@ -528,19 +528,21 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
                 {/* Sub-filter pills */}
                 {activeTab === "Assets" ? (
-                  <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
-                    {filterTabs.map((filter) => (
-                      <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        className={`flex items-center justify-center px-4 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${activeFilter === filter ? "bg-brain-v1dark-green" : "bg-brain-v1headerfooterbg"}`}
-                      >
-                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${activeFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"}`}>
-                          {filter}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  !isYourAccount && (
+                    <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
+                      {filterTabs.map((filter) => (
+                        <button
+                          key={filter}
+                          onClick={() => setActiveFilter(filter)}
+                          className={`flex items-center justify-center px-4 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${activeFilter === filter ? "bg-brain-v1dark-green" : "bg-brain-v1headerfooterbg"}`}
+                        >
+                          <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${activeFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"}`}>
+                            {filter}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )
                 ) : (
                   <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
                     {txFilterTabs.map((filter) => (
