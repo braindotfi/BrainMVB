@@ -63,6 +63,16 @@ export const AssistantPage = (): JSX.Element => {
     }
   }, [location]);
 
+  // Reset to landing state when "new-chat" event is fired
+  useEffect(() => {
+    const handleNewChat = () => {
+      setSession(newSession());
+      setInput("");
+    };
+    window.addEventListener("new-chat", handleNewChat);
+    return () => window.removeEventListener("new-chat", handleNewChat);
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {

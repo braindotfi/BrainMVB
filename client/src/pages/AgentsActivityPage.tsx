@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type AgentStatus = "active" | "inactive" | "paused";
@@ -202,15 +202,32 @@ const AgentCard = ({ agent }: { agent: Agent }) => {
 
 export const AgentsActivityPage = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const filtered = agents.filter((a) => {
-    if (activeTab === "active") return a.status === "active";
-    if (activeTab === "inactive") return a.status === "inactive" || a.status === "paused";
-    return true;
+    const matchesTab =
+      activeTab === "active" ? a.status === "active" :
+      activeTab === "inactive" ? a.status === "inactive" || a.status === "paused" :
+      true;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q) || a.type.toLowerCase().includes(q);
+    return matchesTab && matchesSearch;
   });
 
   const activeCount = agents.filter((a) => a.status === "active").length;
   const inactiveCount = agents.filter((a) => a.status !== "active").length;
+
+  const handleSearchToggle = () => {
+    if (searchOpen) {
+      setSearchOpen(false);
+      setSearchQuery("");
+    } else {
+      setSearchOpen(true);
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
@@ -224,12 +241,42 @@ export const AgentsActivityPage = (): JSX.Element => {
             {activeCount} active · {inactiveCount} inactive
           </p>
         </div>
-        <button className="flex items-center gap-1.5 px-4 py-2 bg-brain-v1dark-orange rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-sm hover:opacity-80 transition-opacity">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Create Agent
-        </button>
+        <div className="flex items-center gap-2">
+          {searchOpen && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-brain-v1baby-blue-15 border border-[#1d2131] focus-within:border-brain-v1baby-blue-30 rounded-xl transition-colors">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-brain-v1baby-blue-30 flex-shrink-0">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search agents..."
+                className="bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none w-40"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors flex-shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+                </button>
+              )}
+            </div>
+          )}
+          <button
+            onClick={handleSearchToggle}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${searchOpen ? "bg-brain-v1dark-orange text-brain-v1light-orange" : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:text-brain-v1white hover:bg-brain-v1baby-blue-30"}`}
+          >
+            {searchOpen ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
