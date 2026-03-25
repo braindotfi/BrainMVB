@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNav } from "@/lib/navContext";
 
@@ -117,9 +118,19 @@ const statusConfig = {
   },
 };
 
-const AgentCard = ({ agent }: { agent: Agent }) => {
-  const [isActive, setIsActive] = useState(agent.status === "active");
-  const config = statusConfig[agent.status];
+const AgentCard = ({
+  agent,
+  currentStatus,
+  onToggle,
+  isUpdating,
+}: {
+  agent: Agent;
+  currentStatus: AgentStatus;
+  onToggle: () => void;
+  isUpdating: boolean;
+}) => {
+  const config = statusConfig[currentStatus];
+  const isActive = currentStatus === "active";
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] hover:border-brain-v1stroke-2 transition-colors">
@@ -150,10 +161,11 @@ const AgentCard = ({ agent }: { agent: Agent }) => {
 
         {/* Toggle */}
         <button
-          onClick={() => setIsActive(!isActive)}
+          onClick={onToggle}
+          disabled={isUpdating}
           className={`relative w-10 h-5 rounded-full flex-shrink-0 transition-colors ${
             isActive ? "bg-brain-v1dark-orange" : "bg-brain-v1baby-blue-30"
-          }`}
+          } ${isUpdating ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <div
             className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
@@ -208,10 +220,40 @@ export const AgentsActivityPage = (): JSX.Element => {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Lifted status state — keyed by agent id, seeded from static data
+  const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(
+    () => Object.fromEntries(agents.map((a) => [a.id, a.status]))
+  );
+  // Track which agent is currently being updated
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: AgentStatus }) => {
+      const res = await fetch(`/api/agents/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update agent status");
+      return res.json() as Promise<{ agentId: string; status: AgentStatus }>;
+    },
+    onSettled: () => setUpdatingId(null),
+  });
+
+  const handleToggle = (agentId: string) => {
+    const current = agentStatuses[agentId];
+    const next: AgentStatus = current === "active" ? "inactive" : "active";
+    // Optimistic update
+    setAgentStatuses((prev) => ({ ...prev, [agentId]: next }));
+    setUpdatingId(agentId);
+    statusMutation.mutate({ id: agentId, status: next });
+  };
+
   const filtered = agents.filter((a) => {
+    const status = agentStatuses[a.id];
     const matchesTab =
-      activeTab === "active" ? a.status === "active" :
-      activeTab === "inactive" ? a.status === "inactive" || a.status === "paused" :
+      activeTab === "active" ? status === "active" :
+      activeTab === "inactive" ? status === "inactive" || status === "paused" :
       true;
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q) || a.type.toLowerCase().includes(q);
@@ -219,8 +261,8 @@ export const AgentsActivityPage = (): JSX.Element => {
   });
 
   const allCount = agents.length;
-  const activeCount = agents.filter((a) => a.status === "active").length;
-  const inactiveCount = agents.filter((a) => a.status !== "active").length;
+  const activeCount = agents.filter((a) => agentStatuses[a.id] === "active").length;
+  const inactiveCount = agents.filter((a) => agentStatuses[a.id] !== "active").length;
 
   const handleSearchToggle = () => {
     if (searchOpen) {
@@ -316,7 +358,13 @@ export const AgentsActivityPage = (): JSX.Element => {
       <ScrollArea className="flex-1">
         <div className="p-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {filtered.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              currentStatus={agentStatuses[agent.id]}
+              onToggle={() => handleToggle(agent.id)}
+              isUpdating={updatingId === agent.id}
+            />
           ))}
         </div>
       </ScrollArea>

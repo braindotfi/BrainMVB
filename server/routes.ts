@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
+import { storage } from "./storage";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -38,6 +39,34 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Claude API error:", error);
       return res.status(500).json({ error: "Failed to get AI response" });
+    }
+  });
+
+  // Agent status toggle — simulates on-chain status update
+  app.patch("/api/agents/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !["active", "inactive", "paused"].includes(status)) {
+        return res.status(400).json({ error: "Valid status required: active | inactive | paused" });
+      }
+
+      const updated = await storage.setAgentStatus(id, status);
+      return res.json({ agentId: id, status: updated });
+    } catch (error) {
+      console.error("Agent status update error:", error);
+      return res.status(500).json({ error: "Failed to update agent status" });
+    }
+  });
+
+  app.get("/api/agents/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const status = await storage.getAgentStatus(id);
+      return res.json({ agentId: id, status: status ?? null });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to get agent status" });
     }
   });
 
