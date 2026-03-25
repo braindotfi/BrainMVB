@@ -10,9 +10,9 @@ import {
 import { ShareModal } from "@/components/ShareModal";
 
 const mainMenuItems = [
-  { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-3.svg", path: "/launchpad", emoji: "🚀" },
   { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", path: "/assistant", emoji: null },
   { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", path: "/agents", emoji: null },
+  { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-launchpad.svg", path: "/launchpad", emoji: "🚀" },
   { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/navbar-icons-3.svg", path: "/", emoji: null },
 ];
 
