@@ -4,39 +4,6 @@ import { SiX, SiTelegram, SiWhatsapp } from "react-icons/si";
 const REFERRAL_CODE = "ADAM123";
 const REFERRAL_URL = `https://brain.finance/ref/${REFERRAL_CODE}`;
 
-const stats = [
-  { label: "Friends Joined", value: "3", icon: "👥" },
-  { label: "$BRAIN Earned", value: "150", icon: "🧠" },
-  { label: "Per Referral", value: "50 $BRAIN", icon: "🎁" },
-];
-
-const socialPlatforms = [
-  {
-    id: "twitter",
-    label: "Share on X",
-    icon: SiX,
-    color: "bg-black hover:bg-[#1a1a1a]",
-    textColor: "text-white",
-    url: () => `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — the AI agent marketplace for DeFi! Use my referral link: ${REFERRAL_URL}`)}`,
-  },
-  {
-    id: "telegram",
-    label: "Telegram",
-    icon: SiTelegram,
-    color: "bg-[#00609c] hover:bg-[#0070b8]",
-    textColor: "text-white",
-    url: () => `https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance — the AI agent marketplace for DeFi!")}`,
-  },
-  {
-    id: "whatsapp",
-    label: "WhatsApp",
-    icon: SiWhatsapp,
-    color: "bg-[#0a5c38] hover:bg-[#0d7046]",
-    textColor: "text-white",
-    url: () => `https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! Use my referral link: ${REFERRAL_URL}`)}`,
-  },
-];
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -44,9 +11,9 @@ interface Props {
 
 export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
 
   if (!open) return null;
 
@@ -62,10 +29,6 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
     setTimeout(() => setCodeCopied(false), 2200);
   };
 
-  const handleSocialShare = (platform: typeof socialPlatforms[0]) => {
-    window.open(platform.url(), "_blank", "noopener,noreferrer");
-  };
-
   const handleEmailSend = () => {
     if (!email.trim()) return;
     setEmailSent(true);
@@ -73,194 +36,209 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
     setTimeout(() => setEmailSent(false), 3000);
   };
 
+  const handleSocial = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/65 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-[3px]"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative z-10 w-[500px] max-h-[90vh] flex flex-col bg-[#0d1017] border border-[#1d2131] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative z-10 w-[400px] max-h-[88vh] flex flex-col bg-[#0d1017] border border-[#1d2132] rounded-3xl shadow-2xl overflow-hidden">
 
-        {/* Header */}
-        <div className="relative px-6 pt-6 pb-5 border-b border-[#1d2131] flex-shrink-0 overflow-hidden">
-          {/* Decorative glow */}
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-64 h-32 bg-brain-v1dark-orange opacity-20 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-brain-v1dark-orange flex items-center justify-center text-2xl flex-shrink-0">
-                🧠
-              </div>
-              <div>
-                <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-xl leading-tight">
-                  Invite Friends
-                </h2>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-0.5">
-                  Share Brain Finance &amp; earn 50 $BRAIN per referral
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0 mt-0.5"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
+        {/* Header bar */}
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
+          <div className="w-6" />
+          <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base leading-tight">
+            Invite Friends
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-4 pb-6 flex flex-col gap-4">
 
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2">
-            {stats.map((s) => (
-              <div key={s.label} className="flex flex-col items-center gap-1 p-3 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl text-center">
-                <span className="text-xl">{s.icon}</span>
-                <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1white text-base leading-tight">{s.value}</span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-[10px] leading-tight">{s.label}</span>
-              </div>
-            ))}
+          {/* Purple promo banner */}
+          <div className="flex items-center gap-3 p-4 bg-[#1e0a3c] border border-[#3b1a70] rounded-2xl">
+            <div className="w-10 h-10 rounded-xl bg-[#7631ee] flex items-center justify-center flex-shrink-0 text-xl">
+              🎁
+            </div>
+            <div>
+              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1purple text-sm leading-tight">
+                Invite and earn 50 $BRAIN
+              </p>
+              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
+                Invite your friends and family and earn 50 $BRAIN per referral
+              </p>
+            </div>
           </div>
 
-          {/* Referral link */}
+          {/* 2-column stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col items-center gap-2 p-4 bg-[#111827] border border-[#1d2132] rounded-2xl">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-brain-v1baby-blue-60">
+                <circle cx="10" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M3 22c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <circle cx="19" cy="9" r="3" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M22 22c0-3.314-2.686-6-6-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-brain-v1white text-2xl leading-tight">21</span>
+              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs text-center leading-tight">Friends Joined</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-[#111827] border border-[#1d2132] rounded-2xl">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-brain-v1baby-blue-60">
+                <ellipse cx="14" cy="9" rx="7" ry="3" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M7 9v4c0 1.657 3.134 3 7 3s7-1.343 7-3V9" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M7 13v4c0 1.657 3.134 3 7 3s7-1.343 7-3v-4" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+              <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-brain-v1white text-2xl leading-tight">1050</span>
+              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs text-center leading-tight">$BRAIN Earned</span>
+            </div>
+          </div>
+
+          {/* Referral Link */}
           <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">
-              Your Referral Link
+            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+              Referral Link
             </label>
-            <div className="flex items-center gap-2 p-1 pl-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
-              <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs flex-1 truncate select-all">
+            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
+              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1white text-sm flex-1 truncate">
                 {REFERRAL_URL}
               </span>
               <button
                 onClick={handleCopyLink}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
                   copied
                     ? "bg-brain-v1dark-green text-brain-v1green"
-                    : "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
+                    : "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
                 }`}
               >
                 {copied ? (
-                  <>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Copied!
-                  </>
+                  "Copied!"
                 ) : (
                   <>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                       <rect x="0.75" y="2.75" width="6.5" height="6.5" rx="1.25" stroke="currentColor" strokeWidth="1.2" />
                       <path d="M2.75 2.75V1.75C2.75 1.199 3.199 0.75 3.75 0.75H8.25C8.801 0.75 9.25 1.199 9.25 1.75V6.25C9.25 6.801 8.801 7.25 8.25 7.25H7.25" stroke="currentColor" strokeWidth="1.2" />
                     </svg>
-                    Copy Link
+                    Copy
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Referral code */}
-          <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
-            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">Referral Code</span>
-              <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1white text-xl tracking-wider">
+          {/* Referral Code */}
+          <div className="flex flex-col gap-2">
+            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+              Referral Code
+            </label>
+            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm flex-1 tracking-widest">
                 {REFERRAL_CODE}
               </span>
-            </div>
-            <button
-              onClick={handleCopyCode}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
-                codeCopied
-                  ? "bg-brain-v1dark-green text-brain-v1green"
-                  : "bg-brain-v1baby-blue-30 text-brain-v1baby-blue-100 hover:bg-brain-v1baby-blue-60"
-              }`}
-            >
-              {codeCopied ? "Copied!" : "Copy Code"}
-            </button>
-          </div>
-
-          {/* Share via social */}
-          <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">
-              Share via
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {socialPlatforms.map((platform) => {
-                const Icon = platform.icon;
-                return (
-                  <button
-                    key={platform.id}
-                    onClick={() => handleSocialShare(platform)}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-2xl border border-[#1d2131] transition-all hover:opacity-90 hover:scale-[1.02] active:scale-100 ${platform.color} ${platform.textColor}`}
-                  >
-                    <Icon size={15} />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-xs">{platform.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Email invite */}
-          <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">
-              Invite by Email
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-brain-v1baby-blue-15 border border-[#1d2131] focus-within:border-[#414965] rounded-2xl transition-colors">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-brain-v1baby-blue-30 flex-shrink-0">
-                  <rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M1 4.5L7 8L13 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
-                  placeholder="friend@example.com"
-                  className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
-                />
-              </div>
               <button
-                onClick={handleEmailSend}
-                disabled={!email.trim()}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
-                  emailSent
+                onClick={handleCopyCode}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
+                  codeCopied
                     ? "bg-brain-v1dark-green text-brain-v1green"
-                    : email.trim()
-                    ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
-                    : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
+                    : "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
                 }`}
               >
-                {emailSent ? (
+                {codeCopied ? (
+                  "Copied!"
+                ) : (
                   <>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                      <rect x="0.75" y="2.75" width="6.5" height="6.5" rx="1.25" stroke="currentColor" strokeWidth="1.2" />
+                      <path d="M2.75 2.75V1.75C2.75 1.199 3.199 0.75 3.75 0.75H8.25C8.801 0.75 9.25 1.199 9.25 1.75V6.25C9.25 6.801 8.801 7.25 8.25 7.25H7.25" stroke="currentColor" strokeWidth="1.2" />
                     </svg>
-                    Sent!
+                    Copy
                   </>
-                ) : "Send"}
+                )}
               </button>
             </div>
           </div>
 
-          {/* Promo banner */}
-          <div className="flex items-start gap-3 p-4 bg-[#1a1300] border border-[#3a2800] rounded-2xl">
-            <div className="w-8 h-8 rounded-xl bg-brain-v1dark-orange flex items-center justify-center text-sm flex-shrink-0">🎁</div>
-            <div>
-              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-sm">
-                Earn 50 $BRAIN per referral
-              </p>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
-                Your friend gets 25 $BRAIN as a welcome bonus. Rewards are credited when they complete their first transaction.
-              </p>
+          {/* Invite by Email */}
+          <div className="flex flex-col gap-2">
+            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+              Invite by Email
+            </label>
+            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
+                placeholder="|johndoe@mail.com"
+                className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+              />
+              <button
+                onClick={handleEmailSend}
+                disabled={!email.trim()}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
+                  emailSent
+                    ? "bg-brain-v1dark-green text-brain-v1green"
+                    : email.trim()
+                    ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
+                    : "text-brain-v1baby-blue-30 cursor-not-allowed"
+                }`}
+              >
+                {emailSent ? "Sent!" : (
+                  <>
+                    Send
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5h6M6 3l2 2-2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </>
+                )}
+              </button>
             </div>
           </div>
+
+          {/* Share on Socials */}
+          <div className="flex flex-col gap-3">
+            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+              Share on Socials
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — the AI agent marketplace for DeFi! ${REFERRAL_URL}`)}`)}
+                className="w-12 h-12 rounded-full bg-[#0a0a0a] hover:opacity-80 transition-opacity flex items-center justify-center border border-[#1d2132]"
+                title="Share on X"
+              >
+                <SiX size={18} color="#ffffff" />
+              </button>
+              <button
+                onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance!")}`)}
+                className="w-12 h-12 rounded-full bg-[#0088cc] hover:opacity-80 transition-opacity flex items-center justify-center"
+                title="Share on Telegram"
+              >
+                <SiTelegram size={20} color="#ffffff" />
+              </button>
+              <button
+                onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! ${REFERRAL_URL}`)}`)}
+                className="w-12 h-12 rounded-full bg-[#25d366] hover:opacity-80 transition-opacity flex items-center justify-center"
+                title="Share on WhatsApp"
+              >
+                <SiWhatsapp size={20} color="#ffffff" />
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
