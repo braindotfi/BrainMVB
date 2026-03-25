@@ -37,20 +37,8 @@ function AppLayout() {
           onCreateAgent={() => setCreateAgentOpen(true)}
         />
 
-        <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)] flex flex-col gap-2">
-          {!navCollapsed && (
-            <div className="flex items-center h-10 flex-shrink-0">
-              <button
-                onClick={() => setNavCollapsed(true)}
-                title="Collapse menu"
-                className="flex items-center justify-center"
-              >
-                <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse menu" className="w-9 h-9" />
-              </button>
-            </div>
-          )}
-          <div className="flex-1 min-h-0">
-            <Switch>
+        <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)]">
+          <Switch>
               <Route path="/" component={Marketplace} />
               <Route path="/assistant" component={AssistantPage} />
               <Route path="/agents" component={AgentsActivityPage} />
@@ -59,7 +47,6 @@ function AppLayout() {
               <Route path="/notifications" component={NotificationsPage} />
               <Route component={NotFound} />
             </Switch>
-          </div>
         </div>
 
         <AccountOverviewSection
