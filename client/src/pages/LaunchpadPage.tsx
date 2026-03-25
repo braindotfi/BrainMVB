@@ -8,6 +8,7 @@ export interface LaunchpadAgent {
   name: string;
   description: string;
   avatar: string;
+  avatarBg?: string;
   marketcap: string;
   marketcapRaw: number;
   price: string;
@@ -28,7 +29,7 @@ export const launchpadAgents: LaunchpadAgent[] = [
     id: "alphaflow",
     ticker: "$ALPHA",
     name: "AlphaFlow",
-    description: "Executes automated trading strategies across crypto markets using momentum, volatility, and liquidity signals in real time.",
+    description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.",
     avatar: "/figmaAssets/avatars-3.svg",
     marketcap: "$842K",
     marketcapRaw: 842000,
@@ -39,7 +40,7 @@ export const launchpadAgents: LaunchpadAgent[] = [
     holders: 1247,
     category: "Trading",
     status: "trending",
-    bondingCurve: 78,
+    bondingCurve: 92,
     createdBy: "0xd3f...9a2c",
     createdAt: "2 days ago",
     replies: 84,
@@ -59,16 +60,16 @@ export const launchpadAgents: LaunchpadAgent[] = [
     holders: 3018,
     category: "Yield",
     status: "trending",
-    bondingCurve: 92,
+    bondingCurve: 86,
     createdBy: "0xab1...34ef",
     createdAt: "5 days ago",
     replies: 156,
   },
   {
-    id: "risksentinel",
-    ticker: "$RISK",
-    name: "Risk Sentinel",
-    description: "Continuously monitors positions and transactions to detect anomalies, enforce limits, and prevent loss in real time.",
+    id: "okaracmo",
+    ticker: "$AICMO",
+    name: "OKARACMO",
+    description: "Automatically direct revenue to coin buybacks & burns performed by agents or humans.",
     avatar: "/figmaAssets/avatars.svg",
     marketcap: "$560K",
     marketcapRaw: 560000,
@@ -77,9 +78,9 @@ export const launchpadAgents: LaunchpadAgent[] = [
     change24h: -3.2,
     volume24h: "$67K",
     holders: 892,
-    category: "Security",
+    category: "Finance",
     status: "live",
-    bondingCurve: 55,
+    bondingCurve: 71,
     createdBy: "0x77f...c890",
     createdAt: "1 week ago",
     replies: 42,
@@ -99,14 +100,14 @@ export const launchpadAgents: LaunchpadAgent[] = [
     holders: 641,
     category: "Analytics",
     status: "trending",
-    bondingCurve: 41,
+    bondingCurve: 67,
     createdBy: "0xee2...11bc",
     createdAt: "3 days ago",
     replies: 67,
   },
   {
     id: "trendradar",
-    ticker: "$RADAR",
+    ticker: "$RADR",
     name: "TrendRadar",
     description: "Detects emerging trends across markets, social platforms, and ecosystems before they become mainstream.",
     avatar: "/figmaAssets/avatars-5.svg",
@@ -119,16 +120,16 @@ export const launchpadAgents: LaunchpadAgent[] = [
     holders: 298,
     category: "Analytics",
     status: "upcoming",
-    bondingCurve: 22,
+    bondingCurve: 97,
     createdBy: "0x44a...f291",
     createdAt: "1 day ago",
     replies: 23,
   },
   {
     id: "taskforge",
-    ticker: "$FORGE",
-    name: "TaskForge Pro",
-    description: "Automates repetitive workflows across tools, APIs, and services with intelligent orchestration and error recovery.",
+    ticker: "$FORG",
+    name: "TaskForge",
+    description: "Automates repetitive workflows across tools, APIs, and services.",
     avatar: "/figmaAssets/avatars-6.svg",
     marketcap: "$95K",
     marketcapRaw: 95000,
@@ -139,30 +140,10 @@ export const launchpadAgents: LaunchpadAgent[] = [
     holders: 142,
     category: "Automation",
     status: "upcoming",
-    bondingCurve: 11,
+    bondingCurve: 96,
     createdBy: "0x19d...a72c",
     createdAt: "6 hours ago",
     replies: 8,
-  },
-  {
-    id: "inboxzero",
-    ticker: "$INBOX",
-    name: "InboxZero",
-    description: "Manages email, filters priority messages, and drafts replies automatically using advanced language models.",
-    avatar: "/figmaAssets/avatars-2.svg",
-    marketcap: "$240K",
-    marketcapRaw: 240000,
-    price: "$0.0024",
-    priceRaw: 0.0024,
-    change24h: 5.9,
-    volume24h: "$31K",
-    holders: 421,
-    category: "Productivity",
-    status: "live",
-    bondingCurve: 30,
-    createdBy: "0xf8c...2d18",
-    createdAt: "4 days ago",
-    replies: 38,
   },
   {
     id: "paystream",
@@ -225,24 +206,44 @@ export const launchpadAgents: LaunchpadAgent[] = [
     replies: 15,
   },
   {
-    id: "opscommander",
-    ticker: "$OPS",
-    name: "Ops Commander",
-    description: "Coordinates multi-step workflows across systems and APIs with real-time monitoring and auto-recovery.",
-    avatar: "/figmaAssets/avatars-8.svg",
-    marketcap: "$155K",
-    marketcapRaw: 155000,
-    price: "$0.00155",
-    priceRaw: 0.00155,
-    change24h: 15.6,
-    volume24h: "$22K",
-    holders: 218,
-    category: "Automation",
-    status: "upcoming",
-    bondingCurve: 19,
-    createdBy: "0x65b...d123",
-    createdAt: "12 hours ago",
-    replies: 19,
+    id: "risksentinel",
+    ticker: "$RISK",
+    name: "Risk Sentinel",
+    description: "Continuously monitors positions and transactions to detect anomalies, enforce limits, and prevent loss.",
+    avatar: "/figmaAssets/avatars.svg",
+    marketcap: "$560K",
+    marketcapRaw: 560000,
+    price: "$0.0056",
+    priceRaw: 0.0056,
+    change24h: -3.2,
+    volume24h: "$67K",
+    holders: 892,
+    category: "Security",
+    status: "live",
+    bondingCurve: 55,
+    createdBy: "0x77f...c890",
+    createdAt: "1 week ago",
+    replies: 42,
+  },
+  {
+    id: "inboxzero",
+    ticker: "$INBOX",
+    name: "InboxZero",
+    description: "Manages email, filters priority messages, and drafts replies automatically using advanced language models.",
+    avatar: "/figmaAssets/avatars-2.svg",
+    marketcap: "$240K",
+    marketcapRaw: 240000,
+    price: "$0.0024",
+    priceRaw: 0.0024,
+    change24h: 5.9,
+    volume24h: "$31K",
+    holders: 421,
+    category: "Productivity",
+    status: "live",
+    bondingCurve: 30,
+    createdBy: "0xf8c...2d18",
+    createdAt: "4 days ago",
+    replies: 38,
   },
   {
     id: "invoicebot",
@@ -266,194 +267,252 @@ export const launchpadAgents: LaunchpadAgent[] = [
   },
 ];
 
-const categoryColors: Record<string, string> = {
-  Trading: "bg-purple-900/40 text-purple-400",
-  Yield: "bg-green-900/40 text-green-400",
-  Security: "bg-blue-900/40 text-blue-400",
-  Analytics: "bg-yellow-900/40 text-yellow-400",
-  Automation: "bg-orange-900/40 text-orange-400",
-  Productivity: "bg-pink-900/40 text-pink-400",
-  Finance: "bg-emerald-900/40 text-emerald-400",
-  "Multi-Agent": "bg-red-900/40 text-red-400",
-};
-
-const AgentCard = ({ agent, onClick }: { agent: LaunchpadAgent; onClick: () => void }) => (
+// ── Featured hero banner ──
+const FeaturedBanner = ({ onClick }: { onClick: () => void }) => (
   <button
     onClick={onClick}
-    className="flex flex-col gap-3 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] hover:border-brain-v1stroke-2 hover:bg-[#151c2e] transition-all text-left group"
+    className="w-full h-[200px] relative rounded-2xl overflow-hidden border-2 text-left flex-shrink-0"
+    style={{ borderColor: "rgba(118,49,238,0.7)", background: "#12032d" }}
   >
-    {/* Top row */}
-    <div className="flex items-start gap-3">
-      <img src={agent.avatar} alt={agent.name} className="w-12 h-12 rounded-xl flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">
-            {agent.name}
-          </span>
-          <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">
-            {agent.ticker}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ${categoryColors[agent.category] || "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60"}`}>
-            {agent.category}
-          </span>
-          <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-            by {agent.createdBy}
-          </span>
-        </div>
-      </div>
-      <div className={`text-xs [font-family:'JetBrains_Mono',Helvetica] font-medium ${agent.change24h >= 0 ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
-        {agent.change24h >= 0 ? "+" : ""}{agent.change24h}%
+    {/* Glowing orbs — CSS-only approximation of Figma ellipses */}
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        right: "-80px",
+        top: "-120px",
+        width: "480px",
+        height: "480px",
+        background: "radial-gradient(ellipse at center, rgba(118,49,238,0.35) 0%, rgba(118,49,238,0.10) 40%, transparent 70%)",
+        transform: "rotate(-30deg)",
+      }}
+    />
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: "-180px",
+        top: "-80px",
+        width: "400px",
+        height: "300px",
+        background: "radial-gradient(ellipse at center, rgba(90,30,180,0.25) 0%, transparent 65%)",
+        transform: "rotate(-165deg)",
+      }}
+    />
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        right: "60px",
+        top: "80px",
+        width: "300px",
+        height: "160px",
+        background: "radial-gradient(ellipse at center, rgba(160,80,255,0.20) 0%, transparent 70%)",
+      }}
+    />
+
+    {/* Text content */}
+    <div className="absolute left-[38px] top-1/2 -translate-y-1/2 flex flex-col items-start w-[336px]">
+      <span
+        className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-[14px] leading-[16px] mb-1"
+      >
+        FEATURED
+      </span>
+      <div className="flex flex-col items-start">
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-[32px] leading-[40px]">
+          Momentum Trader
+        </span>
+        <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#7631ee] text-[16px] leading-[20px]">
+          A smart assistant designed to analyze market trends and execute trades on your behalf.
+        </span>
       </div>
     </div>
 
-    {/* Description */}
-    <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed line-clamp-2">
-      {agent.description}
-    </p>
-
-    {/* Bonding curve progress */}
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-          Bonding curve
-        </span>
-        <span className="text-[10px] text-brain-v1baby-blue-60 [font-family:'JetBrains_Mono',Helvetica]">
-          {agent.bondingCurve}%
-        </span>
-      </div>
-      <div className="w-full h-1.5 bg-brain-v1baby-blue-15 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-brain-v1dark-orange rounded-full transition-all"
-          style={{ width: `${agent.bondingCurve}%` }}
-        />
-      </div>
-    </div>
-
-    {/* Stats row */}
-    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#1d2131]">
-      <div>
-        <div className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Market Cap</div>
-        <div className="text-xs text-brain-v1white [font-family:'JetBrains_Mono',Helvetica] font-medium">{agent.marketcap}</div>
-      </div>
-      <div>
-        <div className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Volume 24h</div>
-        <div className="text-xs text-brain-v1white [font-family:'JetBrains_Mono',Helvetica] font-medium">{agent.volume24h}</div>
-      </div>
-      <div>
-        <div className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Holders</div>
-        <div className="text-xs text-brain-v1white [font-family:'JetBrains_Mono',Helvetica] font-medium">{agent.holders.toLocaleString()}</div>
-      </div>
+    {/* Pagination dots */}
+    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1">
+      <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee] opacity-90" />
+      <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee] opacity-50" />
+      <div className="w-[6px] h-[6px] rounded-full bg-[#3a2060] opacity-70" />
     </div>
   </button>
+);
+
+// ── Stats bar ──
+const StatsBar = () => (
+  <div className="w-full bg-[#06070a] rounded-xl p-3 flex items-center flex-shrink-0">
+    <div className="flex-1 flex flex-col items-center gap-[3px]">
+      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[13px] leading-[14px]">
+        Total Agents
+      </span>
+      <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-[#a8b9f4] text-[16px] leading-[20px]">
+        248
+      </span>
+    </div>
+    {/* Divider */}
+    <div className="w-px self-stretch bg-[#1a1f2e]" />
+    <div className="flex-1 flex flex-col items-center gap-[3px]">
+      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[13px] leading-[14px]">
+        Total Market Cap
+      </span>
+      <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-[#a8b9f4] text-[16px] leading-[20px]">
+        $8.1 M
+      </span>
+    </div>
+    {/* Divider */}
+    <div className="w-px self-stretch bg-[#1a1f2e]" />
+    <div className="flex-1 flex flex-col items-center gap-[3px]">
+      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[13px] leading-[14px]">
+        24h Volume
+      </span>
+      <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-[#a8b9f4] text-[16px] leading-[20px]">
+        $1.6 M
+      </span>
+    </div>
+  </div>
+);
+
+// ── Single agent list item ──
+const AgentRow = ({ agent, onClick }: { agent: LaunchpadAgent; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-1 gap-2 items-start min-w-0 rounded-lg text-left hover:bg-[#0d1018] transition-colors px-1 py-1 -mx-1 -my-1"
+  >
+    {/* Avatar */}
+    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#1a1f2e]">
+      <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
+    </div>
+
+    {/* Info */}
+    <div className="flex flex-col gap-2 flex-1 min-w-0 justify-center">
+      {/* Name + ticker */}
+      <div className="flex items-center gap-1 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap">
+        <span className="text-white">{agent.name}</span>
+        <span className="text-[#6c779d]">{agent.ticker}</span>
+      </div>
+
+      {/* Bonding curve */}
+      <div className="flex flex-col gap-1 w-full">
+        <div className="flex items-start justify-between [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[11px] leading-[12px]">
+          <span>Bonding Curve</span>
+          <span>{agent.bondingCurve}%</span>
+        </div>
+        <div className="h-2 w-full relative">
+          <div className="absolute inset-0 bg-[#222737] rounded-[40px]" />
+          <div
+            className="absolute left-0 top-0 h-full bg-[#ff9500] rounded-[40px]"
+            style={{ width: `${agent.bondingCurve}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#6c779d] text-[11px] leading-[14px] truncate w-full">
+        {agent.description}
+      </p>
+    </div>
+  </button>
+);
+
+// ── Row of 3 agents with vertical dividers ──
+const AgentTrioRow = ({
+  agents,
+  onAgentClick,
+}: {
+  agents: LaunchpadAgent[];
+  onAgentClick: (id: string) => void;
+}) => (
+  <div className="flex items-start gap-0 w-full">
+    {agents.map((agent, i) => (
+      <div key={agent.id} className="flex items-stretch flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
+          <AgentRow agent={agent} onClick={() => onAgentClick(agent.id)} />
+        </div>
+        {i < agents.length - 1 && (
+          <div className="w-px self-stretch bg-[#1a1f2e] mx-4 flex-shrink-0" />
+        )}
+      </div>
+    ))}
+    {/* Pad with empty slots if fewer than 3 */}
+    {agents.length < 3 && Array.from({ length: 3 - agents.length }).map((_, i) => (
+      <div key={`empty-${i}`} className="flex items-stretch flex-1 min-w-0">
+        <div className="w-px self-stretch bg-[#1a1f2e] mx-4 flex-shrink-0" />
+        <div className="flex-1" />
+      </div>
+    ))}
+  </div>
 );
 
 export const LaunchpadPage = (): JSX.Element => {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"trending" | "upcoming" | "all">("trending");
-  const [search, setSearch] = useState("");
 
-  const filtered = launchpadAgents
-    .filter((a) => activeTab === "all" || a.status === activeTab)
-    .filter(
-      (a) =>
-        !search ||
-        a.name.toLowerCase().includes(search.toLowerCase()) ||
-        a.ticker.toLowerCase().includes(search.toLowerCase()) ||
-        a.category.toLowerCase().includes(search.toLowerCase())
-    );
+  const filtered = launchpadAgents.filter(
+    (a) => activeTab === "all" || a.status === activeTab
+  );
+
+  // Split into rows of 3
+  const rows: LaunchpadAgent[][] = [];
+  for (let i = 0; i < filtered.length; i += 3) {
+    rows.push(filtered.slice(i, i + 3));
+  }
 
   return (
-    <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1d2131]">
-        <div>
-          <h1 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-xl">
-            🚀 Launchpad
-          </h1>
-          <p className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-60 text-sm mt-0.5">
-            Discover and invest in tokenized AI agents
-          </p>
-        </div>
-        <button className="flex items-center gap-1.5 px-4 py-2 bg-brain-v1dark-orange rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-sm hover:opacity-80 transition-opacity">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Launch Agent Token
-        </button>
-      </div>
-
-      {/* Search + tabs */}
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-[#1d2131]">
-        <div className="flex items-center gap-2 flex-1 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl px-3 py-2">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="6" cy="6" r="4" stroke="#4a5578" strokeWidth="1.5" />
-            <path d="M10 10L13 13" stroke="#4a5578" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search agents, tickers, categories..."
-            className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-1 p-1 bg-brain-v1baby-blue-15 rounded-xl">
-          {(["trending", "upcoming", "all"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold capitalize transition-colors ${
-                activeTab === tab
-                  ? "bg-brain-v1headerfooterbg text-brain-v1white"
-                  : "text-brain-v1baby-blue-30 hover:text-brain-v1baby-blue-60"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Live stats bar */}
-      <div className="flex items-center gap-6 px-6 py-2 bg-brain-v1baby-blue-15 border-b border-[#1d2131]">
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 bg-brain-v1green rounded-full animate-pulse" />
-          <span className="text-[10px] text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">LIVE</span>
-        </div>
-        <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-          Total agents: <span className="text-brain-v1white">{launchpadAgents.length}</span>
-        </span>
-        <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-          Total market cap: <span className="text-brain-v1white">$8.1M</span>
-        </span>
-        <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-          24h volume: <span className="text-brain-v1white">$1.6M</span>
-        </span>
-      </div>
-
-      {/* Agent grid */}
+    <div className="flex flex-col h-full bg-[#11141b] rounded-3xl border border-solid border-[#1d2132] overflow-hidden">
       <ScrollArea className="flex-1">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-brain-v1baby-blue-30">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" className="mb-3 opacity-40">
-              <circle cx="18" cy="18" r="10" stroke="currentColor" strokeWidth="2" />
-              <path d="M26 26L35 35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="[font-family:'Gilroy-Medium',Helvetica] text-sm">No agents found</span>
+        <div className="flex flex-col gap-8 px-4 pt-4 pb-6">
+
+          {/* 1. Featured banner */}
+          <FeaturedBanner onClick={() => navigate("/agent/alphaflow")} />
+
+          {/* Thin separator */}
+          <div className="w-full h-px bg-[#1a1f2e] -mt-4" />
+
+          {/* 2. Stats bar */}
+          <StatsBar />
+
+          {/* 3. Trending agents */}
+          <div className="flex flex-col gap-4">
+            {/* Section header */}
+            <div className="flex items-center justify-between">
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">
+                Trending Agents
+              </span>
+              <div className="flex items-center gap-1">
+                {(["trending", "upcoming", "all"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1 rounded-full text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold capitalize transition-colors ${
+                      activeTab === tab
+                        ? "bg-[#222737] text-[#a8b9f4]"
+                        : "text-[#414965] hover:text-[#6c779d]"
+                    }`}
+                  >
+                    {tab === "all" ? "See All" : tab === "trending" ? "Trending" : "Upcoming"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Agent rows */}
+            <div className="flex flex-col gap-0">
+              {rows.length === 0 ? (
+                <div className="flex items-center justify-center py-12 text-[#414965] [font-family:'Gilroy-Medium',Helvetica] text-sm">
+                  No agents found
+                </div>
+              ) : (
+                rows.map((row, rowIndex) => (
+                  <div key={rowIndex} className="flex flex-col">
+                    {rowIndex > 0 && (
+                      <div className="w-full h-px bg-[#1a1f2e] my-4" />
+                    )}
+                    <AgentTrioRow
+                      agents={row}
+                      onAgentClick={(id) => navigate(`/agent/${id}`)}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="p-6 grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-            {filtered.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onClick={() => navigate(`/agent/${agent.id}`)}
-              />
-            ))}
-          </div>
-        )}
+        </div>
       </ScrollArea>
     </div>
   );
