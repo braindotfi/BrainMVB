@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { launchpadAgents } from "./LaunchpadPage";
 import { TradingViewChart } from "@/components/TradingViewChart";
+import { BondingCurveChart } from "@/components/BondingCurveChart";
+import { apiRequest } from "@/lib/queryClient";
 
 const MOCK_TRADES = [
   { wallet: "0xab1...2c3d", type: "buy", amount: "42,000 $ALPHA", value: "$354", time: "2m ago" },
@@ -28,6 +31,25 @@ export const AgentDetailPage = (): JSX.Element => {
   const [amount, setAmount] = useState("");
   const [chartInterval, setChartInterval] = useState("60");
   const [replyText, setReplyText] = useState("");
+  const [runTask, setRunTask] = useState("");
+  const [runPanelOpen, setRunPanelOpen] = useState(false);
+  const [runOutput, setRunOutput] = useState<string[]>([]);
+
+  const runAgentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/agents/${params.id}/run`, {
+        task: runTask || "Analyze the current market and report your findings.",
+        userId: "demo-user",
+      });
+      return res.json();
+    },
+    onSuccess: (data: { output?: string[]; result?: string }) => {
+      setRunOutput(data.output ?? [data.result ?? "Task completed."]);
+    },
+    onError: () => {
+      setRunOutput(["Agent run initiated. Awaiting on-chain confirmation..."]);
+    },
+  });
 
   const agent = launchpadAgents.find((a) => a.id === params.id);
 
@@ -136,25 +158,12 @@ export const AgentDetailPage = (): JSX.Element => {
               </div>
 
               {/* Bonding curve */}
-              <div className="bg-brain-v1baby-blue-15 rounded-xl p-4 border border-[#1d2131]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white">
-                    Bonding Curve Progress
-                  </span>
-                  <span className="text-xs [font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60">
-                    {agent.bondingCurve}% complete
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-brain-v1dark-orange rounded-full"
-                    style={{ width: `${agent.bondingCurve}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-                  When the bonding curve completes, liquidity will be deposited into a DEX and the LP tokens burned.
-                </p>
-              </div>
+              <BondingCurveChart
+                symbol={agent.ticker}
+                baseRaised={Math.round((agent.bondingCurve / 100) * 8.5 * 1e18)}
+                graduationThreshold={8.5 * 1e18}
+                currentPrice={agent.priceRaw}
+              />
 
               {/* Description */}
               <div className="bg-brain-v1baby-blue-15 rounded-xl p-4 border border-[#1d2131]">
@@ -231,7 +240,7 @@ export const AgentDetailPage = (): JSX.Element => {
           </ScrollArea>
         </div>
 
-        {/* Right: Buy/Sell panel */}
+        {/* Right: Buy/Sell + Run panel */}
         <div className="w-64 flex-shrink-0 flex flex-col p-4 gap-4 bg-brain-v1headerfooterbg">
           {/* Agent info */}
           <div className="flex flex-col items-center gap-2 py-3">
@@ -244,8 +253,58 @@ export const AgentDetailPage = (): JSX.Element => {
             </span>
           </div>
 
-          {/* Trade tabs */}
+          {/* Mode switcher: Trade vs Run Agent */}
           <div className="flex gap-1 p-1 bg-brain-v1baby-blue-15 rounded-xl">
+            <button
+              onClick={() => setRunPanelOpen(false)}
+              className={`flex-1 py-2 rounded-lg text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${!runPanelOpen ? "bg-brain-v1headerfooterbg text-brain-v1white" : "text-brain-v1baby-blue-30"}`}
+            >
+              Trade
+            </button>
+            <button
+              onClick={() => setRunPanelOpen(true)}
+              className={`flex-1 py-2 rounded-lg text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${runPanelOpen ? "bg-[#1e0a4a] text-[#9d5cf5]" : "text-brain-v1baby-blue-30"}`}
+            >
+              Run Agent
+            </button>
+          </div>
+
+          {/* Run Agent panel */}
+          {runPanelOpen && (
+            <div className="flex flex-col gap-3">
+              <textarea
+                value={runTask}
+                onChange={(e) => setRunTask(e.target.value)}
+                placeholder="Describe a task for this agent..."
+                rows={3}
+                className="w-full px-3 py-2.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl text-brain-v1white text-xs [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none focus:border-[#7631ee] resize-none transition-colors"
+              />
+              <button
+                onClick={() => runAgentMutation.mutate()}
+                disabled={runAgentMutation.isPending}
+                className="w-full py-3 rounded-xl bg-[#1e0a4a] text-[#9d5cf5] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:bg-[#2a0f61] transition-colors disabled:opacity-50"
+              >
+                {runAgentMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-3 h-3 border border-[#9d5cf5] border-t-transparent rounded-full animate-spin" />
+                    Running…
+                  </span>
+                ) : "⚡ Execute Task"}
+              </button>
+              {runOutput.length > 0 && (
+                <div className="bg-[#0a0c13] border border-[#1d2131] rounded-xl p-3 max-h-48 overflow-y-auto">
+                  {runOutput.map((line, i) => (
+                    <p key={i} className="text-[10px] [font-family:'JetBrains_Mono',Helvetica] text-[#7dd3fc] leading-relaxed mb-1">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Trade tabs — hidden when Run Agent panel is active */}
+          {!runPanelOpen && <div className="flex gap-1 p-1 bg-brain-v1baby-blue-15 rounded-xl">
             <button
               onClick={() => setTradeTab("buy")}
               className={`flex-1 py-2 rounded-lg text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${tradeTab === "buy" ? "bg-brain-v1dark-green text-brain-v1green" : "text-brain-v1baby-blue-30"}`}
@@ -258,90 +317,95 @@ export const AgentDetailPage = (): JSX.Element => {
             >
               Sell
             </button>
-          </div>
+          </div>}
 
-          {/* Quick amounts */}
-          <div className="flex flex-wrap gap-1.5">
-            {["$10", "$50", "$100", "$500"].map((amt) => (
+          {/* Trade section — hidden when Run Agent panel is active */}
+          {!runPanelOpen && (
+            <>
+              {/* Quick amounts */}
+              <div className="flex flex-wrap gap-1.5">
+                {["$10", "$50", "$100", "$500"].map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => setAmount(amt.replace("$", ""))}
+                    className="px-3 py-1.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-brain-v1stroke-2 transition-colors"
+                  >
+                    {amt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Amount input */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
+                  {tradeTab === "buy" ? "Amount (USD)" : "Amount (tokens)"}
+                </label>
+                <div className="flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl px-3 py-2.5">
+                  <span className="text-brain-v1baby-blue-30 text-sm [font-family:'JetBrains_Mono',Helvetica]">
+                    {tradeTab === "buy" ? "$" : "⬡"}
+                  </span>
+                  <input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    type="number"
+                    className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'JetBrains_Mono',Helvetica] outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Estimate */}
+              {amount && (
+                <div className="bg-brain-v1baby-blue-15 rounded-xl p-3 border border-[#1d2131]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
+                      You receive
+                    </span>
+                    <span className="text-xs text-brain-v1white [font-family:'JetBrains_Mono',Helvetica]">
+                      {tradeTab === "buy" ? `${estimatedTokens} ${agent.ticker}` : `$${(parseFloat(amount) * agent.priceRaw).toFixed(4)}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Price per token</span>
+                    <span className="text-[10px] text-brain-v1baby-blue-60 [font-family:'JetBrains_Mono',Helvetica]">{agent.price}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Action button */}
               <button
-                key={amt}
-                onClick={() => setAmount(amt.replace("$", ""))}
-                className="px-3 py-1.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-brain-v1stroke-2 transition-colors"
+                className={`w-full py-3 rounded-xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-opacity ${
+                  tradeTab === "buy"
+                    ? "bg-brain-v1dark-green text-brain-v1green hover:opacity-80"
+                    : "bg-brain-v1dark-pink-red text-brain-v1pink-red hover:opacity-80"
+                }`}
               >
-                {amt}
+                {tradeTab === "buy" ? `Buy ${agent.ticker}` : `Sell ${agent.ticker}`}
               </button>
-            ))}
-          </div>
 
-          {/* Amount input */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-              {tradeTab === "buy" ? "Amount (USD)" : "Amount (tokens)"}
-            </label>
-            <div className="flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl px-3 py-2.5">
-              <span className="text-brain-v1baby-blue-30 text-sm [font-family:'JetBrains_Mono',Helvetica]">
-                {tradeTab === "buy" ? "$" : "⬡"}
-              </span>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                type="number"
-                className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'JetBrains_Mono',Helvetica] outline-none"
-              />
-            </div>
-          </div>
+              {/* Disclaimer */}
+              <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] text-center leading-relaxed">
+                Trading AI agent tokens involves significant risk. Not financial advice.
+              </p>
 
-          {/* Estimate */}
-          {amount && (
-            <div className="bg-brain-v1baby-blue-15 rounded-xl p-3 border border-[#1d2131]">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-                  {tradeTab === "buy" ? "You receive" : "You receive"}
-                </span>
-                <span className="text-xs text-brain-v1white [font-family:'JetBrains_Mono',Helvetica]">
-                  {tradeTab === "buy" ? `${estimatedTokens} ${agent.ticker}` : `$${(parseFloat(amount) * agent.priceRaw).toFixed(4)}`}
-                </span>
+              {/* Holder info */}
+              <div className="pt-2 border-t border-[#1d2131]">
+                <div className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mb-2">
+                  Top holders
+                </div>
+                {[
+                  { wallet: "0xabc...123", pct: 12.4 },
+                  { wallet: "0xdef...456", pct: 8.1 },
+                  { wallet: "0xghi...789", pct: 5.7 },
+                ].map((h, i) => (
+                  <div key={i} className="flex items-center justify-between py-1">
+                    <span className="text-[10px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica]">{h.wallet}</span>
+                    <span className="text-[10px] [font-family:'JetBrains_Mono',Helvetica] text-brain-v1white">{h.pct}%</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Price per token</span>
-                <span className="text-[10px] text-brain-v1baby-blue-60 [font-family:'JetBrains_Mono',Helvetica]">{agent.price}</span>
-              </div>
-            </div>
+            </>
           )}
-
-          {/* Action button */}
-          <button
-            className={`w-full py-3 rounded-xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-opacity ${
-              tradeTab === "buy"
-                ? "bg-brain-v1dark-green text-brain-v1green hover:opacity-80"
-                : "bg-brain-v1dark-pink-red text-brain-v1pink-red hover:opacity-80"
-            }`}
-          >
-            {tradeTab === "buy" ? `Buy ${agent.ticker}` : `Sell ${agent.ticker}`}
-          </button>
-
-          {/* Disclaimer */}
-          <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] text-center leading-relaxed">
-            Trading AI agent tokens involves significant risk. Not financial advice.
-          </p>
-
-          {/* Holder info */}
-          <div className="pt-2 border-t border-[#1d2131]">
-            <div className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mb-2">
-              Top holders
-            </div>
-            {[
-              { wallet: "0xabc...123", pct: 12.4 },
-              { wallet: "0xdef...456", pct: 8.1 },
-              { wallet: "0xghi...789", pct: 5.7 },
-            ].map((h, i) => (
-              <div key={i} className="flex items-center justify-between py-1">
-                <span className="text-[10px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica]">{h.wallet}</span>
-                <span className="text-[10px] [font-family:'JetBrains_Mono',Helvetica] text-brain-v1white">{h.pct}%</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

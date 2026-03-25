@@ -1,40 +1,185 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { storage } from "./storage";
+import { z } from "zod";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+// SSE connections map: userId → Response[]
+const sseClients = new Map<string, Response[]>();
+
+function broadcastNotification(userId: string, payload: object) {
+  const clients = sseClients.get(userId) ?? [];
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  clients.forEach(res => {
+    try { res.write(data); } catch { /* client disconnected */ }
+  });
+}
+
+// ─── Agent Runtime (ReAct Loop) ────────────────────────────────────────────────
+const BRAIN_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "check_balance",
+    description: "Check the current USDC balance of the agent sub-account",
+    input_schema: { type: "object" as const, properties: {} },
+  },
+  {
+    name: "get_policy",
+    description: "Retrieve the agent's current spending policy configuration",
+    input_schema: { type: "object" as const, properties: {} },
+  },
+  {
+    name: "record_action",
+    description: "Write an observation or decision to agent memory",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        observation: { type: "string", description: "What happened or was decided" },
+        actionType: { type: "string", description: "Category: trade|payment|analysis|error" },
+      },
+      required: ["observation"],
+    },
+  },
+  {
+    name: "pay_x402",
+    description: "Execute an x402 payment to an external service URL",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        url: { type: "string", description: "Target resource URL" },
+        amount: { type: "string", description: "Amount in USDC (e.g. '1.50')" },
+        merchant: { type: "string", description: "Merchant wallet address or name" },
+      },
+      required: ["url", "amount", "merchant"],
+    },
+  },
+  {
+    name: "analyze_market",
+    description: "Analyze current market conditions for a given token or asset",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        asset: { type: "string", description: "Asset symbol e.g. ETH, USDC, BTC" },
+        timeframe: { type: "string", description: "Timeframe: 1h | 4h | 1d | 1w" },
+      },
+      required: ["asset"],
+    },
+  },
+];
+
+async function runAgentLoop(
+  agentId: string,
+  objective: string,
+  policy: object,
+  memories: Array<{ content: string; actionType: string | null }>
+): Promise<string> {
+  const messages: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: `You are an autonomous financial agent on Brain Finance.
+Agent ID: ${agentId}
+Objective: ${objective}
+Policy: ${JSON.stringify(policy)}
+Recent memory: ${JSON.stringify(memories.slice(-5))}
+
+Execute the objective within your policy constraints. Use tools to act. When complete, summarize what you did.`,
+    },
+  ];
+
+  let maxIterations = 8;
+  let finalSummary = "Agent completed its objective.";
+
+  while (maxIterations-- > 0) {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 2048,
+      tools: BRAIN_TOOLS,
+      messages,
+    });
+
+    messages.push({ role: "assistant", content: response.content });
+
+    if (response.stop_reason === "end_turn") {
+      const lastText = response.content.find(b => b.type === "text");
+      if (lastText && lastText.type === "text") finalSummary = lastText.text;
+      break;
+    }
+
+    if (response.stop_reason === "tool_use") {
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type !== "tool_use") continue;
+        let result: object = {};
+        switch (block.name) {
+          case "check_balance":
+            result = { balance: "5000.00", currency: "USDC", agentId };
+            break;
+          case "get_policy":
+            result = policy;
+            break;
+          case "record_action": {
+            const inp = block.input as { observation: string; actionType?: string };
+            await storage.addMemory({ agentId, content: inp.observation, actionType: inp.actionType ?? "observation", metadata: null });
+            result = { recorded: true };
+            break;
+          }
+          case "pay_x402": {
+            const inp = block.input as { url: string; amount: string; merchant: string };
+            const tx = await storage.addTransaction({
+              agentId, txHash: null, intentHash: null,
+              resourceUri: inp.url, amountUsdc: inp.amount,
+              merchant: inp.merchant, status: "pending", blockNumber: null,
+            });
+            result = { success: true, txId: tx.id, status: "pending", message: `Payment of ${inp.amount} USDC to ${inp.merchant} initiated.` };
+            break;
+          }
+          case "analyze_market": {
+            const inp = block.input as { asset: string; timeframe?: string };
+            result = {
+              asset: inp.asset,
+              price: inp.asset === "ETH" ? 3250.42 : 1.00,
+              change24h: "+2.3%",
+              volume24h: "$1.2B",
+              sentiment: "bullish",
+              recommendation: "Hold — momentum positive, await confirmation.",
+            };
+            break;
+          }
+          default:
+            result = { error: "Unknown tool" };
+        }
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+      }
+      messages.push({ role: "user", content: toolResults });
+    }
+  }
+
+  return finalSummary;
+}
+
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
+  // ─────────────────────────────────────────────────────────────
+  // AI ASSISTANT
+  // ─────────────────────────────────────────────────────────────
   app.post("/api/assistant/chat", async (req, res) => {
     try {
       const { messages } = req.body;
-
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: "Messages array required" });
       }
-
       const response = await anthropic.messages.create({
         model: "claude-opus-4-5",
         max_tokens: 1024,
-        system:
-          "You are Brain AI, an intelligent assistant specialized in DeFi, crypto trading, AI agents, and blockchain technology. You help users understand AI agents, analyze market trends, and make informed decisions about AI agent investments. Be concise, knowledgeable, and helpful.",
+        system: "You are Brain AI, an intelligent assistant specialized in DeFi, crypto trading, AI agents, and blockchain technology on Base L2. You help users understand AI agents, analyze market trends, launchpad opportunities, and make informed decisions. Be concise, knowledgeable, and helpful.",
         messages: messages.map((m: { role: string; content: string }) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
         })),
       });
-
       const content = response.content[0];
-      if (content.type === "text") {
-        return res.json({ message: content.text });
-      }
-
+      if (content.type === "text") return res.json({ message: content.text });
       return res.status(500).json({ error: "Unexpected response type" });
     } catch (error) {
       console.error("Claude API error:", error);
@@ -42,31 +187,408 @@ export async function registerRoutes(
     }
   });
 
-  // Agent status toggle — simulates on-chain status update
+  // ─────────────────────────────────────────────────────────────
+  // MARKETPLACE
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/marketplace", async (req, res) => {
+    try {
+      const { category, featured, trending } = req.query;
+      const listings = await storage.listMarketplaceListings({
+        category: category as string | undefined,
+        featured: featured === "true" ? true : featured === "false" ? false : undefined,
+        trending: trending === "true" ? true : trending === "false" ? false : undefined,
+      });
+      return res.json(listings);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch marketplace" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // AGENTS
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const { ownerId } = req.query;
+      const agents = await storage.listAgents(ownerId as string | undefined);
+      return res.json(agents);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch agents" });
+    }
+  });
+
+  app.get("/api/agents/:id", async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id);
+      if (!agent) return res.status(404).json({ error: "Agent not found" });
+      return res.json(agent);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch agent" });
+    }
+  });
+
+  const createAgentSchema = z.object({
+    id: z.string().min(1),
+    ownerId: z.string().min(1),
+    name: z.string().min(1),
+    description: z.string().min(1),
+    category: z.enum(["trading", "payments", "research", "automation", "swarm"]),
+    avatarUrl: z.string().optional(),
+    executionWallet: z.string().optional(),
+    policy: z.object({
+      spendLimit: z.string(),
+      timeWindowSeconds: z.number(),
+      allowedAssets: z.array(z.string()),
+      approvalThreshold: z.string(),
+    }).optional(),
+  });
+
+  app.post("/api/agents", async (req, res) => {
+    try {
+      const parsed = createAgentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
+      const agent = await storage.createAgent(parsed.data);
+      return res.status(201).json(agent);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to create agent" });
+    }
+  });
+
   app.patch("/api/agents/:id/status", async (req, res) => {
     try {
-      const { id } = req.params;
       const { status } = req.body;
-
-      if (!status || !["active", "inactive", "paused"].includes(status)) {
-        return res.status(400).json({ error: "Valid status required: active | inactive | paused" });
+      if (!["active", "inactive", "paused"].includes(status)) {
+        return res.status(400).json({ error: "Valid status: active | inactive | paused" });
       }
-
-      const updated = await storage.setAgentStatus(id, status);
-      return res.json({ agentId: id, status: updated });
+      const updated = await storage.setAgentStatus(req.params.id, status);
+      return res.json({ agentId: req.params.id, status: updated });
     } catch (error) {
-      console.error("Agent status update error:", error);
       return res.status(500).json({ error: "Failed to update agent status" });
     }
   });
 
   app.get("/api/agents/:id/status", async (req, res) => {
     try {
-      const { id } = req.params;
-      const status = await storage.getAgentStatus(id);
-      return res.json({ agentId: id, status: status ?? null });
+      const status = await storage.getAgentStatus(req.params.id);
+      return res.json({ agentId: req.params.id, status: status ?? null });
     } catch (error) {
       return res.status(500).json({ error: "Failed to get agent status" });
+    }
+  });
+
+  // Run agent objective (ReAct loop)
+  app.post("/api/agents/:id/run", async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id);
+      if (!agent) return res.status(404).json({ error: "Agent not found" });
+
+      const { objective } = req.body;
+      if (!objective) return res.status(400).json({ error: "Objective required" });
+
+      const memories = await storage.getMemories(req.params.id);
+      const policy = agent.policy ?? { spendLimit: "1000", timeWindowSeconds: 86400, allowedAssets: ["USDC"], approvalThreshold: "100" };
+      const summary = await runAgentLoop(req.params.id, objective, policy, memories);
+
+      await storage.addMemory({ agentId: req.params.id, content: `Objective: ${objective}. Result: ${summary}`, actionType: "objective_complete", metadata: { objective } });
+      await storage.updateAgent(req.params.id, { lastActiveAt: new Date() } as any);
+
+      // Broadcast notification to agent owner
+      if (agent.ownerId) {
+        const notif = await storage.createNotification({
+          userId: agent.ownerId,
+          type: "AGENT_OBJECTIVE_COMPLETE",
+          title: `${agent.name} completed its objective`,
+          body: summary.slice(0, 120) + (summary.length > 120 ? "…" : ""),
+          data: { agentId: agent.id, objective },
+          read: false,
+        });
+        broadcastNotification(agent.ownerId, { type: "notification", payload: notif });
+      }
+
+      return res.json({ agentId: req.params.id, objective, summary, status: "complete" });
+    } catch (error) {
+      console.error("Agent run error:", error);
+      return res.status(500).json({ error: "Agent execution failed" });
+    }
+  });
+
+  // Agent memory
+  app.get("/api/agents/:id/memory", async (req, res) => {
+    try {
+      const memories = await storage.getMemories(req.params.id, 30);
+      return res.json(memories);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch memory" });
+    }
+  });
+
+  // Agent transactions
+  app.get("/api/agents/:id/transactions", async (req, res) => {
+    try {
+      const txs = await storage.getTransactions(req.params.id);
+      return res.json(txs);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // LAUNCHPAD
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/launchpad", async (req, res) => {
+    try {
+      const { graduated } = req.query;
+      const filters = graduated !== undefined ? { graduated: graduated === "true" } : undefined;
+      const launches = await storage.listLaunches(filters);
+      return res.json(launches);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch launchpad" });
+    }
+  });
+
+  app.get("/api/launchpad/trending", async (req, res) => {
+    try {
+      const launches = await storage.getTrendingLaunches(10);
+      return res.json(launches);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch trending" });
+    }
+  });
+
+  app.get("/api/launchpad/:id", async (req, res) => {
+    try {
+      const launch = await storage.getLaunch(req.params.id);
+      if (!launch) return res.status(404).json({ error: "Launch not found" });
+      const snapshots = launch.bondingCurveAddress
+        ? await storage.getSnapshots(launch.bondingCurveAddress, 100)
+        : [];
+      return res.json({ ...launch, chartData: snapshots });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch launch" });
+    }
+  });
+
+  app.get("/api/launchpad/:id/price", async (req, res) => {
+    try {
+      const launch = await storage.getLaunch(req.params.id);
+      if (!launch) return res.status(404).json({ error: "Launch not found" });
+      return res.json({
+        price: launch.currentPriceEth,
+        marketCapUsd: launch.marketCapUsd,
+        baseRaised: launch.baseRaised,
+        graduated: launch.graduated,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch price" });
+    }
+  });
+
+  const createLaunchSchema = z.object({
+    agentName: z.string().min(1).max(50),
+    symbol: z.string().min(1).max(10).toUpperCase(),
+    description: z.string().min(10).max(500),
+    creator: z.string().min(1),
+    capabilities: z.array(z.string()).optional(),
+    executionWallet: z.string().optional(),
+  });
+
+  app.post("/api/launchpad/create", async (req, res) => {
+    try {
+      const parsed = createLaunchSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
+
+      const { agentName, symbol, description, creator, capabilities, executionWallet } = parsed.data;
+      const agentId = `0x${Buffer.from(`${creator}-${agentName}-${Date.now()}`).toString("hex").slice(0, 64)}`;
+
+      const launch = await storage.createLaunch({
+        agentId,
+        agentName,
+        symbol,
+        description,
+        creator,
+        capabilities: capabilities ?? [],
+        executionWallet: executionWallet ?? null,
+        launchIndex: null,
+        avatarUrl: null,
+        tokenAddress: null,
+        bondingCurveAddress: null,
+        graduationThreshold: "69000000000000000000000",
+      });
+
+      return res.status(201).json(launch);
+    } catch (error) {
+      console.error("Create launch error:", error);
+      return res.status(500).json({ error: "Failed to create launch" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // ACCOUNT / BANKING
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/account/balance", async (req, res) => {
+    // In production: query BrainAccount contract via Alchemy RPC
+    return res.json({
+      usdc: "5000.00",
+      eth: "1.2450",
+      totalUsd: "9043.13",
+      currency: "USD",
+    });
+  });
+
+  app.get("/api/account/assets", async (req, res) => {
+    return res.json([
+      { symbol: "USDC", name: "USD Coin", balance: "5000.00", usdValue: "5000.00", change24h: "0.00%", icon: "💵" },
+      { symbol: "ETH", name: "Ethereum", balance: "1.2450", usdValue: "4043.13", change24h: "+2.30%", icon: "⟠" },
+      { symbol: "MATIC", name: "Polygon", balance: "850.00", usdValue: "612.00", change24h: "-1.20%", icon: "⬡" },
+      { symbol: "BNB", name: "BNB Chain", balance: "2.10", usdValue: "1281.00", change24h: "+0.80%", icon: "🔶" },
+    ]);
+  });
+
+  app.get("/api/account/transactions", async (req, res) => {
+    return res.json([
+      { id: "1", type: "deposit", asset: "USDC", amount: "2500.00", status: "confirmed", timestamp: new Date(Date.now() - 3600000), description: "Deposit from Coinbase" },
+      { id: "2", type: "trade", asset: "ETH", amount: "0.5", status: "confirmed", timestamp: new Date(Date.now() - 7200000), description: "Buy ETH via AlphaFlow" },
+      { id: "3", type: "payment", asset: "USDC", amount: "150.00", status: "confirmed", timestamp: new Date(Date.now() - 86400000), description: "x402 payment to API service" },
+    ]);
+  });
+
+  app.post("/api/account/allocate", async (req, res) => {
+    try {
+      const { agentId, amount, asset } = req.body;
+      if (!agentId || !amount) return res.status(400).json({ error: "agentId and amount required" });
+      return res.json({ success: true, agentId, amount, asset: asset ?? "USDC", message: "Capital allocated to agent sub-account." });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to allocate capital" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // NOTIFICATIONS
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const userId = (req.query.userId as string) ?? "demo-user";
+      const notifications = await storage.getNotifications(userId);
+      return res.json(notifications);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/count", async (req, res) => {
+    try {
+      const userId = (req.query.userId as string) ?? "demo-user";
+      const count = await storage.getUnreadCount(userId);
+      return res.json({ count });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to get count" });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", async (req, res) => {
+    try {
+      await storage.markAsRead(req.params.id);
+      return res.json({ success: true });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to mark as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", async (req, res) => {
+    try {
+      await storage.deleteNotification(req.params.id);
+      return res.json({ success: true });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
+  // SSE stream for real-time notifications
+  app.get("/api/notifications/stream", (req, res) => {
+    const userId = (req.query.userId as string) ?? "demo-user";
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.flushHeaders();
+
+    // Send initial ping
+    res.write(`data: ${JSON.stringify({ type: "connected", userId })}\n\n`);
+
+    // Register this client
+    const existing = sseClients.get(userId) ?? [];
+    existing.push(res);
+    sseClients.set(userId, existing);
+
+    // Heartbeat every 30s to keep connection alive
+    const heartbeat = setInterval(() => {
+      try { res.write(": heartbeat\n\n"); } catch { clearInterval(heartbeat); }
+    }, 30000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      const clients = sseClients.get(userId) ?? [];
+      sseClients.set(userId, clients.filter(c => c !== res));
+    });
+  });
+
+  // Demo endpoint: trigger a test notification
+  app.post("/api/notifications/demo", async (req, res) => {
+    try {
+      const { userId = "demo-user", type = "AGENT_OBJECTIVE_COMPLETE" } = req.body;
+      const notif = await storage.createNotification({
+        userId,
+        type,
+        title: "Demo Notification",
+        body: "This is a live demo notification via SSE stream.",
+        data: { demo: true },
+        read: false,
+      });
+      broadcastNotification(userId, { type: "notification", payload: notif });
+      return res.json({ success: true, notification: notif });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to create demo notification" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SIWE AUTH
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/auth/nonce", async (req, res) => {
+    try {
+      const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      await storage.createNotification({
+        userId: `nonce:${nonce}`,
+        type: "NONCE",
+        title: nonce,
+        body: expiresAt.toISOString(),
+        data: {},
+        read: false,
+      });
+      return res.json({ nonce });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to generate nonce" });
+    }
+  });
+
+  app.post("/api/auth/verify", async (req, res) => {
+    try {
+      const { address, message, signature } = req.body;
+      if (!address || !message || !signature) {
+        return res.status(400).json({ error: "address, message, and signature required" });
+      }
+      // In production: verify SIWE message with viem/siwe library
+      // For now: trust the address and upsert the user
+      let user = await storage.getUserByWallet(address);
+      if (!user) {
+        user = await storage.createUser({ username: address.slice(0, 8) + "..." + address.slice(-4), password: "", walletAddress: address });
+      }
+      return res.json({ success: true, user: { id: user.id, walletAddress: user.walletAddress, username: user.username } });
+    } catch (error) {
+      console.error("SIWE verify error:", error);
+      return res.status(500).json({ error: "Authentication failed" });
     }
   });
 

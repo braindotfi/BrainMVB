@@ -1,99 +1,194 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNotifications } from "@/hooks/useNotifications";
+import { formatDistanceToNow } from "date-fns";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
+const NOTIFICATION_ICONS: Record<string, string> = {
+  AGENT_PAYMENT_EXECUTED: "🤖",
+  AGENT_POLICY_REJECTED: "⚠️",
+  AGENT_GRADUATED: "🎓",
+  AGENT_THRESHOLD_REACHED: "📈",
+  TRANSACTION_CONFIRMED: "✅",
+  CARD_TRANSACTION: "💳",
+  BALANCE_LOW: "🔴",
+  NEW_AGENT_LISTED: "🚀",
+  TOKEN_PRICE_ALERT: "📊",
+  AGENT_OBJECTIVE_COMPLETE: "🏁",
+  NONCE: "🔑",
+};
+
+type FilterTab = "all" | "agents" | "banking" | "launchpad";
+
+const CATEGORY_MAP: Record<FilterTab, string[]> = {
+  all: [],
+  agents: ["AGENT_PAYMENT_EXECUTED", "AGENT_POLICY_REJECTED", "AGENT_OBJECTIVE_COMPLETE"],
+  banking: ["CARD_TRANSACTION", "TRANSACTION_CONFIRMED", "BALANCE_LOW"],
+  launchpad: ["AGENT_GRADUATED", "AGENT_THRESHOLD_REACHED", "NEW_AGENT_LISTED", "TOKEN_PRICE_ALERT"],
+};
+
+function NotifAvatar({ type }: { type: string }) {
+  const emoji = NOTIFICATION_ICONS[type] ?? "🔔";
+  return (
+    <div
+      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
+      style={{ background: "#1a1f30" }}
+    >
+      {emoji}
+    </div>
+  );
 }
 
-const initialNotifications: Notification[] = [
-  { id: "1", title: "AlphaFlow executed a trade", message: "Bought 0.42 ETH at $2,487.30 — momentum signal triggered.", time: "2m ago", read: false },
-  { id: "2", title: "SwarmAlpha just launched 🚀", message: "A new AI agent token is live on Launchpad. Bonding curve at 8%.", time: "15 minutes ago", read: false },
-  { id: "3", title: "Risk Sentinel: Anomaly detected", message: "Unusual volume spike on MATIC position. Risk threshold at 78%.", time: "3 hours ago", read: true },
-  { id: "4", title: "Yield Pilot rebalanced portfolio", message: "Moved 15% from AAVE to Compound to chase higher yield (8.2% APY).", time: "12 hours ago", read: true },
-  { id: "5", title: "TrendRadar bonding curve at 22%", message: "The agent you're watching has gained 45.2% in 24h.", time: "1 day ago", read: true },
-  { id: "6", title: "Pay Stream payment executed", message: "Processed $324.50 payment via x402 protocol — confirmed.", time: "2 days ago", read: true },
-  { id: "7", title: "New feature: Community replies", message: "You can now comment and react on agent detail pages on Launchpad.", time: "2 days ago", read: true },
-  { id: "8", title: "Signal Seer paused", message: "The agent paused due to low confidence signals. Review required.", time: "2 days ago", read: true },
-  { id: "9", title: "AlphaFlow win streak: 12 trades", message: "Your trading agent has won 12 consecutive trades. Current P&L: +$4,820.", time: "2 days ago", read: true },
-  { id: "10", title: "Account verified", message: "Your Brain Finance account identity has been successfully verified.", time: "3 days ago", read: true },
-];
-
-const EthAvatar = () => (
-  <div className="w-10 h-10 rounded-full bg-[#1a1f30] flex items-center justify-center flex-shrink-0">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L5 12.5L12 9.5L19 12.5L12 2Z" fill="#6b7db3" />
-      <path d="M5 12.5L12 16L19 12.5L12 9.5L5 12.5Z" fill="#4a5a8a" />
-      <path d="M12 16L5 13.5L12 22L19 13.5L12 16Z" fill="#6b7db3" />
-      <path d="M12 9.5L19 12.5L12 16L5 12.5L12 9.5Z" fill="#384870" />
-    </svg>
-  </div>
-);
-
 export const NotificationsPage = (): JSX.Element => {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const { notifications, unreadCount, isLoading, sseConnected, markRead, deleteNotif, markAllRead } = useNotifications();
+  const [tab, setTab] = useState<FilterTab>("all");
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const filtered = tab === "all"
+    ? notifications
+    : notifications.filter(n => CATEGORY_MAP[tab].includes(n.type));
 
-  const markAllRead = () =>
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-
-  const markRead = (id: string) =>
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const formatTime = (ts: string) => {
+    try { return formatDistanceToNow(new Date(ts), { addSuffix: true }); }
+    catch { return "just now"; }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#080b14] rounded-3xl border border-solid border-[#1a1f2e] overflow-hidden">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
-        {/* Mark all as read */}
+      <div className="flex items-center justify-between px-5 py-4 flex-shrink-0 border-b border-[#131927]">
+        <div className="flex items-center gap-3">
+          <h2
+            className="text-base font-semibold"
+            style={{ color: "#f1f5f9", fontFamily: "'Gilroy-Bold', Helvetica, sans-serif" }}
+          >
+            Notifications
+          </h2>
+          {unreadCount > 0 && (
+            <div
+              className="flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold"
+              style={{ background: "#7631ee", color: "white", minWidth: "20px" }}
+            >
+              {unreadCount}
+            </div>
+          )}
+          {/* SSE live indicator */}
+          <div className="flex items-center gap-1">
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: sseConnected ? "#22c55e" : "#ef4444" }}
+            />
+            <span className="text-xs" style={{ color: "#414965" }}>
+              {sseConnected ? "Live" : "Offline"}
+            </span>
+          </div>
+        </div>
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="px-4 py-1.5 rounded-full bg-[#1a1f30] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs hover:text-white transition-colors"
+            data-testid="mark-all-read-btn"
+            className="px-3 py-1.5 rounded-full text-xs transition-colors hover:opacity-80"
+            style={{ background: "#1a1f30", color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
           >
-            Mark All As Read
+            Mark All Read
           </button>
         )}
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex items-center gap-1 px-5 py-3 flex-shrink-0 border-b border-[#131927]">
+        {(["all", "agents", "banking", "launchpad"] as FilterTab[]).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            data-testid={`notif-tab-${t}`}
+            className="px-3 py-1.5 rounded-full text-xs capitalize transition-colors"
+            style={{
+              background: tab === t ? "#240757" : "transparent",
+              color: tab === t ? "#9d5cf5" : "#414965",
+              fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+              border: tab === t ? "1px solid #4a1a9e" : "1px solid transparent",
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
       {/* Notification list */}
       <ScrollArea className="flex-1">
-        <div className="flex flex-col">
-          {notifications.map((n, i) => (
-            <div
-              key={n.id}
-              onClick={() => markRead(n.id)}
-              className={`flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#0f1420] ${
-                !n.read ? "bg-[#0c1018]" : ""
-              } ${i < notifications.length - 1 ? "border-b border-[#131927]" : ""}`}
-            >
-              <EthAvatar />
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <span
-                    className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm leading-snug ${
-                      !n.read ? "text-[#f97316]" : "text-[#c8d4f0]"
-                    }`}
-                  >
-                    {n.title}
-                  </span>
-                  <span className="text-[11px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] whitespace-nowrap flex-shrink-0 mt-0.5">
-                    {n.time}
-                  </span>
-                </div>
-                <p className="mt-1 text-[12px] text-[#6c779d] [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">
-                  {n.message}
-                </p>
-              </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm" style={{ color: "#414965" }}>Loading notifications…</span>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="text-3xl">🔔</span>
+            <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>
+              No notifications yet
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {filtered.map((n, i) => (
+              <div
+                key={n.id}
+                onClick={() => !n.read && markRead(n.id)}
+                data-testid={`notification-item-${n.id}`}
+                className={`flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#0f1420] group ${
+                  !n.read ? "bg-[#0c1018]" : ""
+                } ${i < filtered.length - 1 ? "border-b border-[#131927]" : ""}`}
+              >
+                <NotifAvatar type={n.type} />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <span
+                      className="text-sm leading-snug"
+                      style={{
+                        color: !n.read ? "#f97316" : "#c8d4f0",
+                        fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                      }}
+                    >
+                      {n.title}
+                      {!n.read && (
+                        <span
+                          className="ml-2 inline-block w-1.5 h-1.5 rounded-full align-middle"
+                          style={{ background: "#7631ee" }}
+                        />
+                      )}
+                    </span>
+                    <span
+                      className="text-[11px] whitespace-nowrap flex-shrink-0 mt-0.5"
+                      style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}
+                    >
+                      {formatTime(n.createdAt)}
+                    </span>
+                  </div>
+                  <p
+                    className="mt-1 text-[12px] leading-relaxed"
+                    style={{ color: "#6c779d", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}
+                  >
+                    {n.body}
+                  </p>
+                </div>
+
+                {/* Delete button */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteNotif(n.id); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
+                  data-testid={`delete-notif-${n.id}`}
+                  style={{ color: "#414965" }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </ScrollArea>
     </div>
   );

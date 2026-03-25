@@ -8,6 +8,8 @@ import {
   type ChatSession,
 } from "@/lib/chatHistory";
 import { ShareModal } from "@/components/ShareModal";
+import { WalletButton } from "@/components/WalletButton";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
   { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
@@ -48,15 +50,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const historyPanelRef = useRef<HTMLDivElement>(null);
 
+  const { unreadCount, markAllRead: markAllReadLive, notifications: liveNotifications } = useNotifications();
+  const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+
   const isActive = (path: string) => {
     if (path === "/") return location === "/" || location === "";
     return location.startsWith(path);
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const markAllRead = () => {
+    markAllReadLive();
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   const loadSessions = () => setChatSessions(getChatSessions());
 
@@ -570,13 +575,19 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
         {/* Bottom buttons */}
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
+          {/* Wallet connect */}
+          {!collapsed && (
+            <div className="w-full flex justify-center mb-1">
+              <WalletButton />
+            </div>
+          )}
           <button onClick={onCreateAgent} className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>
+            {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
           </button>
           <button className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Logout" src="/figmaAssets/logout-icon.svg" />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-base font-semibold leading-5 whitespace-nowrap">Logout</span>
+            {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-base font-semibold leading-5 whitespace-nowrap">Logout</span>}
           </button>
         </div>
       </nav>

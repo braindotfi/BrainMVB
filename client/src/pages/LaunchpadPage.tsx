@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
@@ -178,7 +179,7 @@ const VSep = () => (
 );
 
 // ── Stats bar (Figma node 3141:44015 — bg-[#06070a] rounded-[12px] p-[12px]) ──
-const StatsBar = () => (
+const StatsBar = ({ totalAgents, mcRaw, volRaw }: { totalAgents: number; mcRaw: number; volRaw: number }) => (
   <div
     className="flex-shrink-0 w-full flex flex-col items-start justify-center"
     style={{ background: "#06070a", borderRadius: "12px", padding: "12px" }}
@@ -190,7 +191,7 @@ const StatsBar = () => (
           Total Agents
         </p>
         <p style={{ fontFamily: "'Gilroy-Bold', Helvetica, sans-serif", fontWeight: 700, fontSize: "16px", lineHeight: "20px", color: "#a8b9f4", whiteSpace: "nowrap" }}>
-          {launchpadAgents.length}
+          {totalAgents}
         </p>
       </div>
       {/* Vertical divider */}
@@ -201,7 +202,7 @@ const StatsBar = () => (
           Total Market Cap
         </p>
         <p style={{ fontFamily: "'Gilroy-Bold', Helvetica, sans-serif", fontWeight: 700, fontSize: "16px", lineHeight: "20px", color: "#a8b9f4", whiteSpace: "nowrap" }}>
-          {fmtStat(totalMarketCapRaw)}
+          {fmtStat(mcRaw)}
         </p>
       </div>
       {/* Vertical divider */}
@@ -212,7 +213,7 @@ const StatsBar = () => (
           24h Volume
         </p>
         <p style={{ fontFamily: "'Gilroy-Bold', Helvetica, sans-serif", fontWeight: 700, fontSize: "16px", lineHeight: "20px", color: "#a8b9f4", whiteSpace: "nowrap" }}>
-          {fmtStat(total24hVolumeRaw)}
+          {fmtStat(volRaw)}
         </p>
       </div>
     </div>
@@ -309,6 +310,33 @@ const AgentTrioRow = ({ agents, onAgentClick }: { agents: LaunchpadAgent[]; onAg
   </div>
 );
 
+// ── Convert a backend agent to LaunchpadAgent shape ──
+function backendToLaunchpadAgent(a: Record<string, unknown>): LaunchpadAgent {
+  const mcRaw = (a.capitalAmount as number) * 1000 || 0;
+  const priceRaw = mcRaw / 1_000_000 || 0.001;
+  return {
+    id: String(a.id),
+    ticker: String(a.ticker || `$${String(a.name).slice(0, 4).toUpperCase()}`),
+    name: String(a.name),
+    description: String(a.description || ""),
+    avatar: String(a.avatar || "/figmaAssets/avatars.svg"),
+    marketcap: `$${Math.round(mcRaw / 1000)}K`,
+    marketcapRaw: mcRaw,
+    price: `$${priceRaw.toFixed(5)}`,
+    priceRaw,
+    change24h: 0,
+    volume24hRaw: 0,
+    volume24h: "$0",
+    holders: 1,
+    category: String(a.type || "Custom"),
+    bondingCurve: 1,
+    createdBy: "You",
+    createdAt: "just now",
+    createdHoursAgo: 0,
+    replies: 0,
+  };
+}
+
 // ── Main page ──
 export const LaunchpadPage = (): JSX.Element => {
   const [, navigate] = useLocation();
@@ -316,6 +344,20 @@ export const LaunchpadPage = (): JSX.Element => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Fetch live agents from the backend
+  const { data: backendAgents } = useQuery<Record<string, unknown>[]>({
+    queryKey: ["/api/agents"],
+    staleTime: 30_000,
+  });
+
+  // Merge backend agents (prepend) with static list, deduplicating by id
+  const allAgents = useMemo<LaunchpadAgent[]>(() => {
+    const live: LaunchpadAgent[] = (backendAgents ?? []).map(backendToLaunchpadAgent);
+    const liveIds = new Set(live.map((a) => a.id));
+    const statics = launchpadAgents.filter((a) => !liveIds.has(a.id));
+    return [...live, ...statics];
+  }, [backendAgents]);
 
   const handleSearchToggle = () => {
     if (searchOpen) {
@@ -327,7 +369,16 @@ export const LaunchpadPage = (): JSX.Element => {
     }
   };
 
-  const baseAgents = getFiltered(activeTab);
+  const getFilteredMerged = (tab: Tab): LaunchpadAgent[] => {
+    if (tab === "all") return allAgents;
+    if (tab === "new")
+      return allAgents
+        .filter((a) => a.createdHoursAgo <= 24)
+        .sort((a, b) => a.createdHoursAgo - b.createdHoursAgo);
+    return [...allAgents].sort((a, b) => b.volume24hRaw - a.volume24hRaw).slice(0, 9);
+  };
+
+  const baseAgents = getFilteredMerged(activeTab);
   const filtered = searchQuery.trim()
     ? baseAgents.filter(
         (a) =>
@@ -343,6 +394,9 @@ export const LaunchpadPage = (): JSX.Element => {
   const sectionLabel = searchQuery.trim()
     ? `Results (${filtered.length})`
     : activeTab === "trending" ? "Trending Agents" : activeTab === "new" ? "New Agents" : "All Agents";
+
+  const totalMarketCapRawLive = allAgents.reduce((s, a) => s + a.marketcapRaw, 0);
+  const total24hVolumeRawLive = allAgents.reduce((s, a) => s + a.volume24hRaw, 0);
 
   return (
     <div
@@ -446,7 +500,7 @@ export const LaunchpadPage = (): JSX.Element => {
           <HSep />
 
           {/* 3. Stats bar */}
-          <StatsBar />
+          <StatsBar totalAgents={allAgents.length} mcRaw={totalMarketCapRawLive} volRaw={total24hVolumeRawLive} />
 
           {/* 4. Trending agents section */}
           <div className="flex flex-col items-start w-full" style={{ gap: "16px" }}>

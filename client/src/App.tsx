@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Web3Provider } from "@/lib/web3Provider";
 import NotFound from "@/pages/not-found";
 
 import { Marketplace } from "@/pages/Marketplace";
@@ -87,12 +86,12 @@ function AppLayout() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <Web3Provider>
       <TooltipProvider>
         <Toaster />
         <AppLayout />
       </TooltipProvider>
-    </QueryClientProvider>
+    </Web3Provider>
   );
 }
 
