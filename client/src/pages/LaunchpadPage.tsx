@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
 export interface LaunchpadAgent {
   id: string;
@@ -163,165 +164,6 @@ const getFiltered = (tab: Tab): LaunchpadAgent[] => {
   return [...launchpadAgents].sort((a, b) => b.volume24hRaw - a.volume24hRaw).slice(0, 9);
 };
 
-// ── Wave chart SVG for the right side of the featured banner ──
-const WaveChart = () => (
-  <svg width="160" height="136" viewBox="0 0 160 136" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
-    <defs>
-      <linearGradient id="waveFill" x1="80" y1="0" x2="80" y2="136" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#7631ee" stopOpacity="0.35" />
-        <stop offset="100%" stopColor="#7631ee" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M0 100 C10 90, 20 75, 32 70 C44 65, 52 80, 64 72 C76 64, 84 40, 96 30 C108 20, 116 35, 128 28 C140 21, 148 10, 160 8"
-      stroke="#7631ee"
-      strokeWidth="2"
-      strokeLinecap="round"
-      fill="none"
-    />
-    <path
-      d="M0 100 C10 90, 20 75, 32 70 C44 65, 52 80, 64 72 C76 64, 84 40, 96 30 C108 20, 116 35, 128 28 C140 21, 148 10, 160 8 L160 136 L0 136 Z"
-      fill="url(#waveFill)"
-    />
-    {/* Dot at the latest data point */}
-    <circle cx="160" cy="8" r="4" fill="#7631ee" />
-    <circle cx="160" cy="8" r="7" fill="#7631ee" fillOpacity="0.25" />
-  </svg>
-);
-
-// ── Featured hero banner (matches Figma node 3125:34568) ──
-const FeaturedBanner = ({ onClick }: { onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    data-testid="featured-banner"
-    className="w-full flex-shrink-0 text-left relative overflow-hidden"
-    style={{
-      height: "200px",
-      background: "#12032d",
-      borderRadius: "16px",
-      border: "2px solid rgba(118,49,238,0.7)",
-      boxShadow:
-        "0px 122px 34px 0px rgba(0,0,0,0.01), 0px 78px 31px 0px rgba(0,0,0,0.04), 0px 44px 26px 0px rgba(0,0,0,0.15), 0px 20px 20px 0px rgba(0,0,0,0.26), 0px 5px 11px 0px rgba(0,0,0,0.29)",
-    }}
-  >
-    {/* Ellipse 1488 – large glow top-right, rotated -30deg */}
-    <div
-      className="absolute pointer-events-none overflow-hidden"
-      style={{ left: "388px", top: "-229px", width: "708px", height: "604px", transform: "rotate(-30deg)" }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: "-29.49% -16.1%",
-          background: "radial-gradient(ellipse 56% 36% at 50% 50%, rgba(118,49,238,0.55) 0%, rgba(100,30,210,0.30) 40%, transparent 70%)",
-          borderRadius: "50%",
-        }}
-      />
-    </div>
-
-    {/* Ellipse 1490 – small glow bottom-right */}
-    <div
-      className="absolute pointer-events-none"
-      style={{ left: "553px", top: "118px", width: "425px", height: "232px" }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: "-84.35% -46.04%",
-          background: "radial-gradient(ellipse 50% 40% at 50% 50%, rgba(160,80,255,0.30) 0%, transparent 65%)",
-          borderRadius: "50%",
-        }}
-      />
-    </div>
-
-    {/* Ellipse 1489 – glow top-left, rotated -165deg */}
-    <div
-      className="absolute pointer-events-none overflow-hidden"
-      style={{ left: "-284px", top: "-181px", width: "519px", height: "368px", transform: "rotate(-165deg)" }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: "-82.1% -44.82%",
-          background: "radial-gradient(ellipse 52% 42% at 50% 50%, rgba(90,30,180,0.38) 0%, transparent 65%)",
-          borderRadius: "50%",
-        }}
-      />
-    </div>
-
-    {/* Wave chart – right side, vertically centered */}
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        left: "calc(66.67% + 0.67px)",
-        right: "calc(17.91% - 1.28px)",
-        top: "50%",
-        transform: "translateY(-50%) translateY(-4px)",
-        height: "136px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-start",
-      }}
-    >
-      <WaveChart />
-    </div>
-
-    {/* Text – left side, vertically centered (matches Figma exactly) */}
-    <div
-      className="absolute flex flex-col items-start"
-      style={{ left: "38px", top: "50%", transform: "translateY(-50%)", width: "336px" }}
-    >
-      <p
-        style={{
-          fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-          fontWeight: 600,
-          fontSize: "14px",
-          lineHeight: "16px",
-          color: "#7631ee",
-          width: "100%",
-        }}
-      >
-        FEATURED
-      </p>
-      <div className="flex flex-col items-start w-full">
-        <p
-          style={{
-            fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-            fontWeight: 600,
-            fontSize: "32px",
-            lineHeight: "40px",
-            color: "#ffffff",
-            width: "100%",
-          }}
-        >
-          Momentum Trader
-        </p>
-        <p
-          style={{
-            fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
-            fontWeight: 500,
-            fontSize: "16px",
-            lineHeight: "20px",
-            color: "#7631ee",
-            width: "100%",
-          }}
-        >
-          A smart assistant designed to analyze market trends and execute trades on your behalf.
-        </p>
-      </div>
-    </div>
-
-    {/* Pagination dots at top-[180px] centered (Figma: left-1/2 -translate-x-1/2 top-[180px]) */}
-    <div
-      className="absolute flex items-center gap-1"
-      style={{ top: "180px", left: "50%", transform: "translateX(-50%)" }}
-    >
-      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(118,49,238,0.9)", mixBlendMode: "plus-lighter" }} />
-      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(118,49,238,0.9)", mixBlendMode: "plus-lighter" }} />
-      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(58,32,96,0.8)", mixBlendMode: "plus-lighter" }} />
-    </div>
-  </button>
-);
 
 // ── Thin horizontal separator (Figma h-0 with 1px border image) ──
 const HSep = () => (
@@ -556,8 +398,8 @@ export const LaunchpadPage = (): JSX.Element => {
           className="flex flex-col"
           style={{ gap: "32px", padding: "0 15px 24px 15px" }}
         >
-          {/* 1. Featured banner */}
-          <FeaturedBanner onClick={() => navigate("/agent/alphaflow")} />
+          {/* 1. Featured carousel */}
+          <FeaturedCarousel />
 
           {/* 2. Separator (Figma h-0 element = just a 1px line within the gap) */}
           <HSep />

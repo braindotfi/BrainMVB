@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
 const trendingAgentsRow1 = [
   { id: "alphaflow", name: "AlphaFlow", description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.", avatarSrc: "/figmaAssets/avatars-3.svg", avatarType: "img" },
@@ -188,25 +189,11 @@ export const MainContentSection = (): JSX.Element => {
             </div>
           ) : (
             <>
-              {/* Featured Banner */}
-              <div className="relative w-full h-[200px] bg-brain-v1dark-dark-purple rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-0.5 before:rounded-2xl before:[background:linear-gradient(119deg,rgba(118,49,238,0.42)_0%,rgba(118,49,238,0)_36%,rgba(118,49,238,0.06)_67%,rgba(118,49,238,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
-                <div className="absolute top-[-94px] left-[433px] w-[621px] h-[339px] bg-brain-v1purple rounded-[310.64px/169.56px] rotate-[-30deg] blur-[50px] opacity-40" />
-                <div className="absolute top-[120px] left-[555px] w-[425px] h-[232px] bg-brain-v1pink-red rounded-[212.74px/116.12px] blur-[97.95px] opacity-20" />
-                <div className="absolute top-[-123px] left-[-257px] w-[469px] h-64 bg-brain-v1purple rounded-[234.29px/127.89px] rotate-[-165deg] blur-[105px] opacity-30" />
-                <img className="absolute w-[15.43%] top-[calc(50.00%_-_77px)] left-[65.87%] h-[177px]" alt="Vector" src="/figmaAssets/vector.svg" />
-                <div className="flex flex-col w-[336px] items-start absolute top-[calc(50.00%_-_48px)] left-10">
-                  <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1purple text-sm tracking-[0] leading-4">FEATURED</div>
-                  <div className="flex flex-col items-start w-full">
-                    <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-[32px] tracking-[0] leading-10 w-full">Momentum Trader</div>
-                    <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1purple text-base tracking-[0] leading-5 w-full">
-                      A smart assistant designed to analyze market trends and execute trades on your behalf.
-                    </div>
-                  </div>
-                </div>
-                <img className="absolute top-[182px] left-[calc(50.00%_-_13px)] w-[26px] h-1.5" alt="Frame" src="/figmaAssets/frame-2131329948.svg" />
-              </div>
+              {/* Featured Carousel */}
+              <FeaturedCarousel />
 
-              <img className="w-full h-px" alt="Divider" src="/figmaAssets/vector-933.svg" />
+              {/* Separator — 1px line, same style as Launchpad */}
+              <div className="w-full flex-shrink-0" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
 
               <AgentSection title="Trending Agents" row1={trendingAgentsRow1} row2={trendingAgentsRow2} />
               <AgentSection title="New and Noteworthy" row1={newNoteworthyRow1} row2={newNoteworthyRow2} />
