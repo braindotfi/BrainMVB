@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AddAccountModal } from "@/components/AddAccountModal";
 
 const assetsData = [
   { icon: "/figmaAssets/crypto-icons.svg", name: "Ethereum", ticker: "ETH", value: "$2,500", amount: "1.245", category: "crypto" },
@@ -46,6 +47,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeTab, setActiveTab] = useState("Assets");
   const [transactionFilter, setTransactionFilter] = useState("All");
+  const [addOpen, setAddOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeAccount, setActiveAccount] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   }
 
   return (
+    <>
+    <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
     <div className="flex items-start gap-0 flex-shrink-0">
       {/* Separate collapse button tab — sits outside the panel on the left */}
       <button
@@ -226,7 +230,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               {cardActions.map((action) => (
                 <button
                   key={action.label}
-                  onClick={action.label === "Send" ? onSend : undefined}
+                  onClick={
+                    action.label === "Send" ? onSend :
+                    action.label === "Add" ? () => setAddOpen(true) :
+                    undefined
+                  }
                   className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"
                 >
                   <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center group-hover:opacity-80 transition-opacity">
@@ -459,5 +467,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         </ScrollArea>
       </div>
     </div>
+    </>
   );
 };
