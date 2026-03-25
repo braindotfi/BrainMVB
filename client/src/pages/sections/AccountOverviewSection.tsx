@@ -286,19 +286,19 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     ? ["All", "Cash", "Crypto"]
     : ["All", "Cash"];
 
-  // Debit card (card index 1) has no Trades in the transaction filters
-  const txFilterTabs = activeCard === 1
-    ? ["All", "Deposits", "Withdrawals"]
-    : ["All", "Trades", "Deposits", "Withdrawals"];
+  // Debit (index 1) and IBAN/Bank (index 2) cards have no Trades in transaction filters
+  const txFilterTabs = activeCard === 0
+    ? ["All", "Trades", "Deposits", "Withdrawals"]
+    : ["All", "Deposits", "Withdrawals"];
 
   // Reset activeFilter to "All" when switching to a card that doesn't support the current filter
   useEffect(() => {
     if (activeCard !== 0 && activeFilter === "Crypto") setActiveFilter("All");
   }, [activeCard, activeFilter]);
 
-  // Reset transactionFilter if "Trades" is selected while on the Debit card (index 1)
+  // Reset transactionFilter if "Trades" is selected while on Debit (1) or IBAN/Bank (2) cards
   useEffect(() => {
-    if (activeCard === 1 && transactionFilter === "Trades") setTransactionFilter("All");
+    if (activeCard !== 0 && transactionFilter === "Trades") setTransactionFilter("All");
   }, [activeCard, transactionFilter]);
 
   const assetsData   = currentCardData?.assets   ?? walletData.assets;
