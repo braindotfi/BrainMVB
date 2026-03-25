@@ -185,86 +185,168 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
     </>
   );
 
-  // ── Chat history slide-out panel ──
-  const ChatHistoryPanel = () => (
-    <>
-      {/* Dim overlay */}
-      {chatHistoryOpen && (
+  // ── Group sessions by "Mon YYYY" ──
+  const groupSessionsByMonth = (sessions: ChatSession[]) => {
+    const groups: { label: string; sessions: ChatSession[] }[] = [];
+    sessions.forEach((sess) => {
+      const date = new Date(sess.updatedAt);
+      const label = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      const existing = groups.find((g) => g.label === label);
+      if (existing) existing.sessions.push(sess);
+      else groups.push({ label, sessions: [sess] });
+    });
+    return groups;
+  };
+
+  // Get the currently open session id from the URL
+  const currentSessionId = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("session")
+    : null;
+
+  // ── Chat history popup panel (Figma 3146-45912) ──
+  const ChatHistoryPanel = () => {
+    const grouped = groupSessionsByMonth(chatSessions);
+    return (
+      <>
+        {/* Dim overlay */}
+        {chatHistoryOpen && (
+          <div
+            className="fixed inset-0 z-30 transition-opacity duration-300"
+            onClick={() => setChatHistoryOpen(false)}
+          />
+        )}
+
         <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-opacity duration-300"
-          onClick={() => setChatHistoryOpen(false)}
-        />
-      )}
-
-      <div
-        ref={historyPanelRef}
-        className={`fixed z-40 top-[72px] bottom-[72px] flex flex-col w-[280px] rounded-2xl border border-[#1d2131] bg-[#0d1017] shadow-2xl
-          transition-all duration-300 ease-out
-          ${chatHistoryOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
-        `}
-        style={{ left: collapsed ? "76px" : "280px" }}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2131] flex-shrink-0">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Chat History</span>
-          <button onClick={() => setChatHistoryOpen(false)} className="w-6 h-6 flex items-center justify-center rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors text-brain-v1baby-blue-60 hover:text-brain-v1white">
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {chatSessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-brain-v1baby-blue-30 px-4 text-center">
-              <span className="text-3xl">💬</span>
-              <p className="text-xs [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">
-                No chat history yet. Start a conversation with Brain AI.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {chatSessions.map((sess, i) => (
-                <div
-                  key={sess.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openSession(sess.id)}
-                  onKeyDown={(e) => e.key === "Enter" && openSession(sess.id)}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-brain-v1baby-blue-15 transition-colors text-left group w-full cursor-pointer ${i < chatSessions.length - 1 ? "border-b border-[#1d2131]" : ""}`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-brain-v1dark-purple flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <div className="w-3 h-3 bg-brain-v1purple rounded-full opacity-80" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1white truncate">{sess.title}</p>
-                    <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5">
-                      {formatSessionTime(sess.updatedAt)} · {sess.messages.length - 1} messages
-                    </p>
-                  </div>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); removeSession(e as unknown as React.MouseEvent<HTMLButtonElement>, sess.id); }}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); removeSession(e as unknown as React.MouseEvent<HTMLButtonElement>, sess.id); } }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-5 h-5 flex items-center justify-center rounded bg-brain-v1baby-blue-15 hover:bg-brain-v1dark-pink-red cursor-pointer"
-                  >
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="px-4 py-3 border-t border-[#1d2131] flex-shrink-0">
-          <button
-            onClick={() => { setChatHistoryOpen(false); navigate("/assistant"); window.dispatchEvent(new Event("new-chat")); }}
-            className="w-full py-2.5 bg-brain-v1dark-orange rounded-xl text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity"
+          ref={historyPanelRef}
+          className={`fixed z-40 top-[72px] bottom-[72px] flex flex-col w-[320px] overflow-hidden
+            transition-all duration-300 ease-out
+            ${chatHistoryOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
+          `}
+          style={{
+            left: collapsed ? "76px" : "280px",
+            background: "#0a0c10",
+            border: "1px solid #1d2132",
+            borderRadius: "16px",
+            boxShadow: "0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)".replace(/_/g, " "),
+          }}
+        >
+          {/* ── Sticky header (56px, backdrop-blur) ── */}
+          <div
+            className="flex items-center justify-between flex-shrink-0"
+            style={{
+              height: "56px",
+              padding: "0 16px",
+              background: "rgba(10,12,16,0.88)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderBottom: "1px solid #1d2132",
+            }}
           >
-            + New Chat
-          </button>
+            <span
+              style={{
+                fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                fontWeight: 600,
+                fontSize: "20px",
+                lineHeight: "24px",
+                color: "#6c779d",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Chat History
+            </span>
+            <button
+              onClick={() => setChatHistoryOpen(false)}
+              className="flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "100px",
+                background: "#1d2132",
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ── Scrollable content ── */}
+          <div className="flex-1 overflow-y-auto" style={{ padding: "8px" }}>
+            {chatSessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center" style={{ color: "#414965" }}>
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                  <path d="M4 7h20M4 14h14M4 21h8" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", lineHeight: "18px", color: "#414965" }}>
+                  No chat history yet.<br />Start a conversation with Brain AI.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col" style={{ gap: "16px" }}>
+                {grouped.map((group) => (
+                  <div key={group.label} className="flex flex-col" style={{ gap: "8px" }}>
+                    {/* Month label */}
+                    <div style={{ paddingLeft: "8px" }}>
+                      <span style={{
+                        fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                        fontWeight: 600,
+                        fontSize: "14px",
+                        lineHeight: "16px",
+                        color: "#414965",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {group.label}
+                      </span>
+                    </div>
+                    {/* Session cards */}
+                    {group.sessions.map((sess) => {
+                      const isActive = sess.id === currentSessionId;
+                      return (
+                        <button
+                          key={sess.id}
+                          onClick={() => openSession(sess.id)}
+                          className="w-full text-left flex items-start justify-between hover:opacity-80 transition-opacity"
+                          style={{
+                            background: isActive ? "#4a2300" : "#06070a",
+                            borderRadius: "8px",
+                            padding: "8px",
+                            gap: "8px",
+                          }}
+                        >
+                          <span
+                            className="flex-1 truncate"
+                            style={{
+                              fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                              fontSize: "14px",
+                              lineHeight: "16px",
+                              color: isActive ? "#ff9500" : "#6c779d",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {sess.title}
+                          </span>
+                          {isActive && (
+                            /* Vertical 3-dot more icon */
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+                              <circle cx="8" cy="3" r="1.5" fill="#ff9500" />
+                              <circle cx="8" cy="8" r="1.5" fill="#ff9500" />
+                              <circle cx="8" cy="13" r="1.5" fill="#ff9500" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   if (collapsed) {
     return (
