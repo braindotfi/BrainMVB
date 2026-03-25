@@ -15,10 +15,12 @@ import { NotificationsPage } from "@/pages/NotificationsPage";
 import { HeaderFooterSection } from "@/pages/sections/HeaderFooterSection";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
+import { CreateAgentModal } from "@/components/CreateAgentModal";
 
 function AppLayout() {
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
+  const [createAgentOpen, setCreateAgentOpen] = useState(false);
 
   return (
     <div className="bg-shared-colorsheaderfooterbg w-full min-h-screen flex flex-col">
@@ -28,6 +30,7 @@ function AppLayout() {
         <NavigationMenuSection
           collapsed={navCollapsed}
           onToggle={() => setNavCollapsed((v) => !v)}
+          onCreateAgent={() => setCreateAgentOpen(true)}
         />
 
         <div className="flex-1 min-w-0 min-h-[calc(100vh-130px)]">
@@ -45,6 +48,7 @@ function AppLayout() {
         <AccountOverviewSection
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
+          onCreateAgent={() => setCreateAgentOpen(true)}
         />
       </div>
 
@@ -61,6 +65,11 @@ function AppLayout() {
         </div>
         <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
+
+      <CreateAgentModal
+        open={createAgentOpen}
+        onClose={() => setCreateAgentOpen(false)}
+      />
     </div>
   );
 }
