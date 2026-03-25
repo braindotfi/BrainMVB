@@ -13,7 +13,7 @@ const mainMenuItems = [
   { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
   { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
   { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-launchpad.svg", activeIcon: "/figmaAssets/nav-launchpad-active.png", path: "/launchpad", emoji: null },
-  { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/navbar-icons-3.svg", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/", emoji: null },
+  { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/navbar-icons-3.svg", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
 ];
 
 const initialNotifications = [

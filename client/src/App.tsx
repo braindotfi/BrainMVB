@@ -42,6 +42,7 @@ function AppLayout() {
           <Switch>
             <Route path="/" component={AssistantPage} />
             <Route path="/assistant" component={AssistantPage} />
+            <Route path="/marketplace" component={Marketplace} />
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/launchpad" component={LaunchpadPage} />
             <Route path="/agent/:id" component={AgentDetailPage} />
