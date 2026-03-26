@@ -8,7 +8,6 @@ import {
   type ChatSession,
 } from "@/lib/chatHistory";
 import { ShareModal } from "@/components/ShareModal";
-import { WalletButton } from "@/components/WalletButton";
 import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
@@ -575,12 +574,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
         {/* Bottom buttons */}
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
-          {/* Wallet connect */}
-          {!collapsed && (
-            <div className="w-full flex justify-center mb-1">
-              <WalletButton />
-            </div>
-          )}
           <button onClick={onCreateAgent} className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
