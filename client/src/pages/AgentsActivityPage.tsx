@@ -273,7 +273,7 @@ export const AgentsActivityPage = (): JSX.Element => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
       {/* Header row: collapse btn + pill tabs + search */}
       <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
         {/* Pill filter tabs — centered */}

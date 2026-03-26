@@ -250,7 +250,7 @@ export const AssistantPage = (): JSX.Element => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#11141b] rounded-3xl border border-solid border-[#1d2132] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
       {/* ── Landing / empty state ── */}
       {isOnlyWelcome ? (

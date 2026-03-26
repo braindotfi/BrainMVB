@@ -358,7 +358,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
         <NotificationsPanel />
         <ChatHistoryPanel />
-        <nav className="flex flex-col w-[60px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
+        <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
           {/* Logo icon (collapsed) */}
           <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
             <img
@@ -444,7 +444,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <NotificationsPanel />
       <ChatHistoryPanel />
-      <nav className="flex flex-col w-[264px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
+      <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
         {/* Brain logo row — collapse button lives here on the right */}
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">

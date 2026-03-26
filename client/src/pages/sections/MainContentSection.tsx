@@ -110,7 +110,7 @@ export const MainContentSection = (): JSX.Element => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-shared-colorsbaby-blue-5 rounded-3xl overflow-hidden border border-solid border-[#1d2131]">
+    <div className="relative w-full h-full flex flex-col bg-[#11141b] rounded-[16px] overflow-hidden border border-solid border-[#1d2132]">
       {/* Top bar: search expands from the right */}
       <div className="flex items-center px-4 pt-4 pb-0 gap-3">
         {/* Expandable search — grows to fill space when open */}

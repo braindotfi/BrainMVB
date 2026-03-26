@@ -474,7 +474,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
         <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
 
-        <div className="flex flex-col items-center w-[42px] h-full rounded-3xl border border-[#1d2131] bg-[#0b0d14] py-3 gap-[10px]">
+        {/* Backdrop shade — appears behind popup, on top of main content */}
+        {hoveredIcon && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+
+        <div className="flex flex-col items-center w-[42px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] py-3 gap-[10px]">
 
           {/* Toggle expand button */}
           <button
@@ -611,7 +619,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       <div className="flex-shrink-0 self-stretch">
 
         {/* Main panel */}
-        <div className="flex flex-col rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[390px] h-full overflow-hidden">
+        <div className="flex flex-col rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] w-[390px] h-full overflow-hidden">
 
           {/* ── Header bar ── */}
           <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">

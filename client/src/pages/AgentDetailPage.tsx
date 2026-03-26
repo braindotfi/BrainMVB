@@ -71,7 +71,7 @@ export const AgentDetailPage = (): JSX.Element => {
     : "—";
 
   return (
-    <div className="flex flex-col h-full bg-shared-colorsbaby-blue-5 rounded-3xl border border-solid border-[#1d2131] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-[#1d2131] flex-shrink-0">
         <button

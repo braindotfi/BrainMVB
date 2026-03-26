@@ -52,7 +52,7 @@ export const NotificationsPage = (): JSX.Element => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#080b14] rounded-3xl border border-solid border-[#1a1f2e] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-4 flex-shrink-0 border-b border-[#131927]">
         <div className="flex items-center gap-3">
