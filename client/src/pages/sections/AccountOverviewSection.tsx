@@ -468,8 +468,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       );
     };
 
-    const stripIconCls = "w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer";
-
     return (
       <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
         <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
@@ -482,38 +480,44 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           />
         )}
 
-        <div className="flex flex-col items-center w-[42px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] py-3 gap-[10px]">
+        {/* Strip: 56px wide, 8px side padding → 40px inner elements */}
+        <div className="flex flex-col items-center w-[56px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] py-2 gap-[8px]">
 
-          {/* Toggle expand button */}
+          {/* ── Toggle expand button: full-pill, Baby Blue 15% tint ── */}
           <button
             onClick={onToggle}
             title="Expand account panel"
             data-testid="button-expand-account"
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-colors"
+            style={{ background: "rgba(168,185,244,0.15)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="2" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
+              <rect x="11.5" y="2" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
+              <rect x="2" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
+              <rect x="11.5" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
             </svg>
           </button>
 
-          {/* "Wallet" label */}
-          <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wide select-none">Wallet</span>
+          {/* ── Horizontal divider ── */}
+          <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
 
-          {/* ── Bank icon ── */}
+          {/* ── "Wallet" label ── */}
+          <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
+
+          {/* ── Bank icon: WalletIcons style — squircle rounded-[20px] ── */}
           <div
-            className="relative"
+            className="relative flex-shrink-0"
             onMouseEnter={() => openHover("bank")}
             onMouseLeave={closeHover}
           >
             <button
               data-testid="button-collapsed-bank"
-              className={`${stripIconCls} bg-[#4a2300] ${hoveredIcon === "bank" ? "opacity-100 ring-1 ring-[#ff9500]/40" : "opacity-70 hover:opacity-100"}`}
+              className="w-[40px] h-[40px] rounded-[20px] overflow-hidden flex items-center justify-center transition-opacity"
+              style={{ background: "rgba(255,149,0,0.18)" }}
             >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path d="M3 9h14M4 9v6M16 9v6M4 15h12M7 12v3M10 12v3M13 12v3M10 4.5L17 9M10 4.5L3 9" stroke="#ff9500" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#ff9500" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
             {hoveredIcon === "bank" && (
@@ -528,46 +532,53 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             )}
           </div>
 
-          {/* ── Add icon ── */}
+          {/* ── Add icon: full circle ── */}
           <button
             data-testid="button-collapsed-add"
             onClick={() => setAddOpen(true)}
-            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
+            style={{ background: "rgba(255,149,0,0.18)" }}
           >
-            <img className="w-5 h-5" alt="Add" src="/figmaAssets/icons-4.svg" />
+            <img className="w-6 h-6" alt="Add" src="/figmaAssets/icons-4.svg" />
           </button>
 
-          {/* ── Send icon ── */}
+          {/* ── Send icon: full circle ── */}
           <button
             data-testid="button-collapsed-send"
             onClick={onSend}
-            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
+            style={{ background: "rgba(255,149,0,0.18)" }}
           >
-            <img className="w-5 h-5" alt="Send" src="/figmaAssets/icons-14.svg" />
+            <img className="w-6 h-6" alt="Send" src="/figmaAssets/icons-14.svg" />
           </button>
 
-          {/* ── Exchange icon ── */}
+          {/* ── Exchange icon: full circle ── */}
           <button
             data-testid="button-collapsed-exchange"
             onClick={onExchange}
-            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
+            style={{ background: "rgba(255,149,0,0.18)" }}
           >
-            <img className="w-5 h-5" alt="Exchange" src="/figmaAssets/icons-9.svg" />
+            <img className="w-6 h-6" alt="Exchange" src="/figmaAssets/icons-9.svg" />
           </button>
 
-          {/* ── Assets icon ── */}
+          {/* ── Horizontal divider ── */}
+          <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
+
+          {/* ── Assets: Sidebar Menu tile style — rounded-[12px] ── */}
           <div
-            className="relative"
+            className="relative flex-shrink-0"
             onMouseEnter={() => openHover("assets")}
             onMouseLeave={closeHover}
           >
             <button
               data-testid="button-collapsed-assets"
-              className={`${stripIconCls} transition-colors ${hoveredIcon === "assets" ? "bg-[#7631ee]" : "bg-[#1d2235] hover:bg-[#2d2550]"}`}
+              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors"
+              style={{ background: hoveredIcon === "assets" ? "#0a0c10" : "#11141b" }}
             >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="3.5" fill={hoveredIcon === "assets" ? "white" : "#6c779d"}/>
-                <circle cx="10" cy="10" r="7.5" stroke={hoveredIcon === "assets" ? "white" : "#6c779d"} strokeWidth="1.2" strokeDasharray="2.5 2" opacity="0.6"/>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="4" fill={hoveredIcon === "assets" ? "#7631ee" : "#6c779d"}/>
+                <circle cx="12" cy="12" r="9" stroke={hoveredIcon === "assets" ? "#7631ee" : "#6c779d"} strokeWidth="1.4" strokeDasharray="3 2.5" opacity="0.7"/>
               </svg>
             </button>
             {hoveredIcon === "assets" && (
@@ -582,18 +593,19 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             )}
           </div>
 
-          {/* ── Transactions icon ── */}
+          {/* ── Transactions: Sidebar Menu tile style — rounded-[12px] ── */}
           <div
-            className="relative"
+            className="relative flex-shrink-0"
             onMouseEnter={() => openHover("transactions")}
             onMouseLeave={closeHover}
           >
             <button
               data-testid="button-collapsed-transactions"
-              className={`${stripIconCls} transition-colors ${hoveredIcon === "transactions" ? "bg-[#1a2c5e]" : "bg-[#1d2235] hover:bg-[#1a2c5e]"}`}
+              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors"
+              style={{ background: hoveredIcon === "transactions" ? "#0a0c10" : "#11141b" }}
             >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path d="M4 7.5h12M4 7.5L7 4.5M4 7.5L7 10.5M16 12.5H4M16 12.5L13 9.5M16 12.5L13 15.5" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M4 9h16M4 9L8 5M4 9L8 13M20 15H4M20 15L16 11M20 15L16 19" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
             {hoveredIcon === "transactions" && (
