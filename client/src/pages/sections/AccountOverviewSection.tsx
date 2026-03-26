@@ -505,14 +505,23 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               {/* Action icons — gap-[8px] between them */}
               <div className="flex flex-col gap-[8px] items-start flex-shrink-0">
 
-                {/* Bank — 40px rounded-[20px] orange, WalletIcons Normal style */}
+                {/* Bank — 40px rounded-[20px], Inverted (dark) when idle, Normal (orange) on hover */}
                 <div className="relative" onMouseEnter={() => openHover("bank")} onMouseLeave={closeHover}>
                   <button
                     data-testid="button-collapsed-bank"
                     className="w-[40px] h-[40px] rounded-[20px] overflow-hidden flex-shrink-0 relative"
                   >
-                    <img className="absolute inset-0 w-full h-full object-cover" alt="" src="/figmaAssets/active-icons-bank-bg.png" />
-                    <img className="absolute left-[8px] top-[8px] w-[24px] h-[24px]" alt="Bank" src="/figmaAssets/wallet-icon-40-inverted-symbol.png" />
+                    {hoveredIcon === "bank" ? (
+                      <>
+                        <img className="absolute inset-0 w-full h-full object-cover" alt="" src="/figmaAssets/active-icons-bank-bg.png" />
+                        <img className="absolute left-[8px] top-[8px] w-[24px] h-[24px]" alt="Bank" src="/figmaAssets/wallet-icon-40-normal-symbol.png" />
+                      </>
+                    ) : (
+                      <>
+                        <img className="absolute inset-0 w-full h-full object-cover" alt="" src="/figmaAssets/wallet-icon-40-inverted-bg.png" />
+                        <img className="absolute left-[8px] top-[8px] w-[24px] h-[24px]" alt="Bank" src="/figmaAssets/wallet-icon-40-inverted-symbol.png" />
+                      </>
+                    )}
                   </button>
                   {hoveredIcon === "bank" && (
                     <>
@@ -559,20 +568,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {/* 5. List section — Sidebar Menu style: bg-[#11141b] p-[8px] rounded-[12px] */}
             <div className="flex flex-col gap-[4px] items-start w-full flex-shrink-0">
 
-              {/* Assets — NavbarIcons style: active = vivid purple coin, normal = grey */}
+              {/* Assets — Figma Union icon: vivid purple coin (active), grey SVG (idle) */}
               <div className="relative" onMouseEnter={() => openHover("assets")} onMouseLeave={closeHover}>
                 <button
                   data-testid="button-collapsed-assets"
                   className={`w-[40px] h-[40px] flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${hoveredIcon === "assets" ? "bg-[#0a0c10]" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
                 >
-                  <div className="relative overflow-hidden w-[24px] h-[24px]">
+                  <div className="w-[24px] h-[24px] flex items-center justify-center">
                     {hoveredIcon === "assets" ? (
-                      <img
-                        className="absolute w-full h-full object-contain"
-                        style={{ inset: "8.33% 4.17%" }}
-                        alt="Assets"
-                        src="/figmaAssets/assets-active-union1.png"
-                      />
+                      <img className="w-full h-full object-contain" alt="Assets" src="/figmaAssets/assets-active-union1-new.png" />
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <circle cx="12" cy="12" r="4" fill="#414965"/>
@@ -591,20 +595,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 )}
               </div>
 
-              {/* Transactions — NavbarIcons style: active = vivid blue swap, normal = grey */}
+              {/* Transactions — Figma Union1 icon: vivid blue swap (active), grey SVG (idle) */}
               <div className="relative" onMouseEnter={() => openHover("transactions")} onMouseLeave={closeHover}>
                 <button
                   data-testid="button-collapsed-transactions"
                   className={`w-[40px] h-[40px] flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${hoveredIcon === "transactions" ? "bg-[#0a0c10]" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
                 >
-                  <div className="relative overflow-hidden w-[24px] h-[24px]">
+                  <div className="w-[24px] h-[24px] flex items-center justify-center">
                     {hoveredIcon === "transactions" ? (
-                      <img
-                        className="absolute w-full h-full object-contain"
-                        style={{ inset: "12.09% 3.35% 12.09% 3.4%" }}
-                        alt="Transactions"
-                        src="/figmaAssets/assets-active-union2.png"
-                      />
+                      <img className="w-full h-full object-contain" alt="Transactions" src="/figmaAssets/assets-active-union2-new.png" />
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M5 9h14M5 9L8.5 5.5M5 9L8.5 12.5M19 15H5M19 15L15.5 11.5M19 15L15.5 18.5" stroke="#414965" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
