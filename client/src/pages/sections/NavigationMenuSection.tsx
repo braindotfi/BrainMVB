@@ -364,14 +364,16 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
 
             {/* Expand + Brain logo — grouped with gap-[8px], matching Figma 3160-37288 */}
             <div className="flex flex-col gap-[8px] items-center w-full flex-shrink-0">
-              {/* Expand button — 40px full circle, Baby Blue 15, → arrow */}
+              {/* Expand button — 40px circle, Baby Blue 15, sidebar panel + → arrow icon */}
               <button
                 onClick={onToggle}
                 title="Expand menu"
                 className="w-[40px] h-[40px] flex items-center justify-center bg-brain-v1baby-blue-15 rounded-[100px] hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8h10M9.5 4.5L13 8l-3.5 3.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="2" y="3" width="11" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3" fill="none"/>
+                  <line x1="6" y1="3" x2="6" y2="17" stroke="#6c779d" strokeWidth="1.3"/>
+                  <path d="M15 7.5L18 10L15 12.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
 
@@ -490,14 +492,16 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               <span className="text-[#7631ee]">n</span>
             </div>
           </div>
-          {/* Right: 40px full circle Baby Blue 15 collapse button with ← arrow */}
+          {/* Right: 40px full circle Baby Blue 15 collapse button — sidebar panel + ← arrow */}
           <button
             onClick={onToggle}
             title="Collapse menu"
             className="w-[40px] h-[40px] flex items-center justify-center rounded-[100px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M13 8H3M6.5 4.5L3 8l3.5 3.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="7" y="3" width="11" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3" fill="none"/>
+              <line x1="11" y1="3" x2="11" y2="17" stroke="#6c779d" strokeWidth="1.3"/>
+              <path d="M5 7.5L2 10L5 12.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
