@@ -359,19 +359,28 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
-          {/* Logo icon (collapsed) */}
-          <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
+
+          <div className="flex flex-col flex-1 items-center pt-3 gap-1 w-full px-2 overflow-y-auto min-h-0">
+            {/* Expand button — right-arrow → in a rounded rect */}
+            <button
+              onClick={onToggle}
+              title="Expand menu"
+              className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9.5 4.5L13 8l-3.5 3.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Brain logo icon */}
             <img
-              className="w-8 h-8 object-contain"
+              className="w-8 h-8 object-contain mt-1 flex-shrink-0"
               alt="Brain"
               src="/figmaAssets/frame-1000002163.svg"
             />
-          </div>
 
-          <div className="flex flex-col flex-1 items-center mt-1 gap-1 w-full px-2">
-            <button onClick={onToggle} title="Expand menu" className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
+            {/* "Menu" label */}
+            <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wide select-none mb-1">Menu</span>
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
@@ -462,9 +471,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
           <button
             onClick={onToggle}
             title="Collapse menu"
-            className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+            className="flex items-center justify-center px-2.5 h-7 rounded-lg bg-brain-v1baby-blue-15 border border-[#1d2132] hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0 gap-1"
           >
-            <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[11px] leading-none">0</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M9 6H3M5.5 3L3 6l2.5 3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </button>
         </div>
 
