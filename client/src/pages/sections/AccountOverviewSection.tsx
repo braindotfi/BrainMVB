@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
 
@@ -273,7 +273,25 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [activeAccount, setActiveAccount]       = useState<string | null>(null);
   // Card carousel — 0=wallet, 1=debit, 2=bank; only for "Your Account"
   const [activeCard, setActiveCard]             = useState(0);
+  // Collapsed icon strip hover state
+  const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
+  const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
+  const [collapsedTxFilter, setCollapsedTxFilter]       = useState("All");
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const openHover = useCallback((icon: string) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHoveredIcon(icon);
+  }, []);
+
+  const closeHover = useCallback(() => {
+    hoverTimer.current = setTimeout(() => setHoveredIcon(null), 120);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -325,17 +343,263 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
   /* ── collapsed state ── */
   if (collapsed) {
-    return (
-      <div className="flex self-stretch items-stretch gap-0 flex-shrink-0">
-        <button onClick={onToggle} title="Expand account panel" className="self-center w-6 h-14 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-l-xl hover:bg-brain-v1baby-blue-30 transition-colors border border-r-0 border-[#1d2131]">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M7 1L3 5L7 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    const popupBase = "w-[300px] bg-[#11141b] border border-[#1e2235] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden";
+    const popupHeader = (title: string) => (
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2235]">
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-base">{title}</span>
+        <button
+          onClick={() => setHoveredIcon(null)}
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white transition-colors"
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
         </button>
-        <div className="flex flex-col items-center gap-3 w-[52px] rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 flex-shrink-0 py-3">
-          <img className="w-7 h-7 opacity-50" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
-          <div className="flex flex-col items-center gap-2 mt-auto">
-            <div className="w-6 h-6 bg-brain-v1dark-orange rounded-full opacity-60" />
-            <div className="w-6 h-6 bg-brain-v1dark-green rounded-full opacity-60" />
+      </div>
+    );
+
+    const BankPopup = () => (
+      <div className={popupBase}>
+        {popupHeader("Accounts")}
+        <div className="flex items-center gap-2 mx-3 mt-3 mb-2 px-3 py-2 bg-[#1a1f2e] rounded-xl">
+          <img className="w-6 h-6 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
+          <span className="flex-1 [font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-sm">Your Account</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#22c55e"/><path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg>
+        </div>
+        <div className="mx-3 mb-2" style={{ height: "158px", overflow: "hidden" }}>
+          <div style={{ transform: "scale(0.78)", transformOrigin: "top left", width: "370px" }}>
+            <div className="relative h-[200px]"><DebitCardView /></div>
           </div>
+        </div>
+        <div className="flex justify-center gap-1 pb-3">
+          {[0,1,2].map(i => (
+            <div key={i} className={`h-1.5 rounded-full transition-all ${i === 1 ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965]"}`} />
+          ))}
+        </div>
+      </div>
+    );
+
+    const AssetsPopup = () => {
+      const filteredAssets = walletData.assets.filter(a =>
+        collapsedAssetFilter === "Cash"   ? a.category === "cash" :
+        collapsedAssetFilter === "Crypto" ? a.category === "crypto" : true
+      );
+      return (
+        <div className={popupBase} style={{ maxHeight: "420px", display: "flex", flexDirection: "column" }}>
+          {popupHeader("Assets")}
+          <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
+            {["All","Cash","Crypto"].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setCollapsedAssetFilter(tab)}
+                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${collapsedAssetFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+              >{tab}</button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 px-3 pb-3 overflow-y-auto">
+            {filteredAssets.map((asset, idx) => (
+              <div key={`${asset.ticker}-${idx}`} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 w-full">
+                  <img className="w-8 h-8 flex-shrink-0" alt={asset.name} src={asset.icon} />
+                  <div className="flex items-center justify-center gap-2 flex-1">
+                    <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4">{asset.name}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs">{asset.ticker}</span>
+                    </div>
+                    <div className="flex flex-col items-end flex-1">
+                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#42bf23] text-sm text-right">{asset.value}</span>
+                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#6c779d] text-xs text-right">{asset.amount}</span>
+                    </div>
+                  </div>
+                </div>
+                {idx < filteredAssets.length - 1 && <div className="h-px bg-[#1e2235] w-full" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const TransactionsPopup = () => {
+      const filteredTx = walletData.transactions.filter(t =>
+        collapsedTxFilter === "Trades"      ? t.type === "trade"      :
+        collapsedTxFilter === "Deposits"    ? t.type === "deposit"    :
+        collapsedTxFilter === "Withdrawals" ? t.type === "withdrawal" : true
+      );
+      return (
+        <div className={popupBase} style={{ maxHeight: "440px", display: "flex", flexDirection: "column" }}>
+          {popupHeader("Transactions")}
+          <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
+            {["All","Trades","Deposits","Withdrawals"].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setCollapsedTxFilter(tab)}
+                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${collapsedTxFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+              >{tab}</button>
+            ))}
+          </div>
+          <div className="flex flex-col overflow-y-auto px-3 pb-3">
+            {filteredTx.map((tx, idx) => (
+              <div key={tx.id} className="flex flex-col">
+                <div className="flex items-center gap-2 py-3">
+                  <div className="w-8 h-8 bg-[#0a0c10] rounded-full flex items-center justify-center flex-shrink-0">
+                    {tx.type === "deposit" ? (
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 15H13M5 15V7" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ) : tx.type === "withdrawal" ? (
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 15L15 5M15 5H7M15 5V13" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="flex flex-col gap-0.5 flex-shrink-0 min-w-0">
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4 whitespace-nowrap truncate max-w-[140px]">{tx.label}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs">{tx.time} · {tx.date}</span>
+                    </div>
+                    <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-sm text-right ${tx.positive ? "text-[#42bf23]" : "text-[#d20344]"}`}>
+                      {tx.amount}
+                    </span>
+                  </div>
+                </div>
+                {idx < filteredTx.length - 1 && <div className="h-px bg-[#1e2235] w-full" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const stripIconCls = "w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer";
+
+    return (
+      <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
+        <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
+
+        <div className="flex flex-col items-center w-[42px] h-full rounded-3xl border border-[#1d2131] bg-[#0b0d14] py-3 gap-[10px]">
+
+          {/* Toggle expand button */}
+          <button
+            onClick={onToggle}
+            title="Expand account panel"
+            data-testid="button-expand-account"
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+              <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+              <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+              <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+            </svg>
+          </button>
+
+          {/* "Wallet" label */}
+          <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wide select-none">Wallet</span>
+
+          {/* ── Bank icon ── */}
+          <div
+            className="relative"
+            onMouseEnter={() => openHover("bank")}
+            onMouseLeave={closeHover}
+          >
+            <button
+              data-testid="button-collapsed-bank"
+              className={`${stripIconCls} bg-[#4a2300] ${hoveredIcon === "bank" ? "opacity-100 ring-1 ring-[#ff9500]/40" : "opacity-70 hover:opacity-100"}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M3 9h14M4 9v6M16 9v6M4 15h12M7 12v3M10 12v3M13 12v3M10 4.5L17 9M10 4.5L3 9" stroke="#ff9500" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {hoveredIcon === "bank" && (
+              <div
+                className="absolute z-50"
+                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                onMouseEnter={cancelClose}
+                onMouseLeave={closeHover}
+              >
+                <BankPopup />
+              </div>
+            )}
+          </div>
+
+          {/* ── Add icon ── */}
+          <button
+            data-testid="button-collapsed-add"
+            onClick={() => setAddOpen(true)}
+            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+          >
+            <img className="w-5 h-5" alt="Add" src="/figmaAssets/icons-4.svg" />
+          </button>
+
+          {/* ── Send icon ── */}
+          <button
+            data-testid="button-collapsed-send"
+            onClick={onSend}
+            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+          >
+            <img className="w-5 h-5" alt="Send" src="/figmaAssets/icons-14.svg" />
+          </button>
+
+          {/* ── Exchange icon ── */}
+          <button
+            data-testid="button-collapsed-exchange"
+            onClick={onExchange}
+            className={`${stripIconCls} bg-[#4a2300] opacity-70 hover:opacity-100`}
+          >
+            <img className="w-5 h-5" alt="Exchange" src="/figmaAssets/icons-9.svg" />
+          </button>
+
+          {/* ── Assets icon ── */}
+          <div
+            className="relative"
+            onMouseEnter={() => openHover("assets")}
+            onMouseLeave={closeHover}
+          >
+            <button
+              data-testid="button-collapsed-assets"
+              className={`${stripIconCls} transition-colors ${hoveredIcon === "assets" ? "bg-[#7631ee]" : "bg-[#1d2235] hover:bg-[#2d2550]"}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="3.5" fill={hoveredIcon === "assets" ? "white" : "#6c779d"}/>
+                <circle cx="10" cy="10" r="7.5" stroke={hoveredIcon === "assets" ? "white" : "#6c779d"} strokeWidth="1.2" strokeDasharray="2.5 2" opacity="0.6"/>
+              </svg>
+            </button>
+            {hoveredIcon === "assets" && (
+              <div
+                className="absolute z-50"
+                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                onMouseEnter={cancelClose}
+                onMouseLeave={closeHover}
+              >
+                <AssetsPopup />
+              </div>
+            )}
+          </div>
+
+          {/* ── Transactions icon ── */}
+          <div
+            className="relative"
+            onMouseEnter={() => openHover("transactions")}
+            onMouseLeave={closeHover}
+          >
+            <button
+              data-testid="button-collapsed-transactions"
+              className={`${stripIconCls} transition-colors ${hoveredIcon === "transactions" ? "bg-[#1a2c5e]" : "bg-[#1d2235] hover:bg-[#1a2c5e]"}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M4 7.5h12M4 7.5L7 4.5M4 7.5L7 10.5M16 12.5H4M16 12.5L13 9.5M16 12.5L13 15.5" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {hoveredIcon === "transactions" && (
+              <div
+                className="absolute z-50"
+                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                onMouseEnter={cancelClose}
+                onMouseLeave={closeHover}
+              >
+                <TransactionsPopup />
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     );
@@ -344,17 +608,27 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   return (
     <>
       <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
-      <div className="flex self-stretch items-stretch gap-0 flex-shrink-0">
-        {/* Collapse button */}
-        <button onClick={onToggle} title="Collapse account panel" className="self-center w-6 h-14 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-l-xl hover:bg-brain-v1baby-blue-30 transition-colors border border-r-0 border-[#1d2131]">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
+      <div className="flex-shrink-0 self-stretch">
 
         {/* Main panel */}
-        <div className="flex flex-col rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[386px] overflow-hidden">
+        <div className="flex flex-col rounded-3xl border border-solid border-[#1d2131] bg-shared-colorsbaby-blue-5 w-[390px] h-full overflow-hidden">
 
           {/* ── Header bar ── */}
           <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
+            {/* Collapse toggle — grid icon, matching Figma */}
+            <button
+              onClick={onToggle}
+              title="Collapse account panel"
+              data-testid="button-collapse-account"
+              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+              </svg>
+            </button>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {activeAccount ? (
                 <img
