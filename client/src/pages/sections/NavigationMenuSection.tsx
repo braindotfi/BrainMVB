@@ -359,47 +359,27 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
+          {/* Logo icon (collapsed) */}
+          <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
+            <img
+              className="w-8 h-8 object-contain"
+              alt="Brain"
+              src="/figmaAssets/frame-1000002163.svg"
+            />
+          </div>
 
-          <div className="flex flex-col flex-1 items-center pt-3 gap-2 w-full px-2 overflow-y-auto min-h-0">
-
-            {/* Expand + Brain logo — grouped with gap-[8px], matching Figma 3160-37288 */}
-            <div className="flex flex-col gap-[8px] items-center w-full flex-shrink-0">
-              {/* Expand button — 40px circle, Baby Blue 15, sidebar panel + → arrow icon */}
-              <button
-                onClick={onToggle}
-                title="Expand menu"
-                className="w-[40px] h-[40px] flex items-center justify-center bg-brain-v1baby-blue-15 rounded-[100px] hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <rect x="2" y="3" width="11" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3" fill="none"/>
-                  <line x1="6" y1="3" x2="6" y2="17" stroke="#6c779d" strokeWidth="1.3"/>
-                  <path d="M15 7.5L18 10L15 12.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-
-              {/* Brain logo — 40px outer container, 32px inner icon centered */}
-              <div className="w-[40px] h-[40px] flex items-center justify-center flex-shrink-0">
-                <img
-                  className="w-[32px] h-[32px] object-contain"
-                  alt="Brain"
-                  src="/figmaAssets/frame-1000002163.svg"
-                />
-              </div>
-            </div>
-
-            {/* "Menu" label */}
-            <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wide select-none">Menu</span>
+          <div className="flex flex-col flex-1 items-center mt-1 gap-1 w-full px-2">
+            <button onClick={onToggle} title="Expand menu" className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
                 {item.id === "assistant" ? (
                   <div className="relative w-full flex flex-col items-center">
                     <Link href={item.path}>
-                      <button
-                        title={item.label}
-                        className={`flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
-                      >
-                        <img className="w-6 h-6" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
+                      <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
                       </button>
                     </Link>
                     <button
@@ -412,28 +392,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
                   </div>
                 ) : (
                   <Link href={item.path}>
-                    <button
-                      title={item.label}
-                      className={`flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
-                    >
-                      <img className="w-6 h-6" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
+                    <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                      <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
                     </button>
                   </Link>
                 )}
               </div>
             ))}
 
-            <div className="w-full h-px bg-[#1d2132] my-1" />
+            <div className="w-8 h-px bg-[#1d2132] my-1" />
 
-            {/* "Other" section label */}
-            <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold uppercase tracking-widest select-none w-full text-center">Other</span>
-
-            <button
-              title="Notifications"
-              onClick={() => setNotificationsOpen((v) => !v)}
-              className={`relative flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
-            >
-              <img className="w-6 h-6" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
+            <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+              <img className="w-5 h-5" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
               {unreadCount > 0 && (
                 <div className="absolute top-0 right-0 flex items-center justify-center p-[2px] bg-[#414965] rounded-[4px] min-w-[14px]">
                   <span className="text-[9px] text-[#a8b9f4] [font-family:'Gilroy-SemiBold',Helvetica] leading-none">{unreadCount}</span>
@@ -444,24 +414,24 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
             <button
               title="Invite Friends"
               onClick={() => setShareOpen(true)}
-              className={`flex items-center justify-center p-[8px] rounded-[12px] transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
+              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-6 h-6" style={{ mixBlendMode: "lighten" }} />
+              <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-5 h-5" style={{ mixBlendMode: "lighten" }} />
             </button>
 
             <Link href="/settings">
-              <button title="Settings" className="flex items-center justify-center bg-[#11141b] p-[8px] rounded-[12px] hover:bg-[#1a1f2e] transition-colors">
-                <img className="w-6 h-6" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
+              <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
+                <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
               </button>
             </Link>
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-[40px] h-[40px] bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
-              <img className="w-6 h-6" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
+            <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
+              <img className="w-5 h-5" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             </button>
-            <button title="Logout" className="flex items-center justify-center w-[40px] h-[40px] bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity">
-              <img className="w-6 h-6" alt="Logout" src="/figmaAssets/logout-icon.svg" />
+            <button title="Logout" className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
+              <img className="w-5 h-5" alt="Logout" src="/figmaAssets/logout-icon.svg" />
             </button>
           </div>
         </nav>
@@ -475,34 +445,26 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
       <NotificationsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] h-full rounded-3xl border border-solid border-[#1d2132] bg-brain-v1baby-blue-5 flex-shrink-0">
-        {/* Brain logo row — Figma 3163-39100: flex justify-between, 40px height */}
-        <div className="flex items-center justify-between px-3 mt-3 h-[40px] flex-shrink-0">
-          {/* Left: 40px container, 32px brain icon + "brain" text at 28px */}
+        {/* Brain logo row — collapse button lives here on the right */}
+        <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-[40px] h-[40px] flex items-center justify-center flex-shrink-0">
-              <img
-                className="w-[32px] h-[32px] object-contain"
-                alt="Brain"
-                src="/figmaAssets/frame-1000002163.svg"
-              />
-            </div>
-            <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[28px] leading-7 whitespace-nowrap select-none">
+            <img
+              className="w-6 h-6 object-contain flex-shrink-0"
+              alt="Brain"
+              src="/figmaAssets/frame-1000002163.svg"
+            />
+            <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
               <span className="text-[#7631ee]">br</span>
               <span className="text-[#ffffff]">ai</span>
               <span className="text-[#7631ee]">n</span>
             </div>
           </div>
-          {/* Right: 40px full circle Baby Blue 15 collapse button — sidebar panel + ← arrow */}
           <button
             onClick={onToggle}
             title="Collapse menu"
-            className="w-[40px] h-[40px] flex items-center justify-center rounded-[100px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="7" y="3" width="11" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3" fill="none"/>
-              <line x1="11" y1="3" x2="11" y2="17" stroke="#6c779d" strokeWidth="1.3"/>
-              <path d="M5 7.5L2 10L5 12.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
           </button>
         </div>
 
