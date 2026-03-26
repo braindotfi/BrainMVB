@@ -409,7 +409,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
               </div>
             ))}
 
-            <div className="w-8 h-px bg-[#1d2132] my-1" />
+            <div className="w-full h-px bg-[#1d2132] my-1" />
+
+            {/* "Other" section label */}
+            <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold uppercase tracking-widest select-none w-full text-center">Other</span>
 
             <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
               <img className="w-5 h-5" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
@@ -458,7 +461,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <img
-              className="w-6 h-6 object-contain flex-shrink-0"
+              className="w-8 h-8 object-contain flex-shrink-0"
               alt="Brain"
               src="/figmaAssets/frame-1000002163.svg"
             />

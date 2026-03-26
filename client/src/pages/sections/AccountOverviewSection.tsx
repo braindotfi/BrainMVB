@@ -468,142 +468,137 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       );
     };
 
-    const actionIconCls = "w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer";
-    const listIconCls   = "w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer";
-
     return (
       <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
         <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
 
-        <div className="flex flex-col items-center w-[56px] h-full rounded-3xl border border-[#1d2131] bg-[#0b0d14] py-3 gap-2">
+        {/* Strip — exact Figma: bg-[#11141b], rounded-[16px], border-[#1d2132], overflow-hidden */}
+        <div className="relative bg-[#11141b] border border-[#1d2132] rounded-[16px] overflow-hidden w-[56px] h-full">
 
-          {/* Toggle expand button — grid icon */}
-          <button
-            onClick={onToggle}
-            title="Expand account panel"
-            data-testid="button-expand-account"
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="9"   y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="1.5" y="9"   width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-              <rect x="9"   y="9"   width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-            </svg>
-          </button>
+          {/* Inner column — absolute left-[7px] top-[7px] w-[40px], gap-[16px] between sections */}
+          <div className="absolute left-[7px] top-[7px] w-[40px] flex flex-col gap-[16px] items-start">
 
-          {/* "Wallet" label */}
-          <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wide select-none">Wallet</span>
-
-          {/* ── Bank icon (40 px orange circle) ── */}
-          <div
-            className="relative"
-            onMouseEnter={() => openHover("bank")}
-            onMouseLeave={closeHover}
-          >
+            {/* 1. Toggle — 40px full circle, baby-blue-15 bg */}
             <button
-              data-testid="button-collapsed-bank"
-              className={`${actionIconCls} bg-[#4a2300] ${hoveredIcon === "bank" ? "opacity-100 ring-1 ring-[#ff9500]/40" : "opacity-80 hover:opacity-100"}`}
+              onClick={onToggle}
+              title="Expand account panel"
+              data-testid="button-expand-account"
+              className="h-[40px] w-full rounded-[100px] flex items-center justify-center bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 9h14M4 9v6M16 9v6M4 15h12M7 12v3M10 12v3M13 12v3M10 4.5L17 9M10 4.5L3 9" stroke="#ff9500" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="9"   y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="1.5" y="9"   width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <rect x="9"   y="9"   width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
               </svg>
             </button>
-            {hoveredIcon === "bank" && (
-              <div
-                className="absolute z-50"
-                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={cancelClose}
-                onMouseLeave={closeHover}
-              >
-                <BankPopup />
+
+            {/* 2. Divider */}
+            <div className="w-full h-px bg-[#1d2132] flex-shrink-0" />
+
+            {/* 3. Wallet section */}
+            <div className="flex flex-col gap-[4px] items-start flex-shrink-0">
+              {/* "Wallet" label — px-[8px], 12px grey Gilroy */}
+              <div className="flex items-center justify-center px-[8px] w-[40px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[12px] leading-4 whitespace-nowrap select-none">Wallet</span>
               </div>
-            )}
-          </div>
 
-          {/* ── Add icon (40 px orange circle) ── */}
-          <button
-            data-testid="button-collapsed-add"
-            onClick={() => setAddOpen(true)}
-            className={`${actionIconCls} bg-[#4a2300] opacity-80 hover:opacity-100`}
-          >
-            <img className="w-6 h-6" alt="Add" src="/figmaAssets/icons-4.svg" />
-          </button>
+              {/* Action icons — gap-[8px] between them */}
+              <div className="flex flex-col gap-[8px] items-start flex-shrink-0">
 
-          {/* ── Send icon (40 px orange circle) ── */}
-          <button
-            data-testid="button-collapsed-send"
-            onClick={onSend}
-            className={`${actionIconCls} bg-[#4a2300] opacity-80 hover:opacity-100`}
-          >
-            <img className="w-6 h-6" alt="Send" src="/figmaAssets/icons-14.svg" />
-          </button>
+                {/* Bank — 40px rounded-[20px] orange */}
+                <div className="relative" onMouseEnter={() => openHover("bank")} onMouseLeave={closeHover}>
+                  <button
+                    data-testid="button-collapsed-bank"
+                    className="w-[40px] h-[40px] rounded-[20px] flex items-center justify-center bg-[#4a2300] hover:opacity-90 transition-opacity flex-shrink-0"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 10h18M5 10v9M19 10v9M5 19h14M8 14v5M12 14v5M16 14v5M12 4.5L20 10M12 4.5L4 10" stroke="#ff9500" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  {hoveredIcon === "bank" && (
+                    <div className="absolute z-50" style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }} onMouseEnter={cancelClose} onMouseLeave={closeHover}>
+                      <BankPopup />
+                    </div>
+                  )}
+                </div>
 
-          {/* ── Exchange icon (40 px orange circle) ── */}
-          <button
-            data-testid="button-collapsed-exchange"
-            onClick={onExchange}
-            className={`${actionIconCls} bg-[#4a2300] opacity-80 hover:opacity-100`}
-          >
-            <img className="w-6 h-6" alt="Exchange" src="/figmaAssets/icons-9.svg" />
-          </button>
+                {/* Add — 40px full circle orange */}
+                <button
+                  data-testid="button-collapsed-add"
+                  onClick={() => setAddOpen(true)}
+                  className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center bg-[#4a2300] hover:opacity-90 transition-opacity flex-shrink-0"
+                >
+                  <img className="w-6 h-6" alt="Add" src="/figmaAssets/icons-4.svg" />
+                </button>
 
-          {/* Divider between action buttons and list buttons */}
-          <div className="w-7 h-px bg-[#1d2235] flex-shrink-0" />
+                {/* Send — 40px full circle orange */}
+                <button
+                  data-testid="button-collapsed-send"
+                  onClick={onSend}
+                  className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center bg-[#4a2300] hover:opacity-90 transition-opacity flex-shrink-0"
+                >
+                  <img className="w-6 h-6" alt="Send" src="/figmaAssets/icons-14.svg" />
+                </button>
 
-          {/* ── Assets icon (32 px list button) ── */}
-          <div
-            className="relative"
-            onMouseEnter={() => openHover("assets")}
-            onMouseLeave={closeHover}
-          >
-            <button
-              data-testid="button-collapsed-assets"
-              className={`${listIconCls} transition-colors ${hoveredIcon === "assets" ? "bg-[#7631ee]" : "bg-[#1d2235] hover:bg-[#2d2550]"}`}
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="3.5" fill={hoveredIcon === "assets" ? "white" : "#6c779d"}/>
-                <circle cx="10" cy="10" r="7.5" stroke={hoveredIcon === "assets" ? "white" : "#6c779d"} strokeWidth="1.2" strokeDasharray="2.5 2" opacity="0.6"/>
-              </svg>
-            </button>
-            {hoveredIcon === "assets" && (
-              <div
-                className="absolute z-50"
-                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={cancelClose}
-                onMouseLeave={closeHover}
-              >
-                <AssetsPopup />
+                {/* Exchange — 40px full circle orange */}
+                <button
+                  data-testid="button-collapsed-exchange"
+                  onClick={onExchange}
+                  className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center bg-[#4a2300] hover:opacity-90 transition-opacity flex-shrink-0"
+                >
+                  <img className="w-6 h-6" alt="Exchange" src="/figmaAssets/icons-9.svg" />
+                </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* ── Transactions icon (32 px list button) ── */}
-          <div
-            className="relative"
-            onMouseEnter={() => openHover("transactions")}
-            onMouseLeave={closeHover}
-          >
-            <button
-              data-testid="button-collapsed-transactions"
-              className={`${listIconCls} transition-colors ${hoveredIcon === "transactions" ? "bg-[#1a2c5e]" : "bg-[#1d2235] hover:bg-[#1a2c5e]"}`}
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <path d="M4 7.5h12M4 7.5L7 4.5M4 7.5L7 10.5M16 12.5H4M16 12.5L13 9.5M16 12.5L13 15.5" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            {hoveredIcon === "transactions" && (
-              <div
-                className="absolute z-50"
-                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={cancelClose}
-                onMouseLeave={closeHover}
-              >
-                <TransactionsPopup />
+            {/* 4. Divider */}
+            <div className="w-full h-px bg-[#1d2132] flex-shrink-0" />
+
+            {/* 5. List section — Sidebar Menu style: bg-[#11141b] p-[8px] rounded-[12px] */}
+            <div className="flex flex-col gap-[4px] items-start w-full flex-shrink-0">
+
+              {/* Assets */}
+              <div className="relative" onMouseEnter={() => openHover("assets")} onMouseLeave={closeHover}>
+                <button
+                  data-testid="button-collapsed-assets"
+                  className={`w-[40px] h-[40px] flex items-center p-[8px] rounded-[12px] transition-colors ${hoveredIcon === "assets" ? "bg-[#1a1f2e]" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
+                >
+                  <div className="w-[24px] h-[24px] flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="3" fill={hoveredIcon === "assets" ? "#a8b9f4" : "#6c779d"}/>
+                      <circle cx="10" cy="10" r="7" stroke={hoveredIcon === "assets" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.2" strokeDasharray="2.5 2" opacity="0.6"/>
+                    </svg>
+                  </div>
+                </button>
+                {hoveredIcon === "assets" && (
+                  <div className="absolute z-50" style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }} onMouseEnter={cancelClose} onMouseLeave={closeHover}>
+                    <AssetsPopup />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
+              {/* Transactions */}
+              <div className="relative" onMouseEnter={() => openHover("transactions")} onMouseLeave={closeHover}>
+                <button
+                  data-testid="button-collapsed-transactions"
+                  className={`w-[40px] h-[40px] flex items-center p-[8px] rounded-[12px] transition-colors ${hoveredIcon === "transactions" ? "bg-[#1a1f2e]" : "bg-[#11141b] hover:bg-[#1a1f2e]"}`}
+                >
+                  <div className="w-[24px] h-[24px] flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                      <path d="M4 7.5h12M4 7.5L7 4.5M4 7.5L7 10.5M16 12.5H4M16 12.5L13 9.5M16 12.5L13 15.5" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </button>
+                {hoveredIcon === "transactions" && (
+                  <div className="absolute z-50" style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }} onMouseEnter={cancelClose} onMouseLeave={closeHover}>
+                    <TransactionsPopup />
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     );
