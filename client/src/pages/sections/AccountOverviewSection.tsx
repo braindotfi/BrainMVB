@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
+import { useCrossmintWallet } from "@/hooks/useCrossmintWallet";
 
 /* ─── Contextual data per card ─── */
 const walletData = {
@@ -133,25 +134,45 @@ const CopyIcon = () => (
 
 /* ── Personal account cards (orange theme) ── */
 
-const WalletAddressCard = () => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
-    <OrangeGlow />
-    <CardHeader balance="$2,040.30" currency="USD" icon="wallet" />
-    <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Wallet Address</span>
-      <div className="flex items-center gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">0x7cB5.....486A8</span>
-        <CopyIcon />
+const WalletAddressCard = ({
+  walletAddress,
+  ethBalance,
+  userName,
+  isLoading,
+}: {
+  walletAddress: string | null;
+  ethBalance: string | null;
+  userName: string | null;
+  isLoading: boolean;
+}) => {
+  const handleCopy = () => {
+    if (walletAddress) navigator.clipboard.writeText(walletAddress).catch(() => {});
+  };
+  const addrDisplay = isLoading ? "Loading..." : walletAddress ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-5)}` : "No wallet";
+  return (
+    <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+      <OrangeGlow />
+      <CardHeader balance={isLoading ? "···" : (ethBalance ?? "0")} currency="ETH" icon="wallet" />
+      <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Wallet Address</span>
+        <div className="flex items-center gap-2 self-stretch">
+          <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">{addrDisplay}</span>
+          {walletAddress && (
+            <button onClick={handleCopy} title="Copy address">
+              <CopyIcon />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
+        <div className="inline-flex h-8 flex-col items-start gap-1" style={{ maxWidth: 200 }}>
+          <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Account</span>
+          <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4 truncate">{userName ?? "—"}</span>
+        </div>
       </div>
     </div>
-    <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
-      <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-sm leading-4">Adam Jones</span>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 const DebitCardView = () => (
   <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
@@ -265,6 +286,7 @@ interface Props {
 }
 
 export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange }: Props): JSX.Element => {
+  const cmWallet = useCrossmintWallet();
   const [activeFilter, setActiveFilter]         = useState("All");
   const [activeTab, setActiveTab]               = useState("Assets");
   const [transactionFilter, setTransactionFilter] = useState("All");
@@ -662,7 +684,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
                 {activeAccount
                   ? agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Your Account"
-                  : "Your Account"}
+                  : cmWallet.email ?? cmWallet.walletAddressShort ?? "Your Account"}
               </span>
             </div>
 
@@ -712,7 +734,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     <img className="w-8 h-8 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
                     <div className="text-left flex-1 min-w-0">
                       <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Your Account</div>
-                      <div className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">Debit · 1652 ···· 6995</div>
+                      <div className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">{cmWallet.walletAddressShort ?? "No wallet yet"}</div>
                     </div>
                     {activeAccount === null && (
                       <div className="w-4 h-4 bg-brain-v1dark-orange rounded-full flex items-center justify-center flex-shrink-0">
@@ -778,7 +800,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {isYourAccount ? (
               <>
                 {/* Personal account: 3 cards, orange pagination */}
-                {activeCard === 0 && <WalletAddressCard />}
+                {activeCard === 0 && (
+                  <WalletAddressCard
+                    walletAddress={cmWallet.walletAddress}
+                    ethBalance={cmWallet.ethBalance}
+                    userName={cmWallet.email}
+                    isLoading={cmWallet.isLoading}
+                  />
+                )}
                 {activeCard === 1 && <DebitCardView />}
                 {activeCard === 2 && <BankAccountCard />}
                 <div className="absolute top-[182px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1">
