@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
+import { CrossmintProviders } from "@/lib/crossmintProvider";
+import { useAuth } from "@crossmint/client-sdk-react-ui";
 import NotFound from "@/pages/not-found";
 
+import { LoginPage } from "@/pages/LoginPage";
 import { Marketplace } from "@/pages/Marketplace";
 import { AssistantPage } from "@/pages/AssistantPage";
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
@@ -84,13 +87,38 @@ function AppLayout() {
   );
 }
 
+function AuthGate() {
+  const { status } = useAuth();
+  const [location] = useLocation();
+
+  if (status === "loading") {
+    return (
+      <div className="w-full h-screen bg-[#06070a] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (status === "logged-out" && location !== "/login") {
+    return <LoginPage />;
+  }
+
+  if (location === "/login") {
+    return <LoginPage />;
+  }
+
+  return <AppLayout />;
+}
+
 function App() {
   return (
     <Web3Provider>
-      <TooltipProvider>
-        <Toaster />
-        <AppLayout />
-      </TooltipProvider>
+      <CrossmintProviders>
+        <TooltipProvider>
+          <Toaster />
+          <AuthGate />
+        </TooltipProvider>
+      </CrossmintProviders>
     </Web3Provider>
   );
 }
