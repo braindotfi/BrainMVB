@@ -63,11 +63,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.email]);
 
+  // Fetch the real Crossmint wallet address if we don't already have one
+  const refreshWalletAddress = useCallback(async (userId: string) => {
+    try {
+      const res = await fetch(`/api/crossmint/wallet?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.address) {
+          setUser((prev) => {
+            if (!prev || prev.walletAddress === data.address) return prev;
+            const updated = { ...prev, walletAddress: data.address };
+            try { sessionStorage.setItem(USER_KEY, JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch Crossmint wallet address:", e);
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.email) {
       refreshWirexAccounts();
     }
   }, [user?.email]);
+
+  // Whenever we have a userId but no wallet address, try to resolve it
+  useEffect(() => {
+    if (user?.id && !user?.walletAddress) {
+      refreshWalletAddress(user.id);
+    }
+  }, [user?.id, user?.walletAddress]);
 
   const login = useCallback(() => {
     setLoginRequested(true);

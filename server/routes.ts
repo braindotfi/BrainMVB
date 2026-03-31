@@ -611,6 +611,52 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ─────────────────────────────────────────────────────────────
+  // CROSSMINT WALLET LOOKUP
+  // ─────────────────────────────────────────────────────────────
+
+  // GET /api/crossmint/wallet?userId=... — look up a user's embedded wallet address
+  app.get("/api/crossmint/wallet", async (req, res) => {
+    const { userId } = req.query as { userId?: string };
+    if (!userId) return res.status(400).json({ error: "userId required" });
+
+    const apiKey = process.env.CROSSMINT_CLIENT_API_KEY;
+    if (!apiKey) return res.json({ address: null });
+
+    // Crossmint staging REST API — try both v1 and v2 locator patterns
+    const baseUrl = apiKey.startsWith("ck_staging_") || apiKey.startsWith("sk_staging_")
+      ? "https://staging.crossmint.com"
+      : "https://www.crossmint.com";
+
+    const headers = { "X-API-Key": apiKey, "Content-Type": "application/json" };
+
+    // Try fetching the wallet for this user
+    const urls = [
+      `${baseUrl}/api/2022-06-09/wallets/userId:${userId}`,
+      `${baseUrl}/api/2022-06-09/wallets?userId=userId:${userId}`,
+    ];
+
+    for (const url of urls) {
+      try {
+        console.log("[Crossmint] Looking up wallet at:", url);
+        const resp = await fetch(url, { headers });
+        const txt = await resp.text();
+        console.log("[Crossmint] Wallet lookup response:", resp.status, txt.slice(0, 300));
+        if (resp.ok) {
+          const data = JSON.parse(txt);
+          // Handle both single wallet and array response
+          const wallet = Array.isArray(data) ? data[0] : data;
+          const address = wallet?.address ?? wallet?.publicKey ?? null;
+          if (address) return res.json({ address });
+        }
+      } catch (e: any) {
+        console.error("[Crossmint] Wallet lookup error:", e.message);
+      }
+    }
+
+    return res.json({ address: null });
+  });
+
+  // ─────────────────────────────────────────────────────────────
   // WIREX INTEGRATION
   // ─────────────────────────────────────────────────────────────
 

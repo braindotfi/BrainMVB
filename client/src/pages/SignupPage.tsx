@@ -60,7 +60,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
   }
 
   const handleOnboarding = async (userId: string, email?: string, walletAddress?: string) => {
-    if (status === "creating") return;
+    if (status !== "idle") return;
     setStatus("creating");
     try {
       const res = await fetch("/api/wirex/onboard", {
@@ -76,19 +76,22 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
     navigate("/");
   };
 
-  if (status === "creating") {
-    return (
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[#a8b9f4] text-base [font-family:'Gilroy-Medium',Helvetica]">
-          Setting up your wallet &amp; accounts…
-        </span>
-      </div>
-    );
-  }
-
+  // Keep CrossmintAuthWrapper mounted even while creating so the wallet
+  // provider stays alive and can finish loading the wallet address.
   return (
-    <CrossmintAuthWrapper apiKey={apiKey} onSuccess={handleOnboarding} />
+    <>
+      {status === "creating" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
+          <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[#a8b9f4] text-base [font-family:'Gilroy-Medium',Helvetica]">
+            Setting up your wallet &amp; accounts…
+          </span>
+        </div>
+      )}
+      <div style={{ visibility: status === "creating" ? "hidden" : "visible" }}>
+        <CrossmintAuthWrapper apiKey={apiKey} onSuccess={handleOnboarding} />
+      </div>
+    </>
   );
 }
 
@@ -164,18 +167,47 @@ function AuthWatcher({
   const auth = useAuthHook();
   const walletCtx = useWalletHook();
   const calledRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep a ref to the latest wallet address so the timeout callback can read it
+  const walletAddressRef = useRef<string | undefined>(undefined);
+  walletAddressRef.current = walletCtx?.wallet?.address ?? undefined;
 
   useEffect(() => {
     if (auth?.status !== "logged-in" || !auth?.user) return;
     if (calledRef.current) return;
-    // Wait for CrossmintWalletProvider to finish loading/creating the wallet
+
     const walletStatus = walletCtx?.status;
-    if (walletStatus === "in-progress") return;
-    // "loaded" means we have an address; "error" or "not-loaded" means proceed without one
-    calledRef.current = true;
-    const walletAddress: string | undefined = walletCtx?.wallet?.address ?? undefined;
-    onSuccess(auth.user.id, auth.user.email, walletAddress);
+
+    // If wallet is ready, fire immediately
+    if (walletStatus === "loaded") {
+      calledRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      onSuccess(auth.user.id, auth.user.email, walletCtx?.wallet?.address);
+      return;
+    }
+
+    // If wallet errored, fire without address
+    if (walletStatus === "error") {
+      calledRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      onSuccess(auth.user.id, auth.user.email, undefined);
+      return;
+    }
+
+    // "not-loaded" or "in-progress" — start a timeout if we haven't already
+    if (!timerRef.current) {
+      timerRef.current = setTimeout(() => {
+        if (!calledRef.current) {
+          calledRef.current = true;
+          onSuccess(auth.user.id, auth.user.email, walletAddressRef.current);
+        }
+      }, 6000);
+    }
   }, [auth?.status, auth?.user?.id, walletCtx?.status]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   return <>{children}</>;
 }
