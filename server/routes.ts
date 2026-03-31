@@ -592,12 +592,5 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ─── Public config endpoint (exposes client-safe keys) ────────────────────
-  app.get("/api/config", (_req, res) => {
-    res.json({
-      crossmintApiKey: process.env.CROSSMINT_API_KEY ?? "",
-    });
-  });
-
   return httpServer;
 }
