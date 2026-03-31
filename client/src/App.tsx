@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
+import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
 
 import { Marketplace } from "@/pages/Marketplace";
@@ -11,6 +12,7 @@ import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
 import { LaunchpadPage } from "@/pages/LaunchpadPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
+import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 import { CreateAgentModal } from "@/components/CreateAgentModal";
@@ -19,11 +21,22 @@ import { ExchangeModal } from "@/components/ExchangeModal";
 import { NavContext } from "@/lib/navContext";
 
 function AppLayout() {
+  const { isLoggedIn, logout } = useAuth();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [createAgentOpen, setCreateAgentOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [, navigate] = useLocation();
+
+  if (!isLoggedIn) {
+    return <SignupPage />;
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <NavContext.Provider value={{ navCollapsed, toggleNav: () => setNavCollapsed((v) => !v) }}>
@@ -35,6 +48,7 @@ function AppLayout() {
           collapsed={navCollapsed}
           onToggle={() => setNavCollapsed((v) => !v)}
           onCreateAgent={() => setCreateAgentOpen(true)}
+          onLogout={handleLogout}
         />
 
         <div className="flex-1 min-w-0 min-h-0">

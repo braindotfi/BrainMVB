@@ -1,21 +1,16 @@
+import { ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClientProvider } from "@tanstack/react-query";
 import "@rainbow-me/rainbowkit/styles.css";
 import { wagmiConfig } from "./web3";
 import { queryClient } from "./queryClient";
+import { AuthProvider } from "./authContext";
 
 interface Web3ProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-/**
- * Correct provider order per RainbowKit v2 docs:
- * WagmiProvider > QueryClientProvider > RainbowKitProvider
- *
- * The outer QueryClientProvider in App.tsx handles the rest of the app's
- * queries. RainbowKit needs its own dedicated nesting order.
- */
 export function Web3Provider({ children }: Web3ProviderProps) {
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -32,7 +27,9 @@ export function Web3Provider({ children }: Web3ProviderProps) {
             learnMoreUrl: "https://brainfinance.io",
           }}
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

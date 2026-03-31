@@ -3,6 +3,15 @@ import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { storage } from "./storage";
 import { z } from "zod";
+import {
+  createWirexUser,
+  getWirexUser,
+  getWirexWallets,
+  getWirexCards,
+  issueVirtualCard,
+  getWirexBankAccounts,
+  getWirexTransactions,
+} from "./wirex";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -589,6 +598,160 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("SIWE verify error:", error);
       return res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // PUBLIC CONFIG — exposes non-secret public keys to the frontend
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/config", (_req, res) => {
+    return res.json({
+      crossmintApiKey: process.env.CROSSMINT_CLIENT_API_KEY || "",
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // WIREX INTEGRATION
+  // ─────────────────────────────────────────────────────────────
+
+  // POST /api/wirex/onboard — called after Crossmint login to provision WireX accounts
+  app.post("/api/wirex/onboard", async (req, res) => {
+    try {
+      const { userId, email } = req.body;
+      if (!email) return res.status(400).json({ error: "email required" });
+
+      // Check/create WireX user
+      let wirexUser = await getWirexUser(email).catch(() => null);
+      if (!wirexUser) {
+        // Use Crossmint userId as a placeholder wallet address for onboarding
+        const walletPlaceholder = userId || email;
+        await createWirexUser(email, walletPlaceholder).catch(() => null);
+        wirexUser = await getWirexUser(email).catch(() => null);
+      }
+
+      // Fetch accounts
+      const [wallets, cards, bankAccounts] = await Promise.all([
+        getWirexWallets(email).catch(() => []),
+        getWirexCards(email).catch(() => []),
+        getWirexBankAccounts(email).catch(() => []),
+      ]);
+
+      // If no virtual card yet, try to issue one
+      if (cards.length === 0 && wirexUser) {
+        const fullName = wirexUser?.personal_info
+          ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+          : email.split("@")[0];
+        await issueVirtualCard(email, fullName).catch(() => null);
+        const newCards = await getWirexCards(email).catch(() => []);
+        cards.push(...newCards);
+      }
+
+      const accounts = [
+        ...wallets.map((w: any) => ({
+          id: w.id,
+          type: "wallet" as const,
+          address: w.address || w.wallet_address,
+          balance: w.balance,
+          currency: w.currency,
+          nameOnAccount: wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email,
+        })),
+        ...cards.map((c: any) => ({
+          id: c.id,
+          type: "debit" as const,
+          cardNumber: c.card_number ? c.card_number.replace(/(.{4})/g, "$1 ").trim() : undefined,
+          cardExpiry: c.expiry || c.expiry_date,
+          cardCvv: c.cvv,
+          nameOnAccount: c.name_on_card || (wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email),
+          balance: c.balance,
+          currency: c.currency,
+        })),
+        ...bankAccounts.map((b: any) => ({
+          id: b.id,
+          type: "bank" as const,
+          iban: b.iban || b.account_number,
+          nameOnAccount: b.name || (wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email),
+          balance: b.balance,
+          currency: b.currency,
+        })),
+      ];
+
+      return res.json({ success: true, accounts, wirexUser });
+    } catch (error: any) {
+      console.error("WireX onboard error:", error);
+      return res.status(500).json({ error: error.message || "WireX onboarding failed" });
+    }
+  });
+
+  // GET /api/wirex/accounts — refresh accounts for logged-in user
+  app.get("/api/wirex/accounts", async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) return res.status(400).json({ error: "email required" });
+
+      const [wirexUser, wallets, cards, bankAccounts] = await Promise.all([
+        getWirexUser(email).catch(() => null),
+        getWirexWallets(email).catch(() => []),
+        getWirexCards(email).catch(() => []),
+        getWirexBankAccounts(email).catch(() => []),
+      ]);
+
+      const accounts = [
+        ...wallets.map((w: any) => ({
+          id: w.id,
+          type: "wallet" as const,
+          address: w.address || w.wallet_address,
+          balance: w.balance,
+          currency: w.currency,
+          nameOnAccount: wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email,
+        })),
+        ...cards.map((c: any) => ({
+          id: c.id,
+          type: "debit" as const,
+          cardNumber: c.card_number ? c.card_number.replace(/(.{4})/g, "$1 ").trim() : undefined,
+          cardExpiry: c.expiry || c.expiry_date,
+          cardCvv: c.cvv,
+          nameOnAccount: c.name_on_card || (wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email),
+          balance: c.balance,
+          currency: c.currency,
+        })),
+        ...bankAccounts.map((b: any) => ({
+          id: b.id,
+          type: "bank" as const,
+          iban: b.iban || b.account_number,
+          nameOnAccount: b.name || (wirexUser?.personal_info
+            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+            : email),
+          balance: b.balance,
+          currency: b.currency,
+        })),
+      ];
+
+      return res.json({ accounts });
+    } catch (error: any) {
+      console.error("WireX accounts error:", error);
+      return res.status(500).json({ error: error.message || "Failed to fetch accounts" });
+    }
+  });
+
+  // GET /api/wirex/transactions — get transactions for a specific account
+  app.get("/api/wirex/transactions", async (req, res) => {
+    try {
+      const { email, accountId } = req.query as { email: string; accountId?: string };
+      if (!email) return res.status(400).json({ error: "email required" });
+      const txs = await getWirexTransactions(email, accountId).catch(() => []);
+      return res.json({ transactions: txs });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
   });
 

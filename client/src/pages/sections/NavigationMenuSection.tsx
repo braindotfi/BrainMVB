@@ -37,9 +37,10 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onCreateAgent: () => void;
+  onLogout?: () => void;
 }
 
-export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Props): JSX.Element => {
+export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLogout }: Props): JSX.Element => {
   const [location, navigate] = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -578,7 +579,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent }: Pr
             <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
           </button>
-          <button className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity">
+          <button
+            onClick={onLogout}
+            className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity"
+          >
             <img className="w-6 h-6 flex-shrink-0" alt="Logout" src="/figmaAssets/logout-icon.svg" />
             {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-base font-semibold leading-5 whitespace-nowrap">Logout</span>}
           </button>
