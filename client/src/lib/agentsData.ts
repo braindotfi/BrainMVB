@@ -9,6 +9,7 @@ export interface AgentRule {
 export interface AgentData {
   id: string;
   name: string;
+  ticker: string;
   description: string;
   avatar: string;
   status: AgentStatus;
@@ -24,6 +25,7 @@ export interface AgentData {
   schedule: string;
   walletAddress: string;
   deployedAt: string;
+  createdByUser?: boolean;
   activityLog: { time: string; event: string; detail: string; kind: "success" | "info" | "warn" }[];
 }
 
@@ -31,6 +33,8 @@ export const agents: AgentData[] = [
   {
     id: "alphaflow",
     name: "AlphaFlow",
+    ticker: "$ALPHA",
+    createdByUser: true,
     description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.",
     avatar: "/figmaAssets/avatars-3.svg",
     status: "active",
@@ -63,6 +67,8 @@ export const agents: AgentData[] = [
   {
     id: "yieldpilot",
     name: "Yield Pilot",
+    ticker: "$YIELD",
+    createdByUser: true,
     description: "Manages capital allocation across DeFi protocols and yield strategies while maintaining risk-adjusted returns.",
     avatar: "/figmaAssets/avatars-9.svg",
     status: "active",
@@ -93,6 +99,8 @@ export const agents: AgentData[] = [
   {
     id: "risksentinel",
     name: "Risk Sentinel",
+    ticker: "$RISK",
+    createdByUser: true,
     description: "Continuously monitors positions and transactions to detect anomalies, enforce limits, and prevent loss.",
     avatar: "/figmaAssets/avatars.svg",
     status: "active",
@@ -124,6 +132,7 @@ export const agents: AgentData[] = [
   {
     id: "signalseer",
     name: "Signal Seer",
+    ticker: "$SIGNAL",
     description: "Aggregates news, social signals, and on-chain data to surface actionable insights and trading signals.",
     avatar: "/figmaAssets/avatars-5.svg",
     status: "paused",
@@ -154,6 +163,7 @@ export const agents: AgentData[] = [
   {
     id: "inboxzero",
     name: "InboxZero",
+    ticker: "$INBOX",
     description: "Manages email, filters priority messages, and drafts replies automatically using AI.",
     avatar: "/figmaAssets/avatars-2.svg",
     status: "inactive",
@@ -184,6 +194,7 @@ export const agents: AgentData[] = [
   {
     id: "trendradar",
     name: "TrendRadar",
+    ticker: "$TREND",
     description: "Detects emerging trends across markets, social platforms, and ecosystems before they become mainstream.",
     avatar: "/figmaAssets/avatars-5.svg",
     status: "active",
@@ -214,6 +225,7 @@ export const agents: AgentData[] = [
   {
     id: "taskforgepro",
     name: "TaskForge Pro",
+    ticker: "$FORGE",
     description: "Automates repetitive workflows across tools, APIs, and services using event-driven pipelines.",
     avatar: "/figmaAssets/avatars-6.svg",
     status: "active",
@@ -244,6 +256,7 @@ export const agents: AgentData[] = [
   {
     id: "opscommander",
     name: "Ops Commander",
+    ticker: "$OPS",
     description: "Coordinates multi-step workflows across systems and APIs with real-time monitoring and rollback.",
     avatar: "/figmaAssets/avatars-8.svg",
     status: "active",
@@ -274,6 +287,7 @@ export const agents: AgentData[] = [
   {
     id: "invoicebot",
     name: "Invoice Bot",
+    ticker: "$BILL",
     description: "Generates invoices, tracks payment status, and automates billing workflows for recurring clients.",
     avatar: "/figmaAssets/avatars-4.svg",
     status: "inactive",
@@ -304,6 +318,7 @@ export const agents: AgentData[] = [
   {
     id: "dealcloser",
     name: "Deal Closer",
+    ticker: "$DEAL",
     description: "Negotiates and executes transactions between agents using escrow and conditional smart contract payments.",
     avatar: "/figmaAssets/avatars-3.svg",
     status: "paused",
@@ -334,6 +349,7 @@ export const agents: AgentData[] = [
   {
     id: "swarmalpha",
     name: "SwarmAlpha",
+    ticker: "$SWARM",
     description: "Coordinates multiple sub-agents to execute complex strategies in parallel across DeFi and data pipelines.",
     avatar: "/figmaAssets/avatars-7.svg",
     status: "active",
@@ -364,6 +380,7 @@ export const agents: AgentData[] = [
   {
     id: "paystream",
     name: "Pay Stream",
+    ticker: "$PAY",
     description: "Executes real-time payments for APIs and services using x402 protocols and smart contracts.",
     avatar: "/figmaAssets/avatars-1.svg",
     status: "inactive",
