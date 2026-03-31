@@ -614,11 +614,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                     Dashboard
                   </span>
-                  {isActive("/dashboard") && (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                      <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
                 </button>
               </Link>
 

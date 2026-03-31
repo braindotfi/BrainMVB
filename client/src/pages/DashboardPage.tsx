@@ -243,111 +243,119 @@ export const DashboardPage = (): JSX.Element => {
             <StatCard label="Yield Earned" value={d.yield} delta={d.yieldPct} deltaPositive={true} />
           </div>
 
-          {/* ── Middle three-column section ── */}
-          <div className="grid gap-[12px]" style={{ gridTemplateColumns: "1fr 1fr 2fr" }}>
+          {/* ── Middle two-column section ── */}
+          <div className="grid gap-[12px]" style={{ gridTemplateColumns: "1fr 2fr", alignItems: "start" }}>
 
-            {/* ── Left: Spending by Category ── */}
-            <div
-              className="flex flex-col rounded-[16px] overflow-hidden"
-              style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
-            >
-              <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">
-                  Spending by Category
-                </span>
-              </div>
-              <div className="flex flex-col gap-[14px] p-[16px] flex-1">
-                {d.spendCategories.map((cat) => (
-                  <div key={cat.label} className="flex flex-col gap-[6px]">
-                    <div className="flex items-center justify-between">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
-                        {cat.label}
-                      </span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">
-                        {cat.amount}
-                      </span>
-                    </div>
-                    <div className="w-full h-[5px] rounded-full overflow-hidden" style={{ background: "#1d2132" }}>
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${cat.pct}%`, background: cat.color }}
-                      />
-                    </div>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[11px] leading-[14px]">
-                      {cat.pct}% of total
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* ── Left column: Spending by Category + Subscriptions stacked ── */}
+            <div className="flex flex-col gap-[12px]">
 
-            {/* ── Center: Subscriptions ── */}
-            <div
-              className="flex flex-col rounded-[16px] overflow-hidden"
-              style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
-            >
-              <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">
-                  Subscriptions
-                </span>
+              {/* Spending by Category — compact */}
+              <div
+                className="flex flex-col rounded-[16px] overflow-hidden"
+                style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
+              >
+                <div className="flex items-center justify-between px-[14px] py-[10px]" style={{ borderBottom: "1px solid #1d2132" }}>
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">
+                    Spending by Category
+                  </span>
+                </div>
+                <div className="flex flex-col gap-[10px] p-[14px]">
+                  {d.spendCategories.map((cat) => (
+                    <div key={cat.label} className="flex flex-col gap-[4px]">
+                      <div className="flex items-center justify-between">
+                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">
+                          {cat.label}
+                        </span>
+                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">
+                          {cat.amount}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-[6px]">
+                        <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: "#1d2132" }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${cat.pct}%`, background: cat.color }}
+                          />
+                        </div>
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[10px] leading-[12px] flex-shrink-0 w-[26px] text-right">
+                          {cat.pct}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <div className="flex flex-col flex-1">
-                  {d.subscriptions.map((sub, i) => (
+
+              {/* Subscriptions — with monthly total summary */}
+              <div
+                className="flex flex-col rounded-[16px] overflow-hidden"
+                style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
+              >
+                <div className="flex items-center justify-between px-[14px] py-[10px]" style={{ borderBottom: "1px solid #1d2132" }}>
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">
+                    Subscriptions
+                  </span>
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">
+                    Monthly
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  {periodData["30D"].subscriptions.map((sub, i) => (
                     <div key={sub.name}>
-                      <div className="flex items-center gap-[10px] px-[16px] py-[10px] hover:bg-[#111822] transition-colors cursor-pointer">
+                      <div className="flex items-center gap-[8px] px-[14px] py-[8px] hover:bg-[#111822] transition-colors cursor-pointer">
                         <div
-                          className="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center flex-shrink-0 text-[14px]"
+                          className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center flex-shrink-0 text-[12px]"
                           style={{ background: "#1d2132" }}
                         >
                           {sub.icon}
                         </div>
                         <div className="flex flex-col flex-1 min-w-0">
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[13px] leading-[18px] truncate">
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[12px] leading-[16px] truncate">
                             {sub.name}
                           </span>
-                          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">
+                          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[10px] leading-[13px]">
                             {sub.cycle}
                           </span>
                         </div>
-                        <div className="flex flex-col items-end gap-[3px] flex-shrink-0">
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">
+                        <div className="flex flex-col items-end gap-[2px] flex-shrink-0">
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">
                             {sub.amount}
                           </span>
                           {sub.status === "active" && (
-                            <span className="text-[9px] px-[6px] py-[2px] rounded-[4px]" style={{ background: "rgba(66,191,35,0.12)", color: "#42bf23", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
+                            <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(66,191,35,0.12)", color: "#42bf23", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
                               Active
                             </span>
                           )}
                           {sub.status === "low" && (
-                            <span className="text-[9px] px-[6px] py-[2px] rounded-[4px]" style={{ background: "rgba(255,149,0,0.12)", color: "#ff9500", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
+                            <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(255,149,0,0.12)", color: "#ff9500", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
                               Low
                             </span>
                           )}
                           {sub.status === "inactive" && (
-                            <span className="text-[9px] px-[6px] py-[2px] rounded-[4px]" style={{ background: "rgba(108,119,157,0.12)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
+                            <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(108,119,157,0.12)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>
                               Paused
                             </span>
                           )}
                         </div>
                       </div>
-                      {i < d.subscriptions.length - 1 && <HDivider />}
+                      {i < periodData["30D"].subscriptions.length - 1 && <HDivider />}
                     </div>
                   ))}
-                </div>
-                {/* Total row */}
-                <div style={{ borderTop: "1px solid #1d2132" }}>
-                  <div className="flex items-center justify-between px-[16px] py-[10px]">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
-                      Total
-                    </span>
-                    <span className="[font-family:'Gilroy-Bold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">
-                      ${subTotal.toFixed(2)}
-                    </span>
+                  {/* Monthly total */}
+                  <div style={{ borderTop: "1px solid #1d2132" }}>
+                    <div className="flex items-center justify-between px-[14px] py-[9px]">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">
+                        Monthly Total
+                      </span>
+                      <span className="[font-family:'Gilroy-Bold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">
+                        $478.00
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+
+            </div>{/* end left col */}
 
             {/* ── Right: Recent Transactions ── */}
             <div
