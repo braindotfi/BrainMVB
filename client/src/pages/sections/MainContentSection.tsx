@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
@@ -33,7 +34,7 @@ const allAgents = [
 
 type Agent = typeof allAgents[0];
 
-const AgentItem = ({ name, description, avatarSrc, avatarType }: Agent) => (
+const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agent & { onAdd: (id: string) => void }) => (
   <div className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0">
     {avatarType === "img" ? (
       <img className="w-12 h-12 flex-shrink-0" alt={name} src={avatarSrc} />
@@ -48,17 +49,22 @@ const AgentItem = ({ name, description, avatarSrc, avatarType }: Agent) => (
         {description}
       </div>
     </div>
-    <div className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0">
+    <button
+      data-testid={`button-add-agent-${id}`}
+      onClick={() => onAdd(id)}
+      className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+      title={`View ${name}`}
+    >
       <img className="absolute top-1 left-1 w-4 h-4" alt="Add" src="/figmaAssets/icons.svg" />
-    </div>
+    </button>
   </div>
 );
 
-const AgentRow = ({ agents }: { agents: Agent[] }) => (
+const AgentRow = ({ agents, onAdd }: { agents: Agent[]; onAdd: (id: string) => void }) => (
   <div className="flex items-start gap-4 w-full">
     {agents.map((agent, index) => (
       <div key={agent.id} className="flex items-start gap-4 flex-1 self-stretch min-w-0">
-        <AgentItem {...agent} avatarType={agent.avatarType as "img" | "bg"} />
+        <AgentItem {...agent} avatarType={agent.avatarType as "img" | "bg"} onAdd={onAdd} />
         {index < agents.length - 1 && (
           <img className="self-stretch w-px flex-shrink-0" alt="Divider" src="/figmaAssets/vector-944.svg" />
         )}
@@ -67,7 +73,7 @@ const AgentRow = ({ agents }: { agents: Agent[] }) => (
   </div>
 );
 
-const AgentSection = ({ title, row1, row2 }: { title: string; row1: Agent[]; row2: Agent[] }) => (
+const AgentSection = ({ title, row1, row2, onAdd }: { title: string; row1: Agent[]; row2: Agent[]; onAdd: (id: string) => void }) => (
   <div className="flex flex-col items-start gap-4 w-full">
     <div className="flex items-start justify-between w-full">
       <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xl tracking-[0] leading-6 whitespace-nowrap">
@@ -79,17 +85,20 @@ const AgentSection = ({ title, row1, row2 }: { title: string; row1: Agent[]; row
       </button>
     </div>
     <div className="flex flex-col items-start gap-4 w-full">
-      <AgentRow agents={row1} />
+      <AgentRow agents={row1} onAdd={onAdd} />
       <img className="w-full" alt="Divider" src="/figmaAssets/frame-2131330021.svg" />
-      <AgentRow agents={row2} />
+      <AgentRow agents={row2} onAdd={onAdd} />
     </div>
   </div>
 );
 
 export const MainContentSection = (): JSX.Element => {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const handleAdd = (id: string) => navigate(`/agent/${id}`);
 
   const filtered = search.trim()
     ? allAgents.filter(
@@ -181,7 +190,7 @@ export const MainContentSection = (): JSX.Element => {
                 <div className="grid grid-cols-1 gap-4">
                   {filtered.map((agent) => (
                     <div key={agent.id} className="flex items-center gap-3 p-3 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] hover:border-[#414965] transition-colors cursor-pointer">
-                      <AgentItem {...agent} avatarType={agent.avatarType as "img" | "bg"} />
+                      <AgentItem {...agent} avatarType={agent.avatarType as "img" | "bg"} onAdd={handleAdd} />
                     </div>
                   ))}
                 </div>
@@ -195,8 +204,8 @@ export const MainContentSection = (): JSX.Element => {
               {/* Separator — 1px line, same style as Launchpad */}
               <div className="w-full flex-shrink-0" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
 
-              <AgentSection title="Trending Agents" row1={trendingAgentsRow1} row2={trendingAgentsRow2} />
-              <AgentSection title="New and Noteworthy" row1={newNoteworthyRow1} row2={newNoteworthyRow2} />
+              <AgentSection title="Trending Agents" row1={trendingAgentsRow1} row2={trendingAgentsRow2} onAdd={handleAdd} />
+              <AgentSection title="New and Noteworthy" row1={newNoteworthyRow1} row2={newNoteworthyRow2} onAdd={handleAdd} />
             </>
           )}
         </div>
