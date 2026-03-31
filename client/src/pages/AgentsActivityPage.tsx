@@ -1,103 +1,8 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-type AgentStatus = "active" | "inactive" | "paused";
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  avatar: string;
-  status: AgentStatus;
-  type: string;
-  earnings: string;
-  trades: number;
-  successRate: string;
-  lastActive: string;
-  category: string;
-}
-
-const agents: Agent[] = [
-  {
-    id: "alphaflow",
-    name: "AlphaFlow",
-    description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.",
-    avatar: "/figmaAssets/avatars-3.svg",
-    status: "active",
-    type: "Trading",
-    earnings: "+$12,450",
-    trades: 847,
-    successRate: "73%",
-    lastActive: "2 min ago",
-    category: "DeFi",
-  },
-  {
-    id: "yieldpilot",
-    name: "Yield Pilot",
-    description: "Manages capital allocation across DeFi protocols and yield strategies while maintaining risk-adjusted returns.",
-    avatar: "/figmaAssets/avatars-9.svg",
-    status: "active",
-    type: "Yield",
-    earnings: "+$8,201",
-    trades: 312,
-    successRate: "88%",
-    lastActive: "5 min ago",
-    category: "DeFi",
-  },
-  {
-    id: "risksentinel",
-    name: "Risk Sentinel",
-    description: "Continuously monitors positions and transactions to detect anomalies, enforce limits, and prevent loss.",
-    avatar: "/figmaAssets/avatars.svg",
-    status: "active",
-    type: "Risk",
-    earnings: "$0",
-    trades: 2103,
-    successRate: "99%",
-    lastActive: "Just now",
-    category: "Security",
-  },
-  {
-    id: "signalseer",
-    name: "Signal Seer",
-    description: "Aggregates news, social signals, and on-chain data to surface actionable insights and trading signals.",
-    avatar: "/figmaAssets/avatars-5.svg",
-    status: "paused",
-    type: "Analytics",
-    earnings: "+$3,800",
-    trades: 198,
-    successRate: "61%",
-    lastActive: "1 hour ago",
-    category: "Analytics",
-  },
-  {
-    id: "inboxzero",
-    name: "InboxZero",
-    description: "Manages email, filters priority messages, and drafts replies automatically using AI.",
-    avatar: "/figmaAssets/avatars-2.svg",
-    status: "inactive",
-    type: "Productivity",
-    earnings: "+$240",
-    trades: 0,
-    successRate: "N/A",
-    lastActive: "3 days ago",
-    category: "Productivity",
-  },
-  {
-    id: "paystream",
-    name: "Pay Stream",
-    description: "Executes real-time payments for APIs and services using x402 protocols and smart contracts.",
-    avatar: "/figmaAssets/avatars-1.svg",
-    status: "inactive",
-    type: "Payments",
-    earnings: "+$950",
-    trades: 67,
-    successRate: "94%",
-    lastActive: "5 days ago",
-    category: "Finance",
-  },
-];
+import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
 /* ── Toggle switch matching Figma exactly ── */
 const AgentToggle = ({
@@ -138,11 +43,13 @@ const AgentCard = ({
   currentStatus,
   onToggle,
   isUpdating,
+  onEdit,
 }: {
-  agent: Agent;
+  agent: AgentData;
   currentStatus: AgentStatus;
   onToggle: () => void;
   isUpdating: boolean;
+  onEdit: () => void;
 }) => {
   const isActive = currentStatus === "active";
   const earningsPositive = agent.earnings.startsWith("+");
@@ -252,6 +159,7 @@ const AgentCard = ({
         {/* Edit button */}
         <button
           data-testid={`button-edit-agent-${agent.id}`}
+          onClick={onEdit}
           className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -267,6 +175,7 @@ const AgentCard = ({
 };
 
 export const AgentsActivityPage = (): JSX.Element => {
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -424,6 +333,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                 currentStatus={agentStatuses[agent.id]}
                 onToggle={() => handleToggle(agent.id)}
                 isUpdating={updatingId === agent.id}
+                onEdit={() => navigate(`/manage/${agent.id}`)}
               />
             </div>
           ))}
