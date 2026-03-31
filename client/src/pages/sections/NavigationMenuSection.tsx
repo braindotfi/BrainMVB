@@ -192,17 +192,40 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     </>
   );
 
-  // ── Group sessions by "Mon YYYY" ──
+  // ── Group sessions by relative time label ──
   const groupSessionsByMonth = (sessions: ChatSession[]) => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+    const startOfThisWeek = new Date(startOfToday.getTime() - startOfToday.getDay() * 86400000);
+    const startOfLastWeek = new Date(startOfThisWeek.getTime() - 7 * 86400000);
+
+    const getLabel = (iso: string) => {
+      const d = new Date(iso);
+      if (d >= startOfToday) return "Today";
+      if (d >= startOfYesterday) return "Yesterday";
+      if (d >= startOfThisWeek) return "This Week";
+      if (d >= startOfLastWeek) return "Last Week";
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    };
+
+    const ORDER = ["Today", "Yesterday", "This Week", "Last Week"];
     const groups: { label: string; sessions: ChatSession[] }[] = [];
     sessions.forEach((sess) => {
-      const date = new Date(sess.updatedAt);
-      const label = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      const label = getLabel(sess.updatedAt);
       const existing = groups.find((g) => g.label === label);
       if (existing) existing.sessions.push(sess);
       else groups.push({ label, sessions: [sess] });
     });
-    return groups;
+
+    return groups.sort((a, b) => {
+      const ai = ORDER.indexOf(a.label);
+      const bi = ORDER.indexOf(b.label);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return new Date(b.label).getTime() - new Date(a.label).getTime();
+    });
   };
 
   // Get the currently open session id from the URL
@@ -326,7 +349,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                           {/* Row — clicking the title area resumes the chat */}
                           <div
                             className="flex items-center justify-between rounded-[8px] px-2 py-[7px] cursor-pointer
-                              hover:bg-[#1c1400] transition-colors"
+                              hover:bg-[#4a2300] transition-colors"
                             style={{ gap: "6px" }}
                             onClick={() => {
                               setOpenMoreMenu(null);
@@ -355,7 +378,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                                 setOpenMoreMenu(isMenuOpen ? null : sess.id);
                               }}
                               className="opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0
-                                w-6 h-6 rounded-[6px] flex items-center justify-center hover:bg-[#2a1f00]"
+                                w-6 h-6 rounded-[6px] flex items-center justify-center hover:bg-[#5c2d00]"
                               title="More options"
                             >
                               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

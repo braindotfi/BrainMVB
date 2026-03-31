@@ -228,6 +228,9 @@ export const AssistantPage = (): JSX.Element => {
         updatedAt: new Date().toISOString(),
       };
       saveChatSession(updated);
+      if (isFirstUserMsg) {
+        window.dispatchEvent(new Event("chat-sessions-updated"));
+      }
       chatMutation.mutate(updated.messages.map((m) => ({ role: m.role, content: m.content })));
       return updated;
     });
