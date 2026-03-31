@@ -11,6 +11,7 @@ import { AssistantPage } from "@/pages/AssistantPage";
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
 import { AgentManagePage } from "@/pages/AgentManagePage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
@@ -59,6 +60,7 @@ function AppLayout() {
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/manage/:id" component={AgentManagePage} />
             <Route path="/notifications" component={NotificationsPage} />
+            <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>
         </div>
