@@ -4,36 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
-/* ── Toggle switch matching Figma exactly ── */
-const AgentToggle = ({
-  active,
-  onClick,
-  disabled,
-}: {
-  active: boolean;
-  onClick: () => void;
-  disabled: boolean;
-}) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    data-testid="button-agent-toggle"
-    className={`relative h-[24px] w-[40px] flex-shrink-0 transition-all rounded-[12px] ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-  >
-    <div
-      className={`absolute left-[2px] top-[2px] h-[20px] w-[36px] rounded-[100px] transition-colors ${
-        active ? "bg-[#123509]" : "bg-[#222737]"
-      }`}
-    />
-    <div
-      className={`absolute top-[4px] size-[16px] rounded-[100px] transition-all ${
-        active ? "bg-[#42bf23] left-[20px]" : "bg-[#06070a] left-[4px]"
-      }`}
-    />
-  </button>
-);
-
-/* ── Agent Card ── */
+/* ── Agent Card matching Figma 2954-28819 exactly ── */
 const AgentCard = ({
   agent,
   currentStatus,
@@ -48,15 +19,15 @@ const AgentCard = ({
   onEdit: () => void;
 }) => {
   const isActive = currentStatus === "active";
-  const earningsPositive = agent.earnings.startsWith("+");
 
   return (
     <div
       data-testid={`card-agent-${agent.id}`}
       className="flex flex-col gap-[16px] p-[16px] border border-[#1d2132] rounded-[16px] transition-colors hover:border-[#2d3450]"
     >
-      {/* ── Header row ── */}
-      <div className="flex gap-[8px] h-[48px] items-center">
+      {/* ── Header: avatar + name block ── */}
+      <div className="flex gap-[8px] items-center h-[48px]">
+        {/* Avatar 48×48 */}
         <div className="overflow-hidden relative flex-shrink-0 size-[48px] rounded-[10px]">
           <img
             src={agent.avatar}
@@ -64,20 +35,37 @@ const AgentCard = ({
             className="absolute inset-0 w-full h-full object-cover"
           />
         </div>
-        <div className="flex flex-col gap-[4px] items-start justify-center flex-1 min-w-0">
-          <div className="flex gap-[16px] items-center w-full">
-            <span className="flex-1 min-w-0 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] text-white leading-[20px] truncate">
-              {agent.name}
-            </span>
-            <AgentToggle active={isActive} onClick={onToggle} disabled={isUpdating} />
-          </div>
-          <div className="flex items-center gap-[6px]">
-            <span className="bg-[#123509] border border-[rgba(66,191,35,0.2)] px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[11px] leading-[14px] whitespace-nowrap">
-              {agent.type}
-            </span>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[11px] leading-[14px] whitespace-nowrap">
-              {agent.ticker}
-            </span>
+
+        {/* Name + tag block */}
+        <div className="flex flex-1 min-w-0 items-center">
+          <div className="flex flex-1 min-w-0 flex-col items-start">
+            {/* Row 1: agent name + "Last Active" label */}
+            <div className="flex gap-[4px] h-[20px] items-center w-full">
+              <p className="flex-1 min-w-0 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] text-white leading-[20px] truncate">
+                {agent.name}
+              </p>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[12px] leading-[20px] whitespace-nowrap flex-shrink-0">
+                Last Active
+              </span>
+            </div>
+
+            {/* Row 2: type tag (purple) + last active time */}
+            <div className="flex items-center justify-between w-full">
+              <div
+                className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+                style={{
+                  background: "#240757",
+                  border: "1px solid rgba(118,49,238,0.2)",
+                }}
+              >
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-[11px] leading-[14px] whitespace-nowrap">
+                  {agent.type}
+                </span>
+              </div>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
+                {agent.lastActive}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -92,20 +80,18 @@ const AgentCard = ({
 
       {/* ── Stats box ── */}
       <div className="bg-[#0a0c10] flex gap-[6px] items-center p-[8px] rounded-[8px] w-full">
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+        {/* Earnings */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
             Earnings
           </span>
-          <span
-            className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] leading-[20px] whitespace-nowrap ${
-              earningsPositive ? "text-[#42bf23]" : "text-[#a8b9f4]"
-            }`}
-          >
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
             {agent.earnings}
           </span>
         </div>
         <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+        {/* Actions */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
             Actions
           </span>
@@ -114,37 +100,68 @@ const AgentCard = ({
           </span>
         </div>
         <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+        {/* Success */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
             Success
           </span>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[16px] leading-[20px] whitespace-nowrap">
             {agent.successRate}
           </span>
         </div>
       </div>
 
-      {/* ── Horizontal divider ── */}
-      <div className="h-px w-full bg-[#1d2132] flex-shrink-0" />
+      {/* ── Footer: Start/Stop + Edit buttons ── */}
+      <div className="flex gap-[8px] items-center h-[32px]">
+        {/* Start / Stop button — full width, flex-1 */}
+        {isActive ? (
+          <button
+            data-testid={`button-stop-agent-${agent.id}`}
+            onClick={onToggle}
+            disabled={isUpdating}
+            className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 disabled:opacity-50"
+            style={{ background: "#350011" }}
+          >
+            {/* Red square stop icon */}
+            <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+              Stop
+            </span>
+          </button>
+        ) : (
+          <button
+            data-testid={`button-start-agent-${agent.id}`}
+            onClick={onToggle}
+            disabled={isUpdating}
+            className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 disabled:opacity-50"
+            style={{ background: "#123509" }}
+          >
+            {/* Green play icon */}
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+              <path d="M5.5 3.5L12.5 8L5.5 12.5V3.5Z" fill="#42bf23" />
+            </svg>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">
+              Start
+            </span>
+          </button>
+        )}
 
-      {/* ── Footer: Last Active + Edit button ── */}
-      <div className="flex gap-[16px] items-center w-full">
-        <div className="flex flex-col gap-[2px] items-start justify-center flex-1 min-w-0">
-          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap">
-            Last Active
-          </span>
-          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[16px] whitespace-nowrap">
-            {agent.lastActive}
-          </span>
-        </div>
+        {/* Edit button — full width, flex-1 */}
         <button
           data-testid={`button-edit-agent-${agent.id}`}
           onClick={onEdit}
-          className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
+          className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80"
+          style={{ background: "#4a2300" }}
         >
-          {/* pencil icon */}
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Pencil icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+            <path
+              d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z"
+              stroke="#ff9500"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
             Edit
@@ -259,6 +276,7 @@ export const AgentsActivityPage = (): JSX.Element => {
               )}
             </div>
           ) : (
+            /* ── Tab bar ── */
             <div className="inline-flex items-center bg-[#06070a] rounded-[400px] p-[2px] gap-[2px]">
               {tabs.map(({ key, label, count }) => {
                 const isActive = activeTab === key;
@@ -268,7 +286,9 @@ export const AgentsActivityPage = (): JSX.Element => {
                     data-testid={`tab-agents-${key}`}
                     onClick={() => setActiveTab(key)}
                     className={`flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all whitespace-nowrap ${
-                      isActive ? "bg-[#350011] text-[#d20344]" : "bg-[#06070a] text-[#414965] hover:text-white"
+                      isActive
+                        ? "bg-[#350011] text-[#d20344]"
+                        : "bg-[#06070a] text-[#414965] hover:text-white"
                     }`}
                   >
                     {label}
@@ -292,7 +312,7 @@ export const AgentsActivityPage = (): JSX.Element => {
           )}
         </div>
 
-        {/* Search toggle */}
+        {/* Search icon toggle */}
         <button
           data-testid="button-search-toggle"
           onClick={handleSearchToggle}
@@ -315,7 +335,7 @@ export const AgentsActivityPage = (): JSX.Element => {
         </button>
       </div>
 
-      {/* ── Agent grid ── */}
+      {/* ── Agent card grid ── */}
       <ScrollArea className="flex-1">
         <div className="px-[16px] pb-[16px] flex flex-wrap gap-[16px] content-start">
           {filtered.length === 0 ? (
