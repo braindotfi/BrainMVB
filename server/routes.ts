@@ -619,7 +619,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const { userId } = req.query as { userId?: string };
     if (!userId) return res.status(400).json({ error: "userId required" });
 
-    const apiKey = process.env.CROSSMINT_CLIENT_API_KEY;
+    // Prefer the server-side key (required by Crossmint REST API); fall back to client key
+    const apiKey = process.env.CROSSMINT_SERVER_API_KEY || process.env.CROSSMINT_CLIENT_API_KEY;
     if (!apiKey) return res.json({ address: null });
 
     // Crossmint staging REST API — try both v1 and v2 locator patterns
@@ -629,21 +630,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     const headers = { "X-API-Key": apiKey, "Content-Type": "application/json" };
 
-    // Try fetching the wallet for this user
-    const urls = [
-      `${baseUrl}/api/2022-06-09/wallets/userId:${userId}`,
-      `${baseUrl}/api/2022-06-09/wallets?userId=userId:${userId}`,
-    ];
+    // Wallet locator format: userId:<id>:<walletType>
+    // Only try the wallet type created by our CrossmintWalletProvider (evm-smart-wallet with email signer)
+    const { email } = req.query as { email?: string };
+    const locators: string[] = [`userId:${userId}:evm-smart-wallet`];
+    if (email) locators.push(`email:${encodeURIComponent(email)}:evm-smart-wallet`);
 
-    for (const url of urls) {
+    for (const locator of locators) {
+      const url = `${baseUrl}/api/2022-06-09/wallets/${locator}`;
       try {
-        console.log("[Crossmint] Looking up wallet at:", url);
+        console.log("[Crossmint] Looking up wallet:", locator);
         const resp = await fetch(url, { headers });
         const txt = await resp.text();
-        console.log("[Crossmint] Wallet lookup response:", resp.status, txt.slice(0, 300));
+        console.log("[Crossmint] Wallet lookup:", resp.status, txt.slice(0, 200));
         if (resp.ok) {
           const data = JSON.parse(txt);
-          // Handle both single wallet and array response
           const wallet = Array.isArray(data) ? data[0] : data;
           const address = wallet?.address ?? wallet?.publicKey ?? null;
           if (address) return res.json({ address });

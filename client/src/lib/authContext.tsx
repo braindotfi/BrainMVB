@@ -64,9 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.email]);
 
   // Fetch the real Crossmint wallet address if we don't already have one
-  const refreshWalletAddress = useCallback(async (userId: string) => {
+  const refreshWalletAddress = useCallback(async (userId: string, email?: string) => {
     try {
-      const res = await fetch(`/api/crossmint/wallet?userId=${encodeURIComponent(userId)}`);
+      const params = new URLSearchParams({ userId });
+      if (email) params.set("email", email);
+      const res = await fetch(`/api/crossmint/wallet?${params}`);
       if (res.ok) {
         const data = await res.json();
         if (data.address) {
@@ -92,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Whenever we have a userId but no wallet address, try to resolve it
   useEffect(() => {
     if (user?.id && !user?.walletAddress) {
-      refreshWalletAddress(user.id);
+      refreshWalletAddress(user.id, user?.email);
     }
   }, [user?.id, user?.walletAddress]);
 
