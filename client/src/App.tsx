@@ -14,6 +14,7 @@ import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { PerksPage } from "@/pages/PerksPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
+import { DashboardPage } from "@/pages/DashboardPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
@@ -56,7 +57,8 @@ function AppLayout() {
 
         <div className="flex-1 min-w-0 min-h-0">
           <Switch>
-            <Route path="/" component={AssistantPage} />
+            <Route path="/" component={DashboardPage} />
+            <Route path="/dashboard" component={DashboardPage} />
             <Route path="/assistant" component={AssistantPage} />
             <Route path="/marketplace" component={Marketplace} />
             <Route path="/agents" component={AgentsActivityPage} />

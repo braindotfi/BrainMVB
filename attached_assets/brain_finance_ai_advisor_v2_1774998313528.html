@@ -1,0 +1,482 @@
+
+<style>
+  :root {
+    --brain-bg: #0a0a0b;
+    --brain-surface: #111113;
+    --brain-surface2: #18181b;
+    --brain-border: rgba(255,255,255,0.07);
+    --brain-accent: #b3f000;
+    --brain-accent-dim: rgba(179,240,0,0.12);
+    --brain-text: #f0f0f0;
+    --brain-muted: #6b6b7a;
+    --brain-muted2: #9494a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--brain-bg); color: var(--brain-text); font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; }
+  .app { display: flex; height: 620px; width: 100%; overflow: hidden; background: var(--brain-bg); border-radius: 12px; border: 0.5px solid var(--brain-border); }
+
+  .sidebar { width: 54px; background: var(--brain-surface); border-right: 0.5px solid var(--brain-border); display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px; flex-shrink: 0; }
+  .logo { width: 28px; height: 28px; background: var(--brain-accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .nav-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--brain-muted); }
+  .nav-icon:hover { background: var(--brain-surface2); color: var(--brain-text); }
+  .nav-icon.active { background: var(--brain-accent-dim); color: var(--brain-accent); }
+  .nav-spacer { flex: 1; }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .topbar { height: 50px; border-bottom: 0.5px solid var(--brain-border); display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; background: var(--brain-surface); }
+  .topbar-title { font-size: 13px; font-weight: 500; }
+  .topbar-spacer { flex: 1; }
+  .period-btn { padding: 4px 10px; border-radius: 6px; border: 0.5px solid var(--brain-border); background: transparent; color: var(--brain-muted2); font-size: 11px; cursor: pointer; }
+  .period-btn.active { background: var(--brain-accent-dim); color: var(--brain-accent); border-color: var(--brain-accent); }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #b3f000, #4fd1c5); opacity: 0.9; }
+
+  .content { flex: 1; overflow: hidden; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+  .balance-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; flex-shrink: 0; }
+  .stat-card { background: var(--brain-surface); border: 0.5px solid var(--brain-border); border-radius: 10px; padding: 10px 14px; }
+  .stat-label { font-size: 10px; color: var(--brain-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .stat-value { font-size: 17px; font-weight: 500; line-height: 1; }
+  .stat-value.accent { color: var(--brain-accent); }
+  .stat-delta { font-size: 10px; margin-top: 4px; color: #4ade80; }
+  .stat-delta.neg { color: #f87171; }
+
+  /* Three-column mid row */
+  .mid-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+
+  /* Left column stacks two panels */
+  .left-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+  .panel { background: var(--brain-surface); border: 0.5px solid var(--brain-border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
+  .panel-title { font-size: 12px; font-weight: 500; }
+  .panel-sub { font-size: 10px; color: var(--brain-muted); }
+
+  /* Spend bars — compact */
+  .spend-bars { display: flex; flex-direction: column; gap: 7px; flex: 1; justify-content: center; }
+  .spend-row { display: flex; align-items: center; gap: 7px; }
+  .spend-label { font-size: 10px; color: var(--brain-muted2); width: 60px; flex-shrink: 0; }
+  .spend-track { flex: 1; height: 4px; background: var(--brain-surface2); border-radius: 2px; overflow: hidden; }
+  .spend-fill { height: 100%; border-radius: 2px; }
+  .spend-amt { font-size: 10px; color: var(--brain-muted2); width: 36px; text-align: right; flex-shrink: 0; }
+  .spend-row.hl .spend-label { color: var(--brain-text); }
+  .spend-row.hl .spend-amt { color: var(--brain-accent); }
+
+  /* Subscriptions panel */
+  .sub-list { display: flex; flex-direction: column; gap: 1px; flex: 1; overflow-y: auto; }
+  .sub-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+  .sub-item:hover { background: var(--brain-surface2); }
+  .sub-icon { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .sub-info { flex: 1; min-width: 0; }
+  .sub-name { font-size: 11px; font-weight: 500; color: var(--brain-text); }
+  .sub-cycle { font-size: 10px; color: var(--brain-muted); }
+  .sub-amt { font-size: 11px; font-weight: 500; color: var(--brain-muted2); flex-shrink: 0; }
+  .sub-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .sub-badge.low { background: rgba(74,222,128,0.12); color: #4ade80; }
+  .sub-badge.inactive { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .sub-total { display: flex; align-items: center; justify-content: space-between; padding: 7px 6px 2px; border-top: 0.5px solid var(--brain-border); margin-top: 4px; flex-shrink: 0; }
+  .sub-total-label { font-size: 10px; color: var(--brain-muted); }
+  .sub-total-amt { font-size: 12px; font-weight: 500; color: var(--brain-text); }
+
+  /* Recent Transactions — spans 2 columns */
+  .tx-panel { grid-column: span 2; }
+  .tx-list { display: flex; flex-direction: column; gap: 1px; flex: 1; overflow-y: auto; }
+  .tx-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+  .tx-item:hover { background: var(--brain-surface2); }
+  .tx-item.selected { background: var(--brain-accent-dim); }
+  .tx-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--brain-surface2); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-date { font-size: 10px; color: var(--brain-muted); }
+  .tx-cat { font-size: 9px; padding: 1px 6px; border-radius: 3px; background: var(--brain-surface2); color: var(--brain-muted2); margin-left: 4px; }
+  .tx-amt { font-size: 12px; font-weight: 500; flex-shrink: 0; }
+  .tx-amt.debit { color: #f87171; }
+  .tx-amt.credit { color: #4ade80; }
+  .tx-row-inner { display: flex; align-items: center; gap: 4px; }
+
+  /* AI Rail */
+  .ai-rail { width: 270px; background: var(--brain-surface); border-left: 0.5px solid var(--brain-border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+  .ai-header { padding: 13px 14px 9px; border-bottom: 0.5px solid var(--brain-border); flex-shrink: 0; }
+  .ai-title-row { display: flex; align-items: center; gap: 7px; margin-bottom: 1px; }
+  .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brain-accent); animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+  .ai-title { font-size: 12px; font-weight: 500; }
+  .ai-subtitle { font-size: 10px; color: var(--brain-muted); }
+  .ai-body { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .insight { border-radius: 8px; padding: 9px 11px; border: 0.5px solid var(--brain-border); background: var(--brain-surface2); cursor: pointer; }
+  .insight:hover { border-color: rgba(179,240,0,0.3); }
+  .insight.warn { border-left: 2px solid #f59e0b; border-radius: 0 8px 8px 0; }
+  .insight.good { border-left: 2px solid #4ade80; border-radius: 0 8px 8px 0; }
+  .insight.info { border-left: 2px solid var(--brain-accent); border-radius: 0 8px 8px 0; }
+  .insight-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; font-weight: 500; }
+  .insight.warn .insight-tag { color: #f59e0b; }
+  .insight.good .insight-tag { color: #4ade80; }
+  .insight.info .insight-tag { color: var(--brain-accent); }
+  .insight-text { font-size: 11px; color: var(--brain-text); line-height: 1.5; }
+  .insight-action { font-size: 10px; color: var(--brain-accent); margin-top: 4px; }
+  .ctx-panel { background: rgba(179,240,0,0.05); border: 0.5px solid rgba(179,240,0,0.2); border-radius: 8px; padding: 9px 11px; display: none; }
+  .ctx-panel.visible { display: block; }
+  .ctx-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--brain-accent); margin-bottom: 5px; }
+  .ctx-text { font-size: 11px; color: var(--brain-text); line-height: 1.5; }
+  .chat-divider { font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--brain-muted); text-align: center; padding: 2px 0; flex-shrink: 0; }
+  .chat-bubble { border-radius: 8px; padding: 7px 10px; font-size: 11px; line-height: 1.5; }
+  .chat-bubble.ai { background: var(--brain-surface2); border: 0.5px solid var(--brain-border); color: var(--brain-text); }
+  .chat-bubble.user { background: var(--brain-accent-dim); border: 0.5px solid rgba(179,240,0,0.2); color: var(--brain-text); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { padding: 3px 8px; border-radius: 20px; background: var(--brain-surface2); border: 0.5px solid var(--brain-border); font-size: 10px; color: var(--brain-muted2); cursor: pointer; white-space: nowrap; }
+  .chip:hover { border-color: rgba(179,240,0,0.4); color: var(--brain-accent); }
+  .ai-input-row { padding: 9px 10px; border-top: 0.5px solid var(--brain-border); flex-shrink: 0; display: flex; gap: 6px; }
+  .ai-input { flex: 1; background: var(--brain-surface2); border: 0.5px solid var(--brain-border); border-radius: 7px; padding: 6px 10px; font-size: 11px; color: var(--brain-text); outline: none; }
+  .ai-input::placeholder { color: var(--brain-muted); }
+  .ai-send { width: 28px; height: 28px; border-radius: 6px; background: var(--brain-accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#0a0a0b" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="#0a0a0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="nav-icon active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1.5" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="2" y="9" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="9" y="9" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.4"/></svg>
+    </div>
+    <div class="nav-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5h12M2 8h8M2 11h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="nav-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 6.5h14" stroke="currentColor" stroke-width="1.2"/></svg>
+    </div>
+    <div class="nav-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M5 5.5c0-1.1.9-2 2-2h2.5a1.5 1.5 0 0 1 0 3H6.5a1.5 1.5 0 0 0 0 3H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Overview</span>
+      <div class="topbar-spacer"></div>
+      <button class="period-btn">7d</button>
+      <button class="period-btn active">30d</button>
+      <button class="period-btn">90d</button>
+      <div class="avatar"></div>
+    </div>
+
+    <div class="content">
+      <!-- Stats -->
+      <div class="balance-strip">
+        <div class="stat-card">
+          <div class="stat-label">Total Balance</div>
+          <div class="stat-value accent">$12,480</div>
+          <div class="stat-delta">+$320 this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Spent (30d)</div>
+          <div class="stat-value">$3,214</div>
+          <div class="stat-delta neg">+12% vs last month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Saved (30d)</div>
+          <div class="stat-value">$640</div>
+          <div class="stat-delta">On track</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">USDC Yield</div>
+          <div class="stat-value accent">$18.40</div>
+          <div class="stat-delta">4.1% APY</div>
+        </div>
+      </div>
+
+      <!-- Mid row: left col + transactions (spans 2) -->
+      <div class="mid-row">
+
+        <!-- Left column: spending + subscriptions -->
+        <div class="left-col">
+
+          <!-- Spending by category (compact) -->
+          <div class="panel" style="flex:0 0 auto;">
+            <div class="panel-header">
+              <span class="panel-title">Spending by category</span>
+              <span class="panel-sub">Mar 2026</span>
+            </div>
+            <div class="spend-bars">
+              <div class="spend-row hl">
+                <span class="spend-label">Food & drink</span>
+                <div class="spend-track"><div class="spend-fill" style="width:74%;background:#b3f000;"></div></div>
+                <span class="spend-amt">$892</span>
+              </div>
+              <div class="spend-row">
+                <span class="spend-label">Rent</span>
+                <div class="spend-track"><div class="spend-fill" style="width:62%;background:#4ade80;"></div></div>
+                <span class="spend-amt">$750</span>
+              </div>
+              <div class="spend-row">
+                <span class="spend-label">Subscriptions</span>
+                <div class="spend-track"><div class="spend-fill" style="width:38%;background:#f59e0b;"></div></div>
+                <span class="spend-amt">$462</span>
+              </div>
+              <div class="spend-row">
+                <span class="spend-label">Travel</span>
+                <div class="spend-track"><div class="spend-fill" style="width:28%;background:#60a5fa;"></div></div>
+                <span class="spend-amt">$340</span>
+              </div>
+              <div class="spend-row">
+                <span class="spend-label">Shopping</span>
+                <div class="spend-track"><div class="spend-fill" style="width:22%;background:#a78bfa;"></div></div>
+                <span class="spend-amt">$270</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subscriptions -->
+          <div class="panel" style="flex:1;min-height:0;">
+            <div class="panel-header">
+              <span class="panel-title">Subscriptions</span>
+              <span class="panel-sub" style="color:var(--brain-accent);cursor:pointer;">Manage</span>
+            </div>
+            <div class="sub-list">
+              <div class="sub-item">
+                <div class="sub-icon" style="background:#e50914;color:white;">N</div>
+                <div class="sub-info">
+                  <div class="sub-name">Netflix</div>
+                  <div class="sub-cycle">Monthly · Mar 28</div>
+                </div>
+                <span class="sub-badge low">Active</span>
+                <span class="sub-amt">$22.99</span>
+              </div>
+              <div class="sub-item">
+                <div class="sub-icon" style="background:#1db954;color:white;">S</div>
+                <div class="sub-info">
+                  <div class="sub-name">Spotify Duo</div>
+                  <div class="sub-cycle">Monthly · Apr 2</div>
+                </div>
+                <span class="sub-badge low">Active</span>
+                <span class="sub-amt">$14.99</span>
+              </div>
+              <div class="sub-item">
+                <div class="sub-icon" style="background:#0063e5;color:white;">D</div>
+                <div class="sub-info">
+                  <div class="sub-name">Disney+</div>
+                  <div class="sub-cycle">Monthly · Apr 5</div>
+                </div>
+                <span class="sub-badge inactive">47d idle</span>
+                <span class="sub-amt">$13.99</span>
+              </div>
+              <div class="sub-item">
+                <div class="sub-icon" style="background:#555;color:white;">A</div>
+                <div class="sub-info">
+                  <div class="sub-name">Apple TV+</div>
+                  <div class="sub-cycle">Monthly · Apr 10</div>
+                </div>
+                <span class="sub-badge inactive">Unused</span>
+                <span class="sub-amt">$9.99</span>
+              </div>
+              <div class="sub-item">
+                <div class="sub-icon" style="background:#4285f4;color:white;">G</div>
+                <div class="sub-info">
+                  <div class="sub-name">Google One</div>
+                  <div class="sub-cycle">Monthly · Apr 14</div>
+                </div>
+                <span class="sub-badge low">Active</span>
+                <span class="sub-amt">$2.99</span>
+              </div>
+            </div>
+            <div class="sub-total">
+              <span class="sub-total-label">Monthly total</span>
+              <span class="sub-total-amt">$64.95 <span style="font-size:10px;color:#f59e0b;">↑ 41% vs Feb</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions — spans 2 cols -->
+        <div class="panel tx-panel">
+          <div class="panel-header">
+            <span class="panel-title">Recent transactions</span>
+            <span class="panel-sub" style="color:var(--brain-accent);cursor:pointer;">See all</span>
+          </div>
+          <div class="tx-list">
+            <div class="tx-item" data-tx="0" onclick="selectTx(0)">
+              <div class="tx-icon">🍔</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Careem Eats</span><span class="tx-cat">Food</span></div>
+                <div class="tx-date">Today, 1:42 PM</div>
+              </div>
+              <div class="tx-amt debit">-$34.00</div>
+            </div>
+            <div class="tx-item" data-tx="1" onclick="selectTx(1)">
+              <div class="tx-icon">☕</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Caribou Coffee</span><span class="tx-cat">Food</span></div>
+                <div class="tx-date">Today, 9:05 AM</div>
+              </div>
+              <div class="tx-amt debit">-$8.50</div>
+            </div>
+            <div class="tx-item" data-tx="2" onclick="selectTx(2)">
+              <div class="tx-icon">📺</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Netflix</span><span class="tx-cat">Subscriptions</span></div>
+                <div class="tx-date">Yesterday</div>
+              </div>
+              <div class="tx-amt debit">-$22.99</div>
+            </div>
+            <div class="tx-item" data-tx="3" onclick="selectTx(3)">
+              <div class="tx-icon">💳</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Salary — Acme Inc.</span><span class="tx-cat">Income</span></div>
+                <div class="tx-date">Mar 29</div>
+              </div>
+              <div class="tx-amt credit">+$5,200</div>
+            </div>
+            <div class="tx-item" data-tx="4" onclick="selectTx(4)">
+              <div class="tx-icon">🛒</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Carrefour</span><span class="tx-cat">Shopping</span></div>
+                <div class="tx-date">Mar 28</div>
+              </div>
+              <div class="tx-amt debit">-$112.00</div>
+            </div>
+            <div class="tx-item" data-tx="5" onclick="selectTx(5)">
+              <div class="tx-icon">✈️</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Flyadeal</span><span class="tx-cat">Travel</span></div>
+                <div class="tx-date">Mar 27</div>
+              </div>
+              <div class="tx-amt debit">-$240.00</div>
+            </div>
+            <div class="tx-item" data-tx="6" onclick="selectTx(6)">
+              <div class="tx-icon">🎵</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Spotify</span><span class="tx-cat">Subscriptions</span></div>
+                <div class="tx-date">Mar 26</div>
+              </div>
+              <div class="tx-amt debit">-$14.99</div>
+            </div>
+            <div class="tx-item" data-tx="7" onclick="selectTx(7)">
+              <div class="tx-icon">⛽</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">ENOC Fuel</span><span class="tx-cat">Transport</span></div>
+                <div class="tx-date">Mar 25</div>
+              </div>
+              <div class="tx-amt debit">-$55.00</div>
+            </div>
+            <div class="tx-item" data-tx="8" onclick="selectTx(8)">
+              <div class="tx-icon">🏋️</div>
+              <div class="tx-info">
+                <div class="tx-row-inner"><span class="tx-name">Fitness First</span><span class="tx-cat">Health</span></div>
+                <div class="tx-date">Mar 24</div>
+              </div>
+              <div class="tx-amt debit">-$89.00</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Rail -->
+  <div class="ai-rail">
+    <div class="ai-header">
+      <div class="ai-title-row">
+        <div class="ai-dot"></div>
+        <span class="ai-title">Brain AI</span>
+      </div>
+      <div class="ai-subtitle">Proactive financial advisor</div>
+    </div>
+    <div class="ai-body" id="aiBody">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--brain-muted);margin-bottom:2px;">Insights for you</div>
+      <div class="insight warn">
+        <div class="insight-tag">Spending alert</div>
+        <div class="insight-text">Subscriptions up 41% vs Feb. Disney+ and Apple TV are unused this month.</div>
+        <div class="insight-action">Review subscriptions ›</div>
+      </div>
+      <div class="insight good">
+        <div class="insight-tag">Opportunity</div>
+        <div class="insight-text">$4,200 sitting idle. Moving to your USDC vault earns ~$14/mo.</div>
+        <div class="insight-action">Move to vault ›</div>
+      </div>
+      <div class="insight info">
+        <div class="insight-tag">Pattern</div>
+        <div class="insight-text">19 delivery orders this month. Food spend is $280 above your 3-month avg.</div>
+        <div class="insight-action">Set a budget ›</div>
+      </div>
+      <div class="ctx-panel" id="ctxPanel">
+        <div class="ctx-label">Transaction insight</div>
+        <div class="ctx-text" id="ctxText"></div>
+      </div>
+      <div class="chat-divider">Ask anything</div>
+      <div class="chat-bubble user">How much did I spend on food last month vs this month?</div>
+      <div class="chat-bubble ai">Last month: <strong style="color:var(--brain-accent)">$612</strong>. This month: <strong style="color:#f87171">$892</strong> with 2 days left — 46% higher. Want me to set a cap?</div>
+      <div class="chips">
+        <div class="chip" onclick="chipClick('Am I on track to save $1k this month?')">Am I on track?</div>
+        <div class="chip" onclick="chipClick('Which subscriptions should I cancel?')">Cut subscriptions</div>
+        <div class="chip" onclick="chipClick('Show my biggest expenses')">Top expenses</div>
+        <div class="chip" onclick="chipClick('How much yield have I earned?')">Yield earned</div>
+      </div>
+    </div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="aiInput" placeholder="Ask Brain AI..." onkeydown="if(event.key==='Enter')sendMsg()" />
+      <button class="ai-send" onclick="sendMsg()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M7 2l4 4-4 4" stroke="#0a0a0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const txInsights = [
+  "You've ordered Careem Eats 12x this month — $408 total. Your fastest-growing spend category.",
+  "3rd coffee purchase today. You average $186/mo at cafes across Dubai.",
+  "Netflix was billed yesterday. You've watched 14 hrs this month — one of your more-used subscriptions.",
+  "Salary received. After bills and goals, you have ~$1,840 discretionary budget left this month.",
+  "Grocery spend is on track. Your avg is $95/mo — this run is slightly above.",
+  "Flight to Riyadh. Travel spend ($340) is 40% under your usual monthly average — well done.",
+  "Spotify is your most-used subscription. 60+ hrs streamed this month.",
+  "Fuel spend is stable. You've filled up 3x this month vs 3x last month.",
+  "Gym membership active. You've checked in 9x this month — above your 6x average."
+];
+
+function selectTx(idx) {
+  document.querySelectorAll('.tx-item').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('[data-tx="'+idx+'"]').forEach(el => el.classList.add('selected'));
+  const panel = document.getElementById('ctxPanel');
+  document.getElementById('ctxText').textContent = txInsights[idx];
+  panel.classList.add('visible');
+  setTimeout(() => panel.scrollIntoView({behavior:'smooth',block:'nearest'}), 50);
+}
+
+function chipClick(txt) {
+  addChat(txt, true);
+  const replies = {
+    'Am I on track to save $1k this month?': "You've saved $640 so far. With $1,840 remaining budget and 2 days left, hitting $1k is tight — skip dining out tonight and you're there.",
+    'Which subscriptions should I cancel?': "Top candidates: Disney+ (47 days idle, $13.99) and Apple TV+ (never used, $9.99). Cancelling both saves $287/yr.",
+    'Show my biggest expenses': "Top 3 this year: Rent ($8,100), Food & dining ($4,820), Travel ($2,940). Dining is 22% above your peer average.",
+    'How much yield have I earned?': "You've earned $91.20 in USDC yield since activating your vault in Jan 2026 at 4.1% APY."
+  };
+  setTimeout(() => addChat(replies[txt] || "Let me look into that...", false), 500);
+}
+
+function addChat(text, isUser) {
+  const body = document.getElementById('aiBody');
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + (isUser ? 'user' : 'ai');
+  div.textContent = text;
+  body.appendChild(div);
+  setTimeout(() => div.scrollIntoView({behavior:'smooth',block:'nearest'}), 50);
+}
+
+function sendMsg() {
+  const input = document.getElementById('aiInput');
+  const val = input.value.trim();
+  if (!val) return;
+  addChat(val, true);
+  input.value = '';
+  setTimeout(() => addChat("Analyzing your transaction history now...", false), 500);
+}
+</script>

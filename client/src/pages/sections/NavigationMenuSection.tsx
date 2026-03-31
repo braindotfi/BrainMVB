@@ -474,6 +474,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
 
+            {/* Dashboard — first item */}
+            <Link href="/dashboard">
+              <button title="Dashboard" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <rect x="2" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3"/>
+                  <rect x="10" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                  <rect x="2" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                  <rect x="10" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                </svg>
+              </button>
+            </Link>
+
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
                 {item.id === "assistant" ? (
@@ -588,6 +600,28 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">
+              {/* Dashboard — first item */}
+              <Link href="/dashboard" className="w-full">
+                <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                  <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <rect x="2" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3"/>
+                      <rect x="10" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                      <rect x="2" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                      <rect x="10" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
+                    </svg>
+                  </div>
+                  <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                    Dashboard
+                  </span>
+                  {isActive("/dashboard") && (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                      <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+              </Link>
+
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
                   {item.id === "assistant" ? (
