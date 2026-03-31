@@ -4,18 +4,26 @@ type Period = "1D" | "7D" | "30D" | "90D";
 
 /* ── Extended subscriptions shown always (monthly view) ── */
 const allSubscriptions = [
+  { name: "Brain Premium", icon: "🧠", cycle: "Monthly", amount: "$89.00", status: "active" as const },
   { name: "AlphaFlow Agent", icon: "🤖", cycle: "Daily", amount: "$144.00", status: "active" as const },
   { name: "Yield Pilot", icon: "📈", cycle: "Daily", amount: "$72.00", status: "active" as const },
+  { name: "Netflix", icon: "🎬", cycle: "Monthly", amount: "$22.99", status: "active" as const },
+  { name: "Spotify", icon: "🎵", cycle: "Monthly", amount: "$11.99", status: "active" as const },
+  { name: "Amazon Prime", icon: "📦", cycle: "Monthly", amount: "$14.99", status: "active" as const },
   { name: "Risk Sentinel", icon: "🛡️", cycle: "Daily", amount: "$48.00", status: "active" as const },
-  { name: "Brain Premium", icon: "🧠", cycle: "Monthly", amount: "$89.00", status: "active" as const },
+  { name: "Apple TV+", icon: "🍎", cycle: "Monthly", amount: "$9.99", status: "low" as const },
+  { name: "Disney+", icon: "✨", cycle: "Monthly", amount: "$13.99", status: "inactive" as const },
   { name: "TaskForge Pro", icon: "⚙️", cycle: "Weekly", amount: "$96.00", status: "low" as const },
+  { name: "ChatGPT Plus", icon: "💬", cycle: "Monthly", amount: "$20.00", status: "active" as const },
+  { name: "Adobe CC", icon: "🎨", cycle: "Monthly", amount: "$54.99", status: "active" as const },
   { name: "Signal Seer", icon: "📡", cycle: "Monthly", amount: "$29.00", status: "inactive" as const },
+  { name: "YouTube Premium", icon: "▶️", cycle: "Monthly", amount: "$13.99", status: "active" as const },
+  { name: "Dropbox Plus", icon: "📁", cycle: "Monthly", amount: "$11.99", status: "active" as const },
   { name: "SwarmAlpha", icon: "🐝", cycle: "Monthly", amount: "$49.00", status: "active" as const },
-  { name: "Deal Closer", icon: "🤝", cycle: "Per use", amount: "$22.00", status: "active" as const },
-  { name: "Invoice Bot", icon: "🧾", cycle: "Monthly", amount: "$19.00", status: "active" as const },
+  { name: "Notion AI", icon: "📝", cycle: "Monthly", amount: "$16.00", status: "active" as const },
+  { name: "Hulu", icon: "📺", cycle: "Monthly", amount: "$17.99", status: "inactive" as const },
   { name: "Ops Commander", icon: "🎖️", cycle: "Monthly", amount: "$39.00", status: "low" as const },
-  { name: "Claude API", icon: "🔮", cycle: "Per use", amount: "$20.00", status: "active" as const },
-  { name: "OpenAI API", icon: "🤖", cycle: "Per use", amount: "$35.00", status: "active" as const },
+  { name: "iCloud 2TB", icon: "☁️", cycle: "Monthly", amount: "$9.99", status: "active" as const },
 ];
 
 const monthlyTotal = allSubscriptions.reduce((sum, s) => sum + parseFloat(s.amount.replace(/[^0-9.]/g, "")), 0);
