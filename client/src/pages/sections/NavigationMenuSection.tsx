@@ -94,7 +94,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
   const openSession = (id: string) => {
     setChatHistoryOpen(false);
-    navigate(`/assistant?session=${id}`);
+    setOpenMoreMenu(null);
+    // Dispatch event so AssistantPage can load the session even when already on /assistant
+    window.dispatchEvent(new CustomEvent("load-chat-session", { detail: { id } }));
+    navigate("/assistant");
   };
 
   const removeSession = (e: React.MouseEvent, id: string) => {
@@ -242,7 +245,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       deleteChatSession(id);
       loadSessions();
       setOpenMoreMenu(null);
+      setChatHistoryOpen(false);
       window.dispatchEvent(new Event("chat-sessions-updated"));
+      // Navigate to fresh assistant home after deletion
+      window.dispatchEvent(new Event("new-chat"));
+      navigate("/assistant");
     };
 
     const handleShareSession = (e: React.MouseEvent) => {

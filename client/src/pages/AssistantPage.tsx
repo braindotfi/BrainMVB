@@ -177,6 +177,19 @@ export const AssistantPage = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
+    const handleLoadSession = (e: Event) => {
+      const { id } = (e as CustomEvent).detail;
+      const existing = getChatSession(id);
+      if (existing) {
+        setSession(existing);
+        setInput("");
+      }
+    };
+    window.addEventListener("load-chat-session", handleLoadSession);
+    return () => window.removeEventListener("load-chat-session", handleLoadSession);
+  }, []);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
