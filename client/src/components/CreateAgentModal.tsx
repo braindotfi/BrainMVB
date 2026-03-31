@@ -75,6 +75,7 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
   const [agentName, setAgentName]         = useState("");
   const [agentTicker, setAgentTicker]     = useState("");
   const [agentDesc, setAgentDesc]         = useState("");
+  const [agentWebsite, setAgentWebsite]   = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("");
   const [capital, setCapital]             = useState("");
   const [capitalAsset, setCapitalAsset]   = useState("USDC");
@@ -103,6 +104,7 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
         type: selectedType,
         ticker: agentTicker,
         description: agentDesc,
+        website: agentWebsite || undefined,
         avatar: selectedAvatar || "/figmaAssets/avatars.svg",
         capitalAmount: parseFloat(capital) || 0,
         capitalAsset,
@@ -150,7 +152,7 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
     onClose();
     setTimeout(() => {
       setStep(0); setSelectedType(""); setAgentName(""); setAgentTicker("");
-      setAgentDesc(""); setSelectedAvatar(""); setCapital(""); setRiskLevel("Moderate");
+      setAgentDesc(""); setAgentWebsite(""); setSelectedAvatar(""); setCapital(""); setRiskLevel("Moderate");
       setAuthSig(false); setTerms(false); setLaunched(false); setLaunching(false);
     }, 300);
   };
@@ -361,6 +363,18 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
                   placeholder="Describe what your agent does..."
                   rows={3}
                   className={`${inputCls} resize-none`}
+                />
+              </div>
+
+              {/* Website */}
+              <div className="flex flex-col gap-1.5">
+                <FieldLabel>Website</FieldLabel>
+                <input
+                  value={agentWebsite}
+                  onChange={(e) => setAgentWebsite(e.target.value)}
+                  placeholder="https://yourproject.xyz"
+                  type="url"
+                  className={inputCls}
                 />
               </div>
             </div>

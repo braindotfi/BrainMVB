@@ -29,6 +29,7 @@ export const agents = pgTable("agents", {
   ownerId: text("owner_id").notNull(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  website: text("website"),
   category: text("category").notNull(),      // trading|payments|research|automation|swarm
   avatarUrl: text("avatar_url"),
   metadataUri: text("metadata_uri"),         // IPFS
