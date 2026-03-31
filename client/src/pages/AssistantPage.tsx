@@ -12,7 +12,7 @@ import {
 const WELCOME_MSG: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: "Hello! I'm Brain AI, your intelligent assistant for navigating AI agent markets, DeFi protocols, and crypto trading. How can I help you today?",
+  content: "Hello! I'm Brain, your AI assistant. How can I help you today?",
   timestamp: new Date().toISOString(),
 };
 
@@ -380,7 +380,7 @@ export const AssistantPage = (): JSX.Element => {
               onKeyDown={handleKeyDown}
               inputRef={inputRef}
               isPending={chatMutation.isPending}
-              placeholder="Ask Brain AI anything about agents, DeFi, or crypto..."
+              placeholder="Ask Brain anything..."
             />
           </div>
         </>

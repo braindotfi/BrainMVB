@@ -46,6 +46,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const [shareOpen, setShareOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
+  const [openMoreMenu, setOpenMoreMenu] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const historyPanelRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       }
       if (historyPanelRef.current && !historyPanelRef.current.contains(e.target as Node)) {
         setChatHistoryOpen(false);
+        setOpenMoreMenu(null);
       }
     };
     if (notificationsOpen || chatHistoryOpen) document.addEventListener("mousedown", handler);
@@ -211,13 +213,29 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   // ── Chat history popup panel (Figma 3146-45912) ──
   const ChatHistoryPanel = () => {
     const grouped = groupSessionsByMonth(chatSessions);
+
+    const handleDeleteSession = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      deleteChatSession(id);
+      loadSessions();
+      setOpenMoreMenu(null);
+      window.dispatchEvent(new Event("chat-sessions-updated"));
+    };
+
+    const handleShareSession = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setOpenMoreMenu(null);
+      setChatHistoryOpen(false);
+      setShareOpen(true);
+    };
+
     return (
       <>
         {/* Dim overlay */}
         {chatHistoryOpen && (
           <div
             className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[1px] transition-opacity duration-300"
-            onClick={() => setChatHistoryOpen(false)}
+            onClick={() => { setChatHistoryOpen(false); setOpenMoreMenu(null); }}
           />
         )}
 
@@ -232,7 +250,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             background: "#0a0c10",
             border: "1px solid #1d2132",
             borderRadius: "16px",
-            boxShadow: "0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)".replace(/_/g, " "),
+            boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06),0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39)",
           }}
         >
           {/* ── Sticky header (56px, backdrop-blur) ── */}
@@ -260,14 +278,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               Chat History
             </span>
             <button
-              onClick={() => setChatHistoryOpen(false)}
+              onClick={() => { setChatHistoryOpen(false); setOpenMoreMenu(null); }}
               className="flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
-              style={{
-                width: "24px",
-                height: "24px",
-                borderRadius: "100px",
-                background: "#1d2132",
-              }}
+              style={{ width: "24px", height: "24px", borderRadius: "100px", background: "#1d2132" }}
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
@@ -278,69 +291,127 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           {/* ── Scrollable content ── */}
           <div className="flex-1 overflow-y-auto" style={{ padding: "8px" }}>
             {chatSessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center" style={{ color: "#414965" }}>
+              <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center">
                 <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                   <path d="M4 7h20M4 14h14M4 21h8" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
                 <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", lineHeight: "18px", color: "#414965" }}>
-                  No chat history yet.<br />Start a conversation with Brain AI.
+                  No chat history yet.<br />Start a conversation with Brain.
                 </p>
               </div>
             ) : (
               <div className="flex flex-col" style={{ gap: "16px" }}>
                 {grouped.map((group) => (
-                  <div key={group.label} className="flex flex-col" style={{ gap: "8px" }}>
+                  <div key={group.label} className="flex flex-col" style={{ gap: "4px" }}>
                     {/* Month label */}
-                    <div style={{ paddingLeft: "8px" }}>
+                    <div style={{ paddingLeft: "8px", paddingBottom: "4px" }}>
                       <span style={{
                         fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
                         fontWeight: 600,
-                        fontSize: "14px",
+                        fontSize: "12px",
                         lineHeight: "16px",
                         color: "#414965",
                         whiteSpace: "nowrap",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
                       }}>
                         {group.label}
                       </span>
                     </div>
-                    {/* Session cards */}
+                    {/* Session rows */}
                     {group.sessions.map((sess) => {
-                      const isActive = sess.id === currentSessionId;
+                      const isMenuOpen = openMoreMenu === sess.id;
                       return (
-                        <button
-                          key={sess.id}
-                          onClick={() => openSession(sess.id)}
-                          className="w-full text-left flex items-start justify-between hover:opacity-80 transition-opacity"
-                          style={{
-                            background: isActive ? "#4a2300" : "#06070a",
-                            borderRadius: "8px",
-                            padding: "8px",
-                            gap: "8px",
-                          }}
-                        >
-                          <span
-                            className="flex-1 truncate"
-                            style={{
-                              fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
-                              fontSize: "14px",
-                              lineHeight: "16px",
-                              color: isActive ? "#ff9500" : "#6c779d",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
+                        <div key={sess.id} className="relative group/row">
+                          {/* Row — clicking the title area resumes the chat */}
+                          <div
+                            className="flex items-center justify-between rounded-[8px] px-2 py-[7px] cursor-pointer
+                              hover:bg-[#1c1400] transition-colors"
+                            style={{ gap: "6px" }}
+                            onClick={() => {
+                              setOpenMoreMenu(null);
+                              openSession(sess.id);
                             }}
                           >
-                            {sess.title}
-                          </span>
-                          {isActive && (
-                            /* Vertical 3-dot more icon */
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-                              <circle cx="8" cy="3" r="1.5" fill="#ff9500" />
-                              <circle cx="8" cy="8" r="1.5" fill="#ff9500" />
-                              <circle cx="8" cy="13" r="1.5" fill="#ff9500" />
-                            </svg>
+                            <span
+                              className="flex-1 truncate group-hover/row:text-[#ff9500] transition-colors"
+                              style={{
+                                fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                                fontSize: "14px",
+                                lineHeight: "18px",
+                                color: "#6c779d",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {sess.title}
+                            </span>
+
+                            {/* Three-dot button — visible on hover */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMoreMenu(isMenuOpen ? null : sess.id);
+                              }}
+                              className="opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0
+                                w-6 h-6 rounded-[6px] flex items-center justify-center hover:bg-[#2a1f00]"
+                              title="More options"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <circle cx="7" cy="2.5" r="1.3" fill="#ff9500" />
+                                <circle cx="7" cy="7" r="1.3" fill="#ff9500" />
+                                <circle cx="7" cy="11.5" r="1.3" fill="#ff9500" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* ── More dropdown (Share / Delete) ── */}
+                          {isMenuOpen && (
+                            <div
+                              className="absolute right-0 z-50 flex flex-col overflow-hidden"
+                              style={{
+                                top: "calc(100% + 2px)",
+                                width: "160px",
+                                background: "#0d1017",
+                                border: "1px solid #1d2132",
+                                borderRadius: "10px",
+                                boxShadow: "0px 12px 32px rgba(0,0,0,0.7)",
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Share */}
+                              <button
+                                onClick={handleShareSession}
+                                className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-[#131927] transition-colors text-left"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                  <circle cx="11" cy="2.5" r="1.8" stroke="#6c779d" strokeWidth="1.1"/>
+                                  <circle cx="3" cy="7" r="1.8" stroke="#6c779d" strokeWidth="1.1"/>
+                                  <circle cx="11" cy="11.5" r="1.8" stroke="#6c779d" strokeWidth="1.1"/>
+                                  <path d="M4.7 6.1L9.3 3.4M4.7 7.9L9.3 10.6" stroke="#6c779d" strokeWidth="1.1" strokeLinecap="round"/>
+                                </svg>
+                                <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", color: "#6c779d" }}>
+                                  Share
+                                </span>
+                              </button>
+                              {/* Divider */}
+                              <div style={{ height: "1px", background: "#1d2132", margin: "0 8px" }} />
+                              {/* Delete */}
+                              <button
+                                onClick={(e) => handleDeleteSession(e, sess.id)}
+                                className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-[#1a0a0a] transition-colors text-left"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                  <path d="M2 4h10M5 4V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V4M5.5 6.5v4M8.5 6.5v4M3.5 4l.7 7.5a.5.5 0 0 0 .5.5h4.6a.5.5 0 0 0 .5-.5L10.5 4" stroke="#d20344" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", color: "#d20344" }}>
+                                  Delete
+                                </span>
+                              </button>
+                            </div>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
