@@ -236,6 +236,17 @@ export const AgentsActivityPage = (): JSX.Element => {
     { key: "inactive",  label: "Inactive",  count: inactiveCount },
   ];
 
+  const handleKillswitch = () => {
+    const activeIds = agents.filter((a) => agentStatuses[a.id] === "active").map((a) => a.id);
+    if (activeIds.length === 0) return;
+    setAgentStatuses((prev) => {
+      const next = { ...prev };
+      activeIds.forEach((id) => { next[id] = "inactive"; });
+      return next;
+    });
+    activeIds.forEach((id) => statusMutation.mutate({ id, status: "inactive" }));
+  };
+
   const handleSearchToggle = () => {
     if (searchOpen) {
       setSearchOpen(false);
@@ -251,6 +262,29 @@ export const AgentsActivityPage = (): JSX.Element => {
 
       {/* ── Header: tabs + search ── */}
       <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
+        {/* Killswitch — stops all active agents */}
+        <button
+          data-testid="button-killswitch"
+          onClick={handleKillswitch}
+          disabled={activeCount === 0}
+          className="flex items-center gap-[6px] px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{ background: "#350011", border: "1px solid rgba(210,3,68,0.25)" }}
+          title={activeCount === 0 ? "No active agents" : `Stop all ${activeCount} active agent${activeCount !== 1 ? "s" : ""}`}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4.5 1.5A4.5 4.5 0 1 0 9.5 5" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round"/>
+            <path d="M6 1v4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+            Killswitch
+          </span>
+          {activeCount > 0 && (
+            <div className="flex items-center justify-center px-[5px] py-[1px] rounded-[4px] flex-shrink-0" style={{ background: "rgba(210,3,68,0.2)" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[10px] leading-[12px]">{activeCount}</span>
+            </div>
+          )}
+        </button>
+
         <div className="flex-1 flex items-center justify-center">
           {searchOpen ? (
             <div className="flex items-center gap-2 px-3 py-2 bg-[#06070a] border border-[#1d2131] focus-within:border-[#414965] rounded-full transition-colors w-full max-w-[360px]">
