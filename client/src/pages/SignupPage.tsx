@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
 
@@ -114,31 +114,37 @@ function LazyEmbeddedAuth({
   const [Comp, setComp] = useState<React.ComponentType<any> | null>(null);
   const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
   const [AuthProv, setAuthProv] = useState<React.ComponentType<any> | null>(null);
+  const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
   const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
+  const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
 
   useEffect(() => {
     import("@crossmint/client-sdk-react-ui").then((m) => {
       setComp(() => m.EmbeddedAuthForm);
       setProvider(() => m.CrossmintProvider);
       setAuthProv(() => m.CrossmintAuthProvider);
+      setWalletProv(() => m.CrossmintWalletProvider);
       setUseAuthHook(() => m.useAuth);
+      setUseWalletHook(() => m.useWallet);
     });
   }, []);
 
-  if (!Comp || !Provider || !AuthProv) {
+  if (!Comp || !Provider || !AuthProv || !WalletProv) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
   }
 
   return (
     <Provider apiKey={apiKey}>
       <AuthProv loginMethods={["email", "google"]}>
-        <AuthWatcher useAuthHook={useAuthHook!} onSuccess={onSuccess}>
-          <div className="w-full max-w-[420px]">
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-              <Comp />
+        <WalletProv createOnLogin={{ chain: "base-sepolia", signer: { type: "email" } }}>
+          <AuthWatcher useAuthHook={useAuthHook!} useWalletHook={useWalletHook!} onSuccess={onSuccess}>
+            <div className="w-full max-w-[420px]">
+              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                <Comp />
+              </div>
             </div>
-          </div>
-        </AuthWatcher>
+          </AuthWatcher>
+        </WalletProv>
       </AuthProv>
     </Provider>
   );
@@ -146,28 +152,30 @@ function LazyEmbeddedAuth({
 
 function AuthWatcher({
   useAuthHook,
+  useWalletHook,
   onSuccess,
   children,
 }: {
   useAuthHook: () => any;
+  useWalletHook: () => any;
   onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
   children: React.ReactNode;
 }) {
   const auth = useAuthHook();
+  const walletCtx = useWalletHook();
+  const calledRef = useRef(false);
 
   useEffect(() => {
-    if (auth?.status === "logged-in" && auth?.user) {
-      // Crossmint SDK may expose the wallet address on different fields depending on version
-      const user = auth.user;
-      const walletAddress =
-        user?.wallet?.address ||
-        user?.wallets?.[0]?.address ||
-        user?.linkedWallets?.[0]?.address ||
-        user?.evmWallet?.address ||
-        undefined;
-      onSuccess(user.id, user.email, walletAddress);
-    }
-  }, [auth?.status, auth?.user?.id]);
+    if (auth?.status !== "logged-in" || !auth?.user) return;
+    if (calledRef.current) return;
+    // Wait for CrossmintWalletProvider to finish loading/creating the wallet
+    const walletStatus = walletCtx?.status;
+    if (walletStatus === "in-progress") return;
+    // "loaded" means we have an address; "error" or "not-loaded" means proceed without one
+    calledRef.current = true;
+    const walletAddress: string | undefined = walletCtx?.wallet?.address ?? undefined;
+    onSuccess(auth.user.id, auth.user.email, walletAddress);
+  }, [auth?.status, auth?.user?.id, walletCtx?.status]);
 
   return <>{children}</>;
 }
