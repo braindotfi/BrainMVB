@@ -22,7 +22,7 @@ const agents: Agent[] = [
   {
     id: "alphaflow",
     name: "AlphaFlow",
-    description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals.",
+    description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.",
     avatar: "/figmaAssets/avatars-3.svg",
     status: "active",
     type: "Trading",
@@ -99,24 +99,40 @@ const agents: Agent[] = [
   },
 ];
 
-const statusConfig = {
-  active: {
-    label: "Active",
-    dot: "bg-brain-v1green",
-    badge: "bg-brain-v1dark-green text-brain-v1green",
-  },
-  paused: {
-    label: "Paused",
-    dot: "bg-yellow-400",
-    badge: "bg-yellow-900/30 text-yellow-400",
-  },
-  inactive: {
-    label: "Inactive",
-    dot: "bg-brain-v1baby-blue-30",
-    badge: "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30",
-  },
-};
+/* ── Toggle switch matching Figma exactly ── */
+const AgentToggle = ({
+  active,
+  onClick,
+  disabled,
+}: {
+  active: boolean;
+  onClick: () => void;
+  disabled: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    data-testid="button-agent-toggle"
+    className={`relative h-[24px] w-[40px] flex-shrink-0 transition-all ${
+      active ? "rounded-[100px]" : "rounded-[12px]"
+    } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+  >
+    {/* Track */}
+    <div
+      className={`absolute left-[2px] top-[2px] h-[20px] w-[36px] rounded-[100px] transition-colors ${
+        active ? "bg-[#123509]" : "bg-[#222737]"
+      }`}
+    />
+    {/* Dot */}
+    <div
+      className={`absolute top-[4px] size-[16px] rounded-[100px] transition-all ${
+        active ? "bg-[#42bf23] left-[20px]" : "bg-[#06070a] left-[4px]"
+      }`}
+    />
+  </button>
+);
 
+/* ── Agent Card ── */
 const AgentCard = ({
   agent,
   currentStatus,
@@ -128,85 +144,94 @@ const AgentCard = ({
   onToggle: () => void;
   isUpdating: boolean;
 }) => {
-  const config = statusConfig[currentStatus];
   const isActive = currentStatus === "active";
+  const earningsPositive = agent.earnings.startsWith("+");
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] hover:border-brain-v1stroke-2 transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <img src={agent.avatar} alt={agent.name} className="w-12 h-12 rounded-xl flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base whitespace-nowrap">
-                {agent.name}
-              </span>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ${config.badge}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
-                {config.label}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-                {agent.type}
-              </span>
-              <span className="text-brain-v1baby-blue-15">·</span>
-              <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-                {agent.category}
-              </span>
-            </div>
-          </div>
+    <div
+      data-testid={`card-agent-${agent.id}`}
+      className="flex flex-col gap-[16px] p-[16px] border border-[#1d2132] rounded-[16px] transition-colors hover:border-[#2d3450]"
+    >
+      {/* ── Header row ── */}
+      <div className="flex gap-[8px] h-[48px] items-center">
+        {/* Avatar */}
+        <div className="overflow-hidden relative flex-shrink-0 size-[48px] rounded-[10px]">
+          <img
+            src={agent.avatar}
+            alt={agent.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
 
-        {/* Toggle */}
-        <button
-          onClick={onToggle}
-          disabled={isUpdating}
-          className={`relative w-10 h-5 rounded-full flex-shrink-0 transition-colors ${
-            isActive ? "bg-brain-v1dark-orange" : "bg-brain-v1baby-blue-30"
-          } ${isUpdating ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          <div
-            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-              isActive ? "translate-x-5" : "translate-x-0.5"
-            }`}
-          />
-        </button>
+        {/* Name + toggle row + type tag */}
+        <div className="flex flex-col gap-[4px] items-start justify-center flex-1 min-w-0">
+          {/* Name row: name text + toggle */}
+          <div className="flex gap-[16px] items-center w-full">
+            <span className="flex-1 min-w-0 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] text-white leading-[20px] truncate">
+              {agent.name}
+            </span>
+            <AgentToggle
+              active={isActive}
+              onClick={onToggle}
+              disabled={isUpdating}
+            />
+          </div>
+
+          {/* Type tag */}
+          <div className="flex items-center">
+            <span className="bg-[#123509] border border-[rgba(66,191,35,0.2)] px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[11px] leading-[14px] whitespace-nowrap">
+              {agent.type}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed line-clamp-2">
+      {/* ── Description ── */}
+      <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[16px] overflow-hidden w-full" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
         {agent.description}
       </p>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Earnings</span>
-          <span className={`text-sm [font-family:'JetBrains_Mono',Helvetica] font-medium ${agent.earnings.startsWith("+") ? "text-brain-v1green" : "text-brain-v1baby-blue-60"}`}>
+      {/* ── Stats box ── */}
+      <div className="bg-[#0a0c10] flex gap-[6px] items-center p-[8px] rounded-[8px] w-full">
+        {/* Earnings */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
+            Earnings
+          </span>
+          <span
+            className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] leading-[20px] whitespace-nowrap ${
+              earningsPositive ? "text-[#42bf23]" : "text-[#a8b9f4]"
+            }`}
+          >
             {agent.earnings}
           </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Actions</span>
-          <span className="text-sm [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1white">
+
+        {/* Divider */}
+        <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
+
+        {/* Actions */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
+            Actions
+          </span>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
             {agent.trades.toLocaleString()}
           </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">Success</span>
-          <span className="text-sm [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1white">
+
+        {/* Divider */}
+        <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
+
+        {/* Success */}
+        <div className="flex flex-col gap-[3px] items-center justify-center flex-1">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
+            Success
+          </span>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
             {agent.successRate}
           </span>
         </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-2 border-t border-[#1d2131]">
-        <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
-          Last active: {agent.lastActive}
-        </span>
-        <button className="px-3 py-1 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-brain-v1stroke-2 transition-colors">
-          View Details
-        </button>
       </div>
     </div>
   );
@@ -218,11 +243,9 @@ export const AgentsActivityPage = (): JSX.Element => {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Lifted status state — keyed by agent id, seeded from static data
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(
     () => Object.fromEntries(agents.map((a) => [a.id, a.status]))
   );
-  // Track which agent is currently being updated
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const statusMutation = useMutation({
@@ -241,7 +264,6 @@ export const AgentsActivityPage = (): JSX.Element => {
   const handleToggle = (agentId: string) => {
     const current = agentStatuses[agentId];
     const next: AgentStatus = current === "active" ? "inactive" : "active";
-    // Optimistic update
     setAgentStatuses((prev) => ({ ...prev, [agentId]: next }));
     setUpdatingId(agentId);
     statusMutation.mutate({ id: agentId, status: next });
@@ -254,7 +276,11 @@ export const AgentsActivityPage = (): JSX.Element => {
       activeTab === "inactive" ? status === "inactive" || status === "paused" :
       true;
     const q = searchQuery.trim().toLowerCase();
-    const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q) || a.type.toLowerCase().includes(q);
+    const matchesSearch =
+      !q ||
+      a.name.toLowerCase().includes(q) ||
+      a.description.toLowerCase().includes(q) ||
+      a.type.toLowerCase().includes(q);
     return matchesTab && matchesSearch;
   });
 
@@ -274,13 +300,13 @@ export const AgentsActivityPage = (): JSX.Element => {
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      {/* Header row: collapse btn + pill tabs + search */}
+
+      {/* ── Header: tabs + search ── */}
       <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
-        {/* Pill filter tabs — centered */}
         <div className="flex-1 flex items-center justify-center">
           {searchOpen ? (
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#0a0c10] border border-[#1d2131] focus-within:border-brain-v1baby-blue-30 rounded-full transition-colors w-full max-w-[280px]">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-brain-v1baby-blue-30 flex-shrink-0">
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#06070a] border border-[#1d2131] focus-within:border-[#414965] rounded-full transition-colors w-full max-w-[320px]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#414965] flex-shrink-0">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
                 <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
               </svg>
@@ -290,51 +316,66 @@ export const AgentsActivityPage = (): JSX.Element => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search agents..."
-                className="bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none flex-1"
+                className="bg-transparent text-white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-[#414965] outline-none flex-1"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors flex-shrink-0">
+                <button onClick={() => setSearchQuery("")} className="text-[#414965] hover:text-white transition-colors flex-shrink-0">
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
                 </button>
               )}
             </div>
           ) : (
-            <div className="inline-flex items-center bg-[#0a0c10] rounded-full p-1 gap-1">
+            <div className="inline-flex items-center bg-[#06070a] rounded-[400px] p-[2px] gap-[2px]">
               {([
-                { key: "all", label: "All", count: allCount },
-                { key: "active", label: "Active", count: activeCount },
+                { key: "all",      label: "All",      count: allCount      },
+                { key: "active",   label: "Active",   count: activeCount   },
                 { key: "inactive", label: "Inactive", count: inactiveCount },
-              ] as const).map(({ key, label, count }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all ${
-                    activeTab === key
-                      ? "bg-[#3a0d0d] text-[#f04438]"
-                      : "text-[#6c779d] hover:text-brain-v1white"
-                  }`}
-                >
-                  {label}
-                  <span className={`text-xs [font-family:'Gilroy-Medium',Helvetica] ${activeTab === key ? "text-[#f04438]" : "text-[#414965]"}`}>
-                    {count}
-                  </span>
-                </button>
-              ))}
+              ] as const).map(({ key, label, count }) => {
+                const isActive = activeTab === key;
+                return (
+                  <button
+                    key={key}
+                    data-testid={`tab-agents-${key}`}
+                    onClick={() => setActiveTab(key)}
+                    className={`flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all ${
+                      isActive ? "bg-[#350011] text-[#d20344]" : "bg-[#06070a] text-[#414965] hover:text-white"
+                    }`}
+                  >
+                    {label}
+                    <div
+                      className={`flex items-center justify-center p-[2px] rounded-[4px] ${
+                        isActive ? "bg-[#d20344]" : "bg-[#222737]"
+                      }`}
+                    >
+                      <span
+                        className={`text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold leading-[12px] ${
+                          isActive ? "text-[#350011]" : "text-[#6c779d]"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Search toggle button */}
+        {/* Search toggle */}
         <button
+          data-testid="button-search-toggle"
           onClick={handleSearchToggle}
           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
             searchOpen
-              ? "bg-brain-v1dark-orange text-white"
-              : "bg-[#0a0c10] text-[#6c779d] hover:text-brain-v1white"
+              ? "bg-[#d20344] text-white"
+              : "bg-[#06070a] text-[#414965] hover:text-white"
           }`}
         >
           {searchOpen ? (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
           ) : (
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
@@ -344,17 +385,18 @@ export const AgentsActivityPage = (): JSX.Element => {
         </button>
       </div>
 
-      {/* Agent grid */}
+      {/* ── Agent grid ── */}
       <ScrollArea className="flex-1">
-        <div className="p-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="px-[16px] pb-[16px] flex flex-wrap gap-[16px] content-start">
           {filtered.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              currentStatus={agentStatuses[agent.id]}
-              onToggle={() => handleToggle(agent.id)}
-              isUpdating={updatingId === agent.id}
-            />
+            <div key={agent.id} className="w-full xl:w-[calc(50%-8px)]">
+              <AgentCard
+                agent={agent}
+                currentStatus={agentStatuses[agent.id]}
+                onToggle={() => handleToggle(agent.id)}
+                isUpdating={updatingId === agent.id}
+              />
+            </div>
           ))}
         </div>
       </ScrollArea>
