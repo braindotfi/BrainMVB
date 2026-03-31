@@ -156,17 +156,18 @@ const AgentCard = ({
           </span>
         </div>
 
-        {/* Edit button */}
+        {/* View button */}
         <button
-          data-testid={`button-edit-agent-${agent.id}`}
+          data-testid={`button-view-agent-${agent.id}`}
           onClick={onEdit}
           className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.333 13.333l-3.666.667.666-3.667L11.333 2Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M1 8C1 8 3.5 3 8 3s7 5 7 5-2.5 5-7 5-7-5-7-5Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="8" cy="8" r="2" stroke="#ff9500" strokeWidth="1.3"/>
           </svg>
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
-            Edit
+            View
           </span>
         </button>
       </div>
