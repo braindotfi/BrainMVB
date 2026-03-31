@@ -312,6 +312,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
   const [collapsedTxFilter, setCollapsedTxFilter]       = useState("All");
+  const [collapsedCardIndex, setCollapsedCardIndex]     = useState(0);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -391,47 +392,126 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       </div>
     );
 
-    const BankPopup = () => (
-      <div className={popupBase}>
-        {popupHeader("Accounts")}
-        <div className="flex items-center gap-2 mx-3 mt-3 mb-2 px-3 py-2 bg-[#1a1f2e] rounded-xl">
-          <img className="w-6 h-6 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
-          <span className="flex-1 [font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-sm">Your Account</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#22c55e"/><path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg>
-        </div>
-        <div className="mx-3 mb-2" style={{ height: "158px", overflow: "hidden" }}>
-          <div style={{ transform: "scale(0.78)", transformOrigin: "top left", width: "370px" }}>
-            <div className="relative h-[200px]"><DebitCardView account={liveDebit} /></div>
+    /* Helpers shared across popups */
+    const activeCollapsedData = CARDS[collapsedCardIndex].data;
+    const activeCollapsedLabel = CARDS[collapsedCardIndex].label;
+    const collapsedHasCrypto = collapsedCardIndex === 0;
+    const collapsedHasTrades = collapsedCardIndex === 0;
+
+    const collapsedAssetTabs = collapsedHasCrypto ? ["All", "Cash", "Crypto"] : ["All", "Cash"];
+    const collapsedTxTabs    = collapsedHasTrades  ? ["All", "Trades", "Deposits", "Withdrawals"] : ["All", "Deposits", "Withdrawals"];
+
+    const goCard = (dir: 1 | -1) => {
+      setCollapsedCardIndex(prev => (prev + dir + CARDS.length) % CARDS.length);
+      setCollapsedAssetFilter("All");
+      setCollapsedTxFilter("All");
+    };
+
+    const BankPopup = () => {
+      const cardNode = (() => {
+        if (collapsedCardIndex === 0) return <WalletAddressCard account={resolvedWalletAccount as any} />;
+        if (collapsedCardIndex === 1) return <DebitCardView account={liveDebit} />;
+        return <BankAccountCard account={liveBank} />;
+      })();
+      return (
+        <div className={popupBase}>
+          {popupHeader("Accounts")}
+          {/* Account label row */}
+          <div className="flex items-center gap-2 mx-3 mt-3 mb-2 px-3 py-2 bg-[#1a1f2e] rounded-xl">
+            <img className="w-6 h-6 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
+            <span className="flex-1 [font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-sm">
+              Your Account · <span className="text-[#ff9500]">{activeCollapsedLabel}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#22c55e"/><path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </div>
+          {/* Card preview */}
+          <div className="mx-3 mb-1" style={{ height: "158px", overflow: "hidden" }}>
+            <div style={{ transform: "scale(0.78)", transformOrigin: "top left", width: "370px" }}>
+              <div className="relative h-[200px]">{cardNode}</div>
+            </div>
+          </div>
+          {/* Pagination — dots + arrows */}
+          <div className="flex items-center justify-center gap-2 pb-3 px-3">
+            <button
+              onClick={() => goCard(-1)}
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors flex-shrink-0"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            </button>
+            <div className="flex items-center gap-1.5 flex-1 justify-center">
+              {CARDS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); }}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-5 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => goCard(1)}
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors flex-shrink-0"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+          {/* Card type labels */}
+          <div className="flex justify-center gap-4 pb-3 px-3">
+            {CARDS.map((card, i) => (
+              <button
+                key={card.id}
+                onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); }}
+                className={`text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] transition-colors ${i === collapsedCardIndex ? "text-[#ff9500]" : "text-[#414965] hover:text-[#6c779d]"}`}
+              >
+                {card.label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex justify-center gap-1 pb-3">
-          {[0,1,2].map(i => (
-            <div key={i} className={`h-1.5 rounded-full transition-all ${i === 1 ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965]"}`} />
-          ))}
-        </div>
-      </div>
-    );
+      );
+    };
 
     const AssetsPopup = () => {
-      const filteredAssets = walletData.assets.filter(a =>
-        collapsedAssetFilter === "Cash"   ? a.category === "cash" :
-        collapsedAssetFilter === "Crypto" ? a.category === "crypto" : true
+      const safeFilter = collapsedAssetTabs.includes(collapsedAssetFilter) ? collapsedAssetFilter : "All";
+      const filteredAssets = activeCollapsedData.assets.filter(a =>
+        safeFilter === "Cash"   ? a.category === "cash" :
+        safeFilter === "Crypto" ? a.category === "crypto" : true
       );
       return (
         <div className={popupBase} style={{ maxHeight: "420px", display: "flex", flexDirection: "column" }}>
-          {popupHeader("Assets")}
+          {popupHeader(`Assets · ${activeCollapsedLabel}`)}
+          {/* Card switcher mini-dots */}
+          <div className="flex items-center justify-between px-3 py-2 flex-shrink-0" style={{ borderBottom: "1px solid #1e2235" }}>
+            <div className="flex items-center gap-1.5">
+              {CARDS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); }}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => goCard(-1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M5 1.5L2.5 4L5 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              </button>
+              <button onClick={() => goCard(1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1.5L5.5 4L3 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+          </div>
           <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
-            {["All","Cash","Crypto"].map(tab => (
+            {collapsedAssetTabs.map(tab => (
               <button
                 key={tab}
                 onClick={() => setCollapsedAssetFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${collapsedAssetFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
               >{tab}</button>
             ))}
           </div>
           <div className="flex flex-col gap-3 px-3 pb-3 overflow-y-auto">
-            {filteredAssets.map((asset, idx) => (
+            {filteredAssets.length === 0 ? (
+              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Gilroy-Medium',Helvetica]">No assets in this category</p>
+            ) : filteredAssets.map((asset, idx) => (
               <div key={`${asset.ticker}-${idx}`} className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 w-full">
                   <img className="w-8 h-8 flex-shrink-0" alt={asset.name} src={asset.icon} />
@@ -455,25 +535,48 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     };
 
     const TransactionsPopup = () => {
-      const filteredTx = walletData.transactions.filter(t =>
-        collapsedTxFilter === "Trades"      ? t.type === "trade"      :
-        collapsedTxFilter === "Deposits"    ? t.type === "deposit"    :
-        collapsedTxFilter === "Withdrawals" ? t.type === "withdrawal" : true
+      const safeFilter = collapsedTxTabs.includes(collapsedTxFilter) ? collapsedTxFilter : "All";
+      const filteredTx = activeCollapsedData.transactions.filter(t =>
+        safeFilter === "Trades"      ? t.type === "trade"      :
+        safeFilter === "Deposits"    ? t.type === "deposit"    :
+        safeFilter === "Withdrawals" ? t.type === "withdrawal" : true
       );
       return (
         <div className={popupBase} style={{ maxHeight: "440px", display: "flex", flexDirection: "column" }}>
-          {popupHeader("Transactions")}
+          {popupHeader(`Transactions · ${activeCollapsedLabel}`)}
+          {/* Card switcher mini-dots */}
+          <div className="flex items-center justify-between px-3 py-2 flex-shrink-0" style={{ borderBottom: "1px solid #1e2235" }}>
+            <div className="flex items-center gap-1.5">
+              {CARDS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setCollapsedCardIndex(i); setCollapsedTxFilter("All"); }}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => goCard(-1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M5 1.5L2.5 4L5 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              </button>
+              <button onClick={() => goCard(1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1.5L5.5 4L3 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+          </div>
           <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
-            {["All","Trades","Deposits","Withdrawals"].map(tab => (
+            {collapsedTxTabs.map(tab => (
               <button
                 key={tab}
                 onClick={() => setCollapsedTxFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${collapsedTxFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
               >{tab}</button>
             ))}
           </div>
           <div className="flex flex-col overflow-y-auto px-3 pb-3">
-            {filteredTx.map((tx, idx) => (
+            {filteredTx.length === 0 ? (
+              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Gilroy-Medium',Helvetica]">No transactions in this category</p>
+            ) : filteredTx.map((tx, idx) => (
               <div key={tx.id} className="flex flex-col">
                 <div className="flex items-center gap-2 py-3">
                   <div className="w-8 h-8 bg-[#0a0c10] rounded-full flex items-center justify-center flex-shrink-0">
