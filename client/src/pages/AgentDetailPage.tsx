@@ -384,6 +384,11 @@ export const AgentDetailPage = (): JSX.Element => {
               <ConfigRow
                 label="Execution Schedule"
                 value={agent.schedule}
+                hasDivider
+              />
+              <ConfigRow
+                label="Deployed"
+                value={agent.deployedAt}
                 hasDivider={false}
               />
             </div>
