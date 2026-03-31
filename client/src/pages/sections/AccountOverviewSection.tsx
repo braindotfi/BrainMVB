@@ -510,7 +510,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         {/* Backdrop shade — appears behind popup, on top of main content */}
         {hoveredIcon && (
           <div
-            className="fixed inset-0 z-40 bg-black/50"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300"
             style={{ pointerEvents: "none" }}
           />
         )}
@@ -708,7 +708,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {/* Dropdown trigger */}
             <div className="relative flex-shrink-0" ref={dropdownRef}>
               {dropdownOpen && (
-                <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" onClick={() => setDropdownOpen(false)} />
+                <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300" onClick={() => setDropdownOpen(false)} />
               )}
               <button
                 onClick={() => setDropdownOpen((v) => !v)}
