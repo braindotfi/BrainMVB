@@ -39,9 +39,57 @@ interface Props {
   onLogout?: () => void;
 }
 
+const insightsData = [
+  {
+    kind: "alert" as const,
+    tag: "SPENDING ALERT",
+    text: "Subscriptions up 38% vs last month. Signal Seer and TaskForge Pro are inactive but still billing $68/mo combined.",
+    action: "Review subscriptions →",
+  },
+  {
+    kind: "opportunity" as const,
+    tag: "OPPORTUNITY",
+    text: "$4,200 is sitting idle in your Neobank account. Moving it to the USDC yield vault earns ~$18/mo at current APY.",
+    action: "Move to vault →",
+  },
+  {
+    kind: "pattern" as const,
+    tag: "PATTERN",
+    text: "AlphaFlow has made 47 trades this week — 18% above its 30-day average. Consider tightening its budget cap to avoid overtrading.",
+    action: "Adjust budget →",
+  },
+  {
+    kind: "warning" as const,
+    tag: "MARKET ALERT",
+    text: "ETH volatility is elevated (+28% vs 7-day avg). Risk Sentinel recommends pausing momentum-based agents until conditions stabilise.",
+    action: "Review agents →",
+  },
+  {
+    kind: "opportunity" as const,
+    tag: "SAVINGS",
+    text: "You saved $480 more than last month and are 60% toward your $3,000 Q2 savings goal. Keep it up — you're ahead of schedule.",
+    action: "View savings goal →",
+  },
+  {
+    kind: "info" as const,
+    tag: "REMINDER",
+    text: "Brain Premium renews in 3 days ($89/mo). Switching to the annual plan saves you $178/yr and unlocks priority agent execution.",
+    action: "Upgrade plan →",
+  },
+];
+
+const insightColors = {
+  alert:       { tag: "#ff9500", border: "#ff9500", bg: "rgba(255,149,0,0.06)" },
+  opportunity: { tag: "#42bf23", border: "#42bf23", bg: "rgba(66,191,35,0.06)" },
+  pattern:     { tag: "#7631ee", border: "#7631ee", bg: "rgba(118,49,238,0.06)" },
+  warning:     { tag: "#d20344", border: "#d20344", bg: "rgba(210,3,68,0.06)"  },
+  info:        { tag: "#a8b9f4", border: "#a8b9f4", bg: "rgba(168,185,244,0.06)" },
+};
+
 export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLogout }: Props): JSX.Element => {
   const [location, navigate] = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
@@ -104,6 +152,126 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     deleteChatSession(id);
     loadSessions();
   };
+
+  // ── Insights panel ──
+  const InsightsPanel = () => (
+    <>
+      {insightsOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300"
+          onClick={() => setInsightsOpen(false)}
+        />
+      )}
+      <div
+        className={`fixed z-40 top-[12px] bottom-[12px] flex flex-col w-[360px] overflow-hidden
+          transition-all duration-300 ease-out
+          ${insightsOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
+        `}
+        style={{
+          left: collapsed ? "76px" : "280px",
+          background: "#0a0c10",
+          border: "1px solid #1d2132",
+          borderRadius: "16px",
+          boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06),0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between flex-shrink-0 px-[16px] py-[14px]"
+          style={{ borderBottom: "1px solid #1d2132", background: "rgba(10,12,16,0.92)", backdropFilter: "blur(10px)" }}
+        >
+          <div className="flex items-center gap-[8px]">
+            <div
+              className="w-[8px] h-[8px] rounded-full flex-shrink-0"
+              style={{ background: "#7631ee", animation: "pulse 2s infinite" }}
+            />
+            <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "16px", lineHeight: "22px", color: "#a8b9f4" }}>
+              Insights for You
+            </span>
+          </div>
+          <button
+            onClick={() => setInsightsOpen(false)}
+            className="flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
+            style={{ width: "24px", height: "24px", borderRadius: "100px", background: "#1d2132" }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Sub-header */}
+        <div className="px-[16px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
+          <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
+            Brain AI has analysed your accounts and found {insightsData.length} personalised recommendations.
+          </p>
+        </div>
+
+        {/* Insight cards */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-[10px] p-[12px]">
+          {insightsData.map((insight, i) => {
+            const c = insightColors[insight.kind];
+            return (
+              <div
+                key={i}
+                className="flex flex-col gap-[6px] p-[12px] rounded-[12px] cursor-pointer transition-all hover:brightness-110"
+                style={{
+                  background: c.bg,
+                  border: `1px solid ${c.border}22`,
+                  borderLeft: `3px solid ${c.border}`,
+                  borderRadius: "0 12px 12px 0",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                    fontSize: "10px",
+                    lineHeight: "13px",
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase" as const,
+                    color: c.tag,
+                  }}
+                >
+                  {insight.tag}
+                </span>
+                <p
+                  style={{
+                    fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                    fontSize: "13px",
+                    lineHeight: "19px",
+                    color: "#d0d8f0",
+                  }}
+                >
+                  {insight.text}
+                </p>
+                <span
+                  style={{
+                    fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                    fontSize: "12px",
+                    lineHeight: "16px",
+                    color: c.tag,
+                  }}
+                >
+                  {insight.action}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div
+          className="flex-shrink-0 px-[16px] py-[12px]"
+          style={{ borderTop: "1px solid #1d2132" }}
+        >
+          <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "11px", lineHeight: "15px", color: "#414965", textAlign: "center" as const }}>
+            Insights refresh every 24 hours · Powered by Brain AI
+          </p>
+        </div>
+      </div>
+    </>
+  );
 
   // ── Notifications popup panel ──
   const NotificationsPanel = () => (
@@ -457,6 +625,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     return (
       <>
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
+        <InsightsPanel />
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
@@ -485,6 +654,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 </svg>
               </button>
             </Link>
+
+            {/* Insights — lightbulb */}
+            <button
+              title="Insights"
+              onClick={() => setInsightsOpen((v) => !v)}
+              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6.3 13.5h5.4M7 15.5h4" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
@@ -566,6 +747,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   return (
     <>
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
+      <InsightsPanel />
       <NotificationsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
@@ -616,6 +798,30 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   </span>
                 </button>
               </Link>
+
+              {/* Insights item — expanded nav */}
+              <button
+                onClick={() => setInsightsOpen((v) => !v)}
+                className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+              >
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M6.3 13.5h5.4M7 15.5h4" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                  Insights
+                </span>
+                <div
+                  className="flex items-center justify-center flex-shrink-0 px-[6px] py-[2px] rounded-[5px]"
+                  style={{ background: "rgba(118,49,238,0.18)" }}
+                >
+                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "10px", lineHeight: "13px", color: "#9d5cf5" }}>
+                    {insightsData.length}
+                  </span>
+                </div>
+              </button>
 
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
