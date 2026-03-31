@@ -233,6 +233,35 @@ const AgentCard = ({
           </span>
         </div>
       </div>
+
+      {/* ── Horizontal divider ── */}
+      <div className="h-px w-full bg-[#1d2132] flex-shrink-0" />
+
+      {/* ── Footer: Last Active + Edit button ── */}
+      <div className="flex gap-[16px] items-center w-full">
+        {/* Last Active */}
+        <div className="flex flex-col gap-[2px] items-start justify-center flex-1 min-w-0">
+          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap">
+            Last Active
+          </span>
+          <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[16px] whitespace-nowrap">
+            {agent.lastActive}
+          </span>
+        </div>
+
+        {/* Edit button */}
+        <button
+          data-testid={`button-edit-agent-${agent.id}`}
+          className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.333 13.333l-3.666.667.666-3.667L11.333 2Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
+            Edit
+          </span>
+        </button>
+      </div>
     </div>
   );
 };
