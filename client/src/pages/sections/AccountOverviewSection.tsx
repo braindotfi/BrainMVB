@@ -287,11 +287,18 @@ interface Props {
 }
 
 export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange }: Props): JSX.Element => {
-  const { wirexAccounts } = useAuth();
+  const { wirexAccounts, user } = useAuth();
   // Find live WireX accounts by type
   const liveWallet = wirexAccounts.find(a => a.type === "wallet");
   const liveDebit  = wirexAccounts.find(a => a.type === "debit");
   const liveBank   = wirexAccounts.find(a => a.type === "bank");
+
+  // Prefer Crossmint embedded wallet address; fall back to WireX wallet address
+  const resolvedWalletAccount = liveWallet
+    ? { ...liveWallet, address: user?.walletAddress || liveWallet.address }
+    : (user?.walletAddress
+        ? { id: "crossmint", type: "wallet" as const, address: user.walletAddress, nameOnAccount: user.email?.split("@")[0] }
+        : undefined);
 
   const [activeFilter, setActiveFilter]         = useState("All");
   const [activeTab, setActiveTab]               = useState("Assets");
@@ -806,7 +813,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {isYourAccount ? (
               <>
                 {/* Personal account: 3 cards, orange pagination */}
-                {activeCard === 0 && <WalletAddressCard account={liveWallet} />}
+                {activeCard === 0 && <WalletAddressCard account={resolvedWalletAccount} />}
                 {activeCard === 1 && <DebitCardView account={liveDebit} />}
                 {activeCard === 2 && <BankAccountCard account={liveBank} />}
                 <div className="absolute top-[182px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1">

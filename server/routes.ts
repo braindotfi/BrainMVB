@@ -617,15 +617,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // POST /api/wirex/onboard — called after Crossmint login to provision WireX accounts
   app.post("/api/wirex/onboard", async (req, res) => {
     try {
-      const { userId, email } = req.body;
-      console.log("[Onboard] userId:", userId, "email:", email);
+      const { userId, email, walletAddress } = req.body;
+      console.log("[Onboard] userId:", userId, "email:", email, "walletAddress:", walletAddress);
       if (!email) return res.status(400).json({ error: "email required" });
 
-      // Check/create WireX user
+      // Check/create WireX user — prefer the real Crossmint wallet address
       let wirexUser = await getWirexUser(email).catch((e) => { console.error("[Onboard] getUser error:", e.message); return null; });
       console.log("[Onboard] wirexUser after get:", JSON.stringify(wirexUser)?.slice(0, 200));
       if (!wirexUser) {
-        await createWirexUser(email, userId || "").catch((e) => { console.error("[Onboard] createUser error:", e.message); });
+        await createWirexUser(email, walletAddress || userId || "").catch((e) => { console.error("[Onboard] createUser error:", e.message); });
         wirexUser = await getWirexUser(email).catch(() => null);
         console.log("[Onboard] wirexUser after create+get:", JSON.stringify(wirexUser)?.slice(0, 200));
       }
@@ -689,7 +689,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           {
             id: "demo-wallet-1",
             type: "wallet" as const,
-            address: `0x${seed.toString(16).padStart(4, "0")}3cB5a84f9E2d1${seed.toString(16).padStart(4, "0")}486A8`,
+            address: walletAddress || `0x${seed.toString(16).padStart(4, "0")}3cB5a84f9E2d1${seed.toString(16).padStart(4, "0")}486A8`,
             balance: "2,040.30",
             currency: "USD",
             nameOnAccount: displayName,

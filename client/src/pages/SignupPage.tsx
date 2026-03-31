@@ -59,19 +59,19 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
     );
   }
 
-  const handleOnboarding = async (userId: string, email?: string) => {
+  const handleOnboarding = async (userId: string, email?: string, walletAddress?: string) => {
     if (status === "creating") return;
     setStatus("creating");
     try {
       const res = await fetch("/api/wirex/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, email }),
+        body: JSON.stringify({ userId, email, walletAddress }),
       });
       const data = await res.json();
-      setUserAndAccounts({ id: userId, email }, data.accounts ?? []);
+      setUserAndAccounts({ id: userId, email, walletAddress }, data.accounts ?? []);
     } catch {
-      setUserAndAccounts({ id: userId, email }, []);
+      setUserAndAccounts({ id: userId, email, walletAddress }, []);
     }
     navigate("/");
   };
@@ -97,7 +97,7 @@ function CrossmintAuthWrapper({
   onSuccess,
 }: {
   apiKey: string;
-  onSuccess: (userId: string, email?: string) => void;
+  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
 }) {
   return (
     <LazyEmbeddedAuth apiKey={apiKey} onSuccess={onSuccess} />
@@ -109,7 +109,7 @@ function LazyEmbeddedAuth({
   onSuccess,
 }: {
   apiKey: string;
-  onSuccess: (userId: string, email?: string) => void;
+  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
 }) {
   const [Comp, setComp] = useState<React.ComponentType<any> | null>(null);
   const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
@@ -150,14 +150,22 @@ function AuthWatcher({
   children,
 }: {
   useAuthHook: () => any;
-  onSuccess: (userId: string, email?: string) => void;
+  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
   children: React.ReactNode;
 }) {
   const auth = useAuthHook();
 
   useEffect(() => {
     if (auth?.status === "logged-in" && auth?.user) {
-      onSuccess(auth.user.id, auth.user.email);
+      // Crossmint SDK may expose the wallet address on different fields depending on version
+      const user = auth.user;
+      const walletAddress =
+        user?.wallet?.address ||
+        user?.wallets?.[0]?.address ||
+        user?.linkedWallets?.[0]?.address ||
+        user?.evmWallet?.address ||
+        undefined;
+      onSuccess(user.id, user.email, walletAddress);
     }
   }, [auth?.status, auth?.user?.id]);
 

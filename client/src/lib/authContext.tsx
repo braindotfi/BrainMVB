@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 export interface CrossmintUser {
   id: string;
   email?: string;
+  walletAddress?: string;
 }
 
 export interface WirexAccount {
