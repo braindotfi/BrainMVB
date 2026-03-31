@@ -520,6 +520,17 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-5 h-5" style={{ mixBlendMode: "lighten" }} />
             </button>
 
+            <Link href="/perks">
+              <button title="Perks" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <path d="M14.5 8H3.5v8h11V8Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 4.5H2v3.5h14V4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 4.5C9 4.5 7 4.5 7 3S7.9 1.5 9 2.25C10.1 1.5 11 2 11 3S9 4.5 9 4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 4.5v11.5" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </Link>
+
             <Link href="/settings">
               <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
                 <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
@@ -663,6 +674,31 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
               </div>
             </button>
+
+            <Link href="/perks" className="w-full">
+              <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M14.5 8H3.5v8h11V8Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M16 4.5H2v3.5h14V4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M9 4.5C9 4.5 7 4.5 7 3S7.9 1.5 9 2.25C10.1 1.5 11 2 11 3S9 4.5 9 4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M9 4.5v11.5" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/perks") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Perks</span>
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: "rgba(118,49,238,0.2)", color: "#9d5cf5", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
+                >
+                  NEW
+                </span>
+                {isActive("/perks") && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                    <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            </Link>
 
             <Link href="/settings" className="w-full">
               <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
