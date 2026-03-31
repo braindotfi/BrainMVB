@@ -67,9 +67,10 @@ const agentList = [
 interface Props {
   open: boolean;
   onClose: () => void;
+  excludeTypes?: Array<"bank" | "wallet" | "agent">;
 }
 
-export const AddAccountModal = ({ open, onClose }: Props): JSX.Element | null => {
+export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
   const [step, setStep] = useState<Step>("select-type");
   const [selectedType, setSelectedType] = useState<AccountType>(null);
   const [recipientName, setRecipientName] = useState("");
@@ -194,7 +195,7 @@ export const AddAccountModal = ({ open, onClose }: Props): JSX.Element | null =>
           {/* ── Step 1: Select account type ── */}
           {step === "select-type" && (
             <div className="flex flex-col gap-3">
-              {accountTypes.map((type) => (
+              {accountTypes.filter((type) => !excludeTypes.includes(type.id)).map((type) => (
                 <button
                   key={type.id}
                   onClick={() => handleTypeSelect(type.id)}

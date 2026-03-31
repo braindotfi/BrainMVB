@@ -282,7 +282,7 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onCreateAgent: () => void;
-  onSend?: () => void;
+  onSend?: (cardType: "wallet" | "bank") => void;
   onExchange?: () => void;
 }
 
@@ -505,7 +505,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
     return (
       <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
-        <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
+        <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} excludeTypes={[]} />
 
         {/* Backdrop shade — appears behind popup, on top of main content */}
         {hoveredIcon && (
@@ -580,7 +580,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── Send icon: full circle ── */}
           <button
             data-testid="button-collapsed-send"
-            onClick={onSend}
+            onClick={() => onSend?.("wallet")}
             className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
             style={{ background: "rgba(255,149,0,0.18)" }}
           >
@@ -662,7 +662,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
   return (
     <>
-      <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddAccountModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        excludeTypes={activeCard === 0 ? ["bank"] : activeCard === 2 ? ["wallet"] : []}
+      />
       <div className="flex-shrink-0 self-stretch">
 
         {/* Main panel */}
@@ -786,27 +790,32 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           <div className="h-[300px] w-[370px] self-center relative flex-shrink-0">
             {/* Actions panel — sits behind / below the card */}
             <div className="absolute top-[152px] left-0 w-[370px] h-[148px] flex bg-brain-v1headerfooterbg rounded-2xl">
-              <div className="flex mt-16 w-[338px] h-[58px] ml-4 items-center gap-2">
-                {cardActions.map((action) => (
-                  <button
-                    key={action.label}
-                    onClick={
-                      action.label === "Send"     ? onSend :
-                      action.label === "Add"      ? () => setAddOpen(true) :
-                      action.label === "Exchange" ? onExchange :
-                      undefined
-                    }
-                    className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"
-                  >
-                    <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center group-hover:opacity-80 transition-opacity">
-                      <img className="w-6 h-6" alt={action.label} src={action.icon} />
-                    </div>
-                    <span className="self-stretch [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-xs text-center leading-[14px] transition-colors">
-                      {action.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {activeCard !== 1 && (
+                <div className="flex mt-16 w-[338px] h-[58px] ml-4 items-center gap-2">
+                  {cardActions.map((action) => {
+                    const cardType = activeCard === 2 ? "bank" : "wallet";
+                    return (
+                      <button
+                        key={action.label}
+                        onClick={
+                          action.label === "Send"     ? () => onSend?.(cardType) :
+                          action.label === "Add"      ? () => setAddOpen(true) :
+                          action.label === "Exchange" ? onExchange :
+                          undefined
+                        }
+                        className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"
+                      >
+                        <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center group-hover:opacity-80 transition-opacity">
+                          <img className="w-6 h-6" alt={action.label} src={action.icon} />
+                        </div>
+                        <span className="self-stretch [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-xs text-center leading-[14px] transition-colors">
+                          {action.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ── Card carousel ── */}

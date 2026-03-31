@@ -58,6 +58,7 @@ const recipientTypes = [
 interface Props {
   open: boolean;
   onClose: () => void;
+  excludeTypes?: Array<"bank" | "wallet" | "agent">;
 }
 
 const INITIAL: SendState = {
@@ -95,7 +96,7 @@ const StepDot = ({ n, current }: { n: number; current: number }) => (
 
 const stepLabels = ["Type", "Recipient", "Amount", "Review"];
 
-export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
+export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
   const [state, setState] = useState<SendState>(INITIAL);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -250,7 +251,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
                 Choose where you'd like to send funds.
               </p>
               <div className="flex flex-col gap-3 mt-2">
-                {recipientTypes.map((rt) => {
+                {recipientTypes.filter((rt) => !excludeTypes.includes(rt.id as "bank" | "wallet" | "agent")).map((rt) => {
                   const selected = state.recipientType === rt.id;
                   return (
                     <button
@@ -290,7 +291,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
           {/* ===== STEP 2: BANK ACCOUNT ===== */}
           {!sent && state.step === 2 && state.recipientType === "bank" && (
             <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="bank" onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
+              <RecipientTypeTabs current="bank" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Select a linked bank account.
               </p>
@@ -327,7 +328,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
           {/* ===== STEP 2: WALLET ADDRESS ===== */}
           {!sent && state.step === 2 && state.recipientType === "wallet" && (
             <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="wallet" onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
+              <RecipientTypeTabs current="wallet" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Enter or paste the recipient's wallet address.
               </p>
@@ -377,7 +378,7 @@ export const SendModal = ({ open, onClose }: Props): JSX.Element | null => {
           {/* ===== STEP 2: AI AGENT ACCOUNT ===== */}
           {!sent && state.step === 2 && state.recipientType === "agent" && (
             <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="agent" onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
+              <RecipientTypeTabs current="agent" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Select an AI agent account to fund.
               </p>
@@ -653,12 +654,14 @@ const recipientTypeLabels: Record<string, { label: string; icon: string }> = {
 const RecipientTypeTabs = ({
   current,
   onChange,
+  excludeTypes = [],
 }: {
   current: string;
   onChange: (t: RecipientType) => void;
+  excludeTypes?: Array<"bank" | "wallet" | "agent">;
 }) => (
   <div className="flex items-center gap-1 p-1 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
-    {(["bank", "wallet", "agent"] as RecipientType[]).map((t) => {
+    {(["bank", "wallet", "agent"] as RecipientType[]).filter((t) => !excludeTypes.includes(t!)).map((t) => {
       const info = recipientTypeLabels[t!];
       const sel = current === t;
       return (

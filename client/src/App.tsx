@@ -26,6 +26,7 @@ function AppLayout() {
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [createAgentOpen, setCreateAgentOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [, navigate] = useLocation();
 
@@ -68,7 +69,7 @@ function AppLayout() {
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
           onCreateAgent={() => setCreateAgentOpen(true)}
-          onSend={() => setSendOpen(true)}
+          onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
           onExchange={() => setExchangeOpen(true)}
         />
       </div>
@@ -88,6 +89,7 @@ function AppLayout() {
       <SendModal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
+        excludeTypes={sendCardType === "wallet" ? ["bank"] : sendCardType === "bank" ? ["wallet"] : []}
       />
       <ExchangeModal
         open={exchangeOpen}
