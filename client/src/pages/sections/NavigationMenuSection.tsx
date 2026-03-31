@@ -13,13 +13,12 @@ import { useNotifications } from "@/hooks/useNotifications";
 const mainMenuItems = [
   { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
   { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
-  { id: "launchpad", label: "Launchpad", icon: "/figmaAssets/navbar-icons-launchpad.svg", activeIcon: "/figmaAssets/nav-launchpad-active.png", path: "/launchpad", emoji: null },
   { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/navbar-icons-3.svg", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
 ];
 
 const initialNotifications = [
   { id: "1", title: "AlphaFlow executed a trade", body: "Bought 0.45 ETH at $2,498", time: "2m ago", read: false },
-  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live on the Launchpad", time: "15m ago", read: false },
+  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live in the Marketplace", time: "15m ago", read: false },
   { id: "3", title: "Risk Sentinel: Anomaly detected", body: "Unusual volatility in BNB/USDC pair", time: "3h ago", read: true },
   { id: "4", title: "Capital rebalanced successfully", body: "Portfolio adjusted to target weights", time: "12h ago", read: true },
 ];

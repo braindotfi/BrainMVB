@@ -11,7 +11,7 @@ AI agent marketplace + programmable neobank on Base L2.
 - **Smart Contracts**: Hardhat + Base Sepolia (in `contracts/`)
 
 ## Key Files
-- `shared/schema.ts` — Drizzle schema (agents, notifications, launchpad, bonding curve, etc.)
+- `shared/schema.ts` — Drizzle schema (agents, marketplace, notifications, etc.)
 - `server/routes.ts` — All API routes + Claude ReAct agent loop
 - `server/storage.ts` — MemStorage (seeded) + IStorage interface
 - `client/src/lib/web3.ts` — wagmi config (Base + BaseSepolia)
@@ -19,16 +19,15 @@ AI agent marketplace + programmable neobank on Base L2.
 - `client/src/App.tsx` — Root app, routing, NavContext
 - `client/src/hooks/useNotifications.ts` — SSE live notifications hook
 - `client/src/components/WalletButton.tsx` — Wallet connect + SIWE auth
-- `client/src/components/BondingCurveChart.tsx` — recharts bonding curve viz
 - `client/src/components/CreateAgentModal.tsx` — 7-step agent creation (wired to POST /api/agents)
-- `client/src/pages/LaunchpadPage.tsx` — Launchpad + live backend merge
-- `client/src/pages/AgentDetailPage.tsx` — Agent detail, trade panel, Run Agent panel
+- `client/src/pages/AgentsActivityPage.tsx` — Agent list with Edit nav to /manage/:id
+- `client/src/pages/AgentManagePage.tsx` — Full agent detail + edit (rules, config, activity log)
+- `client/src/lib/agentsData.ts` — Shared agent data (rules, budget, schedule, activity log)
 
 ## API Endpoints
 - `GET/POST /api/agents` — List/create agents
 - `POST /api/agents/:id/run` — Run ReAct agent loop (Claude)
-- `GET /api/launchpad/launches` — Launchpad listings
-- `GET /api/launchpad/trending` — Trending by volume
+- `GET /api/marketplace` — Marketplace listings
 - `GET /api/notifications` — User notifications
 - `GET /api/notifications/stream` — SSE live stream
 - `POST /api/notifications/demo` — Fire demo notification
@@ -38,10 +37,6 @@ AI agent marketplace + programmable neobank on Base L2.
 - BrainAccount (ERC-4337 smart account)
 - PolicyValidator (on-chain spending policy)
 - AgentRegistry (agent + action registry)
-- AgentToken (ERC-20 per agent)
-- BondingCurve (quadratic k*s² pricing)
-- LiquidityMigrator (Aerodrome LP + burn)
-- LaunchpadFactory (orchestrator)
 
 Deploy: `npm run deploy:sepolia` (needs `DEPLOYER_PRIVATE_KEY` + `ALCHEMY_API_KEY`)
 

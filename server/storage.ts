@@ -2,8 +2,6 @@ import { randomUUID } from "crypto";
 import {
   type User, type InsertUser,
   type Agent, type InsertAgent,
-  type LaunchpadLaunch, type InsertLaunchpadLaunch,
-  type BondingCurveSnapshot, type InsertBondingCurveSnapshot,
   type AgentMemory, type InsertAgentMemory,
   type AgentTransaction, type InsertAgentTransaction,
   type Notification, type InsertNotification,
@@ -31,18 +29,6 @@ export interface IStorage {
   // Marketplace
   listMarketplaceListings(filters?: { category?: string; featured?: boolean; trending?: boolean }): Promise<MarketplaceListing[]>;
 
-  // Launchpad
-  getLaunch(id: string): Promise<LaunchpadLaunch | undefined>;
-  getLaunchByToken(tokenAddress: string): Promise<LaunchpadLaunch | undefined>;
-  listLaunches(filters?: { graduated?: boolean }): Promise<LaunchpadLaunch[]>;
-  createLaunch(launch: InsertLaunchpadLaunch): Promise<LaunchpadLaunch>;
-  updateLaunch(id: string, updates: Partial<InsertLaunchpadLaunch>): Promise<LaunchpadLaunch | undefined>;
-  getTrendingLaunches(limit?: number): Promise<LaunchpadLaunch[]>;
-
-  // Bonding Curve Snapshots
-  addSnapshot(snapshot: InsertBondingCurveSnapshot): Promise<BondingCurveSnapshot>;
-  getSnapshots(curveAddress: string, limit?: number): Promise<BondingCurveSnapshot[]>;
-
   // Agent Memory
   addMemory(memory: InsertAgentMemory): Promise<AgentMemory>;
   getMemories(agentId: string, limit?: number): Promise<AgentMemory[]>;
@@ -66,8 +52,6 @@ export class MemStorage implements IStorage {
   private agents = new Map<string, Agent>();
   private agentStatuses = new Map<string, AgentStatus>();
   private marketplaceListings = new Map<string, MarketplaceListing>();
-  private launches = new Map<string, LaunchpadLaunch>();
-  private snapshots: BondingCurveSnapshot[] = [];
   private memories: AgentMemory[] = [];
   private txLog: AgentTransaction[] = [];
   private notifs = new Map<string, Notification>();
@@ -100,78 +84,6 @@ export class MemStorage implements IStorage {
       const id = randomUUID();
       this.marketplaceListings.set(id, { id, ...l } as MarketplaceListing);
     });
-
-    // Seed demo launchpad launches
-    const launchSeed: LaunchpadLaunch[] = [
-      {
-        id: randomUUID(),
-        launchIndex: 0,
-        agentId: "0xabc1",
-        agentName: "NeuralTrader",
-        symbol: "NTRDR",
-        description: "A neural network-powered trading agent that learns from market microstructure in real time.",
-        avatarUrl: null,
-        creator: "0x1234...abcd",
-        tokenAddress: "0xToken1",
-        bondingCurveAddress: "0xCurve1",
-        baseRaised: "45000000000000000000000",
-        graduationThreshold: "69000000000000000000000",
-        marketCapUsd: "32500.00",
-        currentPriceEth: "0.000000041",
-        holders: 142,
-        txCount: 289,
-        graduated: false,
-        aerodromePool: null,
-        capabilities: ["trading", "ml", "defi"],
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: randomUUID(),
-        launchIndex: 1,
-        agentId: "0xabc2",
-        agentName: "YieldMaxx",
-        symbol: "YMAXX",
-        description: "Maximizes yield across Aave, Compound, and Aerodrome with automated rebalancing.",
-        avatarUrl: null,
-        creator: "0x5678...efgh",
-        tokenAddress: "0xToken2",
-        bondingCurveAddress: "0xCurve2",
-        baseRaised: "69000000000000000000001",
-        graduationThreshold: "69000000000000000000000",
-        marketCapUsd: "98000.00",
-        currentPriceEth: "0.000000098",
-        holders: 387,
-        txCount: 1042,
-        graduated: true,
-        aerodromePool: "0xPool2",
-        capabilities: ["yield", "lending", "defi"],
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: randomUUID(),
-        launchIndex: 2,
-        agentId: "0xabc3",
-        agentName: "ArbiBot",
-        symbol: "ARBI",
-        description: "Finds and executes cross-DEX arbitrage opportunities on Base with sub-block latency.",
-        avatarUrl: null,
-        creator: "0x9abc...ijkl",
-        tokenAddress: "0xToken3",
-        bondingCurveAddress: "0xCurve3",
-        baseRaised: "12000000000000000000000",
-        graduationThreshold: "69000000000000000000000",
-        marketCapUsd: "8700.00",
-        currentPriceEth: "0.0000000087",
-        holders: 56,
-        txCount: 94,
-        graduated: false,
-        aerodromePool: null,
-        capabilities: ["arbitrage", "trading", "defi"],
-        createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      },
-    ];
-
-    launchSeed.forEach(l => this.launches.set(l.id, l));
   }
 
   // ─── Users ───
@@ -250,76 +162,6 @@ export class MemStorage implements IStorage {
     if (filters?.featured !== undefined) all = all.filter(l => l.featured === filters.featured);
     if (filters?.trending !== undefined) all = all.filter(l => l.trending === filters.trending);
     return all;
-  }
-
-  // ─── Launchpad ───
-  async getLaunch(id: string) { return this.launches.get(id); }
-  async getLaunchByToken(tokenAddress: string) {
-    return Array.from(this.launches.values()).find(l => l.tokenAddress === tokenAddress);
-  }
-  async listLaunches(filters?: { graduated?: boolean }): Promise<LaunchpadLaunch[]> {
-    let all = Array.from(this.launches.values());
-    if (filters?.graduated !== undefined) all = all.filter(l => l.graduated === filters.graduated);
-    return all.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
-  }
-  async createLaunch(launch: InsertLaunchpadLaunch): Promise<LaunchpadLaunch> {
-    const full: LaunchpadLaunch = {
-      id: randomUUID(),
-      ...launch,
-      launchIndex: launch.launchIndex ?? null,
-      description: launch.description ?? null,
-      avatarUrl: launch.avatarUrl ?? null,
-      tokenAddress: launch.tokenAddress ?? null,
-      bondingCurveAddress: launch.bondingCurveAddress ?? null,
-      baseRaised: launch.baseRaised ?? "0",
-      graduationThreshold: launch.graduationThreshold ?? "69000000000000000000000",
-      marketCapUsd: launch.marketCapUsd ?? "0",
-      currentPriceEth: launch.currentPriceEth ?? "0",
-      holders: launch.holders ?? 0,
-      txCount: launch.txCount ?? 0,
-      graduated: launch.graduated ?? false,
-      aerodromePool: launch.aerodromePool ?? null,
-      capabilities: launch.capabilities ?? null,
-      createdAt: new Date(),
-    };
-    this.launches.set(full.id, full);
-    return full;
-  }
-  async updateLaunch(id: string, updates: Partial<InsertLaunchpadLaunch>): Promise<LaunchpadLaunch | undefined> {
-    const existing = this.launches.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...updates };
-    this.launches.set(id, updated);
-    return updated;
-  }
-  async getTrendingLaunches(limit = 10): Promise<LaunchpadLaunch[]> {
-    return Array.from(this.launches.values())
-      .sort((a, b) => (b.holders ?? 0) - (a.holders ?? 0))
-      .slice(0, limit);
-  }
-
-  // ─── Bonding Curve Snapshots ───
-  async addSnapshot(snapshot: InsertBondingCurveSnapshot): Promise<BondingCurveSnapshot> {
-    const full: BondingCurveSnapshot = {
-      id: randomUUID(),
-      ...snapshot,
-      priceEth: snapshot.priceEth ?? null,
-      supply: snapshot.supply ?? null,
-      marketCapUsd: snapshot.marketCapUsd ?? null,
-      baseRaised: snapshot.baseRaised ?? null,
-      txHash: snapshot.txHash ?? null,
-      eventType: snapshot.eventType ?? null,
-      buyerSeller: snapshot.buyerSeller ?? null,
-      amountTokens: snapshot.amountTokens ?? null,
-      createdAt: new Date(),
-    };
-    this.snapshots.push(full);
-    return full;
-  }
-  async getSnapshots(curveAddress: string, limit = 200): Promise<BondingCurveSnapshot[]> {
-    return this.snapshots
-      .filter(s => s.curveAddress === curveAddress)
-      .slice(-limit);
   }
 
   // ─── Agent Memory ───

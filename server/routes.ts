@@ -181,7 +181,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const response = await anthropic.messages.create({
         model: "claude-opus-4-5",
         max_tokens: 1024,
-        system: "You are Brain AI, an intelligent assistant specialized in DeFi, crypto trading, AI agents, and blockchain technology on Base L2. You help users understand AI agents, analyze market trends, launchpad opportunities, and make informed decisions. Be concise, knowledgeable, and helpful.",
+        system: "You are Brain AI, an intelligent assistant specialized in DeFi, crypto trading, AI agents, and blockchain technology on Base L2. You help users understand AI agents, analyze market trends, and make informed decisions. Be concise, knowledgeable, and helpful.",
         messages: messages.map((m: { role: string; content: string }) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
@@ -338,96 +338,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.json(txs);
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch transactions" });
-    }
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // LAUNCHPAD
-  // ─────────────────────────────────────────────────────────────
-  app.get("/api/launchpad", async (req, res) => {
-    try {
-      const { graduated } = req.query;
-      const filters = graduated !== undefined ? { graduated: graduated === "true" } : undefined;
-      const launches = await storage.listLaunches(filters);
-      return res.json(launches);
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch launchpad" });
-    }
-  });
-
-  app.get("/api/launchpad/trending", async (req, res) => {
-    try {
-      const launches = await storage.getTrendingLaunches(10);
-      return res.json(launches);
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch trending" });
-    }
-  });
-
-  app.get("/api/launchpad/:id", async (req, res) => {
-    try {
-      const launch = await storage.getLaunch(req.params.id);
-      if (!launch) return res.status(404).json({ error: "Launch not found" });
-      const snapshots = launch.bondingCurveAddress
-        ? await storage.getSnapshots(launch.bondingCurveAddress, 100)
-        : [];
-      return res.json({ ...launch, chartData: snapshots });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch launch" });
-    }
-  });
-
-  app.get("/api/launchpad/:id/price", async (req, res) => {
-    try {
-      const launch = await storage.getLaunch(req.params.id);
-      if (!launch) return res.status(404).json({ error: "Launch not found" });
-      return res.json({
-        price: launch.currentPriceEth,
-        marketCapUsd: launch.marketCapUsd,
-        baseRaised: launch.baseRaised,
-        graduated: launch.graduated,
-      });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch price" });
-    }
-  });
-
-  const createLaunchSchema = z.object({
-    agentName: z.string().min(1).max(50),
-    symbol: z.string().min(1).max(10).toUpperCase(),
-    description: z.string().min(10).max(500),
-    creator: z.string().min(1),
-    capabilities: z.array(z.string()).optional(),
-    executionWallet: z.string().optional(),
-  });
-
-  app.post("/api/launchpad/create", async (req, res) => {
-    try {
-      const parsed = createLaunchSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
-
-      const { agentName, symbol, description, creator, capabilities, executionWallet } = parsed.data;
-      const agentId = `0x${Buffer.from(`${creator}-${agentName}-${Date.now()}`).toString("hex").slice(0, 64)}`;
-
-      const launch = await storage.createLaunch({
-        agentId,
-        agentName,
-        symbol,
-        description,
-        creator,
-        capabilities: capabilities ?? [],
-        executionWallet: executionWallet ?? null,
-        launchIndex: null,
-        avatarUrl: null,
-        tokenAddress: null,
-        bondingCurveAddress: null,
-        graduationThreshold: "69000000000000000000000",
-      });
-
-      return res.status(201).json(launch);
-    } catch (error) {
-      console.error("Create launch error:", error);
-      return res.status(500).json({ error: "Failed to create launch" });
     }
   });
 

@@ -73,54 +73,6 @@ export const insertMarketplaceListingSchema = createInsertSchema(marketplaceList
 export type InsertMarketplaceListing = z.infer<typeof insertMarketplaceListingSchema>;
 export type MarketplaceListing = typeof marketplaceListings.$inferSelect;
 
-/* ─── Launchpad Launches ─── */
-export const launchpadLaunches = pgTable("launchpad_launches", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  launchIndex: integer("launch_index"),      // on-chain index from LaunchpadFactory
-  agentId: text("agent_id").notNull(),
-  agentName: text("agent_name").notNull(),
-  symbol: text("symbol").notNull(),
-  description: text("description"),
-  avatarUrl: text("avatar_url"),
-  creator: text("creator").notNull(),        // wallet address
-  tokenAddress: text("token_address"),
-  bondingCurveAddress: text("bonding_curve_address"),
-  baseRaised: numeric("base_raised", { precision: 30, scale: 18 }).default("0"),
-  graduationThreshold: numeric("graduation_threshold", { precision: 30, scale: 18 }).default("69000000000000000000000"),
-  marketCapUsd: numeric("market_cap_usd", { precision: 20, scale: 2 }).default("0"),
-  currentPriceEth: numeric("current_price_eth", { precision: 30, scale: 18 }).default("0"),
-  holders: integer("holders").default(0),
-  txCount: integer("tx_count").default(0),
-  graduated: boolean("graduated").default(false),
-  aerodromePool: text("aerodrome_pool"),
-  capabilities: text("capabilities").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertLaunchpadLaunchSchema = createInsertSchema(launchpadLaunches).omit({ id: true, createdAt: true });
-export type InsertLaunchpadLaunch = z.infer<typeof insertLaunchpadLaunchSchema>;
-export type LaunchpadLaunch = typeof launchpadLaunches.$inferSelect;
-
-/* ─── Bonding Curve Snapshots (chart data) ─── */
-export const bondingCurveSnapshots = pgTable("bonding_curve_snapshots", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  curveAddress: text("curve_address").notNull(),
-  agentTokenAddress: text("agent_token_address").notNull(),
-  priceEth: numeric("price_eth", { precision: 30, scale: 18 }),
-  supply: numeric("supply", { precision: 30, scale: 0 }),
-  marketCapUsd: numeric("market_cap_usd", { precision: 20, scale: 2 }),
-  baseRaised: numeric("base_raised", { precision: 30, scale: 18 }),
-  txHash: text("tx_hash"),
-  eventType: text("event_type"),             // buy|sell|graduate
-  buyerSeller: text("buyer_seller"),
-  amountTokens: numeric("amount_tokens", { precision: 30, scale: 0 }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertBondingCurveSnapshotSchema = createInsertSchema(bondingCurveSnapshots).omit({ id: true, createdAt: true });
-export type InsertBondingCurveSnapshot = z.infer<typeof insertBondingCurveSnapshotSchema>;
-export type BondingCurveSnapshot = typeof bondingCurveSnapshots.$inferSelect;
-
 /* ─── Agent Memory ─── */
 export const agentMemory = pgTable("agent_memory", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

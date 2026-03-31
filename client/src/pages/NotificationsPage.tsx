@@ -17,13 +17,12 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   NONCE: "🔑",
 };
 
-type FilterTab = "all" | "agents" | "banking" | "launchpad";
+type FilterTab = "all" | "agents" | "banking";
 
 const CATEGORY_MAP: Record<FilterTab, string[]> = {
   all: [],
   agents: ["AGENT_PAYMENT_EXECUTED", "AGENT_POLICY_REJECTED", "AGENT_OBJECTIVE_COMPLETE"],
   banking: ["CARD_TRANSACTION", "TRANSACTION_CONFIRMED", "BALANCE_LOW"],
-  launchpad: ["AGENT_GRADUATED", "AGENT_THRESHOLD_REACHED", "NEW_AGENT_LISTED", "TOKEN_PRICE_ALERT"],
 };
 
 function NotifAvatar({ type }: { type: string }) {
@@ -95,7 +94,7 @@ export const NotificationsPage = (): JSX.Element => {
 
       {/* Filter tabs */}
       <div className="flex items-center gap-1 px-5 py-3 flex-shrink-0 border-b border-[#131927]">
-        {(["all", "agents", "banking", "launchpad"] as FilterTab[]).map(t => (
+        {(["all", "agents", "banking"] as FilterTab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}

@@ -122,7 +122,6 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/agents"] });
-      qc.invalidateQueries({ queryKey: ["/api/launchpad"] });
       setLaunching(false);
       setLaunched(true);
     },

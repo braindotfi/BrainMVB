@@ -9,8 +9,6 @@ import NotFound from "@/pages/not-found";
 import { Marketplace } from "@/pages/Marketplace";
 import { AssistantPage } from "@/pages/AssistantPage";
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
-import { LaunchpadPage } from "@/pages/LaunchpadPage";
-import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { AgentManagePage } from "@/pages/AgentManagePage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SignupPage } from "@/pages/SignupPage";
@@ -59,8 +57,6 @@ function AppLayout() {
             <Route path="/assistant" component={AssistantPage} />
             <Route path="/marketplace" component={Marketplace} />
             <Route path="/agents" component={AgentsActivityPage} />
-            <Route path="/launchpad" component={LaunchpadPage} />
-            <Route path="/agent/:id" component={AgentDetailPage} />
             <Route path="/manage/:id" component={AgentManagePage} />
             <Route path="/notifications" component={NotificationsPage} />
             <Route component={NotFound} />
