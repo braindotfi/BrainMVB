@@ -618,15 +618,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/wirex/onboard", async (req, res) => {
     try {
       const { userId, email } = req.body;
+      console.log("[Onboard] userId:", userId, "email:", email);
       if (!email) return res.status(400).json({ error: "email required" });
 
       // Check/create WireX user
-      let wirexUser = await getWirexUser(email).catch(() => null);
+      let wirexUser = await getWirexUser(email).catch((e) => { console.error("[Onboard] getUser error:", e.message); return null; });
+      console.log("[Onboard] wirexUser after get:", JSON.stringify(wirexUser)?.slice(0, 200));
       if (!wirexUser) {
-        // Use Crossmint userId as a placeholder wallet address for onboarding
-        const walletPlaceholder = userId || email;
-        await createWirexUser(email, walletPlaceholder).catch(() => null);
+        await createWirexUser(email, userId || "").catch((e) => { console.error("[Onboard] createUser error:", e.message); });
         wirexUser = await getWirexUser(email).catch(() => null);
+        console.log("[Onboard] wirexUser after create+get:", JSON.stringify(wirexUser)?.slice(0, 200));
       }
 
       // Fetch accounts
@@ -646,6 +647,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         cards.push(...newCards);
       }
 
+      const displayName = wirexUser?.personal_info
+        ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+        : email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
       const accounts = [
         ...wallets.map((w: any) => ({
           id: w.id,
@@ -653,9 +658,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           address: w.address || w.wallet_address,
           balance: w.balance,
           currency: w.currency,
-          nameOnAccount: wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email,
+          nameOnAccount: displayName,
         })),
         ...cards.map((c: any) => ({
           id: c.id,
@@ -663,9 +666,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           cardNumber: c.card_number ? c.card_number.replace(/(.{4})/g, "$1 ").trim() : undefined,
           cardExpiry: c.expiry || c.expiry_date,
           cardCvv: c.cvv,
-          nameOnAccount: c.name_on_card || (wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email),
+          nameOnAccount: c.name_on_card || displayName,
           balance: c.balance,
           currency: c.currency,
         })),
@@ -673,13 +674,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: b.id,
           type: "bank" as const,
           iban: b.iban || b.account_number,
-          nameOnAccount: b.name || (wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email),
+          nameOnAccount: b.name || displayName,
           balance: b.balance,
           currency: b.currency,
         })),
       ];
+
+      // If WireX API is unavailable (no real accounts), return demo placeholder accounts
+      // so the UI is populated. These will be replaced by real data once WireX credentials are valid.
+      if (accounts.length === 0) {
+        console.log("[Onboard] WireX unavailable — returning demo placeholder accounts for:", email);
+        const seed = email.charCodeAt(0) + email.charCodeAt(1);
+        const demoAccounts = [
+          {
+            id: "demo-wallet-1",
+            type: "wallet" as const,
+            address: `0x${seed.toString(16).padStart(4, "0")}3cB5a84f9E2d1${seed.toString(16).padStart(4, "0")}486A8`,
+            balance: "2,040.30",
+            currency: "USD",
+            nameOnAccount: displayName,
+          },
+          {
+            id: "demo-debit-1",
+            type: "debit" as const,
+            cardNumber: `${1600 + (seed % 99)} 0400 3201 ${6900 + (seed % 99)}`,
+            cardExpiry: "12/27",
+            cardCvv: `${500 + (seed % 99)}`,
+            nameOnAccount: displayName,
+            balance: "865,040.30",
+            currency: "USD",
+          },
+          {
+            id: "demo-bank-1",
+            type: "bank" as const,
+            iban: `AE07033${seed.toString().padStart(3, "0")}34567890123456`,
+            nameOnAccount: displayName,
+            balance: "12,500.00",
+            currency: "USD",
+          },
+        ];
+        return res.json({ success: true, accounts: demoAccounts, wirexUser: null, demo: true });
+      }
 
       return res.json({ success: true, accounts, wirexUser });
     } catch (error: any) {
@@ -701,6 +736,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         getWirexBankAccounts(email).catch(() => []),
       ]);
 
+      const displayName = wirexUser?.personal_info
+        ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
+        : email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
       const accounts = [
         ...wallets.map((w: any) => ({
           id: w.id,
@@ -708,9 +747,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           address: w.address || w.wallet_address,
           balance: w.balance,
           currency: w.currency,
-          nameOnAccount: wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email,
+          nameOnAccount: displayName,
         })),
         ...cards.map((c: any) => ({
           id: c.id,
@@ -718,9 +755,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           cardNumber: c.card_number ? c.card_number.replace(/(.{4})/g, "$1 ").trim() : undefined,
           cardExpiry: c.expiry || c.expiry_date,
           cardCvv: c.cvv,
-          nameOnAccount: c.name_on_card || (wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email),
+          nameOnAccount: c.name_on_card || displayName,
           balance: c.balance,
           currency: c.currency,
         })),
@@ -728,13 +763,44 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: b.id,
           type: "bank" as const,
           iban: b.iban || b.account_number,
-          nameOnAccount: b.name || (wirexUser?.personal_info
-            ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
-            : email),
+          nameOnAccount: b.name || displayName,
           balance: b.balance,
           currency: b.currency,
         })),
       ];
+
+      if (accounts.length === 0) {
+        const seed = email.charCodeAt(0) + email.charCodeAt(1);
+        const demoAccounts = [
+          {
+            id: "demo-wallet-1",
+            type: "wallet" as const,
+            address: `0x${seed.toString(16).padStart(4, "0")}3cB5a84f9E2d1${seed.toString(16).padStart(4, "0")}486A8`,
+            balance: "2,040.30",
+            currency: "USD",
+            nameOnAccount: displayName,
+          },
+          {
+            id: "demo-debit-1",
+            type: "debit" as const,
+            cardNumber: `${1600 + (seed % 99)} 0400 3201 ${6900 + (seed % 99)}`,
+            cardExpiry: "12/27",
+            cardCvv: `${500 + (seed % 99)}`,
+            nameOnAccount: displayName,
+            balance: "865,040.30",
+            currency: "USD",
+          },
+          {
+            id: "demo-bank-1",
+            type: "bank" as const,
+            iban: `AE07033${seed.toString().padStart(3, "0")}34567890123456`,
+            nameOnAccount: displayName,
+            balance: "12,500.00",
+            currency: "USD",
+          },
+        ];
+        return res.json({ accounts: demoAccounts, demo: true });
+      }
 
       return res.json({ accounts });
     } catch (error: any) {
