@@ -399,7 +399,7 @@ export const DashboardPage = (): JSX.Element => {
         {/* TOP-RIGHT: Active Agents */}
         <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
           <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#42bf23] text-[13px] leading-[18px]">Active Agents</span>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Active Agents</span>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">{activeAgents.length} running</span>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto">
