@@ -654,19 +654,25 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
-          {/* Logo icon (collapsed) */}
-          <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
-            <img
-              className="w-8 h-8 object-contain"
-              alt="Brain"
-              src="/figmaAssets/frame-1000002163.svg"
-            />
-          </div>
-
-          <div className="flex flex-col flex-1 items-center mt-1 gap-1 w-full px-2">
-            <button onClick={onToggle} title="Expand menu" className="w-9 h-9 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-xl hover:bg-brain-v1baby-blue-30 transition-colors mb-1">
+          <div className="flex flex-col flex-1 items-center mt-2 gap-1 w-full px-[7px]">
+            {/* Expand button — top of collapsed sidebar (rounded-full, 40px) */}
+            <button
+              onClick={onToggle}
+              title="Expand menu"
+              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors mb-0"
+              style={{ background: "rgba(168,185,244,0.15)" }}
+            >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
+
+            {/* Brain logo icon — below expand button */}
+            <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
+              <img
+                className="w-8 h-8 object-contain"
+                alt="Brain"
+                src="/figmaAssets/frame-1000002163.svg"
+              />
+            </div>
 
             {/* Dashboard — first item */}
             <Link href="/dashboard">
@@ -776,9 +782,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           <button
             onClick={onToggle}
             title="Collapse menu"
-            className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+            className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors hover:opacity-80"
+            style={{ background: "rgba(168,185,244,0.15)" }}
           >
-            <img src="/figmaAssets/nav-collapse-icon.png" alt="Collapse" className="w-full h-full" />
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2L4 7L9 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
 
@@ -804,6 +813,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                     Dashboard
                   </span>
+                  {isActive("/dashboard") && (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                      <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
                 </button>
               </Link>
 

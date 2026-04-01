@@ -703,7 +703,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── Horizontal divider ── */}
           <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
 
-          {/* ── Assets: Sidebar Menu tile style — rounded-[12px] ── */}
+          {/* ── Assets: Rounded-full circle button — matching Figma 3265:26778 ── */}
           <div
             className="relative flex-shrink-0"
             onMouseEnter={() => openHover("assets")}
@@ -711,12 +711,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-assets"
-              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors"
-              style={{ background: hoveredIcon === "assets" ? "#0a0c10" : "#11141b" }}
+              className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center p-[8px] transition-colors"
+              style={{ background: hoveredIcon === "assets" ? "rgba(118,49,238,0.18)" : "rgba(168,185,244,0.1)" }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="4" fill={hoveredIcon === "assets" ? "#7631ee" : "#6c779d"}/>
-                <circle cx="12" cy="12" r="9" stroke={hoveredIcon === "assets" ? "#7631ee" : "#6c779d"} strokeWidth="1.4" strokeDasharray="3 2.5" opacity="0.7"/>
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="11" cy="11" r="4" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
+                <circle cx="11" cy="11" r="8.5" stroke={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"} strokeWidth="1.3" strokeDasharray="3 2.5" opacity="0.7"/>
               </svg>
             </button>
             {hoveredIcon === "assets" && (
@@ -731,7 +731,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             )}
           </div>
 
-          {/* ── Transactions: Sidebar Menu tile style — rounded-[12px] ── */}
+          {/* ── Transactions: Rounded-full circle button — matching Figma 3265:26778 ── */}
           <div
             className="relative flex-shrink-0"
             onMouseEnter={() => openHover("transactions")}
@@ -739,11 +739,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-transactions"
-              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors"
-              style={{ background: hoveredIcon === "transactions" ? "#0a0c10" : "#11141b" }}
+              className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center p-[8px] transition-colors"
+              style={{ background: hoveredIcon === "transactions" ? "rgba(168,185,244,0.18)" : "rgba(168,185,244,0.1)" }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M4 9h16M4 9L8 5M4 9L8 13M20 15H4M20 15L16 11M20 15L16 19" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M3.5 8.5h15M3.5 8.5L7 5M3.5 8.5L7 12M18.5 13.5H3.5M18.5 13.5L15 10M18.5 13.5L15 17" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
             {hoveredIcon === "transactions" && (
@@ -777,7 +777,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
           {/* ── Header bar ── */}
           <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
-            {/* Collapse toggle — grid icon, matching Figma */}
+            {/* Collapse toggle — sidebar-collapse-right icon, matching Figma 3266:25931 */}
             <button
               onClick={onToggle}
               title="Collapse account panel"
@@ -785,10 +785,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-                <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-                <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
-                <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="#6c779d" strokeWidth="1.2"/>
+                <path d="M10 3L6 8L10 13" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M13 3V13" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
               </svg>
             </button>
             <div className="flex items-center gap-2 flex-1 min-w-0">
