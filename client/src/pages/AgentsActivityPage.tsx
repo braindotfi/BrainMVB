@@ -267,22 +267,35 @@ export const AgentsActivityPage = (): JSX.Element => {
           data-testid="button-killswitch"
           onClick={handleKillswitch}
           disabled={activeCount === 0}
-          className="flex items-center gap-[6px] px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ background: "#350011", border: "1px solid rgba(210,3,68,0.25)" }}
+          className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{ background: "#350011" }}
           title={activeCount === 0 ? "No active agents" : `Stop all ${activeCount} active agent${activeCount !== 1 ? "s" : ""}`}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M4.5 1.5A4.5 4.5 0 1 0 9.5 5" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round"/>
-            <path d="M6 1v4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
+          <div className="relative shrink-0 size-[16px]">
+            <svg
+              className="absolute inset-0"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+            >
+              <path
+                d="M6 2A6 6 0 1 0 12.7 6.7"
+                stroke="#d20344"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M8 1.3v5.4"
+                stroke="#d20344"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
             Killswitch
           </span>
-          {activeCount > 0 && (
-            <div className="flex items-center justify-center px-[5px] py-[1px] rounded-[4px] flex-shrink-0" style={{ background: "rgba(210,3,68,0.2)" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[10px] leading-[12px]">{activeCount}</span>
-            </div>
-          )}
         </button>
 
         <div className="flex-1 flex items-center justify-center">
