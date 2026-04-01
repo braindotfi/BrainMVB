@@ -7,27 +7,31 @@ import {
   AreaChart,
   Area,
   XAxis,
+  YAxis,
   Tooltip,
+  CartesianGrid,
 } from "recharts";
 
-type Period = "1D" | "7D" | "30D" | "90D";
+type Period = "1H" | "1D" | "1W" | "1M" | "1Y" | "ALL";
 
 /* ── Chart data generation ── */
 type ChartPt = { t: string; v: number };
 
 const PERIOD_LABELS: Record<Period, string[]> = {
-  "1D":  ["12 AM","3 AM","6 AM","9 AM","12 PM","3 PM","6 PM","Now"],
-  "7D":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-  "30D": ["Mar 1","Mar 4","Mar 7","Mar 10","Mar 13","Mar 16","Mar 19","Mar 22","Mar 25","Mar 28"],
-  "90D": ["Jan 1","Jan 15","Jan 29","Feb 5","Feb 12","Feb 19","Feb 26","Mar 5","Mar 12","Mar 19","Mar 25","Mar 28"],
+  "1H":  ["00:00","10m","20m","30m","40m","50m","60m"],
+  "1D":  ["03:00","05:00","07:00","09:00","11:00","13:00","15:00","17:00","19:00","21:00","23:00","01:00"],
+  "1W":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+  "1M":  ["Mar 1","Mar 5","Mar 10","Mar 15","Mar 20","Mar 25","Mar 30"],
+  "1Y":  ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  "ALL": ["2022","2023","2024","2025"],
 };
 
 const PERIOD_RATIOS: Record<Period, number> = {
-  "1D": 0.012, "7D": 0.055, "30D": 0.21, "90D": 0.52,
+  "1H": 0.004, "1D": 0.012, "1W": 0.055, "1M": 0.21, "1Y": 0.52, "ALL": 1.0,
 };
 
 const PERIOD_DELTA_RATIOS: Record<Period, number> = {
-  "1D": 0.022, "7D": 0.041, "30D": 0.091, "90D": 0.198,
+  "1H": 0.011, "1D": 0.022, "1W": 0.041, "1M": 0.091, "1Y": 0.198, "ALL": 0.32,
 };
 
 function buildChartData(agent: AgentData, period: Period): ChartPt[] {
@@ -88,23 +92,6 @@ const ChartTip = ({ active, payload }: any) => {
     </div>
   );
 };
-
-/* ── Period button ── */
-const PeriodBtn = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    data-testid={`button-chart-period-${label}`}
-    className="flex items-center justify-center px-[12px] py-[6px] rounded-[100px] transition-all flex-shrink-0"
-    style={active
-      ? { background: "#1d2132", border: "1px solid #414965" }
-      : { background: "transparent", border: "1px solid transparent" }}
-  >
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[13px] leading-[18px] whitespace-nowrap"
-      style={{ color: active ? "#a8b9f4" : "#414965" }}>
-      {label}
-    </span>
-  </button>
-);
 
 /* ── Thin horizontal divider ── */
 const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
@@ -234,7 +221,7 @@ const eventColors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as 
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const [chartPeriod, setChartPeriod] = useState<Period>("30D");
+  const [chartPeriod, setChartPeriod] = useState<Period>("1D");
 
   const agent = agents.find((a) => a.id === params.id);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>(agent?.status ?? "inactive");
@@ -336,49 +323,90 @@ export const AgentDetailPage = (): JSX.Element => {
           <div className="rounded-[16px] overflow-hidden"
             style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
 
-            {/* Chart header: earnings + ticker + period tabs */}
-            <div className="flex items-start justify-between px-[20px] pt-[18px] pb-[14px]"
-              style={{ borderBottom: "1px solid #1d2132" }}>
-              {/* Left: amount + delta */}
-              <div className="flex flex-col gap-[4px]">
-                <span className="[font-family:'Gilroy-Bold',Helvetica] text-white text-[32px] leading-[38px] tracking-tight">
-                  {earnings}
-                </span>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[13px] leading-[18px]"
-                  style={{ color: delta.positive ? "#42bf23" : "#d20344" }}>
-                  {delta.text}&ensp;<span style={{ color: "#6c779d" }}>This period</span>
-                </span>
+            {/* Chart header: price + delta pill | period tabs (Figma 3277:28057) */}
+            <div className="flex items-center justify-between px-[16px] py-[10px]"
+              style={{ borderBottom: "1px solid #1d2132", background: "#0a0c10" }}>
+
+              {/* Left: price + delta pill in a row */}
+              <div className="flex items-center gap-[8px] flex-shrink-0">
+                <p style={{ lineHeight: 0 }}>
+                  <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "16px", lineHeight: "28px", color: "#a8b9f4" }}>$</span>
+                  <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "24px", lineHeight: "28px", color: "#a8b9f4" }}>
+                    {earnings.replace("$", "").replace(",", "")}
+                  </span>
+                </p>
+                <div
+                  className="flex items-center justify-center px-[8px] py-[4px] rounded-[40px] flex-shrink-0"
+                  style={{ background: delta.positive ? "#123509" : "#350011" }}
+                >
+                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "14px", lineHeight: "16px", color: delta.positive ? "#42bf23" : "#d20344", whiteSpace: "nowrap" }}>
+                    {delta.text}
+                  </span>
+                </div>
               </div>
-              {/* Right: ticker + full name */}
-              <div className="flex flex-col items-end gap-[2px]">
-                <span className="[font-family:'Gilroy-Bold',Helvetica] text-white text-[22px] leading-[28px] tracking-wide">
-                  {agent.ticker.replace("$", "")}
-                </span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
-                  {agent.name} · {agent.type}
-                </span>
+
+              {/* Right: period tab picker */}
+              <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] flex-shrink-0"
+                style={{ background: "#06070a" }}>
+                {(["1H","1D","1W","1M","1Y","ALL"] as Period[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p)}
+                    data-testid={`button-chart-period-${p}`}
+                    className="flex items-center justify-center px-[12px] py-[4px] rounded-[100px] transition-all flex-shrink-0"
+                    style={chartPeriod === p
+                      ? { background: "#4a2300" }
+                      : { background: "#06070a" }}
+                  >
+                    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: chartPeriod === p ? "#ff9500" : "#414965", whiteSpace: "nowrap" }}>
+                      {p}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Area chart */}
-            <div style={{ height: "200px", background: "#0a0c10" }}>
+            {/* Area chart — 310px tall, Y-axis on right, X-axis time labels, grid line */}
+            <div style={{ height: "310px", background: "#0a0c10" }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 16, right: 0, left: 0, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 56, left: 0, bottom: 10 }}>
                   <defs>
                     <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor={color} stopOpacity={0.38} />
+                      <stop offset="0%"   stopColor={color} stopOpacity={0.35} />
                       <stop offset="100%" stopColor={color} stopOpacity={0.01} />
                     </linearGradient>
                   </defs>
+                  <CartesianGrid
+                    horizontal={true}
+                    vertical={false}
+                    stroke="#1d2132"
+                    strokeWidth={1}
+                  />
                   <XAxis
                     dataKey="t"
-                    tick={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 10, fill: "#414965" }}
+                    tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }}
                     tickLine={false}
-                    axisLine={false}
-                    dy={4}
+                    axisLine={{ stroke: "#1d2132", strokeWidth: 1 }}
+                    dy={6}
                     interval="preserveStartEnd"
                   />
-                  <Tooltip content={<ChartTip />} cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: "4 4" }} />
+                  <YAxis
+                    orientation="right"
+                    tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickCount={7}
+                    width={52}
+                    tickFormatter={(v: number) =>
+                      v >= 1000
+                        ? `$${(v / 1000).toFixed(1)}k`
+                        : `$${v.toFixed(v < 1 ? 4 : 2)}`
+                    }
+                  />
+                  <Tooltip
+                    content={<ChartTip />}
+                    cursor={{ stroke: "#6c779d", strokeWidth: 1, strokeDasharray: "4 4" }}
+                  />
                   <Area
                     type="monotone"
                     dataKey="v"
@@ -392,17 +420,6 @@ export const AgentDetailPage = (): JSX.Element => {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-
-            {/* Period tab bar */}
-            <div className="flex items-center justify-center gap-[2px] px-[16px] py-[10px]"
-              style={{ borderTop: "1px solid #1d2132" }}>
-              <div className="flex items-center gap-[2px] p-[3px] rounded-[100px]"
-                style={{ background: "#11141b", border: "1px solid #1d2132" }}>
-                {(["1D","7D","30D","90D"] as Period[]).map((p) => (
-                  <PeriodBtn key={p} label={p} active={chartPeriod === p} onClick={() => setChartPeriod(p)} />
-                ))}
-              </div>
             </div>
           </div>
 
