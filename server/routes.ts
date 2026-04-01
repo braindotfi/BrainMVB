@@ -5,6 +5,27 @@ import { storage } from "./storage";
 import { startDailyInsightsScheduler, getInsightsState, generateInsights } from "./insightsService";
 import { z } from "zod";
 import {
+  computeBrainAccountAddress,
+  getDeployedAccount,
+  deployBrainAccount,
+  getOnChainAgentConfig,
+  getAgentBalance,
+  getRemainingBudget,
+  getAgentPolicyHash,
+  getRegistryRecord,
+  formatUsdc,
+  DEPLOYED_ADDRESSES,
+  CONTRACT_MODE,
+} from "./contractService";
+import {
+  processPaymentIntent,
+  processTradeIntent,
+  computePolicyHash,
+  type AgentPolicy,
+  type PaymentIntent,
+  type TradeIntent,
+} from "./policyEngine";
+import {
   createWirexUser,
   getWirexUser,
   getWirexWallets,
@@ -810,6 +831,261 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.json({ success: true, count: insights.length });
     } catch (error) {
       return res.status(500).json({ error: "Failed to trigger insights" });
+    }
+  });
+
+  // ── Contract / Protocol Routes ─────────────────────────────────────────────
+
+  /**
+   * GET /api/contracts/info
+   * Returns deployed contract addresses and chain config.
+   */
+  app.get("/api/contracts/info", (_req, res) => {
+    res.json({
+      mode: CONTRACT_MODE,
+      chainId: parseInt(process.env.CHAIN_ID ?? "84532"),
+      network: parseInt(process.env.CHAIN_ID ?? "84532") === 8453 ? "base" : "base-sepolia",
+      contracts: DEPLOYED_ADDRESSES,
+    });
+  });
+
+  /**
+   * GET /api/contracts/account/:ownerAddress
+   * Returns the BrainAccount address for a wallet (deployed or counterfactual).
+   */
+  app.get("/api/contracts/account/:ownerAddress", async (req, res) => {
+    try {
+      const { ownerAddress } = req.params;
+      const [deployed, computed] = await Promise.all([
+        getDeployedAccount(ownerAddress as `0x${string}`),
+        computeBrainAccountAddress(ownerAddress as `0x${string}`),
+      ]);
+      res.json({
+        ownerAddress,
+        brainAccountAddress: deployed ?? computed,
+        deployed: !!deployed,
+        counterfactual: !deployed ? computed : null,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * POST /api/contracts/deploy-account
+   * Deploy a BrainAccount for the authenticated user via the factory.
+   * Body: { ownerAddress: string }
+   */
+  app.post("/api/contracts/deploy-account", async (req, res) => {
+    try {
+      const { ownerAddress } = req.body;
+      if (!ownerAddress) return res.status(400).json({ error: "ownerAddress required" });
+
+      const result = await deployBrainAccount(ownerAddress as `0x${string}`);
+      res.json({
+        success: true,
+        txHash: result.hash,
+        brainAccountAddress: result.address,
+        demo: CONTRACT_MODE === "demo",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * GET /api/contracts/agent/:brainAccountAddress/:agentId
+   * Read on-chain agent config and balance.
+   */
+  app.get("/api/contracts/agent/:brainAccountAddress/:agentId", async (req, res) => {
+    try {
+      const { brainAccountAddress, agentId } = req.params;
+      const [config, balance, budget, policyHash] = await Promise.all([
+        getOnChainAgentConfig(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
+        getAgentBalance(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
+        getRemainingBudget(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
+        getAgentPolicyHash(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
+      ]);
+      res.json({
+        agentId,
+        brainAccountAddress,
+        config: {
+          ...config,
+          spendLimit: config.spendLimit.toString(),
+          timeWindowSeconds: config.timeWindowSeconds.toString(),
+          spentInWindow: config.spentInWindow.toString(),
+          windowStart: config.windowStart.toString(),
+          approvalThreshold: config.approvalThreshold.toString(),
+          maxPositionSize: config.maxPositionSize.toString(),
+          cumulativeExposure: config.cumulativeExposure.toString(),
+          maxCumulativeExposure: config.maxCumulativeExposure.toString(),
+        },
+        balance: balance.toString(),
+        balanceFormatted: formatUsdc(balance),
+        remainingBudget: budget.toString(),
+        remainingBudgetFormatted: formatUsdc(budget),
+        policyHash,
+        demo: CONTRACT_MODE === "demo",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * GET /api/contracts/registry/:agentId
+   * Read an agent's on-chain registry record.
+   */
+  app.get("/api/contracts/registry/:agentId", async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const record = await getRegistryRecord(agentId as `0x${string}`);
+      if (!record) {
+        return res.json({ agentId, registered: false, demo: CONTRACT_MODE === "demo" });
+      }
+      res.json({
+        agentId,
+        registered: true,
+        record: {
+          ...record,
+          registeredAt: record.registeredAt.toString(),
+          lastActiveAt: record.lastActiveAt.toString(),
+          validationCount: record.validationCount.toString(),
+          totalVolumeUsdc: record.totalVolumeUsdc.toString(),
+          totalVolumeFormatted: formatUsdc(record.totalVolumeUsdc),
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * POST /api/policy/evaluate/payment
+   * Evaluate and sign a PaymentIntent through the Policy Engine.
+   *
+   * This is step 16 in the x402 flow: the Payment Orchestrator calls this
+   * after receiving a 402 response, before assembling the UserOperation.
+   *
+   * Body: { intent: PaymentIntent, policy: AgentPolicy }
+   * Returns: { approved, proof?, expiry?, intentHash?, reason? }
+   */
+  app.post("/api/policy/evaluate/payment", async (req, res) => {
+    try {
+      const { intent, policy } = req.body as { intent: PaymentIntent; policy: AgentPolicy };
+      if (!intent || !policy) {
+        return res.status(400).json({ error: "intent and policy are required" });
+      }
+
+      // Normalise bigint fields from JSON (JSON doesn't support BigInt)
+      const normIntent: PaymentIntent = {
+        ...intent,
+        amount: BigInt(intent.amount as unknown as string),
+      };
+      const normPolicy: AgentPolicy = {
+        ...policy,
+        spendLimit: BigInt(policy.spendLimit as unknown as string),
+        spentInWindow: BigInt(policy.spentInWindow as unknown as string),
+        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
+        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
+        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
+        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+      };
+
+      const result = await processPaymentIntent(normIntent, normPolicy);
+
+      if (!result.approved) {
+        return res.json({ approved: false, reason: result.reason });
+      }
+
+      res.json({
+        approved: true,
+        proof: result.proof,
+        expiry: result.expiry,
+        intentHash: result.intentHash,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * POST /api/policy/evaluate/trade
+   * Evaluate and sign a TradeIntent through the Policy Engine.
+   *
+   * This is step 3 in the trading flow.
+   *
+   * Body: { intent: TradeIntent, policy: AgentPolicy, currentExposure?: string }
+   */
+  app.post("/api/policy/evaluate/trade", async (req, res) => {
+    try {
+      const { intent, policy, currentExposure } = req.body as {
+        intent: TradeIntent;
+        policy: AgentPolicy;
+        currentExposure?: string;
+      };
+      if (!intent || !policy) {
+        return res.status(400).json({ error: "intent and policy are required" });
+      }
+
+      const normIntent: TradeIntent = {
+        ...intent,
+        size: BigInt(intent.size as unknown as string),
+        priceLimit: intent.priceLimit ? BigInt(intent.priceLimit as unknown as string) : undefined,
+      };
+      const normPolicy: AgentPolicy = {
+        ...policy,
+        spendLimit: BigInt(policy.spendLimit as unknown as string),
+        spentInWindow: BigInt(policy.spentInWindow as unknown as string),
+        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
+        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
+        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
+        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+      };
+      const exposure = currentExposure ? BigInt(currentExposure) : BigInt(0);
+
+      const result = await processTradeIntent(normIntent, normPolicy, exposure);
+
+      if (!result.approved) {
+        return res.json({ approved: false, reason: result.reason });
+      }
+
+      res.json({
+        approved: true,
+        proof: result.proof,
+        expiry: result.expiry,
+        intentHash: result.intentHash,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * POST /api/policy/hash
+   * Compute the keccak256 policy hash for a policy config.
+   * Used for BrainAccount.setPolicy() and AgentRegistry.setPolicyHash().
+   *
+   * Body: policy config fields
+   */
+  app.post("/api/policy/hash", (req, res) => {
+    try {
+      const policy = req.body as Parameters<typeof computePolicyHash>[0];
+      if (!policy?.agentId) return res.status(400).json({ error: "agentId required" });
+
+      const normPolicy = {
+        ...policy,
+        spendLimit: BigInt(policy.spendLimit as unknown as string),
+        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
+        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
+        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
+        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+      };
+
+      const hash = computePolicyHash(normPolicy);
+      res.json({ policyHash: hash });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
