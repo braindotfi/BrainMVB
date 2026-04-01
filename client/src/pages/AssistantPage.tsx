@@ -265,12 +265,57 @@ export const AssistantPage = (): JSX.Element => {
     }
   };
 
+  const openHistory = () => window.dispatchEvent(new Event("open-chat-history"));
+
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
+      {/* ── Persistent top header (both landing + active) ── */}
+      <div className="flex items-center gap-3 px-4 flex-shrink-0" style={{ height: "56px", borderBottom: "1px solid #1d2132" }}>
+        {/* History icon — top left */}
+        <button
+          onClick={openHistory}
+          title="Chat History"
+          data-testid="button-chat-history"
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-[#1d2132]"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1d2132" }}
+        >
+          {/* Clock / history icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="5.5" stroke="#6c779d" strokeWidth="1.3"/>
+            <path d="M8 5.5V8L9.5 9.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1 min-w-0">
+          {!isOnlyWelcome && (
+            <div className="flex items-center gap-2">
+              <BrainAvatar />
+              <div className="min-w-0">
+                <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm truncate">{session.title}</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[11px]">Online</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* New Chat button — always visible */}
+        <button
+          onClick={handleNewChat}
+          className="flex items-center justify-center px-3 py-1.5 rounded-full flex-shrink-0 transition-colors hover:opacity-80"
+          style={{ background: "#240757" }}
+        >
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-xs whitespace-nowrap">New Chat</span>
+        </button>
+      </div>
+
       {/* ── Landing / empty state ── */}
       {isOnlyWelcome ? (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col flex-1 items-center justify-center gap-10 px-16">
             <div className="w-full max-w-[560px]">
               <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white leading-[40px] text-[32px]">Hi. I'm Brain.</p>
@@ -306,25 +351,6 @@ export const AssistantPage = (): JSX.Element => {
 
       ) : (
         <>
-          {/* ── Active chat header ── */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-[#1d2132] flex-shrink-0">
-            <BrainAvatar />
-            <div className="flex-1 min-w-0">
-              <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm truncate">
-                {session.title}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[11px]">Online</span>
-              </div>
-            </div>
-            <button
-              onClick={handleNewChat}
-              className="px-3 py-1.5 bg-[#1a1f30] rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs hover:bg-[#222840] hover:text-white transition-colors"
-            >
-              + New Chat
-            </button>
-          </div>
 
           {/* ── Message list ── */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pt-4 pb-2 flex flex-col gap-5">

@@ -103,6 +103,13 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     return () => window.removeEventListener("chat-sessions-updated", loadSessions);
   }, []);
 
+  // Open history panel when AssistantPage history button is clicked
+  useEffect(() => {
+    const handler = () => setChatHistoryOpen(true);
+    window.addEventListener("open-chat-history", handler);
+    return () => window.removeEventListener("open-chat-history", handler);
+  }, []);
+
   // Refresh sessions when history panel opens
   useEffect(() => {
     if (chatHistoryOpen) loadSessions();
@@ -687,28 +694,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
-                {item.id === "assistant" ? (
-                  <div className="relative w-full flex flex-col items-center">
-                    <Link href={item.path}>
-                      <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                        <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                      </button>
-                    </Link>
-                    <button
-                      title="Chat History"
-                      onClick={() => setChatHistoryOpen((v) => !v)}
-                      className={`w-5 h-3 flex items-center justify-center rounded transition-colors ${chatHistoryOpen ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-30 hover:text-brain-v1white"}`}
-                    >
-                      <svg width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                    </button>
-                  </div>
-                ) : (
-                  <Link href={item.path}>
-                    <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                      <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                    </button>
-                  </Link>
-                )}
+                <Link href={item.path}>
+                  <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                    <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
+                  </button>
+                </Link>
               </div>
             ))}
 
@@ -844,33 +834,19 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
                   {item.id === "assistant" ? (
-                    <div className="flex flex-col w-full">
-                      <div className="flex items-center w-full group">
-                        <Link href={item.path} className="flex-1">
-                          <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                            <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                            <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                              {item.label}
-                            </span>
-                            {isActive(item.path) && (
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                                <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
-                          </button>
-                        </Link>
-                        {/* History toggle chevron */}
-                        <button
-                          onClick={() => setChatHistoryOpen((v) => !v)}
-                          title="Chat History"
-                          className={`w-7 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${chatHistoryOpen ? "text-brain-v1light-orange bg-brain-v1baby-blue-15" : "text-brain-v1baby-blue-30 hover:text-brain-v1white hover:bg-brain-v1baby-blue-15"}`}
-                        >
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-200 ${chatHistoryOpen ? "rotate-180" : ""}`}>
-                            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <Link href={item.path} className="w-full">
+                      <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
+                        <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                          {item.label}
+                        </span>
+                        {isActive(item.path) && (
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                            <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                        </button>
-                      </div>
-                    </div>
+                        )}
+                      </button>
+                    </Link>
                   ) : (
                     <Link href={item.path} className="w-full">
                       <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
