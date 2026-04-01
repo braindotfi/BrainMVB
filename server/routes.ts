@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { storage } from "./storage";
+import { startDailyInsightsScheduler, getInsightsState, generateInsights } from "./insightsService";
 import { z } from "zod";
 import {
   createWirexUser,
@@ -777,6 +778,43 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(500).json({ error: error.message });
     }
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // DAILY INSIGHTS
+  // ─────────────────────────────────────────────────────────────
+
+  // GET /api/insights — return the latest generated insights
+  app.get("/api/insights", (_req, res) => {
+    try {
+      const state = getInsightsState();
+      return res.json(state);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch insights" });
+    }
+  });
+
+  // POST /api/insights/trigger — manually regenerate insights (dev/test)
+  app.post("/api/insights/trigger", async (_req, res) => {
+    try {
+      const insights = await generateInsights();
+      const notif = await storage.createNotification({
+        userId: "demo-user",
+        type: "insights",
+        title: "Daily Insights Ready",
+        body: `Brain AI has analysed your accounts and found ${insights.length} personalised recommendations for you today.`,
+        data: { insightCount: insights.length, generatedAt: new Date().toISOString() },
+        read: false,
+      });
+      broadcastNotification("demo-user", { type: "notification", notification: notif });
+      broadcastNotification("anonymous", { type: "notification", notification: notif });
+      return res.json({ success: true, count: insights.length });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to trigger insights" });
+    }
+  });
+
+  // Start the 24-hour scheduler
+  startDailyInsightsScheduler(broadcastNotification);
 
   return httpServer;
 }

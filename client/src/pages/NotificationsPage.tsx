@@ -15,17 +15,32 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   TOKEN_PRICE_ALERT: "📊",
   AGENT_OBJECTIVE_COMPLETE: "🏁",
   NONCE: "🔑",
+  insights: "💡",
 };
 
-type FilterTab = "all" | "agents" | "banking";
+type FilterTab = "all" | "agents" | "banking" | "insights";
 
 const CATEGORY_MAP: Record<FilterTab, string[]> = {
   all: [],
   agents: ["AGENT_PAYMENT_EXECUTED", "AGENT_POLICY_REJECTED", "AGENT_OBJECTIVE_COMPLETE"],
   banking: ["CARD_TRANSACTION", "TRANSACTION_CONFIRMED", "BALANCE_LOW"],
+  insights: ["insights"],
 };
 
 function NotifAvatar({ type }: { type: string }) {
+  if (type === "insights") {
+    return (
+      <div
+        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ background: "#1a1035", border: "1px solid #4a1a9e" }}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6.3 13.5h5.4M7 15.5h4" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      </div>
+    );
+  }
   const emoji = NOTIFICATION_ICONS[type] ?? "🔔";
   return (
     <div
@@ -94,7 +109,7 @@ export const NotificationsPage = (): JSX.Element => {
 
       {/* Filter tabs */}
       <div className="flex items-center gap-1 px-5 py-3 flex-shrink-0 border-b border-[#131927]">
-        {(["all", "agents", "banking"] as FilterTab[]).map(t => (
+        {(["all", "agents", "banking", "insights"] as FilterTab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}

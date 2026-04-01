@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import {
   getChatSessions,
@@ -9,6 +10,13 @@ import {
 } from "@/lib/chatHistory";
 import { ShareModal } from "@/components/ShareModal";
 import { useNotifications } from "@/hooks/useNotifications";
+
+interface DailyInsight {
+  kind: "alert" | "opportunity" | "pattern" | "warning" | "info";
+  tag: string;
+  text: string;
+  action: string;
+}
 
 const mainMenuItems = [
   { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
@@ -39,44 +47,6 @@ interface Props {
   onLogout?: () => void;
 }
 
-const insightsData = [
-  {
-    kind: "alert" as const,
-    tag: "SPENDING ALERT",
-    text: "Subscriptions up 38% vs last month. Signal Seer and TaskForge Pro are inactive but still billing $68/mo combined.",
-    action: "Review subscriptions →",
-  },
-  {
-    kind: "opportunity" as const,
-    tag: "OPPORTUNITY",
-    text: "$4,200 is sitting idle in your Neobank account. Moving it to the USDC yield vault earns ~$18/mo at current APY.",
-    action: "Move to vault →",
-  },
-  {
-    kind: "pattern" as const,
-    tag: "PATTERN",
-    text: "AlphaFlow has made 47 trades this week — 18% above its 30-day average. Consider tightening its budget cap to avoid overtrading.",
-    action: "Adjust budget →",
-  },
-  {
-    kind: "warning" as const,
-    tag: "MARKET ALERT",
-    text: "ETH volatility is elevated (+28% vs 7-day avg). Risk Sentinel recommends pausing momentum-based agents until conditions stabilise.",
-    action: "Review agents →",
-  },
-  {
-    kind: "opportunity" as const,
-    tag: "SAVINGS",
-    text: "You saved $480 more than last month and are 60% toward your $3,000 Q2 savings goal. Keep it up — you're ahead of schedule.",
-    action: "View savings goal →",
-  },
-  {
-    kind: "info" as const,
-    tag: "REMINDER",
-    text: "Brain Premium renews in 3 days ($89/mo). Switching to the annual plan saves you $178/yr and unlocks priority agent execution.",
-    action: "Upgrade plan →",
-  },
-];
 
 const insightColors = {
   alert:       { tag: "#ff9500", border: "#ff9500", bg: "rgba(255,149,0,0.06)" },
@@ -100,6 +70,20 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
   const { unreadCount, markAllRead: markAllReadLive, notifications: liveNotifications } = useNotifications();
   const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+  // ── Daily Insights from API ──
+  const { data: insightsResponse, isLoading: insightsLoading } = useQuery<{
+    insights: DailyInsight[];
+    generatedAt: string | null;
+    generating: boolean;
+    nextAt: string | null;
+  }>({
+    queryKey: ["/api/insights"],
+    refetchInterval: 30000, // poll every 30s to pick up new generation
+  });
+  const insightsData: DailyInsight[] = insightsResponse?.insights ?? [];
+  const insightsGenerating = insightsResponse?.generating ?? false;
+  const insightsGeneratedAt = insightsResponse?.generatedAt ? new Date(insightsResponse.generatedAt) : null;
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/" || location === "";
@@ -203,61 +187,86 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
         {/* Sub-header */}
         <div className="px-[16px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-          <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
-            Brain AI has analysed your accounts and found {insightsData.length} personalised recommendations.
-          </p>
+          {insightsLoading || insightsGenerating ? (
+            <div className="flex items-center gap-[8px]">
+              <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee] animate-pulse flex-shrink-0" />
+              <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#6c779d" }}>
+                Brain AI is analysing your accounts…
+              </p>
+            </div>
+          ) : (
+            <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
+              Brain AI analysed your accounts and found {insightsData.length} personalised recommendations.
+            </p>
+          )}
         </div>
 
         {/* Insight cards */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-[10px] p-[12px]">
-          {insightsData.map((insight, i) => {
-            const c = insightColors[insight.kind];
-            return (
+          {(insightsLoading || insightsGenerating) && insightsData.length === 0 ? (
+            /* Loading skeleton */
+            Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="flex flex-col gap-[6px] p-[12px] rounded-[12px] cursor-pointer transition-all hover:brightness-110"
-                style={{
-                  background: c.bg,
-                  border: `1px solid ${c.border}22`,
-                  borderLeft: `3px solid ${c.border}`,
-                  borderRadius: "0 12px 12px 0",
-                }}
+                className="flex flex-col gap-[8px] p-[12px] rounded-[12px] animate-pulse"
+                style={{ background: "rgba(118,49,238,0.04)", border: "1px solid rgba(118,49,238,0.10)", borderLeft: "3px solid rgba(118,49,238,0.25)", borderRadius: "0 12px 12px 0" }}
               >
-                <span
-                  style={{
-                    fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-                    fontSize: "10px",
-                    lineHeight: "13px",
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase" as const,
-                    color: c.tag,
-                  }}
-                >
-                  {insight.tag}
-                </span>
-                <p
-                  style={{
-                    fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
-                    fontSize: "13px",
-                    lineHeight: "19px",
-                    color: "#d0d8f0",
-                  }}
-                >
-                  {insight.text}
-                </p>
-                <span
-                  style={{
-                    fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-                    fontSize: "12px",
-                    lineHeight: "16px",
-                    color: c.tag,
-                  }}
-                >
-                  {insight.action}
-                </span>
+                <div className="h-[10px] w-[80px] rounded bg-[#1d2132]" />
+                <div className="h-[13px] w-full rounded bg-[#1d2132]" />
+                <div className="h-[13px] w-4/5 rounded bg-[#1d2132]" />
+                <div className="h-[12px] w-[100px] rounded bg-[#1d2132]" />
               </div>
-            );
-          })}
+            ))
+          ) : (
+            insightsData.map((insight, i) => {
+              const c = insightColors[insight.kind] ?? insightColors.info;
+              return (
+                <div
+                  key={i}
+                  className="flex flex-col gap-[6px] p-[12px] cursor-pointer transition-all hover:brightness-110"
+                  style={{
+                    background: c.bg,
+                    border: `1px solid ${c.border}22`,
+                    borderLeft: `3px solid ${c.border}`,
+                    borderRadius: "0 12px 12px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                      fontSize: "10px",
+                      lineHeight: "13px",
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase" as const,
+                      color: c.tag,
+                    }}
+                  >
+                    {insight.tag}
+                  </span>
+                  <p
+                    style={{
+                      fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                      fontSize: "13px",
+                      lineHeight: "19px",
+                      color: "#d0d8f0",
+                    }}
+                  >
+                    {insight.text}
+                  </p>
+                  <span
+                    style={{
+                      fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                      fontSize: "12px",
+                      lineHeight: "16px",
+                      color: c.tag,
+                    }}
+                  >
+                    {insight.action}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Footer */}
@@ -266,7 +275,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           style={{ borderTop: "1px solid #1d2132" }}
         >
           <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "11px", lineHeight: "15px", color: "#414965", textAlign: "center" as const }}>
-            Insights refresh every 24 hours · Powered by Brain AI
+            {insightsGeneratedAt
+              ? `Last updated ${insightsGeneratedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Refreshes every 24h · Powered by Brain AI`
+              : "Insights refresh every 24 hours · Powered by Brain AI"}
           </p>
         </div>
       </div>
@@ -323,9 +334,16 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 i < notifications.length - 1 ? "border-b border-[#1a1f2e]" : ""
               } ${!n.read ? "bg-[#0f1420]" : ""}`}
             >
-              {/* Ethereum circle avatar */}
+              {/* Icon — lightbulb for insights, eth for everything else */}
               <div className="w-9 h-9 rounded-full bg-[#1a1f30] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <EthIcon />
+                {n.type === "insights" ? (
+                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                    <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M6.3 13.5h5.4M7 15.5h4" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <EthIcon />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-[13px] leading-snug [font-family:'Gilroy-SemiBold',Helvetica] ${!n.read ? "text-[#f97316]" : "text-[#8899bb]"}`}>
