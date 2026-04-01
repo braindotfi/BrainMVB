@@ -279,21 +279,11 @@ export const AgentsActivityPage = (): JSX.Element => {
               viewBox="0 0 16 16"
               fill="none"
             >
-              <path
-                d="M6 2A6 6 0 1 0 12.7 6.7"
-                stroke="#d20344"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M8 1.3v5.4"
-                stroke="#d20344"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
+              <path d="M3.5 3.5L12.5 12.5" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M12.5 3.5L3.5 12.5" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </div>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[14px] leading-[16px] whitespace-nowrap">
             Killswitch
           </span>
         </button>
