@@ -40,6 +40,67 @@ const EthIcon = () => (
   </svg>
 );
 
+/* ── Sidebar icon components matching Figma 3146:45452 ── */
+const CollapseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M12 2.5V13.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M9.5 5.5L5.5 8L9.5 10.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const ExpandIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M4 2.5V13.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M6.5 5.5L10.5 8L6.5 10.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const DashboardIcon = ({ active }: { active: boolean }) => {
+  const c = active ? "#9d5cf5" : "#414965";
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 12.5A6 6 0 1 1 15 12.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M9 10L7 6.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
+      <circle cx="9" cy="10" r="1.3" fill={c}/>
+      <path d="M5.5 10.5H4.5M13.5 10.5H12.5M9 5V4M12.8 7.2l0.7-0.7M5.2 7.2l-0.7-0.7" stroke={c} strokeWidth="1.1" strokeLinecap="round"/>
+    </svg>
+  );
+};
+
+const InsightsIcon = ({ active }: { active: boolean }) => {
+  const c = active ? "#9d5cf5" : "#414965";
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2.5a4.5 4.5 0 0 1 3.18 7.68c-.46.46-.68 1.1-.68 1.72V13H6.5v-.1c0-.62-.22-1.26-.68-1.72A4.5 4.5 0 0 1 9 2.5Z" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M6.5 13.5h5M7.2 15.5h3.6" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M14.5 3.5l0.8-0.8M2.7 3.5L1.9 2.7M16.5 9H15.5M2.5 9H1.5" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.7"/>
+    </svg>
+  );
+};
+
+const PerksIcon = ({ active }: { active: boolean }) => {
+  const c = active ? "#9d5cf5" : "#414965";
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <rect x="2.5" y="7" width="13" height="2.5" rx="0.6" stroke={c} strokeWidth="1.3"/>
+      <rect x="3.5" y="9.5" width="11" height="6" rx="0.6" stroke={c} strokeWidth="1.3"/>
+      <path d="M9 7V15.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M9 7C9 7 6.8 7 6.8 5.3C6.8 3.8 7.9 3.3 9 4.2C10.1 3.3 11.2 3.8 11.2 5.3C11.2 7 9 7 9 7Z" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+};
+
+const CountBadge = ({ count, purple = false }: { count: number; purple?: boolean }) => (
+  <div
+    className="flex items-center justify-center flex-shrink-0 px-[6px] py-[2px] rounded-[5px]"
+    style={{ background: purple ? "rgba(118,49,238,0.18)" : "#1a1f2e", minWidth: "20px" }}
+  >
+    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "10px", lineHeight: "14px", color: purple ? "#9d5cf5" : "#6c779d" }}>
+      {count}
+    </span>
+  </div>
+);
+
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
@@ -662,7 +723,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors mb-0"
               style={{ background: "rgba(168,185,244,0.15)" }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <ExpandIcon />
             </button>
 
             {/* Brain logo icon — below expand button */}
@@ -677,25 +738,17 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             {/* Dashboard — first item */}
             <Link href="/dashboard">
               <button title="Dashboard" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <rect x="2" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3"/>
-                  <rect x="10" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                  <rect x="2" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                  <rect x="10" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                </svg>
+                <DashboardIcon active={isActive("/dashboard")} />
               </button>
             </Link>
 
-            {/* Insights — lightbulb */}
+            {/* Insights */}
             <button
               title="Insights"
               onClick={() => setInsightsOpen((v) => !v)}
               className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6.3 13.5h5.4M7 15.5h4" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
+              <InsightsIcon active={insightsOpen} />
             </button>
 
             {mainMenuItems.map((item) => (
@@ -713,8 +766,8 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
               <img className="w-5 h-5" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
               {unreadCount > 0 && (
-                <div className="absolute top-0 right-0 flex items-center justify-center p-[2px] bg-[#414965] rounded-[4px] min-w-[14px]">
-                  <span className="text-[9px] text-[#a8b9f4] [font-family:'Gilroy-SemiBold',Helvetica] leading-none">{unreadCount}</span>
+                <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center px-[4px] py-[1px] rounded-[4px] min-w-[14px]" style={{ background: "#1a1f2e" }}>
+                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "9px", lineHeight: "13px", color: "#6c779d" }}>{unreadCount}</span>
                 </div>
               )}
             </button>
@@ -729,12 +782,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
             <Link href="/perks">
               <button title="Perks" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                  <path d="M14.5 8H3.5v8h11V8Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M16 4.5H2v3.5h14V4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 4.5C9 4.5 7 4.5 7 3S7.9 1.5 9 2.25C10.1 1.5 11 2 11 3S9 4.5 9 4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 4.5v11.5" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
+                <PerksIcon active={isActive("/perks")} />
               </button>
             </Link>
 
@@ -785,9 +833,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors hover:opacity-80"
             style={{ background: "rgba(168,185,244,0.15)" }}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M9 2L4 7L9 12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <CollapseIcon />
           </button>
         </div>
 
@@ -803,12 +849,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <Link href="/dashboard" className="w-full">
                 <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                   <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <rect x="2" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3"/>
-                      <rect x="10" y="2" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                      <rect x="2" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                      <rect x="10" y="10" width="6" height="6" rx="1.5" stroke={isActive("/dashboard") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" opacity="0.5"/>
-                    </svg>
+                    <DashboardIcon active={isActive("/dashboard")} />
                   </div>
                   <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                     Dashboard
@@ -827,22 +868,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
               >
                 <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M6.3 13.5h5.4M7 15.5h4" stroke={insightsOpen ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
+                  <InsightsIcon active={insightsOpen} />
                 </div>
                 <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                   Insights
                 </span>
-                <div
-                  className="flex items-center justify-center flex-shrink-0 px-[6px] py-[2px] rounded-[5px]"
-                  style={{ background: "rgba(118,49,238,0.18)" }}
-                >
-                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "10px", lineHeight: "13px", color: "#9d5cf5" }}>
-                    {insightsData.length}
-                  </span>
-                </div>
+                {insightsData.length > 0 && (
+                  <CountBadge count={insightsData.length} purple />
+                )}
               </button>
 
               {mainMenuItems.map((item) => (
@@ -896,9 +929,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
               <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
               {unreadCount > 0 && (
-                <div className={`flex items-center justify-center p-[2px] rounded-[4px] ${notificationsOpen ? "bg-[#7631ee]" : "bg-[#414965]"}`}>
-                  <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[12px] leading-[12px] whitespace-nowrap ${notificationsOpen ? "text-[#240757]" : "text-[#a8b9f4]"}`}>{unreadCount}</span>
-                </div>
+                <CountBadge count={unreadCount} />
               )}
               {notificationsOpen && (
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
@@ -921,12 +952,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <Link href="/perks" className="w-full">
               <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                 <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M14.5 8H3.5v8h11V8Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M16 4.5H2v3.5h14V4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M9 4.5C9 4.5 7 4.5 7 3S7.9 1.5 9 2.25C10.1 1.5 11 2 11 3S9 4.5 9 4.5Z" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M9 4.5v11.5" stroke={isActive("/perks") ? "#9d5cf5" : "#414965"} strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
+                  <PerksIcon active={isActive("/perks")} />
                 </div>
                 <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/perks") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Perks</span>
                 <span
