@@ -1,97 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
-
-type Period = "1H" | "1D" | "1W" | "1M" | "1Y" | "ALL";
-
-/* ── Chart data generation ── */
-type ChartPt = { t: string; v: number };
-
-const PERIOD_LABELS: Record<Period, string[]> = {
-  "1H":  ["00:00","10m","20m","30m","40m","50m","60m"],
-  "1D":  ["03:00","05:00","07:00","09:00","11:00","13:00","15:00","17:00","19:00","21:00","23:00","01:00"],
-  "1W":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-  "1M":  ["Mar 1","Mar 5","Mar 10","Mar 15","Mar 20","Mar 25","Mar 30"],
-  "1Y":  ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-  "ALL": ["2022","2023","2024","2025"],
-};
-
-const PERIOD_RATIOS: Record<Period, number> = {
-  "1H": 0.004, "1D": 0.012, "1W": 0.055, "1M": 0.21, "1Y": 0.52, "ALL": 1.0,
-};
-
-const PERIOD_DELTA_RATIOS: Record<Period, number> = {
-  "1H": 0.011, "1D": 0.022, "1W": 0.041, "1M": 0.091, "1Y": 0.198, "ALL": 0.32,
-};
-
-function buildChartData(agent: AgentData, period: Period): ChartPt[] {
-  const raw = parseFloat(agent.earnings.replace(/[^0-9.]/g, "")) || 1000;
-  const target = raw * PERIOD_RATIOS[period];
-  const labels = PERIOD_LABELS[period];
-  const n = labels.length;
-  // Risk level drives volatility
-  const vol = agent.riskLevel === "high" ? 0.18 : agent.riskLevel === "medium" ? 0.09 : 0.04;
-  // Seed from agent id so data is deterministic per agent
-  const seed = agent.id.charCodeAt(0) + agent.id.charCodeAt(1);
-
-  return labels.map((t, i) => {
-    const progress = i / (n - 1);
-    // Slight dip at start then climb
-    const trend = progress < 0.15
-      ? 0.55 + progress * 1.2
-      : 0.55 + 0.18 + (progress - 0.15) * 1.05;
-    const noise = vol * Math.sin(i * 2.3 + seed * 0.7) * (1 - progress * 0.4);
-    const v = Math.max(0, target * (trend + noise));
-    return { t, v: parseFloat(v.toFixed(2)) };
-  });
-}
-
-function periodEarnings(agent: AgentData, period: Period): string {
-  const raw = parseFloat(agent.earnings.replace(/[^0-9.]/g, "")) || 1000;
-  const v = raw * PERIOD_RATIOS[period];
-  return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function periodDelta(agent: AgentData, period: Period): { text: string; positive: boolean } {
-  const raw = parseFloat(agent.earnings.replace(/[^0-9.]/g, "")) || 1000;
-  const v = raw * PERIOD_RATIOS[period] * PERIOD_DELTA_RATIOS[period];
-  const pct = PERIOD_DELTA_RATIOS[period] * 100;
-  return {
-    text: `+$${v.toFixed(2)} (+${pct.toFixed(2)}%)`,
-    positive: true,
-  };
-}
-
-/* ── Agent chart color ── */
-function agentColor(agent: AgentData): string {
-  if (agent.status !== "active") return "#6c779d";
-  if (agent.riskLevel === "high")   return "#d20344";
-  if (agent.riskLevel === "medium") return "#7631ee";
-  return "#42bf23";
-}
-
-/* ── Chart custom tooltip ── */
-const ChartTip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null;
-  const v: number = payload[0]?.value ?? 0;
-  return (
-    <div className="px-[10px] py-[8px] rounded-[8px]" style={{ background: "#0d101a", border: "1px solid #1d2132" }}>
-      <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", color: "#ffffff" }}>
-        ${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </span>
-    </div>
-  );
-};
+import { AgentPerfChart } from "@/components/AgentPerfChart";
 
 /* ── Thin horizontal divider ── */
 const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
@@ -221,16 +132,9 @@ const eventColors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as 
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const [chartPeriod, setChartPeriod] = useState<Period>("1D");
 
   const agent = agents.find((a) => a.id === params.id);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>(agent?.status ?? "inactive");
-
-  const chartData  = useMemo(() => agent ? buildChartData(agent, chartPeriod)    : [], [agent, chartPeriod]);
-  const earnings   = useMemo(() => agent ? periodEarnings(agent, chartPeriod)     : "$0.00",  [agent, chartPeriod]);
-  const delta      = useMemo(() => agent ? periodDelta(agent, chartPeriod)         : { text: "", positive: true }, [agent, chartPeriod]);
-  const color      = useMemo(() => agent ? agentColor(agent)                       : "#42bf23", [agent]);
-  const gradientId = `perf-grad-${agent?.id ?? "none"}`;
 
   if (!agent) {
     return (
@@ -320,108 +224,7 @@ export const AgentDetailPage = (): JSX.Element => {
           {/* ════════════════════════════════
               2. Performance chart card
           ════════════════════════════════ */}
-          <div className="rounded-[16px] overflow-hidden"
-            style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-
-            {/* Chart header: price + delta pill | period tabs (Figma 3277:28057) */}
-            <div className="flex items-center justify-between px-[16px] py-[10px]"
-              style={{ borderBottom: "1px solid #1d2132", background: "#0a0c10" }}>
-
-              {/* Left: price + delta pill in a row */}
-              <div className="flex items-center gap-[8px] flex-shrink-0">
-                <p style={{ lineHeight: 0 }}>
-                  <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "16px", lineHeight: "28px", color: "#a8b9f4" }}>$</span>
-                  <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "24px", lineHeight: "28px", color: "#a8b9f4" }}>
-                    {earnings.replace("$", "").replace(",", "")}
-                  </span>
-                </p>
-                <div
-                  className="flex items-center justify-center px-[8px] py-[4px] rounded-[40px] flex-shrink-0"
-                  style={{ background: delta.positive ? "#123509" : "#350011" }}
-                >
-                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "14px", lineHeight: "16px", color: delta.positive ? "#42bf23" : "#d20344", whiteSpace: "nowrap" }}>
-                    {delta.text}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right: period tab picker */}
-              <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] flex-shrink-0"
-                style={{ background: "#06070a" }}>
-                {(["1H","1D","1W","1M","1Y","ALL"] as Period[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setChartPeriod(p)}
-                    data-testid={`button-chart-period-${p}`}
-                    className="flex items-center justify-center px-[12px] py-[4px] rounded-[100px] transition-all flex-shrink-0"
-                    style={chartPeriod === p
-                      ? { background: "#4a2300" }
-                      : { background: "#06070a" }}
-                  >
-                    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: chartPeriod === p ? "#ff9500" : "#414965", whiteSpace: "nowrap" }}>
-                      {p}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Area chart — 310px tall, Y-axis on right, X-axis time labels, grid line */}
-            <div style={{ height: "310px", background: "#0a0c10" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 56, left: 0, bottom: 10 }}>
-                  <defs>
-                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor={color} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={color} stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    horizontal={true}
-                    vertical={false}
-                    stroke="#1d2132"
-                    strokeWidth={1}
-                  />
-                  <XAxis
-                    dataKey="t"
-                    tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }}
-                    tickLine={false}
-                    axisLine={{ stroke: "#1d2132", strokeWidth: 1 }}
-                    dy={6}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    orientation="right"
-                    tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickCount={7}
-                    width={52}
-                    tickFormatter={(v: number) =>
-                      v >= 1000
-                        ? `$${(v / 1000).toFixed(1)}k`
-                        : `$${v.toFixed(v < 1 ? 4 : 2)}`
-                    }
-                  />
-                  <Tooltip
-                    content={<ChartTip />}
-                    cursor={{ stroke: "#6c779d", strokeWidth: 1, strokeDasharray: "4 4" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="v"
-                    stroke={color}
-                    strokeWidth={2}
-                    fill={`url(#${gradientId})`}
-                    dot={false}
-                    activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
-                    isAnimationActive={true}
-                    animationDuration={400}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <AgentPerfChart agent={agent} />
 
           {/* ════════════════════════════════
               3. Configuration card
