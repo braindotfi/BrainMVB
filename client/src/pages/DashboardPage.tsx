@@ -1,4 +1,14 @@
 import { useState } from "react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 type Period = "1D" | "7D" | "30D" | "90D";
 
@@ -29,6 +39,56 @@ const allSubscriptions = [
 const monthlyTotal = allSubscriptions.reduce((sum, s) => sum + parseFloat(s.amount.replace(/[^0-9.]/g, "")), 0);
 
 type TxRow = { icon: string; name: string; date: string; category: string; amount: string; type: "debit" | "credit"; account: string };
+
+type ChartPoint = { label: string; balance: number; spend: number; saved: number; yield: number };
+
+const chartData: Record<Period, ChartPoint[]> = {
+  "1D": [
+    { label: "12 AM", balance: 47200, spend: 0,     saved: 0,   yield: 0 },
+    { label: "3 AM",  balance: 47218, spend: 0,     saved: 0,   yield: 4.6 },
+    { label: "6 AM",  balance: 47236, spend: 0,     saved: 0,   yield: 9.1 },
+    { label: "9 AM",  balance: 47547, spend: 89,    saved: 80,  yield: 13.7 },
+    { label: "12 PM", balance: 47695, spend: 237.2, saved: 80,  yield: 16.3 },
+    { label: "3 PM",  balance: 47743, spend: 285.4, saved: 80,  yield: 17.4 },
+    { label: "6 PM",  balance: 47798, spend: 305.2, saved: 80,  yield: 17.9 },
+    { label: "Now",   balance: 47832, spend: 312.4, saved: 80,  yield: 18.22 },
+  ],
+  "7D": [
+    { label: "Mon", balance: 45400, spend: 106,    saved: 60,  yield: 12.8 },
+    { label: "Tue", balance: 45918, spend: 342,    saved: 120, yield: 31.2 },
+    { label: "Wed", balance: 46310, spend: 688,    saved: 200, yield: 52.4 },
+    { label: "Thu", balance: 46782, spend: 1004,   saved: 300, yield: 73.1 },
+    { label: "Fri", balance: 47090, spend: 1340,   saved: 380, yield: 91.6 },
+    { label: "Sat", balance: 47440, spend: 1760,   saved: 480, yield: 112.3 },
+    { label: "Sun", balance: 47832, spend: 2148.6, saved: 560, yield: 127.54 },
+  ],
+  "30D": [
+    { label: "Mar 1",  balance: 42300, spend: 306,    saved: 80,    yield: 18.3 },
+    { label: "Mar 4",  balance: 43210, spend: 1102,   saved: 280,   yield: 66.2 },
+    { label: "Mar 7",  balance: 43820, spend: 2148,   saved: 480,   yield: 127.5 },
+    { label: "Mar 10", balance: 44560, spend: 3210,   saved: 700,   yield: 183.4 },
+    { label: "Mar 13", balance: 45200, spend: 4418,   saved: 960,   yield: 241.6 },
+    { label: "Mar 16", balance: 45840, spend: 5630,   saved: 1200,  yield: 298.2 },
+    { label: "Mar 19", balance: 46340, spend: 6820,   saved: 1560,  yield: 346.1 },
+    { label: "Mar 22", balance: 46790, spend: 7640,   saved: 1800,  yield: 390.8 },
+    { label: "Mar 25", balance: 47210, spend: 8430,   saved: 2100,  yield: 456.4 },
+    { label: "Mar 28", balance: 47832, spend: 9214.4, saved: 2400,  yield: 548.3 },
+  ],
+  "90D": [
+    { label: "Jan 1",  balance: 38200, spend: 1248,   saved: 320,  yield: 72.1 },
+    { label: "Jan 8",  balance: 39640, spend: 3812,   saved: 960,  yield: 214.3 },
+    { label: "Jan 15", balance: 40180, spend: 5940,   saved: 1440, yield: 328.4 },
+    { label: "Jan 22", balance: 40920, spend: 8104,   saved: 1920, yield: 438.2 },
+    { label: "Jan 29", balance: 41780, spend: 10360,  saved: 2560, yield: 548.6 },
+    { label: "Feb 5",  balance: 42640, spend: 13020,  saved: 3200, yield: 676.8 },
+    { label: "Feb 12", balance: 43520, spend: 15680,  saved: 3840, yield: 812.4 },
+    { label: "Feb 19", balance: 44480, spend: 18340,  saved: 4480, yield: 948.2 },
+    { label: "Feb 26", balance: 45400, spend: 21000,  saved: 5120, yield: 1080.6 },
+    { label: "Mar 5",  balance: 46120, spend: 22960,  saved: 5760, yield: 1248.8 },
+    { label: "Mar 19", balance: 46900, spend: 25300,  saved: 6400, yield: 1432.4 },
+    { label: "Mar 28", balance: 47832, spend: 27643.2, saved: 7200, yield: 1644.9 },
+  ],
+};
 
 const periodData: Record<Period, {
   totalBalance: string;
@@ -220,9 +280,39 @@ const statusBadge = (status: "active" | "low" | "inactive") => {
   return <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(108,119,157,0.12)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>Paused</span>;
 };
 
+/* ── Custom tooltip ── */
+const ChartTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const fmt = (v: number) =>
+    v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+  return (
+    <div
+      className="flex flex-col gap-[6px] px-[12px] py-[10px] rounded-[10px]"
+      style={{ background: "#0d101a", border: "1px solid #1d2132", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}
+    >
+      <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", color: "#6c779d" }}>{label}</span>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="flex items-center gap-[8px]">
+          <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: p.stroke }} />
+          <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "12px", color: "#a8b9f4", minWidth: "80px" }}>{p.name}</span>
+          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", color: "#ffffff" }}>{fmt(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const SERIES = [
+  { key: "balance", name: "Total Balance", color: "#a8b9f4", dot: false },
+  { key: "spend",   name: "Total Spend",   color: "#d20344", dot: false },
+  { key: "saved",   name: "Total Saved",   color: "#42bf23", dot: false },
+  { key: "yield",   name: "Yield Earned",  color: "#ff9500", dot: false },
+] as const;
+
 export const DashboardPage = (): JSX.Element => {
   const [period, setPeriod] = useState<Period>("30D");
   const d = periodData[period];
+  const points = chartData[period];
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
@@ -245,12 +335,78 @@ export const DashboardPage = (): JSX.Element => {
         </div>
       </div>
 
-      {/* ── Stat cards strip (fixed height) ── */}
+      {/* ── Stat cards strip ── */}
       <div className="flex gap-[12px] px-[16px] pt-[16px] flex-shrink-0">
         <StatCard label="Total Balance" value={d.totalBalance} />
         <StatCard label="Total Spend" value={d.totalSpend} delta={d.spendDelta} deltaPositive={false} />
         <StatCard label="Total Saved" value={d.totalSaved} delta={d.savedDelta} deltaPositive={true} />
         <StatCard label="Yield Earned" value={d.yield} delta={d.yieldPct} deltaPositive={true} />
+      </div>
+
+      {/* ── Line chart ── */}
+      <div
+        className="mx-[16px] mt-[12px] flex-shrink-0 rounded-[16px] overflow-hidden"
+        style={{ background: "#0a0c10", border: "1px solid #1d2132", height: "178px" }}
+      >
+        {/* Chart header */}
+        <div
+          className="flex items-center justify-between px-[16px] py-[10px]"
+          style={{ borderBottom: "1px solid #1d2132" }}
+        >
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">
+            Financial Overview
+          </span>
+          <div className="flex items-center gap-[14px]">
+            {SERIES.map(s => (
+              <div key={s.key} className="flex items-center gap-[5px]">
+                <div className="w-[8px] h-[2px] rounded-full" style={{ background: s.color }} />
+                <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "10px", color: "#414965" }}>
+                  {s.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recharts */}
+        <div style={{ height: "130px", padding: "8px 8px 4px 0" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={points} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid
+                vertical={false}
+                stroke="#1d2132"
+                strokeDasharray="3 3"
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 10, fill: "#414965" }}
+                tickLine={false}
+                axisLine={false}
+                dy={4}
+              />
+              <YAxis
+                tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+                tick={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 10, fill: "#414965" }}
+                tickLine={false}
+                axisLine={false}
+                width={42}
+              />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#1d2132", strokeWidth: 1 }} />
+              {SERIES.map(s => (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.name}
+                  stroke={s.color}
+                  strokeWidth={1.8}
+                  dot={false}
+                  activeDot={{ r: 3, fill: s.color, strokeWidth: 0 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* ── Two-column grid (fills remaining space) ── */}
