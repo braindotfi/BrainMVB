@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
+
+function isInsideIframe(): boolean {
+  try { return window.self !== window.top; } catch { return true; }
+}
 
 export function SignupPage() {
   const { isLoggedIn } = useAuth();
@@ -50,14 +54,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
   const { setUserAndAccounts } = useAuth();
   const [, navigate] = useLocation();
   const [status, setStatus] = useState<"idle" | "creating" | "done">("idle");
-
-  if (!apiKey) {
-    return (
-      <div className="text-[#6c779d] text-sm text-center max-w-sm">
-        Crossmint API key not configured. Please add CROSSMINT_CLIENT_API_KEY to secrets.
-      </div>
-    );
-  }
+  const inIframe = isInsideIframe();
 
   const handleOnboarding = async (userId: string, email?: string, walletAddress?: string) => {
     if (status !== "idle") return;
@@ -76,8 +73,26 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
     navigate("/");
   };
 
-  // Keep CrossmintAuthWrapper mounted even while creating so the wallet
-  // provider stays alive and can finish loading the wallet address.
+  const handleDemoLogin = () => handleOnboarding("demo-user", "demo@brain.finance");
+
+  if (!apiKey || inIframe) {
+    return (
+      <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
+        {inIframe && (
+          <p className="text-[#6c779d] text-sm">
+            Full sign-in is available when opened in a browser tab. Use demo mode to explore the app.
+          </p>
+        )}
+        {!apiKey && !inIframe && (
+          <p className="text-[#6c779d] text-sm">
+            Crossmint API key not configured. Please add CROSSMINT_CLIENT_API_KEY to secrets.
+          </p>
+        )}
+        <DemoLoginButton onLogin={handleDemoLogin} loading={status === "creating"} />
+      </div>
+    );
+  }
+
   return (
     <>
       {status === "creating" && (
@@ -89,10 +104,52 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         </div>
       )}
       <div style={{ visibility: status === "creating" ? "hidden" : "visible" }}>
-        <CrossmintAuthWrapper apiKey={apiKey} onSuccess={handleOnboarding} />
+        <CrossmintErrorBoundary fallback={<DemoLoginButton onLogin={handleDemoLogin} loading={status === "creating"} />}>
+          <CrossmintAuthWrapper apiKey={apiKey} onSuccess={handleOnboarding} />
+        </CrossmintErrorBoundary>
       </div>
     </>
   );
+}
+
+function DemoLoginButton({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+      <div className="w-16 h-16 rounded-2xl bg-[#7631ee]/20 flex items-center justify-center">
+        <img src="/figmaAssets/frame-1000002163.svg" alt="Brain" className="w-8 h-8" />
+      </div>
+      <div>
+        <h2 className="[font-family:'Gilroy-Bold',Helvetica] text-white text-2xl mb-1">Brain Finance</h2>
+        <p className="text-[#6c779d] text-sm">AI-powered neobank & agent marketplace</p>
+      </div>
+      <button
+        onClick={onLogin}
+        disabled={loading}
+        data-testid="button-demo-login"
+        className="w-full py-3 px-6 rounded-2xl bg-[#7631ee] hover:bg-[#8a42f5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy-SemiBold',Helvetica] text-white text-base"
+      >
+        {loading ? "Signing in…" : "Continue with Demo"}
+      </button>
+      <p className="text-[#414965] text-xs">
+        Demo mode · No wallet required
+      </p>
+    </div>
+  );
+}
+
+class CrossmintErrorBoundary extends Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
 }
 
 function CrossmintAuthWrapper({
@@ -168,7 +225,6 @@ function AuthWatcher({
   const walletCtx = useWalletHook();
   const calledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep a ref to the latest wallet address so the timeout callback can read it
   const walletAddressRef = useRef<string | undefined>(undefined);
   walletAddressRef.current = walletCtx?.wallet?.address ?? undefined;
 
@@ -178,7 +234,6 @@ function AuthWatcher({
 
     const walletStatus = walletCtx?.status;
 
-    // If wallet is ready, fire immediately
     if (walletStatus === "loaded") {
       calledRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -186,7 +241,6 @@ function AuthWatcher({
       return;
     }
 
-    // If wallet errored, fire without address
     if (walletStatus === "error") {
       calledRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -194,7 +248,6 @@ function AuthWatcher({
       return;
     }
 
-    // "not-loaded" or "in-progress" — start a timeout if we haven't already
     if (!timerRef.current) {
       timerRef.current = setTimeout(() => {
         if (!calledRef.current) {
