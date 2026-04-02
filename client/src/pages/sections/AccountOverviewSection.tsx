@@ -784,9 +784,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               data-testid="button-collapse-account"
               className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M10 3L6 8L10 13" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M13 3V13" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+              <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
             <div className="flex items-center gap-2 flex-1 min-w-0">
