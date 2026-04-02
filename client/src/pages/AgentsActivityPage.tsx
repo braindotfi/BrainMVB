@@ -271,20 +271,11 @@ export const AgentsActivityPage = (): JSX.Element => {
           style={{ background: "#350011" }}
           title={activeCount === 0 ? "No active agents" : `Stop all ${activeCount} active agent${activeCount !== 1 ? "s" : ""}`}
         >
-          <div className="relative shrink-0 size-[16px]">
-            <svg
-              className="absolute inset-0"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-            >
-              <path d="M3.5 3.5L12.5 12.5" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M12.5 3.5L3.5 12.5" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+          <div className="relative shrink-0 size-[16px] flex items-center justify-center">
+            <div className="w-[12px] h-[12px] rounded-[2px] bg-[#d20344]" />
           </div>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[14px] leading-[16px] whitespace-nowrap">
-            Killswitch
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+            Stop All
           </span>
         </button>
 

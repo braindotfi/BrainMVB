@@ -621,19 +621,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         {/* Strip: 56px wide, 8px side padding → 40px inner elements */}
         <div className="flex flex-col items-center w-[56px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] py-2 gap-[8px]">
 
-          {/* ── Toggle expand button: full-pill, Baby Blue 15% tint ── */}
+          {/* ── Toggle expand button: full-pill, #222737 background ── */}
           <button
             onClick={onToggle}
             title="Expand account panel"
             data-testid="button-expand-account"
             className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-colors"
-            style={{ background: "rgba(168,185,244,0.15)" }}
+            style={{ background: "#222737" }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="2" y="2" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
-              <rect x="11.5" y="2" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
-              <rect x="2" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
-              <rect x="11.5" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="#a8b9f4" strokeWidth="1.3"/>
+            <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 6L6 9L9 12M7 9H14M17 17H3C1.89543 17 1 16.1046 1 15V3C1 1.89543 1.89543 1 3 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
 
@@ -711,12 +708,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-assets"
-              className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center p-[8px] transition-colors"
-              style={{ background: hoveredIcon === "assets" ? "rgba(118,49,238,0.18)" : "rgba(168,185,244,0.1)" }}
+              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors bg-[#11141b]"
             >
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="11" cy="11" r="4" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
-                <circle cx="11" cy="11" r="8.5" stroke={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"} strokeWidth="1.3" strokeDasharray="3 2.5" opacity="0.7"/>
+              <svg width="22" height="20" viewBox="0 0 22 20" fill="none">
+                <path d="M14.3 4.44444C18.5526 4.44444 22 7.92667 22 12.2222C22 16.5178 18.5526 20 14.3 20C10.0474 20 6.6 16.5178 6.6 12.2222C6.6 7.92667 10.0474 4.44444 14.3 4.44444Z" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
+                <path d="M7.7 0C9.83147 0 11.7607 0.874835 13.1549 2.28841C8.2267 2.86175 4.4 7.09058 4.4 12.2222C4.4 13.1777 4.53253 14.1021 4.78027 14.9772C1.97542 13.8153 0 11.0295 0 7.77778C0 3.48223 3.44741 0 7.7 0Z" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
               </svg>
             </button>
             {hoveredIcon === "assets" && (
@@ -739,11 +735,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-transactions"
-              className="w-[40px] h-[40px] rounded-[100px] flex items-center justify-center p-[8px] transition-colors"
-              style={{ background: hoveredIcon === "transactions" ? "rgba(168,185,244,0.18)" : "rgba(168,185,244,0.1)" }}
+              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors bg-[#11141b]"
             >
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M3.5 8.5h15M3.5 8.5L7 5M3.5 8.5L7 12M18.5 13.5H3.5M18.5 13.5L15 10M18.5 13.5L15 17" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="22" height="18" viewBox="0 0 22.3812 18.1988" fill="none">
+                <path d="M1.00017 5.62925L2.64504 8.47826C2.85468 8.84136 3.31899 8.96577 3.6821 8.75613L6.31195 7.23779M21.381 12.5635L19.7362 9.71454C19.5265 9.35144 19.0623 9.22698 18.6991 9.43666L15.8501 11.0815M4.17248 13.1483C6.40865 17.0215 11.3612 18.3485 15.2344 16.1123C17.5453 14.7781 18.9987 12.4486 19.2915 9.98041M18.1984 5.05045C15.9622 1.17731 11.0097 -0.149741 7.1365 2.08643C4.82554 3.42067 3.37219 5.75015 3.07943 8.2184" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
             {hoveredIcon === "transactions" && (
@@ -776,18 +771,20 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         <div className="flex flex-col rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] w-[390px] h-full overflow-hidden">
 
           {/* ── Header bar ── */}
-          <div className="flex mx-2 mt-2 mb-3 h-12 items-center gap-2 p-2 bg-brain-v1baby-blue-15 rounded-2xl">
-            {/* Collapse toggle — sidebar-collapse-right icon, matching Figma 3266:25931 */}
+          <div className="flex items-center gap-2 mx-2 mt-2 mb-3">
+            {/* Collapse toggle — outside and to the left of the input field */}
             <button
               onClick={onToggle}
               title="Collapse account panel"
               data-testid="button-collapse-account"
-              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#1a1f2e] transition-colors flex-shrink-0"
+              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] hover:bg-[#1a1f2e] transition-colors"
             >
               <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
+            {/* Header pill input field */}
+            <div className="flex-1 flex items-center gap-2 h-[40px] px-2 bg-brain-v1baby-blue-15 rounded-[8px]">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {activeAccount ? (
                 <img
@@ -883,6 +880,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </div>
 
