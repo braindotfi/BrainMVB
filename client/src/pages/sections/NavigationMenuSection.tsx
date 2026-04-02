@@ -40,62 +40,87 @@ const EthIcon = () => (
   </svg>
 );
 
-/* ── Sidebar icon components matching Figma 3146:45452 ── */
+/* ── Sidebar icon components — exact paths from Figma 3146:45452 ── */
+
 const CollapseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M12 2.5V13.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M9.5 5.5L5.5 8L9.5 10.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 6L11 9L14 12M12 9H19M3 17H5C6.10457 17 7 16.1046 7 15V3C7 1.89543 6.10457 1 5 1H3C1.89543 1 1 1.89543 1 3V15C1 16.1046 1.89543 17 3 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const ExpandIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M4 2.5V13.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M6.5 5.5L10.5 8L6.5 10.5" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const DashboardIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#414965";
+  const c = active ? "#9d5cf5" : "#6c779d";
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M3 12.5A6 6 0 1 1 15 12.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M9 10L7 6.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
-      <circle cx="9" cy="10" r="1.3" fill={c}/>
-      <path d="M5.5 10.5H4.5M13.5 10.5H12.5M9 5V4M12.8 7.2l0.7-0.7M5.2 7.2l-0.7-0.7" stroke={c} strokeWidth="1.1" strokeLinecap="round"/>
+    <svg width="18" height="13" viewBox="0 0 22.2997 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill={c} d="M11 0C14.0788 0 16.8608 1.26625 18.8574 3.30469L10.0811 12.082C9.57337 12.5897 9.57337 13.4122 10.0811 13.9199C10.5887 14.4275 11.4113 14.4276 11.9189 13.9199L20.4561 5.38184C21.4353 7.0265 22 8.9469 22 11C22 12.367 21.7485 13.6747 21.292 14.8818C21.0263 15.5843 20.3242 16 19.5732 16H2.42676C1.67575 16 0.973681 15.5843 0.708008 14.8818C0.251487 13.6747 0 12.367 0 11C0 4.92487 4.92487 0 11 0ZM14.2949 3.38086C12.9078 2.781 11.3823 2.57143 9.88477 2.77441C8.38727 2.9775 6.97319 3.58574 5.7959 4.5332C4.61853 5.48092 3.72154 6.73263 3.20312 8.15234C2.68479 9.57204 2.56385 11.1065 2.85352 12.5898C2.99115 13.2945 3.67426 13.7538 4.37891 13.6162C5.08324 13.4784 5.54275 12.7962 5.40527 12.0918C5.20631 11.073 5.28949 10.019 5.64551 9.04395C6.00153 8.06899 6.61725 7.20942 7.42578 6.55859C8.2343 5.90789 9.20594 5.49006 10.2344 5.35059C11.2627 5.21129 12.3102 5.35568 13.2627 5.76758C13.9215 6.05206 14.6868 5.74861 14.9717 5.08984C15.2563 4.43119 14.9533 3.66604 14.2949 3.38086ZM20.0811 2.08203C20.5887 1.57435 21.4113 1.57435 21.9189 2.08203C22.4265 2.58972 22.4266 3.41227 21.9189 3.91992L20.4561 5.38184C20.0062 4.62625 19.4691 3.92919 18.8574 3.30469L20.0811 2.08203Z"/>
     </svg>
   );
 };
 
 const InsightsIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#414965";
+  const c = active ? "#9d5cf5" : "#6c779d";
+  const rays: Array<[number, number, number]> = [
+    [12,   2,    0],
+    [22,   12,   90],
+    [2,    12,   90],
+    [19.4, 4.6,  45],
+    [4.6,  4.6,  135],
+    [19.4, 19.4, 135],
+    [4.6,  19.4, 45],
+  ];
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M9 2.5a4.5 4.5 0 0 1 3.18 7.68c-.46.46-.68 1.1-.68 1.72V13H6.5v-.1c0-.62-.22-1.26-.68-1.72A4.5 4.5 0 0 1 9 2.5Z" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M6.5 13.5h5M7.2 15.5h3.6" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M14.5 3.5l0.8-0.8M2.7 3.5L1.9 2.7M16.5 9H15.5M2.5 9H1.5" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.7"/>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(4.75,4.375)">
+        <path fill={c} d="M0 7.25C0 3.246 3.246 0 7.25 0C11.254 0 14.5 3.246 14.5 7.25C14.5 9.886 13.097 11.929 11.055 13.158C10.954 13.219 10.905 13.3 10.892 13.367L10.646 14.593C10.617 14.739 10.57 14.878 10.508 15.007H3.992C3.93 14.878 3.883 14.739 3.854 14.593L3.608 13.367C3.595 13.3 3.546 13.219 3.446 13.158C1.403 11.929 0 9.886 0 7.25Z"/>
+      </g>
+      <g transform="translate(9.25,20.38)">
+        <path fill={c} d="M0 0V0.743C0 1.709 0.784 2.493 1.75 2.493H3.75C4.717 2.493 5.5 1.709 5.5 0.743V0H0Z"/>
+      </g>
+      {rays.map(([cx, cy, angle], i) => {
+        const rad = (angle * Math.PI) / 180;
+        return (
+          <line
+            key={i}
+            x1={cx + Math.sin(rad) * -1.5}
+            y1={cy - Math.cos(rad) * 1.5}
+            x2={cx + Math.sin(rad) * 1.5}
+            y2={cy + Math.cos(rad) * 1.5}
+            stroke={c}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        );
+      })}
     </svg>
   );
 };
 
 const PerksIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#414965";
+  const c = active ? "#9d5cf5" : "#6c779d";
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="2.5" y="7" width="13" height="2.5" rx="0.6" stroke={c} strokeWidth="1.3"/>
-      <rect x="3.5" y="9.5" width="11" height="6" rx="0.6" stroke={c} strokeWidth="1.3"/>
-      <path d="M9 7V15.5" stroke={c} strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M9 7C9 7 6.8 7 6.8 5.3C6.8 3.8 7.9 3.3 9 4.2C10.1 3.3 11.2 3.8 11.2 5.3C11.2 7 9 7 9 7Z" stroke={c} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(3,7)">
+        <path fill={c} d="M8 6V15H5.7998C4.11978 15 3.27941 14.9998 2.6377 14.6729C2.07347 14.3853 1.61472 13.9265 1.32715 13.3623C1.00018 12.7206 1 11.8802 1 10.2002V6H8ZM16 0C16.465 0 16.698 0 16.8887 0.0508C17.406 0.1895 17.8105 0.594 17.9492 1.1113C18.0003 1.3021 18 1.535 18 2C18 2.465 18.0003 2.6979 17.9492 2.8887C17.8105 3.406 17.406 3.8105 16.8887 3.9492C16.698 4.0003 16.465 4 16 4H2C1.535 4 1.3021 4.0003 1.1113 3.9492C0.594 3.8105 0.1895 3.406 0.0508 2.8887C0 2.6979 0 2.465 0 2C0 1.535 0 1.3021 0.0508 1.1113C0.1895 0.594 0.594 0.1895 1.1113 0.0508C1.3021 0 1.535 0 2 0H16ZM17 10.2002C17 11.8802 16.9998 12.7206 16.6729 13.3623C16.3853 13.9265 15.9265 14.3853 15.3623 14.6729C14.7206 14.9998 13.8802 15 12.2002 15H10V6H17V10.2002Z"/>
+      </g>
+      <g transform="translate(5,3)">
+        <path stroke={c} strokeWidth="2" strokeLinejoin="round" fill="none" d="M7 6V4.857M7 6H4.214C2.439 6 1 4.561 1 2.786C1 1.799 1.799 1 2.786 1H3.143C5.273 1 7 2.727 7 4.857M7 6H9.786C11.561 6 13 4.561 13 2.786C13 1.799 12.2 1 11.214 1H10.857C8.727 1 7 2.727 7 4.857"/>
+      </g>
     </svg>
   );
 };
 
 const CountBadge = ({ count, purple = false }: { count: number; purple?: boolean }) => (
   <div
-    className="flex items-center justify-center flex-shrink-0 px-[6px] py-[2px] rounded-[5px]"
-    style={{ background: purple ? "rgba(118,49,238,0.18)" : "#1a1f2e", minWidth: "20px" }}
+    className="flex items-center justify-center flex-shrink-0 px-[4px] py-[2px] rounded-[4px]"
+    style={{ background: purple ? "rgba(118,49,238,0.18)" : "#222737", minWidth: "18px" }}
   >
-    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "10px", lineHeight: "14px", color: purple ? "#9d5cf5" : "#6c779d" }}>
+    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "12px", lineHeight: "12px", color: purple ? "#9d5cf5" : "#6c779d", textAlign: "center" as const }}>
       {count}
     </span>
   </div>
