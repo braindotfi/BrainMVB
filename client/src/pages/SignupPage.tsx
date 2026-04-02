@@ -2,10 +2,6 @@ import { Component, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
 
-function isInsideIframe(): boolean {
-  try { return window.self !== window.top; } catch { return true; }
-}
-
 export function SignupPage() {
   const { isLoggedIn } = useAuth();
   const [, navigate] = useLocation();
@@ -54,7 +50,6 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
   const { setUserAndAccounts } = useAuth();
   const [, navigate] = useLocation();
   const [status, setStatus] = useState<"idle" | "creating" | "done">("idle");
-  const inIframe = isInsideIframe();
 
   const handleOnboarding = async (userId: string, email?: string, walletAddress?: string) => {
     if (status !== "idle") return;
@@ -75,70 +70,51 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
 
   const handleDemoLogin = () => handleOnboarding("demo-user", "demo@brain.finance");
 
-  if (!apiKey || inIframe) {
+  if (status === "creating") {
     return (
-      <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
-        {inIframe && (
-          <p className="text-[#6c779d] text-sm">
-            Full sign-in is available when opened in a browser tab. Use demo mode to explore the app.
-          </p>
-        )}
-        {!apiKey && !inIframe && (
-          <p className="text-[#6c779d] text-sm">
-            Crossmint API key not configured. Please add CROSSMINT_CLIENT_API_KEY to secrets.
-          </p>
-        )}
-        <DemoLoginButton onLogin={handleDemoLogin} loading={status === "creating"} />
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
+        <span className="text-[#a8b9f4] text-base [font-family:'Gilroy-Medium',Helvetica]">
+          Setting up your wallet &amp; accounts…
+        </span>
       </div>
     );
   }
 
   return (
-    <>
-      {status === "creating" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
-          <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[#a8b9f4] text-base [font-family:'Gilroy-Medium',Helvetica]">
-            Setting up your wallet &amp; accounts…
-          </span>
-        </div>
-      )}
-      <div style={{ visibility: status === "creating" ? "hidden" : "visible" }}>
-        <CrossmintErrorBoundary fallback={<DemoLoginButton onLogin={handleDemoLogin} loading={status === "creating"} />}>
-          <CrossmintAuthWrapper apiKey={apiKey} onSuccess={handleOnboarding} />
+    <div className="flex flex-col items-center gap-6 w-full max-w-[420px]">
+      {/* Crossmint form — wrapped in error boundary; hidden gracefully on failure */}
+      {apiKey && (
+        <CrossmintErrorBoundary>
+          <LazyEmbeddedAuth apiKey={apiKey} onSuccess={handleOnboarding} />
         </CrossmintErrorBoundary>
-      </div>
-    </>
-  );
-}
+      )}
 
-function DemoLoginButton({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
-  return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-      <div className="w-16 h-16 rounded-2xl bg-[#7631ee]/20 flex items-center justify-center">
-        <img src="/figmaAssets/frame-1000002163.svg" alt="Brain" className="w-8 h-8" />
+      {/* Divider */}
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-1 h-px bg-[#1d2132]" />
+        <span className="text-[#414965] text-xs [font-family:'Mont-Regular',Helvetica]">or continue with demo</span>
+        <div className="flex-1 h-px bg-[#1d2132]" />
       </div>
-      <div>
-        <h2 className="[font-family:'Gilroy-Bold',Helvetica] text-white text-2xl mb-1">Brain Finance</h2>
-        <p className="text-[#6c779d] text-sm">AI-powered neobank & agent marketplace</p>
-      </div>
+
+      {/* Demo login — always shown */}
       <button
-        onClick={onLogin}
-        disabled={loading}
+        onClick={handleDemoLogin}
         data-testid="button-demo-login"
-        className="w-full py-3 px-6 rounded-2xl bg-[#7631ee] hover:bg-[#8a42f5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy-SemiBold',Helvetica] text-white text-base"
+        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        {loading ? "Signing in…" : "Continue with Demo"}
+        <img src="/figmaAssets/frame-1000002163.svg" alt="" className="w-5 h-5 opacity-70" />
+        Continue with Demo
       </button>
       <p className="text-[#414965] text-xs">
-        Demo mode · No wallet required
+        No wallet required · Explore all features
       </p>
     </div>
   );
 }
 
 class CrossmintErrorBoundary extends Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
+  { children: React.ReactNode },
   { hasError: boolean }
 > {
   constructor(props: any) {
@@ -147,21 +123,9 @@ class CrossmintErrorBoundary extends Component<
   }
   static getDerivedStateFromError() { return { hasError: true }; }
   render() {
-    if (this.state.hasError) return this.props.fallback;
+    if (this.state.hasError) return null;
     return this.props.children;
   }
-}
-
-function CrossmintAuthWrapper({
-  apiKey,
-  onSuccess,
-}: {
-  apiKey: string;
-  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
-}) {
-  return (
-    <LazyEmbeddedAuth apiKey={apiKey} onSuccess={onSuccess} />
-  );
 }
 
 function LazyEmbeddedAuth({
@@ -177,17 +141,22 @@ function LazyEmbeddedAuth({
   const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
   const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
   const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
+  const [sdkError, setSdkError] = useState(false);
 
   useEffect(() => {
-    import("@crossmint/client-sdk-react-ui").then((m) => {
-      setComp(() => m.EmbeddedAuthForm);
-      setProvider(() => m.CrossmintProvider);
-      setAuthProv(() => m.CrossmintAuthProvider);
-      setWalletProv(() => m.CrossmintWalletProvider);
-      setUseAuthHook(() => m.useAuth);
-      setUseWalletHook(() => m.useWallet);
-    });
+    import("@crossmint/client-sdk-react-ui")
+      .then((m) => {
+        setComp(() => m.EmbeddedAuthForm);
+        setProvider(() => m.CrossmintProvider);
+        setAuthProv(() => m.CrossmintAuthProvider);
+        setWalletProv(() => m.CrossmintWalletProvider);
+        setUseAuthHook(() => m.useAuth);
+        setUseWalletHook(() => m.useWallet);
+      })
+      .catch(() => setSdkError(true));
   }, []);
+
+  if (sdkError) return null;
 
   if (!Comp || !Provider || !AuthProv || !WalletProv) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
