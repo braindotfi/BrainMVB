@@ -1,18 +1,15 @@
 import { useState } from "react";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
 
-import { Marketplace } from "@/pages/Marketplace";
-import { AssistantPage } from "@/pages/AssistantPage";
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
 import { AgentManagePage } from "@/pages/AgentManagePage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { PerksPage } from "@/pages/PerksPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { SignupPage } from "@/pages/SignupPage";
@@ -59,13 +56,13 @@ function AppLayout() {
           <Switch>
             <Route path="/" component={DashboardPage} />
             <Route path="/dashboard" component={DashboardPage} />
-            <Route path="/assistant" component={AssistantPage} />
-            <Route path="/marketplace" component={Marketplace} />
+            <Route path="/assistant">{() => <Redirect to="/dashboard" />}</Route>
+            <Route path="/marketplace">{() => <Redirect to="/dashboard" />}</Route>
+            <Route path="/perks">{() => <Redirect to="/dashboard" />}</Route>
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/manage/:id" component={AgentManagePage} />
             <Route path="/notifications" component={NotificationsPage} />
             <Route path="/settings" component={SettingsPage} />
-            <Route path="/perks" component={PerksPage} />
             <Route path="/agent/:id" component={AgentDetailPage} />
             <Route component={NotFound} />
           </Switch>

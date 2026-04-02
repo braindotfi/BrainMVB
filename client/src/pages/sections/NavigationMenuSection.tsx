@@ -19,9 +19,7 @@ interface DailyInsight {
 }
 
 const mainMenuItems = [
-  { id: "assistant", label: "Assistant", icon: "/figmaAssets/navbar-icons.svg", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
   { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
-  { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/navbar-icons-3.svg", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
 ];
 
 const initialNotifications = [
@@ -805,12 +803,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-5 h-5" style={{ mixBlendMode: "lighten" }} />
             </button>
 
-            <Link href="/perks">
-              <button title="Perks" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                <PerksIcon active={isActive("/perks")} />
-              </button>
-            </Link>
-
             <Link href="/settings">
               <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
                 <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
@@ -973,26 +965,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
               </div>
             </button>
-
-            <Link href="/perks" className="w-full">
-              <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/perks") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                  <PerksIcon active={isActive("/perks")} />
-                </div>
-                <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/perks") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Perks</span>
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                  style={{ background: "rgba(118,49,238,0.2)", color: "#9d5cf5", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
-                >
-                  NEW
-                </span>
-                {isActive("/perks") && (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                    <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            </Link>
 
             <Link href="/settings" className="w-full">
               <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>

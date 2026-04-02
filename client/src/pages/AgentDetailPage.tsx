@@ -141,10 +141,10 @@ export const AgentDetailPage = (): JSX.Element => {
       <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#11141b] rounded-[16px] border border-[#1d2132]">
         <span className="text-4xl">🤖</span>
         <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[14px]">Agent not found</p>
-        <button onClick={() => navigate("/marketplace")}
+        <button onClick={() => navigate("/agents")}
           className="px-4 py-2 rounded-full text-sm transition-opacity hover:opacity-80"
           style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}>
-          Back to Marketplace
+          Back to Agents
         </button>
       </div>
     );
