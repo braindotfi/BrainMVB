@@ -313,8 +313,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
   const [collapsedTxFilter, setCollapsedTxFilter]       = useState("All");
   const [collapsedCardIndex, setCollapsedCardIndex]     = useState(0);
+  const [collapsedAccount, setCollapsedAccount]         = useState<string | null>(null);
+  const [collapsedDropdownOpen, setCollapsedDropdownOpen] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const collapsedDropdownRef = useRef<HTMLDivElement>(null);
 
   const openHover = useCallback((icon: string) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -338,6 +341,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     if (dropdownOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (collapsedDropdownRef.current && !collapsedDropdownRef.current.contains(e.target as Node)) {
+        setCollapsedDropdownOpen(false);
+      }
+    };
+    if (collapsedDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [collapsedDropdownOpen]);
 
   // Reset card to wallet whenever switching account (personal or any agent)
   const handleSwitchAccount = (id: string | null) => {
@@ -408,63 +421,151 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     };
 
     const BankPopup = () => {
+      const isYourCollapsedAccount = collapsedAccount === null;
+      const selectedAgent = !isYourCollapsedAccount ? agentAccounts.find(a => a.id === collapsedAccount) : null;
+
       const cardNode = (() => {
-        if (collapsedCardIndex === 0) return <WalletAddressCard account={resolvedWalletAccount as any} />;
-        if (collapsedCardIndex === 1) return <DebitCardView account={liveDebit} />;
-        return <BankAccountCard account={liveBank} />;
+        if (isYourCollapsedAccount) {
+          if (collapsedCardIndex === 0) return <WalletAddressCard account={resolvedWalletAccount as any} />;
+          if (collapsedCardIndex === 1) return <DebitCardView account={liveDebit} />;
+          return <BankAccountCard account={liveBank} />;
+        }
+        return <AgentDebitCard agentName={selectedAgent?.name || "Agent"} />;
       })();
+
       return (
-        <div className={popupBase}>
-          {popupHeader("Accounts")}
-          {/* Account label row */}
-          <div className="flex items-center gap-2 mx-3 mt-3 mb-2 px-3 py-2 bg-[#1a1f2e] rounded-xl">
-            <img className="w-6 h-6 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
-            <span className="flex-1 [font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-sm">
-              Your Account · <span className="text-[#ff9500]">{activeCollapsedLabel}</span>
+        <div className="w-[310px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
+          {/* Header */}
+          <div className="flex items-center justify-between p-[16px]">
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+              Accounts
             </span>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#22c55e"/><path d="M5 8l2 2 4-4" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
-          {/* Card preview */}
-          <div className="mx-3 mb-1" style={{ height: "158px", overflow: "hidden" }}>
-            <div style={{ transform: "scale(0.78)", transformOrigin: "top left", width: "370px" }}>
-              <div className="relative h-[200px]">{cardNode}</div>
-            </div>
-          </div>
-          {/* Pagination — dots + arrows */}
-          <div className="flex items-center justify-center gap-2 pb-3 px-3">
             <button
-              onClick={() => goCard(-1)}
-              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors flex-shrink-0"
+              onClick={() => setHoveredIcon(null)}
+              className="w-[24px] h-[24px] rounded-[100px] flex items-center justify-center flex-shrink-0"
+              style={{ background: "#1d2132" }}
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            </button>
-            <div className="flex items-center gap-1.5 flex-1 justify-center">
-              {CARDS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); }}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-5 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => goCard(1)}
-              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors flex-shrink-0"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
             </button>
           </div>
-          {/* Card type labels */}
-          <div className="flex justify-center gap-4 pb-3 px-3">
-            {CARDS.map((card, i) => (
+
+          {/* Dropdown + Card area */}
+          <div className="flex flex-col gap-[8px] px-[8px] pb-[12px]">
+
+            {/* Account selector dropdown */}
+            <div className="relative" ref={collapsedDropdownRef}>
               <button
-                key={card.id}
-                onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); }}
-                className={`text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] transition-colors ${i === collapsedCardIndex ? "text-[#ff9500]" : "text-[#414965] hover:text-[#6c779d]"}`}
+                onClick={() => setCollapsedDropdownOpen(prev => !prev)}
+                className="w-full h-[48px] bg-[#222737] rounded-[8px] px-[8px] flex items-center gap-[8px]"
               >
-                {card.label}
+                {/* Bank/agent icon */}
+                {isYourCollapsedAccount ? (
+                  <div className="w-[32px] h-[32px] rounded-[16px] bg-[#1d2132] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                ) : (
+                  <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
+                )}
+
+                {/* Label */}
+                <div className="flex items-center gap-[8px] flex-1 min-w-0 overflow-hidden">
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                    {isYourCollapsedAccount ? "Your Account" : selectedAgent?.name}
+                  </span>
+                  {isYourCollapsedAccount && (
+                    <>
+                      <div className="w-[5px] h-[5px] rounded-full bg-[#414965] flex-shrink-0" />
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                        {CARDS[collapsedCardIndex].label}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Green checkmark + chevron */}
+                <div className="flex items-center gap-[8px] flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
+                    <circle cx="10" cy="10" r="7" fill="#42BF23"/>
+                    <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               </button>
-            ))}
+
+              {/* Dropdown menu */}
+              {collapsedDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-[4px] bg-[#222737] rounded-[8px] overflow-hidden z-20 shadow-[0px_8px_24px_rgba(0,0,0,0.5)]">
+                  {/* Your Account option */}
+                  <button
+                    onClick={() => { setCollapsedAccount(null); setCollapsedCardIndex(0); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
+                    className={`w-full h-[48px] px-[8px] flex items-center gap-[8px] transition-colors ${isYourCollapsedAccount ? "bg-[rgba(255,149,0,0.08)]" : "hover:bg-[#2d3350]"}`}
+                  >
+                    <div className="w-[32px] h-[32px] rounded-[16px] bg-[#1d2132] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-[14px] flex-1 text-left">Your Account</span>
+                    {isYourCollapsedAccount && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="8" fill="#42BF23" opacity="0.25"/>
+                        <circle cx="8" cy="8" r="5.5" fill="#42BF23"/>
+                        <path d="M5 8l2 2 3.5-4" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                  <div className="mx-[8px] h-px bg-[#1d2132]" />
+                  {/* Agent accounts */}
+                  {agentAccounts.map((agent) => (
+                    <button
+                      key={agent.id}
+                      onClick={() => { setCollapsedAccount(agent.id); setCollapsedDropdownOpen(false); }}
+                      className={`w-full h-[48px] px-[8px] flex items-center gap-[8px] transition-colors ${collapsedAccount === agent.id ? "bg-[rgba(66,191,35,0.08)]" : "hover:bg-[#2d3350]"}`}
+                    >
+                      <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
+                      <div className="flex flex-col items-start flex-1 min-w-0">
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-[14px] leading-[18px]">{agent.name}</span>
+                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[11px] leading-[14px]">{agent.type} Agent</span>
+                      </div>
+                      {collapsedAccount === agent.id && (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <circle cx="8" cy="8" r="8" fill="#42BF23" opacity="0.25"/>
+                          <circle cx="8" cy="8" r="5.5" fill="#42BF23"/>
+                          <path d="M5 8l2 2 3.5-4" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Card preview with pagination dots overlaid inside */}
+            <div className="relative rounded-[8px] overflow-hidden" style={{ height: "156px" }}>
+              <div style={{ transform: "scale(0.78)", transformOrigin: "top left", width: "370px" }}>
+                <div className="relative h-[200px]">{cardNode}</div>
+              </div>
+              {/* Pagination dots — overlaid at bottom-center of card (Your Account only) */}
+              {isYourCollapsedAccount && (
+                <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[4px] z-10">
+                  {CARDS.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); }}
+                      className={`rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-[16px] h-[6px] bg-[#ff9500]" : "w-[6px] h-[6px] bg-[rgba(255,255,255,0.35)] hover:bg-[rgba(255,255,255,0.6)]"}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       );
