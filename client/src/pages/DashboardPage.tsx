@@ -52,40 +52,40 @@ const activeAgents: AgentRow[] = [
     ticker: "ALPH", name: "AlphaFlow", color: "#42bf23",
     earnings: { "1D": "$148.20", "7D": "$412.00", "30D": "$2,145.70", "90D": "$6,435.10" },
     spark: {
-      "1D":  [10, 14, 13, 18, 22, 26, 28, 31, 33, 36, 38, 41],
-      "7D":  [20, 28, 35, 42, 52, 60, 68, 75, 82, 90, 98, 105],
-      "30D": [100, 145, 180, 220, 270, 310, 380, 440, 510, 580, 650, 720],
-      "90D": [200, 340, 520, 710, 890, 1080, 1280, 1510, 1760, 2020, 2290, 2580],
+      "1D":  [10, 18, 12, 28, 16, 35, 22, 42, 30, 38, 34, 41],
+      "7D":  [20, 38, 28, 55, 42, 72, 58, 88, 70, 100, 85, 105],
+      "30D": [100, 185, 140, 260, 200, 340, 280, 420, 360, 510, 440, 600],
+      "90D": [200, 420, 320, 680, 520, 980, 780, 1320, 1060, 1680, 1380, 2100],
     },
   },
   {
     ticker: "YLDR", name: "Yield Pilot", color: "#7631ee",
     earnings: { "1D": "$72.00", "7D": "$220.00", "30D": "$1,120.40", "90D": "$3,361.20" },
     spark: {
-      "1D":  [8, 10, 12, 14, 16, 17, 18, 20, 21, 22, 23, 24],
-      "7D":  [15, 22, 30, 38, 48, 56, 63, 70, 78, 85, 92, 98],
-      "30D": [80, 110, 150, 195, 240, 285, 335, 385, 440, 490, 540, 590],
-      "90D": [150, 260, 395, 540, 695, 855, 1030, 1210, 1400, 1600, 1810, 2030],
+      "1D":  [8, 12, 10, 17, 13, 19, 16, 22, 18, 23, 21, 24],
+      "7D":  [15, 28, 20, 42, 32, 56, 46, 68, 58, 80, 70, 98],
+      "30D": [80, 140, 105, 195, 155, 260, 210, 340, 280, 430, 360, 520],
+      "90D": [150, 310, 230, 500, 390, 720, 580, 1020, 820, 1380, 1120, 1800],
     },
   },
   {
     ticker: "RISK", name: "Risk Sentinel", color: "#ff9500",
     earnings: { "1D": "$48.00", "7D": "$180.00", "30D": "$640.00", "90D": "$1,920.00" },
     spark: {
-      "1D":  [20, 22, 19, 23, 21, 24, 22, 25, 24, 26, 25, 27],
-      "7D":  [40, 42, 38, 45, 43, 48, 45, 50, 47, 52, 50, 55],
-      "30D": [120, 135, 128, 145, 140, 155, 148, 162, 158, 168, 165, 172],
-      "90D": [280, 310, 295, 340, 325, 368, 355, 395, 382, 418, 408, 428],
+      "1D":  [20, 24, 18, 28, 22, 30, 20, 27, 24, 31, 23, 27],
+      "7D":  [40, 52, 38, 58, 44, 65, 48, 70, 54, 74, 50, 60],
+      "30D": [120, 158, 132, 174, 148, 186, 158, 196, 162, 200, 168, 178],
+      "90D": [280, 380, 310, 450, 360, 520, 400, 580, 440, 620, 460, 580],
     },
   },
   {
     ticker: "SWRM", name: "SwarmAlpha", color: "#a8b9f4",
     earnings: { "1D": "$43.80", "7D": "$225.00", "30D": "$490.00", "90D": "$1,470.00" },
     spark: {
-      "1D":  [18, 15, 20, 14, 22, 17, 24, 19, 26, 21, 28, 23],
-      "7D":  [35, 28, 42, 30, 52, 38, 58, 44, 65, 50, 72, 55],
-      "30D": [100, 78, 128, 88, 155, 110, 172, 125, 190, 140, 208, 155],
-      "90D": [200, 155, 260, 175, 320, 215, 380, 250, 440, 290, 500, 330],
+      "1D":  [18, 10, 24, 8, 28, 14, 32, 10, 36, 16, 30, 23],
+      "7D":  [35, 18, 52, 12, 65, 28, 72, 18, 80, 30, 68, 55],
+      "30D": [100, 58, 148, 72, 190, 100, 220, 80, 250, 115, 230, 170],
+      "90D": [200, 110, 320, 140, 430, 190, 540, 220, 630, 260, 580, 390],
     },
   },
 ];
@@ -95,51 +95,56 @@ type TxRow = { name: string; date: string; category: string; amount: string; typ
 
 type ChartPoint = { label: string; balance: number; spend: number; saved: number; yield: number };
 
+/* More volatile chart data matching Figma's jagged lines */
 const chartData: Record<Period, ChartPoint[]> = {
   "1D": [
-    { label: "12 AM", balance: 47200, spend: 0,      saved: 0,    yield: 0 },
-    { label: "3 AM",  balance: 47218, spend: 0,      saved: 0,    yield: 4.6 },
-    { label: "6 AM",  balance: 47236, spend: 0,      saved: 0,    yield: 9.1 },
-    { label: "9 AM",  balance: 47547, spend: 89,     saved: 80,   yield: 13.7 },
-    { label: "12 PM", balance: 47695, spend: 237.2,  saved: 80,   yield: 16.3 },
-    { label: "3 PM",  balance: 47743, spend: 285.4,  saved: 80,   yield: 17.4 },
-    { label: "6 PM",  balance: 47798, spend: 305.2,  saved: 80,   yield: 17.9 },
-    { label: "Now",   balance: 47832, spend: 312.4,  saved: 80,   yield: 18.22 },
+    { label: "12 AM", balance: 47200, spend: 0,    saved: 0,   yield: 0 },
+    { label: "2 AM",  balance: 47320, spend: 8,    saved: 0,   yield: 1.8 },
+    { label: "4 AM",  balance: 47140, spend: 22,   saved: 0,   yield: 3.9 },
+    { label: "6 AM",  balance: 47480, spend: 14,   saved: 15,  yield: 7.2 },
+    { label: "8 AM",  balance: 47260, spend: 95,   saved: 40,  yield: 9.8 },
+    { label: "10 AM", balance: 47710, spend: 175,  saved: 55,  yield: 12.4 },
+    { label: "12 PM", balance: 47440, spend: 240,  saved: 80,  yield: 14.9 },
+    { label: "2 PM",  balance: 47890, spend: 268,  saved: 80,  yield: 16.1 },
+    { label: "4 PM",  balance: 47580, spend: 295,  saved: 80,  yield: 17.0 },
+    { label: "6 PM",  balance: 47960, spend: 303,  saved: 80,  yield: 17.6 },
+    { label: "8 PM",  balance: 47650, spend: 309,  saved: 80,  yield: 18.0 },
+    { label: "Now",   balance: 47832, spend: 312,  saved: 80,  yield: 18.22 },
   ],
   "7D": [
     { label: "Mon", balance: 45400, spend: 106,    saved: 60,   yield: 12.8 },
-    { label: "Tue", balance: 45918, spend: 342,    saved: 120,  yield: 31.2 },
-    { label: "Wed", balance: 46310, spend: 688,    saved: 200,  yield: 52.4 },
-    { label: "Thu", balance: 46782, spend: 1004,   saved: 300,  yield: 73.1 },
-    { label: "Fri", balance: 47090, spend: 1340,   saved: 380,  yield: 91.6 },
-    { label: "Sat", balance: 47440, spend: 1760,   saved: 480,  yield: 112.3 },
-    { label: "Sun", balance: 47832, spend: 2148.6, saved: 560,  yield: 127.54 },
+    { label: "Tue", balance: 46320, spend: 480,    saved: 155,  yield: 42.6 },
+    { label: "Wed", balance: 45760, spend: 740,    saved: 200,  yield: 58.2 },
+    { label: "Thu", balance: 47100, spend: 1140,   saved: 330,  yield: 86.4 },
+    { label: "Fri", balance: 46480, spend: 1520,   saved: 400,  yield: 101.2 },
+    { label: "Sat", balance: 47640, spend: 1920,   saved: 520,  yield: 120.8 },
+    { label: "Sun", balance: 47832, spend: 2148,   saved: 560,  yield: 127.54 },
   ],
   "30D": [
     { label: "Mar 1",  balance: 42300, spend: 306,    saved: 80,    yield: 18.3 },
-    { label: "Mar 4",  balance: 43210, spend: 1102,   saved: 280,   yield: 66.2 },
-    { label: "Mar 7",  balance: 43820, spend: 2148,   saved: 480,   yield: 127.5 },
-    { label: "Mar 10", balance: 44560, spend: 3210,   saved: 700,   yield: 183.4 },
-    { label: "Mar 13", balance: 45200, spend: 4418,   saved: 960,   yield: 241.6 },
-    { label: "Mar 16", balance: 45840, spend: 5630,   saved: 1200,  yield: 298.2 },
-    { label: "Mar 19", balance: 46340, spend: 6820,   saved: 1560,  yield: 346.1 },
-    { label: "Mar 22", balance: 46790, spend: 7640,   saved: 1800,  yield: 390.8 },
-    { label: "Mar 25", balance: 47210, spend: 8430,   saved: 2100,  yield: 456.4 },
-    { label: "Mar 28", balance: 47832, spend: 9214.4, saved: 2400,  yield: 548.3 },
+    { label: "Mar 4",  balance: 44100, spend: 1420,   saved: 380,   yield: 82.6 },
+    { label: "Mar 7",  balance: 43200, spend: 2360,   saved: 520,   yield: 148.4 },
+    { label: "Mar 10", balance: 45480, spend: 3680,   saved: 820,   yield: 204.8 },
+    { label: "Mar 13", balance: 44600, spend: 4820,   saved: 1040,  yield: 268.3 },
+    { label: "Mar 16", balance: 46540, spend: 5960,   saved: 1320,  yield: 318.0 },
+    { label: "Mar 19", balance: 45380, spend: 6820,   saved: 1600,  yield: 365.4 },
+    { label: "Mar 22", balance: 47200, spend: 7820,   saved: 1900,  yield: 408.6 },
+    { label: "Mar 25", balance: 46100, spend: 8640,   saved: 2180,  yield: 478.2 },
+    { label: "Mar 28", balance: 47832, spend: 9214,   saved: 2400,  yield: 548.3 },
   ],
   "90D": [
     { label: "Jan 1",  balance: 38200, spend: 1248,    saved: 320,   yield: 72.1 },
-    { label: "Jan 8",  balance: 39640, spend: 3812,    saved: 960,   yield: 214.3 },
-    { label: "Jan 15", balance: 40180, spend: 5940,    saved: 1440,  yield: 328.4 },
-    { label: "Jan 22", balance: 40920, spend: 8104,    saved: 1920,  yield: 438.2 },
-    { label: "Jan 29", balance: 41780, spend: 10360,   saved: 2560,  yield: 548.6 },
-    { label: "Feb 5",  balance: 42640, spend: 13020,   saved: 3200,  yield: 676.8 },
-    { label: "Feb 12", balance: 43520, spend: 15680,   saved: 3840,  yield: 812.4 },
-    { label: "Feb 19", balance: 44480, spend: 18340,   saved: 4480,  yield: 948.2 },
-    { label: "Feb 26", balance: 45400, spend: 21000,   saved: 5120,  yield: 1080.6 },
-    { label: "Mar 5",  balance: 46120, spend: 22960,   saved: 5760,  yield: 1248.8 },
-    { label: "Mar 19", balance: 46900, spend: 25300,   saved: 6400,  yield: 1432.4 },
-    { label: "Mar 28", balance: 47832, spend: 27643.2, saved: 7200,  yield: 1644.9 },
+    { label: "Jan 8",  balance: 40480, spend: 4320,    saved: 1100,  yield: 248.6 },
+    { label: "Jan 15", balance: 39200, spend: 6480,    saved: 1560,  yield: 360.2 },
+    { label: "Jan 22", balance: 41640, spend: 9200,    saved: 2240,  yield: 492.8 },
+    { label: "Jan 29", balance: 40200, spend: 11480,   saved: 2800,  yield: 608.4 },
+    { label: "Feb 5",  balance: 43300, spend: 14600,   saved: 3600,  yield: 752.0 },
+    { label: "Feb 12", balance: 41800, spend: 17200,   saved: 4200,  yield: 884.6 },
+    { label: "Feb 19", balance: 44900, spend: 20100,   saved: 5000,  yield: 1024.8 },
+    { label: "Feb 26", balance: 43400, spend: 22800,   saved: 5620,  yield: 1148.4 },
+    { label: "Mar 5",  balance: 46500, spend: 24960,   saved: 6320,  yield: 1328.6 },
+    { label: "Mar 19", balance: 44800, spend: 26400,   saved: 6840,  yield: 1492.0 },
+    { label: "Mar 28", balance: 47832, spend: 27643,   saved: 7200,  yield: 1644.9 },
   ],
 };
 
@@ -245,14 +250,23 @@ const periodData: Record<Period, {
   },
 };
 
-/* ── Small components ── */
-const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
+/* ── Dividers ── */
+/* Full-width for outer panel borders */
+const InsetDivider = () => (
+  <div className="flex-shrink-0 mx-[14px]" style={{ height: "1px", background: "#1d2132" }} />
+);
 
+/* Category separator — slightly lighter inset */
+const CategoryDivider = () => (
+  <div className="flex-shrink-0 mx-[14px]" style={{ height: "1px", background: "#1a1f2e" }} />
+);
+
+/* ── Stat card — no border, Gilroy-Medium value, sentence-case label ── */
 const StatCard = ({ label, value, delta, deltaPositive }: { label: string; value: string; delta?: string; deltaPositive?: boolean }) => (
-  <div className="flex flex-col gap-[8px] p-[16px] rounded-[16px] flex-1 min-w-0" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] uppercase tracking-widest whitespace-nowrap">{label}</span>
-    <span className="[font-family:'Gilroy-Bold',Helvetica] text-white text-[20px] leading-[26px] whitespace-nowrap">{value}</span>
-    {delta && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px]" style={{ color: deltaPositive ? "#42bf23" : "#d20344" }}>{delta}</span>}
+  <div className="flex flex-col gap-[8px] p-[16px] rounded-[16px] flex-1 min-w-0" style={{ background: "#0a0c10" }}>
+    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
+    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">{value}</span>
+    {delta && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[14px]" style={{ color: deltaPositive ? "#42bf23" : "#d20344" }}>{delta}</span>}
   </div>
 );
 
@@ -288,11 +302,12 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+/* Updated colors to match Figma: purple=balance, orange=spent, red=saved, green=yield */
 const SERIES = [
-  { key: "balance", name: "Total Balance", color: "#a8b9f4" },
-  { key: "spend",   name: "Total Spend",   color: "#d20344" },
-  { key: "saved",   name: "Total Saved",   color: "#42bf23" },
-  { key: "yield",   name: "Yield Earned",  color: "#ff9500" },
+  { key: "balance", name: "Total Balance", color: "#7631ee" },
+  { key: "spend",   name: "Total Spent",   color: "#ff9500" },
+  { key: "saved",   name: "Total Saved",   color: "#d20344" },
+  { key: "yield",   name: "Yield Earned",  color: "#42bf23" },
 ] as const;
 
 /* ── Sparkline for Active Agents ── */
@@ -331,33 +346,33 @@ export const DashboardPage = (): JSX.Element => {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — no border per Figma */}
       <div className="flex gap-[12px] px-[16px] pt-[16px] flex-shrink-0">
         <StatCard label="Total Balance" value={d.totalBalance} />
-        <StatCard label="Total Spend"   value={d.totalSpend}   delta={d.spendDelta} deltaPositive={false} />
+        <StatCard label="Total Spent"   value={d.totalSpend}   delta={d.spendDelta} deltaPositive={false} />
         <StatCard label="Total Saved"   value={d.totalSaved}   delta={d.savedDelta} deltaPositive={true}  />
         <StatCard label="Yield Earned"  value={d.yield}        delta={d.yieldPct}   deltaPositive={true}  />
       </div>
 
-      {/* Financial Overview line chart */}
-      <div className="mx-[16px] mt-[12px] flex-shrink-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132", height: "178px" }}>
-        <div className="flex items-center justify-between px-[16px] py-[10px]" style={{ borderBottom: "1px solid #1d2132" }}>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Financial Overview</span>
-          <div className="flex items-center gap-[14px]">
+      {/* Financial Overview — no border, 16px header, updated legend */}
+      <div className="mx-[16px] mt-[12px] flex-shrink-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", height: "200px" }}>
+        <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Financial Overview</span>
+          <div className="flex items-center gap-[12px]">
             {SERIES.map(s => (
-              <div key={s.key} className="flex items-center gap-[5px]">
-                <div className="w-[8px] h-[2px] rounded-full" style={{ background: s.color }} />
-                <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "10px", color: "#414965" }}>{s.name}</span>
+              <div key={s.key} className="flex items-center gap-[4px]">
+                <div className="h-[4px] rounded-[2px] flex-shrink-0" style={{ width: "10px", background: s.color }} />
+                <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", color: "#6c779d" }}>{s.name}</span>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ height: "130px", padding: "8px 8px 4px 0" }}>
+        <div style={{ height: "152px", padding: "8px 8px 4px 0" }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="#1d2132" strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 10, fill: "#414965" }} tickLine={false} axisLine={false} dy={4} />
-              <YAxis tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} tick={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 10, fill: "#414965" }} tickLine={false} axisLine={false} width={42} />
+              <XAxis dataKey="label" tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }} tickLine={false} axisLine={false} dy={4} />
+              <YAxis tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }} tickLine={false} axisLine={false} width={42} />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#1d2132", strokeWidth: 1 }} />
               {SERIES.map(s => (
                 <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={1.8} dot={false} activeDot={{ r: 3, fill: s.color, strokeWidth: 0 }} />
@@ -367,37 +382,40 @@ export const DashboardPage = (): JSX.Element => {
         </div>
       </div>
 
-      {/* ── 2×2 widget grid ── */}
+      {/* ── 2×2 widget grid — no borders on widgets ── */}
       <div
         className="flex-1 min-h-0 grid px-[16px] pb-[16px] pt-[12px] gap-[12px]"
         style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}
       >
 
-        {/* TOP-LEFT: Spending by Category */}
-        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+        {/* TOP-LEFT: Spending by Category — separators between categories */}
+        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10" }}>
           <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Spending by Category</span>
           </div>
-          <div className="flex flex-col gap-[10px] p-[14px] flex-1">
-            {d.spendCategories.map((cat) => (
-              <div key={cat.label} className="flex flex-col gap-[4px]">
-                <div className="flex items-center justify-between">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cat.label}</span>
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">{cat.amount}</span>
-                </div>
-                <div className="flex items-center gap-[6px]">
-                  <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: "#1d2132" }}>
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cat.pct}%`, background: cat.color }} />
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {d.spendCategories.map((cat, i) => (
+              <div key={cat.label} className="flex flex-col">
+                <div className="flex flex-col gap-[4px] px-[14px] py-[10px]">
+                  <div className="flex items-center justify-between">
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cat.label}</span>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">{cat.amount}</span>
                   </div>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[10px] leading-[12px] flex-shrink-0 w-[26px] text-right">{cat.pct}%</span>
+                  <div className="flex items-center gap-[6px]">
+                    <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: "#1d2132" }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cat.pct}%`, background: cat.color }} />
+                    </div>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[10px] leading-[12px] flex-shrink-0 w-[26px] text-right">{cat.pct}%</span>
+                  </div>
                 </div>
+                {i < d.spendCategories.length - 1 && <CategoryDivider />}
               </div>
             ))}
           </div>
         </div>
 
-        {/* TOP-RIGHT: Active Agents */}
-        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+        {/* TOP-RIGHT: Active Agents — inset separators */}
+        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10" }}>
           <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Active Agents</span>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">{activeAgents.length} running</span>
@@ -406,28 +424,25 @@ export const DashboardPage = (): JSX.Element => {
             {activeAgents.map((agent, i) => (
               <div key={agent.ticker}>
                 <div className="flex items-center gap-[10px] px-[14px] py-[10px] hover:bg-[#111822] transition-colors cursor-pointer">
-                  {/* Ticker + name */}
                   <div className="flex flex-col min-w-0" style={{ width: "72px", flexShrink: 0 }}>
                     <span style={{ fontFamily: "'Gilroy-Bold',Helvetica", fontSize: "15px", lineHeight: "20px", color: "#ffffff", letterSpacing: "0.02em" }}>{agent.ticker}</span>
                     <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "10px", lineHeight: "13px", color: "#6c779d" }}>{agent.name}</span>
                   </div>
-                  {/* Sparkline */}
                   <div className="flex-1 flex items-center justify-center">
                     <AgentSparkline data={agent.spark[period]} color={agent.color} />
                   </div>
-                  {/* Earnings */}
                   <span style={{ fontFamily: "'Gilroy-Bold',Helvetica", fontSize: "15px", lineHeight: "20px", color: agent.color, flexShrink: 0, minWidth: "72px", textAlign: "right" }}>
                     {agent.earnings[period]}
                   </span>
                 </div>
-                {i < activeAgents.length - 1 && <HDivider />}
+                {i < activeAgents.length - 1 && <InsetDivider />}
               </div>
             ))}
           </div>
         </div>
 
-        {/* BOTTOM-LEFT: Subscriptions */}
-        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+        {/* BOTTOM-LEFT: Subscriptions — inset separators */}
+        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
           <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Subscriptions</span>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">Monthly</span>
@@ -445,7 +460,7 @@ export const DashboardPage = (): JSX.Element => {
                     {statusBadge(sub.status)}
                   </div>
                 </div>
-                {i < allSubscriptions.length - 1 && <HDivider />}
+                {i < allSubscriptions.length - 1 && <InsetDivider />}
               </div>
             ))}
           </div>
@@ -457,8 +472,8 @@ export const DashboardPage = (): JSX.Element => {
           </div>
         </div>
 
-        {/* BOTTOM-RIGHT: Recent Transactions (no emojis, compact) */}
-        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+        {/* BOTTOM-RIGHT: Recent Transactions — inset separators */}
+        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
           <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Recent Transactions</span>
             <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">{d.transactions.length} total</span>
@@ -474,7 +489,6 @@ export const DashboardPage = (): JSX.Element => {
             {d.transactions.map((tx, i) => (
               <div key={i}>
                 <div className="flex items-center gap-[10px] px-[14px] py-[8px] hover:bg-[#111822] transition-colors cursor-pointer">
-                  {/* Colored type dot */}
                   <div className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: tx.type === "credit" ? "#42bf23" : "#d20344" }} />
                   <div className="flex flex-col flex-1 min-w-0">
                     <div className="flex items-center gap-[5px] min-w-0">
@@ -486,7 +500,7 @@ export const DashboardPage = (): JSX.Element => {
                   <span className="w-[60px] text-right [font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[10px] leading-[13px] flex-shrink-0">{tx.account}</span>
                   <span className="w-[64px] text-right [font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[15px] flex-shrink-0" style={{ color: tx.type === "credit" ? "#42bf23" : "#d20344" }}>{tx.amount}</span>
                 </div>
-                {i < d.transactions.length - 1 && <HDivider />}
+                {i < d.transactions.length - 1 && <InsetDivider />}
               </div>
             ))}
           </div>
