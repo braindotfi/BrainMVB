@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
@@ -182,6 +182,42 @@ export const AgentsActivityPage = (): JSX.Element => {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  /* ── Fetch created agents from API ── */
+  const { data: apiAgentsRaw } = useQuery<{ id: string; name: string; type: string; description: string; avatar: string; status: string; capitalAmount: number; capitalAsset: string; riskLevel: string; executionMode: string; allowedAssets: string[]; createdAt: string; createdByUser?: boolean }[]>({
+    queryKey: ["/api/agents"],
+    refetchOnWindowFocus: false,
+  });
+
+  /* Map API agents → AgentData, exclude those already in static list */
+  const staticIds = new Set(agents.map((a) => a.id));
+  const apiAgents: AgentData[] = (apiAgentsRaw ?? [])
+    .filter((a) => !staticIds.has(a.id))
+    .map((a) => ({
+      id: a.id,
+      name: a.name,
+      ticker: "$" + a.name.toUpperCase().replace(/\s/g, "").slice(0, 8),
+      description: a.description || `AI ${a.type} agent`,
+      avatar: a.avatar || "/figmaAssets/avatars.svg",
+      status: (a.status === "active" ? "active" : "inactive") as AgentStatus,
+      type: a.type ? a.type.charAt(0).toUpperCase() + a.type.slice(1) : "Custom",
+      earnings: "$0",
+      trades: 0,
+      successRate: "—",
+      lastActive: "Just now",
+      category: a.type || "custom",
+      rules: [],
+      budget: a.capitalAmount ? `$${a.capitalAmount.toLocaleString()} ${a.capitalAsset || "USDC"}` : "—",
+      riskLevel: (a.riskLevel === "conservative" ? "low" : a.riskLevel === "aggressive" ? "high" : "medium") as "low" | "medium" | "high",
+      schedule: a.executionMode || "automatic",
+      walletAddress: "0x0000000000000000000000000000000000000000",
+      deployedAt: a.createdAt ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Just now",
+      activityLog: [],
+      createdByUser: true,
+    }));
+
+  /* Merge static + API agents */
+  const allAgents: AgentData[] = [...agents, ...apiAgents];
+
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(
     () => Object.fromEntries(agents.map((a) => [a.id, a.status]))
   );
@@ -201,20 +237,21 @@ export const AgentsActivityPage = (): JSX.Element => {
   });
 
   const handleToggle = (agentId: string) => {
-    const current = agentStatuses[agentId];
+    const fallback = allAgents.find((a) => a.id === agentId)?.status ?? "inactive";
+    const current = agentStatuses[agentId] ?? fallback;
     const next: AgentStatus = current === "active" ? "inactive" : "active";
     setAgentStatuses((prev) => ({ ...prev, [agentId]: next }));
     setUpdatingId(agentId);
     statusMutation.mutate({ id: agentId, status: next });
   };
 
-  const allCount      = agents.length;
-  const myCount       = agents.filter((a) => a.createdByUser).length;
-  const activeCount   = agents.filter((a) => agentStatuses[a.id] === "active").length;
-  const inactiveCount = agents.filter((a) => agentStatuses[a.id] !== "active").length;
+  const allCount      = allAgents.length;
+  const myCount       = allAgents.filter((a) => a.createdByUser).length;
+  const activeCount   = allAgents.filter((a) => (agentStatuses[a.id] ?? a.status) === "active").length;
+  const inactiveCount = allAgents.filter((a) => (agentStatuses[a.id] ?? a.status) !== "active").length;
 
-  const filtered = agents.filter((a) => {
-    const status = agentStatuses[a.id];
+  const filtered = allAgents.filter((a) => {
+    const status = agentStatuses[a.id] ?? a.status;
     const matchesTab =
       activeTab === "my-agents" ? !!a.createdByUser :
       activeTab === "active"    ? status === "active" :
@@ -237,7 +274,7 @@ export const AgentsActivityPage = (): JSX.Element => {
   ];
 
   const handleKillswitch = () => {
-    const activeIds = agents.filter((a) => agentStatuses[a.id] === "active").map((a) => a.id);
+    const activeIds = allAgents.filter((a) => (agentStatuses[a.id] ?? a.status) === "active").map((a) => a.id);
     if (activeIds.length === 0) return;
     setAgentStatuses((prev) => {
       const next = { ...prev };
@@ -381,7 +418,7 @@ export const AgentsActivityPage = (): JSX.Element => {
               <div key={agent.id} className="w-full xl:w-[calc(50%-8px)]">
                 <AgentCard
                   agent={agent}
-                  currentStatus={agentStatuses[agent.id]}
+                  currentStatus={agentStatuses[agent.id] ?? agent.status}
                   onToggle={() => handleToggle(agent.id)}
                   isUpdating={updatingId === agent.id}
                   onEdit={() => navigate(`/agent/${agent.id}`)}
