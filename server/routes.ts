@@ -297,7 +297,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         capitalAmount?: number; capitalAsset?: string; riskLevel?: string;
         maxDrawdown?: number; stopLoss?: number; executionMode?: string;
         allowedAssets?: string[]; maxAllocationPct?: number; maxPositionPct?: number;
-        maxTradesPerDay?: number;
+        maxTradesPerDay?: number; policyHash?: string; typeConfig?: Record<string, unknown>;
       };
 
       const existingPolicy = (existing.policy as any) ?? {};
@@ -315,6 +315,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         maxAllocationPct: d.maxAllocationPct ?? existingPolicy.maxAllocationPct,
         maxPositionPct:   d.maxPositionPct   ?? existingPolicy.maxPositionPct,
         maxTradesPerDay:  d.maxTradesPerDay  ?? existingPolicy.maxTradesPerDay,
+        policyHash:       d.policyHash       ?? existingPolicy.policyHash,
+        typeConfig:       d.typeConfig       ?? existingPolicy.typeConfig ?? {},
         uiType:           d.type             ?? existingPolicy.uiType,
         uiAvatar:         d.avatar           ?? existingPolicy.uiAvatar,
         uiCapitalAmount:  capitalNum,
@@ -371,6 +373,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     createdByUser:    z.boolean().optional().default(false),
     ticker:           z.string().optional(),
     website:          z.string().optional(),
+    policyHash:       z.string().optional(),
+    typeConfig:       z.record(z.unknown()).optional(),
   });
 
   // Map UI agent type → storage category
@@ -406,6 +410,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         maxAllocationPct:    d.maxAllocationPct,
         maxPositionPct:      d.maxPositionPct,
         maxTradesPerDay:     d.maxTradesPerDay,
+        // Schema policy fields
+        policyHash:          d.policyHash ?? null,
+        typeConfig:          d.typeConfig  ?? {},
         // UI metadata (prefixed ui* to avoid collisions)
         uiType:              d.type,
         uiAvatar:            d.avatar,
