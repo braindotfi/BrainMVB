@@ -315,26 +315,57 @@ const TX_LOG = [
 
 const TIME_TABS = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 
-/* ── Equity curve custom tooltip: orange pill ── */
-const PriceTooltip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: "#4a2300", borderRadius: "12px", padding: "2px 6px", lineHeight: "14px", pointerEvents: "none" }}>
-      <span style={{ color: "#ff9500", fontSize: "10px", fontFamily: "'Gilroy-SemiBold', Helvetica", whiteSpace: "nowrap" }}>
-        ${payload[0].value.toLocaleString()}
-      </span>
-    </div>
-  );
-};
-
-/* ── Crosshair cursor: orange dashed vertical + horizontal lines ── */
-const CrosshairCursor = ({ points, width, height }: any) => {
+/* ── Crosshair cursor: dashed lines + orange pill at intersection ── */
+const CrosshairCursor = ({ points, width, height, payload }: any) => {
   if (!points?.length) return null;
   const { x, y } = points[0];
+
+  /* Format the value into a price string */
+  const val = payload?.[0]?.value;
+  const formatted = val != null
+    ? `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : "";
+
+  /* Pill dimensions — approximate 6.2px per character at 10px Gilroy-SemiBold */
+  const charW = 6.2;
+  const padX = 8;
+  const pillH = 18;
+  const pillRx = 9;
+  const textW = formatted.length * charW;
+  const pillW = textW + padX * 2;
+
+  /* Keep pill inside chart horizontally */
+  let pillX = x + 6;
+  if (pillX + pillW > width - 4) pillX = x - pillW - 6;
+
+  /* Center pill vertically on the y value line */
+  const pillY = y - pillH / 2;
+
   return (
     <g>
-      <line x1={x} y1={0} x2={x} y2={height} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-      <line x1={0} y1={y} x2={width} y2={y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      {/* Vertical dashed line */}
+      <line x1={x} y1={0} x2={x} y2={height}
+        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      {/* Horizontal dashed line */}
+      <line x1={0} y1={y} x2={width} y2={y}
+        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      {/* Orange price pill at intersection */}
+      {formatted && (
+        <g>
+          <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
+          <text
+            x={pillX + pillW / 2}
+            y={pillY + pillH / 2 + 3.5}
+            textAnchor="middle"
+            fill="#ff9500"
+            fontSize={10}
+            fontFamily="'Gilroy-SemiBold', Helvetica"
+            fontWeight="600"
+          >
+            {formatted}
+          </text>
+        </g>
+      )}
     </g>
   );
 };
@@ -388,7 +419,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
         {/* Back button (left) */}
         <button data-testid="button-back" onClick={onBack}
           className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ background: "rgba(255,255,255,0.06)" }}>
+          style={{ background: "#1d2132" }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -516,7 +547,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                       </linearGradient>
                     </defs>
                     <Tooltip
-                      content={<PriceTooltip />}
+                      content={() => null}
                       cursor={<CrosshairCursor />}
                       isAnimationActive={false}
                     />
