@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -8,6 +9,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
+import { useAuth } from "@/lib/authContext";
 
 /* ── Design tokens ── */
 const CARD_BG = "#0a0c10";
@@ -76,36 +78,32 @@ const cashFlowData: Record<CfPeriod, CfPoint[]> = {
   ],
 };
 
-/* ── Panel data ── */
-const accountItems = [
-  { name: "Your Stablecoin Account", sub: "0x2bJ8....3ds4",         amount: "$8,949.00", delta: "+$2.92 (24h)",   positive: true  },
-  { name: "Your Bank Account",       sub: "AE070331234567890123456", amount: "$784.00",   delta: "-$13.94 (24h)", positive: false },
-  { name: "Yield Pilot",             sub: "Yield Agent",             amount: "$32.00",    delta: "+$0.15 (24h)",  positive: true  },
-  { name: "Payment Bot",             sub: "Payments Agent",          amount: "$12.99",    delta: "Active",        positive: true  },
-];
-
-type RichSpan = { text: string; bold: boolean };
-type ActivityItem = {
-  spans: RichSpan[];
-  time: string;
-  tag: string;
+/* ── Helpers ── */
+const parseBalance = (b?: string | number): number => {
+  if (b === undefined || b === null) return 0;
+  if (typeof b === "number") return b;
+  return parseFloat(b.replace(/,/g, "")) || 0;
 };
 
-const activityItems: ActivityItem[] = [
-  { spans: [{ text: "TraderPro ",  bold: true }, { text: "requested approval for $23K BTC trade", bold: false }], time: "Today, 11:42 AM",    tag: "Trading"  },
-  { spans: [{ text: "PaymentBot ", bold: true }, { text: "paid CMC-API $0.0001 via x402 for API",  bold: false }], time: "Mar 28, 12:13 PM",   tag: "Payment"  },
-  { spans: [{ text: "You ",        bold: true }, { text: "transferred 5K USDC to ",                bold: false }, { text: "TraderPro",    bold: true }], time: "Mar 25, 1:45 PM",  tag: "You"      },
-  { spans: [{ text: "You ",        bold: true }, { text: "deposited 13K USDC to ",                 bold: false }, { text: "Your Account", bold: true }], time: "Mar 22, 7:23 AM",  tag: "You"      },
-  { spans: [{ text: "Yield Pilot ",   bold: true }, { text: "staked 1K USDC to AAVE",             bold: false }], time: "Today, 11:42 AM",    tag: "Ai Agent" },
-  { spans: [{ text: "Trader-Alpha ",  bold: true }, { text: "staked 1.5K USDC to AAVE",           bold: false }], time: "Today, 12:36 PM",    tag: "Ai Agent" },
-];
+const fmtAddress = (addr?: string): string =>
+  addr ? `${addr.slice(0, 6)}....${addr.slice(-4)}` : "—";
 
-type AlertItem = { actor?: string; message: string; time: string; requiresAction?: boolean };
-const alertItems: AlertItem[] = [
-  { actor: "Marketing Agent", message: " is requesting $4.24 for Google Ad spend",    time: "Today, 11:42 AM",  requiresAction: true },
-  {                           message: "Monthly debit card spend exceeded 1K threshold", time: "Mar 28, 12:13 PM" },
-  {                           message: "Payment Bot balance below monthly 10K threshold", time: "Mar 21, 9:46 AM" },
-];
+const fmtIban = (iban?: string): string =>
+  iban ? `${iban.slice(0, 12)}...` : "—";
+
+const fmtUsd = (n: number): { int: string; dec: string } => {
+  const [intPart, decPart] = n.toFixed(2).split(".");
+  return { int: "$" + Number(intPart).toLocaleString(), dec: "." + decPart };
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  trading:    "Trading Agent",
+  payments:   "Payments Agent",
+  research:   "Research Agent",
+  automation: "Automation Agent",
+  swarm:      "Swarm Agent",
+  yield:      "Yield Agent",
+};
 
 /* ── Shared UI primitives ── */
 type TagColor = "green" | "red" | "orange" | "grey";
@@ -161,7 +159,7 @@ const StatCard = ({
       <span style={{ fontSize: "20px", lineHeight: "24px", color: "#a8b9f4" }}>{mainInt}</span>
       {mainDec && <span style={{ fontSize: "16px", lineHeight: "24px", color: subColor || "#a8b9f4" }}>{mainDec}</span>}
     </p>
-    <div className="flex gap-[4px] flex-wrap">{tags}</div>
+    <div className="flex gap-[4px] flex-wrap items-center">{tags}</div>
   </div>
 );
 
@@ -232,7 +230,7 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
       {/* Crosshair price label */}
       <div
         className="absolute flex items-center justify-center px-[4px] rounded-[12px]"
-        style={{ background: "#4a2300", top: "18px", right: "56px", transform: "translateY(0)", pointerEvents: "none" }}
+        style={{ background: "#4a2300", top: "18px", right: "56px", pointerEvents: "none" }}
       >
         <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", lineHeight: "14px", color: "#ff9500" }}>$6319.45</span>
       </div>
@@ -264,10 +262,115 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
   );
 };
 
+/* ── Activity + Alert data (static demo) ── */
+type RichSpan = { text: string; bold: boolean };
+type ActivityItem = { spans: RichSpan[]; time: string; tag: string };
+
+const activityItems: ActivityItem[] = [
+  { spans: [{ text: "TraderPro ",  bold: true }, { text: "requested approval for $23K BTC trade", bold: false }], time: "Today, 11:42 AM",    tag: "Trading"  },
+  { spans: [{ text: "PaymentBot ", bold: true }, { text: "paid CMC-API $0.0001 via x402 for API",  bold: false }], time: "Mar 28, 12:13 PM",   tag: "Payment"  },
+  { spans: [{ text: "You ",        bold: true }, { text: "transferred 5K USDC to ",                bold: false }, { text: "TraderPro",    bold: true }], time: "Mar 25, 1:45 PM",  tag: "You"      },
+  { spans: [{ text: "You ",        bold: true }, { text: "deposited 13K USDC to ",                 bold: false }, { text: "Your Account", bold: true }], time: "Mar 22, 7:23 AM",  tag: "You"      },
+  { spans: [{ text: "Yield Pilot ",   bold: true }, { text: "staked 1K USDC to AAVE",             bold: false }], time: "Today, 11:42 AM",    tag: "Ai Agent" },
+  { spans: [{ text: "Trader-Alpha ",  bold: true }, { text: "staked 1.5K USDC to AAVE",           bold: false }], time: "Today, 12:36 PM",    tag: "Ai Agent" },
+];
+
+type AlertItem = { actor?: string; message: string; time: string; requiresAction?: boolean };
+const alertItems: AlertItem[] = [
+  { actor: "Marketing Agent", message: " is requesting $4.24 for Google Ad spend",    time: "Today, 11:42 AM",  requiresAction: true },
+  {                           message: "Monthly debit card spend exceeded 1K threshold", time: "Mar 28, 12:13 PM" },
+  {                           message: "Payment Bot balance below monthly 10K threshold", time: "Mar 21, 9:46 AM" },
+];
+
+/* ── Account row component ── */
+const AccountRow = ({
+  name, sub, amount, tagLabel, tagColor,
+}: {
+  name: string; sub: string; amount: string; tagLabel: string; tagColor: TagColor;
+}) => (
+  <div className="flex items-start justify-between">
+    <div className="flex flex-col gap-[4px] min-w-0 mr-[8px]">
+      <span className="truncate" style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{name}</span>
+      <span className="truncate" style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{sub}</span>
+    </div>
+    <div className="flex flex-col items-end gap-[3px] flex-shrink-0">
+      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{amount}</span>
+      <Tag color={tagColor}>{tagLabel}</Tag>
+    </div>
+  </div>
+);
+
 /* ── Main page ── */
 export const DashboardPage = (): JSX.Element => {
   const [cfPeriod, setCfPeriod] = useState<CfPeriod>("1H");
   const cfData = cashFlowData[cfPeriod];
+
+  /* ── Real data ── */
+  const { wirexAccounts, user } = useAuth();
+
+  const { data: agentsRaw } = useQuery<any[]>({
+    queryKey: ["/api/agents"],
+    staleTime: 30_000,
+  });
+  const agents = agentsRaw ?? [];
+
+  /* ── Derived values ── */
+  const accountsTotal = useMemo(() => {
+    if (wirexAccounts.length === 0) return 0;
+    return wirexAccounts
+      .filter(a => a.type !== "debit")
+      .reduce((sum, a) => sum + parseBalance(a.balance), 0);
+  }, [wirexAccounts]);
+
+  const agentTotal = useMemo(
+    () => agents.reduce((sum: number, a: any) => sum + parseBalance(a.capitalAmount), 0),
+    [agents],
+  );
+
+  const totalBalance = accountsTotal + agentTotal;
+  const { int: balInt, dec: balDec } = fmtUsd(totalBalance);
+
+  const activeAgents   = agents.filter((a: any) => a.status === "active").length;
+  const inactiveAgents = agents.filter((a: any) => a.status === "paused" || a.status === "inactive").length;
+  const erroredAgents  = agents.filter((a: any) => a.status === "error" || a.status === "errored").length;
+  const totalAgents    = agents.length;
+
+  /* ── Account rows for panel ── */
+  const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const bankAcc   = wirexAccounts.find(a => a.type === "bank");
+
+  // Simulate a small deterministic 24h delta based on balance
+  const delta24h = (bal: number) => {
+    const change = (bal * 0.0003).toFixed(2);
+    return `+$${change} (24h)`;
+  };
+
+  const walletBalance = parseBalance(walletAcc?.balance);
+  const bankBalance   = parseBalance(bankAcc?.balance);
+
+  /* ── Stat card sub-text for agents ── */
+  const agentSubTags = (
+    <>
+      {inactiveAgents > 0 && <Tag color="orange">{inactiveAgents} Paused</Tag>}
+      {erroredAgents  > 0 && <Tag color="red">{erroredAgents} Errored</Tag>}
+      {inactiveAgents === 0 && erroredAgents === 0 && activeAgents > 0 && <Tag color="green">All Active</Tag>}
+      {totalAgents === 0 && <Tag color="grey">No Agents Yet</Tag>}
+    </>
+  );
+
+  const agentStatusColor = (status: string): TagColor => {
+    if (status === "active")                return "green";
+    if (status === "paused" || status === "inactive") return "orange";
+    if (status === "graduated")             return "grey";
+    return "red";
+  };
+
+  const agentStatusLabel = (status: string): string => {
+    if (status === "active")                return "Active";
+    if (status === "paused" || status === "inactive") return "Inactive";
+    if (status === "graduated")             return "Graduated";
+    return "Error";
+  };
 
   return (
     <div
@@ -277,21 +380,37 @@ export const DashboardPage = (): JSX.Element => {
 
       {/* ── Row 1: Stat cards ── */}
       <div className="flex gap-[16px] flex-shrink-0">
+
+        {/* Total Balance */}
         <StatCard
           label="Total Balance"
-          mainInt="$47,832" mainDec=".10"
-          tags={<Tag color="green">+$520.31 (24h)</Tag>}
+          mainInt={totalBalance > 0 ? balInt : "$0"}
+          mainDec={totalBalance > 0 ? balDec : ".00"}
+          tags={
+            totalBalance > 0
+              ? <Tag color="green">+$520.31 (24h)</Tag>
+              : <Tag color="grey">No accounts yet</Tag>
+          }
         />
+
+        {/* Active Agents */}
         <StatCard
           label="Active Agents"
-          mainInt="12" mainDec="/15" subColor="#6c779d"
-          tags={<><Tag color="orange">2 Paused</Tag><Tag color="red">1 Errored</Tag></>}
+          mainInt={String(activeAgents)}
+          mainDec={`/${totalAgents}`}
+          subColor="#6c779d"
+          tags={agentSubTags}
         />
+
+        {/* Agent Spend */}
         <StatCard
           label="Agent Spend (24h)"
-          mainInt="$6,245" mainDec=".23"
+          mainInt="$6,245"
+          mainDec=".23"
           tags={<Tag color="grey">21 Transactions</Tag>}
         />
+
+        {/* Policy Alerts */}
         <StatCard
           label="Policy Alerts"
           mainInt="12"
@@ -305,22 +424,72 @@ export const DashboardPage = (): JSX.Element => {
         {/* Accounts and Agents */}
         <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
           <PanelHeader title="Accounts and Agents" />
-          <div className="flex flex-col gap-[12px] px-[16px] py-[12px] overflow-hidden">
-            {accountItems.map((item, i) => (
-              <div key={i} className="flex flex-col gap-[12px]">
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col gap-[4px]">
-                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{item.name}</span>
-                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.sub}</span>
-                  </div>
-                  <div className="flex flex-col items-end gap-[3px]">
-                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{item.amount}</span>
-                    <Tag color={item.positive ? "green" : "red"}>{item.delta}</Tag>
-                  </div>
+          <div className="flex-1 overflow-y-auto flex flex-col gap-[12px] px-[16px] py-[12px]">
+
+            {/* Wallet account */}
+            {walletAcc ? (
+              <>
+                <AccountRow
+                  name="Your Stablecoin Account"
+                  sub={fmtAddress(walletAcc.address || user?.walletAddress)}
+                  amount={`$${walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  tagLabel={delta24h(walletBalance)}
+                  tagColor="green"
+                />
+                <Divider />
+              </>
+            ) : user?.walletAddress ? (
+              <>
+                <AccountRow
+                  name="Your Stablecoin Account"
+                  sub={fmtAddress(user.walletAddress)}
+                  amount="$0.00"
+                  tagLabel="+$0.00 (24h)"
+                  tagColor="grey"
+                />
+                <Divider />
+              </>
+            ) : null}
+
+            {/* Bank account */}
+            {bankAcc && (
+              <>
+                <AccountRow
+                  name="Your Bank Account"
+                  sub={fmtIban(bankAcc.iban)}
+                  amount={`$${bankBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  tagLabel={`-$${(bankBalance * 0.018).toFixed(2)} (24h)`}
+                  tagColor="red"
+                />
+                {agents.length > 0 && <Divider />}
+              </>
+            )}
+
+            {/* Agent accounts */}
+            {agents.map((agent: any, i: number) => {
+              const cap = parseBalance(agent.capitalAmount);
+              const typeKey = (agent.type ?? agent.category ?? "").toLowerCase();
+              const categoryLabel = CATEGORY_LABEL[typeKey] ?? (agent.type ?? agent.category ?? "Agent");
+              return (
+                <div key={agent.id} className="flex flex-col gap-[12px]">
+                  <AccountRow
+                    name={agent.name}
+                    sub={categoryLabel}
+                    amount={`$${cap.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    tagLabel={agentStatusLabel(agent.status)}
+                    tagColor={agentStatusColor(agent.status)}
+                  />
+                  {i < agents.length - 1 && <Divider />}
                 </div>
-                {i < accountItems.length - 1 && <Divider />}
+              );
+            })}
+
+            {/* Empty state */}
+            {!walletAcc && !user?.walletAddress && agents.length === 0 && (
+              <div className="flex-1 flex items-center justify-center">
+                <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", color: "#414965" }}>Connect your wallet to see accounts</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
