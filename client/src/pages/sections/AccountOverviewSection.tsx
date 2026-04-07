@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
 import { useAuth, type WirexAccount } from "@/lib/authContext";
@@ -77,11 +78,6 @@ const cardActions = [
   { icon: "/figmaAssets/icons-9.svg",  label: "Exchange" },
 ];
 
-const agentAccounts = [
-  { id: "1", name: "AlphaFlow",     ticker: "$ALPHA", icon: "⚡", type: "Trading",   avatar: "/figmaAssets/avatars-3.svg" },
-  { id: "2", name: "SwarmAlpha",    ticker: "$SWRM",  icon: "🤖", type: "Analytics", avatar: "/figmaAssets/avatars-7.svg" },
-  { id: "3", name: "Risk Sentinel", ticker: "$RSKX",  icon: "🛡",  type: "Risk",      avatar: "/figmaAssets/avatars-5.svg" },
-];
 
 /* ─── Card sub-components ─── */
 
@@ -232,7 +228,7 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
 /* ── AI Agent cards (green theme) ── */
 
 const AgentWalletCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border-[1.4px] border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
     <GreenGlow />
     <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
@@ -256,7 +252,7 @@ const AgentWalletCard = ({ agentName }: { agentName: string }) => (
 );
 
 const AgentDebitCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border-[1.4px] border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
     <GreenGlow />
     <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
@@ -290,6 +286,16 @@ interface Props {
 
 export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange }: Props): JSX.Element => {
   const { wirexAccounts, user } = useAuth();
+
+  const { data: agentsRaw = [] } = useQuery<any[]>({ queryKey: ["/api/agents"] });
+  const agentAccounts = agentsRaw.map((a: any) => ({
+    id: String(a.id),
+    name: a.name ?? "Agent",
+    ticker: a.policy?.uiTicker ? `$${a.policy.uiTicker}` : `$${(a.name ?? "AGT").slice(0, 4).toUpperCase()}`,
+    type: a.type ?? "AI",
+    avatar: a.avatarUrl ?? "/figmaAssets/avatars-3.svg",
+  }));
+
   // Find live WireX accounts by type
   const liveWallet = wirexAccounts.find(a => a.type === "wallet");
   const liveDebit  = wirexAccounts.find(a => a.type === "debit");
