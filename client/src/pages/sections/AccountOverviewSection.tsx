@@ -140,7 +140,7 @@ const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Wallet Address</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Crypto Wallet Address</span>
         <div className="flex items-center gap-2 self-stretch">
           <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">{truncated}</span>
           <CopyIcon value={addr} />
@@ -206,7 +206,7 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">IBAN Account Number</span>
+        <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Bank Account Number</span>
         <div className="flex items-center gap-2 self-stretch">
           <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">{iban}</span>
           <CopyIcon value={iban} />
@@ -229,7 +229,7 @@ const AgentWalletCard = ({ agentName }: { agentName: string }) => (
     <GreenGlow />
     <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Wallet Address</span>
+      <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Crypto Wallet Address</span>
       <div className="flex items-center gap-2 self-stretch">
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">0x7cB5.....486A8</span>
         <CopyIcon />
@@ -481,7 +481,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 {/* Label */}
                 <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                   {isYourCollapsedAccount
-                    ? (["Stablecoin Account", "Debit Card", "Bank Account"] as const)[collapsedCardIndex as 0|1|2] ?? "Your Account"
+                    ? (["Crypto Account", "Debit Card", "Bank Account"] as const)[collapsedCardIndex as 0|1|2] ?? "Your Account"
                     : (selectedAgent?.name ?? "Account")}
                 </span>
                 {/* Green checkmark + chevron */}
@@ -522,9 +522,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
                   {/* WireX account rows */}
                   {[
-                    { cardIdx: 0, label: "Stablecoin Account", tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
-                    { cardIdx: 1, label: "Debit Card",         tag: liveDebit?.cardNumber ?? "——" },
-                    { cardIdx: 2, label: "Bank Account",       tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
+                    { cardIdx: 0, label: "Crypto Account", tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
+                    { cardIdx: 1, label: "Debit Card",     tag: liveDebit?.cardNumber ?? "——" },
+                    { cardIdx: 2, label: "Bank Account",   tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
                     const isSel = isYourCollapsedAccount && collapsedCardIndex === cardIdx;
                     return (
@@ -984,7 +984,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
                   {/* WireX account rows */}
                   {[
-                    { id: null as null, cardIdx: 0, label: "Stablecoin Account", tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
+                    { id: null as null, cardIdx: 0, label: "Crypto Account", tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
                     { id: null as null, cardIdx: 1, label: "Debit Card",         tag: liveDebit?.cardNumber ?? "——" },
                     { id: null as null, cardIdx: 2, label: "Bank Account",       tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
