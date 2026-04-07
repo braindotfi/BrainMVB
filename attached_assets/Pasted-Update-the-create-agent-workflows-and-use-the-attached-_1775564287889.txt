@@ -1,0 +1,181 @@
+Update the create agent workflows and use the attached schema document "Brain_Agent_Configuration_Schema.pdf" as your source of truth for:
+- All input fields per agent type (exact field names, types, examples)
+- Policy hash composition (what gets hashed for on-chain enforcement)
+- Enforcement layer descriptions (PolicyEngine, PolicyValidator, Crossmint Agent Wallet)
+- Contract interfaces (IBrainAccount, IPolicyValidator, IERC8004)
+- API endpoints and data structures
+- Claude tool schemas for each agent type
+
+Technology Stack:
+- Cryptography: ethers.js for Keccak256 hashing and ERC-4337 UserOperation construction
+- State Management: zustand for form state
+- Form Handling: React Hook Form + Zod for validation
+
+
+Application Flow:
+
+1. **Agent Type Selection Screen**
+   - Six cards representing each agent type (Trading, Lending, Yield, Payments, Analytics, Custom)
+   - Each card shows icon, description, and key use case
+   - On selection, navigate to the configuration form for that type
+   - Include a "Learn More" tooltip for each type
+
+2. **Dynamic Form Generation**
+   - Render form fields based on selected agent_type
+   - Group related fields into collapsible sections (e.g., "Position Controls" for Trading agents)
+   - Add inline hints and tooltips for each input
+   - Validate inputs in real-time (e.g., max_position_size > 0, allowed_markets non-empty)
+   - Show concrete examples in placeholders (e.g., "e.g., BTC-USDC, ETH-USDC" for allowed_markets)
+   - Display field type and constraints clearly (e.g., "uint256 (USDC wei)" or "0-100 (percent)")
+   - Include "Copy Example Configuration" button to pre-fill with realistic sample data
+
+3. **Policy Hash Computation**
+   - Once user fills and submits the form, compute policy_hash = keccak256(abi.encode(...))
+   - Use ethers.js: ethers.AbiCoder.defaultAbiCoder().encode([type1, type2, ...], [value1, value2, ...])
+   - Policy hash must be deterministic: same inputs always produce same hash
+   - Display policy_hash in a read-only, copyable field
+   - Show policy_nonce (default: 0) and policy_expiry (default: current_timestamp + 10 minutes)
+   - Include a "Test Hash Determinism" button that re-computes and confirms hash stability
+
+4. **Enforcement Stack Visualization**
+   - Display three-tier enforcement architecture:
+     - **Tier 1 - PolicyEngine (Control Plane)**: List specific validation checks (e.g., "Position size < max_position_size_usdc", "Market in allowlist")
+     - **Tier 2 - PolicyValidator (On-Chain)**: Proof verification, replay prevention via nonces/expiry, oracle-gated checks
+     - **Tier 3 - Crossmint Agent Wallet**: Smart contract guardrails, spend limits, recipient whitelisting
+   - Use color-coded badges for each tier
+   - Explain in plain language what each tier does and why it matters
+   - Include a collapsible "Technical Details" section for each tier
+
+5. **API Integration (Backend)**
+   - POST /api/agents/create: Save agent config to agents table, derive policy_hash, return agent_id and tx_hash
+   - POST /api/agents/validate: Validate policy_hash against stored config (idempotent)
+   - GET /api/agents/:agent_id: Retrieve full agent status, balance, recent actions
+   - POST /api/agents/:agent_id/policy: Update policy, store old and new hashes for audit trail
+   - All responses include signed policy_proof once control plane signs it (async)
+   - Include proper error handling with descriptive messages
+
+6. **Claude Tool Schema Display**
+   - Show the Claude tool schema (JSON) for the selected agent type
+   - Display in a syntax-highlighted code block (read-only)
+   - Include a sidebar explaining:
+     - What each tool does
+     - Tool input schema (parameters, types, constraints)
+     - Example usage
+     - When this tool is called (ReAct loop condition)
+   - "Copy Tool Schema" button for developer reference
+
+7. **Summary Screen Before Deployment**
+   - Show all user inputs in a read-only summary
+   - Display computed policy_hash with visual confirmation
+   - Show estimated monthly costs (if applicable)
+   - Display all three enforcement tiers and what they validate
+   - Prominent "Deploy Agent" button
+   - "Edit" button to go back and modify inputs
+
+8. **Deployment & Feedback**
+   - Show deployment progress:
+     - Hashing inputs → policy_hash computed
+     - Signing proof → proof generated
+     - Submitting UserOperation → awaiting confirmation
+     - Agent registered → ERC-8004 registry entry
+   - Display final agent_id and tx_hash once deployed
+   - Show "View on Explorer" link to on-chain transaction
+   - Offer "Deploy Another Agent" or "View Agent Dashboard" options
+
+Database Schema:
+```sql
+CREATE TABLE agents (
+  agent_id BYTEA PRIMARY KEY,
+  owner_address VARCHAR(42),
+  agent_type VARCHAR(20),
+  agent_name VARCHAR(64),
+  agent_description VARCHAR(256),
+  status VARCHAR(20),
+  capital_allocation BIGINT,
+  balance_usdc BIGINT,
+  policy_hash BYTEA,
+  tx_hash VARCHAR(66),
+  created_at BIGINT,
+  updated_at BIGINT,
+  deployed_at BIGINT
+);
+
+CREATE TABLE agent_policies (
+  policy_id SERIAL PRIMARY KEY,
+  agent_id BYTEA REFERENCES agents(agent_id),
+  policy_parameters JSONB,
+  policy_hash BYTEA,
+  nonce INT DEFAULT 0,
+  expiry BIGINT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at BIGINT
+);
+
+CREATE TABLE agent_actions (
+  action_id BYTEA PRIMARY KEY,
+  agent_id BYTEA REFERENCES agents(agent_id),
+  action_type VARCHAR(20),
+  timestamp BIGINT,
+  amount_usdc BIGINT,
+  counterparty VARCHAR(42),
+  tx_hash VARCHAR(66),
+  policy_proof_hash BYTEA,
+  status VARCHAR(20),
+  created_at BIGINT
+);
+
+CREATE TABLE agent_memory (
+  memory_id SERIAL PRIMARY KEY,
+  agent_id BYTEA REFERENCES agents(agent_id),
+  observation_type VARCHAR(50),
+  embedding VECTOR(1536),
+  content TEXT,
+  created_at BIGINT,
+  INDEX ON (agent_id, observation_type)
+);
+```
+
+Error Handling:
+- Validate inputs before policy_hash computation
+- Clear error messages (e.g., "max_position_size must be >= $100 (in USDC wei)")
+- Handle edge cases: ENS resolution, decimal place handling, address checksums
+- Implement retry logic for proof generation (exponential backoff)
+- Show network errors with suggestions (e.g., "Try again or switch RPC endpoint")
+- Gracefully handle contract reverts with human-readable explanations
+
+Code Organization:
+/src 
+/pages 
+/agents 
+/index.tsx (Agent selection screen) 
+/[type].tsx (Form page for agent type) 
+/[agent_id].tsx (Agent detail/dashboard) 
+/components 
+/AgentTypeCard.tsx 
+/DynamicFormField.tsx 
+/PolicyHashDisplay.tsx 
+/EnforcementStack.tsx 
+/ToolSchema.tsx 
+/DeploymentSummary.tsx 
+/DeploymentProgress.tsx 
+/lib 
+/policyHash.ts (Keccak256 computation) 
+/validation.ts (Zod schemas per agent type) 
+/apiClient.ts (API calls) 
+/ethers.ts (ethers.js helpers) 
+/hooks 
+/useAgentForm.ts 
+/usePolicyHash.ts 
+/useDeployment.ts 
+/types 
+/agent.ts (Agent interfaces) 
+/policy.ts (Policy interfaces) 
+/api.ts (API response types)
+
+Test policy hash computation with concrete examples: 
+- Example 1: Trading agent with max_position=10000e6, max_daily_loss=5%, allowed_markets=['BTC-USDC']  
+     - Should produce deterministic hash, same every time 
+- Example 2: Same inputs with minor change (e.g., max_daily_loss=6%)  
+     - Should produce completely different hash 
+- Example 3: Same inputs, different order of allowed_markets  
+     - Should produce same hash (order-independent for arrays in abi.encode) Include comprehensive comments explaining policy hash composition for each agent type.
