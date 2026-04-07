@@ -102,9 +102,13 @@ function apiAgentToData(a: any): AgentData {
 
   const rules: AgentRule[] = buildRulesFromPolicy(p, type, capitalAmt, capitalAsset);
 
-  const deployedAt = a.createdAt
-    ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : "Just now";
+  const fmtDate = (d: string | Date | undefined) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : undefined;
+
+  const deployedAt   = fmtDate(a.createdAt) ?? "Just now";
+  const lastActiveAt = fmtDate(a.lastActiveAt);
+  // Only show "Last Updated" if it differs from the deployment date
+  const lastUpdated  = lastActiveAt && lastActiveAt !== deployedAt ? lastActiveAt : undefined;
 
   return {
     id: a.id,
@@ -125,6 +129,7 @@ function apiAgentToData(a: any): AgentData {
     schedule: executionModeLabel(p.uiExecutionMode),
     walletAddress: a.brainAccountAddress ?? "0x0000000000000000000000000000000000000000",
     deployedAt,
+    lastUpdated,
     createdByUser: true,
     activityLog: [
       { time: "Just now", event: "Agent deployed", detail: `${a.name} activated and ready to execute.`, kind: "success" as const },
@@ -476,9 +481,17 @@ export const AgentDetailPage = (): JSX.Element => {
               <ConfigRow
                 label="Deployed"
                 value={agent.deployedAt}
-                hasDivider={false}
+                hasDivider={!!agent.lastUpdated}
                 onEdit={() => openEdit(1)}
               />
+              {agent.lastUpdated && (
+                <ConfigRow
+                  label="Last Updated"
+                  value={agent.lastUpdated}
+                  hasDivider={false}
+                  onEdit={() => openEdit(1)}
+                />
+              )}
             </div>
           </div>
 

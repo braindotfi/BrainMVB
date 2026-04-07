@@ -4,7 +4,7 @@ import {
   ColorType,
   CrosshairMode,
   LineStyle,
-  AreaSeries,
+  HistogramSeries,
   type IChartApi,
   type ISeriesApi,
   type SeriesType,
@@ -15,15 +15,31 @@ type Period = "1H" | "1D" | "1W" | "1M" | "1Y" | "ALL";
 
 const PERIODS: Period[] = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 
-const GREEN        = "#42bf23";
-const GREEN_TOP    = "rgba(66,191,35,0.32)";
-const GREEN_BOTTOM = "rgba(66,191,35,0.01)";
+const GREEN     = "#42bf23";
+const GREEN_DIM = "rgba(66,191,35,0.52)";
 
-function generateData(agent: AgentData, period: Period): { time: number; value: number }[] {
+/* ─── Deterministic LCG random ─── */
+function makeRng(seed: number) {
+  let s = (seed * 1664525 + 1013904223) >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+function agentSeed(agent: AgentData): number {
+  return agent.id.split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
+}
+
+/** Generate action-count data for each time bucket */
+function generateData(
+  agent: AgentData,
+  period: Period,
+): { time: number; value: number; color: string }[] {
   const now = Math.floor(Date.now() / 1000);
+
   let intervalSecs: number;
   let count: number;
-
   switch (period) {
     case "1H":  intervalSecs = 60;         count = 60; break;
     case "1D":  intervalSecs = 3600;       count = 24; break;
@@ -33,26 +49,52 @@ function generateData(agent: AgentData, period: Period): { time: number; value: 
     case "ALL": intervalSecs = 86400 * 30; count = 36; break;
   }
 
-  const raw  = parseFloat(agent.earnings.replace(/[^0-9.]/g, "")) || 1000;
-  const base = 0.055 + (raw % 500) / 100_000;
-  const seed = agent.id.charCodeAt(0) * 13 + agent.id.charCodeAt(1) * 7;
-  const vol  = 0.0018;
+  const totalTrades = agent.trades || 120;
+  const seed        = agentSeed(agent) + period.charCodeAt(0) * 17;
+  const rng         = makeRng(seed);
+
+  /* Average actions per bucket, scaled to the period */
+  const avgPerBucket = Math.max(1, (() => {
+    switch (period) {
+      case "1H":  return totalTrades / (24 * 60);
+      case "1D":  return totalTrades / 24;
+      case "1W":  return totalTrades / 7;
+      case "1M":  return totalTrades / 30;
+      case "1Y":  return totalTrades / 52;
+      case "ALL": return totalTrades / 12;
+    }
+  })());
 
   const start = now - intervalSecs * count;
-  let price = base;
-  const pts: { time: number; value: number }[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const progress = i / count;
-    const trend = progress * vol * 1.4;
-    const n1    = vol * 0.50 * Math.sin(i * 2.3  + seed * 0.7);
-    const n2    = vol * 0.28 * Math.sin(i * 5.1  + seed * 0.3);
-    const n3    = vol * 0.14 * Math.sin(i * 11.7 + seed * 1.1);
-    price = Math.max(base * 0.80, base + trend + n1 + n2 + n3);
-    pts.push({ time: start + intervalSecs * i, value: parseFloat(price.toFixed(6)) });
-  }
-  return pts;
+  return Array.from({ length: count }, (_, i) => {
+    /* Simulate market-hours bump for sub-day buckets */
+    const bucketHour = Math.floor(((start + intervalSecs * i) % 86400) / 3600);
+    const hourFactor =
+      period === "1H" || period === "1D"
+        ? bucketHour >= 8 && bucketHour <= 20 ? 1.45 : 0.55
+        : 1.0;
+
+    const noise = rng();
+    const val   = Math.max(0, Math.round(avgPerBucket * hourFactor * (0.25 + noise * 1.55)));
+    const isHigh = val > avgPerBucket * 1.15;
+
+    return {
+      time:  start + intervalSecs * i,
+      value: val,
+      color: isHigh ? GREEN : GREEN_DIM,
+    };
+  });
 }
+
+const PERIOD_LABEL: Record<Period, string> = {
+  "1H": "past hour",
+  "1D": "past 24 h",
+  "1W": "past week",
+  "1M": "past month",
+  "1Y": "past year",
+  "ALL": "all time",
+};
 
 interface Props { agent: AgentData }
 
@@ -65,23 +107,26 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
   const periodRef    = useRef<Period>(period);
   periodRef.current  = period;
 
-  /* ── Derive header values from data ── */
-  const data      = generateData(agent, period);
-  const firstVal  = data[0]?.value  ?? 0;
-  const lastVal   = data[data.length - 1]?.value ?? 0;
-  const absDelta  = lastVal - firstVal;
-  const pctDelta  = firstVal ? (absDelta / firstVal) * 100 : 0;
-  const positive  = absDelta >= 0;
-  const priceStr  = lastVal.toFixed(4);
-  const deltaStr  = `${positive ? "+" : ""}$${Math.abs(absDelta).toFixed(4)} (${Math.abs(pctDelta).toFixed(2)}%)`;
+  /* ── Summary numbers ── */
+  const data  = generateData(agent, period);
+  const total = data.reduce((s, d) => s + d.value, 0);
 
-  /* ── Create chart once on mount ── */
+  /* Compare first half vs second half of the period for trend */
+  const mid       = Math.floor(data.length / 2);
+  const firstHalf = data.slice(0, mid).reduce((s, d) => s + d.value, 0);
+  const secHalf   = data.slice(mid).reduce((s, d) => s + d.value, 0);
+  const delta     = secHalf - firstHalf;
+  const positive  = delta >= 0;
+  const deltaPct  = firstHalf > 0 ? Math.round(Math.abs(delta / firstHalf) * 100) : 0;
+  const deltaStr  = `${positive ? "▲" : "▼"} ${deltaPct}%`;
+
+  /* ── Create chart once ── */
   useEffect(() => {
     if (!containerRef.current) return;
 
     const chart = createChart(containerRef.current, {
       width:  containerRef.current.clientWidth || 600,
-      height: 310,
+      height: 290,
       layout: {
         background:      { type: ColorType.Solid, color: "#0a0c10" },
         textColor:       "#6c779d",
@@ -110,7 +155,7 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
       rightPriceScale: {
         visible:       true,
         borderVisible: false,
-        scaleMargins:  { top: 0.08, bottom: 0.15 },
+        scaleMargins:  { top: 0.08, bottom: 0.06 },
       },
       leftPriceScale: { visible: false },
       timeScale: {
@@ -124,25 +169,16 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
       handleScale:  false,
     } as any);
 
-    const series = chart.addSeries(AreaSeries, {
-      lineColor:                    GREEN,
-      topColor:                     GREEN_TOP,
-      bottomColor:                  GREEN_BOTTOM,
-      lineWidth:                    2,
-      priceLineVisible:             false,
-      lastValueVisible:             false,
-      crosshairMarkerVisible:       true,
-      crosshairMarkerRadius:        4,
-      crosshairMarkerBorderColor:   GREEN,
-      crosshairMarkerBackgroundColor: GREEN,
+    const series = chart.addSeries(HistogramSeries, {
+      color:            GREEN_DIM,
+      priceLineVisible: false,
+      lastValueVisible: false,
     });
 
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    /* Initial data load */
-    const init = generateData(agent, periodRef.current);
-    series.setData(init as any);
+    series.setData(generateData(agent, periodRef.current) as any);
     chart.timeScale().fitContent();
 
     const ro = new ResizeObserver(() => {
@@ -160,45 +196,47 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Reload data whenever period or agent changes ── */
+  /* ── Update data on period / agent change ── */
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current) return;
-    const newData = generateData(agent, period);
-    seriesRef.current.setData(newData as any);
+    seriesRef.current.setData(generateData(agent, period) as any);
     chartRef.current.timeScale().fitContent();
   }, [period, agent.id]);
 
   return (
-    <div
-      className="rounded-[16px] overflow-hidden"
-      style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
-    >
+    <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+
       {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between px-[16px] py-[10px]"
-        style={{ borderBottom: "1px solid #1d2132" }}
-      >
-        {/* Price + delta pill */}
+      <div className="flex items-center justify-between px-[16px] py-[10px]" style={{ borderBottom: "1px solid #1d2132" }}>
+
+        {/* Count + trend pill */}
         <div className="flex items-center gap-[8px] flex-shrink-0">
-          <p style={{ lineHeight: 0 }}>
-            <span style={{ fontFamily: "'Gilroy-Medium',Helvetica,sans-serif", fontSize: "16px", lineHeight: "28px", color: "#a8b9f4" }}>$</span>
-            <span style={{ fontFamily: "'Gilroy-Medium',Helvetica,sans-serif", fontSize: "24px", lineHeight: "28px", color: "#a8b9f4" }}>{priceStr}</span>
-          </p>
+          <div className="flex flex-col gap-[2px]">
+            <div className="flex items-baseline gap-[4px]">
+              <span style={{ fontFamily: "'Gilroy-Bold',Helvetica,sans-serif", fontSize: "22px", lineHeight: "26px", color: "#a8b9f4" }}>
+                {total.toLocaleString()}
+              </span>
+              <span style={{ fontFamily: "'Gilroy-Medium',Helvetica,sans-serif", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>
+                actions
+              </span>
+            </div>
+            <span style={{ fontFamily: "'Gilroy-Medium',Helvetica,sans-serif", fontSize: "11px", color: "#414965" }}>
+              {PERIOD_LABEL[period]}
+            </span>
+          </div>
+
           <div
             className="flex items-center justify-center px-[8px] py-[4px] rounded-[40px] flex-shrink-0"
             style={{ background: positive ? "#123509" : "#350011" }}
           >
-            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica,sans-serif", fontSize: "14px", lineHeight: "16px", color: positive ? GREEN : "#d20344", whiteSpace: "nowrap" }}>
+            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica,sans-serif", fontSize: "13px", lineHeight: "16px", color: positive ? GREEN : "#d20344", whiteSpace: "nowrap" }}>
               {deltaStr}
             </span>
           </div>
         </div>
 
-        {/* Period tabs */}
-        <div
-          className="flex items-center gap-[2px] p-[2px] rounded-[400px] flex-shrink-0"
-          style={{ background: "#06070a" }}
-        >
+        {/* Period selector */}
+        <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] flex-shrink-0" style={{ background: "#06070a" }}>
           {PERIODS.map((p) => (
             <button
               key={p}
@@ -215,8 +253,8 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
         </div>
       </div>
 
-      {/* ── TradingView Lightweight Chart ── */}
-      <div ref={containerRef} style={{ height: "310px", background: "#0a0c10" }} />
+      {/* ── Chart canvas ── */}
+      <div ref={containerRef} style={{ height: "290px", background: "#0a0c10" }} />
     </div>
   );
 };

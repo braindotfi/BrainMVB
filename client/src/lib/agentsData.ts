@@ -25,6 +25,7 @@ export interface AgentData {
   schedule: string;
   walletAddress: string;
   deployedAt: string;
+  lastUpdated?: string;
   createdByUser?: boolean;
   activityLog: { time: string; event: string; detail: string; kind: "success" | "info" | "warn" }[];
 }
