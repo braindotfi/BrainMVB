@@ -4,29 +4,52 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
-/* ── Agent Card matching Figma 2954-28819 exactly ── */
+/* ── Per-agent spend cap mock data ── */
+const SPEND_DATA: Record<string, { cap: string; unit: string; pct: number }> = {
+  alphaflow:     { cap: "$5k",    unit: "/day", pct: 62 },
+  yieldpilot:    { cap: "$2.5k",  unit: "/day", pct: 18 },
+  risksentinel:  { cap: "$10k",   unit: "/day", pct: 8  },
+  signalseer:    { cap: "$500",   unit: "/mo",  pct: 34 },
+  inboxzero:     { cap: "$50",    unit: "/mo",  pct: 0  },
+  trendradar:    { cap: "$1k",    unit: "/day", pct: 45 },
+  taskforgepro:  { cap: "$5k",    unit: "/day", pct: 71 },
+  opscommander:  { cap: "$3k",    unit: "/day", pct: 29 },
+};
+
+/* ── Color logic based on % used ── */
+const usedColor = (pct: number) => {
+  if (pct >= 90) return "#d20344";
+  if (pct >= 70) return "#ff9500";
+  return "#42bf23";
+};
+
+/* ── Agent Card — Figma 3374-34051 ── */
 const AgentCard = ({
   agent,
+  spend,
   currentStatus,
   onToggle,
   isUpdating,
-  onEdit,
+  onOpen,
 }: {
   agent: AgentData;
+  spend: { cap: string; unit: string; pct: number };
   currentStatus: AgentStatus;
   onToggle: () => void;
   isUpdating: boolean;
-  onEdit: () => void;
+  onOpen: () => void;
 }) => {
   const isActive = currentStatus === "active";
+  const barColor = usedColor(spend.pct);
 
   return (
     <div
       data-testid={`card-agent-${agent.id}`}
-      className="flex flex-col gap-[16px] p-[16px] border border-[#1d2132] rounded-[16px] transition-colors hover:border-[#2d3450]"
+      className="bg-[#0a0c10] flex flex-col gap-[8px] p-[16px] rounded-[16px] cursor-pointer transition-opacity hover:opacity-90 select-none"
+      onClick={onOpen}
     >
-      {/* ── Header: avatar + name block ── */}
-      <div className="flex gap-[8px] items-center h-[48px]">
+      {/* ── Header: avatar + name/tag + stop/start btn ── */}
+      <div className="flex gap-[8px] h-[48px] items-center">
         {/* Avatar 48×48 */}
         <div className="overflow-hidden relative flex-shrink-0 size-[48px] rounded-[10px]">
           <img
@@ -36,137 +59,90 @@ const AgentCard = ({
           />
         </div>
 
-        {/* Name + tag block */}
-        <div className="flex flex-1 min-w-0 items-center">
-          <div className="flex flex-1 min-w-0 flex-col items-start">
-            {/* Row 1: agent name + "Last Active" label */}
-            <div className="flex gap-[4px] h-[20px] items-center w-full">
-              <p className="flex-1 min-w-0 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[16px] text-white leading-[20px] truncate">
-                {agent.name}
-              </p>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[12px] leading-[20px] whitespace-nowrap flex-shrink-0">
-                Last Active
-              </span>
-            </div>
-
-            {/* Row 2: type tag (purple) + last active time */}
-            <div className="flex items-center justify-between w-full">
-              <div
-                className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
-                style={{
-                  background: "#240757",
-                  border: "1px solid rgba(118,49,238,0.2)",
-                }}
-              >
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-[11px] leading-[14px] whitespace-nowrap">
-                  {agent.type}
-                </span>
-              </div>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
-                {agent.lastActive}
-              </span>
-            </div>
+        {/* Name + type tag */}
+        <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] truncate w-full">
+            {agent.name}
+          </span>
+          <div className="inline-flex w-fit items-center justify-center px-[8px] py-[3px] rounded-[22px]"
+            style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
+              {agent.type}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* ── Description ── */}
-      <p
-        className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[16px] overflow-hidden w-full"
-        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
-      >
-        {agent.description}
-      </p>
-
-      {/* ── Stats box ── */}
-      <div className="bg-[#0a0c10] flex gap-[6px] items-center p-[8px] rounded-[8px] w-full">
-        {/* Earnings */}
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
-            Earnings
-          </span>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-            {agent.earnings}
-          </span>
-        </div>
-        <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
-        {/* Actions */}
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
-            Actions
-          </span>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-            {agent.trades.toLocaleString()}
-          </span>
-        </div>
-        <div className="w-px self-stretch bg-[#1d2132] flex-shrink-0" />
-        {/* Success */}
-        <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[13px] leading-[14px] whitespace-nowrap">
-            Success
-          </span>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[16px] leading-[20px] whitespace-nowrap">
-            {agent.successRate}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Footer: Start/Stop + Edit buttons ── */}
-      <div className="flex gap-[8px] items-center h-[32px]">
-        {/* Start / Stop button — full width, flex-1 */}
+        {/* Stop / Start button — right side of header */}
         {isActive ? (
           <button
             data-testid={`button-stop-agent-${agent.id}`}
-            onClick={onToggle}
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
             disabled={isUpdating}
-            className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 disabled:opacity-50"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{ background: "#350011" }}
           >
-            {/* Red square stop icon */}
             <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
               Stop
             </span>
           </button>
         ) : (
           <button
             data-testid={`button-start-agent-${agent.id}`}
-            onClick={onToggle}
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
             disabled={isUpdating}
-            className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 disabled:opacity-50"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{ background: "#123509" }}
           >
-            {/* Green play icon */}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-              <path d="M5.5 3.5L12.5 8L5.5 12.5V3.5Z" fill="#42bf23" />
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
+              <path d="M3 2L10 6L3 10V2Z" fill="#42bf23" />
             </svg>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">
               Start
             </span>
           </button>
         )}
+      </div>
 
-        {/* Edit button — full width, flex-1 */}
-        <button
-          data-testid={`button-edit-agent-${agent.id}`}
-          onClick={onEdit}
-          className="flex flex-1 gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80"
-          style={{ background: "#4a2300" }}
-        >
-          {/* Pencil icon */}
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-            <path
-              d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z"
-              stroke="#ff9500"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
-            Edit
-          </span>
-        </button>
+      {/* ── Cap / Used + progress bar ── */}
+      <div className="flex flex-col gap-[8px]">
+        {/* Labels + values row */}
+        <div className="flex gap-[16px]">
+          {/* Cap (left) */}
+          <div className="flex flex-1 flex-col items-start min-w-0">
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">
+              Cap
+            </span>
+            <p style={{ fontSize: 0, lineHeight: 0 }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">
+                {spend.cap}
+              </span>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[12px] leading-[20px]">
+                {spend.unit}
+              </span>
+            </p>
+          </div>
+
+          {/* Used (right, right-aligned) */}
+          <div className="flex flex-1 flex-col items-end min-w-0">
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">
+              Used
+            </span>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[16px] leading-[20px]"
+              style={{ color: barColor }}>
+              {spend.pct}%
+            </span>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="relative h-[8px] w-full flex-shrink-0">
+          <div className="absolute inset-0 rounded-[40px]" style={{ background: "#222737" }} />
+          <div
+            className="absolute left-0 top-0 h-full rounded-[40px] transition-all"
+            style={{ width: `${spend.pct}%`, background: barColor }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -187,7 +163,6 @@ export const AgentsActivityPage = (): JSX.Element => {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Sync tab when URL changes (e.g. navigated programmatically)
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const t = params.get("tab");
@@ -204,7 +179,6 @@ export const AgentsActivityPage = (): JSX.Element => {
     refetchOnWindowFocus: false,
   });
 
-  /* Map API agents → AgentData, exclude those already in static list */
   const staticIds = new Set(agents.map((a) => a.id));
   const apiAgents: AgentData[] = (apiAgentsRaw ?? [])
     .filter((a) => !staticIds.has(a.id))
@@ -231,11 +205,26 @@ export const AgentsActivityPage = (): JSX.Element => {
       createdByUser: true,
     }));
 
-  /* Merge static + API agents */
   const allAgents: AgentData[] = [...agents, ...apiAgents];
 
+  /* Build spend map including API agents (derive from capitalAmount) */
+  const spendMap: Record<string, { cap: string; unit: string; pct: number }> = {
+    ...SPEND_DATA,
+    ...Object.fromEntries(
+      apiAgents.map((a) => {
+        const raw = apiAgentsRaw?.find((r) => r.id === a.id);
+        const cap = raw?.capitalAmount
+          ? raw.capitalAmount >= 1000
+            ? `$${Math.round(raw.capitalAmount / 1000)}k`
+            : `$${raw.capitalAmount}`
+          : "$—";
+        return [a.id, { cap, unit: "/day", pct: 0 }];
+      })
+    ),
+  };
+
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(
-    () => Object.fromEntries(agents.map((a) => [a.id, a.status]))
+    () => Object.fromEntries(allAgents.map((a) => [a.id, a.status]))
   );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -313,107 +302,103 @@ export const AgentsActivityPage = (): JSX.Element => {
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
-      {/* ── Header: tabs + search ── */}
-      <div className="flex items-center gap-3 px-4 py-4 flex-shrink-0">
-        {/* Killswitch — stops all active agents */}
-        <button
-          data-testid="button-killswitch"
-          onClick={handleKillswitch}
-          disabled={activeCount === 0}
-          className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ background: "#350011" }}
-          title={activeCount === 0 ? "No active agents" : `Stop all ${activeCount} active agent${activeCount !== 1 ? "s" : ""}`}
-        >
-          <div className="relative shrink-0 size-[16px] flex items-center justify-center">
-            <div className="w-[12px] h-[12px] rounded-[2px] bg-[#d20344]" />
-          </div>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
-            Stop All
-          </span>
-        </button>
+      {/* ── Header nav bar — Figma 3372:33199 ── */}
+      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
 
-        <div className="flex-1 flex items-center justify-center">
-          {searchOpen ? (
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#06070a] border border-[#1d2131] focus-within:border-[#414965] rounded-full transition-colors w-full max-w-[360px]">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#414965] flex-shrink-0">
-                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <input
-                ref={searchRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search agents..."
-                data-testid="input-search-agents"
-                className="bg-transparent text-white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-[#414965] outline-none flex-1"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-[#414965] hover:text-white transition-colors flex-shrink-0">
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                  </svg>
-                </button>
-              )}
+        {/* Stop All button (left) */}
+        <div className="absolute left-[16px] top-[16px]">
+          <button
+            data-testid="button-killswitch"
+            onClick={handleKillswitch}
+            disabled={activeCount === 0}
+            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ background: "#350011" }}
+          >
+            <div className="relative flex-shrink-0 size-[16px] flex items-center justify-center">
+              <div className="w-[12px] h-[12px] rounded-[2px]" style={{ background: "#d20344" }} />
             </div>
-          ) : (
-            /* ── Tab bar ── */
-            <div className="inline-flex items-center bg-[#06070a] rounded-[400px] p-[2px] gap-[2px]">
-              {tabs.map(({ key, label, count }) => {
-                const isActive = activeTab === key;
-                return (
-                  <button
-                    key={key}
-                    data-testid={`tab-agents-${key}`}
-                    onClick={() => {
-                      setActiveTab(key);
-                      navigate(key === "all" ? "/agents" : `/agents?tab=${key}`, { replace: true });
-                    }}
-                    className={`flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all whitespace-nowrap ${
-                      isActive
-                        ? "bg-[#350011] text-[#d20344]"
-                        : "bg-[#06070a] text-[#414965] hover:text-white"
-                    }`}
-                  >
-                    {label}
-                    <div
-                      className={`flex items-center justify-center p-[2px] rounded-[4px] ${
-                        isActive ? "bg-[#d20344]" : "bg-[#222737]"
-                      }`}
-                    >
-                      <span
-                        className={`text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold leading-[12px] ${
-                          isActive ? "text-[#350011]" : "text-[#6c779d]"
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+              Stop All
+            </span>
+          </button>
         </div>
 
-        {/* Search icon toggle */}
+        {/* Tab bar (center) */}
+        <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto">
+            {searchOpen ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-full transition-colors"
+                style={{ background: "#06070a", border: "1px solid #1d2132", width: "280px" }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0" style={{ color: "#414965" }}>
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search agents..."
+                  data-testid="input-search-agents"
+                  className="bg-transparent text-white text-[14px] [font-family:'Gilroy-Medium',Helvetica] placeholder-[#414965] outline-none flex-1"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-[#414965] hover:text-white transition-colors flex-shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
+                {tabs.map(({ key, label, count }) => {
+                  const isSel = activeTab === key;
+                  return (
+                    <button
+                      key={key}
+                      data-testid={`tab-agents-${key}`}
+                      onClick={() => {
+                        setActiveTab(key);
+                        navigate(key === "all" ? "/agents" : `/agents?tab=${key}`, { replace: true });
+                      }}
+                      className="flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all whitespace-nowrap"
+                      style={{
+                        background: isSel ? "#350011" : "transparent",
+                        color: isSel ? "#d20344" : "#414965",
+                      }}
+                    >
+                      {label}
+                      <div className="flex items-center justify-center p-[2px] rounded-[4px]"
+                        style={{ background: isSel ? "#d20344" : "#222737" }}>
+                        <span className="text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] leading-[12px]"
+                          style={{ color: isSel ? "#350011" : "#6c779d" }}>
+                          {count}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Search toggle (right) — dark 32px circle with search icon */}
         <button
           data-testid="button-search-toggle"
           onClick={handleSearchToggle}
-          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-            searchOpen
-              ? "bg-[#d20344] text-white"
-              : "bg-[#06070a] text-[#414965] hover:text-white"
-          }`}
+          className="absolute right-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{ background: searchOpen ? "#350011" : "#1d2132" }}
         >
           {searchOpen ? (
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <path d="M1 1L11 11M11 1L1 11" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
           ) : (
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="6" cy="6" r="4.5" stroke="#6c779d" strokeWidth="1.3" />
+              <path d="M9.5 9.5L12.5 12.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
           )}
         </button>
@@ -433,17 +418,21 @@ export const AgentsActivityPage = (): JSX.Element => {
               </p>
             </div>
           ) : (
-            filtered.map((agent) => (
-              <div key={agent.id} className="w-full xl:w-[calc(50%-8px)]">
-                <AgentCard
-                  agent={agent}
-                  currentStatus={agentStatuses[agent.id] ?? agent.status}
-                  onToggle={() => handleToggle(agent.id)}
-                  isUpdating={updatingId === agent.id}
-                  onEdit={() => navigate(`/agent/${agent.id}`)}
-                />
-              </div>
-            ))
+            filtered.map((agent) => {
+              const spend = spendMap[agent.id] ?? { cap: "$—", unit: "/day", pct: 0 };
+              return (
+                <div key={agent.id} className="w-full xl:w-[calc(50%-8px)]">
+                  <AgentCard
+                    agent={agent}
+                    spend={spend}
+                    currentStatus={agentStatuses[agent.id] ?? agent.status}
+                    onToggle={() => handleToggle(agent.id)}
+                    isUpdating={updatingId === agent.id}
+                    onOpen={() => navigate(`/agent/${agent.id}`)}
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       </ScrollArea>
