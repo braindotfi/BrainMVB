@@ -1,16 +1,95 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentData, AgentStatus, AgentRule } from "@/lib/agentsData";
 import { AgentPerfChart } from "@/components/AgentPerfChart";
 import { apiRequest } from "@/lib/queryClient";
+import { useNav, AgentPrefillData } from "@/lib/navContext";
 
 /* ────────────────────────────────────────────────────────
-   Helpers
+   Wallet display helpers
 ──────────────────────────────────────────────────────── */
 
-/** Convert a raw API agent (with policy jsonb) into the AgentData shape */
+/** Show first 6 + …… + last 6 characters */
+const formatWallet = (addr: string): string => {
+  if (!addr || addr === "N/A") return addr;
+  // If it's a full hex address (42 chars with 0x)
+  if (/^0x[0-9a-fA-F]{40}$/.test(addr)) {
+    return addr.slice(0, 6) + "......" + addr.slice(-6);
+  }
+  // If already partially truncated (contains dots)
+  if (addr.includes("...")) {
+    // Rebuild: try first/last 6 from the raw abbreviated parts
+    const firstPart = addr.split("...")[0];
+    const lastPart = addr.split("...").slice(-1)[0];
+    return `${firstPart.slice(0, 6)}......${lastPart.slice(-4)}`;
+  }
+  if (addr.length > 12) return addr.slice(0, 6) + "......" + addr.slice(-6);
+  return addr;
+};
+
+/* ────────────────────────────────────────────────────────
+   Convert AgentData (or raw API agent) → AgentPrefillData
+──────────────────────────────────────────────────────── */
+
+function buildPrefill(agent: AgentData, rawPolicy?: any): AgentPrefillData {
+  const p = rawPolicy ?? {};
+
+  // Extract numeric capital from budget string like "$10,000" or "$25,000 USDC"
+  const parseBudget = (b: string) => {
+    const match = b.replace(/,/g, "").match(/[\d.]+/);
+    return match ? match[0] : "";
+  };
+
+  const execModeFromSchedule = (s: string): string => {
+    const lower = s.toLowerCase();
+    if (lower.includes("manual")) return "manual_approval";
+    if (lower.includes("supervised")) return "supervised";
+    return "automatic";
+  };
+
+  return {
+    type:           (p.uiType   ?? agent.type   ?? "trading").toLowerCase(),
+    name:           p.uiName    ?? agent.name   ?? "",
+    description:    agent.description ?? "",
+    avatar:         p.uiAvatar  ?? agent.avatar ?? "",
+    capital:        p.uiCapitalAmount != null
+                      ? String(p.uiCapitalAmount)
+                      : parseBudget(agent.budget ?? ""),
+    capitalAsset:   p.uiCapitalAsset  ?? "USDC",
+    riskLevel:      p.uiRiskLevel     ?? agent.riskLevel ?? "moderate",
+    maxDrawdown:    String(p.maxDrawdown  ?? 20),
+    stopLoss:       String(p.stopLoss     ?? 10),
+    executionMode:  p.uiExecutionMode ?? execModeFromSchedule(agent.schedule ?? ""),
+    allowedAssets:  p.uiAllowedAssets ?? [],
+    maxAlloc:       String(p.maxAllocationPct ?? 80),
+    maxPosition:    String(p.maxPositionPct   ?? 25),
+    maxTrades:      String(p.maxTradesPerDay  ?? 10),
+    maxLTV:              String(p.maxLTV ?? 75),
+    liquidationThreshold: String(p.liquidationThreshold ?? 85),
+    targetAPY:      String(p.targetAPY  ?? 8),
+    minAPY:         String(p.minAPY     ?? 4),
+    rebalanceFreq:  p.rebalanceFreq  ?? "Every 24h",
+    yieldProtocols: p.yieldProtocols ?? [],
+    maxSinglePayment:       String(p.maxSinglePayment       ?? 500),
+    monthlyBudgetCap:       String(p.monthlyBudgetCap       ?? 2000),
+    autoApprovalThreshold:  String(p.autoApprovalThreshold  ?? 50),
+  };
+}
+
+/** Map rule ID → step number in CreateAgentModal */
+const ruleIdToStep = (ruleId: string): number => {
+  if (ruleId === "r-capital")                               return 2;
+  if (["r-drawdown", "r-stoploss", "r-approval", "r-auto"].includes(ruleId)) return 3;
+  if (["r-allocation", "r-position", "r-trades", "r-assets"].includes(ruleId)) return 4;
+  return 3;
+};
+
+/* ────────────────────────────────────────────────────────
+   Convert raw API agent → AgentData
+──────────────────────────────────────────────────────── */
+
 function apiAgentToData(a: any): AgentData {
   const p = a.policy ?? {};
   const type = (p.uiType ?? a.category ?? "custom") as string;
@@ -44,7 +123,7 @@ function apiAgentToData(a: any): AgentData {
     budget: capitalAmt > 0 ? `$${capitalAmt.toLocaleString()} ${capitalAsset}` : "Not set",
     riskLevel,
     schedule: executionModeLabel(p.uiExecutionMode),
-    walletAddress: a.brainAccountAddress ?? "0x0000...0000",
+    walletAddress: a.brainAccountAddress ?? "0x0000000000000000000000000000000000000000",
     deployedAt,
     createdByUser: true,
     activityLog: [
@@ -62,106 +141,39 @@ function executionModeLabel(mode: string | undefined): string {
   }
 }
 
-/** Build rules array from the policy stored in the API agent */
 function buildRulesFromPolicy(p: any, type: string, capitalAmt: number, capitalAsset: string): AgentRule[] {
   const rules: AgentRule[] = [];
   const t = (type ?? "").toLowerCase();
 
-  if (capitalAmt > 0) {
-    rules.push({
-      id: "r-capital",
-      label: "Capital allocation",
-      value: `Deploy up to $${capitalAmt.toLocaleString()} ${capitalAsset} as working capital.`,
-    });
-  }
+  if (capitalAmt > 0)
+    rules.push({ id: "r-capital", label: "Capital allocation", value: `Deploy up to $${capitalAmt.toLocaleString()} ${capitalAsset} as working capital.` });
+  if (p.maxDrawdown != null && p.maxDrawdown > 0)
+    rules.push({ id: "r-drawdown", label: "Maximum drawdown", value: `Pause all activity if portfolio value drops more than ${p.maxDrawdown}% from its peak.` });
+  if (p.stopLoss != null && p.stopLoss > 0)
+    rules.push({ id: "r-stoploss", label: "Stop-loss", value: `Auto-close any position that drops more than ${p.stopLoss}% from entry price.` });
+  if (p.maxAllocationPct != null && p.maxAllocationPct < 100)
+    rules.push({ id: "r-allocation", label: "Max capital allocation", value: `Never deploy more than ${p.maxAllocationPct}% of total capital at once.` });
+  if (p.maxPositionPct != null && p.maxPositionPct > 0 && (t === "trading" || t === "yield" || t === "lending"))
+    rules.push({ id: "r-position", label: "Max position size", value: `No single position may exceed ${p.maxPositionPct}% of total portfolio.` });
+  if (p.maxTradesPerDay != null && p.maxTradesPerDay > 0 && t === "trading")
+    rules.push({ id: "r-trades", label: "Daily trade limit", value: `Execute no more than ${p.maxTradesPerDay} trades per 24-hour period.` });
+  if (Array.isArray(p.uiAllowedAssets) && p.uiAllowedAssets.length > 0)
+    rules.push({ id: "r-assets", label: "Allowed assets", value: `Only interact with the following assets: ${p.uiAllowedAssets.join(", ")}.` });
+  if (p.uiExecutionMode === "manual_approval")
+    rules.push({ id: "r-approval", label: "Execution approval", value: "Every action requires manual confirmation before execution." });
+  else
+    rules.push({ id: "r-auto", label: "Autonomous execution", value: "Agent may execute actions automatically without per-action approval." });
 
-  if (p.maxDrawdown != null && p.maxDrawdown > 0) {
-    rules.push({
-      id: "r-drawdown",
-      label: "Maximum drawdown",
-      value: `Pause all activity if portfolio value drops more than ${p.maxDrawdown}% from its peak.`,
-    });
-  }
-
-  if (p.stopLoss != null && p.stopLoss > 0) {
-    rules.push({
-      id: "r-stoploss",
-      label: "Stop-loss",
-      value: `Auto-close any position that drops more than ${p.stopLoss}% from entry price.`,
-    });
-  }
-
-  if (p.maxAllocationPct != null && p.maxAllocationPct < 100) {
-    rules.push({
-      id: "r-allocation",
-      label: "Max capital allocation",
-      value: `Never deploy more than ${p.maxAllocationPct}% of total capital at once.`,
-    });
-  }
-
-  if (p.maxPositionPct != null && p.maxPositionPct > 0 && (t === "trading" || t === "yield" || t === "lending")) {
-    rules.push({
-      id: "r-position",
-      label: "Max position size",
-      value: `No single position may exceed ${p.maxPositionPct}% of total portfolio.`,
-    });
-  }
-
-  if (p.maxTradesPerDay != null && p.maxTradesPerDay > 0 && t === "trading") {
-    rules.push({
-      id: "r-trades",
-      label: "Daily trade limit",
-      value: `Execute no more than ${p.maxTradesPerDay} trades per 24-hour period.`,
-    });
-  }
-
-  if (Array.isArray(p.uiAllowedAssets) && p.uiAllowedAssets.length > 0) {
-    rules.push({
-      id: "r-assets",
-      label: "Allowed assets",
-      value: `Only interact with the following assets: ${p.uiAllowedAssets.join(", ")}.`,
-    });
-  }
-
-  if (p.uiExecutionMode === "manual_approval") {
-    rules.push({
-      id: "r-approval",
-      label: "Execution approval",
-      value: "Every action requires manual confirmation before execution.",
-    });
-  }
-
-  if (p.approvalThreshold === "0" && p.uiExecutionMode !== "manual_approval") {
-    rules.push({
-      id: "r-auto",
-      label: "Autonomous execution",
-      value: "Agent may execute actions automatically without per-action approval.",
-    });
-  }
-
-  // Type-specific defaults if policy was sparse
-  if (rules.length === 0) {
+  if (rules.length <= 1) {
     if (t === "trading") {
       rules.push(
         { id: "r1", label: "Max position size", value: "Never exceed 5% of total portfolio in a single trade." },
         { id: "r2", label: "Stop-loss", value: "Auto-close any position that drops more than 8% from entry." },
-        { id: "r3", label: "Asset whitelist", value: "Only trade BTC, ETH, SOL, and top-20 DeFi tokens." },
       );
     } else if (t === "payments") {
-      rules.push(
-        { id: "r1", label: "Payment whitelist", value: "Only pay to pre-approved recipients." },
-        { id: "r2", label: "Max single payment", value: "Never authorize a single payment exceeding $500 without confirmation." },
-      );
-    } else if (t === "analytics") {
-      rules.push(
-        { id: "r1", label: "Signal sources", value: "Monitor on-chain data, social sentiment, and market signals." },
-        { id: "r2", label: "Confidence tagging", value: "Tag all signals Low / Medium / High confidence before emitting." },
-      );
+      rules.push({ id: "r1", label: "Payment whitelist", value: "Only pay to pre-approved recipients." });
     } else {
-      rules.push(
-        { id: "r1", label: "Autonomous execution", value: "Agent executes tasks autonomously within defined parameters." },
-        { id: "r2", label: "Error handling", value: "On failure, retry up to 3 times then alert and halt." },
-      );
+      rules.push({ id: "r1", label: "Autonomous execution", value: "Agent executes tasks autonomously within defined parameters." });
     }
   }
 
@@ -169,7 +181,7 @@ function buildRulesFromPolicy(p: any, type: string, capitalAmt: number, capitalA
 }
 
 /* ────────────────────────────────────────────────────────
-   Sub-components (unchanged from previous implementation)
+   Sub-components
 ──────────────────────────────────────────────────────── */
 
 const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
@@ -198,11 +210,13 @@ const EditHintPill = () => (
         <path d="M8.5 1.5a1.414 1.414 0 0 1 2 2L3.875 10.125l-2.625.625.625-2.625L8.5 1.5Z" stroke="#414965" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">Hover over an option to edit</span>
+    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">Click Edit to modify</span>
   </div>
 );
 
-const ConfigRow = ({ label, value, hasDivider }: { label: string; value: string; hasDivider: boolean }) => {
+const ConfigRow = ({
+  label, value, hasDivider, onEdit,
+}: { label: string; value: string; hasDivider: boolean; onEdit?: () => void }) => {
   const [hovered, setHovered] = useState(false);
   return (
     <>
@@ -213,7 +227,9 @@ const ConfigRow = ({ label, value, hasDivider }: { label: string; value: string;
           <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px]">{label}</p>
           <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{value}</p>
         </div>
-        <button className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-all"
+        <button
+          onClick={onEdit}
+          className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-all"
           style={{ background: "#4a2300", opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none" }}>
           <PencilIcon />
           <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
@@ -224,7 +240,9 @@ const ConfigRow = ({ label, value, hasDivider }: { label: string; value: string;
   );
 };
 
-const RuleRow = ({ index, label, value, hasDivider }: { index: number; label: string; value: string; hasDivider: boolean }) => {
+const RuleRow = ({
+  index, label, value, hasDivider, onEdit,
+}: { index: number; label: string; value: string; hasDivider: boolean; onEdit?: () => void }) => {
   const [hovered, setHovered] = useState(false);
   return (
     <>
@@ -240,7 +258,9 @@ const RuleRow = ({ index, label, value, hasDivider }: { index: number; label: st
             <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[24px]">{label}</p>
             <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{value}</p>
           </div>
-          <button data-testid={`button-edit-rule-${index}`}
+          <button
+            data-testid={`button-edit-rule-${index}`}
+            onClick={onEdit}
             className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-all"
             style={{ background: "#4a2300", opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none" }}>
             <PencilIcon />
@@ -285,9 +305,6 @@ const ActivityDot = ({ kind }: { kind: "success" | "info" | "warn" }) => {
 
 const eventColors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as const;
 
-/* ────────────────────────────────────────────────────────
-   Loading skeleton
-──────────────────────────────────────────────────────── */
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse rounded-[8px] ${className ?? ""}`} style={{ background: "#1d2132" }} />
 );
@@ -298,8 +315,9 @@ const Skeleton = ({ className }: { className?: string }) => (
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { openCreateAgentAtStep } = useNav();
 
-  // 1. Try static lookup first (fast, no network needed)
+  // 1. Try static lookup first
   const staticAgent = agents.find((a) => a.id === params.id);
 
   // 2. If not in static list, fetch from the API
@@ -311,11 +329,26 @@ export const AgentDetailPage = (): JSX.Element => {
   });
 
   const agent: AgentData | null = staticAgent ?? (apiAgent ? apiAgentToData(apiAgent) : null);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+  const rawPolicy = apiAgent?.policy ?? null;
 
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const effectiveStatus: AgentStatus = agentStatus ?? agent?.status ?? "inactive";
   const isActive = effectiveStatus === "active";
   const handleToggle = () => setAgentStatus((p) => ((p ?? agent?.status) === "active" ? "inactive" : "active"));
+
+  // Build prefill once (stable reference)
+  const getPrefill = useCallback((): AgentPrefillData | undefined => {
+    if (!agent) return undefined;
+    return buildPrefill(agent, rawPolicy);
+  }, [agent, rawPolicy]);
+
+  // Only user-created agents (those with keccak256-style IDs) can be edited via PATCH
+  const editableId = agent?.createdByUser && apiAgent ? params.id : undefined;
+
+  const openEdit = useCallback((step: number) => {
+    const prefill = getPrefill();
+    openCreateAgentAtStep(step, prefill, editableId);
+  }, [getPrefill, openCreateAgentAtStep, editableId]);
 
   /* ── Loading state ── */
   if (isLoading) {
@@ -356,10 +389,6 @@ export const AgentDetailPage = (): JSX.Element => {
     );
   }
 
-  const truncatedWallet = agent.walletAddress && agent.walletAddress !== "N/A"
-    ? agent.walletAddress
-    : "0x0000...0000";
-
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
@@ -378,13 +407,9 @@ export const AgentDetailPage = (): JSX.Element => {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
-          {/* ════════════════════════════════
-              1. Identity card
-          ════════════════════════════════ */}
+          {/* 1. Identity card */}
           <div className="rounded-[16px] overflow-hidden flex flex-col gap-[16px] p-[16px]"
             style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-
-            {/* Avatar + name row */}
             <div className="flex gap-[8px] items-center w-full">
               <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
                 <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
@@ -403,29 +428,22 @@ export const AgentDetailPage = (): JSX.Element => {
               </div>
             </div>
 
-            {/* Description */}
             <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{agent.description}</p>
-
             <HDivider />
 
-            {/* Stats row 1 */}
             <div className="flex items-center gap-[6px]">
               <StatCol label="Total Actions" value={agent.trades.toLocaleString()} />
               <VDivider />
-              <StatCol
-                label="Total Earnings"
-                value={agent.earnings}
-                accent={agent.earnings.startsWith("+") ? "#a8b9f4" : agent.earnings === "$0" ? "#a8b9f4" : "#d20344"}
-              />
+              <StatCol label="Total Earnings" value={agent.earnings}
+                accent={agent.earnings.startsWith("+") ? "#a8b9f4" : agent.earnings === "$0" ? "#a8b9f4" : "#d20344"} />
               <VDivider />
               <StatCol label="Success Rate" value={agent.successRate} accent="#42bf23" />
             </div>
 
             <HDivider />
 
-            {/* Stats row 2 */}
             <div className="flex items-center gap-[6px]">
-              <StatCol label="Creator" value={truncatedWallet} />
+              <StatCol label="Creator" value={formatWallet(agent.walletAddress)} />
               <VDivider />
               <StatCol label="Category" value={agent.category} />
               <VDivider />
@@ -433,29 +451,38 @@ export const AgentDetailPage = (): JSX.Element => {
             </div>
           </div>
 
-          {/* ════════════════════════════════
-              2. Performance chart card
-          ════════════════════════════════ */}
+          {/* 2. Performance chart */}
           <AgentPerfChart agent={agent} />
 
-          {/* ════════════════════════════════
-              3. Configuration card
-          ════════════════════════════════ */}
+          {/* 3. Configuration card */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Configuration</span>
               <EditHintPill />
             </div>
             <div className="flex flex-col gap-[16px] p-[16px]">
-              <ConfigRow label="Budget / Spend Limit" value={agent.budget}     hasDivider />
-              <ConfigRow label="Execution Schedule"   value={agent.schedule}   hasDivider />
-              <ConfigRow label="Deployed"             value={agent.deployedAt} hasDivider={false} />
+              <ConfigRow
+                label="Budget / Spend Limit"
+                value={agent.budget}
+                hasDivider
+                onEdit={() => openEdit(2)}
+              />
+              <ConfigRow
+                label="Execution Schedule"
+                value={agent.schedule}
+                hasDivider
+                onEdit={() => openEdit(3)}
+              />
+              <ConfigRow
+                label="Deployed"
+                value={agent.deployedAt}
+                hasDivider={false}
+                onEdit={() => openEdit(1)}
+              />
             </div>
           </div>
 
-          {/* ════════════════════════════════
-              4. Rulebook card
-          ════════════════════════════════ */}
+          {/* 4. Rulebook card */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Rulebook</span>
@@ -470,6 +497,7 @@ export const AgentDetailPage = (): JSX.Element => {
                     label={rule.label}
                     value={rule.value}
                     hasDivider={i < agent.rules.length - 1}
+                    onEdit={() => openEdit(ruleIdToStep(rule.id))}
                   />
                 ))
               ) : (
@@ -478,9 +506,7 @@ export const AgentDetailPage = (): JSX.Element => {
             </div>
           </div>
 
-          {/* ════════════════════════════════
-              5. Recent Activity card
-          ════════════════════════════════ */}
+          {/* 5. Recent Activity card */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Recent Activity</span>

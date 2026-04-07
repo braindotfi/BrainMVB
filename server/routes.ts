@@ -268,9 +268,86 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const agent = await storage.getAgent(req.params.id);
       if (!agent) return res.status(404).json({ error: "Agent not found" });
-      return res.json(agent);
+      // Enrich with UI fields from policy
+      const p = (agent.policy as any) ?? {};
+      return res.json({
+        ...agent,
+        type:          p.uiType          ?? agent.category,
+        avatar:        p.uiAvatar        ?? agent.avatarUrl,
+        capitalAmount: p.uiCapitalAmount ?? 0,
+        capitalAsset:  p.uiCapitalAsset  ?? "USDC",
+        riskLevel:     p.uiRiskLevel     ?? "moderate",
+        executionMode: p.uiExecutionMode ?? "automatic",
+        allowedAssets: p.uiAllowedAssets ?? [],
+        createdByUser: p.uiCreatedByUser ?? false,
+      });
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch agent" });
+    }
+  });
+
+  // PATCH /api/agents/:id — update an existing agent's policy & metadata
+  app.patch("/api/agents/:id", async (req, res) => {
+    try {
+      const existing = await storage.getAgent(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Agent not found" });
+
+      const d = req.body as {
+        name?: string; type?: string; description?: string; avatar?: string;
+        capitalAmount?: number; capitalAsset?: string; riskLevel?: string;
+        maxDrawdown?: number; stopLoss?: number; executionMode?: string;
+        allowedAssets?: string[]; maxAllocationPct?: number; maxPositionPct?: number;
+        maxTradesPerDay?: number;
+      };
+
+      const existingPolicy = (existing.policy as any) ?? {};
+      const capitalNum = d.capitalAmount ?? existingPolicy.uiCapitalAmount ?? 0;
+      const spendLimitUnits = BigInt(Math.round(capitalNum * 1_000_000));
+
+      const updatedPolicy = {
+        ...existingPolicy,
+        spendLimit:       spendLimitUnits.toString(),
+        timeWindowSeconds: 86400,
+        allowedAssets:    d.allowedAssets    ?? existingPolicy.allowedAssets,
+        approvalThreshold: (d.executionMode === "manual_approval") ? "1" : "0",
+        maxDrawdown:      d.maxDrawdown      ?? existingPolicy.maxDrawdown,
+        stopLoss:         d.stopLoss         ?? existingPolicy.stopLoss,
+        maxAllocationPct: d.maxAllocationPct ?? existingPolicy.maxAllocationPct,
+        maxPositionPct:   d.maxPositionPct   ?? existingPolicy.maxPositionPct,
+        maxTradesPerDay:  d.maxTradesPerDay  ?? existingPolicy.maxTradesPerDay,
+        uiType:           d.type             ?? existingPolicy.uiType,
+        uiAvatar:         d.avatar           ?? existingPolicy.uiAvatar,
+        uiCapitalAmount:  capitalNum,
+        uiCapitalAsset:   d.capitalAsset     ?? existingPolicy.uiCapitalAsset,
+        uiRiskLevel:      d.riskLevel        ?? existingPolicy.uiRiskLevel,
+        uiExecutionMode:  d.executionMode    ?? existingPolicy.uiExecutionMode,
+        uiAllowedAssets:  d.allowedAssets    ?? existingPolicy.uiAllowedAssets,
+        uiCreatedByUser:  existingPolicy.uiCreatedByUser ?? false,
+      };
+
+      const updated = await storage.updateAgent(req.params.id, {
+        name:        d.name        ?? existing.name,
+        description: d.description ?? existing.description,
+        avatarUrl:   d.avatar      ?? existing.avatarUrl,
+        policy:      updatedPolicy,
+        lastActiveAt: new Date(),
+      } as any);
+
+      if (!updated) return res.status(404).json({ error: "Agent not found after update" });
+      return res.json({
+        ...updated,
+        type:          updatedPolicy.uiType,
+        avatar:        updatedPolicy.uiAvatar,
+        capitalAmount: updatedPolicy.uiCapitalAmount,
+        capitalAsset:  updatedPolicy.uiCapitalAsset,
+        riskLevel:     updatedPolicy.uiRiskLevel,
+        executionMode: updatedPolicy.uiExecutionMode,
+        allowedAssets: updatedPolicy.uiAllowedAssets,
+        createdByUser: true,
+      });
+    } catch (error) {
+      console.error("[agents] patch failed:", error);
+      return res.status(500).json({ error: "Failed to update agent" });
     }
   });
 

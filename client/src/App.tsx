@@ -18,13 +18,16 @@ import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection"
 import { CreateAgentModal } from "@/components/CreateAgentModal";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
-import { NavContext } from "@/lib/navContext";
+import { NavContext, AgentPrefillData } from "@/lib/navContext";
 
 function AppLayout() {
   const { isLoggedIn, logout } = useAuth();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [createAgentOpen, setCreateAgentOpen] = useState(false);
+  const [agentEditStep, setAgentEditStep] = useState<number>(0);
+  const [agentEditPrefill, setAgentEditPrefill] = useState<AgentPrefillData | undefined>(undefined);
+  const [agentEditId, setAgentEditId] = useState<string | undefined>(undefined);
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
@@ -39,8 +42,19 @@ function AppLayout() {
     navigate("/");
   };
 
+  const openCreateAgentAtStep = (step: number, prefill?: AgentPrefillData, agentId?: string) => {
+    setAgentEditStep(step);
+    setAgentEditPrefill(prefill);
+    setAgentEditId(agentId);
+    setCreateAgentOpen(true);
+  };
+
   return (
-    <NavContext.Provider value={{ navCollapsed, toggleNav: () => setNavCollapsed((v) => !v) }}>
+    <NavContext.Provider value={{
+      navCollapsed,
+      toggleNav: () => setNavCollapsed((v) => !v),
+      openCreateAgentAtStep,
+    }}>
     <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex flex-col overflow-hidden">
 
       {/* ── Three-panel content row ── */}
@@ -87,11 +101,22 @@ function AppLayout() {
 
       <CreateAgentModal
         open={createAgentOpen}
-        onClose={() => setCreateAgentOpen(false)}
+        onClose={() => {
+          setCreateAgentOpen(false);
+          setAgentEditStep(0);
+          setAgentEditPrefill(undefined);
+          setAgentEditId(undefined);
+        }}
         onViewMyAgents={() => {
           setCreateAgentOpen(false);
+          setAgentEditStep(0);
+          setAgentEditPrefill(undefined);
+          setAgentEditId(undefined);
           navigate("/agents?tab=my-agents");
         }}
+        initialStep={agentEditStep}
+        prefill={agentEditPrefill}
+        agentId={agentEditId}
       />
       <SendModal
         open={sendOpen}

@@ -1,11 +1,15 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { AgentPrefillData } from "@/lib/navContext";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onViewMyAgents?: () => void;
+  initialStep?: number;
+  prefill?: AgentPrefillData;
+  agentId?: string;
 }
 
 const agentTypes = [
@@ -131,8 +135,24 @@ const RadioGroup = ({ label, options, value, onChange }: {
   </div>
 );
 
-export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.Element | null => {
-  const [step, setStep] = useState(0);
+/* Convert API execution mode string → modal label */
+function toExecModeLabel(apiMode: string | undefined): string {
+  switch ((apiMode ?? "").toLowerCase().replace(/\s/g, "_")) {
+    case "automatic":       return "Automatic";
+    case "supervised":      return "Supervised";
+    case "manual_approval": return "Manual Approval";
+    default:                return "Automatic";
+  }
+}
+
+/* Capitalize first letter (conservative → Conservative) */
+function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 0, prefill, agentId }: Props): JSX.Element | null => {
+  const isEditMode = !!prefill && !!agentId;
+  const [step, setStep] = useState(initialStep);
 
   const [selectedType, setSelectedType]     = useState("");
   const [agentName, setAgentName]           = useState("");
@@ -188,6 +208,42 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
+  /* ── Pre-fill state when opened with prefill data ── */
+  useEffect(() => {
+    if (!open) return;
+    setStep(initialStep ?? 0);
+    if (!prefill) return;
+    setSelectedType(prefill.type || "");
+    setAgentName(prefill.name || "");
+    setAgentDesc(prefill.description || "");
+    setSelectedAvatar(prefill.avatar || "");
+    setCapital(prefill.capital || "");
+    setCapitalAsset(prefill.capitalAsset || "USDC");
+    setRiskLevel(capitalize(prefill.riskLevel || "Moderate"));
+    setMaxDrawdown(prefill.maxDrawdown || "20");
+    setStopLoss(prefill.stopLoss || "10");
+    setExecutionMode(toExecModeLabel(prefill.executionMode));
+    setSelectedAssets(prefill.allowedAssets?.length ? prefill.allowedAssets : ["ETH", "USDC"]);
+    setMaxAlloc(prefill.maxAlloc || "80");
+    setMaxPosition(prefill.maxPosition || "25");
+    setMaxTrades(prefill.maxTrades || "10");
+    if (prefill.maxLTV)              setMaxLTV(prefill.maxLTV);
+    if (prefill.liquidationThreshold) setLiquidationThreshold(prefill.liquidationThreshold);
+    if (prefill.targetAPY)            setTargetAPY(prefill.targetAPY);
+    if (prefill.minAPY)               setMinAPY(prefill.minAPY);
+    if (prefill.rebalanceFreq)        setRebalanceFreq(prefill.rebalanceFreq);
+    if (prefill.yieldProtocols?.length) setYieldProtocols(prefill.yieldProtocols);
+    if (prefill.maxSinglePayment)     setMaxSinglePayment(prefill.maxSinglePayment);
+    if (prefill.monthlyBudgetCap)     setMonthlyBudgetCap(prefill.monthlyBudgetCap);
+    if (prefill.autoApprovalThreshold) setAutoApprovalThreshold(prefill.autoApprovalThreshold);
+    // Reset auth/launch flags
+    setAuthSig(false);
+    setTerms(false);
+    setLaunched(false);
+    setLaunching(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const capitalNum = parseNumber(capital);
   const balanceError = capitalNum > 0 && capitalNum > AVAILABLE_BALANCE;
   const autoTicker = agentName ? "$" + agentName.toUpperCase().replace(/\s/g, "").slice(0, 8) : "";
@@ -233,7 +289,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
     if (step === 0) return !!selectedType;
     if (step === 1) return !!agentName;
     if (step === 2) return !!capital && !balanceError;
-    if (step === 5) return authSig && terms;
+    if (step === 5) return isEditMode || (authSig && terms);
     return true;
   };
 
@@ -251,9 +307,42 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
     }, 300);
   };
 
+  const updateAgentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", `/api/agents/${agentId}`, {
+        name: agentName,
+        type: selectedType,
+        description: agentDesc,
+        avatar: selectedAvatar || "/figmaAssets/avatars.svg",
+        capitalAmount: capitalNum,
+        capitalAsset,
+        riskLevel: riskLevel.toLowerCase(),
+        maxDrawdown: parseInt(maxDrawdown),
+        stopLoss: parseInt(stopLoss),
+        executionMode: executionMode.toLowerCase().replace(" ", "_"),
+        allowedAssets: selectedAssets,
+        maxAllocationPct: parseInt(maxAlloc),
+        maxPositionPct: parseInt(maxPosition),
+        maxTradesPerDay: parseInt(maxTrades),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/agents"] });
+      qc.invalidateQueries({ queryKey: ["/api/agents", agentId] });
+      setLaunching(false);
+      setLaunched(true);
+    },
+    onError: () => { setLaunching(false); setLaunched(true); },
+  });
+
   const handleLaunch = () => {
     setLaunching(true);
-    createAgentMutation.mutate();
+    if (isEditMode) {
+      updateAgentMutation.mutate();
+    } else {
+      createAgentMutation.mutate();
+    }
   };
 
   const inputCls = "px-4 py-3 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-60 outline-none focus:border-[#414965] transition-colors w-full";
@@ -416,7 +505,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
 
             <div className="text-center">
               <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">
-                {agentName || "Agent"} is live!
+                {isEditMode ? "Changes saved!" : `${agentName || "Agent"} is live!`}
               </h3>
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Your AI agent is deployed and ready to operate.
@@ -491,7 +580,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
             </button>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">Create an Agent</h2>
+            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">{isEditMode ? "Edit Agent" : "Create an Agent"}</h2>
             <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">{STEPS[step]}</p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -987,7 +1076,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.
               disabled={launching}
               className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity disabled:opacity-40"
             >
-              {launching ? "Launching…" : "🚀 Launch Agent"}
+              {launching ? (isEditMode ? "Saving…" : "Launching…") : (isEditMode ? "💾 Save Changes" : "🚀 Launch Agent")}
             </button>
           )}
         </div>
