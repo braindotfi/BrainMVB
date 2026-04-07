@@ -962,61 +962,87 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-[calc(100%+6px)] w-[240px] z-[51] bg-[#11141b] border border-[#1d2131] rounded-2xl shadow-2xl overflow-hidden">
+                <div
+                  className="absolute right-0 top-[calc(100%+6px)] w-[280px] z-[51] flex flex-col p-[8px] rounded-[12px]"
+                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
+                >
+                  {/* Add Agent Account — purple CTA */}
                   <button
                     onClick={() => { setDropdownOpen(false); onCreateAgent(); }}
-                    className="flex items-center gap-3 px-4 py-3 w-full hover:bg-brain-v1baby-blue-15 transition-colors border-b border-[#1d2131]"
+                    className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
+                    style={{ background: "#7631ee" }}
                   >
-                    <div className="w-8 h-8 bg-brain-v1dark-orange rounded-xl flex items-center justify-center flex-shrink-0">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                    <div className="w-[32px] h-[32px] rounded-[100px] flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.25)" }}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
                     </div>
-                    <div className="text-left">
-                      <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Create Agent</div>
-                      <div className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-30 text-xs">Launch a new AI agent</div>
-                    </div>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
+                      Add Agent Account
+                    </span>
                   </button>
 
-                  <div className="px-4 pt-2 pb-1">
-                    <span className="text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 uppercase tracking-wider">Switch Account</span>
-                  </div>
-
-                  <button
-                    onClick={() => handleSwitchAccount(null)}
-                    className={`flex items-center gap-3 px-4 py-2.5 w-full transition-colors ${activeAccount === null ? "bg-brain-v1baby-blue-15" : "hover:bg-brain-v1baby-blue-15"}`}
-                  >
-                    <img className="w-8 h-8 flex-shrink-0" alt="Wallet" src="/figmaAssets/wallet-icons-1.svg" />
-                    <div className="text-left flex-1 min-w-0">
-                      <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Your Account</div>
-                      <div className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">Debit · 1652 ···· 6995</div>
-                    </div>
-                    {activeAccount === null && (
-                      <div className="w-4 h-4 bg-brain-v1dark-orange rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6L7 2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      </div>
-                    )}
-                  </button>
-
-                  {agentAccounts.map((agent) => (
-                    <button
-                      key={agent.id}
-                      onClick={() => handleSwitchAccount(agent.id)}
-                      className={`flex items-center gap-3 px-4 py-2.5 w-full transition-colors ${activeAccount === agent.id ? "bg-brain-v1baby-blue-15" : "hover:bg-brain-v1baby-blue-15"}`}
-                    >
-                      <img className="w-8 h-8 rounded-xl object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
-                      <div className="text-left flex-1 min-w-0">
-                        <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm truncate">{agent.name}</div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">{agent.ticker}</span>
-                          <span className="text-[9px] px-1 py-0.5 bg-brain-v1baby-blue-15 rounded text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">{agent.type}</span>
+                  {/* WireX account rows */}
+                  {[
+                    { id: null as null, cardIdx: 0, label: "Stablecoin Account", tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
+                    { id: null as null, cardIdx: 1, label: "Debit Card",         tag: liveDebit?.cardNumber ?? "——" },
+                    { id: null as null, cardIdx: 2, label: "Bank Account",       tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
+                  ].map(({ cardIdx, label, tag }) => {
+                    const isSel = activeAccount === null && activeCard === cardIdx;
+                    return (
+                      <button
+                        key={cardIdx}
+                        onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                      >
+                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.15)" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
                         </div>
-                      </div>
-                      {activeAccount === agent.id && (
-                        <div className="w-4 h-4 bg-brain-v1dark-orange rounded-full flex items-center justify-center flex-shrink-0">
-                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6L7 2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                          {label}
+                        </span>
+                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                         </div>
-                      )}
-                    </button>
-                  ))}
+                        {isSel && (
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
+                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
+                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Agent account rows */}
+                  {agentAccounts.map((agent) => {
+                    const isSel = activeAccount === agent.id;
+                    return (
+                      <button
+                        key={agent.id}
+                        onClick={() => handleSwitchAccount(agent.id)}
+                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                      >
+                        <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                          {agent.name}
+                        </span>
+                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                        </div>
+                        {isSel && (
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
+                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
+                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

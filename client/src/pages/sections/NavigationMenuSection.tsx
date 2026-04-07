@@ -734,7 +734,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     return (
       <>
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
-        <InsightsPanel />
         <NotificationsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
@@ -764,15 +763,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 <DashboardIcon active={isActive("/dashboard")} />
               </button>
             </Link>
-
-            {/* Insights */}
-            <button
-              title="Insights"
-              onClick={() => setInsightsOpen((v) => !v)}
-              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
-            >
-              <InsightsIcon active={insightsOpen} />
-            </button>
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
@@ -826,7 +816,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   return (
     <>
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
-      <InsightsPanel />
       <NotificationsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
@@ -878,22 +867,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   )}
                 </button>
               </Link>
-
-              {/* Insights item — expanded nav */}
-              <button
-                onClick={() => setInsightsOpen((v) => !v)}
-                className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
-              >
-                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                  <InsightsIcon active={insightsOpen} />
-                </div>
-                <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                  Insights
-                </span>
-                {insightsData.length > 0 && (
-                  <CountBadge count={insightsData.length} purple />
-                )}
-              </button>
 
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
