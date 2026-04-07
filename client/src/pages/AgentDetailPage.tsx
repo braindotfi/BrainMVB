@@ -105,10 +105,16 @@ function apiAgentToData(a: any): AgentData {
   const fmtDate = (d: string | Date | undefined) =>
     d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : undefined;
 
+  const fmtDateTime = (d: string | Date | undefined) =>
+    d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : undefined;
+
   const deployedAt   = fmtDate(a.createdAt) ?? "Just now";
-  const lastActiveAt = fmtDate(a.lastActiveAt);
-  // Only show "Last Updated" if it differs from the deployment date
-  const lastUpdated  = lastActiveAt && lastActiveAt !== deployedAt ? lastActiveAt : undefined;
+
+  // Show "Last Updated" if lastActiveAt is more than 60 seconds after createdAt
+  const createdMs    = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+  const updatedMs    = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+  const wasEdited    = updatedMs - createdMs > 60_000;
+  const lastUpdated  = wasEdited ? fmtDateTime(a.lastActiveAt) : undefined;
 
   return {
     id: a.id,
