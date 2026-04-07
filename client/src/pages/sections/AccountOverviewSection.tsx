@@ -125,11 +125,13 @@ const CardHeader = ({
   </div>
 );
 
-const CopyIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
-    <rect x="7" y="7" width="10" height="10" rx="2" stroke="white" strokeWidth="1.4" />
-    <path d="M4 13V4a1 1 0 011-1h9" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
+const CopyIcon = ({ value }: { value: string }) => (
+  <img
+    className="w-6 h-6 flex-shrink-0 cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+    alt="Copy"
+    src="/figmaAssets/icons-8.svg"
+    onClick={() => navigator.clipboard.writeText(value)}
+  />
 );
 
 /* ── Personal account cards (orange theme) ── */
@@ -148,7 +150,7 @@ const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Wallet Address</span>
         <div className="flex items-center gap-2 self-stretch">
           <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">{truncated}</span>
-          <CopyIcon />
+          <CopyIcon value={addr} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
@@ -176,7 +178,7 @@ const DebitCardView = ({ account }: { account?: WirexAccount }) => {
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Debit Card</span>
         <div className="flex items-start gap-2 self-stretch">
           <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-xl leading-6 whitespace-nowrap">{cardNum}</span>
-          <img className="w-6 h-6" alt="Icons" src="/figmaAssets/icons-8.svg" />
+          <CopyIcon value={cardNum} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex">
@@ -213,8 +215,8 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
         <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">IBAN Account Number</span>
         <div className="flex items-center gap-2 self-stretch">
-          <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-[15px] leading-6 whitespace-nowrap tracking-tight">{iban}</span>
-          <CopyIcon />
+          <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">{iban}</span>
+          <CopyIcon value={iban} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
@@ -880,9 +882,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               data-testid="button-collapse-account"
               className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] hover:bg-[#1a1f2e] transition-colors"
             >
-              <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img src="/figmaAssets/nav-collapse-icon.svg" width="18" height="16" alt="Collapse" />
             </button>
             {/* Header pill input field */}
             <div className="flex-1 flex items-center gap-2 h-[40px] px-2 bg-brain-v1baby-blue-15 rounded-[8px]">
@@ -1163,7 +1163,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           </div>
                         </div>
                         {index < filtered.length - 1 && (
-                          <img className="self-stretch w-full h-px" alt="divider" src="/figmaAssets/vector-933.svg" />
+                          <div className="self-stretch w-full h-px bg-[#1d2132] flex-shrink-0" />
                         )}
                       </div>
                     ))}
@@ -1218,7 +1218,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           </div>
                         </div>
                         {index < filtered.length - 1 && (
-                          <img className="self-stretch w-full h-px" alt="divider" src="/figmaAssets/vector-933.svg" />
+                          <div className="self-stretch w-full h-px bg-[#1d2132] flex-shrink-0" />
                         )}
                       </div>
                     ))}
