@@ -1,513 +1,424 @@
 import { useState } from "react";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
   AreaChart,
   Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ReferenceLine,
 } from "recharts";
 
-type Period = "1D" | "7D" | "30D" | "90D";
+/* ── Design tokens ── */
+const CARD_BG = "#0a0c10";
+const BORDER  = "#1d2132";
 
-/* ── Subscriptions ── */
-const allSubscriptions = [
-  { name: "Brain Premium",    cycle: "Monthly", amount: "$89.00",  status: "active"   as const },
-  { name: "AlphaFlow Agent",  cycle: "Daily",   amount: "$144.00", status: "active"   as const },
-  { name: "Yield Pilot",      cycle: "Daily",   amount: "$72.00",  status: "active"   as const },
-  { name: "Netflix",          cycle: "Monthly", amount: "$22.99",  status: "active"   as const },
-  { name: "Spotify",          cycle: "Monthly", amount: "$11.99",  status: "active"   as const },
-  { name: "Amazon Prime",     cycle: "Monthly", amount: "$14.99",  status: "active"   as const },
-  { name: "Risk Sentinel",    cycle: "Daily",   amount: "$48.00",  status: "active"   as const },
-  { name: "Apple TV+",        cycle: "Monthly", amount: "$9.99",   status: "low"      as const },
-  { name: "Disney+",          cycle: "Monthly", amount: "$13.99",  status: "inactive" as const },
-  { name: "TaskForge Pro",    cycle: "Weekly",  amount: "$96.00",  status: "low"      as const },
-  { name: "ChatGPT Plus",     cycle: "Monthly", amount: "$20.00",  status: "active"   as const },
-  { name: "Adobe CC",         cycle: "Monthly", amount: "$54.99",  status: "active"   as const },
-  { name: "Signal Seer",      cycle: "Monthly", amount: "$29.00",  status: "inactive" as const },
-  { name: "YouTube Premium",  cycle: "Monthly", amount: "$13.99",  status: "active"   as const },
-  { name: "Dropbox Plus",     cycle: "Monthly", amount: "$11.99",  status: "active"   as const },
-  { name: "SwarmAlpha",       cycle: "Monthly", amount: "$49.00",  status: "active"   as const },
-  { name: "Notion AI",        cycle: "Monthly", amount: "$16.00",  status: "active"   as const },
-  { name: "Hulu",             cycle: "Monthly", amount: "$17.99",  status: "inactive" as const },
-  { name: "Ops Commander",    cycle: "Monthly", amount: "$39.00",  status: "low"      as const },
-  { name: "iCloud 2TB",       cycle: "Monthly", amount: "$9.99",   status: "active"   as const },
-];
-const monthlyTotal = allSubscriptions.reduce((s, x) => s + parseFloat(x.amount.replace(/[^0-9.]/g, "")), 0);
+/* ── Cash flow chart data ── */
+type CfPeriod = "1H" | "1D" | "1W" | "1M" | "1Y" | "ALL";
+type CfPoint  = { time: string; inflow: number; outflow: number };
 
-/* ── Active Agents ── */
-type AgentRow = {
-  ticker: string;
-  name: string;
-  color: string;
-  earnings: Record<Period, string>;
-  spark: Record<Period, number[]>;
-};
-
-const activeAgents: AgentRow[] = [
-  {
-    ticker: "ALPH", name: "AlphaFlow", color: "#42bf23",
-    earnings: { "1D": "$148.20", "7D": "$412.00", "30D": "$2,145.70", "90D": "$6,435.10" },
-    spark: {
-      "1D":  [10, 18, 12, 28, 16, 35, 22, 42, 30, 38, 34, 41],
-      "7D":  [20, 38, 28, 55, 42, 72, 58, 88, 70, 100, 85, 105],
-      "30D": [100, 185, 140, 260, 200, 340, 280, 420, 360, 510, 440, 600],
-      "90D": [200, 420, 320, 680, 520, 980, 780, 1320, 1060, 1680, 1380, 2100],
-    },
-  },
-  {
-    ticker: "YLDR", name: "Yield Pilot", color: "#7631ee",
-    earnings: { "1D": "$72.00", "7D": "$220.00", "30D": "$1,120.40", "90D": "$3,361.20" },
-    spark: {
-      "1D":  [8, 12, 10, 17, 13, 19, 16, 22, 18, 23, 21, 24],
-      "7D":  [15, 28, 20, 42, 32, 56, 46, 68, 58, 80, 70, 98],
-      "30D": [80, 140, 105, 195, 155, 260, 210, 340, 280, 430, 360, 520],
-      "90D": [150, 310, 230, 500, 390, 720, 580, 1020, 820, 1380, 1120, 1800],
-    },
-  },
-  {
-    ticker: "RISK", name: "Risk Sentinel", color: "#ff9500",
-    earnings: { "1D": "$48.00", "7D": "$180.00", "30D": "$640.00", "90D": "$1,920.00" },
-    spark: {
-      "1D":  [20, 24, 18, 28, 22, 30, 20, 27, 24, 31, 23, 27],
-      "7D":  [40, 52, 38, 58, 44, 65, 48, 70, 54, 74, 50, 60],
-      "30D": [120, 158, 132, 174, 148, 186, 158, 196, 162, 200, 168, 178],
-      "90D": [280, 380, 310, 450, 360, 520, 400, 580, 440, 620, 460, 580],
-    },
-  },
-  {
-    ticker: "SWRM", name: "SwarmAlpha", color: "#a8b9f4",
-    earnings: { "1D": "$43.80", "7D": "$225.00", "30D": "$490.00", "90D": "$1,470.00" },
-    spark: {
-      "1D":  [18, 10, 24, 8, 28, 14, 32, 10, 36, 16, 30, 23],
-      "7D":  [35, 18, 52, 12, 65, 28, 72, 18, 80, 30, 68, 55],
-      "30D": [100, 58, 148, 72, 190, 100, 220, 80, 250, 115, 230, 170],
-      "90D": [200, 110, 320, 140, 430, 190, 540, 220, 630, 260, 580, 390],
-    },
-  },
-];
-
-/* ── Transactions ── */
-type TxRow = { name: string; date: string; category: string; amount: string; type: "debit" | "credit"; account: string };
-
-type ChartPoint = { label: string; balance: number; spend: number; saved: number; yield: number };
-
-/* More volatile chart data matching Figma's jagged lines */
-const chartData: Record<Period, ChartPoint[]> = {
+const cashFlowData: Record<CfPeriod, CfPoint[]> = {
+  "1H": [
+    { time: "00:00", inflow: 6100, outflow: 5820 },
+    { time: "01:00", inflow: 6350, outflow: 5940 },
+    { time: "02:00", inflow: 6180, outflow: 6050 },
+    { time: "03:00", inflow: 6520, outflow: 5980 },
+    { time: "04:00", inflow: 6380, outflow: 5900 },
+    { time: "05:00", inflow: 6700, outflow: 6180 },
+    { time: "06:00", inflow: 6319, outflow: 6040 },
+    { time: "07:00", inflow: 6820, outflow: 6290 },
+    { time: "08:00", inflow: 6610, outflow: 6200 },
+    { time: "09:00", inflow: 7000, outflow: 6490 },
+    { time: "10:00", inflow: 6790, outflow: 6380 },
+    { time: "11:00", inflow: 6900, outflow: 6580 },
+  ],
   "1D": [
-    { label: "12 AM", balance: 47200, spend: 0,    saved: 0,   yield: 0 },
-    { label: "2 AM",  balance: 47320, spend: 8,    saved: 0,   yield: 1.8 },
-    { label: "4 AM",  balance: 47140, spend: 22,   saved: 0,   yield: 3.9 },
-    { label: "6 AM",  balance: 47480, spend: 14,   saved: 15,  yield: 7.2 },
-    { label: "8 AM",  balance: 47260, spend: 95,   saved: 40,  yield: 9.8 },
-    { label: "10 AM", balance: 47710, spend: 175,  saved: 55,  yield: 12.4 },
-    { label: "12 PM", balance: 47440, spend: 240,  saved: 80,  yield: 14.9 },
-    { label: "2 PM",  balance: 47890, spend: 268,  saved: 80,  yield: 16.1 },
-    { label: "4 PM",  balance: 47580, spend: 295,  saved: 80,  yield: 17.0 },
-    { label: "6 PM",  balance: 47960, spend: 303,  saved: 80,  yield: 17.6 },
-    { label: "8 PM",  balance: 47650, spend: 309,  saved: 80,  yield: 18.0 },
-    { label: "Now",   balance: 47832, spend: 312,  saved: 80,  yield: 18.22 },
+    { time: "06:00", inflow: 5820, outflow: 5620 },
+    { time: "09:00", inflow: 6210, outflow: 5900 },
+    { time: "12:00", inflow: 6530, outflow: 6120 },
+    { time: "15:00", inflow: 6780, outflow: 6290 },
+    { time: "18:00", inflow: 6580, outflow: 6180 },
+    { time: "21:00", inflow: 7000, outflow: 6500 },
+    { time: "00:00", inflow: 6900, outflow: 6600 },
   ],
-  "7D": [
-    { label: "Mon", balance: 45400, spend: 106,    saved: 60,   yield: 12.8 },
-    { label: "Tue", balance: 46320, spend: 480,    saved: 155,  yield: 42.6 },
-    { label: "Wed", balance: 45760, spend: 740,    saved: 200,  yield: 58.2 },
-    { label: "Thu", balance: 47100, spend: 1140,   saved: 330,  yield: 86.4 },
-    { label: "Fri", balance: 46480, spend: 1520,   saved: 400,  yield: 101.2 },
-    { label: "Sat", balance: 47640, spend: 1920,   saved: 520,  yield: 120.8 },
-    { label: "Sun", balance: 47832, spend: 2148,   saved: 560,  yield: 127.54 },
+  "1W": [
+    { time: "Mon", inflow: 5900, outflow: 5700 },
+    { time: "Tue", inflow: 6310, outflow: 5990 },
+    { time: "Wed", inflow: 6120, outflow: 5880 },
+    { time: "Thu", inflow: 6710, outflow: 6290 },
+    { time: "Fri", inflow: 6430, outflow: 6090 },
+    { time: "Sat", inflow: 6920, outflow: 6490 },
+    { time: "Sun", inflow: 7000, outflow: 6580 },
   ],
-  "30D": [
-    { label: "Mar 1",  balance: 42300, spend: 306,    saved: 80,    yield: 18.3 },
-    { label: "Mar 4",  balance: 44100, spend: 1420,   saved: 380,   yield: 82.6 },
-    { label: "Mar 7",  balance: 43200, spend: 2360,   saved: 520,   yield: 148.4 },
-    { label: "Mar 10", balance: 45480, spend: 3680,   saved: 820,   yield: 204.8 },
-    { label: "Mar 13", balance: 44600, spend: 4820,   saved: 1040,  yield: 268.3 },
-    { label: "Mar 16", balance: 46540, spend: 5960,   saved: 1320,  yield: 318.0 },
-    { label: "Mar 19", balance: 45380, spend: 6820,   saved: 1600,  yield: 365.4 },
-    { label: "Mar 22", balance: 47200, spend: 7820,   saved: 1900,  yield: 408.6 },
-    { label: "Mar 25", balance: 46100, spend: 8640,   saved: 2180,  yield: 478.2 },
-    { label: "Mar 28", balance: 47832, spend: 9214,   saved: 2400,  yield: 548.3 },
+  "1M": [
+    { time: "Mar 1",  inflow: 5700, outflow: 5500 },
+    { time: "Mar 8",  inflow: 6120, outflow: 5820 },
+    { time: "Mar 15", inflow: 6520, outflow: 6190 },
+    { time: "Mar 22", inflow: 6800, outflow: 6380 },
+    { time: "Mar 28", inflow: 7000, outflow: 6590 },
   ],
-  "90D": [
-    { label: "Jan 1",  balance: 38200, spend: 1248,    saved: 320,   yield: 72.1 },
-    { label: "Jan 8",  balance: 40480, spend: 4320,    saved: 1100,  yield: 248.6 },
-    { label: "Jan 15", balance: 39200, spend: 6480,    saved: 1560,  yield: 360.2 },
-    { label: "Jan 22", balance: 41640, spend: 9200,    saved: 2240,  yield: 492.8 },
-    { label: "Jan 29", balance: 40200, spend: 11480,   saved: 2800,  yield: 608.4 },
-    { label: "Feb 5",  balance: 43300, spend: 14600,   saved: 3600,  yield: 752.0 },
-    { label: "Feb 12", balance: 41800, spend: 17200,   saved: 4200,  yield: 884.6 },
-    { label: "Feb 19", balance: 44900, spend: 20100,   saved: 5000,  yield: 1024.8 },
-    { label: "Feb 26", balance: 43400, spend: 22800,   saved: 5620,  yield: 1148.4 },
-    { label: "Mar 5",  balance: 46500, spend: 24960,   saved: 6320,  yield: 1328.6 },
-    { label: "Mar 19", balance: 44800, spend: 26400,   saved: 6840,  yield: 1492.0 },
-    { label: "Mar 28", balance: 47832, spend: 27643,   saved: 7200,  yield: 1644.9 },
+  "1Y": [
+    { time: "Jan", inflow: 4510, outflow: 4200 },
+    { time: "Mar", inflow: 5210, outflow: 4790 },
+    { time: "May", inflow: 5820, outflow: 5390 },
+    { time: "Jul", inflow: 6320, outflow: 5890 },
+    { time: "Sep", inflow: 6700, outflow: 6180 },
+    { time: "Nov", inflow: 7000, outflow: 6490 },
+    { time: "Dec", inflow: 6820, outflow: 6310 },
+  ],
+  "ALL": [
+    { time: "2022", inflow: 3210, outflow: 2810 },
+    { time: "2023", inflow: 4520, outflow: 4100 },
+    { time: "Q1",   inflow: 5820, outflow: 5390 },
+    { time: "Q2",   inflow: 6530, outflow: 6010 },
+    { time: "Q3",   inflow: 6920, outflow: 6390 },
+    { time: "2024", inflow: 7000, outflow: 6490 },
   ],
 };
 
-const periodData: Record<Period, {
-  totalBalance: string;
-  totalSpend: string;
-  totalSaved: string;
-  yield: string;
-  yieldPct: string;
-  spendDelta: string;
-  savedDelta: string;
-  spendCategories: { label: string; amount: string; pct: number; color: string }[];
-  transactions: TxRow[];
-}> = {
-  "1D": {
-    totalBalance: "$47,832.10", totalSpend: "$312.40", totalSaved: "$80.00",
-    yield: "$18.22", yieldPct: "+0.04%", spendDelta: "-$312.40", savedDelta: "+$80.00",
-    spendCategories: [
-      { label: "AI Agents",     amount: "$148.20", pct: 47, color: "#7631ee" },
-      { label: "Subscriptions", amount: "$89.00",  pct: 28, color: "#a8b9f4" },
-      { label: "Transfers",     amount: "$50.00",  pct: 16, color: "#42bf23" },
-      { label: "Other",         amount: "$25.20",  pct: 9,  color: "#414965" },
-    ],
-    transactions: [
-      { name: "AlphaFlow — ETH Buy",  date: "Today, 11:42 AM", category: "AI Agent",     amount: "-$148.20", type: "debit",  account: "AI Wallet" },
-      { name: "Brain Premium",         date: "Today, 10:15 AM", category: "Subscription", amount: "-$89.00",  type: "debit",  account: "Neobank"   },
-      { name: "Yield Harvest",         date: "Today, 08:00 AM", category: "Yield",        amount: "+$18.22",  type: "credit", account: "AI Wallet" },
-      { name: "Bank Transfer",         date: "Today, 07:30 AM", category: "Transfer",     amount: "+$80.00",  type: "credit", account: "Neobank"   },
-    ],
-  },
-  "7D": {
-    totalBalance: "$47,832.10", totalSpend: "$2,148.60", totalSaved: "$560.00",
-    yield: "$127.54", yieldPct: "+0.27%", spendDelta: "-$2,148.60", savedDelta: "+$560.00",
-    spendCategories: [
-      { label: "AI Agents",     amount: "$1,037.00", pct: 48, color: "#7631ee" },
-      { label: "Subscriptions", amount: "$623.00",   pct: 29, color: "#a8b9f4" },
-      { label: "Transfers",     amount: "$350.00",   pct: 16, color: "#42bf23" },
-      { label: "Other",         amount: "$138.60",   pct: 7,  color: "#414965" },
-    ],
-    transactions: [
-      { name: "AlphaFlow — BTC Rebalance", date: "Today, 11:42 AM",     category: "AI Agent",     amount: "-$412.00",   type: "debit",  account: "AI Wallet" },
-      { name: "Yield Pilot — USDC Farm",   date: "Yesterday, 09:10 AM", category: "AI Agent",     amount: "-$220.00",   type: "debit",  account: "AI Wallet" },
-      { name: "Yield Harvest",             date: "Yesterday, 08:00 AM", category: "Yield",        amount: "+$127.54",   type: "credit", account: "AI Wallet" },
-      { name: "Payroll Deposit",           date: "Mon, 09:00 AM",       category: "Income",       amount: "+$3,200.00", type: "credit", account: "Neobank"   },
-      { name: "Brain Premium",             date: "Sun, 10:00 AM",       category: "Subscription", amount: "-$89.00",    type: "debit",  account: "Neobank"   },
-      { name: "Bank → Wallet Transfer",    date: "Sat, 02:15 PM",       category: "Transfer",     amount: "-$500.00",   type: "debit",  account: "Neobank"   },
-      { name: "Risk Sentinel — Hedge",     date: "Fri, 03:45 PM",       category: "AI Agent",     amount: "-$180.00",   type: "debit",  account: "AI Wallet" },
-      { name: "SwarmAlpha — Deploy",       date: "Thu, 11:00 AM",       category: "AI Agent",     amount: "-$225.00",   type: "debit",  account: "AI Wallet" },
-    ],
-  },
-  "30D": {
-    totalBalance: "$47,832.10", totalSpend: "$9,214.40", totalSaved: "$2,400.00",
-    yield: "$548.30", yieldPct: "+1.16%", spendDelta: "-$9,214.40", savedDelta: "+$2,400.00",
-    spendCategories: [
-      { label: "AI Agents",     amount: "$4,432.00", pct: 48, color: "#7631ee" },
-      { label: "Subscriptions", amount: "$2,670.00", pct: 29, color: "#a8b9f4" },
-      { label: "Transfers",     amount: "$1,500.00", pct: 16, color: "#42bf23" },
-      { label: "Other",         amount: "$612.40",   pct: 7,  color: "#414965" },
-    ],
-    transactions: [
-      { name: "AlphaFlow — ETH Accumulate", date: "Today, 11:42 AM",   category: "AI Agent",     amount: "-$1,200.00",  type: "debit",  account: "AI Wallet" },
-      { name: "Monthly Yield Harvest",      date: "Mar 28, 08:00 AM",  category: "Yield",        amount: "+$548.30",    type: "credit", account: "AI Wallet" },
-      { name: "Payroll Deposit",            date: "Mar 25, 09:00 AM",  category: "Income",       amount: "+$6,400.00",  type: "credit", account: "Neobank"   },
-      { name: "Wallet Top-Up",              date: "Mar 20, 02:15 PM",  category: "Transfer",     amount: "-$1,500.00",  type: "debit",  account: "Neobank"   },
-      { name: "Yield Pilot — Rebalance",    date: "Mar 15, 10:30 AM",  category: "AI Agent",     amount: "-$880.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Risk Sentinel — Hedge",      date: "Mar 10, 03:00 PM",  category: "AI Agent",     amount: "-$640.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Brain Premium",              date: "Mar 1, 10:00 AM",   category: "Subscription", amount: "-$89.00",     type: "debit",  account: "Neobank"   },
-      { name: "SwarmAlpha — Strategy",      date: "Feb 28, 01:00 PM",  category: "AI Agent",     amount: "-$490.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Deal Closer — Commission",   date: "Feb 25, 04:30 PM",  category: "AI Agent",     amount: "-$320.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Invoice Bot — Batch",        date: "Feb 22, 09:15 AM",  category: "AI Agent",     amount: "-$58.00",     type: "debit",  account: "Neobank"   },
-      { name: "Bank Transfer In",           date: "Feb 20, 08:00 AM",  category: "Transfer",     amount: "+$2,000.00",  type: "credit", account: "Neobank"   },
-      { name: "TaskForge — Automation",     date: "Feb 18, 11:00 AM",  category: "AI Agent",     amount: "-$240.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Claude API — Batch",         date: "Feb 15, 03:00 PM",  category: "API",          amount: "-$62.00",     type: "debit",  account: "Neobank"   },
-      { name: "Ops Commander",              date: "Feb 12, 10:45 AM",  category: "AI Agent",     amount: "-$195.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Mid-Month Yield",            date: "Feb 10, 08:00 AM",  category: "Yield",        amount: "+$210.40",    type: "credit", account: "AI Wallet" },
-    ],
-  },
-  "90D": {
-    totalBalance: "$47,832.10", totalSpend: "$27,643.20", totalSaved: "$7,200.00",
-    yield: "$1,644.90", yieldPct: "+3.47%", spendDelta: "-$27,643.20", savedDelta: "+$7,200.00",
-    spendCategories: [
-      { label: "AI Agents",     amount: "$13,269.00", pct: 48, color: "#7631ee" },
-      { label: "Subscriptions", amount: "$8,010.00",  pct: 29, color: "#a8b9f4" },
-      { label: "Transfers",     amount: "$4,500.00",  pct: 16, color: "#42bf23" },
-      { label: "Other",         amount: "$1,864.20",  pct: 7,  color: "#414965" },
-    ],
-    transactions: [
-      { name: "AlphaFlow — Q1 Rebalance",  date: "Today, 11:42 AM", category: "AI Agent",     amount: "-$3,600.00",  type: "debit",  account: "AI Wallet" },
-      { name: "Q1 Yield Harvest",          date: "Mar 28, 08:00 AM",category: "Yield",        amount: "+$1,644.90",  type: "credit", account: "AI Wallet" },
-      { name: "Q1 Payroll Total",          date: "Mar 25",          category: "Income",       amount: "+$19,200.00", type: "credit", account: "Neobank"   },
-      { name: "Wallet Funding",            date: "Mar 1",           category: "Transfer",     amount: "-$4,500.00",  type: "debit",  account: "Neobank"   },
-      { name: "Yield Pilot — DeFi Deploy", date: "Feb 15",          category: "AI Agent",     amount: "-$2,640.00",  type: "debit",  account: "AI Wallet" },
-      { name: "Risk Sentinel — Hedge",     date: "Jan 30",          category: "AI Agent",     amount: "-$1,920.00",  type: "debit",  account: "AI Wallet" },
-      { name: "TaskForge Pro — API Calls", date: "Jan 15",          category: "AI Agent",     amount: "-$960.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Brain Premium × 3 Mo",     date: "Jan 1",           category: "Subscription", amount: "-$267.00",    type: "debit",  account: "Neobank"   },
-      { name: "SwarmAlpha — Q1 Ops",      date: "Dec 28",          category: "AI Agent",     amount: "-$1,470.00",  type: "debit",  account: "AI Wallet" },
-      { name: "Deal Closer — Q4 Wrap",    date: "Dec 20",          category: "AI Agent",     amount: "-$660.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Year-End Deposit",         date: "Dec 15",          category: "Income",       amount: "+$8,000.00",  type: "credit", account: "Neobank"   },
-      { name: "Claude API — Q4",          date: "Dec 10",          category: "API",          amount: "-$180.00",    type: "debit",  account: "Neobank"   },
-      { name: "Ops Commander — Q4",       date: "Dec 5",           category: "AI Agent",     amount: "-$585.00",    type: "debit",  account: "AI Wallet" },
-      { name: "Q4 Yield Harvest",         date: "Dec 1",           category: "Yield",        amount: "+$820.00",    type: "credit", account: "AI Wallet" },
-    ],
-  },
+/* ── Panel data ── */
+const accountItems = [
+  { name: "Your Stablecoin Account", sub: "0x2bJ8....3ds4",         amount: "$8,949.00", delta: "+$2.92 (24h)",   positive: true  },
+  { name: "Your Bank Account",       sub: "AE070331234567890123456", amount: "$784.00",   delta: "-$13.94 (24h)", positive: false },
+  { name: "Yield Pilot",             sub: "Yield Agent",             amount: "$32.00",    delta: "+$0.15 (24h)",  positive: true  },
+  { name: "Payment Bot",             sub: "Payments Agent",          amount: "$12.99",    delta: "Active",        positive: true  },
+];
+
+type RichSpan = { text: string; bold: boolean };
+type ActivityItem = {
+  spans: RichSpan[];
+  time: string;
+  tag: string;
 };
 
-/* ── Dividers ── */
-/* Full-width for outer panel borders */
-const InsetDivider = () => (
-  <div className="flex-shrink-0 mx-[14px]" style={{ height: "1px", background: "#1d2132" }} />
-);
+const activityItems: ActivityItem[] = [
+  { spans: [{ text: "TraderPro ",  bold: true }, { text: "requested approval for $23K BTC trade", bold: false }], time: "Today, 11:42 AM",    tag: "Trading"  },
+  { spans: [{ text: "PaymentBot ", bold: true }, { text: "paid CMC-API $0.0001 via x402 for API",  bold: false }], time: "Mar 28, 12:13 PM",   tag: "Payment"  },
+  { spans: [{ text: "You ",        bold: true }, { text: "transferred 5K USDC to ",                bold: false }, { text: "TraderPro",    bold: true }], time: "Mar 25, 1:45 PM",  tag: "You"      },
+  { spans: [{ text: "You ",        bold: true }, { text: "deposited 13K USDC to ",                 bold: false }, { text: "Your Account", bold: true }], time: "Mar 22, 7:23 AM",  tag: "You"      },
+  { spans: [{ text: "Yield Pilot ",   bold: true }, { text: "staked 1K USDC to AAVE",             bold: false }], time: "Today, 11:42 AM",    tag: "Ai Agent" },
+  { spans: [{ text: "Trader-Alpha ",  bold: true }, { text: "staked 1.5K USDC to AAVE",           bold: false }], time: "Today, 12:36 PM",    tag: "Ai Agent" },
+];
 
-/* Category separator — slightly lighter inset */
-const CategoryDivider = () => (
-  <div className="flex-shrink-0 mx-[14px]" style={{ height: "1px", background: "#1a1f2e" }} />
-);
+type AlertItem = { actor?: string; message: string; time: string; requiresAction?: boolean };
+const alertItems: AlertItem[] = [
+  { actor: "Marketing Agent", message: " is requesting $4.24 for Google Ad spend",    time: "Today, 11:42 AM",  requiresAction: true },
+  {                           message: "Monthly debit card spend exceeded 1K threshold", time: "Mar 28, 12:13 PM" },
+  {                           message: "Payment Bot balance below monthly 10K threshold", time: "Mar 21, 9:46 AM" },
+];
 
-/* ── Stat card — no border, Gilroy-Medium value, sentence-case label ── */
-const StatCard = ({ label, value, delta, deltaPositive }: { label: string; value: string; delta?: string; deltaPositive?: boolean }) => (
-  <div className="flex flex-col gap-[8px] p-[16px] rounded-[16px] flex-1 min-w-0" style={{ background: "#0a0c10" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
-    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">{value}</span>
-    {delta && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[14px]" style={{ color: deltaPositive ? "#42bf23" : "#d20344" }}>{delta}</span>}
-  </div>
-);
-
-const PeriodBtn = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
-  <button onClick={onClick} data-testid={`button-period-${label}`}
-    className="flex items-center justify-center px-[12px] py-[6px] rounded-[100px] transition-all flex-shrink-0"
-    style={active ? { background: "#1d2132", border: "1px solid #414965" } : { background: "transparent", border: "1px solid transparent" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[13px] leading-[18px] whitespace-nowrap" style={{ color: active ? "#a8b9f4" : "#414965" }}>{label}</span>
-  </button>
-);
-
-const statusBadge = (status: "active" | "low" | "inactive") => {
-  if (status === "active")   return <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(66,191,35,0.12)",   color: "#42bf23", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>Active</span>;
-  if (status === "low")      return <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(255,149,0,0.12)",   color: "#ff9500", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>Low</span>;
-  return                            <span className="text-[8px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "rgba(108,119,157,0.12)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>Paused</span>;
+/* ── Shared UI primitives ── */
+type TagColor = "green" | "red" | "orange" | "grey";
+const TAG_STYLES: Record<TagColor, { bg: string; border: string; text: string }> = {
+  green:  { bg: "#123509", border: "rgba(66,191,35,0.2)",   text: "#42bf23" },
+  red:    { bg: "#350011", border: "rgba(210,3,68,0.2)",    text: "#d20344" },
+  orange: { bg: "#4a2300", border: "rgba(255,149,0,0.2)",   text: "#ff9500" },
+  grey:   { bg: "#222737", border: "rgba(108,119,157,0.2)", text: "#6c779d" },
 };
 
-/* ── Overview chart tooltip ── */
-const ChartTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  const fmt = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+const Tag = ({ children, color = "grey" }: { children: React.ReactNode; color?: TagColor }) => {
+  const s = TAG_STYLES[color];
   return (
-    <div className="flex flex-col gap-[6px] px-[12px] py-[10px] rounded-[10px]" style={{ background: "#0d101a", border: "1px solid #1d2132", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-      <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", color: "#6c779d" }}>{label}</span>
-      {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center gap-[8px]">
-          <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: p.stroke }} />
-          <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "12px", color: "#a8b9f4", minWidth: "80px" }}>{p.name}</span>
-          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", color: "#ffffff" }}>{fmt(p.value)}</span>
-        </div>
-      ))}
-    </div>
+    <span
+      className="flex-shrink-0 inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] whitespace-nowrap"
+      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text, fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", lineHeight: "14px" }}
+    >{children}</span>
   );
 };
 
-/* Updated colors to match Figma: purple=balance, orange=spent, red=saved, green=yield */
-const SERIES = [
-  { key: "balance", name: "Total Balance", color: "#7631ee" },
-  { key: "spend",   name: "Total Spent",   color: "#ff9500" },
-  { key: "saved",   name: "Total Saved",   color: "#d20344" },
-  { key: "yield",   name: "Yield Earned",  color: "#42bf23" },
-] as const;
+const CategoryTag = ({ children }: { children: React.ReactNode }) => (
+  <span
+    className="flex-shrink-0 inline-flex items-center justify-center px-[4px] py-[1px] rounded-[20px] whitespace-nowrap"
+    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", lineHeight: "14px" }}
+  >{children}</span>
+);
 
-/* ── Sparkline for Active Agents ── */
-const AgentSparkline = ({ data, color }: { data: number[]; color: string }) => {
-  const points = data.map((v, i) => ({ i, v }));
-  const gradId = `spark-${color.replace("#", "")}`;
+const Divider = () => <div className="w-full flex-shrink-0" style={{ height: "1px", background: BORDER }} />;
+
+const PanelHeader = ({ title, right }: { title: string; right?: React.ReactNode }) => (
+  <div
+    className="flex items-center justify-between px-[16px] flex-shrink-0"
+    style={{ height: "48px", borderBottom: `1px solid ${BORDER}`, background: CARD_BG }}
+  >
+    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>{title}</span>
+    {right}
+  </div>
+);
+
+/* ── Stat card ── */
+const StatCard = ({
+  label, mainInt, mainDec, subColor, tags,
+}: {
+  label: string;
+  mainInt: string;
+  mainDec?: string;
+  subColor?: string;
+  tags: React.ReactNode;
+}) => (
+  <div className="flex-1 flex flex-col gap-[8px] p-[16px] rounded-[16px]" style={{ background: CARD_BG }}>
+    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "14px", color: "#414965" }}>{label}</span>
+    <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+      <span style={{ fontSize: "20px", lineHeight: "24px", color: "#a8b9f4" }}>{mainInt}</span>
+      {mainDec && <span style={{ fontSize: "16px", lineHeight: "24px", color: subColor || "#a8b9f4" }}>{mainDec}</span>}
+    </p>
+    <div className="flex gap-[4px] flex-wrap">{tags}</div>
+  </div>
+);
+
+/* ── Cash Flow chart period button ── */
+const CF_PERIODS: CfPeriod[] = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
+
+const CfBtn = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    data-testid={`button-cf-period-${label}`}
+    className="flex items-center justify-center px-[8px] py-[4px] rounded-[100px] flex-shrink-0 transition-colors"
+    style={{ background: active ? "#4a2300" : "transparent" }}
+  >
+    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: active ? "#ff9500" : "#414965" }}>{label}</span>
+  </button>
+);
+
+/* ── Cash Flow chart ── */
+const Y_TICKS = [5600, 5800, 6000, 6200, 6400, 6600, 7000];
+
+const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
+  const crosshairTime = data[Math.floor(data.length * 0.55)]?.time;
+  const crosshairInflow = data[Math.floor(data.length * 0.55)]?.inflow ?? 6319;
+
   return (
-    <AreaChart width={88} height={36} data={points} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.6} fill={`url(#${gradId})`} dot={false} isAnimationActive={false} />
-    </AreaChart>
+    <div className="relative w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 16, right: 56, left: 0, bottom: 56 }}>
+          <defs>
+            <linearGradient id="cfInflow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#42bf23" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#42bf23" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="cfOutflow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#d20344" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#d20344" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke={BORDER} strokeDasharray="0" />
+          <XAxis
+            dataKey="time"
+            tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold',Helvetica" }}
+            axisLine={false} tickLine={false}
+            interval="preserveStartEnd"
+          />
+          <YAxis
+            orientation="right"
+            domain={[5600, 7000]}
+            ticks={Y_TICKS}
+            tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold',Helvetica" }}
+            tickFormatter={(v: number) => `$${v}`}
+            axisLine={false} tickLine={false}
+            width={48}
+          />
+          <ReferenceLine x={crosshairTime} stroke="#1d2132" strokeWidth={1} />
+          <ReferenceLine y={crosshairInflow} stroke="#1d2132" strokeWidth={1} strokeDasharray="0" />
+          <Area
+            type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
+            fill="url(#cfInflow)" dot={false} isAnimationActive={false} name="Inflow"
+          />
+          <Area
+            type="monotone" dataKey="outflow" stroke="#d20344" strokeWidth={1.5}
+            fill="url(#cfOutflow)" dot={false} isAnimationActive={false} name="Outflow"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+
+      {/* Crosshair price label */}
+      <div
+        className="absolute flex items-center justify-center px-[4px] rounded-[12px]"
+        style={{ background: "#4a2300", top: "18px", right: "56px", transform: "translateY(0)", pointerEvents: "none" }}
+      >
+        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", lineHeight: "14px", color: "#ff9500" }}>$6319.45</span>
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-[8px] left-[16px] flex gap-[24px] items-center">
+        <div className="flex gap-[8px] items-start">
+          <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#42bf23" }} />
+          <div className="flex flex-col">
+            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Inflow</span>
+            <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+              <span style={{ fontSize: "16px", lineHeight: "24px" }}>$6,245</span>
+              <span style={{ fontSize: "13px", lineHeight: "24px" }}>.23</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-[8px] items-start">
+          <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#d20344" }} />
+          <div className="flex flex-col">
+            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Outflow</span>
+            <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+              <span style={{ fontSize: "16px", lineHeight: "24px" }}>$5,982</span>
+              <span style={{ fontSize: "13px", lineHeight: "24px" }}>.40</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
 /* ── Main page ── */
 export const DashboardPage = (): JSX.Element => {
-  const [period, setPeriod] = useState<Period>("30D");
-  const d = periodData[period];
-  const points = chartData[period];
+  const [cfPeriod, setCfPeriod] = useState<CfPeriod>("1H");
+  const cfData = cashFlowData[cfPeriod];
 
   return (
-    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+    <div
+      className="flex flex-col gap-[16px] p-[15px] h-full overflow-y-auto rounded-[16px] border border-solid"
+      style={{ background: "#11141b", borderColor: BORDER }}
+    >
 
-      {/* Header */}
-      <div className="flex items-center gap-[12px] px-[16px] flex-shrink-0" style={{ height: "56px", borderBottom: "1px solid #1d2132" }}>
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[18px] leading-[24px] flex-1">Dashboard</span>
-        <div className="flex items-center gap-[2px] p-[3px] rounded-[100px]" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-          {(["1D", "7D", "30D", "90D"] as Period[]).map((p) => (
-            <PeriodBtn key={p} label={p} active={period === p} onClick={() => setPeriod(p)} />
-          ))}
-        </div>
+      {/* ── Row 1: Stat cards ── */}
+      <div className="flex gap-[16px] flex-shrink-0">
+        <StatCard
+          label="Total Balance"
+          mainInt="$47,832" mainDec=".10"
+          tags={<Tag color="green">+$520.31 (24h)</Tag>}
+        />
+        <StatCard
+          label="Active Agents"
+          mainInt="12" mainDec="/15" subColor="#6c779d"
+          tags={<><Tag color="orange">2 Paused</Tag><Tag color="red">1 Errored</Tag></>}
+        />
+        <StatCard
+          label="Agent Spend (24h)"
+          mainInt="$6,245" mainDec=".23"
+          tags={<Tag color="grey">21 Transactions</Tag>}
+        />
+        <StatCard
+          label="Policy Alerts"
+          mainInt="12"
+          tags={<Tag color="grey">1 Requires Approval</Tag>}
+        />
       </div>
 
-      {/* Stat cards — no border per Figma */}
-      <div className="flex gap-[12px] px-[16px] pt-[16px] flex-shrink-0">
-        <StatCard label="Total Balance" value={d.totalBalance} />
-        <StatCard label="Total Spent"   value={d.totalSpend}   delta={d.spendDelta} deltaPositive={false} />
-        <StatCard label="Total Saved"   value={d.totalSaved}   delta={d.savedDelta} deltaPositive={true}  />
-        <StatCard label="Yield Earned"  value={d.yield}        delta={d.yieldPct}   deltaPositive={true}  />
-      </div>
+      {/* ── Row 2: Accounts+Agents | Cash Flow ── */}
+      <div className="flex gap-[16px] flex-shrink-0">
 
-      {/* Financial Overview — no border, 16px header, updated legend */}
-      <div className="mx-[16px] mt-[12px] flex-shrink-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", height: "200px" }}>
-        <div className="flex items-center justify-between px-[16px] py-[12px]" style={{ borderBottom: "1px solid #1d2132" }}>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Financial Overview</span>
-          <div className="flex items-center gap-[12px]">
-            {SERIES.map(s => (
-              <div key={s.key} className="flex items-center gap-[4px]">
-                <div className="h-[4px] rounded-[2px] flex-shrink-0" style={{ width: "10px", background: s.color }} />
-                <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", color: "#6c779d" }}>{s.name}</span>
+        {/* Accounts and Agents */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
+          <PanelHeader title="Accounts and Agents" />
+          <div className="flex flex-col gap-[12px] px-[16px] py-[12px] overflow-hidden">
+            {accountItems.map((item, i) => (
+              <div key={i} className="flex flex-col gap-[12px]">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-[4px]">
+                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{item.name}</span>
+                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.sub}</span>
+                  </div>
+                  <div className="flex flex-col items-end gap-[3px]">
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{item.amount}</span>
+                    <Tag color={item.positive ? "green" : "red"}>{item.delta}</Tag>
+                  </div>
+                </div>
+                {i < accountItems.length - 1 && <Divider />}
               </div>
             ))}
           </div>
         </div>
-        <div style={{ height: "152px", padding: "8px 8px 4px 0" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={points} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="#1d2132" strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }} tickLine={false} axisLine={false} dy={4} />
-              <YAxis tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} tick={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: 10, fill: "#6c779d" }} tickLine={false} axisLine={false} width={42} />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#1d2132", strokeWidth: 1 }} />
-              {SERIES.map(s => (
-                <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={1.8} dot={false} activeDot={{ r: 3, fill: s.color, strokeWidth: 0 }} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+
+        {/* Cash Flow */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
+          <PanelHeader
+            title="Cash Flow"
+            right={
+              <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
+                {CF_PERIODS.map(p => <CfBtn key={p} label={p} active={cfPeriod === p} onClick={() => setCfPeriod(p)} />)}
+              </div>
+            }
+          />
+          <div className="flex-1 overflow-hidden">
+            <CashFlowChart data={cfData} />
+          </div>
         </div>
       </div>
 
-      {/* ── 2×2 widget grid — no borders on widgets ── */}
-      <div
-        className="flex-1 min-h-0 grid px-[16px] pb-[16px] pt-[12px] gap-[12px]"
-        style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}
-      >
+      {/* ── Row 3: Recent Activity | Attention Required ── */}
+      <div className="flex gap-[16px] flex-shrink-0">
 
-        {/* TOP-LEFT: Spending by Category — separators between categories */}
-        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10" }}>
-          <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Spending by Category</span>
+        {/* Recent Activity */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
+          <div
+            className="flex items-center justify-between px-[16px] flex-shrink-0"
+            style={{ height: "48px", borderBottom: `1px solid ${BORDER}`, background: "rgba(10,12,16,0.8)", backdropFilter: "blur(10px)" }}
+          >
+            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>Recent Activity</span>
           </div>
-          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {d.spendCategories.map((cat, i) => (
-              <div key={cat.label} className="flex flex-col">
-                <div className="flex flex-col gap-[4px] px-[14px] py-[10px]">
-                  <div className="flex items-center justify-between">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cat.label}</span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">{cat.amount}</span>
+          <div className="flex-1 overflow-y-auto flex flex-col gap-[12px] px-[16px] py-[12px]">
+            {activityItems.map((item, i) => (
+              <div key={i} className="flex flex-col gap-[12px]">
+                <div className="flex flex-col gap-[4px]">
+                  <p style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
+                    {item.spans.map((s, j) => (
+                      <span key={j} style={{ color: s.bold ? "#a8b9f4" : "#6c779d" }}>{s.text}</span>
+                    ))}
+                  </p>
+                  <div className="flex items-center gap-[8px]">
+                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
+                    <CategoryTag>{item.tag}</CategoryTag>
                   </div>
-                  <div className="flex items-center gap-[6px]">
-                    <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: "#1d2132" }}>
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cat.pct}%`, background: cat.color }} />
+                </div>
+                {i < activityItems.length - 1 && <Divider />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Attention Required */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
+          <PanelHeader
+            title="Attention Required"
+            right={<Tag color="grey">3 Total</Tag>}
+          />
+          <div className="flex-1 overflow-y-auto flex flex-col gap-[12px] px-[16px] py-[12px]">
+            {alertItems.map((item, i) => (
+              <div key={i} className="flex flex-col gap-[12px]">
+                <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[4px]">
+                    <p style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
+                      {item.actor && <span>{item.actor}</span>}
+                      <span style={{ color: item.actor ? "#6c779d" : "#a8b9f4" }}>{item.message}</span>
+                    </p>
+                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
+                  </div>
+                  {item.requiresAction && (
+                    <div className="flex gap-[8px]">
+                      <button
+                        data-testid="button-approve-alert"
+                        className="flex items-center gap-[4px] px-[10px] py-[4px] rounded-[100px] transition-opacity hover:opacity-80"
+                        style={{ background: "#123509" }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8.5L6.5 12L13 5" stroke="#42bf23" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#42bf23" }}>Approve</span>
+                      </button>
+                      <button
+                        data-testid="button-deny-alert"
+                        className="flex items-center gap-[4px] px-[10px] py-[4px] rounded-[100px] transition-opacity hover:opacity-80"
+                        style={{ background: "#350011" }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M4.5 4.5L11.5 11.5M11.5 4.5L4.5 11.5" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round"/>
+                        </svg>
+                        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#d20344" }}>Deny</span>
+                      </button>
                     </div>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[10px] leading-[12px] flex-shrink-0 w-[26px] text-right">{cat.pct}%</span>
-                  </div>
+                  )}
                 </div>
-                {i < d.spendCategories.length - 1 && <CategoryDivider />}
+                {i < alertItems.length - 1 && <Divider />}
               </div>
             ))}
           </div>
         </div>
-
-        {/* TOP-RIGHT: Active Agents — inset separators */}
-        <div className="flex flex-col rounded-[16px] overflow-hidden min-h-0" style={{ background: "#0a0c10" }}>
-          <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Active Agents</span>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">{activeAgents.length} running</span>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {activeAgents.map((agent, i) => (
-              <div key={agent.ticker}>
-                <div className="flex items-center gap-[10px] px-[14px] py-[10px] hover:bg-[#111822] transition-colors cursor-pointer">
-                  <div className="flex flex-col min-w-0" style={{ width: "72px", flexShrink: 0 }}>
-                    <span style={{ fontFamily: "'Gilroy-Bold',Helvetica", fontSize: "15px", lineHeight: "20px", color: "#ffffff", letterSpacing: "0.02em" }}>{agent.ticker}</span>
-                    <span style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: "10px", lineHeight: "13px", color: "#6c779d" }}>{agent.name}</span>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <AgentSparkline data={agent.spark[period]} color={agent.color} />
-                  </div>
-                  <span style={{ fontFamily: "'Gilroy-Bold',Helvetica", fontSize: "15px", lineHeight: "20px", color: agent.color, flexShrink: 0, minWidth: "72px", textAlign: "right" }}>
-                    {agent.earnings[period]}
-                  </span>
-                </div>
-                {i < activeAgents.length - 1 && <InsetDivider />}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* BOTTOM-LEFT: Subscriptions — inset separators */}
-        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-          <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Subscriptions</span>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">Monthly</span>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {allSubscriptions.map((sub, i) => (
-              <div key={sub.name}>
-                <div className="flex items-center gap-[8px] px-[14px] py-[7px] hover:bg-[#111822] transition-colors cursor-pointer">
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[12px] leading-[16px] truncate">{sub.name}</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[10px] leading-[13px]">{sub.cycle}</span>
-                  </div>
-                  <div className="flex flex-col items-end gap-[2px] flex-shrink-0">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[11px] leading-[14px]">{sub.amount}</span>
-                    {statusBadge(sub.status)}
-                  </div>
-                </div>
-                {i < allSubscriptions.length - 1 && <InsetDivider />}
-              </div>
-            ))}
-          </div>
-          <div className="flex-shrink-0" style={{ borderTop: "1px solid #1d2132" }}>
-            <div className="flex items-center justify-between px-[14px] py-[9px]">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Monthly Total</span>
-              <span className="[font-family:'Gilroy-Bold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">${monthlyTotal.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* BOTTOM-RIGHT: Recent Transactions — inset separators */}
-        <div className="flex flex-col min-h-0 rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-          <div className="flex items-center justify-between px-[14px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">Recent Transactions</span>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px]">{d.transactions.length} total</span>
-          </div>
-          {/* Column headers */}
-          <div className="flex items-center gap-[10px] px-[14px] py-[6px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-            <span className="flex-1 [font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[9px] leading-[12px] uppercase tracking-widest">Transaction</span>
-            <span className="w-[60px] text-right [font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[9px] leading-[12px] uppercase tracking-widest flex-shrink-0">Account</span>
-            <span className="w-[64px] text-right [font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[9px] leading-[12px] uppercase tracking-widest flex-shrink-0">Amount</span>
-          </div>
-          {/* Scrollable rows */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {d.transactions.map((tx, i) => (
-              <div key={i}>
-                <div className="flex items-center gap-[10px] px-[14px] py-[8px] hover:bg-[#111822] transition-colors cursor-pointer">
-                  <div className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: tx.type === "credit" ? "#42bf23" : "#d20344" }} />
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-center gap-[5px] min-w-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[11px] leading-[15px] truncate">{tx.name}</span>
-                      <span className="flex-shrink-0 text-[8px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "#1d2132", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica" }}>{tx.category}</span>
-                    </div>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[10px] leading-[13px]">{tx.date}</span>
-                  </div>
-                  <span className="w-[60px] text-right [font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[10px] leading-[13px] flex-shrink-0">{tx.account}</span>
-                  <span className="w-[64px] text-right [font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[15px] flex-shrink-0" style={{ color: tx.type === "credit" ? "#42bf23" : "#d20344" }}>{tx.amount}</span>
-                </div>
-                {i < d.transactions.length - 1 && <InsetDivider />}
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>{/* end 2×2 grid */}
-
+      </div>
     </div>
   );
 };
