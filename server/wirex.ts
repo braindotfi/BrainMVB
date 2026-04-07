@@ -4,30 +4,43 @@ const WIREX_CHAIN_ID = "9223372036854775806";
 const WIREX_AUDIENCE = "https://api-business.wirexpaychain.tech";
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
+let authFailedUntil: number = 0;
+let pendingTokenFetch: Promise<string> | null = null;
 
 async function getWirexToken(): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.token;
+  if (Date.now() < authFailedUntil) throw new Error("WireX auth unavailable (cached failure)");
+  if (pendingTokenFetch) return pendingTokenFetch;
 
-  console.log("[WireX] Fetching new access token...");
-  const res = await fetch(WIREX_AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: process.env.WIREX_CLIENT_ID,
-      client_secret: process.env.WIREX_CLIENT_SECRET,
-      audience: WIREX_AUDIENCE,
-      grant_type: "client_credentials",
-    }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    console.error("[WireX] Auth failed:", res.status, txt);
-    throw new Error(`WireX auth failed: ${txt}`);
-  }
-  const data = await res.json();
-  console.log("[WireX] Token obtained, expires_in:", data.expires_in);
-  cachedToken = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
-  return data.access_token;
+  pendingTokenFetch = (async () => {
+    try {
+      console.log("[WireX] Fetching new access token...");
+      const res = await fetch(WIREX_AUTH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env.WIREX_CLIENT_ID,
+          client_secret: process.env.WIREX_CLIENT_SECRET,
+          audience: WIREX_AUDIENCE,
+          grant_type: "client_credentials",
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("[WireX] Auth failed:", res.status, txt);
+        authFailedUntil = Date.now() + 2 * 60 * 1000;
+        throw new Error(`WireX auth failed: ${txt}`);
+      }
+      const data = await res.json();
+      console.log("[WireX] Token obtained, expires_in:", data.expires_in);
+      cachedToken = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
+      return data.access_token;
+    } finally {
+      pendingTokenFetch = null;
+    }
+  })();
+
+  return pendingTokenFetch;
 }
 
 function wirexHeaders(token: string, email?: string) {

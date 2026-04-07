@@ -740,9 +740,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ─────────────────────────────────────────────────────────────
 
   // GET /api/crossmint/wallet?userId=... — look up a user's embedded wallet address
+  const crossmintWalletCache = new Map<string, { address: string | null; expiresAt: number }>();
+
   app.get("/api/crossmint/wallet", async (req, res) => {
     const { userId } = req.query as { userId?: string };
     if (!userId) return res.status(400).json({ error: "userId required" });
+
+    const { email } = req.query as { email?: string };
+    const cacheKey = `${userId}:${email ?? ""}`;
+    const cached = crossmintWalletCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json({ address: cached.address, cached: true });
+    }
 
     // Prefer the server-side key (required by Crossmint REST API); fall back to client key
     const apiKey = process.env.CROSSMINT_SERVER_API_KEY || process.env.CROSSMINT_CLIENT_API_KEY;
@@ -756,8 +765,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const headers = { "X-API-Key": apiKey, "Content-Type": "application/json" };
 
     // Wallet locator format: userId:<id>:<walletType>
-    // Only try the wallet type created by our CrossmintWalletProvider (evm-smart-wallet with email signer)
-    const { email } = req.query as { email?: string };
     const locators: string[] = [`userId:${userId}:evm-smart-wallet`];
     if (email) locators.push(`email:${encodeURIComponent(email)}:evm-smart-wallet`);
 
@@ -772,13 +779,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const data = JSON.parse(txt);
           const wallet = Array.isArray(data) ? data[0] : data;
           const address = wallet?.address ?? wallet?.publicKey ?? null;
-          if (address) return res.json({ address });
+          if (address) {
+            crossmintWalletCache.set(cacheKey, { address, expiresAt: Date.now() + 5 * 60 * 1000 });
+            return res.json({ address });
+          }
         }
       } catch (e: any) {
         console.error("[Crossmint] Wallet lookup error:", e.message);
       }
     }
 
+    crossmintWalletCache.set(cacheKey, { address: null, expiresAt: Date.now() + 2 * 60 * 1000 });
     return res.json({ address: null });
   });
 
