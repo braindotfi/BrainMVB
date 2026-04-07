@@ -714,6 +714,318 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 };
 
 /* ════════════════════════════════════════════════════════
+   Lending Agent View (Figma 3390-32625)
+════════════════════════════════════════════════════════ */
+
+const OUTSTANDING_LOANS = [
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 62, amount: "$2,000.00",  pct: "+7.4%",  pos: true  },
+  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "wBTC", ltv: 58, amount: "$4,084.00",  pct: "-0.4%",  pos: false },
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 74, amount: "$3,800.00",  pct: "+6.9%",  pos: true  },
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "sETH", ltv: 55, amount: "$8,200.00",  pct: "+3.11%", pos: true  },
+  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "USDT", ltv: 62, amount: "$7,050.00",  pct: "-0.4%",  pos: false },
+];
+
+const LTV_DISTRIBUTION = [
+  { label: "0 - 50%",    loans: 4, color: "#42bf23", pct: 90 },
+  { label: "50% - 65%",  loans: 7, color: "#42bf23", pct: 65 },
+  { label: "655 - 75%",  loans: 3, color: "#ff9500", pct: 35 },
+  { label: "75%+",       loans: 0, color: "#d20344", pct: 4  },
+];
+
+const LENDING_TX = [
+  { action: "$2,500 SOL Loan on Aave v3",  ago: "2m ago",  hash: "0x3a59...2cf4", status: "Executed", amount: "$2,500.00" },
+  { action: "$500 USDT loan on Morpho",     ago: "32m ago", hash: "0x3a59...2cf4", status: "Executed", amount: "$500.00"   },
+  { action: "$200 USDC loan on Morpho",     ago: "1d ago",  hash: "0x3a59...2cf4", status: "Executed", amount: "$200.00"   },
+];
+
+const ltvColor = (ltv: number) =>
+  ltv >= 75 ? "#d20344" : ltv >= 65 ? "#ff9500" : "#42bf23";
+const ltvBg   = (ltv: number) =>
+  ltv >= 75 ? "#350011" : ltv >= 65 ? "#4a2300" : "#123509";
+
+interface LendingAgentViewProps {
+  agent: AgentData;
+  rawPolicy: any;
+  isActive: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onBack: () => void;
+}
+
+const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: LendingAgentViewProps) => {
+  const p = rawPolicy ?? {};
+  const truncateWallet = (addr: string) =>
+    addr?.length > 12 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
+
+  /* Policy Envelope field derivation */
+  const maxBookSize    = p.typeConfig?.max_supply_usd      ? `$${Number(p.typeConfig.max_supply_usd).toLocaleString()}`      : "$100,000";
+  const maxPerLoan     = p.typeConfig?.max_per_loan        ? `$${Number(p.typeConfig.max_per_loan).toLocaleString()}`        : "$20,000";
+  const maxPerBorrower = p.typeConfig?.max_per_borrower    ? `$${Number(p.typeConfig.max_per_borrower).toLocaleString()}`    : "$300,000";
+  const maxLTVOrig     = p.typeConfig?.max_ltv_percent     ? `${p.typeConfig.max_ltv_percent}%`                              : "65%";
+  const collateral     = p.uiAllowedAssets?.length         ? p.uiAllowedAssets                                              : ["BTC", "ETH", "SOL"];
+  const protocols      = p.typeConfig?.protocols?.length   ? p.typeConfig.protocols                                          : ["Aave v3", "Morpho"];
+  const maxDuration    = p.typeConfig?.max_duration_days   ? `${p.typeConfig.max_duration_days} days`                       : "90 days";
+  const liqThreshold   = p.typeConfig?.max_liquidation_risk_percent ? `${p.typeConfig.max_liquidation_risk_percent}%`       : "82%";
+  const circuitBreaker = p.typeConfig?.circuit_breaker     ?? "Book LTV > 70%";
+
+  const policyRows = [
+    [{ label: "Max Book Size",         value: maxBookSize,    mkts: null }, { label: "Max Per Loan",            value: maxPerLoan,    mkts: null }],
+    [{ label: "Max Per Borrower",      value: maxPerBorrower, mkts: null }, { label: "Max LTV at Origination",  value: maxLTVOrig,    mkts: null }],
+    [{ label: "Collateral",            value: null,           mkts: collateral }, { label: "Protocols",         value: null,          mkts: protocols }],
+    [{ label: "Max Duration",          value: maxDuration,    mkts: null }, { label: "Liquidation Threshold",   value: liqThreshold,  mkts: null }],
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+
+      {/* ── Top nav bar ── */}
+      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
+        <button data-testid="button-back" onClick={onBack}
+          className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{ background: "#1d2132" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
+          {/* Edit */}
+          <button onClick={onEdit} data-testid="button-edit-agent"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
+            style={{ background: "#222737" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+          </button>
+          {/* Stop */}
+          <button data-testid="button-stop-agent" onClick={onToggle}
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+            style={{ background: "#350011" }}>
+            <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+              {isActive ? "Stop" : "Start"}
+            </span>
+          </button>
+          {/* Kill */}
+          <button data-testid="button-kill-agent"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+            style={{ background: "#350011" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
+          </button>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
+
+          {/* ── 1. Header card ── */}
+          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]"
+            style={{ background: "#0a0c10" }}>
+            <div className="flex gap-[8px] items-center w-full">
+              <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
+                <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
+              </div>
+              <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
+                <div className="flex items-center gap-[4px]">
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
+                  <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+                    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Lending</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-[8px]">
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+                    Deployed: {agent.deployedAt}
+                  </span>
+                  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+                    {truncateWallet(agent.walletAddress)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">
+              {agent.description || "A smart lending agent that helps users borrow, lend, and manage credit with clear rules and automated execution."}
+            </p>
+          </div>
+
+          {/* ── 2. Stat Cards ── */}
+          <div className="grid grid-cols-4 gap-[16px]">
+            {[
+              { label: "Total Lent",    v1: "$842,100", v2: ".82", color: "#a8b9f4" },
+              { label: "Avg APY",       v1: "7.2",      v2: "%",   color: "#42bf23" },
+              { label: "Active Loans",  v1: "14",       v2: "",    color: "#a8b9f4" },
+              { label: "Defaults · 90d",v1: "0",        v2: "",    color: "#a8b9f4" },
+            ].map(({ label, v1, v2, color }) => (
+              <div key={label} className="rounded-[16px] p-[16px] flex flex-col gap-[8px]"
+                style={{ background: "#0a0c10" }}>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px]">{label}</span>
+                <p style={{ color, fontSize: 0, lineHeight: 0 }}>
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{v1}</span>
+                  {v2 && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{v2}</span>}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* ── 3. Outstanding Loans + LTV Distribution ── */}
+          <div className="grid grid-cols-2 gap-[16px]">
+
+            {/* Outstanding Loans */}
+            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
+              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
+                style={{ borderBottom: "1px solid #1d2132" }}>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Outstanding Loans</span>
+              </div>
+              <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
+                {OUTSTANDING_LOANS.map((loan, i) => (
+                  <div key={i} className="flex items-center gap-[8px]">
+                    {/* Address + protocol */}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px] whitespace-nowrap">{loan.addr}</span>
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">{loan.protocol} · {loan.collateral}</span>
+                    </div>
+                    {/* LTV badge */}
+                    <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+                      style={{ background: ltvBg(loan.ltv) }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap"
+                        style={{ color: ltvColor(loan.ltv) }}>LTV {loan.ltv}%</span>
+                    </div>
+                    {/* Amount + pct */}
+                    <div className="flex flex-col items-end flex-shrink-0">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px] whitespace-nowrap">{loan.amount}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[16px] whitespace-nowrap"
+                        style={{ color: loan.pos ? "#42bf23" : "#d20344" }}>{loan.pct}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* LTV Distribution */}
+            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
+              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
+                style={{ borderBottom: "1px solid #1d2132" }}>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">LTV Distribution</span>
+              </div>
+              <div className="flex flex-col px-[16px] py-[12px] gap-[16px]">
+                {LTV_DISTRIBUTION.map((band, i) => (
+                  <div key={i} className="flex flex-col gap-[6px]">
+                    <div className="flex items-center justify-between">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{band.label}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">{band.loans} Loans</span>
+                    </div>
+                    {/* Progress bar track */}
+                    <div className="h-[6px] rounded-full w-full" style={{ background: "#1d2132" }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${band.pct}%`, background: band.color }} />
+                    </div>
+                  </div>
+                ))}
+                {/* Nearest to threshold */}
+                <div className="pt-[4px]" style={{ borderTop: "1px solid #1d2132" }}>
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
+                    Nearest to threshold: 74% (0xc37....043d1)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 4. Policies ── */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="flex items-center gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">Policies</span>
+                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">V4</span>
+                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">edited on-chain 42 days ago</span>
+              </div>
+              <button onClick={onEdit}
+                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 flex-shrink-0"
+                style={{ background: "#222737" }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.889 13.778l-3.556.889.889-3.556L11.333 2Z" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+              </button>
+            </div>
+            <div className="flex flex-col gap-[8px] p-[16px]">
+              {policyRows.map((row, ri) => (
+                <div key={ri} className="flex gap-[8px]">
+                  {row.map((field, fi) => (
+                    <div key={fi} className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]"
+                      style={{ background: "#11141b" }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{field.label}</span>
+                      {field.mkts ? (
+                        <div className="flex items-center gap-[4px]">
+                          {(field.mkts as string[]).map((m: string, mi: number) => (
+                            <span key={mi} className="flex items-center gap-[4px]">
+                              {mi > 0 && <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#6c779d" }} />}
+                              <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">{m}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{field.value}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {/* Full-width Circuit Breaker row */}
+              <div className="flex gap-[8px]">
+                <div className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]" style={{ background: "#11141b" }}>
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Circuit Breaker</span>
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{circuitBreaker}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 5. Transactions ── */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transactions</span>
+            </div>
+            <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
+              {LENDING_TX.map((tx, i) => (
+                <div key={i}>
+                  <div className="flex gap-[24px] items-center">
+                    {/* Col 1: action · time · hash */}
+                    <div className="flex flex-1 items-center gap-[8px] min-w-0">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
+                      <Dot />
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
+                      <Dot />
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap font-mono">{tx.hash}</span>
+                    </div>
+                    {/* Col 2: status badge */}
+                    <div className="flex items-center justify-center px-[10px] py-[4px] rounded-[100px] flex-shrink-0"
+                      style={{ background: "#123509" }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">{tx.status}</span>
+                    </div>
+                    {/* Col 3: amount */}
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap flex-shrink-0 w-[90px] text-right">{tx.amount}</span>
+                  </div>
+                  {i < LENDING_TX.length - 1 && (
+                    <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
    Main page
 ════════════════════════════════════════════════════════ */
 export const AgentDetailPage = (): JSX.Element => {
@@ -833,6 +1145,20 @@ export const AgentDetailPage = (): JSX.Element => {
       <TradingAgentView
         agent={agent}
         apiAgent={apiAgent}
+        rawPolicy={rawPolicy}
+        isActive={isActive}
+        onToggle={handleToggle}
+        onEdit={() => openEdit(1)}
+        onBack={() => window.history.back()}
+      />
+    );
+  }
+
+  /* ── Lending agent → Figma 3390-32625 view ── */
+  if (agentType === "lending") {
+    return (
+      <LendingAgentView
+        agent={agent}
         rawPolicy={rawPolicy}
         isActive={isActive}
         onToggle={handleToggle}
