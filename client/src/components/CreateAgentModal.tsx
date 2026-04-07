@@ -283,30 +283,6 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     },
   });
 
-  if (!open) return null;
-
-  const canProceed = () => {
-    if (step === 0) return !!selectedType;
-    if (step === 1) return !!agentName;
-    if (step === 2) return !!capital && !balanceError;
-    if (step === 5) return isEditMode || (authSig && terms);
-    return true;
-  };
-
-  const toggleAsset = (a: string) =>
-    setSelectedAssets((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
-
-  const handleClose = () => {
-    onClose();
-    setTimeout(() => {
-      setStep(0); setSelectedType(""); setAgentName(""); setAgentDesc("");
-      setAgentWebsite(""); setSelectedAvatar(""); setCapital(""); setRiskLevel("Moderate");
-      setAuthSig(false); setTerms(false); setLaunched(false); setLaunching(false);
-      setCapitalAsset("USDC"); setMaxDrawdown("20"); setStopLoss("10");
-      setExecutionMode("Automatic"); setSelectedAssets(["ETH", "USDC"]);
-    }, 300);
-  };
-
   const updateAgentMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("PATCH", `/api/agents/${agentId}`, {
@@ -335,6 +311,30 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     },
     onError: () => { setLaunching(false); setLaunched(true); },
   });
+
+  if (!open) return null;
+
+  const canProceed = () => {
+    if (step === 0) return !!selectedType;
+    if (step === 1) return !!agentName;
+    if (step === 2) return !!capital && !balanceError;
+    if (step === 5) return isEditMode || (authSig && terms);
+    return true;
+  };
+
+  const toggleAsset = (a: string) =>
+    setSelectedAssets((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
+
+  const handleClose = () => {
+    onClose();
+    setTimeout(() => {
+      setStep(0); setSelectedType(""); setAgentName(""); setAgentDesc("");
+      setAgentWebsite(""); setSelectedAvatar(""); setCapital(""); setRiskLevel("Moderate");
+      setAuthSig(false); setTerms(false); setLaunched(false); setLaunching(false);
+      setCapitalAsset("USDC"); setMaxDrawdown("20"); setStopLoss("10");
+      setExecutionMode("Automatic"); setSelectedAssets(["ETH", "USDC"]);
+    }, 300);
+  };
 
   const handleLaunch = () => {
     setLaunching(true);
