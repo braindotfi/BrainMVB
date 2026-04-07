@@ -1,18 +1,183 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
+import { agents, AgentData, AgentStatus, AgentRule } from "@/lib/agentsData";
 import { AgentPerfChart } from "@/components/AgentPerfChart";
+import { apiRequest } from "@/lib/queryClient";
 
-/* ── Thin horizontal divider ── */
+/* ────────────────────────────────────────────────────────
+   Helpers
+──────────────────────────────────────────────────────── */
+
+/** Convert a raw API agent (with policy jsonb) into the AgentData shape */
+function apiAgentToData(a: any): AgentData {
+  const p = a.policy ?? {};
+  const type = (p.uiType ?? a.category ?? "custom") as string;
+  const capitalAmt: number = p.uiCapitalAmount ?? 0;
+  const capitalAsset: string = p.uiCapitalAsset ?? "USDC";
+  const riskLevel: "low" | "medium" | "high" =
+    p.uiRiskLevel === "conservative" ? "low"
+    : p.uiRiskLevel === "aggressive" ? "high"
+    : "medium";
+
+  const rules: AgentRule[] = buildRulesFromPolicy(p, type, capitalAmt, capitalAsset);
+
+  const deployedAt = a.createdAt
+    ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "Just now";
+
+  return {
+    id: a.id,
+    name: a.name,
+    ticker: p.uiTicker ? `$${p.uiTicker.toUpperCase()}` : `$${a.name.replace(/\s+/g, "").slice(0, 6).toUpperCase()}`,
+    description: a.description || `${type} AI agent`,
+    avatar: p.uiAvatar ?? a.avatarUrl ?? "/figmaAssets/avatars.svg",
+    status: (["active", "inactive", "paused"].includes(a.status) ? a.status : "active") as AgentStatus,
+    type: type.charAt(0).toUpperCase() + type.slice(1),
+    earnings: "$0",
+    trades: a.totalPaymentsExecuted ?? 0,
+    successRate: "–",
+    lastActive: "Just now",
+    category: a.category ?? type,
+    rules,
+    budget: capitalAmt > 0 ? `$${capitalAmt.toLocaleString()} ${capitalAsset}` : "Not set",
+    riskLevel,
+    schedule: executionModeLabel(p.uiExecutionMode),
+    walletAddress: a.brainAccountAddress ?? "0x0000...0000",
+    deployedAt,
+    createdByUser: true,
+    activityLog: [
+      { time: "Just now", event: "Agent deployed", detail: `${a.name} activated and ready to execute.`, kind: "success" as const },
+    ],
+  };
+}
+
+function executionModeLabel(mode: string | undefined): string {
+  switch (mode) {
+    case "automatic":       return "Continuous (automatic)";
+    case "manual_approval": return "Manual approval required";
+    case "scheduled":       return "Scheduled";
+    default:                return "Continuous (automatic)";
+  }
+}
+
+/** Build rules array from the policy stored in the API agent */
+function buildRulesFromPolicy(p: any, type: string, capitalAmt: number, capitalAsset: string): AgentRule[] {
+  const rules: AgentRule[] = [];
+  const t = (type ?? "").toLowerCase();
+
+  if (capitalAmt > 0) {
+    rules.push({
+      id: "r-capital",
+      label: "Capital allocation",
+      value: `Deploy up to $${capitalAmt.toLocaleString()} ${capitalAsset} as working capital.`,
+    });
+  }
+
+  if (p.maxDrawdown != null && p.maxDrawdown > 0) {
+    rules.push({
+      id: "r-drawdown",
+      label: "Maximum drawdown",
+      value: `Pause all activity if portfolio value drops more than ${p.maxDrawdown}% from its peak.`,
+    });
+  }
+
+  if (p.stopLoss != null && p.stopLoss > 0) {
+    rules.push({
+      id: "r-stoploss",
+      label: "Stop-loss",
+      value: `Auto-close any position that drops more than ${p.stopLoss}% from entry price.`,
+    });
+  }
+
+  if (p.maxAllocationPct != null && p.maxAllocationPct < 100) {
+    rules.push({
+      id: "r-allocation",
+      label: "Max capital allocation",
+      value: `Never deploy more than ${p.maxAllocationPct}% of total capital at once.`,
+    });
+  }
+
+  if (p.maxPositionPct != null && p.maxPositionPct > 0 && (t === "trading" || t === "yield" || t === "lending")) {
+    rules.push({
+      id: "r-position",
+      label: "Max position size",
+      value: `No single position may exceed ${p.maxPositionPct}% of total portfolio.`,
+    });
+  }
+
+  if (p.maxTradesPerDay != null && p.maxTradesPerDay > 0 && t === "trading") {
+    rules.push({
+      id: "r-trades",
+      label: "Daily trade limit",
+      value: `Execute no more than ${p.maxTradesPerDay} trades per 24-hour period.`,
+    });
+  }
+
+  if (Array.isArray(p.uiAllowedAssets) && p.uiAllowedAssets.length > 0) {
+    rules.push({
+      id: "r-assets",
+      label: "Allowed assets",
+      value: `Only interact with the following assets: ${p.uiAllowedAssets.join(", ")}.`,
+    });
+  }
+
+  if (p.uiExecutionMode === "manual_approval") {
+    rules.push({
+      id: "r-approval",
+      label: "Execution approval",
+      value: "Every action requires manual confirmation before execution.",
+    });
+  }
+
+  if (p.approvalThreshold === "0" && p.uiExecutionMode !== "manual_approval") {
+    rules.push({
+      id: "r-auto",
+      label: "Autonomous execution",
+      value: "Agent may execute actions automatically without per-action approval.",
+    });
+  }
+
+  // Type-specific defaults if policy was sparse
+  if (rules.length === 0) {
+    if (t === "trading") {
+      rules.push(
+        { id: "r1", label: "Max position size", value: "Never exceed 5% of total portfolio in a single trade." },
+        { id: "r2", label: "Stop-loss", value: "Auto-close any position that drops more than 8% from entry." },
+        { id: "r3", label: "Asset whitelist", value: "Only trade BTC, ETH, SOL, and top-20 DeFi tokens." },
+      );
+    } else if (t === "payments") {
+      rules.push(
+        { id: "r1", label: "Payment whitelist", value: "Only pay to pre-approved recipients." },
+        { id: "r2", label: "Max single payment", value: "Never authorize a single payment exceeding $500 without confirmation." },
+      );
+    } else if (t === "analytics") {
+      rules.push(
+        { id: "r1", label: "Signal sources", value: "Monitor on-chain data, social sentiment, and market signals." },
+        { id: "r2", label: "Confidence tagging", value: "Tag all signals Low / Medium / High confidence before emitting." },
+      );
+    } else {
+      rules.push(
+        { id: "r1", label: "Autonomous execution", value: "Agent executes tasks autonomously within defined parameters." },
+        { id: "r2", label: "Error handling", value: "On failure, retry up to 3 times then alert and halt." },
+      );
+    }
+  }
+
+  return rules;
+}
+
+/* ────────────────────────────────────────────────────────
+   Sub-components (unchanged from previous implementation)
+──────────────────────────────────────────────────────── */
+
 const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
 
-/* ── Vertical divider between stat columns ── */
 const VDivider = () => (
   <div className="flex-shrink-0 self-stretch" style={{ width: "1px", background: "#1d2132" }} />
 );
 
-/* ── One stat column ── */
 const StatCol = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
   <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
     <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
@@ -20,14 +185,12 @@ const StatCol = ({ label, value, accent }: { label: string; value: string; accen
   </div>
 );
 
-/* ── Pencil icon ── */
 const PencilIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-/* ── Edit hint pill ── */
 const EditHintPill = () => (
   <div className="flex gap-[4px] items-center pl-[4px] pr-[8px] py-[4px] rounded-[40px] flex-shrink-0" style={{ background: "#11141b" }}>
     <div className="w-[16px] h-[16px] flex items-center justify-center">
@@ -39,7 +202,6 @@ const EditHintPill = () => (
   </div>
 );
 
-/* ── Config row ── */
 const ConfigRow = ({ label, value, hasDivider }: { label: string; value: string; hasDivider: boolean }) => {
   const [hovered, setHovered] = useState(false);
   return (
@@ -62,7 +224,6 @@ const ConfigRow = ({ label, value, hasDivider }: { label: string; value: string;
   );
 };
 
-/* ── Rule row ── */
 const RuleRow = ({ index, label, value, hasDivider }: { index: number; label: string; value: string; hasDivider: boolean }) => {
   const [hovered, setHovered] = useState(false);
   return (
@@ -92,7 +253,6 @@ const RuleRow = ({ index, label, value, hasDivider }: { index: number; label: st
   );
 };
 
-/* ── Start / Stop button ── */
 const StartStopBtn = ({ isActive, onToggle }: { isActive: boolean; onToggle: () => void }) => {
   if (isActive) {
     return (
@@ -114,7 +274,6 @@ const StartStopBtn = ({ isActive, onToggle }: { isActive: boolean; onToggle: () 
   );
 };
 
-/* ── Activity dot ── */
 const ActivityDot = ({ kind }: { kind: "success" | "info" | "warn" }) => {
   const colors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as const;
   return (
@@ -126,16 +285,63 @@ const ActivityDot = ({ kind }: { kind: "success" | "info" | "warn" }) => {
 
 const eventColors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as const;
 
-/* ══════════════════════════════════════════
+/* ────────────────────────────────────────────────────────
+   Loading skeleton
+──────────────────────────────────────────────────────── */
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={`animate-pulse rounded-[8px] ${className ?? ""}`} style={{ background: "#1d2132" }} />
+);
+
+/* ════════════════════════════════════════════════════════
    Main page
-══════════════════════════════════════════ */
+════════════════════════════════════════════════════════ */
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
 
-  const agent = agents.find((a) => a.id === params.id);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>(agent?.status ?? "inactive");
+  // 1. Try static lookup first (fast, no network needed)
+  const staticAgent = agents.find((a) => a.id === params.id);
 
+  // 2. If not in static list, fetch from the API
+  const { data: apiAgent, isLoading } = useQuery<any>({
+    queryKey: ["/api/agents", params.id],
+    queryFn: () => apiRequest("GET", `/api/agents/${params.id}`).then((r) => r.json()),
+    enabled: !staticAgent && !!params.id,
+    retry: false,
+  });
+
+  const agent: AgentData | null = staticAgent ?? (apiAgent ? apiAgentToData(apiAgent) : null);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+
+  const effectiveStatus: AgentStatus = agentStatus ?? agent?.status ?? "inactive";
+  const isActive = effectiveStatus === "active";
+  const handleToggle = () => setAgentStatus((p) => ((p ?? agent?.status) === "active" ? "inactive" : "active"));
+
+  /* ── Loading state ── */
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+        <div className="flex items-center gap-[8px] px-[16px] flex-shrink-0" style={{ height: "64px", borderBottom: "1px solid #1d2132" }}>
+          <div className="w-[32px] h-[32px] rounded-[100px]" style={{ background: "#1d2132" }} />
+        </div>
+        <div className="flex flex-col gap-[16px] p-[16px]">
+          <div className="rounded-[16px] p-[16px] flex flex-col gap-[16px]" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+            <div className="flex gap-[8px] items-center">
+              <Skeleton className="w-[64px] h-[64px] rounded-[12px]" />
+              <div className="flex flex-col gap-[8px] flex-1">
+                <Skeleton className="h-[20px] w-[140px]" />
+                <Skeleton className="h-[16px] w-[100px]" />
+              </div>
+            </div>
+            <Skeleton className="h-[16px] w-full" />
+            <Skeleton className="h-[16px] w-3/4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Not found ── */
   if (!agent) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#11141b] rounded-[16px] border border-[#1d2132]">
@@ -150,9 +356,9 @@ export const AgentDetailPage = (): JSX.Element => {
     );
   }
 
-  const isActive = agentStatus === "active";
-  const handleToggle = () => setAgentStatus((p) => (p === "active" ? "inactive" : "active"));
-  const truncatedWallet = agent.walletAddress && agent.walletAddress !== "N/A" ? agent.walletAddress : "0x0000...0000";
+  const truncatedWallet = agent.walletAddress && agent.walletAddress !== "N/A"
+    ? agent.walletAddress
+    : "0x0000...0000";
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
@@ -187,7 +393,9 @@ export const AgentDetailPage = (): JSX.Element => {
                 <div className="flex flex-col gap-[4px] flex-1 min-w-0">
                   <div className="flex items-center gap-[4px]">
                     <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">{agent.ticker}</span>
+                    {agent.ticker && (
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">{agent.ticker}</span>
+                    )}
                   </div>
                   <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Deployed: {agent.deployedAt}</span>
                 </div>
@@ -204,7 +412,11 @@ export const AgentDetailPage = (): JSX.Element => {
             <div className="flex items-center gap-[6px]">
               <StatCol label="Total Actions" value={agent.trades.toLocaleString()} />
               <VDivider />
-              <StatCol label="Total Earnings" value={agent.earnings} accent={agent.earnings.startsWith("+") ? "#a8b9f4" : "#d20344"} />
+              <StatCol
+                label="Total Earnings"
+                value={agent.earnings}
+                accent={agent.earnings.startsWith("+") ? "#a8b9f4" : agent.earnings === "$0" ? "#a8b9f4" : "#d20344"}
+              />
               <VDivider />
               <StatCol label="Success Rate" value={agent.successRate} accent="#42bf23" />
             </div>
@@ -250,9 +462,19 @@ export const AgentDetailPage = (): JSX.Element => {
               <EditHintPill />
             </div>
             <div className="flex flex-col gap-[16px] p-[16px]">
-              {agent.rules.map((rule, i) => (
-                <RuleRow key={rule.id} index={i} label={rule.label} value={rule.value} hasDivider={i < agent.rules.length - 1} />
-              ))}
+              {agent.rules.length > 0 ? (
+                agent.rules.map((rule, i) => (
+                  <RuleRow
+                    key={rule.id}
+                    index={i}
+                    label={rule.label}
+                    value={rule.value}
+                    hasDivider={i < agent.rules.length - 1}
+                  />
+                ))
+              ) : (
+                <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[14px] leading-[20px]">No rules configured.</p>
+              )}
             </div>
           </div>
 
