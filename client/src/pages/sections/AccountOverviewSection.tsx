@@ -470,9 +470,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               >
                 {/* Icon */}
                 {isYourCollapsedAccount ? (
-                  <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.15)" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <div className="w-[40px] h-[40px] rounded-[20px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#ff9500" }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                 ) : (
@@ -534,9 +534,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => { setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.15)" }}>
+                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </div>
                         <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
@@ -995,9 +995,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.15)" }}>
+                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </div>
                         <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
