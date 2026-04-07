@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentData, AgentStatus, AgentRule } from "@/lib/agentsData";
 import { AgentPerfChart } from "@/components/AgentPerfChart";
@@ -128,7 +128,7 @@ function apiAgentToData(a: any): AgentData {
     trades: a.totalPaymentsExecuted ?? 0,
     successRate: "–",
     lastActive: "Just now",
-    category: a.category ?? type,
+    category: type.charAt(0).toUpperCase() + type.slice(1),
     rules,
     budget: capitalAmt > 0 ? `$${capitalAmt.toLocaleString()} ${capitalAsset}` : "Not set",
     riskLevel,
@@ -232,19 +232,21 @@ const ConfigRow = ({
   return (
     <>
       <div className="flex gap-[8px] items-center w-full transition-colors"
-        style={{ background: hovered ? "rgba(74,35,0,0.06)" : "transparent" }}
+        style={{ background: onEdit && hovered ? "rgba(74,35,0,0.06)" : "transparent" }}
         onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
         <div className="flex flex-col gap-[8px] items-start flex-1 min-w-0">
           <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px]">{label}</p>
           <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{value}</p>
         </div>
-        <button
-          onClick={onEdit}
-          className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-all"
-          style={{ background: "#4a2300", opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none" }}>
-          <PencilIcon />
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-        </button>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-all"
+            style={{ background: "#4a2300", opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none" }}>
+            <PencilIcon />
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+          </button>
+        )}
       </div>
       {hasDivider && <HDivider />}
     </>
@@ -342,10 +344,29 @@ export const AgentDetailPage = (): JSX.Element => {
   const agent: AgentData | null = staticAgent ?? (apiAgent ? apiAgentToData(apiAgent) : null);
   const rawPolicy = apiAgent?.policy ?? null;
 
+  const qc = useQueryClient();
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const effectiveStatus: AgentStatus = agentStatus ?? agent?.status ?? "inactive";
   const isActive = effectiveStatus === "active";
-  const handleToggle = () => setAgentStatus((p) => ((p ?? agent?.status) === "active" ? "inactive" : "active"));
+
+  const statusMutation = useMutation({
+    mutationFn: async (newStatus: AgentStatus) => {
+      if (!apiAgent) return;
+      const res = await apiRequest("PATCH", `/api/agents/${params.id}/status`, { status: newStatus });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/agents", params.id] });
+      qc.invalidateQueries({ queryKey: ["/api/agents"] });
+    },
+  });
+
+  const handleToggle = () => {
+    const current = agentStatus ?? agent?.status ?? "inactive";
+    const next: AgentStatus = current === "active" ? "inactive" : "active";
+    setAgentStatus(next);
+    statusMutation.mutate(next);
+  };
 
   // Build prefill once (stable reference)
   const getPrefill = useCallback((): AgentPrefillData | undefined => {
@@ -429,9 +450,6 @@ export const AgentDetailPage = (): JSX.Element => {
                 <div className="flex flex-col gap-[4px] flex-1 min-w-0">
                   <div className="flex items-center gap-[4px]">
                     <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                    {agent.ticker && (
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">{agent.ticker}</span>
-                    )}
                   </div>
                   <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Deployed: {agent.deployedAt}</span>
                 </div>
@@ -488,14 +506,12 @@ export const AgentDetailPage = (): JSX.Element => {
                 label="Deployed"
                 value={agent.deployedAt}
                 hasDivider={!!agent.lastUpdated}
-                onEdit={() => openEdit(1)}
               />
               {agent.lastUpdated && (
                 <ConfigRow
                   label="Last Updated"
                   value={agent.lastUpdated}
                   hasDivider={false}
-                  onEdit={() => openEdit(1)}
                 />
               )}
             </div>

@@ -212,6 +212,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   useEffect(() => {
     if (!open) return;
     setStep(initialStep ?? 0);
+    // Always reset launch state when the modal opens
+    setLaunched(false);
+    setLaunching(false);
+    setAuthSig(false);
+    setTerms(false);
     if (!prefill) return;
     setSelectedType(prefill.type || "");
     setAgentName(prefill.name || "");
@@ -236,11 +241,6 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     if (prefill.maxSinglePayment)     setMaxSinglePayment(prefill.maxSinglePayment);
     if (prefill.monthlyBudgetCap)     setMonthlyBudgetCap(prefill.monthlyBudgetCap);
     if (prefill.autoApprovalThreshold) setAutoApprovalThreshold(prefill.autoApprovalThreshold);
-    // Reset auth/launch flags
-    setAuthSig(false);
-    setTerms(false);
-    setLaunched(false);
-    setLaunching(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
