@@ -623,8 +623,22 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 
           {/* ── 4. Policy Envelope — rectangular boxes ── */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-            <div className="px-[16px] py-[12px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Policy Envelope</span>
+            <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
+              {/* Left: Policies · V4 · edited on-chain */}
+              <div className="flex items-center gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">Policies</span>
+                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">V4</span>
+                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">edited on-chain 42 days ago</span>
+              </div>
+              {/* Right: Edit button */}
+              <button className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 flex-shrink-0" style={{ background: "#222737" }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.889 13.778l-3.556.889.889-3.556L11.333 2Z" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+              </button>
             </div>
             <div className="flex flex-col gap-[8px] p-[16px]">
               {policyRows.map((row, ri) => (
@@ -652,10 +666,10 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             </div>
           </div>
 
-          {/* ── 5. Transaction Log ── */}
+          {/* ── 5. Transactions ── */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transaction Log</span>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transactions</span>
             </div>
             <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
               {TX_LOG.map((tx, i) => (
