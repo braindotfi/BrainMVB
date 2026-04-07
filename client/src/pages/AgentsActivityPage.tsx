@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
@@ -177,10 +177,26 @@ type TabKey = "all" | "my-agents" | "active" | "inactive";
 
 export const AgentsActivityPage = (): JSX.Element => {
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const searchString = useSearch();
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+    const params = new URLSearchParams(searchString);
+    const t = params.get("tab");
+    return (t === "my-agents" || t === "active" || t === "inactive") ? t as TabKey : "all";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Sync tab when URL changes (e.g. navigated programmatically)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const t = params.get("tab");
+    if (t === "my-agents" || t === "active" || t === "inactive") {
+      setActiveTab(t as TabKey);
+    } else if (!t) {
+      setActiveTab("all");
+    }
+  }, [searchString]);
 
   /* ── Fetch created agents from API ── */
   const { data: apiAgentsRaw } = useQuery<{ id: string; name: string; type: string; description: string; avatar: string; status: string; capitalAmount: number; capitalAsset: string; riskLevel: string; executionMode: string; allowedAssets: string[]; createdAt: string; createdByUser?: boolean }[]>({

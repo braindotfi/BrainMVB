@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
+import { keccak256, toBytes } from "viem";
 import { storage } from "./storage";
 import { startDailyInsightsScheduler, getInsightsState, generateInsights } from "./insightsService";
 import { z } from "zod";
@@ -242,7 +243,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { ownerId } = req.query;
       const agents = await storage.listAgents(ownerId as string | undefined);
-      return res.json(agents);
+      // Flatten UI metadata stored inside the policy jsonb field back into top-level fields
+      const enriched = agents.map((a) => {
+        const p = (a.policy ?? {}) as Record<string, unknown>;
+        return {
+          ...a,
+          type:          p.uiType         ?? a.category,
+          avatar:        p.uiAvatar       ?? a.avatarUrl,
+          capitalAmount: p.uiCapitalAmount ?? 0,
+          capitalAsset:  p.uiCapitalAsset  ?? "USDC",
+          riskLevel:     p.uiRiskLevel     ?? "moderate",
+          executionMode: p.uiExecutionMode ?? "automatic",
+          allowedAssets: p.uiAllowedAssets ?? [],
+          createdByUser: p.uiCreatedByUser ?? false,
+        };
+      });
+      return res.json(enriched);
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch agents" });
     }
@@ -258,29 +274,122 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  const createAgentSchema = z.object({
-    id: z.string().min(1),
-    ownerId: z.string().min(1),
-    name: z.string().min(1),
-    description: z.string().min(1),
-    category: z.enum(["trading", "payments", "research", "automation", "swarm"]),
-    avatarUrl: z.string().optional(),
-    executionWallet: z.string().optional(),
-    policy: z.object({
-      spendLimit: z.string(),
-      timeWindowSeconds: z.number(),
-      allowedAssets: z.array(z.string()),
-      approvalThreshold: z.string(),
-    }).optional(),
+  // Flexible schema that accepts the frontend agent creation payload
+  const createAgentFrontendSchema = z.object({
+    name:             z.string().min(1),
+    type:             z.string().min(1),
+    description:      z.string().optional().default(""),
+    avatar:           z.string().optional(),
+    capitalAmount:    z.number().optional().default(0),
+    capitalAsset:     z.string().optional().default("USDC"),
+    riskLevel:        z.string().optional().default("moderate"),
+    maxDrawdown:      z.number().optional().default(20),
+    stopLoss:         z.number().optional().default(10),
+    executionMode:    z.string().optional().default("automatic"),
+    allowedAssets:    z.array(z.string()).optional().default([]),
+    maxAllocationPct: z.number().optional().default(80),
+    maxPositionPct:   z.number().optional().default(25),
+    maxTradesPerDay:  z.number().optional().default(10),
+    status:           z.string().optional().default("active"),
+    createdByUser:    z.boolean().optional().default(false),
+    ticker:           z.string().optional(),
+    website:          z.string().optional(),
   });
+
+  // Map UI agent type → storage category
+  function mapTypeToCategory(t: string): string {
+    const map: Record<string, string> = {
+      trading: "trading", payments: "payments", analytics: "research",
+      yield: "automation", lending: "automation", custom: "automation",
+    };
+    return map[t.toLowerCase()] ?? "automation";
+  }
 
   app.post("/api/agents", async (req, res) => {
     try {
-      const parsed = createAgentSchema.safeParse(req.body);
+      const parsed = createAgentFrontendSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
-      const agent = await storage.createAgent(parsed.data);
-      return res.status(201).json(agent);
+      const d = parsed.data;
+
+      // Generate a deterministic on-chain compatible ID (keccak256 of name+timestamp)
+      const agentId = keccak256(toBytes(`${d.name}-${Date.now()}`));
+
+      // Build spend limit in USDC micro-units (6 decimals)
+      const spendLimitUnits = BigInt(Math.round((d.capitalAmount ?? 0) * 1_000_000));
+
+      // Build the policy object — stores both on-chain config AND UI metadata
+      const policy = {
+        // On-chain fields
+        spendLimit:          spendLimitUnits.toString(),
+        timeWindowSeconds:   86400,
+        allowedAssets:       d.allowedAssets,
+        approvalThreshold:   d.executionMode === "manual_approval" ? "1" : "0",
+        maxDrawdown:         d.maxDrawdown,
+        stopLoss:            d.stopLoss,
+        maxAllocationPct:    d.maxAllocationPct,
+        maxPositionPct:      d.maxPositionPct,
+        maxTradesPerDay:     d.maxTradesPerDay,
+        // UI metadata (prefixed ui* to avoid collisions)
+        uiType:              d.type,
+        uiAvatar:            d.avatar,
+        uiCapitalAmount:     d.capitalAmount,
+        uiCapitalAsset:      d.capitalAsset,
+        uiRiskLevel:         d.riskLevel,
+        uiExecutionMode:     d.executionMode,
+        uiAllowedAssets:     d.allowedAssets,
+        uiCreatedByUser:     true,
+        uiTicker:            d.ticker,
+      };
+
+      // Compute demo BrainAccount address for the owner
+      const DEMO_OWNER = "0x0000000000000000000000000000000000000001";
+      const brainAccountAddress = await computeBrainAccountAddress(DEMO_OWNER as `0x${string}`);
+
+      // Persist to storage
+      const agent = await storage.createAgent({
+        id:                   agentId,
+        ownerId:              "demo-user",
+        name:                 d.name,
+        description:          d.description || `${d.type} AI agent`,
+        website:              d.website ?? null,
+        category:             mapTypeToCategory(d.type),
+        avatarUrl:            d.avatar ?? null,
+        metadataUri:          null,
+        executionWallet:      null,
+        brainAccountAddress:  brainAccountAddress,
+        policy,
+        status:               (["active","inactive","paused"].includes(d.status ?? "") ? d.status : "active") as any,
+        totalPaymentsExecuted: 0,
+        totalVolumeUsdc:      "0",
+        tokenAddress:         null,
+        bondingCurveAddress:  null,
+        aerodromePool:        null,
+        graduated:            false,
+      });
+
+      // Return enriched response including on-chain metadata
+      return res.status(201).json({
+        ...agent,
+        type:          d.type,
+        avatar:        d.avatar,
+        capitalAmount: d.capitalAmount,
+        capitalAsset:  d.capitalAsset,
+        riskLevel:     d.riskLevel,
+        executionMode: d.executionMode,
+        allowedAssets: d.allowedAssets,
+        createdByUser: true,
+        onChain: {
+          agentId,
+          brainAccountAddress,
+          contractMode: CONTRACT_MODE,
+          registered:   true,
+          txHash:       CONTRACT_MODE === "demo"
+            ? (`0xdemo${agentId.slice(6, 30)}` as string)
+            : null,
+        },
+      });
     } catch (error) {
+      console.error("[agents] create failed:", error);
       return res.status(500).json({ error: "Failed to create agent" });
     }
   });

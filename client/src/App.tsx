@@ -88,6 +88,10 @@ function AppLayout() {
       <CreateAgentModal
         open={createAgentOpen}
         onClose={() => setCreateAgentOpen(false)}
+        onViewMyAgents={() => {
+          setCreateAgentOpen(false);
+          navigate("/agents?tab=my-agents");
+        }}
       />
       <SendModal
         open={sendOpen}

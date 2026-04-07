@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface Props {
   open: boolean;
   onClose: () => void;
+  onViewMyAgents?: () => void;
 }
 
 const agentTypes = [
@@ -130,7 +131,7 @@ const RadioGroup = ({ label, options, value, onChange }: {
   </div>
 );
 
-export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null => {
+export const CreateAgentModal = ({ open, onClose, onViewMyAgents }: Props): JSX.Element | null => {
   const [step, setStep] = useState(0);
 
   const [selectedType, setSelectedType]     = useState("");
@@ -473,8 +474,11 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
               ))}
             </div>
 
-            <button onClick={handleClose} className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity flex-shrink-0">
-              View in My Agents
+            <button
+              onClick={() => { onViewMyAgents ? onViewMyAgents() : handleClose(); }}
+              className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity flex-shrink-0"
+            >
+              View in My Agents →
             </button>
           </div>
         )}
