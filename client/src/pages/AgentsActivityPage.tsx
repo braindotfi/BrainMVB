@@ -406,9 +406,9 @@ export const AgentsActivityPage = (): JSX.Element => {
 
       {/* ── Agent card grid ── */}
       <ScrollArea className="flex-1">
-        <div className="px-[16px] pb-[16px] flex flex-wrap gap-[16px] content-start">
+        <div className="px-[16px] pb-[16px] grid grid-cols-2 gap-[16px]">
           {filtered.length === 0 ? (
-            <div className="w-full flex flex-col items-center justify-center py-16 gap-3">
+            <div className="col-span-2 flex flex-col items-center justify-center py-16 gap-3">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                 <rect x="8" y="8" width="24" height="24" rx="4" stroke="#1d2132" strokeWidth="2" />
                 <path d="M16 20h8M20 16v8" stroke="#1d2132" strokeWidth="2" strokeLinecap="round" />
@@ -421,16 +421,15 @@ export const AgentsActivityPage = (): JSX.Element => {
             filtered.map((agent) => {
               const spend = spendMap[agent.id] ?? { cap: "$—", unit: "/day", pct: 0 };
               return (
-                <div key={agent.id} className="w-full xl:w-[calc(50%-8px)]">
-                  <AgentCard
-                    agent={agent}
-                    spend={spend}
-                    currentStatus={agentStatuses[agent.id] ?? agent.status}
-                    onToggle={() => handleToggle(agent.id)}
-                    isUpdating={updatingId === agent.id}
-                    onOpen={() => navigate(`/agent/${agent.id}`)}
-                  />
-                </div>
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  spend={spend}
+                  currentStatus={agentStatuses[agent.id] ?? agent.status}
+                  onToggle={() => handleToggle(agent.id)}
+                  isUpdating={updatingId === agent.id}
+                  onOpen={() => navigate(`/agent/${agent.id}`)}
+                />
               );
             })
           )}
