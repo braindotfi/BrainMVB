@@ -95,9 +95,12 @@ const CardHeader = ({
 }: { balance: string; currency: string; icon: "wallet" | "agent" }) => (
   <div className="flex w-[338px] items-center justify-center gap-4 absolute top-4 left-4">
     {icon === "agent" ? (
-      /* Green circle with robot icon — matches Figma WalletIcons (color=Agent, size=48px) */
-      <div className="w-12 h-12 rounded-[24px] bg-[#42bf23] flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-        <img src="/figmaAssets/icon-robot.png" width="29" height="29" alt="Agent" className="object-contain" style={{ imageRendering: "pixelated" }} />
+      /* Figma WalletIcons — green circle bg + dark-green robot at inset-[20%] */
+      <div className="overflow-clip relative rounded-[24px] w-12 h-12 flex-shrink-0">
+        <img alt="" className="absolute block max-w-none w-full h-full" src="/figmaAssets/wallet-icons-agent-bg.svg" />
+        <div className="absolute inset-[20%]">
+          <img alt="" className="absolute block max-w-none w-full h-full" src="/figmaAssets/icon-robot.svg" />
+        </div>
       </div>
     ) : (
       <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
