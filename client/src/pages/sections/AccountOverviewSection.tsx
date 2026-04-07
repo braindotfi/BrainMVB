@@ -141,7 +141,7 @@ const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
   const balance = account?.balance ? `$${account.balance}` : "$0.00";
   const currency = account?.currency || "USD";
   return (
-    <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+    <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
@@ -207,7 +207,7 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
   const balance = account?.balance ? `$${account.balance}` : "$0.00";
   const currency = account?.currency || "USD";
   return (
-    <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#4a2300] rounded-2xl overflow-hidden border border-[rgba(255,149,0,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+    <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
@@ -1076,30 +1076,56 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <div className="flex flex-col items-start gap-2 self-stretch w-full">
 
                 {/* Main tabs */}
-                <div className="flex items-start gap-[17px] self-stretch w-full">
-                  {mainTabs.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-2xl tracking-[0] leading-7 whitespace-nowrap bg-transparent border-none p-0 cursor-pointer ${
-                        activeTab === tab ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-[16px] self-stretch w-full">
+                  <button
+                    onClick={() => setActiveTab("Assets")}
+                    className="flex items-center gap-[6px] bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    <svg width="24" height="22" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14.3 4.44444C18.5526 4.44444 22 7.92667 22 12.2222C22 16.5178 18.5526 20 14.3 20C10.0474 20 6.6 16.5178 6.6 12.2222C6.6 7.92667 10.0474 4.44444 14.3 4.44444Z" fill={activeTab === "Assets" ? "#9d5cf5" : "#6c779d"}/>
+                      <path d="M7.7 0C9.83147 0 11.7607 0.874835 13.1549 2.28841C8.2267 2.86175 4.4 7.09058 4.4 12.2222C4.4 13.1777 4.53253 14.1021 4.78027 14.9772C1.97542 13.8153 0 11.0295 0 7.77778C0 3.48223 3.44741 0 7.7 0Z" fill={activeTab === "Assets" ? "#9d5cf5" : "#6c779d"}/>
+                    </svg>
+                    <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Assets" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
+                      Assets
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("Transactions")}
+                    className="flex items-center gap-[6px] bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    <svg width="24" height="20" viewBox="0 0 22.3812 18.1988" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1.00017 5.62925L2.64504 8.47826C2.85468 8.84136 3.31899 8.96577 3.6821 8.75613L6.31195 7.23779M21.381 12.5635L19.7362 9.71454C19.5265 9.35144 19.0623 9.22698 18.6991 9.43666L15.8501 11.0815M4.17248 13.1483C6.40865 17.0215 11.3612 18.3485 15.2344 16.1123C17.5453 14.7781 18.9987 12.4486 19.2915 9.98041M18.1984 5.05045C15.9622 1.17731 11.0097 -0.149741 7.1365 2.08643C4.82554 3.42067 3.37219 5.75015 3.07943 8.2184" stroke={activeTab === "Transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Transactions" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
+                      Transactions
+                    </span>
+                  </button>
                 </div>
 
-                {/* Sub-filter pills — only shown in Transactions tab */}
-                {activeTab === "Assets" ? null : (
-                  <div className="flex w-[370px] items-center gap-0.5 p-0.5 bg-brain-v1headerfooterbg rounded-[400px] overflow-hidden">
+                {/* Sub-filter pills — shown per tab */}
+                {activeTab === "Assets" ? (
+                  <div className="flex w-[370px] items-center gap-[2px] p-[2px] bg-[#06070a] rounded-[400px] overflow-hidden">
+                    {filterTabs.map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setActiveFilter(filter)}
+                        className={`flex items-center justify-center px-[16px] py-[8px] flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${activeFilter === filter ? "bg-[#123509]" : "bg-[#06070a]"}`}
+                      >
+                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${activeFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
+                          {filter}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex w-[370px] items-center gap-[2px] p-[2px] bg-[#06070a] rounded-[400px] overflow-hidden">
                     {txFilterTabs.map((filter) => (
                       <button
                         key={filter}
                         onClick={() => setTransactionFilter(filter)}
-                        className={`flex items-center justify-center px-3 py-2 flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${transactionFilter === filter ? "bg-[#123509]" : "bg-brain-v1headerfooterbg"}`}
+                        className={`flex items-center justify-center px-[16px] py-[8px] flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${transactionFilter === filter ? "bg-[#123509]" : "bg-[#06070a]"}`}
                       >
-                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm whitespace-nowrap ${transactionFilter === filter ? "text-brain-v1green" : "text-brain-v1baby-blue-30"}`}>
+                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${transactionFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
                           {filter}
                         </span>
                       </button>
