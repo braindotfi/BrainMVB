@@ -95,15 +95,9 @@ const CardHeader = ({
 }: { balance: string; currency: string; icon: "wallet" | "agent" }) => (
   <div className="flex w-[338px] items-center justify-center gap-4 absolute top-4 left-4">
     {icon === "agent" ? (
-      /* Green rounded square with robot icon */
-      <div className="w-12 h-12 rounded-2xl bg-brain-v1dark-green flex items-center justify-center flex-shrink-0">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <rect x="8" y="12" width="12" height="10" rx="2" stroke="#42bf23" strokeWidth="1.5"/>
-          <circle cx="11" cy="16" r="1.5" fill="#42bf23"/>
-          <circle cx="17" cy="16" r="1.5" fill="#42bf23"/>
-          <path d="M14 8V12M12 8H16" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round"/>
-          <path d="M8 18H6M22 18H20M11 22V24M17 22V24" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
+      /* Green circle with robot icon — matches Figma WalletIcons (color=Agent, size=48px) */
+      <div className="w-12 h-12 rounded-[24px] bg-[#42bf23] flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+        <img src="/figmaAssets/icon-robot.png" width="29" height="29" alt="Agent" className="object-contain" style={{ imageRendering: "pixelated" }} />
       </div>
     ) : (
       <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
@@ -228,7 +222,7 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
 /* ── AI Agent cards (green theme) ── */
 
 const AgentWalletCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border-[1.4px] border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(66,191,35,0.42)_0%,rgba(66,191,35,0)_36%,rgba(66,191,35,0.06)_67%,rgba(66,191,35,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
     <GreenGlow />
     <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
@@ -252,7 +246,7 @@ const AgentWalletCard = ({ agentName }: { agentName: string }) => (
 );
 
 const AgentDebitCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden border-[1.4px] border-[rgba(66,191,35,0.7)] shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026]">
+  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(66,191,35,0.42)_0%,rgba(66,191,35,0)_36%,rgba(66,191,35,0.06)_67%,rgba(66,191,35,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
     <GreenGlow />
     <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
     <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
