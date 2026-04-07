@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
 import { AgentPerfChart } from "@/components/AgentPerfChart";
 import { apiRequest } from "@/lib/queryClient";
@@ -237,12 +237,12 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
    Trading Agent View (Figma 3380-32372)
 ════════════════════════════════════════════════════════ */
 
-const EQUITY_CURVE_1H = [
-  { t: "03:00", v: 5680 }, { t: "05:00", v: 5760 }, { t: "07:00", v: 5900 },
-  { t: "09:00", v: 6040 }, { t: "11:00", v: 6100 }, { t: "13:00", v: 6200 },
-  { t: "15:00", v: 6350 }, { t: "17:00", v: 6600 }, { t: "18:00", v: 6850 },
-  { t: "19:00", v: 6950 }, { t: "20:00", v: 6600 }, { t: "21:00", v: 6400 },
-  { t: "23:00", v: 6300 }, { t: "01:00", v: 6260 }, { t: "03:00", v: 6240 },
+const EQUITY_CURVE_DATA = [
+  { t: "03:00", v: 5680 }, { t: "05:00", v: 5760 }, { t: "07:00", v: 5920 },
+  { t: "09:00", v: 6050 }, { t: "11:00", v: 6120 }, { t: "13:00", v: 6220 },
+  { t: "15:00", v: 6370 }, { t: "17:00", v: 6630 }, { t: "18:00", v: 6860 },
+  { t: "19:00", v: 6960 }, { t: "20:00", v: 6600 }, { t: "21:00", v: 6390 },
+  { t: "23:00", v: 6300 }, { t: "01:00", v: 6270 }, { t: "03:00", v: 6240 },
 ];
 
 const OPEN_POSITIONS = [
@@ -250,7 +250,7 @@ const OPEN_POSITIONS = [
   { market: "ETH-PERP", dir: "Short", lev: "2.0x", value: "$7,084.00", pct: "-0.4%",  pos: false },
   { market: "SOL-PERP", dir: "Long",  lev: "2.5x", value: "$3,200.00", pct: "+1.1%",  pos: true  },
   { market: "BCH-PERP", dir: "Long",  lev: "3.2x", value: "$8,949.00", pct: "+3.11%", pos: true  },
-  { market: "DAI-PERP", dir: "Short", lev: "1.4x", value: "$7,084.00", pct: "-0.6%",  pos: false },
+  { market: "DAI-PERP", dir: "Short", lev: "1.4x", value: "$7,084.00", pct: "-0.4%",  pos: false },
 ];
 
 const TX_LOG = [
@@ -263,15 +263,33 @@ const TX_LOG = [
 
 const TIME_TABS = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 
-const KillBtn = () => (
-  <button data-testid="button-kill-agent"
-    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-    style={{ background: "#350011" }}>
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M2 2L10 10M10 2L2 10" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
-  </button>
+/* ── Equity curve custom tooltip: orange pill ── */
+const PriceTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: "#4a2300", borderRadius: "12px", padding: "2px 6px", lineHeight: "14px", pointerEvents: "none" }}>
+      <span style={{ color: "#ff9500", fontSize: "10px", fontFamily: "'Gilroy-SemiBold', Helvetica", whiteSpace: "nowrap" }}>
+        ${payload[0].value.toLocaleString()}
+      </span>
+    </div>
+  );
+};
+
+/* ── Crosshair cursor: orange dashed vertical + horizontal lines ── */
+const CrosshairCursor = ({ points, width, height }: any) => {
+  if (!points?.length) return null;
+  const { x, y } = points[0];
+  return (
+    <g>
+      <line x1={x} y1={0} x2={x} y2={height} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <line x1={0} y1={y} x2={width} y2={y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+    </g>
+  );
+};
+
+/* ── Small 4px separator dot ── */
+const Dot = () => (
+  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
 );
 
 interface TradingAgentViewProps {
@@ -284,41 +302,45 @@ interface TradingAgentViewProps {
   onBack: () => void;
 }
 
-const TradingAgentView = ({ agent, apiAgent, rawPolicy, isActive, onToggle, onEdit, onBack }: TradingAgentViewProps) => {
+const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: TradingAgentViewProps) => {
   const [chartTab, setChartTab] = useState("1H");
   const p = rawPolicy ?? {};
 
   /* Policy Envelope field derivation */
   const spendLimitRaw = p.spendLimit ? (parseInt(p.spendLimit) / 1_000_000) : null;
-  const dailySpendCap  = spendLimitRaw ? `$${spendLimitRaw.toLocaleString()}` : "$25,000";
+  const dailySpendCap   = spendLimitRaw ? `$${spendLimitRaw.toLocaleString()}` : "$25,000";
   const maxPositionSize = p.typeConfig?.max_position_size_usdc
     ? `$${Number(p.typeConfig.max_position_size_usdc).toLocaleString()}`
     : "$20,000";
-  const maxLeverage   = p.typeConfig?.max_leverage ? `${p.typeConfig.max_leverage}x` : "3x";
-  const allowedMkts   = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]).join(" · ");
+  const maxLeverage    = p.typeConfig?.max_leverage ? `${p.typeConfig.max_leverage}x` : "3x";
+  const allowedMkts    = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]);
   const approvalThresh = p.approvalThreshold === "0" ? ">90% of Cap" : p.approvalThreshold ?? ">90% of Cap";
   const killSwitch     = p.maxDrawdown ? `-${p.maxDrawdown}% Equity` : "-15% Equity";
 
-  const policyFields = [
-    { left: { label: "Daily Spend Cap",      value: dailySpendCap  }, right: { label: "Max Position Size",  value: maxPositionSize } },
-    { left: { label: "Max Leverage",         value: maxLeverage    }, right: { label: "Allowed Markets",    value: allowedMkts     } },
-    { left: { label: "Approval Threshold",   value: approvalThresh }, right: { label: "Kill Switch Drawdown", value: killSwitch    } },
+  const policyRows = [
+    [{ label: "Daily Spend Cap",    value: dailySpendCap }, { label: "Max Position Size",    value: maxPositionSize }],
+    [{ label: "Max Leverage",       value: maxLeverage   }, { label: "Allowed Markets",      value: null, mkts: allowedMkts }],
+    [{ label: "Approval Threshold", value: approvalThresh }, { label: "Kill Switch Drawdown", value: killSwitch }],
   ];
 
   const truncateWallet = (addr: string) =>
     addr?.length > 12 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
 
+  /* Y-axis label values (Figma: $7000 → $5600) */
+  const Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"];
+  const X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
+
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
-      {/* ── Top nav bar ── */}
+      {/* ── Top nav bar — no bottom separator ── */}
       <div className="flex items-center gap-[8px] px-[16px] flex-shrink-0"
-        style={{ height: "64px", borderBottom: "1px solid #1d2132", background: "#11141b" }}>
+        style={{ height: "64px", background: "#11141b" }}>
         <button data-testid="button-back" onClick={onBack}
-          className="w-[32px] h-[32px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-colors hover:bg-[#1d2132]"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1d2132" }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M9 3L5 7L9 11" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          className="w-[32px] h-[32px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-70"
+          style={{ background: "rgba(255,255,255,0.06)" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
@@ -326,35 +348,60 @@ const TradingAgentView = ({ agent, apiAgent, rawPolicy, isActive, onToggle, onEd
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
-          {/* ── 1. Header card ── */}
-          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[16px] p-[16px]"
-            style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            {/* Agent identity row */}
+          {/* ── 1. Header card — no border ── */}
+          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]"
+            style={{ background: "#0a0c10" }}>
+            {/* Identity row */}
             <div className="flex gap-[8px] items-center w-full">
               <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
                 <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
               </div>
               <div className="flex flex-1 min-w-0 gap-[16px] items-center">
                 <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                  {/* Name only — no ticker per user request */}
                   <div className="flex items-center gap-[4px]">
                     <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">{agent.ticker}</span>
                   </div>
+                  {/* Deployed · wallet */}
                   <div className="flex items-center gap-[8px]">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px]">
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
                       Deployed: {agent.deployedAt}
                     </span>
-                    <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#414965" }} />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] font-mono">
+                    <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
                       {truncateWallet(agent.walletAddress)}
                     </span>
                   </div>
                 </div>
-                {/* Action buttons */}
+                {/* Action buttons — Edit is GREY per Figma */}
                 <div className="flex items-center gap-[8px] flex-shrink-0">
-                  <EditBtn onClick={onEdit} />
-                  <StartStopBtn isActive={isActive} onToggle={onToggle} />
-                  <KillBtn />
+                  {/* Edit (grey) */}
+                  <button onClick={onEdit} data-testid="button-edit-agent"
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
+                    style={{ background: "#222737" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+                  </button>
+                  {/* Stop (red) */}
+                  <button data-testid="button-stop-agent" onClick={onToggle}
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+                    style={{ background: "#350011" }}>
+                    <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+                      {isActive ? "Stop" : "Start"}
+                    </span>
+                  </button>
+                  {/* Kill (red) */}
+                  <button data-testid="button-kill-agent"
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+                    style={{ background: "#350011" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -364,41 +411,42 @@ const TradingAgentView = ({ agent, apiAgent, rawPolicy, isActive, onToggle, onEd
             </p>
           </div>
 
-          {/* ── 2. Stat Cards ── */}
+          {/* ── 2. Stat Cards — no border, left-aligned ── */}
           <div className="grid grid-cols-4 gap-[16px]">
             {[
-              { label: "PnL (30d)",    value: "+$47,832", sup: ".10", color: "#42bf23" },
-              { label: "Win Rate",     value: "62",       sup: "%",   color: "#a8b9f4" },
-              { label: "Trades (30d)", value: "184",      sup: "",    color: "#a8b9f4" },
-              { label: "Sharpe",       value: "1.8",      sup: "",    color: "#a8b9f4" },
-            ].map(({ label, value, sup, color }) => (
+              { label: "PnL (30d)",    v1: "+$47,832", v2: ".10", color: "#42bf23" },
+              { label: "Win Rate",     v1: "62",       v2: "%",   color: "#a8b9f4" },
+              { label: "Trades (30d)", v1: "184",      v2: "",    color: "#a8b9f4" },
+              { label: "Sharpe",       v1: "1.8",      v2: "",    color: "#a8b9f4" },
+            ].map(({ label, v1, v2, color }) => (
               <div key={label} className="rounded-[16px] p-[16px] flex flex-col gap-[8px]"
-                style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+                style={{ background: "#0a0c10" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px]">{label}</span>
-                <div className="flex items-baseline gap-[1px]" style={{ color }}>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{value}</span>
-                  {sup && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{sup}</span>}
-                </div>
+                <p style={{ color, fontSize: 0, lineHeight: 0 }}>
+                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{v1}</span>
+                  {v2 && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{v2}</span>}
+                </p>
               </div>
             ))}
           </div>
 
-          {/* ── 3. Chart + Open Positions ── */}
+          {/* ── 3. Equity Curve + Open Positions ── */}
           <div className="grid grid-cols-2 gap-[16px]">
 
-            {/* Equity Curve */}
-            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-              {/* Chart header */}
-              <div className="flex items-center justify-between px-[16px] py-[12px] flex-shrink-0"
+            {/* Equity Curve — no border, full-width chart */}
+            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-[16px] py-[12px] h-[48px] flex-shrink-0"
                 style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Equity Curve</span>
-                <div className="flex gap-[2px]" style={{ background: "#06070a", borderRadius: "100px", padding: "3px" }}>
+                {/* Time tabs */}
+                <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
                   {TIME_TABS.map((tab) => (
                     <button key={tab} onClick={() => setChartTab(tab)}
-                      className="px-[8px] py-[3px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all rounded-[100px]"
+                      className="px-[8px] py-[4px] text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all rounded-[100px] leading-[16px]"
                       style={{
                         background: chartTab === tab ? "#4a2300" : "transparent",
-                        color: chartTab === tab ? "#ff9500" : "#6c779d",
+                        color: chartTab === tab ? "#ff9500" : "#414965",
                       }}>
                       {tab}
                     </button>
@@ -406,132 +454,148 @@ const TradingAgentView = ({ agent, apiAgent, rawPolicy, isActive, onToggle, onEd
                 </div>
               </div>
 
-              {/* Recharts area chart */}
-              <div className="flex-1 px-[4px] pt-[12px] pb-[4px]" style={{ minHeight: "280px" }}>
+              {/* Chart area — full width with overlaid Y labels */}
+              <div className="relative flex-1" style={{ minHeight: "284px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={EQUITY_CURVE_1H} margin={{ top: 4, right: 48, bottom: 0, left: 0 }}>
+                  <AreaChart data={EQUITY_CURVE_DATA} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                     <defs>
-                      <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#42bf23" stopOpacity={0.35} />
+                      <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#42bf23" stopOpacity={0.32} />
                         <stop offset="100%" stopColor="#42bf23" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis
-                      dataKey="t"
-                      tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold', Helvetica" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "#1d2132" }}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      orientation="right"
-                      tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold', Helvetica" }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
-                      domain={[5400, 7200]}
-                      width={44}
-                    />
                     <Tooltip
-                      contentStyle={{ background: "#0a0c10", border: "1px solid #1d2132", borderRadius: 8, fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}
-                      labelStyle={{ color: "#6c779d" }}
-                      itemStyle={{ color: "#42bf23" }}
-                      formatter={(v: number) => [`$${v.toLocaleString()}`, "Equity"]}
+                      content={<PriceTooltip />}
+                      cursor={<CrosshairCursor />}
+                      position={{ y: -999 }}
+                      allowEscapeViewBox={{ x: false, y: true }}
                     />
                     <Area
                       type="monotone"
                       dataKey="v"
                       stroke="#42bf23"
-                      strokeWidth={2}
-                      fill="url(#greenGradient)"
+                      strokeWidth={1.5}
+                      fill="url(#greenGrad)"
                       dot={false}
-                      activeDot={{ r: 4, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }}
+                      activeDot={{ r: 3, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+                {/* Y-axis labels overlaid on right */}
+                <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none"
+                  style={{ paddingTop: "8px", paddingBottom: "4px" }}>
+                  {Y_LABELS.map((lbl) => (
+                    <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right"
+                      style={{ color: "#6c779d" }}>{lbl}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* X-axis labels */}
+              <div className="flex items-center justify-between px-[8px] py-[4px]"
+                style={{ borderTop: "1px solid #1d2132" }}>
+                {X_LABELS.map((lbl, i) => (
+                  <span key={i} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px]"
+                    style={{ color: "#6c779d" }}>{lbl}</span>
+                ))}
               </div>
             </div>
 
-            {/* Open Positions */}
-            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-              <div className="px-[16px] py-[12px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
+            {/* Open Positions — no border */}
+            <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
+              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
+                style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Open Positions</span>
               </div>
-              <div className="flex flex-col flex-1 overflow-auto">
+              <div className="flex flex-col gap-[12px] px-[16px] py-[12px]">
                 {OPEN_POSITIONS.map((pos, i) => (
                   <div key={i}>
-                    <div className="flex items-center justify-between px-[16px] py-[14px]">
-                      <div className="flex flex-col gap-[2px]">
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[14px] leading-[18px]">{pos.market}</span>
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
-                          {pos.dir} · {pos.lev}
-                        </span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{pos.market}</span>
+                        <div className="flex items-center gap-[4px]">
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.dir}</span>
+                          <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.lev}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-[2px]">
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[14px] leading-[18px]">{pos.value}</span>
-                        <span className="px-[6px] py-[1px] rounded-[100px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica]"
-                          style={{ background: pos.pos ? "rgba(66,191,35,0.15)" : "rgba(210,3,68,0.15)", color: pos.pos ? "#42bf23" : "#d20344" }}>
-                          {pos.pct}
-                        </span>
+                      <div className="flex flex-col items-end justify-center gap-[2px]">
+                        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#a8b9f4] text-[14px] leading-[20px] text-right whitespace-nowrap">{pos.value}</span>
+                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px]"
+                          style={pos.pos
+                            ? { background: "#123509", border: "1px solid rgba(66,191,35,0.2)" }
+                            : { background: "#350011", border: "1px solid rgba(210,3,68,0.2)" }}>
+                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] text-center whitespace-nowrap"
+                            style={{ color: pos.pos ? "#42bf23" : "#d20344" }}>{pos.pct}</span>
+                        </div>
                       </div>
                     </div>
-                    {i < OPEN_POSITIONS.length - 1 && <div className="h-px mx-[16px]" style={{ background: "#1d2132" }} />}
+                    {i < OPEN_POSITIONS.length - 1 && (
+                      <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ── 4. Policy Envelope ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <div className="px-[16px] py-[14px]" style={{ borderBottom: "1px solid #1d2132" }}>
+          {/* ── 4. Policy Envelope — rectangular boxes ── */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] py-[12px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Policy Envelope</span>
             </div>
-            <div className="flex flex-col">
-              {policyFields.map((row, i) => (
-                <div key={i} className="grid grid-cols-2"
-                  style={{ borderBottom: i < policyFields.length - 1 ? "1px solid #1d2132" : "none" }}>
-                  {/* Left field */}
-                  <div className="flex items-center justify-between px-[16px] py-[14px]"
-                    style={{ borderRight: "1px solid #1d2132" }}>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">{row.left.label}</span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[13px] leading-[20px]">{row.left.value}</span>
-                  </div>
-                  {/* Right field */}
-                  <div className="flex items-center justify-between px-[16px] py-[14px]">
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">{row.right.label}</span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[13px] leading-[20px]">{row.right.value}</span>
-                  </div>
+            <div className="flex flex-col gap-[8px] p-[16px]">
+              {policyRows.map((row, ri) => (
+                <div key={ri} className="flex gap-[8px]">
+                  {row.map((field, fi) => (
+                    <div key={fi} className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]"
+                      style={{ background: "#11141b" }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{field.label}</span>
+                      {field.mkts ? (
+                        <div className="flex items-center gap-[4px]">
+                          {field.mkts.map((m: string, mi: number) => (
+                            <span key={mi} className="flex items-center gap-[4px]">
+                              {mi > 0 && <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#6c779d" }} />}
+                              <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">{m}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{field.value}</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
 
           {/* ── 5. Transaction Log ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <div className="px-[16px] py-[14px]" style={{ borderBottom: "1px solid #1d2132" }}>
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] py-[12px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transaction Log</span>
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-[12px] px-[16px] py-[12px]">
               {TX_LOG.map((tx, i) => (
-                <div key={i}>
-                  <div className="flex items-center justify-between px-[16px] py-[14px] gap-[8px]">
-                    <div className="flex items-center gap-[6px] flex-1 min-w-0">
-                      <span className="[font-family:'Gilroy-Bold',Helvetica] text-white text-[13px] leading-[18px] font-bold whitespace-nowrap">{tx.action}</span>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[12px] leading-[18px] whitespace-nowrap">· {tx.ago}</span>
-                      <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#414965] text-[11px] leading-[18px] whitespace-nowrap">· {tx.hash}</span>
-                    </div>
-                    <div className="flex items-center gap-[8px] flex-shrink-0">
-                      <span className="px-[8px] py-[2px] rounded-[100px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] whitespace-nowrap"
-                        style={tx.status === "Executed"
-                          ? { background: "#123509", color: "#42bf23" }
-                          : { background: "#4a2300", color: "#ff9500" }}>
-                        {tx.status}
-                      </span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[13px] leading-[18px] whitespace-nowrap">{tx.amount}</span>
-                    </div>
+                <div key={i} className="flex gap-[24px] items-start">
+                  {/* Left: action · time · hash */}
+                  <div className="flex flex-1 items-center gap-[8px] min-w-0 flex-wrap">
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
+                    <Dot />
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
+                    <Dot />
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.hash}</span>
                   </div>
-                  {i < TX_LOG.length - 1 && <div className="h-px mx-[16px]" style={{ background: "#1d2132" }} />}
+                  {/* Right: status badge + amount */}
+                  <div className="flex items-center gap-[8px] flex-shrink-0">
+                    <span className="px-[8px] py-[3px] rounded-[100px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] leading-[14px] whitespace-nowrap"
+                      style={tx.status === "Executed"
+                        ? { background: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" }
+                        : { background: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" }}>
+                      {tx.status}
+                    </span>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.amount}</span>
+                  </div>
                 </div>
               ))}
             </div>
