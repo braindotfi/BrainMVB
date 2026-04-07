@@ -237,13 +237,65 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
    Trading Agent View (Figma 3380-32372)
 ════════════════════════════════════════════════════════ */
 
-const EQUITY_CURVE_DATA = [
-  { t: "03:00", v: 5680 }, { t: "05:00", v: 5760 }, { t: "07:00", v: 5920 },
-  { t: "09:00", v: 6050 }, { t: "11:00", v: 6120 }, { t: "13:00", v: 6220 },
-  { t: "15:00", v: 6370 }, { t: "17:00", v: 6630 }, { t: "18:00", v: 6860 },
-  { t: "19:00", v: 6960 }, { t: "20:00", v: 6600 }, { t: "21:00", v: 6390 },
-  { t: "23:00", v: 6300 }, { t: "01:00", v: 6270 }, { t: "03:00", v: 6240 },
-];
+/* ── Chart data per time tab ── */
+const CHART_DATA: Record<string, { pts: { t: string; v: number }[]; xLabels: string[]; yLabels: string[] }> = {
+  "1H": {
+    pts: [
+      { t: "03:00", v: 5680 }, { t: "04:00", v: 5760 }, { t: "05:00", v: 5920 },
+      { t: "07:00", v: 6050 }, { t: "08:00", v: 6120 }, { t: "09:00", v: 6220 },
+      { t: "11:00", v: 6370 }, { t: "14:00", v: 6630 }, { t: "16:00", v: 6860 },
+      { t: "18:00", v: 6960 }, { t: "19:00", v: 6600 }, { t: "21:00", v: 6390 },
+      { t: "22:00", v: 6300 }, { t: "23:00", v: 6270 }, { t: "03:00", v: 6240 },
+    ],
+    xLabels: ["03:00", "11:00", "19:00", "03:00"],
+    yLabels: ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"],
+  },
+  "1D": {
+    pts: [
+      { t: "Mon", v: 58200 }, { t: "Tue", v: 59800 }, { t: "Wed", v: 61200 },
+      { t: "Thu", v: 60400 }, { t: "Fri", v: 63000 }, { t: "Sat", v: 64200 },
+      { t: "Sun", v: 62400 },
+    ],
+    xLabels: ["Mon", "Tue", "Thu", "Sat", "Sun"],
+    yLabels: ["$65k", "$64k", "$62k", "$61k", "$59k", "$58k"],
+  },
+  "1W": {
+    pts: [
+      { t: "Wk1", v: 52000 }, { t: "Wk2", v: 55000 }, { t: "Wk3", v: 57200 },
+      { t: "Wk4", v: 59800 }, { t: "Wk5", v: 61400 }, { t: "Wk6", v: 63200 },
+      { t: "Wk7", v: 62400 },
+    ],
+    xLabels: ["Wk1", "Wk2", "Wk4", "Wk6", "Wk7"],
+    yLabels: ["$64k", "$62k", "$59k", "$57k", "$55k", "$52k"],
+  },
+  "1M": {
+    pts: [
+      { t: "Mar 4", v: 44000 }, { t: "Mar 8", v: 47200 }, { t: "Mar 12", v: 49600 },
+      { t: "Mar 16", v: 51200 }, { t: "Mar 20", v: 53400 }, { t: "Mar 24", v: 55800 },
+      { t: "Mar 28", v: 58400 }, { t: "Apr 1", v: 60200 }, { t: "Apr 4", v: 62400 },
+    ],
+    xLabels: ["Mar 4", "Mar 12", "Mar 24", "Apr 4"],
+    yLabels: ["$63k", "$60k", "$56k", "$51k", "$47k", "$44k"],
+  },
+  "1Y": {
+    pts: [
+      { t: "Apr 25", v: 18000 }, { t: "Jun 25", v: 22400 }, { t: "Aug 25", v: 29800 },
+      { t: "Oct 25", v: 36200 }, { t: "Dec 25", v: 44000 }, { t: "Feb 26", v: 54800 },
+      { t: "Apr 26", v: 62400 },
+    ],
+    xLabels: ["Apr '25", "Aug '25", "Dec '25", "Apr '26"],
+    yLabels: ["$63k", "$54k", "$44k", "$30k", "$22k", "$18k"],
+  },
+  "ALL": {
+    pts: [
+      { t: "2022", v: 8000 }, { t: "Q2 22", v: 11200 }, { t: "2023", v: 18400 },
+      { t: "Q2 23", v: 26800 }, { t: "2024", v: 38200 }, { t: "Q2 24", v: 48600 },
+      { t: "2025", v: 52400 }, { t: "Q2 25", v: 58800 }, { t: "2026", v: 62400 },
+    ],
+    xLabels: ["2022", "2023", "2024", "2025", "2026"],
+    yLabels: ["$63k", "$52k", "$38k", "$18k", "$11k", "$8k"],
+  },
+};
 
 const OPEN_POSITIONS = [
   { market: "BTC-PERP", dir: "Long",  lev: "3.2x", value: "$8,949.00", pct: "+2.92%", pos: true  },
@@ -326,82 +378,81 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
   const truncateWallet = (addr: string) =>
     addr?.length > 12 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
 
-  /* Y-axis label values (Figma: $7000 → $5600) */
-  const Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"];
-  const X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
+  const chartSet = CHART_DATA[chartTab] ?? CHART_DATA["1H"];
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
 
-      {/* ── Top nav bar — no bottom separator ── */}
-      <div className="flex items-center gap-[8px] px-[16px] flex-shrink-0"
-        style={{ height: "64px", background: "#11141b" }}>
+      {/* ── Top nav bar: back btn LEFT, action btns RIGHT, NO bottom border ── */}
+      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
+        {/* Back button (left) */}
         <button data-testid="button-back" onClick={onBack}
-          className="w-[32px] h-[32px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-70"
+          className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
           style={{ background: "rgba(255,255,255,0.06)" }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        {/* Action buttons (right) */}
+        <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
+          {/* Edit (grey) */}
+          <button onClick={onEdit} data-testid="button-edit-agent"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
+            style={{ background: "#222737" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+          </button>
+          {/* Stop/Start (red) */}
+          <button data-testid="button-stop-agent" onClick={onToggle}
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+            style={{ background: "#350011" }}>
+            <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+              {isActive ? "Stop" : "Start"}
+            </span>
+          </button>
+          {/* Kill (red) */}
+          <button data-testid="button-kill-agent"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
+            style={{ background: "#350011" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
+          </button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
-          {/* ── 1. Header card — no border ── */}
+          {/* ── 1. Header card — avatar + name + "Trading" tag + deployed + description ── */}
           <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]"
             style={{ background: "#0a0c10" }}>
-            {/* Identity row */}
             <div className="flex gap-[8px] items-center w-full">
               <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
                 <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
               </div>
-              <div className="flex flex-1 min-w-0 gap-[16px] items-center">
-                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                  {/* Name only — no ticker per user request */}
-                  <div className="flex items-center gap-[4px]">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                  </div>
-                  {/* Deployed · wallet */}
-                  <div className="flex items-center gap-[8px]">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                      Deployed: {agent.deployedAt}
-                    </span>
-                    <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                      {truncateWallet(agent.walletAddress)}
-                    </span>
+              <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
+                {/* Name + Trading tag */}
+                <div className="flex items-center gap-[4px]">
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
+                  <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+                    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Trading</span>
                   </div>
                 </div>
-                {/* Action buttons — Edit is GREY per Figma */}
-                <div className="flex items-center gap-[8px] flex-shrink-0">
-                  {/* Edit (grey) */}
-                  <button onClick={onEdit} data-testid="button-edit-agent"
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
-                    style={{ background: "#222737" }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-                  </button>
-                  {/* Stop (red) */}
-                  <button data-testid="button-stop-agent" onClick={onToggle}
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-                    style={{ background: "#350011" }}>
-                    <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
-                      {isActive ? "Stop" : "Start"}
-                    </span>
-                  </button>
-                  {/* Kill (red) */}
-                  <button data-testid="button-kill-agent"
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-                    style={{ background: "#350011" }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
-                  </button>
+                {/* Deployed · wallet */}
+                <div className="flex items-center gap-[8px]">
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+                    Deployed: {agent.deployedAt}
+                  </span>
+                  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+                    {truncateWallet(agent.walletAddress)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -457,7 +508,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
               {/* Chart area — full width with overlaid Y labels */}
               <div className="relative flex-1" style={{ minHeight: "284px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={EQUITY_CURVE_DATA} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+                  <AreaChart data={chartSet.pts} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#42bf23" stopOpacity={0.32} />
@@ -467,8 +518,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                     <Tooltip
                       content={<PriceTooltip />}
                       cursor={<CrosshairCursor />}
-                      position={{ y: -999 }}
-                      allowEscapeViewBox={{ x: false, y: true }}
+                      isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
@@ -477,6 +527,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                       strokeWidth={1.5}
                       fill="url(#greenGrad)"
                       dot={false}
+                      isAnimationActive={false}
                       activeDot={{ r: 3, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }}
                     />
                   </AreaChart>
@@ -484,7 +535,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                 {/* Y-axis labels overlaid on right */}
                 <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none"
                   style={{ paddingTop: "8px", paddingBottom: "4px" }}>
-                  {Y_LABELS.map((lbl) => (
+                  {chartSet.yLabels.map((lbl) => (
                     <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right"
                       style={{ color: "#6c779d" }}>{lbl}</span>
                   ))}
@@ -494,7 +545,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
               {/* X-axis labels */}
               <div className="flex items-center justify-between px-[8px] py-[4px]"
                 style={{ borderTop: "1px solid #1d2132" }}>
-                {X_LABELS.map((lbl, i) => (
+                {chartSet.xLabels.map((lbl, i) => (
                   <span key={i} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px]"
                     style={{ color: "#6c779d" }}>{lbl}</span>
                 ))}
@@ -572,30 +623,40 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 
           {/* ── 5. Transaction Log ── */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-            <div className="px-[16px] py-[12px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
+            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transaction Log</span>
             </div>
-            <div className="flex flex-col gap-[12px] px-[16px] py-[12px]">
+            <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
               {TX_LOG.map((tx, i) => (
-                <div key={i} className="flex gap-[24px] items-start">
-                  {/* Left: action · time · hash */}
-                  <div className="flex flex-1 items-center gap-[8px] min-w-0 flex-wrap">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
-                    <Dot />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
-                    <Dot />
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.hash}</span>
+                <div key={i}>
+                  {/* Row: 3 columns: left (flex-1) · middle (w-[100px] centered) · right (w-[100px] end) */}
+                  <div className="flex gap-[24px] items-center">
+                    {/* Col 1: action · time · hash */}
+                    <div className="flex flex-1 items-center gap-[8px] min-w-0">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
+                      <Dot />
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
+                      <Dot />
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.hash}</span>
+                    </div>
+                    {/* Col 2: status badge — centered, fixed 100px */}
+                    <div className="flex items-center justify-center flex-shrink-0" style={{ width: "100px" }}>
+                      <span className="px-[8px] py-[3px] rounded-[22px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] leading-[14px] whitespace-nowrap text-center"
+                        style={tx.status === "Executed"
+                          ? { background: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" }
+                          : { background: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" }}>
+                        {tx.status}
+                      </span>
+                    </div>
+                    {/* Col 3: amount — right-aligned, fixed 100px, JetBrains Mono */}
+                    <div className="flex items-center justify-end flex-shrink-0" style={{ width: "100px" }}>
+                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#a8b9f4] text-[14px] leading-[20px] text-right whitespace-nowrap">{tx.amount}</span>
+                    </div>
                   </div>
-                  {/* Right: status badge + amount */}
-                  <div className="flex items-center gap-[8px] flex-shrink-0">
-                    <span className="px-[8px] py-[3px] rounded-[100px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] leading-[14px] whitespace-nowrap"
-                      style={tx.status === "Executed"
-                        ? { background: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" }
-                        : { background: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" }}>
-                      {tx.status}
-                    </span>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.amount}</span>
-                  </div>
+                  {/* Separator between rows */}
+                  {i < TX_LOG.length - 1 && (
+                    <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
+                  )}
                 </div>
               ))}
             </div>
