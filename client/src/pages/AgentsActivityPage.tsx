@@ -365,7 +365,10 @@ export const AgentsActivityPage = (): JSX.Element => {
                   <button
                     key={key}
                     data-testid={`tab-agents-${key}`}
-                    onClick={() => setActiveTab(key)}
+                    onClick={() => {
+                      setActiveTab(key);
+                      navigate(key === "all" ? "/agents" : `/agents?tab=${key}`, { replace: true });
+                    }}
                     className={`flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all whitespace-nowrap ${
                       isActive
                         ? "bg-[#350011] text-[#d20344]"

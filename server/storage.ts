@@ -6,7 +6,15 @@ import {
   type AgentTransaction, type InsertAgentTransaction,
   type Notification, type InsertNotification,
   type MarketplaceListing,
+  users as usersTable,
+  agents as agentsTable,
+  marketplaceListings as marketplaceListingsTable,
+  agentMemory as agentMemoryTable,
+  agentTransactions as agentTransactionsTable,
+  notifications as notificationsTable,
 } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { db } from "./db";
 
 export type AgentStatus = "active" | "inactive" | "paused";
 
@@ -236,4 +244,151 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// ─── PostgreSQL-backed implementation ───
+
+const MARKETPLACE_SEED: Omit<MarketplaceListing, "id" | "createdAt">[] = [
+  { agentId: "alpha-001", name: "AlphaFlow", description: "Executes automated trading strategies across DeFi protocols using momentum indicators and on-chain signals.", category: "trading", rating: "4.8", installs: 2341, price: "free", featured: true, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["trading", "defi", "automation"] },
+  { agentId: "yield-001", name: "Yield Pilot", description: "Manages capital allocation across DeFi protocols to maximize yield while respecting risk parameters.", category: "trading", rating: "4.6", installs: 1872, price: "free", featured: true, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["lending", "yield", "defi"] },
+  { agentId: "risk-001", name: "Risk Sentinel", description: "Continuously monitors positions and transactions for risk thresholds, liquidation danger, and anomalies.", category: "trading", rating: "4.9", installs: 3102, price: "free", featured: false, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["risk", "monitoring", "alerts"] },
+  { agentId: "signal-001", name: "Signal Seer", description: "Aggregates news, social signals, and on-chain data to generate actionable trading signals.", category: "research", rating: "4.5", installs: 1234, price: "free", featured: false, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["research", "signals", "analytics"] },
+  { agentId: "trend-001", name: "TrendRadar", description: "Detects emerging trends across markets, social platforms, and on-chain activity before they go mainstream.", category: "research", rating: "4.4", installs: 987, price: "free", featured: false, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["research", "trends", "social"] },
+  { agentId: "task-001", name: "TaskForge Pro", description: "Automates repetitive workflows across tools, APIs, and DeFi protocols with smart scheduling.", category: "automation", rating: "4.7", installs: 1567, price: "free", featured: false, trending: true, newAndNoteworthy: false, previewImages: [], capabilities: ["automation", "workflows", "scheduling"] },
+  { agentId: "inbox-001", name: "InboxZero", description: "Manages email, filters priority messages, and drafts responses using context from your financial data.", category: "automation", rating: "4.3", installs: 756, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["email", "productivity", "automation"] },
+  { agentId: "ops-001", name: "Ops Commander", description: "Coordinates multi-step workflows across systems, APIs, and agents with dependency management.", category: "automation", rating: "4.5", installs: 843, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["orchestration", "workflows", "multi-agent"] },
+  { agentId: "pay-001", name: "Pay Stream", description: "Executes real-time payments for APIs and services using x402 machine-to-machine protocol.", category: "payments", rating: "4.6", installs: 1102, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["payments", "x402", "automation"] },
+  { agentId: "inv-001", name: "Invoice Bot", description: "Generates invoices, tracks payments, and automates collections for freelancers and businesses.", category: "payments", rating: "4.2", installs: 634, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["invoicing", "payments", "accounting"] },
+  { agentId: "deal-001", name: "Deal Closer", description: "Negotiates and executes transactions between agents using on-chain escrow and dispute resolution.", category: "payments", rating: "4.4", installs: 521, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["negotiation", "escrow", "payments"] },
+  { agentId: "swarm-001", name: "SwarmAlpha", description: "Coordinates multiple sub-agents to execute complex strategies that no single agent can handle alone.", category: "swarm", rating: "4.8", installs: 2891, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["swarm", "multi-agent", "orchestration"] },
+];
+
+export class DatabaseStorage implements IStorage {
+  async init() {
+    const existing = await db.select().from(marketplaceListingsTable).limit(1);
+    if (existing.length === 0) {
+      await db.insert(marketplaceListingsTable).values(MARKETPLACE_SEED as any);
+    }
+  }
+
+  // ─── Users ───
+  async getUser(id: string): Promise<User | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+    return row ?? undefined;
+  }
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.username, username)).limit(1);
+    return row ?? undefined;
+  }
+  async getUserByWallet(walletAddress: string): Promise<User | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.walletAddress, walletAddress)).limit(1);
+    return row ?? undefined;
+  }
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [row] = await db.insert(usersTable).values(insertUser).returning();
+    return row;
+  }
+  async updateUserWallet(id: string, walletAddress: string): Promise<User | undefined> {
+    const [row] = await db.update(usersTable).set({ walletAddress }).where(eq(usersTable.id, id)).returning();
+    return row ?? undefined;
+  }
+
+  // ─── Agents ───
+  async getAgent(id: string): Promise<Agent | undefined> {
+    const [row] = await db.select().from(agentsTable).where(eq(agentsTable.id, id)).limit(1);
+    return row ?? undefined;
+  }
+  async listAgents(ownerId?: string): Promise<Agent[]> {
+    if (ownerId) {
+      return db.select().from(agentsTable).where(eq(agentsTable.ownerId, ownerId));
+    }
+    return db.select().from(agentsTable);
+  }
+  async createAgent(agent: InsertAgent): Promise<Agent> {
+    const [row] = await db.insert(agentsTable).values(agent).returning();
+    return row;
+  }
+  async updateAgent(id: string, updates: Partial<InsertAgent>): Promise<Agent | undefined> {
+    const [row] = await db.update(agentsTable)
+      .set({ ...updates, lastActiveAt: new Date() })
+      .where(eq(agentsTable.id, id))
+      .returning();
+    return row ?? undefined;
+  }
+  async getAgentStatus(agentId: string): Promise<AgentStatus | undefined> {
+    const [row] = await db.select({ status: agentsTable.status }).from(agentsTable).where(eq(agentsTable.id, agentId)).limit(1);
+    return (row?.status as AgentStatus) ?? undefined;
+  }
+  async setAgentStatus(agentId: string, status: AgentStatus): Promise<AgentStatus> {
+    await db.update(agentsTable).set({ status }).where(eq(agentsTable.id, agentId));
+    return status;
+  }
+
+  // ─── Marketplace ───
+  async listMarketplaceListings(filters?: { category?: string; featured?: boolean; trending?: boolean }): Promise<MarketplaceListing[]> {
+    const conditions = [];
+    if (filters?.category) conditions.push(eq(marketplaceListingsTable.category, filters.category));
+    if (filters?.featured !== undefined) conditions.push(eq(marketplaceListingsTable.featured, filters.featured));
+    if (filters?.trending !== undefined) conditions.push(eq(marketplaceListingsTable.trending, filters.trending));
+    if (conditions.length > 0) {
+      return db.select().from(marketplaceListingsTable).where(and(...conditions));
+    }
+    return db.select().from(marketplaceListingsTable);
+  }
+
+  // ─── Agent Memory ───
+  async addMemory(memory: InsertAgentMemory): Promise<AgentMemory> {
+    const [row] = await db.insert(agentMemoryTable).values(memory).returning();
+    return row;
+  }
+  async getMemories(agentId: string, limit = 20): Promise<AgentMemory[]> {
+    return db.select().from(agentMemoryTable)
+      .where(eq(agentMemoryTable.agentId, agentId))
+      .orderBy(desc(agentMemoryTable.createdAt))
+      .limit(limit);
+  }
+
+  // ─── Agent Transactions ───
+  async addTransaction(tx: InsertAgentTransaction): Promise<AgentTransaction> {
+    const [row] = await db.insert(agentTransactionsTable).values(tx).returning();
+    return row;
+  }
+  async getTransactions(agentId: string, limit = 50): Promise<AgentTransaction[]> {
+    return db.select().from(agentTransactionsTable)
+      .where(eq(agentTransactionsTable.agentId, agentId))
+      .orderBy(desc(agentTransactionsTable.createdAt))
+      .limit(limit);
+  }
+
+  // ─── Notifications ───
+  async getNotifications(userId: string, limit = 50): Promise<Notification[]> {
+    return db.select().from(notificationsTable)
+      .where(eq(notificationsTable.userId, userId))
+      .orderBy(desc(notificationsTable.createdAt))
+      .limit(limit);
+  }
+  async getUnreadCount(userId: string): Promise<number> {
+    const rows = await db.select().from(notificationsTable)
+      .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.read, false)));
+    return rows.length;
+  }
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [row] = await db.insert(notificationsTable).values(notification).returning();
+    return row;
+  }
+  async markAsRead(id: string): Promise<void> {
+    await db.update(notificationsTable).set({ read: true }).where(eq(notificationsTable.id, id));
+  }
+  async deleteNotification(id: string): Promise<void> {
+    await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
+  }
+}
+
+async function createStorage(): Promise<IStorage> {
+  if (process.env.DATABASE_URL) {
+    const dbStorage = new DatabaseStorage();
+    await dbStorage.init();
+    return dbStorage;
+  }
+  return new MemStorage();
+}
+
+export const storage: IStorage = await createStorage();

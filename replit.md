@@ -7,13 +7,13 @@ AI agent marketplace + programmable neobank on Base L2.
 - **Backend**: Express.js (same server via Vite proxy)
 - **Web3**: wagmi v2, viem, RainbowKit (wallet connection + SIWE auth)
 - **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`)
-- **DB Schema**: Drizzle ORM, PostgreSQL-ready (currently in-memory MemStorage)
+- **DB**: Drizzle ORM + PostgreSQL (DatabaseStorage, falls back to MemStorage if no DATABASE_URL)
 - **Smart Contracts**: Hardhat + Base Sepolia (in `contracts/`)
 
 ## Key Files
 - `shared/schema.ts` — Drizzle schema (agents, marketplace, notifications, etc.)
 - `server/routes.ts` — All API routes + Claude ReAct agent loop
-- `server/storage.ts` — MemStorage (seeded) + IStorage interface
+- `server/storage.ts` — MemStorage + DatabaseStorage (Drizzle/PG) + IStorage interface; `server/db.ts` — Drizzle pool
 - `server/policyEngine.ts` — Off-chain policy evaluation + ECDSA proof signing (viem)
 - `server/contractService.ts` — viem reads/writes to deployed contracts (demo fallback)
 - `client/src/lib/web3.ts` — wagmi config (Base + BaseSepolia)
