@@ -405,36 +405,76 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
 
         {/* ── SUCCESS ── */}
         {launched && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0d1017] gap-5 px-8">
-            <div className="w-20 h-20 rounded-full bg-brain-v1dark-orange flex items-center justify-center">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0d1017] gap-5 px-8 overflow-y-auto py-8">
+            {/* Star icon */}
+            <div className="w-20 h-20 rounded-full bg-brain-v1dark-orange/20 border border-brain-v1dark-orange/30 flex items-center justify-center flex-shrink-0">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M18 6L22 14L31 15.5L24.5 22L26 31L18 27L10 31L11.5 22L5 15.5L14 14L18 6Z" stroke="#ff9500" strokeWidth="2" strokeLinejoin="round" />
+                <path d="M18 6L22 14L31 15.5L24.5 22L26 31L18 27L10 31L11.5 22L5 15.5L14 14L18 6Z" fill="#ff9500" fillOpacity="0.15" stroke="#ff9500" strokeWidth="1.5" strokeLinejoin="round" />
               </svg>
             </div>
+
             <div className="text-center">
               <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">
-                {agentName || "Agent"} Launched!
+                {agentName || "Agent"} is live!
               </h3>
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                Your AI agent is now live and ready to operate.
+                Your AI agent is deployed and ready to operate.
               </p>
             </div>
-            <div className="w-full bg-brain-v1baby-blue-15 rounded-2xl p-4 text-left space-y-2.5">
-              {[
-                { label: "Name",    value: agentName || "—" },
-                { label: "Type",    value: selectedType ? selectedType.charAt(0).toUpperCase() + selectedType.slice(1) : "—" },
-                { label: "Capital", value: capital ? `$${capital} ${capitalAsset}` : "—" },
-                { label: "Risk",    value: riskLevel },
-                { label: "Status",  value: "Active", orange: true },
-              ].map(({ label, value, orange }) => (
-                <div key={label} className="flex justify-between items-center">
+
+            {/* Identity */}
+            <div className="w-full flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
+              {selectedAvatar ? (
+                <img src={selectedAvatar} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-brain-v1dark-orange/20 flex items-center justify-center flex-shrink-0 text-lg">
+                  {agentTypes.find((t) => t.id === selectedType)?.icon ?? "🤖"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm truncate">{agentName}</p>
+                <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] capitalize">{selectedType} agent</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="w-2 h-2 rounded-full bg-brain-v1green animate-pulse" />
+                <span className="text-xs text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">Active</span>
+              </div>
+            </div>
+
+            {/* Summary rows */}
+            <div className="w-full bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] overflow-hidden">
+              {([
+                { label: "Capital",        value: capital ? `$${capital} ${capitalAsset}` : "—" },
+                { label: "Risk Level",     value: riskLevel },
+                { label: "Execution",      value: executionMode },
+                ...(selectedType === "lending" ? [
+                  { label: "Max LTV",    value: `${maxLTV}%` },
+                  { label: "Protocols",  value: lendingProtocols.slice(0, 2).join(", ") },
+                ] : selectedType === "yield" ? [
+                  { label: "Target APY",  value: `${targetAPY}%` },
+                  { label: "Rebalance",   value: rebalanceFreq },
+                ] : selectedType === "payments" ? [
+                  { label: "Max Payment", value: `$${maxSinglePayment}` },
+                  { label: "Monthly Cap", value: `$${monthlyBudgetCap}` },
+                ] : selectedType === "analytics" ? [
+                  { label: "Sources",     value: signalSources.slice(0, 2).join(", ") },
+                  { label: "Confidence",  value: minConfidence },
+                ] : selectedType === "custom" ? [
+                  { label: "Trigger",     value: triggerType },
+                ] : [
+                  { label: "Assets",      value: selectedAssets.slice(0, 3).join(", ") + (selectedAssets.length > 3 ? "…" : "") },
+                  { label: "Max Drawdown",value: `${maxDrawdown}%` },
+                ]),
+              ] as { label: string; value: string }[]).map(({ label, value }, i, arr) => (
+                <div key={label} className={`flex justify-between items-center px-4 py-3 ${i < arr.length - 1 ? "border-b border-[#1d2131]" : ""}`}>
                   <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
-                  <span className={`[font-family:'JetBrains_Mono',Helvetica] text-xs ${orange ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"}`}>{value}</span>
+                  <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{value}</span>
                 </div>
               ))}
             </div>
-            <button onClick={handleClose} className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity">
-              Done
+
+            <button onClick={handleClose} className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity flex-shrink-0">
+              View in My Agents
             </button>
           </div>
         )}
@@ -520,11 +560,6 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
               <div className="flex flex-col gap-1.5">
                 <FieldLabel>Agent Name *</FieldLabel>
                 <input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="e.g. AlphaFlow" className={inputCls} />
-                {agentName && (
-                  <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'JetBrains_Mono',Helvetica]">
-                    Token ticker: <span className="text-brain-v1light-orange">{autoTicker}</span> (auto-generated)
-                  </p>
-                )}
               </div>
 
               {/* Description */}
@@ -804,11 +839,58 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
           )}
 
           {/* STEP 6 — Review */}
-          {step === 6 && (
-            <div className="flex flex-col gap-4">
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Review your configuration before launching.</p>
-              <div className="flex flex-col gap-3">
-                {/* Agent identity */}
+          {step === 6 && (() => {
+            /* Rows that vary per agent type */
+            const typeRows: { label: string; value: string }[] =
+              selectedType === "lending" ? [
+                { label: "Max LTV",               value: `${maxLTV}%` },
+                { label: "Liquidation Threshold", value: `${liquidationThreshold}%` },
+                { label: "Interest Rate Mode",    value: interestRateMode },
+                { label: "Lending Protocols",     value: lendingProtocols.join(", ") || "None" },
+              ] : selectedType === "yield" ? [
+                { label: "Target APY",          value: `${targetAPY}%` },
+                { label: "Min APY Threshold",   value: `${minAPY}%` },
+                { label: "Rebalance Frequency", value: rebalanceFreq },
+                { label: "Yield Protocols",     value: yieldProtocols.join(", ") || "None" },
+              ] : selectedType === "payments" ? [
+                { label: "Max Single Payment",      value: `$${maxSinglePayment}` },
+                { label: "Monthly Budget Cap",      value: `$${monthlyBudgetCap}` },
+                { label: "Auto-approval Threshold", value: `$${autoApprovalThreshold}` },
+                { label: "Payment Method",          value: paymentMethod },
+              ] : selectedType === "analytics" ? [
+                { label: "Signal Sources",  value: signalSources.join(", ") || "None" },
+                { label: "Min Confidence",  value: minConfidence },
+                { label: "Signals per Day", value: signalsPerDay },
+                { label: "Output Channels", value: outputChannels.join(", ") || "None" },
+              ] : selectedType === "custom" ? [
+                { label: "Trigger Type", value: triggerType },
+                { label: "Webhook URL",  value: webhookURL || "Not set" },
+              ] : [
+                { label: "Max Allocation per Asset", value: `${maxAlloc}%` },
+                { label: "Max Position Size",        value: `${maxPosition}%` },
+                { label: "Max Trades per Day",       value: maxTrades },
+              ];
+
+            const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+              <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest px-1">{children}</p>
+            );
+
+            const RowBlock = ({ rows }: { rows: { label: string; value: string }[] }) => (
+              <div className="bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] overflow-hidden">
+                {rows.map(({ label, value }, i) => (
+                  <div key={label} className={`flex justify-between items-center px-4 py-3 ${i < rows.length - 1 ? "border-b border-[#1d2131]" : ""}`}>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
+                    <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs max-w-[55%] text-right">{value}</span>
+                  </div>
+                ))}
+              </div>
+            );
+
+            return (
+              <div className="flex flex-col gap-4">
+                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Review every setting before launching your agent.</p>
+
+                {/* Identity card */}
                 <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
                   {selectedAvatar ? (
                     <img src={selectedAvatar} alt="Avatar" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
@@ -818,39 +900,71 @@ export const CreateAgentModal = ({ open, onClose }: Props): JSX.Element | null =
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base">{agentName || "Unnamed Agent"}</p>
-                    <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{autoTicker || "No ticker"}</p>
+                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base truncate">{agentName || "Unnamed Agent"}</p>
+                    {agentDesc ? (
+                      <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 line-clamp-1">{agentDesc}</p>
+                    ) : (
+                      <p className="text-[11px] text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 italic">No description</p>
+                    )}
                   </div>
-                  <span className="px-3 py-1 bg-brain-v1dark-orange/20 rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] capitalize">
+                  <span className="px-3 py-1 bg-brain-v1dark-orange/20 rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] capitalize flex-shrink-0">
                     {selectedType || "No type"}
                   </span>
                 </div>
 
-                {/* Config summary */}
-                <div className="bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] overflow-hidden">
-                  {[
-                    { label: "Capital",        value: capital ? `$${capital} ${capitalAsset}` : "—" },
-                    { label: "Risk Level",     value: riskLevel },
-                    { label: "Max Drawdown",   value: `${maxDrawdown}%` },
-                    { label: "Stop Loss",      value: `${stopLoss}%` },
-                    { label: "Execution Mode", value: executionMode },
-                    { label: "Allowed Assets", value: selectedAssets.join(", ") || "None" },
-                  ].map(({ label, value }, i, arr) => (
-                    <div key={label} className={`flex justify-between items-center px-4 py-3 ${i < arr.length - 1 ? "border-b border-[#1d2131]" : ""}`}>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
-                      <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{value}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* Capital & risk */}
+                <SectionTitle>Capital &amp; Risk</SectionTitle>
+                <RowBlock rows={[
+                  { label: "Capital Allocation", value: capital ? `$${capital} ${capitalAsset}` : "—" },
+                  { label: "Risk Level",         value: riskLevel },
+                  { label: "Max Drawdown",       value: `${maxDrawdown}%` },
+                  { label: "Stop Loss",          value: `${stopLoss}%` },
+                  { label: "Execution Mode",     value: executionMode },
+                ]} />
 
+                {/* Assets */}
+                <SectionTitle>
+                  {selectedType === "lending" ? "Collateral Assets" : selectedType === "analytics" ? "Monitored Markets" : "Allowed Assets"}
+                </SectionTitle>
+                <RowBlock rows={[
+                  { label: selectedType === "lending" ? "Accepted Collateral" : "Tradeable Assets", value: selectedAssets.join(", ") || "None selected" },
+                  { label: "Max Allocation / Asset", value: `${maxAlloc}%` },
+                  { label: "Min Liquidity Threshold", value: `$${minLiquidity}` },
+                ]} />
+
+                {/* Type-specific */}
+                {typeRows.length > 0 && (
+                  <>
+                    <SectionTitle>
+                      {selectedType === "lending" ? "Lending Policy" :
+                       selectedType === "yield"    ? "Yield Strategy" :
+                       selectedType === "payments" ? "Payment Controls" :
+                       selectedType === "analytics"? "Analytics Settings" :
+                       selectedType === "custom"   ? "Custom Logic" :
+                       "Trading Strategy"}
+                    </SectionTitle>
+                    <RowBlock rows={typeRows} />
+                  </>
+                )}
+
+                {/* Custom instructions preview */}
+                {selectedType === "custom" && customInstructions && (
+                  <div className="p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
+                    <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest mb-2">Instructions</p>
+                    <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed line-clamp-4">{customInstructions}</p>
+                  </div>
+                )}
+
+                {/* Description */}
                 {agentDesc && (
                   <div className="p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
+                    <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest mb-2">Description</p>
                     <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">{agentDesc}</p>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* ── FOOTER ── */}
