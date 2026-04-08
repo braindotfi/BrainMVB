@@ -804,7 +804,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             </button>
-            <button title="Logout" className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
+            <button title="Logout" onClick={onLogout} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Logout" src="/figmaAssets/logout-icon.svg" />
             </button>
           </div>
