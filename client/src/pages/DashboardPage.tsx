@@ -4,10 +4,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ReferenceLine,
+  Tooltip,
 } from "recharts";
 import { useAuth } from "@/lib/authContext";
 
@@ -177,17 +174,64 @@ const CfBtn = ({ label, active, onClick }: { label: string; active: boolean; onC
   </button>
 );
 
-/* ── Cash Flow chart ── */
-const Y_TICKS = [5600, 5800, 6000, 6200, 6400, 6600, 7000];
+/* ── Cash Flow crosshair cursor (orange dashed + price pill, same as trading equity curve) ── */
+const CfCrosshairCursor = ({ points, width, height, payload }: any) => {
+  if (!points?.length) return null;
+  const { x, y } = points[0];
 
-const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
-  const crosshairTime = data[Math.floor(data.length * 0.55)]?.time;
-  const crosshairInflow = data[Math.floor(data.length * 0.55)]?.inflow ?? 6319;
+  const val = payload?.[0]?.value;
+  const formatted = val != null
+    ? `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : "";
+
+  const charW = 6.2;
+  const padX  = 8;
+  const pillH = 18;
+  const pillRx = 9;
+  const textW  = formatted.length * charW;
+  const pillW  = textW + padX * 2;
+
+  let pillX = x + 6;
+  if (pillX + pillW > width - 4) pillX = x - pillW - 6;
+
+  const pillY = y - pillH / 2;
 
   return (
-    <div className="relative w-full h-full">
+    <g>
+      <line x1={x} y1={0} x2={x} y2={height}
+        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <line x1={0} y1={y} x2={width} y2={y}
+        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      {formatted && (
+        <g>
+          <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
+          <text
+            x={pillX + pillW / 2}
+            y={pillY + pillH / 2 + 3.5}
+            textAnchor="middle"
+            fill="#ff9500"
+            fontSize={10}
+            fontFamily="'Gilroy-SemiBold', Helvetica"
+            fontWeight="600"
+          >
+            {formatted}
+          </text>
+        </g>
+      )}
+    </g>
+  );
+};
+
+/* ── Cash Flow chart — full width, overlaid Y/X labels ── */
+const CF_Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"];
+const CF_X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
+
+const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
+  <div className="relative w-full h-full flex flex-col">
+    {/* Chart area — full width */}
+    <div className="relative flex-1">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 16, right: 56, left: 0, bottom: 56 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="cfInflow" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#42bf23" stopOpacity={0.28} />
@@ -198,24 +242,11 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
               <stop offset="100%" stopColor="#d20344" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke={BORDER} strokeDasharray="0" />
-          <XAxis
-            dataKey="time"
-            tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold',Helvetica" }}
-            axisLine={false} tickLine={false}
-            interval="preserveStartEnd"
+          <Tooltip
+            content={() => null}
+            cursor={<CfCrosshairCursor />}
+            isAnimationActive={false}
           />
-          <YAxis
-            orientation="right"
-            domain={[5600, 7000]}
-            ticks={Y_TICKS}
-            tick={{ fill: "#6c779d", fontSize: 10, fontFamily: "'Gilroy-SemiBold',Helvetica" }}
-            tickFormatter={(v: number) => `$${v}`}
-            axisLine={false} tickLine={false}
-            width={48}
-          />
-          <ReferenceLine x={crosshairTime} stroke="#1d2132" strokeWidth={1} />
-          <ReferenceLine y={crosshairInflow} stroke="#1d2132" strokeWidth={1} strokeDasharray="0" />
           <Area
             type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
             fill="url(#cfInflow)" dot={false} isAnimationActive={false} name="Inflow"
@@ -227,40 +258,46 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
         </AreaChart>
       </ResponsiveContainer>
 
-      {/* Crosshair price label */}
-      <div
-        className="absolute flex items-center justify-center px-[4px] rounded-[12px]"
-        style={{ background: "#4a2300", top: "18px", right: "56px", pointerEvents: "none" }}
-      >
-        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", lineHeight: "14px", color: "#ff9500" }}>$6319.45</span>
+      {/* Y-axis labels overlaid on right edge */}
+      <div className="absolute inset-y-0 right-0 flex flex-col justify-between py-[8px] pr-[8px]" style={{ pointerEvents: "none" }}>
+        {CF_Y_LABELS.map((l) => (
+          <span key={l} style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", color: "#6c779d", textAlign: "right", lineHeight: "14px" }}>{l}</span>
+        ))}
       </div>
+    </div>
 
-      {/* Legend */}
-      <div className="absolute bottom-[8px] left-[16px] flex gap-[24px] items-center">
-        <div className="flex gap-[8px] items-start">
-          <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#42bf23" }} />
-          <div className="flex flex-col">
-            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Inflow</span>
-            <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
-              <span style={{ fontSize: "16px", lineHeight: "24px" }}>$6,245</span>
-              <span style={{ fontSize: "13px", lineHeight: "24px" }}>.23</span>
-            </p>
-          </div>
+    {/* X-axis labels row */}
+    <div className="flex-shrink-0 flex items-center justify-between px-[4px] py-[4px]" style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+      {CF_X_LABELS.map((l, i) => (
+        <span key={i} style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", color: "#6c779d", padding: "0 4px" }}>{l}</span>
+      ))}
+    </div>
+
+    {/* Legend */}
+    <div className="flex-shrink-0 flex gap-[24px] items-center px-[16px] py-[12px]">
+      <div className="flex gap-[8px] items-start">
+        <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#42bf23" }} />
+        <div className="flex flex-col">
+          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Inflow</span>
+          <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+            <span style={{ fontSize: "16px", lineHeight: "24px" }}>$6,245</span>
+            <span style={{ fontSize: "13px", lineHeight: "24px" }}>.23</span>
+          </p>
         </div>
-        <div className="flex gap-[8px] items-start">
-          <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#d20344" }} />
-          <div className="flex flex-col">
-            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Outflow</span>
-            <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
-              <span style={{ fontSize: "16px", lineHeight: "24px" }}>$5,982</span>
-              <span style={{ fontSize: "13px", lineHeight: "24px" }}>.40</span>
-            </p>
-          </div>
+      </div>
+      <div className="flex gap-[8px] items-start">
+        <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#d20344" }} />
+        <div className="flex flex-col">
+          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Outflow</span>
+          <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+            <span style={{ fontSize: "16px", lineHeight: "24px" }}>$1,536</span>
+            <span style={{ fontSize: "13px", lineHeight: "24px" }}>.69</span>
+          </p>
         </div>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 /* ── Activity + Alert data (static demo) ── */
 type RichSpan = { text: string; bold: boolean };
