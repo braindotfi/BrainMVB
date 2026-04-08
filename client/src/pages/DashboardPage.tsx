@@ -418,8 +418,11 @@ export const DashboardPage = (): JSX.Element => {
         />
       </div>
 
-      {/* ── Row 2a: Accounts+Agents (full width) ── */}
-      <div className="w-full rounded-[16px] overflow-hidden flex flex-col flex-shrink-0" style={{ background: CARD_BG, height: "380px" }}>
+      {/* ── Row 2: Accounts+Agents | Cash Flow ── */}
+      <div className="flex gap-[16px] flex-shrink-0">
+
+        {/* Accounts and Agents */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
           <PanelHeader title="Accounts and Agents" />
           <div className="flex-1 overflow-y-auto flex flex-col gap-[12px] px-[16px] py-[12px]">
 
@@ -488,20 +491,21 @@ export const DashboardPage = (): JSX.Element => {
               </div>
             )}
           </div>
-      </div>
+        </div>
 
-      {/* ── Row 2b: Cash Flow (full width) ── */}
-      <div className="w-full rounded-[16px] overflow-hidden flex flex-col flex-shrink-0" style={{ background: CARD_BG, height: "380px" }}>
-        <PanelHeader
-          title="Cash Flow"
-          right={
-            <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
-              {CF_PERIODS.map(p => <CfBtn key={p} label={p} active={cfPeriod === p} onClick={() => setCfPeriod(p)} />)}
-            </div>
-          }
-        />
-        <div className="flex-1 overflow-hidden">
-          <CashFlowChart data={cfData} />
+        {/* Cash Flow */}
+        <div className="flex-1 rounded-[16px] overflow-hidden flex flex-col" style={{ background: CARD_BG, height: "380px" }}>
+          <PanelHeader
+            title="Cash Flow"
+            right={
+              <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
+                {CF_PERIODS.map(p => <CfBtn key={p} label={p} active={cfPeriod === p} onClick={() => setCfPeriod(p)} />)}
+              </div>
+            }
+          />
+          <div className="flex-1 overflow-hidden">
+            <CashFlowChart data={cfData} />
+          </div>
         </div>
       </div>
 
