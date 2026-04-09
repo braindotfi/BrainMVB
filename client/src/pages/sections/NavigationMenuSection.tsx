@@ -20,6 +20,7 @@ interface DailyInsight {
 
 const mainMenuItems = [
   { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
+  { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/nav-marketplace-normal.png", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
 ];
 
 const initialNotifications = [
