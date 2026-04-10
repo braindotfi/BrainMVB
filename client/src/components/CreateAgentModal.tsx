@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
-import { ChevronLeft, X, Plus, ChevronDown, Info, Image as ImageIcon, Wallet } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -53,11 +53,14 @@ const RadioCard = ({
 );
 
 const PolicyInfoCard = ({
-  label, value, valueColor = "#a8b9f4"
-}: { label: string; value: string; valueColor?: string }) => (
+  label, value, valueColor = "#a8b9f4", valueNode
+}: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }) => (
   <div className="bg-[#0a0c10] flex flex-col h-[58px] items-start p-[12px] rounded-[16px]">
-    <p className="font-['Gilroy-SemiBold',sans-serif] text-[#414965] text-[12px] leading-[14px]">{label}</p>
-    <p className="font-['Gilroy-Medium',sans-serif] text-[14px] leading-[20px] mt-auto" style={{ color: valueColor }}>{value}</p>
+    <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[14px]">{label}</p>
+    {valueNode
+      ? <div className="mt-auto">{valueNode}</div>
+      : <p className="font-['Gilroy-Medium',sans-serif] text-[14px] leading-[20px] mt-auto" style={{ color: valueColor }}>{value}</p>
+    }
   </div>
 );
 
@@ -435,14 +438,40 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const demoPolicyShort = policyHash ? policyHash.slice(0, 6) + "…" + policyHash.slice(-4) : "0x9f3c…6a5f";
 
   /* ── Policy preview cards per type ── */
-  const policyPreviewCards: { label: string; value: string; valueColor?: string }[] = (() => {
+  const policyPreviewCards: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }[] = (() => {
     if (selectedType === "trading") return [
-      { label: "Max Daily Loss",    value: `-${t_max_daily_loss_percent}%` },
-      { label: "Kill Switch",       value: `-${t_kill_switch_drawdown}%` },
-      { label: "Max Position Size", value: `$${t_max_position_size_usdc}` },
-      { label: "Max Slippage",      value: `${t_max_slippage_bps} bps` },
-      { label: "Strategy",          value: t_strategy_type.replace(/_/g, " ") },
-      { label: "Allowed Markets",   value: t_allowed_markets.slice(0, 2).join(", ") + (t_allowed_markets.length > 2 ? `+${t_allowed_markets.length-2}` : "") },
+      { label: "Max Daily Loss",        value: `-${t_max_daily_loss_percent}%` },
+      { label: "Kill Switch",           value: `-${t_kill_switch_drawdown}%` },
+      { label: "Approval Threshold",    value: `> 90%` },
+      { label: "Markets",               value: t_allowed_markets.join(" · "), valueNode: (
+          <div className="flex gap-[4px] items-center mt-auto">
+            {t_allowed_markets.slice(0, 3).map((m, i) => (
+              <span key={m} className="flex items-center gap-[4px]">
+                {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
+                <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
+              </span>
+            ))}
+          </div>
+        )
+      },
+      { label: "Order Types",           value: t_order_types.map(o => o.replace(/_/g, " ")).join(" · "), valueNode: (
+          <div className="flex gap-[4px] items-center mt-auto">
+            {t_order_types.map((o, i) => (
+              <span key={o} className="flex items-center gap-[4px]">
+                {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
+                <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px] capitalize">{o.replace(/_/g, " ")}</span>
+              </span>
+            ))}
+          </div>
+        )
+      },
+      { label: "Cooldown",              value: `${t_cooldown_window_seconds}s` },
+      { label: "Max Position Size",     value: `$${Number(t_max_position_size_usdc).toLocaleString()}` },
+      { label: "Cumulative Exposure",   value: `$${Number(t_cumulative_exposure_limit).toLocaleString()}` },
+      { label: "Max Leverage",          value: `${t_max_position_leverage}×` },
+      { label: "Strategy",              value: t_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Capital Allocated",     value: `$${Number(capital || 0).toLocaleString()} ${capitalAsset}` },
+      { label: "Daily Spend Cap",       value: `$${Number(t_daily_spend_cap).toLocaleString()}` },
     ];
     if (selectedType === "lending") return [
       { label: "Borrow Assets",    value: l_allowed_borrow_assets.join(", ") },
@@ -1402,11 +1431,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               </div>
             )}
 
-            {/* ── STEP 4: Policy Preview & Sign ── */}
+            {/* ── STEP 4: Confirm & Sign ── */}
             {step === 4 && (
               <div className="flex flex-col gap-[24px] items-start w-full">
+
                 {/* Agent identity card */}
-                <div className="bg-[#0a0c10] flex gap-[8px] items-start p-[16px] rounded-[16px] w-full">
+                <div className="bg-[#0a0c10] flex gap-[16px] items-start p-[16px] rounded-[16px] w-full">
                   <div className="rounded-[12px] size-[40px] overflow-hidden shrink-0 bg-[#1d2132]">
                     {selectedAvatar
                       ? <img src={selectedAvatar} alt="" className="size-full object-cover" />
@@ -1418,7 +1448,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px] truncate">{agentName || "Unnamed Agent"}</p>
                       <TypeBadge type={selectedType} />
                     </div>
-                    <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-2">
+                    <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-4">
                       {agentDesc || `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} AI agent for automated execution.`}
                     </p>
                   </div>
@@ -1429,37 +1459,54 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   <SectionDivider title="POLICIES" />
                   <div className="grid grid-cols-2 gap-[8px] w-full">
                     {policyPreviewCards.map((card) => (
-                      <PolicyInfoCard key={card.label} label={card.label} value={card.value} valueColor={card.valueColor} />
+                      <PolicyInfoCard key={card.label} label={card.label} value={card.value} valueColor={card.valueColor} valueNode={card.valueNode} />
                     ))}
                   </div>
                 </div>
 
-                {/* Policy hash */}
-                <div className="flex flex-col gap-[8px] w-full">
-                  <SectionDivider title="POLICY HASH" />
-                  <div className="bg-[#0a0c10] border border-[#1d2132] flex items-center gap-[8px] p-[12px] rounded-[12px] w-full">
-                    <p className="font-['JetBrains_Mono',sans-serif] text-[#42bf23] text-[12px] flex-1 truncate">
-                      {policyHash || "Computing…"}
-                    </p>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(policyHash)}
-                      className="text-[#6c779d] hover:text-white text-[11px] font-['Gilroy-SemiBold',sans-serif] shrink-0 transition-colors"
-                    >
-                      Copy
-                    </button>
+                {/* Deployment Process */}
+                <div className="flex flex-col gap-[16px] w-full">
+                  <SectionDivider title="DEPLOYMENT PROCESS" />
+                  <div className="flex flex-col gap-[8px] w-full">
+                    {[
+                      { n: 1, title: "Policy Compiles",   desc: "Inputs are validated and hashed deterministically into a 32-byte commitment" },
+                      { n: 2, title: "Capital Transfers",  desc: "USDC moves from your treasury to the agent's sub-account" },
+                      { n: 3, title: "Agent Registers",    desc: "ERC-8004 entry created with the policy hash and your owner address" },
+                      { n: 4, title: "Agent Goes Live",    desc: "Starts executing within the policy envelope while every action is verified against the hash" },
+                    ].map(({ n, title, desc }) => (
+                      <div key={n} className="flex flex-col w-full">
+                        <div className="flex gap-[16px] items-center w-full">
+                          <div className="bg-[#0a0c10] flex items-center justify-center h-[32px] w-[48px] rounded-[100px] shrink-0">
+                            <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[16px] leading-[16px]">{n}</span>
+                          </div>
+                          <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[32px] min-w-0">{title}</p>
+                          <ChevronUp size={24} className="text-[#6c779d] shrink-0" />
+                        </div>
+                        <div className="pl-[64px] w-full">
+                          <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">{desc}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Authorization */}
                 <div className="flex flex-col gap-[16px] w-full">
                   <SectionDivider title="AUTHORIZATION" />
+                  <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">
+                    Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.
+                  </p>
                   <div className="flex flex-col gap-[16px]">
                     <div className="flex gap-[16px] items-start">
                       <div
                         onClick={() => setAuthSig(!authSig)}
-                        className={`size-[20px] rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all mt-[2px] ${authSig ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
+                        className={`size-[20px] rounded-[4px] border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all mt-[2px] ${authSig ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
                       >
-                        {authSig && <div className="size-[8px] rounded-full bg-[#7631ee]" />}
+                        {authSig && (
+                          <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                            <path d="M1 4L4.5 7.5L11 1" stroke="#7631ee" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </div>
                       <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setAuthSig(!authSig)}>
                         I authorize this agent to act on my behalf
@@ -1468,9 +1515,13 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex gap-[16px] items-start">
                       <div
                         onClick={() => setTerms(!terms)}
-                        className={`size-[20px] rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all mt-[2px] ${terms ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
+                        className={`size-[20px] rounded-[4px] border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all mt-[2px] ${terms ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
                       >
-                        {terms && <div className="size-[8px] rounded-full bg-[#7631ee]" />}
+                        {terms && (
+                          <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                            <path d="M1 4L4.5 7.5L11 1" stroke="#7631ee" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </div>
                       <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setTerms(!terms)}>
                         I agree to the{" "}
