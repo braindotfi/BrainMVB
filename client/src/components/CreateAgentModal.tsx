@@ -122,6 +122,72 @@ const TypeBadge = ({ type }: { type: string }) => (
   </div>
 );
 
+const ConfigSlider = ({
+  min, max, value, onChange, unit = "%"
+}: { min: number; max: number; value: string; onChange: (v: string) => void; unit?: string }) => {
+  const n = Math.min(max, Math.max(min, Number(value) || min));
+  const pct = Math.round(((n - min) / (max - min)) * 100);
+  return (
+    <div className="w-full flex flex-col gap-0">
+      <div className="relative h-[12px] w-full mb-[8px]">
+        <span className="absolute left-0 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{min}{unit}</span>
+        <span className="absolute right-0 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{max}{unit}</span>
+        <span
+          className="absolute -translate-x-1/2 font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[11px] leading-[12px]"
+          style={{ left: `${pct}%` }}
+        >{n}{unit}</span>
+      </div>
+      <div className="relative h-[32px] flex items-center w-full">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[6px] rounded-full bg-[#222737]" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[6px] rounded-full bg-[#7631ee]" style={{ width: `${pct}%` }} />
+        <input
+          type="range" min={min} max={max} value={n}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 w-full opacity-0 cursor-pointer"
+          style={{ height: "32px", margin: 0 }}
+        />
+        <div
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[24px] rounded-full bg-[#7631ee] border-[4px] border-[#11141b] pointer-events-none"
+          style={{ left: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const SmallDropdown = ({
+  label, value, options, open, onOpen, onChange
+}: { label: string; value: string; options: { label: string; value: string }[]; open: boolean; onOpen: () => void; onChange: (v: string) => void }) => (
+  <div className="flex flex-col gap-[4px]">
+    <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{label}</p>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onOpen}
+        data-testid={`dropdown-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px] cursor-pointer"
+      >
+        <span className="flex-1 text-left font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px]">
+          {options.find(o => o.value === value)?.label ?? value}
+        </span>
+        <ChevronDown size={24} className="text-[#6c779d] shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#1d2132] border border-[#222737] rounded-[8px] overflow-hidden">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`w-full text-left px-[12px] py-[8px] font-['Gilroy-Medium',sans-serif] text-[14px] hover:bg-[#222737] transition-colors ${value === opt.value ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}
+            >{opt.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
 const ALL_CUSTOM_TOOLS_LIST = ["Read Balance","Read Orderbook","Read Market Data","Place Limit Order","Cancel Order","Place Market Order","Open Perp","Transfer Internal","Withdraw External","Contract Call"];
 
 /* ─── Helpers ─── */
@@ -164,14 +230,16 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   /* ══ TRADING ══ */
   const [t_strategy_type, setT_strategy_type]                   = useState("perpetual_long_short");
   const [t_max_position_size_usdc, setT_max_position_size_usdc] = useState("10,000");
-  const [t_max_daily_loss_percent, setT_max_daily_loss_percent] = useState("5");
+  const [t_max_daily_loss_percent, setT_max_daily_loss_percent] = useState("20");
   const [t_allowed_markets, setT_allowed_markets]               = useState<string[]>(["BTC-USDC", "ETH-USDC"]);
   const [t_cooldown_window_seconds, setT_cooldown_window_seconds] = useState("3600");
   const [t_cumulative_exposure_limit, setT_cumulative_exposure_limit] = useState("50,000");
-  const [t_order_types, setT_order_types]                       = useState<string[]>(["market", "limit"]);
+  const [t_daily_spend_cap, setT_daily_spend_cap]               = useState("10,000");
+  const [t_order_types, setT_order_types]                       = useState<string[]>(["stop_limit"]);
   const [t_max_slippage_bps, setT_max_slippage_bps]             = useState("30");
   const [t_max_position_leverage, setT_max_position_leverage]   = useState("3");
-  const [t_kill_switch_drawdown, setT_kill_switch_drawdown]     = useState("15");
+  const [t_kill_switch_drawdown, setT_kill_switch_drawdown]     = useState("17");
+  const [t_open_drop, setT_open_drop]                           = useState<null | string>(null);
 
   /* ══ LENDING ══ */
   const [l_protocol, setL_protocol]                               = useState("morpho");
@@ -233,6 +301,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       allowed_markets: t_allowed_markets,
       cooldown_window_seconds: parseInt(t_cooldown_window_seconds),
       cumulative_exposure_limit: parseUsd(t_cumulative_exposure_limit),
+      daily_spend_cap: parseUsd(t_daily_spend_cap),
       order_types: t_order_types,
       max_slippage_bps: parseInt(t_max_slippage_bps),
       max_position_leverage: parseInt(t_max_position_leverage),
@@ -287,7 +356,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       secondary_limit_usdc: parseUsd(c_secondary_limit),
     };
     return {};
-  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_stable_pair_concentration, y_max_position_size_usdc, y_protocols, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
+  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_stable_pair_concentration, y_max_position_size_usdc, y_protocols, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
 
   const policyHash = useMemo(() => selectedType ? computePolicyHash(selectedType, policyParams) : "", [selectedType, policyParams]);
 
@@ -677,7 +746,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       {/* Amount input + currency dropdown */}
                       <div className="flex gap-[8px] items-start w-full">
                         {/* Amount field — h-[48px] = py-[14px] + 20px line */}
-                        <div className="bg-[#222737] flex flex-1 items-center gap-[8px] px-[16px] py-[14px] rounded-[16px] min-w-0">
+                        <div className="bg-[#222737] flex flex-1 items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] min-w-0">
                           <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
                           <input
                             value={capital}
@@ -692,7 +761,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <button
                             onClick={() => setShowAssetDrop((v) => !v)}
                             data-testid="button-asset-dropdown"
-                            className="bg-[#222737] flex items-center justify-between gap-[8px] px-[16px] py-[14px] rounded-[16px] w-full cursor-pointer"
+                            className="bg-[#222737] flex items-center justify-between gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full cursor-pointer"
                           >
                             <span className="font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px]">
                               {capitalAsset}
@@ -778,17 +847,23 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                 {/* TRADING CONFIG */}
                 {selectedType === "trading" && (
-                  <div className="flex flex-col gap-[24px] w-full">
+                  <div className="flex flex-col gap-[24px] w-full" onClick={() => t_open_drop && setT_open_drop(null)}>
+
+                    {/* ── STRATEGY ── */}
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="STRATEGY" />
                       <div className="flex flex-col gap-[4px] items-start w-full">
-                        <FieldLabel>Trading Type</FieldLabel>
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Trading Type</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
                         <div className="grid grid-cols-2 gap-[12px] w-full mt-[4px]">
                           {[
                             { id: "perpetual_long_short", label: "Perpetual Long/Short", desc: "A directional strategy that opens long and short positions based on market signals." },
                             { id: "grid_trading",         label: "Grid Trading",          desc: "A strategy that places layered buy and sell orders to profit from market volatility." },
                             { id: "yield_farming_arb",    label: "Yield Farming Arb",     desc: "A strategy that shifts capital between yield opportunities to capture rate inefficiencies." },
-                            { id: "index_tracking",       label: "Index Tracking",        desc: "Tracks a basket of assets to replicate index performance with minimal deviation." },
+                            { id: "index_tracking",       label: "Index Tracking",        desc: "A strategy that follows a set basket of assets to mirror overall market performance." },
+                            { id: "custom",               label: "Custom",                desc: "A strategy tailored to your own market view, rules, and execution logic." },
                           ].map((opt) => (
                             <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={t_strategy_type === opt.id} onClick={() => setT_strategy_type(opt.id)} />
                           ))}
@@ -796,71 +871,186 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       </div>
                     </div>
 
+                    {/* ── CONTROLS ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="EXECUTION CONTROLS" />
-                      <div className="grid grid-cols-2 gap-[12px] w-full">
-                        <div className="flex flex-col gap-[4px]">
+                      <SectionDivider title="CONTROLS" />
+
+                      {/* Max Position Size */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
                           <FieldLabel>Max Position Size</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={t_max_position_size_usdc} onChange={(e) => setT_max_position_size_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="10,000" />
-                          </div>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Cumulative Exposure</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={t_cumulative_exposure_limit} onChange={(e) => setT_cumulative_exposure_limit(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="50,000" />
-                          </div>
+                        <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
+                          <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <input
+                            value={t_max_position_size_usdc}
+                            onChange={(e) => setT_max_position_size_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
+                            data-testid="input-max-position-size"
+                            className="bg-transparent text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            placeholder="10,000"
+                          />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Daily Loss %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={t_max_daily_loss_percent} onChange={(e) => setT_max_daily_loss_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="5" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                      </div>
+
+                      {/* Cumulative Exposure Limit */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Cumulative Exposure Limit</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Kill Switch %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={t_kill_switch_drawdown} onChange={(e) => setT_kill_switch_drawdown(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="15" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                        <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
+                          <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <input
+                            value={t_cumulative_exposure_limit}
+                            onChange={(e) => setT_cumulative_exposure_limit(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
+                            data-testid="input-cumulative-exposure"
+                            className="bg-transparent text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            placeholder="50,000"
+                          />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Slippage (bps)</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={t_max_slippage_bps} onChange={(e) => setT_max_slippage_bps(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="30" />
-                            <span className="text-[#6c779d] text-[14px]">bps</span>
-                          </div>
+                      </div>
+
+                      {/* Daily Spend Cap */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Daily Spend Cap</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Leverage</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={t_max_position_leverage} onChange={(e) => setT_max_position_leverage(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="3" />
-                            <span className="text-[#6c779d] text-[14px]">×</span>
-                          </div>
+                        <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
+                          <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <input
+                            value={t_daily_spend_cap}
+                            onChange={(e) => setT_daily_spend_cap(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
+                            data-testid="input-daily-spend-cap"
+                            className="bg-transparent text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            placeholder="10,000"
+                          />
                         </div>
+                      </div>
+
+                      {/* Order Types + Max Leverage */}
+                      <div className="grid grid-cols-2 gap-[16px] w-full" onClick={(e) => e.stopPropagation()}>
+                        <SmallDropdown
+                          label="Order Types"
+                          value={t_order_types[0] ?? "stop_limit"}
+                          options={[
+                            { value: "market",      label: "Market" },
+                            { value: "limit",       label: "Limit" },
+                            { value: "stop_limit",  label: "Stop Limit" },
+                            { value: "take_profit", label: "Take Profit" },
+                          ]}
+                          open={t_open_drop === "orderTypes"}
+                          onOpen={() => setT_open_drop(t_open_drop === "orderTypes" ? null : "orderTypes")}
+                          onChange={(v) => { setT_order_types([v]); setT_open_drop(null); }}
+                        />
+                        <SmallDropdown
+                          label="Max Leverage"
+                          value={t_max_position_leverage}
+                          options={[
+                            { value: "1",  label: "1×" },
+                            { value: "2",  label: "2×" },
+                            { value: "3",  label: "3×" },
+                            { value: "5",  label: "5×" },
+                            { value: "10", label: "10×" },
+                          ]}
+                          open={t_open_drop === "leverage"}
+                          onOpen={() => setT_open_drop(t_open_drop === "leverage" ? null : "leverage")}
+                          onChange={(v) => { setT_max_position_leverage(v); setT_open_drop(null); }}
+                        />
+                      </div>
+
+                      {/* Allowed Markets */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Allowed Markets</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <div className="flex flex-wrap gap-[12px] w-full mt-[4px]">
+                          {["BTC-USDC","ETH-USDC","SOL-USDC","ARB-USDC","OP-USDC","AVAX-USDC","BNB-USDC","MATIC-USDC"].map((mkt) => {
+                            const sel = t_allowed_markets.includes(mkt);
+                            return (
+                              <button
+                                key={mkt}
+                                type="button"
+                                onClick={() => setT_allowed_markets(tog(t_allowed_markets, mkt))}
+                                data-testid={`chip-market-${mkt}`}
+                                className={`flex items-center gap-[8px] px-[12px] py-[10px] rounded-[12px] h-[40px] transition-colors ${sel ? "bg-[#240757]" : "bg-[#0a0c10]"}`}
+                              >
+                                <span className={`font-['Gilroy-Medium',sans-serif] text-[16px] leading-[20px] whitespace-nowrap ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{mkt}</span>
+                                <div className={`relative overflow-hidden size-[20px] rounded-full border flex-shrink-0 ${sel ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
+                                  {sel && <div className="absolute inset-[20%] rounded-full bg-[#7631ee]" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Max Slippage + Cooldown Window */}
+                      <div className="grid grid-cols-2 gap-[16px] w-full" onClick={(e) => e.stopPropagation()}>
+                        <SmallDropdown
+                          label="Max Slippage"
+                          value={t_max_slippage_bps}
+                          options={[
+                            { value: "10",  label: "10 bps" },
+                            { value: "30",  label: "30 bps" },
+                            { value: "50",  label: "50 bps" },
+                            { value: "100", label: "100 bps" },
+                          ]}
+                          open={t_open_drop === "slippage"}
+                          onOpen={() => setT_open_drop(t_open_drop === "slippage" ? null : "slippage")}
+                          onChange={(v) => { setT_max_slippage_bps(v); setT_open_drop(null); }}
+                        />
+                        <SmallDropdown
+                          label="Cooldown Window"
+                          value={t_cooldown_window_seconds}
+                          options={[
+                            { value: "60",   label: "60 sec" },
+                            { value: "300",  label: "5 min" },
+                            { value: "900",  label: "15 min" },
+                            { value: "3600", label: "60 min" },
+                          ]}
+                          open={t_open_drop === "cooldown"}
+                          onOpen={() => setT_open_drop(t_open_drop === "cooldown" ? null : "cooldown")}
+                          onChange={(v) => { setT_cooldown_window_seconds(v); setT_open_drop(null); }}
+                        />
                       </div>
                     </div>
 
+                    {/* ── SAFETY ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="ALLOWED MARKETS" />
-                      <ChipGroup
-                        options={["BTC-USDC","ETH-USDC","SOL-USDC","ARB-USDC","OP-USDC","AVAX-USDC","BNB-USDC","MATIC-USDC"]}
-                        selected={t_allowed_markets}
-                        onToggle={(v) => setT_allowed_markets(tog(t_allowed_markets, v))}
-                      />
+                      <SectionDivider title="SAFETY" />
+
+                      {/* Max Daily Loss % */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Max Daily Loss %</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider
+                          min={1} max={50}
+                          value={t_max_daily_loss_percent}
+                          onChange={setT_max_daily_loss_percent}
+                          unit="%"
+                        />
+                      </div>
+
+                      {/* Kill Switch Drawdown */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Kill Switch Drawdown</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider
+                          min={1} max={20}
+                          value={t_kill_switch_drawdown}
+                          onChange={setT_kill_switch_drawdown}
+                          unit=""
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="ORDER TYPES" />
-                      <ChipGroup
-                        options={["Market","Limit","Stop Limit","Take Profit"]}
-                        selected={t_order_types}
-                        onToggle={(v) => setT_order_types(tog(t_order_types, v))}
-                      />
-                    </div>
                   </div>
                 )}
 
