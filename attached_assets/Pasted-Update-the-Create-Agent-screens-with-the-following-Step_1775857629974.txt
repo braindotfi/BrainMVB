@@ -1,0 +1,46 @@
+Update the Create Agent screens with the following:
+
+Step 1:
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3407-33536&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 2:
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3407-33632&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 3:
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3412-35109&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Trading Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3462-34078&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Lending Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3447-36072&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Yield Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3451-33698&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Payments Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3464-34629&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Analytics Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3467-36415&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 4 (if Custom Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3492-33841&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 5 (if Trading Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3428-34040&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 5 (if Lending Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3448-36654&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 5 (if Yield Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3519-35714&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 5 (if Payments Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3521-33594&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Step 5 (if Analytics Agent is selected):
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3522-35106&m=draw&t=9EoxAHDUW0ieACuU-11
+
+Create Agent final confirmation:
+https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=3462-33710&m=draw&t=9EoxAHDUW0ieACuU-11
