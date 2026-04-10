@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
-import { ChevronLeft, X, Plus, ChevronDown, Info } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, Info, Image as ImageIcon } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -557,7 +557,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <div className="flex flex-col gap-[24px] items-start w-full">
                 <div className="flex flex-col items-start w-full">
                   <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
-                    Agent Identity
+                    Agents Identity
                   </p>
                   <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
                     Give your agent a name and avatar so you can identify it on your dashboard.
@@ -570,20 +570,34 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     className="bg-[#0a0c10] flex gap-[8px] h-[64px] items-center px-[16px] rounded-[16px] w-full cursor-pointer"
                     onClick={() => setShowAvatarPicker((v) => !v)}
                   >
-                    <div className="rounded-[20px] size-[40px] overflow-hidden shrink-0 bg-[#1d2132] flex items-center justify-center">
-                      {selectedAvatar
-                        ? <img src={selectedAvatar} alt="" className="size-full object-cover" />
-                        : <div className="size-full bg-[#1d2132]" />
-                      }
+                    {/* Avatar thumbnail — 40×40, rounded-[20px] */}
+                    <div className="relative overflow-hidden rounded-[20px] size-[40px] shrink-0">
+                      {selectedAvatar ? (
+                        <img src={selectedAvatar} alt="" className="absolute inset-0 size-full object-cover" />
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-[#1d2132]" />
+                          <div className="absolute inset-[20%] flex items-center justify-center">
+                            <ImageIcon size={24} className="text-[#6c779d]" style={{ width: 24, height: 24 }} />
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[20px] leading-[24px]">
+
+                    {/* Label — 20px when empty, 16px when filled */}
+                    <p className={`flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] leading-[24px] min-w-0 truncate ${selectedAvatar ? "text-[16px]" : "text-[20px]"}`}>
                       {selectedAvatar ? "Change Avatar" : "Add Avatar"}
                     </p>
+
+                    {/* Action button — 32px + icon (empty) | 40px + image icon (filled) */}
                     <button
-                      className="rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors"
+                      className={`rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors ${selectedAvatar ? "size-[40px]" : "size-[32px]"}`}
                       onClick={(e) => { e.stopPropagation(); setShowAvatarPicker((v) => !v); }}
                     >
-                      <Plus size={16} className="text-[#6c779d]" />
+                      {selectedAvatar
+                        ? <ImageIcon size={20} className="text-[#6c779d]" />
+                        : <Plus size={16} className="text-[#6c779d]" />
+                      }
                     </button>
                   </div>
 
@@ -612,20 +626,22 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     />
                   </div>
 
-                  {/* Description */}
+                  {/* Description — h-[120px] fixed, pill counter at bottom-right */}
                   <div className="flex flex-col gap-[4px] items-start w-full">
                     <FieldLabel>Description</FieldLabel>
-                    <div className="relative w-full">
+                    <div className="relative w-full h-[120px]">
                       <textarea
                         value={agentDesc}
                         onChange={(e) => setAgentDesc(e.target.value.slice(0, 1000))}
                         placeholder="Descibe what your agent does..."
-                        rows={4}
-                        className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none w-full resize-none"
+                        className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none w-full h-full resize-none"
                       />
-                      <span className="absolute bottom-[10px] right-[8px] font-['Gilroy-Medium',sans-serif] text-[#414965] text-[12px]">
-                        {agentDesc.length}/1000
-                      </span>
+                      {/* Pill-style character counter */}
+                      <div className="absolute bottom-[8px] right-[8px] flex items-center justify-end px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
+                        <span className="font-['JetBrains_Mono',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px]">
+                          {agentDesc.length}/1000
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
