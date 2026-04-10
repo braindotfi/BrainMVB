@@ -4,69 +4,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
-import { AgentPerfChart } from "@/components/AgentPerfChart";
 import { apiRequest } from "@/lib/queryClient";
 import { useNav, AgentPrefillData } from "@/lib/navContext";
 
-/* ─── Enforcement tiers (sourced from schema doc) ─── */
-const ENFORCEMENT: Record<string, { tier1: string[]; tier2extra?: string; tier3: string }> = {
-  trading:   { tier1: ["Position size check vs max_position_size_usdc", "Market in allowed_markets allowlist", "Velocity check (cooldown_window_seconds)", "Daily loss tracking vs max_daily_loss_percent", "Cumulative exposure vs cumulative_exposure_limit"], tier3: "Smart contract guardrails, spend limits, recipient restrictions" },
-  lending:   { tier1: ["Supply amount check vs max_supply_usd", "Collateral in allowed_collateral_assets", "LTV simulation before every borrow (vs max_ltv_percent)", "Liquidation risk < max_liquidation_risk_percent", "Protocol exposure ≤ max_protocol_exposure_percent"], tier2extra: "Oracle-gated LTV verification", tier3: "Enforces cumulative spend limit, prevents non-whitelisted pool addresses" },
-  yield:     { tier1: ["Entry slippage ≤ max_slippage_bps", "Position ≤ max_position_size_usdc", "APY ≥ min_apy_percent at entry", "IL simulation vs impermanent_loss_tolerance_percent", "Stable pair concentration ≤ max_stable_pair_concentration"], tier2extra: "Oracle-gated APY confirmation", tier3: "Enforces position limits and concentration caps" },
-  payments:  { tier1: ["Recipient in allowlisted_recipients", "Amount ≤ per_transaction_limit_usdc", "Daily spend ≤ daily_spend_budget_usdc", "Daily tx count ≤ daily_transaction_count_limit", "x402 header parsing and allowlist validation", "Approval routing for amounts > require_approval_above_usdc"], tier3: "Recipient whitelisting at smart contract level" },
-  analytics: { tier1: ["No budget enforcement for read-only operations", "ERC-8004 registry records all observations", "pgvector stores historical data for trend analysis", "For auto-execute: validates against execution_limit_usdc", "execution_whitelist agent type check"], tier3: "Standard PolicyValidator flow; ERC-4337 guardrails on auto-execute only" },
-  custom:    { tier1: ["Tool in allowed_tools whitelist", "Tool not in forbidden_tools blacklist", "Operations ≤ max_operations_per_hour", "Cumulative P&L circuit breaker (circuit_breaker_loss_percent)", "Counterparty in allowed_counterparties", "Contract calls ≤ max_calls_per_day"], tier3: "All executions go through standard PolicyValidator flow" },
-};
-
-/* ─── Claude Tool Schemas ─── */
-const TOOL_SCHEMAS: Record<string, object[]> = {
-  trading: [
-    { name: "execute_trade", description: "Execute a spot or perpetual trade on Hyperliquid within policy bounds", input_schema: { type: "object", properties: { market: { type: "string", description: "Must be in allowed_markets" }, side: { type: "string", enum: ["long", "short"] }, size_usdc: { type: "number", description: "≤ max_position_size_usdc" }, order_type: { type: "string", enum: ["market", "limit", "stop_limit", "take_profit"] }, leverage: { type: "integer", minimum: 1, description: "≤ max_position_leverage" } }, required: ["market", "side", "size_usdc", "order_type"] } },
-    { name: "close_position", description: "Close an open position fully or partially", input_schema: { type: "object", properties: { market: { type: "string" }, close_pct: { type: "number", minimum: 1, maximum: 100 } }, required: ["market"] } },
-    { name: "get_position_info", description: "Retrieve current open positions, P&L, and exposure", input_schema: { type: "object", properties: { market: { type: "string" } }, required: [] } },
-  ],
-  lending: [
-    { name: "supply_collateral", description: "Supply an asset to a lending protocol", input_schema: { type: "object", properties: { protocol: { type: "string", enum: ["aave", "compound", "morpho", "custom_contract"] }, asset: { type: "string", description: "Must be in allowed_collateral_assets" }, amount_usdc: { type: "number", description: "≤ max_supply_usd" } }, required: ["protocol", "asset", "amount_usdc"] } },
-    { name: "borrow_asset", description: "Borrow an asset against supplied collateral (LTV must remain ≤ max_ltv_percent)", input_schema: { type: "object", properties: { protocol: { type: "string" }, asset: { type: "string", description: "Must be in allowed_borrow_assets" }, amount_usdc: { type: "number" } }, required: ["protocol", "asset", "amount_usdc"] } },
-    { name: "rebalance_ltv", description: "Repay or withdraw to reach target_ltv_percent", input_schema: { type: "object", properties: { protocol: { type: "string" }, target_ltv_pct: { type: "number" } }, required: ["protocol", "target_ltv_pct"] } },
-    { name: "get_health_factor", description: "Get current health factor, LTV, and liquidation risk", input_schema: { type: "object", properties: { protocol: { type: "string" } }, required: ["protocol"] } },
-  ],
-  yield: [
-    { name: "enter_yield_position", description: "Enter a yield-generating position within policy bounds", input_schema: { type: "object", properties: { protocol: { type: "string" }, strategy: { type: "string", enum: ["stable_farming", "lp_on_dex", "perpetual_funding", "curve_convex", "custom"] }, assets: { type: "array", items: { type: "string" } }, amount_usdc: { type: "number", description: "≤ max_position_size_usdc" } }, required: ["protocol", "strategy", "assets", "amount_usdc"] } },
-    { name: "exit_yield_position", description: "Exit a yield position and return to USDC", input_schema: { type: "object", properties: { position_id: { type: "string" }, exit_pct: { type: "number", minimum: 1, maximum: 100 } }, required: ["position_id"] } },
-    { name: "check_apy", description: "Check current APY for a given protocol and asset pair", input_schema: { type: "object", properties: { protocol: { type: "string" }, asset_pair: { type: "string" } }, required: ["protocol"] } },
-    { name: "compound_rewards", description: "Claim and reinvest yield rewards", input_schema: { type: "object", properties: { position_id: { type: "string" }, reinvest: { type: "boolean" } }, required: ["position_id"] } },
-  ],
-  payments: [
-    { name: "send_payment", description: "Execute a USDC payment to an allowlisted recipient", input_schema: { type: "object", properties: { recipient: { type: "string", description: "Must be in allowlisted_recipients" }, amount_usdc: { type: "number", description: "≤ per_transaction_limit_usdc" }, memo: { type: "string" } }, required: ["recipient", "amount_usdc"] } },
-    { name: "batch_payroll", description: "Execute a batch of payments in a single transaction", input_schema: { type: "object", properties: { payments: { type: "array", items: { type: "object", properties: { recipient: { type: "string" }, amount_usdc: { type: "number" } } } } }, required: ["payments"] } },
-    { name: "verify_x402_request", description: "Parse and verify an x402 payment request header", input_schema: { type: "object", properties: { x402_header: { type: "string" }, max_amount_usdc: { type: "number", description: "≤ x402_max_per_request_usdc" } }, required: ["x402_header"] } },
-    { name: "schedule_recurring_payment", description: "Schedule a recurring payment to an allowlisted recipient", input_schema: { type: "object", properties: { recipient: { type: "string" }, amount_usdc: { type: "number" }, interval: { type: "string", enum: ["daily", "weekly", "monthly"] } }, required: ["recipient", "amount_usdc", "interval"] } },
-  ],
-  analytics: [
-    { name: "get_portfolio_snapshot", description: "Return current portfolio state across tracked agents", input_schema: { type: "object", properties: { agent_ids: { type: "array", items: { type: "string" } }, include_recommendations: { type: "boolean" } }, required: [] } },
-    { name: "detect_anomaly", description: "Run anomaly detection on recent agent activity", input_schema: { type: "object", properties: { agent_id: { type: "string" }, lookback_hours: { type: "integer", minimum: 1, maximum: 168 } }, required: ["agent_id"] } },
-    { name: "generate_report", description: "Generate a performance report based on report_metrics config", input_schema: { type: "object", properties: { agent_ids: { type: "array", items: { type: "string" } }, metrics: { type: "array", items: { type: "string" } }, period_days: { type: "integer" } }, required: [] } },
-    { name: "fire_alert", description: "Send a notification when alert rule threshold is breached", input_schema: { type: "object", properties: { rule_name: { type: "string" }, severity: { type: "string", enum: ["info", "warning", "critical"] }, message: { type: "string" }, notification_target: { type: "string" } }, required: ["severity", "message"] } },
-  ],
-  custom: [
-    { name: "execute_custom_action", description: "Execute a user-defined action within allowed_tools boundaries", input_schema: { type: "object", properties: { action_type: { type: "string", description: "Must be in allowed_tools, not in forbidden_tools" }, parameters: { type: "object" }, spend_usdc: { type: "number", description: "≤ primary_limit_usdc" } }, required: ["action_type", "parameters"] } },
-    { name: "call_external_api", description: "Call a whitelisted external API from external_data_sources", input_schema: { type: "object", properties: { endpoint: { type: "string", description: "Must be in external_data_sources" }, method: { type: "string", enum: ["GET", "POST"] }, payload: { type: "object" } }, required: ["endpoint", "method"] } },
-    { name: "store_observation", description: "Store an observation in pgvector agent memory", input_schema: { type: "object", properties: { content: { type: "string" }, category: { type: "string" } }, required: ["content"] } },
-  ],
-};
-
 /* ─── Helpers ─── */
-const formatWallet = (addr: string): string => {
-  if (!addr || addr === "N/A") return addr;
-  if (/^0x[0-9a-fA-F]{40}$/.test(addr)) return addr.slice(0, 6) + "......" + addr.slice(-6);
-  if (addr.includes("...")) {
-    const firstPart = addr.split("...")[0];
-    const lastPart = addr.split("...").slice(-1)[0];
-    return `${firstPart.slice(0, 6)}......${lastPart.slice(-4)}`;
-  }
-  if (addr.length > 12) return addr.slice(0, 6) + "......" + addr.slice(-6);
-  return addr;
+const truncShort = (addr: string) =>
+  addr?.length > 10 ? addr.slice(0, 6) + "..." + addr.slice(-4) : (addr ?? "");
+
+const shortId = (id: string) => {
+  const hex = id?.startsWith("0x") ? id.slice(2) : id ?? "";
+  return "0x" + hex.slice(0, 8);
 };
 
 const fmtConfigValue = (v: unknown): string => {
@@ -79,33 +26,30 @@ const fmtConfigValue = (v: unknown): string => {
 
 function buildPrefill(agent: AgentData, rawPolicy?: any): AgentPrefillData {
   const p = rawPolicy ?? {};
-  const parseBudget = (b: string) => {
-    const match = b.replace(/,/g, "").match(/[\d.]+/);
-    return match ? match[0] : "";
-  };
+  const parseBudget = (b: string) => { const m = b?.replace(/,/g, "").match(/[\d.]+/); return m ? m[0] : ""; };
   return {
-    type:           (p.uiType ?? agent.type ?? "trading").toLowerCase(),
-    name:           p.uiName  ?? agent.name ?? "",
-    description:    agent.description ?? "",
-    avatar:         p.uiAvatar ?? agent.avatar ?? "",
-    capital:        p.uiCapitalAmount != null ? String(p.uiCapitalAmount) : parseBudget(agent.budget ?? ""),
-    capitalAsset:   p.uiCapitalAsset ?? "USDC",
-    riskLevel:      p.uiRiskLevel    ?? "moderate",
-    maxDrawdown:    String(p.maxDrawdown  ?? 20),
-    stopLoss:       String(p.stopLoss     ?? 10),
-    executionMode:  p.uiExecutionMode ?? "automatic",
-    allowedAssets:  p.uiAllowedAssets ?? [],
-    maxAlloc:       String(p.maxAllocationPct ?? 80),
-    maxPosition:    String(p.maxPositionPct   ?? 25),
-    maxTrades:      String(p.maxTradesPerDay  ?? 10),
-    maxLTV:              String(p.maxLTV ?? 75),
+    type: (p.uiType ?? agent.type ?? "trading").toLowerCase(),
+    name: p.uiName ?? agent.name ?? "",
+    description: agent.description ?? "",
+    avatar: p.uiAvatar ?? agent.avatar ?? "",
+    capital: p.uiCapitalAmount != null ? String(p.uiCapitalAmount) : parseBudget(agent.budget ?? ""),
+    capitalAsset: p.uiCapitalAsset ?? "USDC",
+    riskLevel: p.uiRiskLevel ?? "moderate",
+    maxDrawdown: String(p.maxDrawdown ?? 20),
+    stopLoss: String(p.stopLoss ?? 10),
+    executionMode: p.uiExecutionMode ?? "automatic",
+    allowedAssets: p.uiAllowedAssets ?? [],
+    maxAlloc: String(p.maxAllocationPct ?? 80),
+    maxPosition: String(p.maxPositionPct ?? 25),
+    maxTrades: String(p.maxTradesPerDay ?? 10),
+    maxLTV: String(p.maxLTV ?? 75),
     liquidationThreshold: String(p.liquidationThreshold ?? 85),
-    targetAPY:      String(p.targetAPY ?? 8),
-    minAPY:         String(p.minAPY    ?? 4),
-    rebalanceFreq:  p.rebalanceFreq  ?? "Every 24h",
+    targetAPY: String(p.targetAPY ?? 8),
+    minAPY: String(p.minAPY ?? 4),
+    rebalanceFreq: p.rebalanceFreq ?? "Every 24h",
     yieldProtocols: p.yieldProtocols ?? [],
-    maxSinglePayment:      String(p.maxSinglePayment      ?? 500),
-    monthlyBudgetCap:      String(p.monthlyBudgetCap      ?? 2000),
+    maxSinglePayment: String(p.maxSinglePayment ?? 500),
+    monthlyBudgetCap: String(p.monthlyBudgetCap ?? 2000),
     autoApprovalThreshold: String(p.autoApprovalThreshold ?? 50),
   };
 }
@@ -115,17 +59,9 @@ function apiAgentToData(a: any): AgentData {
   const type = (p.uiType ?? a.category ?? "custom") as string;
   const capitalAmt: number = p.uiCapitalAmount ?? 0;
   const capitalAsset: string = p.uiCapitalAsset ?? "USDC";
-
   const fmtDate = (d: string | Date | undefined) =>
     d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : undefined;
-  const fmtDateTime = (d: string | Date | undefined) =>
-    d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : undefined;
-  const deployedAt  = fmtDate(a.createdAt) ?? "Just now";
-  const createdMs   = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-  const updatedMs   = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
-  const wasEdited   = updatedMs - createdMs > 60_000;
-  const lastUpdated = wasEdited ? fmtDateTime(a.lastActiveAt) : undefined;
-
+  const deployedAt = fmtDate(a.createdAt) ?? "Just now";
   return {
     id: a.id,
     name: a.name,
@@ -145,7 +81,6 @@ function apiAgentToData(a: any): AgentData {
     schedule: "Automatic",
     walletAddress: a.brainAccountAddress ?? "0x0000000000000000000000000000000000000000",
     deployedAt,
-    lastUpdated,
     createdByUser: true,
     activityLog: [
       { time: "Just now", event: "Agent deployed", detail: `${a.name} activated and ready to execute.`, kind: "success" as const },
@@ -153,91 +88,259 @@ function apiAgentToData(a: any): AgentData {
   };
 }
 
-/* ─── Sub-components ─── */
+/* ═══════════════════════════════════════════════════════
+   SHARED PRIMITIVE COMPONENTS
+═══════════════════════════════════════════════════════ */
 const HDivider = () => <div className="h-px w-full flex-shrink-0" style={{ background: "#1d2132" }} />;
-const VDivider = () => <div className="flex-shrink-0 self-stretch" style={{ width: "1px", background: "#1d2132" }} />;
-
-const StatCol = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
-  <div className="flex flex-col gap-[3px] items-center justify-center flex-1 min-w-0">
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
-    <span className="[font-family:'Gilroy-Bold',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: accent ?? "#a8b9f4" }}>{value}</span>
-  </div>
-);
-
-const PencilIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const EditBtn = ({ onClick }: { onClick: () => void }) => (
-  <button onClick={onClick} data-testid="button-edit-agent"
-    className="flex gap-[6px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
-    style={{ background: "#4a2300" }}>
-    <PencilIcon />
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-  </button>
-);
-
-const StartStopBtn = ({ isActive, onToggle }: { isActive: boolean; onToggle: () => void }) => {
-  if (isActive) return (
-    <button data-testid="button-stop-agent" onClick={onToggle}
-      className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-      style={{ background: "#350011" }}>
-      <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Stop</span>
-    </button>
-  );
-  return (
-    <button data-testid="button-start-agent" onClick={onToggle}
-      className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-      style={{ background: "#123509" }}>
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2L10 6L3 10V2Z" fill="#42bf23" /></svg>
-      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">Start</span>
-    </button>
-  );
-};
-
-const ActivityDot = ({ kind }: { kind: "success" | "info" | "warn" }) => {
-  const colors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as const;
-  return <div className="flex-shrink-0 flex items-start pt-[4px]"><div className="w-[8px] h-[8px] rounded-full" style={{ background: colors[kind] }} /></div>;
-};
-
-const eventColors = { success: "#42bf23", info: "#a8b9f4", warn: "#d20344" } as const;
-
+const Dot = () => <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />;
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse rounded-[8px] ${className ?? ""}`} style={{ background: "#1d2132" }} />
 );
 
-const CardHeader = ({ title, action }: { title: React.ReactNode; action?: React.ReactNode }) => (
-  <div className="flex items-center justify-between px-[16px] py-[14px]" style={{ borderBottom: "1px solid #1d2132" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{title}</span>
-    {action}
+/* ═══════════════════════════════════════════════════════
+   SHARED TOP BAR  (Back ← | Edit · Stop · Kill →)
+═══════════════════════════════════════════════════════ */
+const AgentTopBar = ({ onBack, onEdit, isActive, onToggle }: {
+  onBack: () => void; onEdit: () => void; isActive: boolean; onToggle: () => void;
+}) => (
+  <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
+    <button onClick={onBack} data-testid="button-back"
+      className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center hover:opacity-70"
+      style={{ background: "#1d2132" }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+    <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
+      {/* Edit (grey) */}
+      <button onClick={onEdit} data-testid="button-edit-agent"
+        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+        style={{ background: "#222737" }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+      </button>
+      {/* Stop / Start */}
+      <button data-testid="button-stop-agent" onClick={onToggle}
+        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+        style={{ background: "#350011" }}>
+        {isActive
+          ? <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+          : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2L10 6L3 10V2Z" fill="#d20344" /></svg>}
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+          {isActive ? "Stop" : "Start"}
+        </span>
+      </button>
+      {/* Kill */}
+      <button data-testid="button-kill-agent"
+        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+        style={{ background: "#350011" }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
+      </button>
+    </div>
   </div>
 );
 
-/* Monospace table of field → value rows (policy params) */
-const ParamBlock = ({ rows }: { rows: { label: string; value: string }[] }) => (
-  <div className="rounded-[12px] overflow-hidden border" style={{ borderColor: "#1a1f2e" }}>
-    {rows.map(({ label, value }, i) => (
-      <div key={label} className="flex justify-between items-center px-[14px] py-[10px]"
-        style={{ borderBottom: i < rows.length - 1 ? "1px solid #131824" : "none", background: i % 2 === 0 ? "#0a0c12" : "#080a0f" }}>
-        <code className="[font-family:'JetBrains_Mono',Helvetica] text-[11px] text-[#414965]">{label}</code>
-        <span className="[font-family:'JetBrains_Mono',Helvetica] text-[11px] text-[#6c779d] max-w-[55%] text-right truncate">{value}</span>
+/* ═══════════════════════════════════════════════════════
+   SHARED HEADER CARD
+═══════════════════════════════════════════════════════ */
+const AgentHeaderCard = ({ agent, agentType, agentId }: {
+  agent: AgentData; agentType: string; agentId: string;
+}) => (
+  <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]" style={{ background: "#0a0c10" }}>
+    <div className="flex gap-[8px] items-center w-full">
+      <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
+        <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
       </div>
-    ))}
+      <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
+        <div className="flex items-center gap-[4px]">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
+          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+            style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] capitalize">{agentType}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-[8px] flex-wrap">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+            Deployed: {agent.deployedAt}
+          </span>
+          <Dot />
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+            ID: {shortId(agentId)}
+          </span>
+          <Dot />
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+            Owner: {truncShort(agent.walletAddress)}
+          </span>
+        </div>
+      </div>
+    </div>
+    <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{agent.description}</p>
   </div>
 );
 
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] uppercase tracking-widest">{children}</p>
+/* ═══════════════════════════════════════════════════════
+   SHARED STAT CARDS ROW
+═══════════════════════════════════════════════════════ */
+const StatCard = ({ label, value, sup, color }: { label: string; value: string; sup?: string; color?: string }) => (
+  <div className="rounded-[16px] p-[16px] flex flex-col gap-[8px] flex-1 min-w-0" style={{ background: "#0a0c10" }}>
+    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
+    <p style={{ color: color ?? "#a8b9f4", fontSize: 0, lineHeight: 0 }}>
+      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{value}</span>
+      {sup && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{sup}</span>}
+    </p>
+  </div>
 );
 
-/* ════════════════════════════════════════════════════════
-   Trading Agent View (Figma 3380-32372)
-════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   SHARED POLICIES SECTION
+═══════════════════════════════════════════════════════ */
+type PolicyCell = { label: string; value: string };
 
-/* ── Chart data per time tab ── */
+const PolicyGrid = ({ rows, onEdit }: { rows: PolicyCell[][]; onEdit?: () => void }) => (
+  <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+    <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
+      <div className="flex items-center gap-[8px]">
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
+        <Dot />
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
+        <Dot />
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
+      </div>
+      {onEdit && (
+        <button onClick={onEdit}
+          className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] hover:opacity-80 flex-shrink-0"
+          style={{ background: "#222737" }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+        </button>
+      )}
+    </div>
+    <div className="flex flex-col gap-[8px] p-[16px]">
+      {rows.map((row, ri) => (
+        <div key={ri} className="grid gap-[8px]" style={{ gridTemplateColumns: `repeat(${row.length}, 1fr)` }}>
+          {row.map((cell, ci) => (
+            <div key={ci} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]"
+              style={{ background: "#11141b" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cell.label}</span>
+              <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{cell.value}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════
+   SHARED SCHEMA SECTION
+═══════════════════════════════════════════════════════ */
+type SchemaRow = { k: string; v: string };
+
+const SchemaSection = ({ rows }: { rows: SchemaRow[] }) => {
+  const [expanded, setExpanded] = useState(true);
+  const pairs: [SchemaRow, SchemaRow | null][] = [];
+  for (let i = 0; i < rows.length; i += 2) {
+    pairs.push([rows[i], rows[i + 1] ?? null]);
+  }
+  return (
+    <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+      <div className="px-[16px] py-[12px] flex items-center justify-between"
+        style={{ borderBottom: expanded ? "1px solid #1d2132" : "none" }}>
+        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Schema</span>
+        <div className="flex items-center gap-[8px]">
+          <button className="flex items-center gap-[4px] px-[12px] py-[7px] rounded-[100px] hover:opacity-80"
+            style={{ background: "#222737" }}>
+            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">View Raw →</span>
+          </button>
+          <button onClick={() => setExpanded(v => !v)}
+            className="w-[28px] h-[28px] rounded-full flex items-center justify-center hover:opacity-70"
+            style={{ background: "#222737" }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+              style={{ transform: expanded ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.2s" }}>
+              <path d="M2 8L6 4L10 8" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div>
+          {pairs.map(([left, right], i) => (
+            <div key={i} className="grid grid-cols-4 gap-[8px] px-[16px] py-[10px]"
+              style={{ background: i % 2 === 0 ? "#0a0c10" : "#06070a", borderTop: "1px solid #0d1018" }}>
+              <code className="[font-family:'JetBrains_Mono',Helvetica] text-[#414965] text-[11px] truncate">{left.k}</code>
+              <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#6c779d] text-[11px] truncate col-span-1">{left.v}</span>
+              <code className="[font-family:'JetBrains_Mono',Helvetica] text-[#414965] text-[11px] truncate">{right?.k ?? ""}</code>
+              <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#6c779d] text-[11px] truncate">{right?.v ?? ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   SHARED TX TABLE HEADER STYLES
+═══════════════════════════════════════════════════════ */
+const TxSectionTitle = ({ title }: { title: string }) => (
+  <div className="px-[16px] h-[48px] flex items-center flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
+    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{title}</span>
+  </div>
+);
+
+const TxHeaderCell = ({ children, right }: { children: string; right?: boolean }) => (
+  <span className={`[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] ${right ? "text-right" : ""}`}>{children}</span>
+);
+
+const TxCell = ({ children, mono, muted, right }: { children: React.ReactNode; mono?: boolean; muted?: boolean; right?: boolean }) => (
+  <span className={`${mono ? "[font-family:'JetBrains_Mono',Helvetica]" : "[font-family:'Gilroy-SemiBold',Helvetica]"} text-[${muted ? "#6c779d" : "#a8b9f4"}] text-[12px] leading-[16px] ${right ? "text-right" : ""} truncate`}
+    style={{ color: muted ? "#6c779d" : "#a8b9f4" }}>
+    {children}
+  </span>
+);
+
+const StatusBadge = ({ label, color, bg }: { label: string; color: string; bg: string }) => (
+  <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] w-fit"
+    style={{ background: bg }}>
+    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color }}>{label}</span>
+  </div>
+);
+
+const statusStyle = (s: string): { color: string; bg: string } => {
+  if (s === "Executed" || s === "Verified" || s === "Filled" || s === "Ok" || s === "Allowed") return { color: "#42bf23", bg: "#123509" };
+  if (s === "Escalate" || s === "Policy Escalate") return { color: "#ff9500", bg: "#4a2300" };
+  if (s === "Blocked" || s === "Undeclared") return { color: "#d20344", bg: "#350011" };
+  if (s === "Closed") return { color: "#6c779d", bg: "#222737" };
+  return { color: "#a8b9f4", bg: "#1d2132" };
+};
+
+const RailBadge = ({ rail }: { rail: string }) => {
+  const colors: Record<string, { color: string; bg: string }> = {
+    x402: { color: "#ff9500", bg: "#4a2300" },
+    USDC: { color: "#a8b9f4", bg: "#1d2132" },
+    WireX: { color: "#9d5cf5", bg: "#240757" },
+  };
+  const c = colors[rail] ?? { color: "#6c779d", bg: "#222737" };
+  return (
+    <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] w-fit"
+      style={{ background: c.bg }}>
+      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color: c.color }}>{rail}</span>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   STATIC DEMO DATA
+═══════════════════════════════════════════════════════ */
+
+/* TRADING */
 const CHART_DATA: Record<string, { pts: { t: string; v: number }[]; xLabels: string[]; yLabels: string[] }> = {
   "1H": {
     pts: [
@@ -253,8 +356,7 @@ const CHART_DATA: Record<string, { pts: { t: string; v: number }[]; xLabels: str
   "1D": {
     pts: [
       { t: "Mon", v: 58200 }, { t: "Tue", v: 59800 }, { t: "Wed", v: 61200 },
-      { t: "Thu", v: 60400 }, { t: "Fri", v: 63000 }, { t: "Sat", v: 64200 },
-      { t: "Sun", v: 62400 },
+      { t: "Thu", v: 60400 }, { t: "Fri", v: 63000 }, { t: "Sat", v: 64200 }, { t: "Sun", v: 62400 },
     ],
     xLabels: ["Mon", "Tue", "Thu", "Sat", "Sun"],
     yLabels: ["$65k", "$64k", "$62k", "$61k", "$59k", "$58k"],
@@ -262,8 +364,7 @@ const CHART_DATA: Record<string, { pts: { t: string; v: number }[]; xLabels: str
   "1W": {
     pts: [
       { t: "Wk1", v: 52000 }, { t: "Wk2", v: 55000 }, { t: "Wk3", v: 57200 },
-      { t: "Wk4", v: 59800 }, { t: "Wk5", v: 61400 }, { t: "Wk6", v: 63200 },
-      { t: "Wk7", v: 62400 },
+      { t: "Wk4", v: 59800 }, { t: "Wk5", v: 61400 }, { t: "Wk6", v: 63200 }, { t: "Wk7", v: 62400 },
     ],
     xLabels: ["Wk1", "Wk2", "Wk4", "Wk6", "Wk7"],
     yLabels: ["$64k", "$62k", "$59k", "$57k", "$55k", "$52k"],
@@ -305,63 +406,204 @@ const OPEN_POSITIONS = [
   { market: "DAI-PERP", dir: "Short", lev: "1.4x", value: "$7,084.00", pct: "-0.4%",  pos: false },
 ];
 
-const TX_LOG = [
-  { action: "Open SOL-PERP Long",  ago: "2m ago",  hash: "0x3a59...2cf4", status: "Executed",        amount: "$312.64"    },
-  { action: "Close ETH-PERP Long", ago: "32m ago", hash: "0x3a59...2cf4", status: "Executed",        amount: "$842.75"    },
-  { action: "Open SOL-PERP Long",  ago: "57m ago", hash: "0x3a59...2cf4", status: "Executed",        amount: "$2,174.23"  },
-  { action: "Open BTC-PERP Long",  ago: "2h ago",  hash: "0x3a59...2cf4", status: "Policy Escalate", amount: "$23,000.00" },
-  { action: "Open SOL-PERP Long",  ago: "1d ago",  hash: "0x3a59...2cf4", status: "Executed",        amount: "$1,648.47"  },
+const TRADING_TX = [
+  { time: "2m ago",  action: "Open Long",           market: "SOL-PERP",  size: "$23,000", status: "Escalate",  policy: "v4", tx: "0x3a...c2" },
+  { time: "5m ago",  action: "Close Short",          market: "BTC-USD",   size: "$832",    status: "Verified",  policy: "v4", tx: "0x3a...c2" },
+  { time: "10m ago", action: "Hold Position",         market: "ETH-PERP",  size: "$23,000", status: "Verified",  policy: "v4", tx: "0x1e...ab" },
+  { time: "30m ago", action: "Set Stop Loss",         market: "ADA-USD",   size: "$312",    status: "Verified",  policy: "v4", tx: "0x4c...f7" },
+  { time: "1h ago",  action: "Adjust Take Profit",    market: "DOGE-PERP", size: "$23,000", status: "Verified",  policy: "v4", tx: "0x8a...31" },
 ];
 
-const TIME_TABS = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
+const TRADING_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",                v: "0x7c8af41b" },       { k: "agent Type",              v: "trading" },
+  { k: "status",                  v: "deployed" },          { k: "version",                 v: "4" },
+  { k: "strategy_type",           v: "perpetual_long_short" }, { k: "capital_allocation",   v: "10000_000000" },
+  { k: "max_position_size_usdc",  v: "20000_000000" },      { k: "max_daily_loss_percent",  v: "5" },
+  { k: "max_position_leverage",   v: "3" },                 { k: "max_slippage_bps",        v: "30" },
+  { k: "cooldown_window_seconds", v: "60" },                { k: "cumulative_exposure_limit", v: "60000_000000" },
+  { k: "allowed_markets",         v: "[BTC-PERP, ETH-PERP, SOL-PERP]" }, { k: "order_types", v: "[limit, stop_limit, stop_market]" },
+  { k: "policy_hash",             v: "0x9f3c8a2e1b4d7f6a5c8e2d1b9f4a7c6e3d2b1a9f8e7c6d5b4a3f2e1d0c7b6a5f" }, { k: "erc8004_registry", v: "registered" },
+  { k: "last_proof_nonce",        v: "0xa48f" },            { k: "proof_expiry_seconds",    v: "600" },
+  { k: "sub_account_balance",     v: "98_240_000000" },     { k: "",                        v: "" },
+];
 
-/* ── Crosshair cursor: dashed lines + orange pill at intersection ── */
+/* LENDING */
+const OUTSTANDING_LOANS = [
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 62, amount: "$2,000.00",  pct: "+7.4%",  pos: true  },
+  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "wBTC", ltv: 58, amount: "$4,084.00",  pct: "-0.4%",  pos: false },
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 74, amount: "$3,800.00",  pct: "+6.9%",  pos: true  },
+  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "sETH", ltv: 55, amount: "$8,200.00",  pct: "+3.11%", pos: true  },
+  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "USDT", ltv: 62, amount: "$7,050.00",  pct: "-0.4%",  pos: false },
+];
+const LTV_DISTRIBUTION = [
+  { label: "0 - 50%",   loans: 4, color: "#42bf23", pct: 90 },
+  { label: "50% - 65%", loans: 7, color: "#42bf23", pct: 65 },
+  { label: "65% - 75%", loans: 3, color: "#ff9500", pct: 35 },
+  { label: "75%+",      loans: 0, color: "#d20344", pct: 4  },
+];
+const ltvColor = (ltv: number) => ltv >= 75 ? "#d20344" : ltv >= 65 ? "#ff9500" : "#42bf23";
+const ltvBg   = (ltv: number) => ltv >= 75 ? "#350011" : ltv >= 65 ? "#4a2300" : "#123509";
+
+const LENDING_TX = [
+  { time: "2m ago",  event: "Originated", borrower: "0xa34...1d2", amount: "$23,000", ltv: "55%", policy: "v2", tx: "0x5a...c2" },
+  { time: "5m ago",  event: "Interest",   borrower: "Morpho Pool",  amount: "$1,832",  ltv: "—",  policy: "v2", tx: "0x7f...d9" },
+  { time: "10m ago", event: "LTV Warn",   borrower: "0x7ab...9d2",  amount: "$23,000", ltv: "74%", policy: "v2", tx: "" },
+  { time: "30m ago", event: "Originated", borrower: "0x6ad...a04f", amount: "$312",    ltv: "35%", policy: "v2", tx: "0xe4...f7" },
+  { time: "1h ago",  event: "Interest",   borrower: "Morpho Pool",  amount: "$23,000", ltv: "Closed", policy: "v2", tx: "0x85...e3" },
+];
+
+const LENDING_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",                  v: "0x3b1e9c42" },       { k: "agent Type",              v: "lending" },
+  { k: "status",                    v: "deployed" },          { k: "version",                 v: "2" },
+  { k: "capital_allocation",        v: "1000000_000000" },    { k: "max_supply_usd",          v: "1000000_000000" },
+  { k: "target_ltv_percent",        v: "55" },                { k: "max_ltv_percent",         v: "65" },
+  { k: "rebalance_threshold_pct",   v: "8" },                 { k: "max_liquidation_risk_pct", v: "75" },
+  { k: "max_protocol_exposure_pct", v: "60" },                { k: "min_apy_target_percent",  v: "5.5" },
+  { k: "protocol",                  v: "[morpho, aave_v3]" }, { k: "allowed_collateral_assets", v: "[ETH, wBTC, stETH, cbBTC]" },
+  { k: "allowed_borrow_assets",     v: "[USDC, USDT]" },      { k: "policy_hash",             v: "0x9f3c8a2e1b4d7f6a5c8e2d1b9f4a7c6e3d2b1a9f8e7c6d5b4a3f2e1d0c7b6a5f" },
+  { k: "erc8004_registry",          v: "registered" },        { k: "last_proof_nonce",        v: "0xa48f" },
+  { k: "proof_expiry_seconds",      v: "600" },               { k: "sub_account_balance",     v: "98_240_000000" },
+];
+
+/* YIELD */
+const YIELD_ALLOCATIONS = [
+  { protocol: "Morpho - USDC Vault", apy: "7.8%", amount: "$496,000", pct: 40, color: "#42bf23" },
+  { protocol: "Aave v3 - USDC",      apy: "7.8%", amount: "$372,000", pct: 30, color: "#ff9500" },
+  { protocol: "Morpho - USDC Vault", apy: "7.8%", amount: "$248,000", pct: 20, color: "#9d5cf5" },
+  { protocol: "Sky - sUSDS",         apy: "7.8%", amount: "$124,000", pct: 10, color: "#a8b9f4" },
+];
+const YIELD_TX = [
+  { time: "2m ago",  event: "Harvest",      protocol: "Morpho - USDC vault", amount: "$23,000", apy: "55%", policy: "v3", tx: "0x3a...c2" },
+  { time: "5m ago",  event: "APY Drift",    protocol: "Pendle - sUSDe PT",   amount: "$1,832",  apy: "v3",  policy: "v3", tx: "0x7f...d9" },
+  { time: "10m ago", event: "Rebalance In", protocol: "Morpho - USDC vault", amount: "$23,000", apy: "74%", policy: "v4", tx: "0xc4...f7" },
+  { time: "30m ago", event: "Rebalance Out",protocol: "Sky - sUSDS",         amount: "$312",    apy: "35%", policy: "v3", tx: "0x3a...c2" },
+  { time: "1h ago",  event: "APY Drift",    protocol: "Pendle - sUSDe PT",   amount: "$23,000", apy: "v3",  policy: "v3", tx: "0x85...03" },
+];
+const YIELD_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",                    v: "0x3b1e9c42" },        { k: "agent Type",                   v: "yield" },
+  { k: "status",                      v: "deployed" },           { k: "version",                      v: "2" },
+  { k: "strategy_type",               v: "stable_farming" },     { k: "capital_allocation",            v: "1000000_000000" },
+  { k: "min_apy_percent",             v: "5.5" },                { k: "target_apy_percent",            v: "8.0" },
+  { k: "exit_if_apy_below_pct",       v: "60" },                 { k: "max_slippage_bps",             v: "25" },
+  { k: "il_tolerance_percent",        v: "2" },                  { k: "max_stable_concentration",     v: "40" },
+  { k: "rebalance_frequency_hours",   v: "24" },                 { k: "max_position_size_usdc",       v: "500000_000000" },
+  { k: "protocol_allowlist",          v: "[morpho, aave_v3, pendle, sky]" }, { k: "policy_hash",      v: "0x4d8a7c2e1b9f6a3d8c5e2b1f7a4c9e6d3b2a1f8e7c6d5b4a3f2e1d8c7b6a5b3e1" },
+  { k: "erc8004_registry",            v: "registered" },         { k: "last_proof_nonce",             v: "0xa48f" },
+  { k: "proof_expiry_seconds",        v: "600" },                { k: "sub_account_balance",          v: "98_240_000000" },
+];
+
+/* PAYMENTS */
+const ALLOWLISTED_RECIPIENTS = [
+  { name: "Anthropic API call",   sub: "x402 host",        rail: "x402", cap: "$58",    recur: "per call",  d30: "$24,100" },
+  { name: "Linear monthly",       sub: "0x8c2a...3f10",    rail: "USDC", cap: "$200",   recur: "—",         d30: "$18,400" },
+  { name: "0x4e2a...8c91",        sub: "x402 host",        rail: "x402", cap: "$50",    recur: "per call",  d30: "$14,200" },
+  { name: "DMCC Office Rent",     sub: "WireX Beneficiary",rail: "WireX",cap: "$3,000", recur: "monthly",   d30: "$2,840"  },
+  { name: "Maya Ruben",           sub: "0x9a3f...j81k",    rail: "USDC", cap: "$5,000", recur: "monthly",   d30: "$3,400"  },
+];
+const PAYMENTS_TX = [
+  { time: "2m ago",  rail: "x402", recipient: "Anthropic API call", amount: "$12.40",  status: "Verified",  policy: "v3", tx: "0x3a...c2" },
+  { time: "5m ago",  rail: "USDC", recipient: "Linear monthly",     amount: "$96.00",  status: "Verified",  policy: "v3", tx: "0x7f...d9" },
+  { time: "10m ago", rail: "WireX",recipient: "0x4e2a...8c91",      amount: "$2840",   status: "Verified",  policy: "v3", tx: "" },
+  { time: "30m ago", rail: "USDC", recipient: "DMCC Office Rent",   amount: "$4,200",  status: "Escalate",  policy: "v3", tx: "" },
+  { time: "1h ago",  rail: "USDC", recipient: "Maya Ruben",         amount: "$3,400",  status: "Verified",  policy: "v3", tx: "0x85...03" },
+];
+const PAYMENTS_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",                       v: "0x3b1e9c42" },         { k: "agent Type",                      v: "payments" },
+  { k: "status",                         v: "deployed" },            { k: "version",                         v: "5" },
+  { k: "payment_type",                   v: "recurring_bills" },     { k: "capital_allocation",              v: "1000000_000000" },
+  { k: "per_transaction_limit_usdc",     v: "10000_000000" },        { k: "daily_spend_budget_usdc",         v: "25000_000000" },
+  { k: "daily_transaction_count_limit",  v: "200" },                 { k: "require_approval_above_usdc",     v: "10000_000000" },
+  { k: "execution_window",               v: "24_7" },                { k: "accept_x402_payments",            v: "true" },
+  { k: "x402_max_per_request_usdc",      v: "50_000000" },           { k: "velocity_per_counterparty",       v: "500000_000000" },
+  { k: "x402_allowlist",                 v: "[anthropic, aws_bedrock, openai, +9]" }, { k: "allowlisted_recipients", v: "[8 entries · linked]" },
+  { k: "deny_list",                      v: "[2 sanctioned addresses]" }, { k: "policy_hash",               v: "0x4d8a7c2e1b9f6a3d8c5e2b1f7a4c9e6d3b2a1f8e7c6d5b4a3f2e1d8c7b6a5b3e1" },
+  { k: "erc8004_registry",               v: "registered" },          { k: "last_proof_nonce",                v: "0xa48f" },
+];
+
+/* ANALYTICS */
+const ALERT_RULES = [
+  { rule: "Trader Drawdown",  condition: "PnL_24h < -10% · Trader-Alpha",           action: "Pause Agent",  routing: "Slack + SMS" },
+  { rule: "LTV Warning",      condition: "any_loan_LTV > 70% · Lending-Core",         action: "Notify Only",  routing: "Slack"       },
+  { rule: "Yield Drift",      condition: "APY Drop > 25% · Yield-Harvester",          action: "Notify Only",  routing: "Dashboard"   },
+  { rule: "Vendor Anomaly",   condition: "vendor_spend > 3x avg · Payments-Hub",      action: "Pause Agent",  routing: "Slack + SMS" },
+  { rule: "Stable Depeg",     condition: "any_stable < 0.995 · 5 min sustained",      action: "Notify Only",  routing: "SMS"         },
+];
+const ANALYTICS_TX = [
+  { time: "2m ago",  event: "Signal raised", detail: "Morpho USDC inflows up 40% · 24h", conf: "88%", routed: "dashboard", pol: "v3" },
+  { time: "5m ago",  event: "Daily report",  detail: "Portfolio summary · 5 agents",      conf: "—",   routed: "dashboard", pol: "v3" },
+  { time: "10m ago", event: "Auto-action",   detail: "Paused Payments-Hub · Vendor anomaly", conf: "94%", routed: "SMS + Slack", pol: "v3" },
+  { time: "30m ago", event: "Critical signal", detail: "AWS billing up 280% vs monthly avg", conf: "92%", routed: "SMS",      pol: "v3" },
+  { time: "1h ago",  event: "Query",         detail: "Defilama TVL Snapshot",              conf: "—",   routed: "Internal",  pol: "v3" },
+];
+const ANALYTICS_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",              v: "0x3b1e9c42" },          { k: "agent Type",            v: "analytics" },
+  { k: "status",                v: "deployed" },             { k: "version",               v: "5" },
+  { k: "tracked_agents",        v: "all" },                  { k: "tracked_positions",     v: "all_open" },
+  { k: "report_frequency",      v: "daily_0900_gst" },       { k: "include_recommendations", v: "true" },
+  { k: "allow_auto_execute",    v: "true" },                 { k: "execution_limit_usdc",  v: "5000_000000" },
+  { k: "max_alerts_per_day",    v: "10" },                   { k: "compute_budget_usdc",   v: "250_000000" },
+  { k: "execution_whitelist",   v: "[pause_agent]" },        { k: "report_metrics",        v: "[pnl, risk, ltv, apy, vendor_spend, peg]" },
+  { k: "alert_rules",           v: "[5 rules · linked]" },  { k: "policy_hash",           v: "0x4d8a7c2e1b9f6a3d8c5e2b1f7a4c9e6d3b2a1f8e7c6d5b4a3f2e1d8c7b6a5b3e1" },
+  { k: "erc8004_registry",      v: "registered" },           { k: "last_proof_nonce",      v: "0xa48f" },
+  { k: "proof_expiry_seconds",  v: "600" },                  { k: "sub_account_balance",   v: "98_240_000000" },
+];
+
+/* CUSTOM */
+const CUSTOM_TOOLS = [
+  { name: "Read Balance",       allowed: true  },
+  { name: "Read Orderbook",     allowed: true  },
+  { name: "Read Orderbook",     allowed: true  },
+  { name: "Cancel Order",       allowed: true  },
+  { name: "Place Market Order", allowed: false },
+  { name: "Open Perp",          allowed: false },
+  { name: "Transfer",           allowed: false },
+  { name: "Withdraw",           allowed: false },
+  { name: "Contract Call",      allowed: false },
+];
+const CUSTOM_TX = [
+  { time: "2m ago",  tool: "Place Limit Order",  args: "BTC · Buy · $42 · 63,840", check: "Allowed",   result: "Filled",    pol: "v1", tx: "0x3a...c2" },
+  { time: "5m ago",  tool: "Cancel Order",        args: "ETH · ID: 8c4d",          check: "Allowed",   result: "Executed",  pol: "v1", tx: "0x7f...d9" },
+  { time: "10m ago", tool: "Read Orderbook",       args: "BTC · Depth: 20",         check: "Allowed",   result: "Ok",        pol: "v1", tx: "—" },
+  { time: "30m ago", tool: "Place Market Order",   args: "BTC · Buy · Attempted",   check: "Blocked",   result: "Undeclared",pol: "v1", tx: "—" },
+  { time: "1h ago",  tool: "Read Balance",         args: "USDC · $5,990",           check: "Allowed",   result: "Ok",        pol: "v1", tx: "0x85...03" },
+];
+const CUSTOM_SCHEMA: SchemaRow[] = [
+  { k: "agent_id",              v: "0x3b1e9c42" },         { k: "agent Type",              v: "custom" },
+  { k: "status",                v: "draft" },               { k: "version",                 v: "1" },
+  { k: "complexity_level",      v: "medium" },              { k: "capital_allocation",      v: "5000_000000" },
+  { k: "primary_limit_usdc",    v: "500_000000" },          { k: "secondary_limit_usdc",    v: "25000_000000" },
+  { k: "max_operations_per_hour", v: "1200" },              { k: "execution_window",        v: "24_7" },
+  { k: "circuit_breaker_loss_pct", v: "8" },               { k: "sandbox_days_required",   v: "14" },
+  { k: "allowed_tools",         v: "[read_balance, read_orderbook, place_limit_order, cancel_order]" }, { k: "forbidden_tools", v: "[place_market_order, open_perp, transfer, withdraw, contract_call]" },
+  { k: "allowed_counterparties", v: "[hyperliquid_spot]" }, { k: "objective",               v: "\"Provide two-sided liquidity on...\"" },
+  { k: "policy_hash",           v: "8x1f7d3a8c2e5b9f4a7e1e7b3d8f2a5c8e6v7d1f6a2c8e2b5d8f4a6c1e9b5d3a92" }, { k: "erc8004_registry", v: "registered" },
+  { k: "last_proof_nonce",      v: "0xa48f" },              { k: "proof_expiry_seconds",    v: "600" },
+];
+
+/* ═══════════════════════════════════════════════════════
+   TRADING EQUITY CURVE CROSSHAIR
+═══════════════════════════════════════════════════════ */
 const CrosshairCursor = ({ points, width, height, payload }: any) => {
   if (!points?.length) return null;
   const { x, y } = points[0];
-
-  /* Format the value into a price string */
   const val = payload?.[0]?.value;
   const formatted = val != null
     ? `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
     : "";
-
-  /* Pill dimensions — approximate 6.2px per character at 10px Gilroy-SemiBold */
-  const charW = 6.2;
-  const padX = 8;
-  const pillH = 18;
-  const pillRx = 9;
-  const textW = formatted.length * charW;
-  const pillW = textW + padX * 2;
-
-  /* Keep pill inside chart horizontally */
+  const charW = 6.2; const padX = 8; const pillH = 18; const pillRx = 9;
+  const pillW = formatted.length * charW + padX * 2;
   let pillX = x + 6;
   if (pillX + pillW > width - 4) pillX = x - pillW - 6;
-
-  /* Center pill vertically on the y value line */
   const pillY = y - pillH / 2;
-
   return (
     <g>
-      {/* Vertical dashed line */}
-      <line x1={x} y1={0} x2={x} y2={height}
-        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-      {/* Horizontal dashed line */}
-      <line x1={0} y1={y} x2={width} y2={y}
-        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-      {/* Orange price pill at intersection */}
+      <line x1={x} y1={0} x2={x} y2={height} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <line x1={0} y1={y} x2={width} y2={y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
       {formatted && (
         <g>
           <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
-          <text
-            x={pillX + pillW / 2}
-            y={pillY + pillH / 2 + 3.5}
-            textAnchor="middle"
-            fill="#ff9500"
-            fontSize={10}
-            fontFamily="'Gilroy-SemiBold', Helvetica"
-            fontWeight="600"
-          >
+          <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500"
+            fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">
             {formatted}
           </text>
         </g>
@@ -370,173 +612,66 @@ const CrosshairCursor = ({ points, width, height, payload }: any) => {
   );
 };
 
-/* ── Small 4px separator dot ── */
-const Dot = () => (
-  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-);
+const TIME_TABS = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 
-interface TradingAgentViewProps {
-  agent: AgentData;
-  apiAgent: any;
-  rawPolicy: any;
-  isActive: boolean;
-  onToggle: () => void;
-  onEdit: () => void;
-  onBack: () => void;
-}
-
-const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: TradingAgentViewProps) => {
+/* ═══════════════════════════════════════════════════════
+   TRADING AGENT VIEW  (Figma 3380-32372)
+═══════════════════════════════════════════════════════ */
+const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
   const [chartTab, setChartTab] = useState("1H");
   const p = rawPolicy ?? {};
-
-  /* Policy Envelope field derivation */
-  const spendLimitRaw = p.spendLimit ? (parseInt(p.spendLimit) / 1_000_000) : null;
-  const dailySpendCap   = spendLimitRaw ? `$${spendLimitRaw.toLocaleString()}` : "$25,000";
-  const maxPositionSize = p.typeConfig?.max_position_size_usdc
-    ? `$${Number(p.typeConfig.max_position_size_usdc).toLocaleString()}`
-    : "$20,000";
-  const maxLeverage    = p.typeConfig?.max_leverage ? `${p.typeConfig.max_leverage}x` : "3x";
-  const allowedMkts    = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]);
-  const approvalThresh = p.approvalThreshold === "0" ? ">90% of Cap" : p.approvalThreshold ?? ">90% of Cap";
-  const killSwitch     = p.maxDrawdown ? `-${p.maxDrawdown}% Equity` : "-15% Equity";
-
-  const policyRows = [
-    [{ label: "Daily Spend Cap",    value: dailySpendCap }, { label: "Max Position Size",    value: maxPositionSize }],
-    [{ label: "Max Leverage",       value: maxLeverage   }, { label: "Allowed Markets",      value: null, mkts: allowedMkts }],
-    [{ label: "Approval Threshold", value: approvalThresh }, { label: "Kill Switch Drawdown", value: killSwitch }],
-  ];
-
-  const truncateWallet = (addr: string) =>
-    addr?.length > 12 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
-
   const chartSet = CHART_DATA[chartTab] ?? CHART_DATA["1H"];
+
+  const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$100,000";
+  const dailySpendCap = p.spendLimit ? `$${(parseInt(p.spendLimit) / 1_000_000).toLocaleString()}` : "$25,000";
+  const maxPositionSize = p.typeConfig?.max_position_size_usdc ? `$${Number(p.typeConfig.max_position_size_usdc).toLocaleString()}` : "$20,000";
+  const maxLeverage = p.typeConfig?.max_leverage ? `${p.typeConfig.max_leverage}x` : "3x";
+  const allowedMkts = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]).join(" · ");
+  const killSwitch = p.maxDrawdown ? `-${p.maxDrawdown}% equity` : "-15% equity";
+
+  const policyRows: PolicyCell[][] = [
+    [{ label: "Strategy", value: "Perpetual long/short" }, { label: "Daily Spend Cap", value: dailySpendCap }, { label: "Max Position Size", value: maxPositionSize }],
+    [{ label: "Max Leverage", value: maxLeverage }, { label: "Allowed Markets", value: allowedMkts }, { label: "Order Types", value: "Limit · Stop" }],
+    [{ label: "Max Slippage", value: "30 bps" }, { label: "Cooldown", value: "60 sec" }, { label: "Approval Threshold", value: "> 90% of cap" }],
+    [{ label: "Max Daily Loss", value: "- 5%" }, { label: "Kill Switch Drawdown", value: killSwitch }, { label: "Cumulative Exposure", value: "$60,000" }],
+  ];
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-
-      {/* ── Top nav bar: back btn LEFT, action btns RIGHT, NO bottom border ── */}
-      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
-        {/* Back button (left) */}
-        <button data-testid="button-back" onClick={onBack}
-          className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ background: "#1d2132" }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {/* Action buttons (right) */}
-        <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
-          {/* Edit (grey) */}
-          <button onClick={onEdit} data-testid="button-edit-agent"
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
-            style={{ background: "#222737" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-          </button>
-          {/* Stop/Start (red) */}
-          <button data-testid="button-stop-agent" onClick={onToggle}
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-            style={{ background: "#350011" }}>
-            <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
-              {isActive ? "Stop" : "Start"}
-            </span>
-          </button>
-          {/* Kill (red) */}
-          <button data-testid="button-kill-agent"
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-            style={{ background: "#350011" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
-          </button>
-        </div>
-      </div>
-
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
-          {/* ── 1. Header card — avatar + name + "Trading" tag + deployed + description ── */}
-          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]"
-            style={{ background: "#0a0c10" }}>
-            <div className="flex gap-[8px] items-center w-full">
-              <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
-                <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
-                {/* Name + Trading tag */}
-                <div className="flex items-center gap-[4px]">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                  <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
-                    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Trading</span>
-                  </div>
-                </div>
-                {/* Deployed · wallet */}
-                <div className="flex items-center gap-[8px]">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                    Deployed: {agent.deployedAt}
-                  </span>
-                  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                    {truncateWallet(agent.walletAddress)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {/* Description */}
-            <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">
-              {agent.description}
-            </p>
+          {/* Header */}
+          <AgentHeaderCard agent={agent} agentType="Trading" agentId={agent.id} />
+
+          {/* Stats */}
+          <div className="flex gap-[16px]">
+            <StatCard label="Capital Allocated" value={capitalAmt} />
+            <StatCard label="PnL (30d)"    value="+$47,832" sup=".10" color="#42bf23" />
+            <StatCard label="Win Rate"     value="62"       sup="%"   />
+            <StatCard label="Trades (30d)" value="184" />
+            <StatCard label="Sharpe"       value="1.8" />
           </div>
 
-          {/* ── 2. Stat Cards — no border, left-aligned ── */}
-          <div className="grid grid-cols-4 gap-[16px]">
-            {[
-              { label: "PnL (30d)",    v1: "+$47,832", v2: ".10", color: "#42bf23" },
-              { label: "Win Rate",     v1: "62",       v2: "%",   color: "#a8b9f4" },
-              { label: "Trades (30d)", v1: "184",      v2: "",    color: "#a8b9f4" },
-              { label: "Sharpe",       v1: "1.8",      v2: "",    color: "#a8b9f4" },
-            ].map(({ label, v1, v2, color }) => (
-              <div key={label} className="rounded-[16px] p-[16px] flex flex-col gap-[8px]"
-                style={{ background: "#0a0c10" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px]">{label}</span>
-                <p style={{ color, fontSize: 0, lineHeight: 0 }}>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{v1}</span>
-                  {v2 && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{v2}</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* ── 3. Equity Curve + Open Positions ── */}
+          {/* Equity Curve + Open Positions */}
           <div className="grid grid-cols-2 gap-[16px]">
-
-            {/* Equity Curve — no border, full-width chart */}
+            {/* Equity Curve */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
-              {/* Header */}
-              <div className="flex items-center justify-between px-[16px] py-[12px] h-[48px] flex-shrink-0"
-                style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="flex items-center justify-between px-[16px] py-[12px] h-[48px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Equity Curve</span>
-                {/* Time tabs */}
                 <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
                   {TIME_TABS.map((tab) => (
                     <button key={tab} onClick={() => setChartTab(tab)}
                       className="px-[8px] py-[4px] text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all rounded-[100px] leading-[16px]"
-                      style={{
-                        background: chartTab === tab ? "#4a2300" : "transparent",
-                        color: chartTab === tab ? "#ff9500" : "#414965",
-                      }}>
+                      style={{ background: chartTab === tab ? "#4a2300" : "transparent", color: chartTab === tab ? "#ff9500" : "#414965" }}>
                       {tab}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Chart area — full width with overlaid Y labels */}
               <div className="relative flex-1" style={{ minHeight: "284px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartSet.pts} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
@@ -546,47 +681,28 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                         <stop offset="100%" stopColor="#42bf23" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Tooltip
-                      content={() => null}
-                      cursor={<CrosshairCursor />}
-                      isAnimationActive={false}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="v"
-                      stroke="#42bf23"
-                      strokeWidth={1.5}
-                      fill="url(#greenGrad)"
-                      dot={false}
-                      isAnimationActive={false}
-                      activeDot={{ r: 3, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }}
-                    />
+                    <Tooltip content={() => null} cursor={<CrosshairCursor />} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="v" stroke="#42bf23" strokeWidth={1.5}
+                      fill="url(#greenGrad)" dot={false} isAnimationActive={false}
+                      activeDot={{ r: 3, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }} />
                   </AreaChart>
                 </ResponsiveContainer>
-                {/* Y-axis labels overlaid on right */}
-                <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none"
-                  style={{ paddingTop: "8px", paddingBottom: "4px" }}>
+                <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none" style={{ paddingTop: "8px", paddingBottom: "4px" }}>
                   {chartSet.yLabels.map((lbl) => (
-                    <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right"
-                      style={{ color: "#6c779d" }}>{lbl}</span>
+                    <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right" style={{ color: "#6c779d" }}>{lbl}</span>
                   ))}
                 </div>
               </div>
-
-              {/* X-axis labels */}
-              <div className="flex items-center justify-between px-[8px] py-[4px]"
-                style={{ borderTop: "1px solid #1d2132" }}>
+              <div className="flex items-center justify-between px-[8px] py-[4px]" style={{ borderTop: "1px solid #1d2132" }}>
                 {chartSet.xLabels.map((lbl, i) => (
-                  <span key={i} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px]"
-                    style={{ color: "#6c779d" }}>{lbl}</span>
+                  <span key={i} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px]" style={{ color: "#6c779d" }}>{lbl}</span>
                 ))}
               </div>
             </div>
 
-            {/* Open Positions — no border */}
+            {/* Open Positions */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
-              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
-                style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="px-[16px] py-[12px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Open Positions</span>
               </div>
               <div className="flex flex-col gap-[12px] px-[16px] py-[12px]">
@@ -594,116 +710,53 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                   <div key={i}>
                     <div className="flex items-start justify-between">
                       <div className="flex flex-col gap-[4px]">
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{pos.market}</span>
+                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{pos.market}</span>
                         <div className="flex items-center gap-[4px]">
                           <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.dir}</span>
-                          <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
+                          <Dot />
                           <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.lev}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end justify-center gap-[2px]">
-                        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#a8b9f4] text-[14px] leading-[20px] text-right whitespace-nowrap">{pos.value}</span>
-                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px]"
-                          style={pos.pos
-                            ? { background: "#123509", border: "1px solid rgba(66,191,35,0.2)" }
-                            : { background: "#350011", border: "1px solid rgba(210,3,68,0.2)" }}>
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] text-center whitespace-nowrap"
-                            style={{ color: pos.pos ? "#42bf23" : "#d20344" }}>{pos.pct}</span>
-                        </div>
+                      <div className="flex flex-col items-end gap-[2px]">
+                        <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{pos.value}</span>
+                        <StatusBadge label={pos.pct} color={pos.pos ? "#42bf23" : "#d20344"} bg={pos.pos ? "#123509" : "#350011"} />
                       </div>
                     </div>
-                    {i < OPEN_POSITIONS.length - 1 && (
-                      <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
-                    )}
+                    {i < OPEN_POSITIONS.length - 1 && <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />}
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ── 4. Policy Envelope — rectangular boxes ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-            <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
-              {/* Left: Policies · V4 · edited on-chain */}
-              <div className="flex items-center gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">Policies</span>
-                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">V4</span>
-                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">edited on-chain 42 days ago</span>
-              </div>
-              {/* Right: Edit button */}
-              <button className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 flex-shrink-0" style={{ background: "#222737" }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.889 13.778l-3.556.889.889-3.556L11.333 2Z" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
-              </button>
-            </div>
-            <div className="flex flex-col gap-[8px] p-[16px]">
-              {policyRows.map((row, ri) => (
-                <div key={ri} className="flex gap-[8px]">
-                  {row.map((field, fi) => (
-                    <div key={fi} className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]"
-                      style={{ background: "#11141b" }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{field.label}</span>
-                      {field.mkts ? (
-                        <div className="flex items-center gap-[4px]">
-                          {field.mkts.map((m: string, mi: number) => (
-                            <span key={mi} className="flex items-center gap-[4px]">
-                              {mi > 0 && <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#6c779d" }} />}
-                              <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">{m}</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{field.value}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Policies */}
+          <PolicyGrid rows={policyRows} onEdit={onEdit} />
 
-          {/* ── 5. Transactions ── */}
+          {/* Schema */}
+          <SchemaSection rows={TRADING_SCHEMA} />
+
+          {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transactions</span>
-            </div>
-            <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
-              {TX_LOG.map((tx, i) => (
-                <div key={i}>
-                  {/* Row: 3 columns: left (flex-1) · middle (w-[100px] centered) · right (w-[100px] end) */}
-                  <div className="flex gap-[24px] items-center">
-                    {/* Col 1: action · time · hash */}
-                    <div className="flex flex-1 items-center gap-[8px] min-w-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
-                      <Dot />
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
-                      <Dot />
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.hash}</span>
-                    </div>
-                    {/* Col 2: status badge — centered, fixed 100px */}
-                    <div className="flex items-center justify-center flex-shrink-0" style={{ width: "100px" }}>
-                      <span className="px-[8px] py-[3px] rounded-[22px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] leading-[14px] whitespace-nowrap text-center"
-                        style={tx.status === "Executed"
-                          ? { background: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" }
-                          : { background: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" }}>
-                        {tx.status}
-                      </span>
-                    </div>
-                    {/* Col 3: amount — right-aligned, fixed 100px, JetBrains Mono */}
-                    <div className="flex items-center justify-end flex-shrink-0" style={{ width: "100px" }}>
-                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#a8b9f4] text-[14px] leading-[20px] text-right whitespace-nowrap">{tx.amount}</span>
-                    </div>
+            <TxSectionTitle title="Transaction History" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 1fr 90px 80px 90px 40px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Action", "Market", "Size", "Status", "Policy", "TX"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {TRADING_TX.map((tx, i) => {
+                const s = statusStyle(tx.status);
+                return (
+                  <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 1fr 90px 80px 90px 40px 80px", borderTop: "1px solid #0d1018" }}>
+                    <TxCell muted>{tx.time}</TxCell>
+                    <TxCell>{tx.action}</TxCell>
+                    <TxCell muted>{tx.market}</TxCell>
+                    <TxCell mono>{tx.size}</TxCell>
+                    <div><StatusBadge label={tx.status} color={s.color} bg={s.bg} /></div>
+                    <TxCell muted>{tx.policy}</TxCell>
+                    <TxCell muted mono>{tx.tx}</TxCell>
                   </div>
-                  {/* Separator between rows */}
-                  {i < TX_LOG.length - 1 && (
-                    <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -713,307 +766,214 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
   );
 };
 
-/* ════════════════════════════════════════════════════════
-   Lending Agent View (Figma 3390-32625)
-════════════════════════════════════════════════════════ */
-
-const OUTSTANDING_LOANS = [
-  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 62, amount: "$2,000.00",  pct: "+7.4%",  pos: true  },
-  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "wBTC", ltv: 58, amount: "$4,084.00",  pct: "-0.4%",  pos: false },
-  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "ETH",  ltv: 74, amount: "$3,800.00",  pct: "+6.9%",  pos: true  },
-  { addr: "0xc37...043d1", protocol: "Morpho", collateral: "sETH", ltv: 55, amount: "$8,200.00",  pct: "+3.11%", pos: true  },
-  { addr: "0xc37...043d1", protocol: "Aave",   collateral: "USDT", ltv: 62, amount: "$7,050.00",  pct: "-0.4%",  pos: false },
-];
-
-const LTV_DISTRIBUTION = [
-  { label: "0 - 50%",    loans: 4, color: "#42bf23", pct: 90 },
-  { label: "50% - 65%",  loans: 7, color: "#42bf23", pct: 65 },
-  { label: "655 - 75%",  loans: 3, color: "#ff9500", pct: 35 },
-  { label: "75%+",       loans: 0, color: "#d20344", pct: 4  },
-];
-
-const LENDING_TX = [
-  { action: "$2,500 SOL Loan on Aave v3",  ago: "2m ago",  hash: "0x3a59...2cf4", status: "Executed", amount: "$2,500.00" },
-  { action: "$500 USDT loan on Morpho",     ago: "32m ago", hash: "0x3a59...2cf4", status: "Executed", amount: "$500.00"   },
-  { action: "$200 USDC loan on Morpho",     ago: "1d ago",  hash: "0x3a59...2cf4", status: "Executed", amount: "$200.00"   },
-];
-
-const ltvColor = (ltv: number) =>
-  ltv >= 75 ? "#d20344" : ltv >= 65 ? "#ff9500" : "#42bf23";
-const ltvBg   = (ltv: number) =>
-  ltv >= 75 ? "#350011" : ltv >= 65 ? "#4a2300" : "#123509";
-
-interface LendingAgentViewProps {
-  agent: AgentData;
-  rawPolicy: any;
-  isActive: boolean;
-  onToggle: () => void;
-  onEdit: () => void;
-  onBack: () => void;
-}
-
-const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: LendingAgentViewProps) => {
+/* ═══════════════════════════════════════════════════════
+   LENDING AGENT VIEW  (Figma 3390-32625)
+═══════════════════════════════════════════════════════ */
+const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
   const p = rawPolicy ?? {};
-  const truncateWallet = (addr: string) =>
-    addr?.length > 12 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
+  const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$100,000";
+  const protocols = (p.typeConfig?.protocols?.length ? p.typeConfig.protocols : ["Morpho", "Aave v3"]).join(" · ");
+  const maxSupply = p.typeConfig?.max_supply_usd ? `$${Number(p.typeConfig.max_supply_usd).toLocaleString()}` : "$1,000,000";
+  const collateral = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["ETH", "wBTC", "stETH", "cbBTC"]).join(" · ");
+  const targetLTV = p.typeConfig?.target_ltv_percent ? `${p.typeConfig.target_ltv_percent}%` : "55%";
+  const maxLTVOrig = p.typeConfig?.max_ltv_percent ? `${p.typeConfig.max_ltv_percent}%` : "65%";
+  const maxProtocol = p.typeConfig?.max_protocol_exposure_pct ? `${p.typeConfig.max_protocol_exposure_pct}%` : "60%";
+  const liqCeiling = p.typeConfig?.max_liquidation_risk_pct ? `${p.typeConfig.max_liquidation_risk_pct}% LTV` : "75% LTV";
 
-  /* Policy Envelope field derivation */
-  const maxBookSize    = p.typeConfig?.max_supply_usd      ? `$${Number(p.typeConfig.max_supply_usd).toLocaleString()}`      : "$100,000";
-  const maxPerLoan     = p.typeConfig?.max_per_loan        ? `$${Number(p.typeConfig.max_per_loan).toLocaleString()}`        : "$20,000";
-  const maxPerBorrower = p.typeConfig?.max_per_borrower    ? `$${Number(p.typeConfig.max_per_borrower).toLocaleString()}`    : "$300,000";
-  const maxLTVOrig     = p.typeConfig?.max_ltv_percent     ? `${p.typeConfig.max_ltv_percent}%`                              : "65%";
-  const collateral     = p.uiAllowedAssets?.length         ? p.uiAllowedAssets                                              : ["BTC", "ETH", "SOL"];
-  const protocols      = p.typeConfig?.protocols?.length   ? p.typeConfig.protocols                                          : ["Aave v3", "Morpho"];
-  const maxDuration    = p.typeConfig?.max_duration_days   ? `${p.typeConfig.max_duration_days} days`                       : "90 days";
-  const liqThreshold   = p.typeConfig?.max_liquidation_risk_percent ? `${p.typeConfig.max_liquidation_risk_percent}%`       : "82%";
-  const circuitBreaker = p.typeConfig?.circuit_breaker     ?? "Book LTV > 70%";
-
-  const policyRows = [
-    [{ label: "Max Book Size",         value: maxBookSize,    mkts: null }, { label: "Max Per Loan",            value: maxPerLoan,    mkts: null }],
-    [{ label: "Max Per Borrower",      value: maxPerBorrower, mkts: null }, { label: "Max LTV at Origination",  value: maxLTVOrig,    mkts: null }],
-    [{ label: "Collateral",            value: null,           mkts: collateral }, { label: "Protocols",         value: null,          mkts: protocols }],
-    [{ label: "Max Duration",          value: maxDuration,    mkts: null }, { label: "Liquidation Threshold",   value: liqThreshold,  mkts: null }],
+  const policyRows: PolicyCell[][] = [
+    [{ label: "Protocols", value: protocols }, { label: "Max Supply", value: maxSupply }, { label: "Collateral Assets", value: collateral }],
+    [{ label: "Borrow Assets", value: "USDC · USDT" }, { label: "Min APY Targets", value: "5.5%" }, { label: "Target LTV", value: targetLTV }],
+    [{ label: "Max LTV at Origination", value: maxLTVOrig }, { label: "Rebalance Threshold", value: "8% from target" }, { label: "Max Protocol Exposure", value: maxProtocol }],
+    [{ label: "Liquidation Risk Ceiling", value: liqCeiling }, { label: "Book LTV Breaker", value: "> 70% halt" }, { label: "Default Rate Breaker", value: "> 1.5% · 90d" }],
   ];
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-
-      {/* ── Top nav bar ── */}
-      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
-        <button data-testid="button-back" onClick={onBack}
-          className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ background: "#1d2132" }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
-          {/* Edit */}
-          <button onClick={onEdit} data-testid="button-edit-agent"
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-all hover:opacity-80"
-            style={{ background: "#222737" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-          </button>
-          {/* Stop */}
-          <button data-testid="button-stop-agent" onClick={onToggle}
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-            style={{ background: "#350011" }}>
-            <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
-              {isActive ? "Stop" : "Start"}
-            </span>
-          </button>
-          {/* Kill */}
-          <button data-testid="button-kill-agent"
-            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] flex-shrink-0 transition-colors hover:opacity-80"
-            style={{ background: "#350011" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
-          </button>
-        </div>
-      </div>
-
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
-          {/* ── 1. Header card ── */}
-          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[8px] p-[16px]"
-            style={{ background: "#0a0c10" }}>
-            <div className="flex gap-[8px] items-center w-full">
-              <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
-                <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
-                <div className="flex items-center gap-[4px]">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                  <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
-                    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Lending</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-[8px]">
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                    Deployed: {agent.deployedAt}
-                  </span>
-                  <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
-                    {truncateWallet(agent.walletAddress)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">
-              {agent.description || "A smart lending agent that helps users borrow, lend, and manage credit with clear rules and automated execution."}
-            </p>
+          <AgentHeaderCard agent={agent} agentType="Lending" agentId={agent.id} />
+
+          <div className="flex gap-[16px]">
+            <StatCard label="Capital Allocated" value={capitalAmt} />
+            <StatCard label="Total Supplied" value="$842,100" sup=".82" />
+            <StatCard label="Avg APY"        value="7.2"    sup="%"  color="#42bf23" />
+            <StatCard label="Active Loans"   value="14" />
+            <StatCard label="Defaults · 90d" value="0" />
           </div>
 
-          {/* ── 2. Stat Cards ── */}
-          <div className="grid grid-cols-4 gap-[16px]">
-            {[
-              { label: "Total Lent",    v1: "$842,100", v2: ".82", color: "#a8b9f4" },
-              { label: "Avg APY",       v1: "7.2",      v2: "%",   color: "#42bf23" },
-              { label: "Active Loans",  v1: "14",       v2: "",    color: "#a8b9f4" },
-              { label: "Defaults · 90d",v1: "0",        v2: "",    color: "#a8b9f4" },
-            ].map(({ label, v1, v2, color }) => (
-              <div key={label} className="rounded-[16px] p-[16px] flex flex-col gap-[8px]"
-                style={{ background: "#0a0c10" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px]">{label}</span>
-                <p style={{ color, fontSize: 0, lineHeight: 0 }}>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{v1}</span>
-                  {v2 && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{v2}</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* ── 3. Outstanding Loans + LTV Distribution ── */}
+          {/* Outstanding Loans + LTV Distribution */}
           <div className="grid grid-cols-2 gap-[16px]">
-
-            {/* Outstanding Loans */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
-              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
-                style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Outstanding Loans</span>
               </div>
               <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
                 {OUTSTANDING_LOANS.map((loan, i) => (
                   <div key={i} className="flex items-center gap-[8px]">
-                    {/* Address + protocol */}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px] whitespace-nowrap">{loan.addr}</span>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">{loan.protocol} · {loan.collateral}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.addr}</span>
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">{loan.protocol} · {loan.collateral}</span>
                     </div>
-                    {/* LTV badge */}
-                    <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
-                      style={{ background: ltvBg(loan.ltv) }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap"
-                        style={{ color: ltvColor(loan.ltv) }}>LTV {loan.ltv}%</span>
+                    <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: ltvBg(loan.ltv) }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px]" style={{ color: ltvColor(loan.ltv) }}>LTV {loan.ltv}%</span>
                     </div>
-                    {/* Amount + pct */}
                     <div className="flex flex-col items-end flex-shrink-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px] whitespace-nowrap">{loan.amount}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[16px] whitespace-nowrap"
-                        style={{ color: loan.pos ? "#42bf23" : "#d20344" }}>{loan.pct}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.amount}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[16px]" style={{ color: loan.pos ? "#42bf23" : "#d20344" }}>{loan.pct}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* LTV Distribution */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
-              <div className="px-[16px] py-[12px] h-[48px] flex items-center flex-shrink-0"
-                style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">LTV Distribution</span>
               </div>
               <div className="flex flex-col px-[16px] py-[12px] gap-[16px]">
-                {LTV_DISTRIBUTION.map((band, i) => (
-                  <div key={i} className="flex flex-col gap-[6px]">
+                {LTV_DISTRIBUTION.map((band) => (
+                  <div key={band.label} className="flex flex-col gap-[6px]">
                     <div className="flex items-center justify-between">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{band.label}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">{band.loans} Loans</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{band.label}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{band.loans} Loans</span>
                     </div>
-                    {/* Progress bar track */}
                     <div className="h-[6px] rounded-full w-full" style={{ background: "#1d2132" }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${band.pct}%`, background: band.color }} />
                     </div>
                   </div>
                 ))}
-                {/* Nearest to threshold */}
-                <div className="pt-[4px]" style={{ borderTop: "1px solid #1d2132" }}>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">
-                    Nearest to threshold: 74% (0xc37....043d1)
-                  </span>
-                </div>
+                <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[12px] leading-[16px]">
+                  Nearest to threshold: 74% (0xc37...043d1)
+                </p>
               </div>
             </div>
           </div>
 
-          {/* ── 4. Policies ── */}
+          <PolicyGrid rows={policyRows} onEdit={onEdit} />
+          <SchemaSection rows={LENDING_SCHEMA} />
+
+          {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
-            <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
-              <div className="flex items-center gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">Policies</span>
-                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">V4</span>
-                <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: "#6c779d" }} />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">edited on-chain 42 days ago</span>
+            <TxSectionTitle title="Transaction History" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 100px 110px 80px 70px 50px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Event", "Borrower", "Amount", "LTV", "Policy", "TX"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
               </div>
-              <button onClick={onEdit}
-                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors hover:opacity-80 flex-shrink-0"
-                style={{ background: "#222737" }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.889 13.778l-3.556.889.889-3.556L11.333 2Z" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
-              </button>
-            </div>
-            <div className="flex flex-col gap-[8px] p-[16px]">
-              {policyRows.map((row, ri) => (
-                <div key={ri} className="flex gap-[8px]">
-                  {row.map((field, fi) => (
-                    <div key={fi} className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]"
-                      style={{ background: "#11141b" }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{field.label}</span>
-                      {field.mkts ? (
-                        <div className="flex items-center gap-[4px]">
-                          {(field.mkts as string[]).map((m: string, mi: number) => (
-                            <span key={mi} className="flex items-center gap-[4px]">
-                              {mi > 0 && <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#6c779d" }} />}
-                              <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">{m}</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{field.value}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {/* Full-width Circuit Breaker row */}
-              <div className="flex gap-[8px]">
-                <div className="flex flex-1 items-start justify-between rounded-[8px] p-[8px]" style={{ background: "#11141b" }}>
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Circuit Breaker</span>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{circuitBreaker}</span>
-                </div>
-              </div>
+              {LENDING_TX.map((tx, i) => {
+                const ltvS = statusStyle(tx.ltv === "Closed" ? "Closed" : "");
+                return (
+                  <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 100px 110px 80px 70px 50px 80px", borderTop: "1px solid #0d1018" }}>
+                    <TxCell muted>{tx.time}</TxCell>
+                    <TxCell>{tx.event}</TxCell>
+                    <TxCell muted mono>{tx.borrower}</TxCell>
+                    <TxCell mono>{tx.amount}</TxCell>
+                    <div>{tx.ltv === "Closed"
+                      ? <StatusBadge label="Closed" color={ltvS.color} bg={ltvS.bg} />
+                      : <TxCell muted>{tx.ltv}</TxCell>}</div>
+                    <TxCell muted>{tx.policy}</TxCell>
+                    <TxCell muted mono>{tx.tx || "—"}</TxCell>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* ── 5. Transactions ── */}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   YIELD AGENT VIEW  (Figma 3393-33496)
+═══════════════════════════════════════════════════════ */
+const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
+  const p = rawPolicy ?? {};
+  const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$1,224,000";
+  const targetAPY = p.typeConfig?.target_apy_percent ?? 8;
+  const minAPY = p.typeConfig?.min_apy_percent ?? 5.5;
+  const maxPosition = p.typeConfig?.max_position_size_usdc ? `$${Number(p.typeConfig.max_position_size_usdc).toLocaleString()}` : "$500,000";
+  const rebalanceFreq = p.typeConfig?.rebalance_frequency_hours ? `${p.typeConfig.rebalance_frequency_hours}h Cooldown` : "24h Cooldown";
+  const slippage = p.typeConfig?.max_slippage_bps ?? 25;
+  const maxStable = p.typeConfig?.max_stable_pair_concentration ?? 40;
+  const ilTol = p.typeConfig?.impermanent_loss_tolerance_percent ?? 2;
+  const exitBelow = p.typeConfig?.exit_if_apy_below_percent ? `${p.typeConfig.exit_if_apy_below_percent}% of entry` : "60% of entry";
+  const protocols = (p.typeConfig?.protocol_allowlist ?? ["morpho", "aave_v3", "pendle", "sky"]).join(", ");
+
+  const policyRows: PolicyCell[][] = [
+    [{ label: "Strategy", value: "Stable farming" }, { label: "Target APY", value: `${targetAPY}%` }, { label: "Min APY Floor", value: `${minAPY}%` }],
+    [{ label: "Exit if APY Drops Below", value: exitBelow }, { label: "Max Position Size", value: maxPosition }, { label: "Max Per Protocol", value: `${maxStable}%` }],
+    [{ label: "Max Slippage", value: `${slippage} bps` }, { label: "IL Tolerance", value: `${ilTol}%` }, { label: "Rebalance Frequency", value: rebalanceFreq }],
+    [{ label: "Protocol Downgrade", value: "- 2 tiers · Exit" }, { label: "TVL Drain Breaker", value: "- 30% · 24hr" }, { label: "Stable Peg Breaker", value: "< 0.995 · Exit" }],
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
+
+          <AgentHeaderCard agent={agent} agentType="Yield" agentId={agent.id} />
+
+          <div className="flex gap-[16px]">
+            <StatCard label="Capital Allocated" value={capitalAmt} />
+            <StatCard label="TVL Deployed"    value="$1,000" sup=".12" />
+            <StatCard label="Blended APY"     value="8.4"    sup="%"  color="#42bf23" />
+            <StatCard label="Yield · 30d"     value="+$8,642" color="#42bf23" />
+            <StatCard label="Rebalances · 30d" value="6" />
+          </div>
+
+          {/* Current Allocations */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Transactions</span>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Current Allocations</span>
             </div>
-            <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
-              {LENDING_TX.map((tx, i) => (
-                <div key={i}>
-                  <div className="flex gap-[24px] items-center">
-                    {/* Col 1: action · time · hash */}
-                    <div className="flex flex-1 items-center gap-[8px] min-w-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">{tx.action}</span>
-                      <Dot />
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap">{tx.ago}</span>
-                      <Dot />
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px] whitespace-nowrap font-mono">{tx.hash}</span>
+            <div className="flex flex-col px-[16px] py-[12px] gap-[16px]">
+              {YIELD_ALLOCATIONS.map((alloc, i) => (
+                <div key={i} className="flex flex-col gap-[6px]">
+                  <div className="flex items-center justify-between">
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{alloc.protocol}</span>
+                    <div className="flex items-center gap-[16px]">
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">APY {alloc.apy}</span>
+                      <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{alloc.amount}</span>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px] w-[32px] text-right">{alloc.pct}%</span>
                     </div>
-                    {/* Col 2: status badge */}
-                    <div className="flex items-center justify-center px-[10px] py-[4px] rounded-[100px] flex-shrink-0"
-                      style={{ background: "#123509" }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">{tx.status}</span>
-                    </div>
-                    {/* Col 3: amount */}
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap flex-shrink-0 w-[90px] text-right">{tx.amount}</span>
                   </div>
-                  {i < LENDING_TX.length - 1 && (
-                    <div className="h-px w-full mt-[12px]" style={{ background: "#1d2132" }} />
-                  )}
+                  <div className="h-[6px] rounded-full w-full" style={{ background: "#1d2132" }}>
+                    <div className="h-full rounded-full" style={{ width: `${alloc.pct}%`, background: alloc.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <PolicyGrid rows={policyRows} onEdit={onEdit} />
+          <SchemaSection rows={YIELD_SCHEMA} />
+
+          {/* Transaction History */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <TxSectionTitle title="Transaction History" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 110px 1fr 80px 60px 50px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Event", "Protocol", "Amount", "APY", "Policy", "TX"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {YIELD_TX.map((tx, i) => (
+                <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 110px 1fr 80px 60px 50px 80px", borderTop: "1px solid #0d1018" }}>
+                  <TxCell muted>{tx.time}</TxCell>
+                  <TxCell>{tx.event}</TxCell>
+                  <TxCell muted>{tx.protocol}</TxCell>
+                  <TxCell mono>{tx.amount}</TxCell>
+                  <TxCell muted>{tx.apy}</TxCell>
+                  <TxCell muted>{tx.policy}</TxCell>
+                  <TxCell muted mono>{tx.tx}</TxCell>
                 </div>
               ))}
             </div>
@@ -1025,9 +985,404 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
   );
 };
 
-/* ════════════════════════════════════════════════════════
-   Main page
-════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   PAYMENTS AGENT VIEW  (Figma 3437-34303)
+═══════════════════════════════════════════════════════ */
+const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
+  const p = rawPolicy ?? {};
+  const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$1,224,000";
+  const perTxLimit = p.spendLimit ? `$${(parseInt(p.spendLimit) / 1_000_000).toLocaleString()}` : "$10,000";
+  const dailyBudget = p.typeConfig?.daily_spend_budget_usdc ? `$${(Number(p.typeConfig.daily_spend_budget_usdc) / 1_000_000).toLocaleString()}` : "$25,000";
+  const dailyTxCount = p.typeConfig?.daily_transaction_count_limit ?? 2000;
+  const execWindow = p.typeConfig?.execution_window ?? "24/7";
+  const x402MaxReq = p.typeConfig?.x402_max_per_request_usdc ? `$${(Number(p.typeConfig.x402_max_per_request_usdc) / 1_000_000).toLocaleString()}` : "Not capped";
+  const approvalThresh = p.approvalThreshold && p.approvalThreshold !== "0" ? `> $${Number(p.approvalThreshold).toLocaleString()}` : "> $10,000";
+
+  const policyRows: PolicyCell[][] = [
+    [{ label: "Payment Type", value: "Recurring + subscriptions" }, { label: "Per-TX limit", value: perTxLimit }, { label: "Daily Budget", value: dailyBudget }],
+    [{ label: "Daily TX Count", value: String(dailyTxCount) }, { label: "Approval Threshold", value: approvalThresh }, { label: "Execution Window", value: execWindow }],
+    [{ label: "x402 Enabled", value: "Yes · 12 Hosts" }, { label: "x402 Max / Request", value: x402MaxReq }, { label: "Sanctions Screening", value: "OFAC + Chainalysis" }],
+    [{ label: "Velocity / Counterparty", value: "$50k / 24h" }, { label: "Volume Spike", value: "5x · 24hr · Freeze" }, { label: "Sanctions Hit", value: "Block + alert" }],
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
+
+          <AgentHeaderCard agent={agent} agentType="Payments" agentId={agent.id} />
+
+          <div className="flex gap-[16px]">
+            <StatCard label="Capital Allocated" value={capitalAmt} />
+            <StatCard label="Volume · 30d"    value="$284,600" />
+            <StatCard label="Payments · 30d"  value="$1,084" sup=".12" />
+            <StatCard label="Avg Size"        value="$154" />
+            <StatCard label="Pending Review"  value="4" color="#ff9500" />
+          </div>
+
+          {/* Allowlisted Recipients */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Allowlisted Recipients</span>
+            </div>
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "1fr 70px 100px 90px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Recipient", "Rail", "Per-Payment Cap", "Recurrence", "30D"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {ALLOWLISTED_RECIPIENTS.map((r, i) => (
+                <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "1fr 70px 100px 90px 80px", borderTop: "1px solid #0d1018" }}>
+                  <div className="flex flex-col">
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">{r.name}</span>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{r.sub}</span>
+                  </div>
+                  <div><RailBadge rail={r.rail} /></div>
+                  <TxCell>{r.cap}</TxCell>
+                  <TxCell muted>{r.recur}</TxCell>
+                  <TxCell mono>{r.d30}</TxCell>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <PolicyGrid rows={policyRows} onEdit={onEdit} />
+          <SchemaSection rows={PAYMENTS_SCHEMA} />
+
+          {/* Transaction History */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <TxSectionTitle title="Transaction History" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 70px 1fr 80px 90px 50px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Rail", "Recipient", "Amount", "Status", "Policy", "TX"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {PAYMENTS_TX.map((tx, i) => {
+                const s = statusStyle(tx.status);
+                return (
+                  <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 70px 1fr 80px 90px 50px 80px", borderTop: "1px solid #0d1018" }}>
+                    <TxCell muted>{tx.time}</TxCell>
+                    <div><RailBadge rail={tx.rail} /></div>
+                    <TxCell>{tx.recipient}</TxCell>
+                    <TxCell mono>{tx.amount}</TxCell>
+                    <div><StatusBadge label={tx.status} color={s.color} bg={s.bg} /></div>
+                    <TxCell muted>{tx.policy}</TxCell>
+                    <TxCell muted mono>{tx.tx || "—"}</TxCell>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   ANALYTICS AGENT VIEW  (Figma 3438-35039)
+═══════════════════════════════════════════════════════ */
+const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
+  const p = rawPolicy ?? {};
+  const trackedAgents = p.typeConfig?.tracked_agents ?? 5;
+  const maxAlerts = p.typeConfig?.max_alerts_per_day ?? 10;
+  const computeCap = p.typeConfig?.compute_budget_usdc
+    ? `$${(Number(p.typeConfig.compute_budget_usdc) / 1_000_000).toLocaleString()} / month`
+    : "$250 / month";
+  const execCap = p.typeConfig?.execution_limit_usdc
+    ? `$${(Number(p.typeConfig.execution_limit_usdc) / 1_000_000).toLocaleString()} / action`
+    : "$5,000 / action";
+  const allowedActions = Array.isArray(p.typeConfig?.execution_whitelist)
+    ? p.typeConfig.execution_whitelist.join(", ")
+    : "Pause agent only";
+
+  const policyRows: PolicyCell[][] = [
+    [{ label: "Tracked Agents", value: `All (${trackedAgents})` }, { label: "Tracked Positions", value: "All open" }, { label: "Report Frequency", value: "Daily 09:00 GST" }],
+    [{ label: "Recommendations", value: "Included" }, { label: "Critical Routing", value: "Dash + Slack + SMS" }, { label: "Max Alerts / Day", value: String(maxAlerts) }],
+    [{ label: "Compute Cap", value: computeCap }, { label: "Auto Execute", value: "Enabled · Whitelist" }, { label: "Execution Cap", value: execCap }],
+    [{ label: "Allowed Actions", value: allowedActions }, { label: "Daily Action Cap", value: "3" }, { label: "Sanctions Hit", value: "Move funds · Trade" }],
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
+
+          <AgentHeaderCard agent={agent} agentType="Analytics" agentId={agent.id} />
+
+          <div className="flex gap-[16px]">
+            <StatCard label="Tracked Agents"  value={String(trackedAgents)} />
+            <StatCard label="Reports · 30d"   value="124" />
+            <StatCard label="Signals Raised"  value="18" />
+            <StatCard label="Auto Actions"    value="2" />
+            <StatCard label="Compute · 30d"   value="$132" />
+          </div>
+
+          {/* Alert Rules */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Alert Rules</span>
+            </div>
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "110px 1fr 110px 110px", borderBottom: "1px solid #1d2132" }}>
+                {["Rule", "Condition", "Action", "Routing"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {ALERT_RULES.map((r, i) => (
+                <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "110px 1fr 110px 110px", borderTop: "1px solid #0d1018" }}>
+                  <TxCell>{r.rule}</TxCell>
+                  <TxCell muted>{r.condition}</TxCell>
+                  <TxCell>{r.action}</TxCell>
+                  <TxCell muted>{r.routing}</TxCell>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <PolicyGrid rows={policyRows} onEdit={onEdit} />
+          <SchemaSection rows={ANALYTICS_SCHEMA} />
+
+          {/* Transaction History */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <TxSectionTitle title="Transaction History" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 110px 1fr 50px 90px 50px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Event", "Detail", "Conf", "Routed", "POL"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {ANALYTICS_TX.map((tx, i) => (
+                <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 110px 1fr 50px 90px 50px", borderTop: "1px solid #0d1018" }}>
+                  <TxCell muted>{tx.time}</TxCell>
+                  <TxCell>{tx.event}</TxCell>
+                  <TxCell muted>{tx.detail}</TxCell>
+                  <TxCell muted>{tx.conf}</TxCell>
+                  <TxCell muted>{tx.routed}</TxCell>
+                  <TxCell muted>{tx.pol}</TxCell>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   CUSTOM AGENT VIEW  (Figma 3498-33400)
+═══════════════════════════════════════════════════════ */
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="6.5" fill="#123509" stroke="#42bf23" strokeWidth="0.5" />
+    <path d="M4.5 7L6.2 8.8L9.5 5.5" stroke="#42bf23" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const XIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="6.5" fill="#350011" stroke="#d20344" strokeWidth="0.5" />
+    <path d="M5 5L9 9M9 5L5 9" stroke="#d20344" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
+
+const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+}) => {
+  const p = rawPolicy ?? {};
+  const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$5,000";
+  const primaryLimit = p.typeConfig?.primary_limit_usdc
+    ? `$${(Number(p.typeConfig.primary_limit_usdc) / 1_000_000).toLocaleString()} / Order`
+    : "$500 / Order";
+  const secondaryLimit = p.typeConfig?.secondary_limit_usdc
+    ? `$${(Number(p.typeConfig.secondary_limit_usdc) / 1_000_000).toLocaleString()} / Day`
+    : "$25,000 / Day";
+  const opsPerHour = p.typeConfig?.max_operations_per_hour ?? 1200;
+  const execWindow = p.typeConfig?.execution_window ?? "24/7";
+  const sandboxDays = p.typeConfig?.sandbox_days_required ?? 14;
+  const circuitBreaker = p.typeConfig?.circuit_breaker_loss_pct ? `-${p.typeConfig.circuit_breaker_loss_pct}% PnL · Pause` : "-8% PnL · Pause";
+
+  const gradDays = 4;
+  const gradRequired = sandboxDays;
+  const violationCount = 0;
+  const graduationScore = 82;
+
+  const allowedTools = Array.isArray(p.typeConfig?.allowed_tools)
+    ? p.typeConfig.allowed_tools as string[]
+    : ["read_balance", "read_orderbook", "place_limit_order", "cancel_order"];
+  const forbiddenTools = Array.isArray(p.typeConfig?.forbidden_tools)
+    ? p.typeConfig.forbidden_tools as string[]
+    : ["place_market_order", "open_perp", "transfer", "withdraw", "contract_call"];
+
+  const toolsGrid = CUSTOM_TOOLS.map(t => ({
+    ...t,
+    allowed: allowedTools.some(a => a.toLowerCase().replace(/_/g, " ") === t.name.toLowerCase())
+      ? true
+      : forbiddenTools.some(f => f.toLowerCase().replace(/_/g, " ") === t.name.toLowerCase())
+        ? false
+        : t.allowed,
+  }));
+
+  const execWindowDesc = (p.typeConfig?.allowed_counterparties ?? ["hyperliquid_spot"]).map((c: string) =>
+    c.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+  ).join(", ") + " · " + (p.uiAllowedAssets?.length ? p.uiAllowedAssets.join(", ") : "BTC, ETH");
+
+  return (
+    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
+
+          <AgentHeaderCard agent={agent} agentType="Custom" agentId={agent.id} />
+
+          <div className="flex gap-[16px]">
+            <StatCard label="Capital Allocated"  value={capitalAmt} />
+            <StatCard label="Sandbox PnL"        value="+$142"         color="#42bf23" />
+            <StatCard label="Days in Sandbox"    value={`${gradDays} / ${gradRequired}`} />
+            <StatCard label="Policy Violations"  value={String(violationCount)} />
+            <StatCard label="Graduation Score"   value={`${graduationScore}%`} />
+          </div>
+
+          {/* Objective */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
+              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Objective</span>
+            </div>
+            <div className="flex gap-[8px] p-[16px]">
+              <div className="flex flex-col gap-[4px] flex-1 px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Target Outcome</span>
+                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">
+                  {p.typeConfig?.objective?.slice(0, 40) ?? "Positive PnL · Sharpe > 1.0"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-[4px] w-[160px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Complexity</span>
+                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px] capitalize">
+                  {p.typeConfig?.complexity_level ?? "Medium"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Policies — custom layout with subsections */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
+              <div className="flex items-center gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
+                <Dot />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
+                <Dot />
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
+              </div>
+              <button onClick={onEdit}
+                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] hover:opacity-80 flex-shrink-0"
+                style={{ background: "#222737" }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+              </button>
+            </div>
+            <div className="flex flex-col gap-[16px] p-[16px]">
+              {/* Tools Allowed */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Tools Allowed</span>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  {toolsGrid.map((tool, i) => (
+                    <div key={i} className="flex items-center justify-between px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{tool.name}</span>
+                      {tool.allowed ? <CheckIcon /> : <XIcon />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Numeric Limits */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Numeric Limits</span>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  {[
+                    { label: "Primary Limit", value: primaryLimit },
+                    { label: "Secondary Limit", value: secondaryLimit },
+                    { label: "Operations / Hour", value: String(opsPerHour) },
+                  ].map((c) => (
+                    <div key={c.label} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-[8px]">
+                  <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{execWindow}</span>
+                  </div>
+                  <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{execWindowDesc}</span>
+                  </div>
+                </div>
+              </div>
+              {/* Safety Circuit Breakers */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Safety Circuit Breakers</span>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  {[
+                    { label: "Graduation", value: `${gradDays} / ${gradRequired} Days Clean` },
+                    { label: "Circuit Breaker", value: circuitBreaker },
+                    { label: "Undeclared Tool", value: "Block + Alert" },
+                  ].map((c) => (
+                    <div key={c.label} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
+                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <SchemaSection rows={CUSTOM_SCHEMA} />
+
+          {/* Capability Invocation Log */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+            <TxSectionTitle title="Capability Invocation Log" />
+            <div className="px-[16px]">
+              <div className="grid gap-[8px] py-[10px]"
+                style={{ gridTemplateColumns: "80px 140px 1fr 70px 90px 40px 80px", borderBottom: "1px solid #1d2132" }}>
+                {["Time", "Tool", "Args", "Check", "Result", "POL", "TX"].map(h => <TxHeaderCell key={h}>{h}</TxHeaderCell>)}
+              </div>
+              {CUSTOM_TX.map((tx, i) => {
+                const cs = statusStyle(tx.check);
+                const rs = statusStyle(tx.result);
+                return (
+                  <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "80px 140px 1fr 70px 90px 40px 80px", borderTop: "1px solid #0d1018" }}>
+                    <TxCell muted>{tx.time}</TxCell>
+                    <TxCell>{tx.tool}</TxCell>
+                    <TxCell muted>{tx.args}</TxCell>
+                    <div><StatusBadge label={tx.check} color={cs.color} bg={cs.bg} /></div>
+                    <div><StatusBadge label={tx.result} color={rs.color} bg={rs.bg} /></div>
+                    <TxCell muted>{tx.pol}</TxCell>
+                    <TxCell muted mono>{tx.tx}</TxCell>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   MAIN PAGE — routing dispatch
+═══════════════════════════════════════════════════════ */
 export const AgentDetailPage = (): JSX.Element => {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -1044,23 +1399,12 @@ export const AgentDetailPage = (): JSX.Element => {
 
   const agent: AgentData | null = staticAgent ?? (apiAgent ? apiAgentToData(apiAgent) : null);
   const rawPolicy = apiAgent?.policy ?? null;
-
-  /* Pull out the schema-aligned fields from the stored policy */
-  const agentType   = ((rawPolicy?.uiType ?? apiAgent?.category ?? agent?.type ?? "").toLowerCase()) as string;
-  const typeConfig  = (rawPolicy?.typeConfig ?? {}) as Record<string, unknown>;
-  const policyHash  = (rawPolicy?.policyHash ?? "") as string;
-  const capitalAmt  = rawPolicy?.uiCapitalAmount ?? 0;
-  const capitalAsset = rawPolicy?.uiCapitalAsset ?? "USDC";
-
-  const hasTypeConfig = Object.keys(typeConfig).length > 0;
+  const agentType = ((rawPolicy?.uiType ?? apiAgent?.category ?? agent?.type ?? "").toLowerCase()) as string;
 
   const qc = useQueryClient();
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const effectiveStatus: AgentStatus = agentStatus ?? agent?.status ?? "inactive";
   const isActive = effectiveStatus === "active";
-
-  const [hashCopied, setHashCopied] = useState(false);
-  const [toolTab, setToolTab] = useState(0);
 
   const statusMutation = useMutation({
     mutationFn: async (newStatus: AgentStatus) => {
@@ -1087,362 +1431,63 @@ export const AgentDetailPage = (): JSX.Element => {
   }, [agent, rawPolicy]);
 
   const editableId = agent?.createdByUser && apiAgent ? params.id : undefined;
-
   const openEdit = useCallback((step: number) => {
-    const prefill = getPrefill();
-    openCreateAgentAtStep(step, prefill, editableId);
+    openCreateAgentAtStep(step, getPrefill(), editableId);
   }, [getPrefill, openCreateAgentAtStep, editableId]);
 
-  const copyHash = () => {
-    if (!policyHash) return;
-    navigator.clipboard.writeText(policyHash);
-    setHashCopied(true);
-    setTimeout(() => setHashCopied(false), 2000);
+  const commonProps = {
+    isActive,
+    onToggle: handleToggle,
+    onEdit: () => openEdit(1),
+    onBack: () => window.history.back(),
   };
 
-  /* ── Loading ── */
+  /* Loading */
   if (isLoading) {
     return (
       <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-        <div className="flex items-center gap-[8px] px-[16px] flex-shrink-0" style={{ height: "64px", borderBottom: "1px solid #1d2132" }}>
-          <div className="w-[32px] h-[32px] rounded-[100px]" style={{ background: "#1d2132" }} />
+        <div className="flex items-center px-[16px] flex-shrink-0" style={{ height: "64px" }}>
+          <Skeleton className="w-[32px] h-[32px] rounded-full" />
         </div>
         <div className="flex flex-col gap-[16px] p-[16px]">
-          <div className="rounded-[16px] p-[16px] flex flex-col gap-[16px]" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+          <div className="rounded-[16px] p-[16px] flex flex-col gap-[12px]" style={{ background: "#0a0c10" }}>
             <div className="flex gap-[8px] items-center">
               <Skeleton className="w-[64px] h-[64px] rounded-[12px]" />
               <div className="flex flex-col gap-[8px] flex-1">
                 <Skeleton className="h-[20px] w-[140px]" />
-                <Skeleton className="h-[16px] w-[100px]" />
+                <Skeleton className="h-[16px] w-[200px]" />
               </div>
             </div>
             <Skeleton className="h-[16px] w-full" />
-            <Skeleton className="h-[16px] w-3/4" />
           </div>
         </div>
       </div>
     );
   }
 
-  /* ── Not found ── */
+  /* Not found */
   if (!agent) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#11141b] rounded-[16px] border border-[#1d2132]">
         <span className="text-4xl">🤖</span>
         <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[14px]">Agent not found</p>
         <button onClick={() => navigate("/agents")}
-          className="px-4 py-2 rounded-full text-sm transition-opacity hover:opacity-80"
-          style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}>
+          className="px-4 py-2 rounded-full text-sm hover:opacity-80"
+          style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy-SemiBold', Helvetica" }}>
           Back to Agents
         </button>
       </div>
     );
   }
 
-  /* ── Trading agent → Figma 3380-32372 view ── */
-  if (agentType === "trading") {
-    return (
-      <TradingAgentView
-        agent={agent}
-        apiAgent={apiAgent}
-        rawPolicy={rawPolicy}
-        isActive={isActive}
-        onToggle={handleToggle}
-        onEdit={() => openEdit(1)}
-        onBack={() => window.history.back()}
-      />
-    );
-  }
+  /* Type dispatch */
+  if (agentType === "trading")   return <TradingAgentView   agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
+  if (agentType === "lending")   return <LendingAgentView   agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
+  if (agentType === "yield")     return <YieldAgentView     agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
+  if (agentType === "payments")  return <PaymentsAgentView  agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
+  if (agentType === "analytics") return <AnalyticsAgentView agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
+  if (agentType === "custom")    return <CustomAgentView    agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
 
-  /* ── Lending agent → Figma 3390-32625 view ── */
-  if (agentType === "lending") {
-    return (
-      <LendingAgentView
-        agent={agent}
-        rawPolicy={rawPolicy}
-        isActive={isActive}
-        onToggle={handleToggle}
-        onEdit={() => openEdit(1)}
-        onBack={() => window.history.back()}
-      />
-    );
-  }
-
-  /* ── Type-specific param rows (from typeConfig) ── */
-  const typeConfigRows: { label: string; value: string }[] = Object.entries(typeConfig)
-    .filter(([, v]) => v !== null && v !== undefined)
-    .map(([k, v]) => ({ label: k, value: fmtConfigValue(v) }));
-
-  /* ── Tool schemas for this agent type ── */
-  const tools = TOOL_SCHEMAS[agentType] ?? [];
-  const currentTool: any = tools[toolTab] ?? null;
-
-  /* ── Enforcement for this type ── */
-  const enf = ENFORCEMENT[agentType] ?? { tier1: [], tier3: "Standard PolicyValidator flow." };
-
-  const tiers = [
-    { num: "1", label: "PolicyEngine", sublabel: "Control Plane (off-chain)", color: "#ff9500", bg: "#1a1000", border: "#2a1800", checks: enf.tier1, desc: "Off-chain validation before any UserOperation is submitted." },
-    { num: "2", label: "PolicyValidator", sublabel: "On-Chain Solidity", color: "#a8b9f4", bg: "#0d1117", border: "#1d2131", checks: ["Cryptographic proof verification (keccak256 policy_hash)", "Replay prevention via nonce inclusion", "Proof expiry enforcement (10-minute window)", ...(enf.tier2extra ? [enf.tier2extra] : []), "ERC-8004 audit trail recording on every execution"], desc: "Solidity contract verifies every proof before execution." },
-    { num: "3", label: "Crossmint Agent Wallet", sublabel: "Smart Contract (ERC-4337)", color: "#9d5cf5", bg: "#110d1e", border: "#1e1530", checks: [enf.tier3, "Reentrancy guard on all operations", "Agent revocation via revokeAgent(agent_id) at any time"], desc: "Smart account guardrails — cannot be bypassed by any layer above." },
-  ];
-
-  return (
-    <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-
-      {/* Top nav bar */}
-      <div className="flex items-center gap-[8px] px-[16px] flex-shrink-0"
-        style={{ height: "64px", borderBottom: "1px solid #1d2132", background: "#11141b" }}>
-        <button data-testid="button-back" onClick={() => window.history.back()}
-          className="w-[32px] h-[32px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-colors hover:bg-[#1d2132]"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1d2132" }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M9 3L5 7L9 11" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[16px] p-[16px] pb-8">
-
-          {/* ── 1. Identity card ── */}
-          <div className="rounded-[16px] overflow-hidden flex flex-col gap-[16px] p-[16px]"
-            style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <div className="flex gap-[8px] items-center w-full">
-              <div className="overflow-hidden relative flex-shrink-0 w-[64px] h-[64px] rounded-[12px]">
-                <img src={agent.avatar} alt={agent.name} className="absolute inset-0 w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-1 min-w-0 gap-[16px] items-center">
-                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                  <div className="flex items-center gap-[8px]">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap truncate">{agent.name}</span>
-                    <span className="px-[8px] py-[2px] rounded-full text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] capitalize flex-shrink-0"
-                      style={{ background: "#1a1000", color: "#ff9500", border: "1px solid #2a1800" }}>
-                      {agentType || agent.type}
-                    </span>
-                  </div>
-                  <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[18px]">Deployed: {agent.deployedAt}{agent.lastUpdated ? ` · Updated: ${agent.lastUpdated}` : ""}</span>
-                </div>
-                <StartStopBtn isActive={isActive} onToggle={handleToggle} />
-              </div>
-            </div>
-
-            <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{agent.description}</p>
-            <HDivider />
-
-            <div className="flex items-center gap-[6px]">
-              <StatCol label="Total Actions" value={agent.trades.toLocaleString()} />
-              <VDivider />
-              <StatCol label="Total Earnings" value={agent.earnings}
-                accent={agent.earnings.startsWith("+") ? "#42bf23" : "#a8b9f4"} />
-              <VDivider />
-              <StatCol label="Success Rate" value={agent.successRate} accent="#42bf23" />
-            </div>
-            <HDivider />
-            <div className="flex items-center gap-[6px]">
-              <StatCol label="Creator" value={formatWallet(agent.walletAddress)} />
-              <VDivider />
-              <StatCol label="Category" value={agent.category} />
-              <VDivider />
-              <StatCol label="Last Active" value={agent.lastActive} />
-            </div>
-          </div>
-
-          {/* ── 2. Performance chart ── */}
-          <AgentPerfChart agent={agent} />
-
-          {/* ── 3. Policy card ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <CardHeader
-              title={
-                <span className="flex items-center gap-2">
-                  Policy
-                  {agentType && (
-                    <span className="text-[11px] [font-family:'JetBrains_Mono',Helvetica] text-[#414965] font-normal">· {agentType}</span>
-                  )}
-                </span>
-              }
-              action={editableId ? <EditBtn onClick={() => openEdit(2)} /> : undefined}
-            />
-
-            <div className="flex flex-col gap-[20px] p-[16px]">
-
-              {/* Core inputs */}
-              <div className="flex flex-col gap-[10px]">
-                <SectionLabel>Core Inputs</SectionLabel>
-                <ParamBlock rows={[
-                  { label: "agent_name",         value: agent.name },
-                  { label: "agent_type",         value: agentType || agent.type.toLowerCase() },
-                  { label: "capital_allocation", value: capitalAmt > 0 ? `$${capitalAmt.toLocaleString()} ${capitalAsset}` : "Not set" },
-                  { label: "status",             value: effectiveStatus },
-                  { label: "version",            value: "1" },
-                ]} />
-              </div>
-
-              {/* Type-specific params */}
-              {hasTypeConfig ? (
-                <div className="flex flex-col gap-[10px]">
-                  <SectionLabel>{agentType} Policy Params</SectionLabel>
-                  <ParamBlock rows={typeConfigRows} />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[10px]">
-                  <SectionLabel>{agentType || agent.type.toLowerCase()} Policy Params</SectionLabel>
-                  <div className="rounded-[12px] p-[16px] flex flex-col items-center gap-2" style={{ background: "#080a0f", border: "1px solid #131824" }}>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="3" stroke="#1d2132" strokeWidth="1.5" /><path d="M7 10h6M7 7h3" stroke="#1d2132" strokeWidth="1.3" strokeLinecap="round" /></svg>
-                    <p className="text-[12px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica]">Policy params not yet configured</p>
-                    {editableId && (
-                      <button onClick={() => openEdit(2)}
-                        className="text-[11px] text-[#ff9500] [font-family:'Gilroy-SemiBold',Helvetica] hover:underline">
-                        Edit agent to set policy params →
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Policy hash */}
-              <div className="flex flex-col gap-[10px]">
-                <div className="flex items-center justify-between">
-                  <SectionLabel>Policy Hash (keccak256)</SectionLabel>
-                  {policyHash && (
-                    <button onClick={copyHash}
-                      className="text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] px-[10px] py-[4px] rounded-[8px] transition-colors flex-shrink-0"
-                      style={{ background: "#1d2132", color: hashCopied ? "#42bf23" : "#6c779d" }}>
-                      {hashCopied ? "Copied!" : "Copy"}
-                    </button>
-                  )}
-                </div>
-                <div className="rounded-[12px] p-[12px] flex items-start gap-2" style={{ background: "#04060a", border: "1px solid #0e1219" }}>
-                  <svg className="flex-shrink-0 mt-0.5" width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="2" stroke="#1d2132" strokeWidth="1.2" /><path d="M5 3V2a2 2 0 0 1 4 0v1" stroke="#1d2132" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                  {policyHash ? (
-                    <code className="text-[10px] text-[#42bf23] [font-family:'JetBrains_Mono',Helvetica] break-all leading-relaxed">{policyHash}</code>
-                  ) : (
-                    <span className="text-[11px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] italic">No policy hash — create agent with new schema to generate one</span>
-                  )}
-                </div>
-                {policyHash && (
-                  <div className="grid grid-cols-2 gap-[8px]">
-                    {[
-                      { k: "Policy Nonce", v: "0" },
-                      { k: "Proof Expiry", v: "10 min" },
-                    ].map(({ k, v }) => (
-                      <div key={k} className="rounded-[10px] p-[10px] flex flex-col gap-[4px]" style={{ background: "#0d1017", border: "1px solid #131824" }}>
-                        <p className="text-[10px] text-[#414965] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-wider">{k}</p>
-                        <p className="text-[12px] [font-family:'JetBrains_Mono',Helvetica] text-[#6c779d]">{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── 4. Enforcement Stack card ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <CardHeader title="Enforcement Stack" />
-
-            <div className="flex flex-col gap-[12px] p-[16px]">
-              <p className="text-[12px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">
-                Three independent layers enforce your policy at every stage of the execution pipeline. Each tier is independently verifiable.
-              </p>
-              {tiers.map((tier) => (
-                <div key={tier.num} className="rounded-[14px] border p-[14px] flex flex-col gap-[10px]"
-                  style={{ background: tier.bg, borderColor: tier.border }}>
-                  <div className="flex items-start gap-[10px]">
-                    <div className="w-[26px] h-[26px] rounded-[8px] flex items-center justify-center flex-shrink-0 text-[11px] [font-family:'JetBrains_Mono',Helvetica] font-bold"
-                      style={{ background: tier.color + "20", color: tier.color }}>
-                      {tier.num}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[13px] [font-family:'Gilroy-SemiBold',Helvetica]" style={{ color: tier.color }}>{tier.label}</p>
-                      <p className="text-[11px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] mt-[2px]">{tier.sublabel} · {tier.desc}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-[5px] pl-[36px]">
-                    {tier.checks.map((c, i) => (
-                      <div key={i} className="flex items-start gap-[6px]">
-                        <div className="w-[4px] h-[4px] rounded-full flex-shrink-0 mt-[5px]" style={{ background: tier.color + "70" }} />
-                        <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── 5. Claude Tool Schema card ── */}
-          {tools.length > 0 && (
-            <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-              <CardHeader title="Claude Tool Schema" />
-              <div className="flex flex-col gap-[12px] p-[16px]">
-                <p className="text-[12px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica]">
-                  Tool definitions available to the Claude ReAct loop. Only tools matching the policy whitelist can be invoked.
-                </p>
-
-                {/* Tab selector */}
-                <div className="flex gap-[4px] p-[4px] rounded-[12px]" style={{ background: "#06070a" }}>
-                  {tools.map((t: any, i) => (
-                    <button key={i} onClick={() => setToolTab(i)}
-                      className="flex-1 px-[10px] py-[7px] rounded-[9px] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all whitespace-nowrap"
-                      style={{
-                        background: toolTab === i ? "#1d2132" : "transparent",
-                        color: toolTab === i ? "#a8b9f4" : "#414965",
-                      }}>
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tool description */}
-                {currentTool && (
-                  <div className="flex flex-col gap-[10px]">
-                    <p className="text-[12px] text-[#6c779d] [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">{currentTool.description}</p>
-                    <div className="relative">
-                      <div className="rounded-[12px] p-[14px] overflow-x-auto max-h-[260px]" style={{ background: "#04060a", border: "1px solid #0e1219" }}>
-                        <pre className="text-[10px] [font-family:'JetBrains_Mono',Helvetica] text-[#a8b9f4] whitespace-pre-wrap leading-relaxed">
-                          {JSON.stringify(currentTool, null, 2)}
-                        </pre>
-                      </div>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(JSON.stringify(currentTool, null, 2))}
-                        className="absolute top-[10px] right-[10px] text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] px-[8px] py-[4px] rounded-[8px] transition-colors"
-                        style={{ background: "#1d2132", color: "#6c779d" }}>
-                        Copy
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── 6. Recent Activity card ── */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <CardHeader title="Recent Activity" />
-            <div className="flex flex-col gap-[16px] p-[16px]">
-              {agent.activityLog.map((log, i) => (
-                <div key={i}>
-                  <div className="flex gap-[12px] items-start">
-                    <ActivityDot kind={log.kind} />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <div className="flex gap-[16px] items-start">
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[16px] leading-[24px] flex-shrink-0" style={{ color: eventColors[log.kind] }}>
-                          {log.event}
-                        </span>
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[24px] flex-shrink-0">{log.time}</span>
-                      </div>
-                      <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[22px]">{log.detail}</p>
-                    </div>
-                  </div>
-                  {i < agent.activityLog.length - 1 && <div className="mt-[16px]"><HDivider /></div>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </ScrollArea>
-    </div>
-  );
+  /* Fallback — use Trading view for unknown types */
+  return <TradingAgentView agent={agent} rawPolicy={rawPolicy} {...commonProps} />;
 };
