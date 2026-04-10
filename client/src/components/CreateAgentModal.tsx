@@ -38,17 +38,17 @@ const RadioCard = ({
 }: { label: string; desc?: string; checked: boolean; onClick: () => void; small?: boolean }) => (
   <div
     onClick={onClick}
-    className={`bg-[#0a0c10] p-[16px] rounded-[16px] flex flex-col gap-[4px] cursor-pointer border transition-all ${checked ? "border-[#7631ee]" : "border-[#1d2132] hover:border-[#414965]"}`}
+    className="bg-[#0a0c10] p-[16px] rounded-[16px] flex flex-col gap-[4px] cursor-pointer"
   >
     <div className="flex items-start justify-between">
       <p className={`font-['Gilroy-Medium',sans-serif] text-[#6c779d] whitespace-nowrap ${small ? "text-[14px]" : "text-[16px]"} leading-[20px]`}>
         {label}
       </p>
-      <div className={`size-[20px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-2 ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
-        {checked && <div className="size-[8px] rounded-full bg-[#7631ee]" />}
+      <div className={`relative overflow-hidden size-[20px] rounded-full border flex-shrink-0 ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
+        {checked && <div className="absolute inset-[20%] rounded-full bg-[#7631ee]" />}
       </div>
     </div>
-    {desc && <p className="font-['Gilroy-Medium',sans-serif] text-[#414965] text-[12px] leading-[16px]">{desc}</p>}
+    {desc && <p className="font-['Gilroy-Medium',sans-serif] text-[#414965] text-[12px] leading-[12px]">{desc}</p>}
   </div>
 );
 
@@ -424,7 +424,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal shell */}
-      <div className="relative z-10 w-[420px] max-h-[85vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
+      <div className="relative z-10 w-[480px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
 
         {/* ══ CONFIRMATION SCREEN (no header) ══ */}
         {launched && (
@@ -491,20 +491,20 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {step > 0 && (
               <button
                 onClick={() => setStep((s) => s - 1)}
-                className="absolute left-[11px] top-[11px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+                className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
               >
                 <ChevronLeft size={16} className="text-[#6c779d]" />
               </button>
             )}
 
-            {/* Pagination dots — centered */}
-            <div className="flex items-center gap-[4px]">
+            {/* Pagination dots — 5 dots, 8×8px, 8px gap, centered in 96px frame */}
+            <div className="flex items-center gap-[8px]">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
                   className="rounded-full transition-all duration-300"
                   style={{
-                    width: 6, height: 6,
+                    width: 8, height: 8,
                     background: i <= step ? "#FFFFFF" : "#FF9500",
                     opacity: i <= step ? 1 : 0.4,
                     mixBlendMode: (i > step ? "plus-lighter" : "normal") as React.CSSProperties["mixBlendMode"],
@@ -516,7 +516,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {/* Close button */}
             <button
               onClick={handleClose}
-              className="absolute right-[11px] top-[11px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+              className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
             >
               <X size={16} className="text-[#6c779d]" />
             </button>
@@ -538,7 +538,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     Select the primary function. Each type has a distinct enforcement schema and policy hash composition.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-[12px] w-full">
+                <div className="grid grid-cols-2 gap-[12px] items-start w-full">
                   {agentTypes.map((t) => (
                     <RadioCard
                       key={t.id}
@@ -1234,13 +1234,13 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
         {/* ══ FOOTER BUTTON (fixed outside scroll) ══ */}
         {!launched && (
-          <div className="flex-shrink-0 px-[24px] pb-[24px] pt-[16px] border-t border-[#1d2132]">
+          <div className="flex-shrink-0 px-[24px] pb-[24px] pt-[24px]">
             {step < 4 ? (
               <button
                 onClick={() => canProceed() && setStep((s) => s + 1)}
                 disabled={!canProceed()}
                 data-testid="button-continue"
-                className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[12px] rounded-[100px] transition-all ${canProceed() ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
+                className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
                 Continue
               </button>
@@ -1249,7 +1249,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 onClick={() => canProceed() && handleLaunch()}
                 disabled={!canProceed() || launching}
                 data-testid="button-create-agent"
-                className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[12px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
+                className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
                 {launching ? "Creating Agent…" : "Create Agent"}
               </button>
