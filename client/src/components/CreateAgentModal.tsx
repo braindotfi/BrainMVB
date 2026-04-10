@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
-import { ChevronLeft, X, Plus, ChevronDown, Info, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, Info, Image as ImageIcon, Wallet } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -153,6 +153,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [selectedAvatar, setSelectedAvatar] = useState("");
   const [capital, setCapital]             = useState("");
   const [capitalAsset, setCapitalAsset]   = useState("USDC");
+  const [showAssetDrop, setShowAssetDrop] = useState(false);
 
   /* ── Launch state ── */
   const [authSig, setAuthSig] = useState(false);
@@ -497,20 +498,22 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               </button>
             )}
 
-            {/* Pagination dots — 5 dots, 8×8px, 8px gap, centered in 96px frame */}
-            <div className="flex items-center gap-[8px]">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width: 8, height: 8,
-                    background: i <= step ? "#FFFFFF" : "#FF9500",
-                    opacity: i <= step ? 1 : 0.4,
-                    mixBlendMode: (i > step ? "plus-lighter" : "normal") as React.CSSProperties["mixBlendMode"],
-                  }}
-                />
-              ))}
+            {/* Pagination dots — 96×24px frame, 5×8px dots, 8px gap, 12px side margins */}
+            <div className="flex items-center justify-center w-[96px] h-[24px]">
+              <div className="flex items-center gap-[8px]">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-full transition-all duration-300 shrink-0"
+                    style={{
+                      width: 8, height: 8,
+                      background: i <= step ? "#FFFFFF" : "#FF9500",
+                      opacity: i <= step ? 1 : 0.4,
+                      mixBlendMode: (i > step ? "plus-lighter" : "normal") as React.CSSProperties["mixBlendMode"],
+                    }}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Close button */}
@@ -661,52 +664,96 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 </div>
 
                 <div className="flex flex-col gap-[16px] items-start w-full">
-                  {/* Capital Allocation label + info */}
+                  {/* Capital Allocation label + info + inputs */}
                   <div className="flex flex-col gap-[4px] items-start w-full">
+                    {/* Label row */}
                     <div className="flex gap-[4px] items-center">
                       <FieldLabel>Capital Allocation</FieldLabel>
-                      <Info size={16} className="text-[#414965]" />
+                      <Info size={20} className="text-[#414965] shrink-0" />
                     </div>
 
-                    {/* Amount + USDC row */}
-                    <div className="flex gap-[8px] items-start w-full">
-                      <div className="bg-[#222737] flex flex-1 items-center gap-[8px] px-[16px] py-[14px] rounded-[16px]">
-                        <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
-                        <input
-                          value={capital}
-                          onChange={(e) => setCapital(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
-                          placeholder="10,000"
-                          className="flex-1 bg-transparent text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none min-w-0"
-                        />
+                    {/* Inputs + quick amounts wrapper — gap-[8px] between rows */}
+                    <div className="flex flex-col gap-[8px] items-start w-full">
+                      {/* Amount input + currency dropdown */}
+                      <div className="flex gap-[8px] items-start w-full">
+                        {/* Amount field — h-[48px] = py-[14px] + 20px line */}
+                        <div className="bg-[#222737] flex flex-1 items-center gap-[8px] px-[16px] py-[14px] rounded-[16px] min-w-0">
+                          <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <input
+                            value={capital}
+                            onChange={(e) => setCapital(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
+                            placeholder="10,000"
+                            data-testid="input-capital"
+                            className="flex-1 bg-transparent text-white text-[16px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none min-w-0"
+                          />
+                        </div>
+                        {/* Currency dropdown — w-[120px] h-[48px] */}
+                        <div className="relative shrink-0 w-[120px]">
+                          <button
+                            onClick={() => setShowAssetDrop((v) => !v)}
+                            data-testid="button-asset-dropdown"
+                            className="bg-[#222737] flex items-center justify-between gap-[8px] px-[16px] py-[14px] rounded-[16px] w-full cursor-pointer"
+                          >
+                            <span className="font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px]">
+                              {capitalAsset}
+                            </span>
+                            <ChevronDown size={16} className="text-[#6c779d] shrink-0" />
+                          </button>
+                          {showAssetDrop && (
+                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-[#222737] border border-[#414965] rounded-[12px] overflow-hidden z-10">
+                              {["USDC", "USDT"].map((asset) => (
+                                <button
+                                  key={asset}
+                                  onClick={() => { setCapitalAsset(asset); setShowAssetDrop(false); }}
+                                  data-testid={`option-asset-${asset}`}
+                                  className={`w-full px-[16px] py-[10px] text-left font-['Gilroy-Medium',sans-serif] text-[16px] leading-[20px] transition-colors ${capitalAsset === asset ? "text-white bg-[#2d3347]" : "text-[#6c779d] hover:bg-[#1d2132] hover:text-white"}`}
+                                >
+                                  {asset}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-[#222737] flex items-center justify-between gap-[8px] px-[16px] py-[14px] rounded-[16px] w-[120px] shrink-0 cursor-pointer">
-                        <span className="font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px]">
-                          {capitalAsset}
-                        </span>
-                        <ChevronDown size={16} className="text-[#6c779d]" />
-                      </div>
-                    </div>
 
-                    {/* Quick-add buttons */}
-                    <div className="flex gap-[8px] items-start w-full mt-[4px]">
-                      {["1,000", "5,000", "10,000", "20,000", "50,000"].map((amt) => (
-                        <button
-                          key={amt}
-                          onClick={() => setCapital(amt)}
-                          className="flex-1 bg-[#4a2300] items-center justify-center px-[12px] py-[8px] rounded-[100px] min-w-0"
-                        >
-                          <p className="font-['JetBrains_Mono',sans-serif] text-[#ff9500] text-[11px] leading-[16px] whitespace-nowrap text-center">
-                            +${amt.length > 5 ? amt : amt}
-                          </p>
-                        </button>
-                      ))}
+                      {/* Quick-add preset buttons — h-[32px] = py-[8px] + 16px line */}
+                      <div className="flex gap-[8px] items-start w-full">
+                        {["1,000", "5,000", "10,000", "20,000", "50,000"].map((amt) => (
+                          <button
+                            key={amt}
+                            onClick={() => setCapital(amt)}
+                            data-testid={`button-preset-${amt}`}
+                            className="flex-1 bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] min-w-0"
+                          >
+                            <span className="font-['JetBrains_Mono',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
+                              +${amt}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Available balance */}
-                  <div className="border border-[#1d2132] flex items-center justify-between px-[16px] py-[14px] rounded-[16px] w-full">
-                    <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px]">Available Balance</span>
-                    <span className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[14px]">$865,040.30 USDC</span>
+                  {/* Available balance row — h-[40px] = p-[8px] + 24px icon */}
+                  <div className="border border-[#1d2132] flex gap-[8px] items-center p-[8px] rounded-[12px] w-full">
+                    {/* Left: wallet icon + label */}
+                    <div className="flex flex-1 gap-[4px] items-center min-w-0">
+                      <Wallet size={24} className="text-[#6c779d] shrink-0" />
+                      <span className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[24px] min-w-0">
+                        Available Balance
+                      </span>
+                    </div>
+                    {/* Right: balance + asset tag */}
+                    <div className="flex flex-1 gap-[4px] items-center justify-end min-w-0">
+                      <span className="flex-1 font-['JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px] text-right min-w-0">
+                        $865,942.49
+                      </span>
+                      <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center px-[4px] py-[1px] rounded-[20px] shrink-0">
+                        <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">
+                          {capitalAsset}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1250,7 +1297,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
         {/* ══ FOOTER BUTTON (fixed outside scroll) ══ */}
         {!launched && (
-          <div className="flex-shrink-0 px-[24px] pb-[24px] pt-[24px]">
+          <div className="flex-shrink-0 px-[24px] pb-[24px] pt-0">
             {step < 4 ? (
               <button
                 onClick={() => canProceed() && setStep((s) => s + 1)}
