@@ -20,12 +20,16 @@ export function useNotifications(userId = DEMO_USER) {
   const [sseConnected, setSseConnected] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+  const { data: rawNotifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications", userId],
     queryFn: () =>
       fetch(`/api/notifications?userId=${userId}`).then(r => r.json()),
     refetchInterval: false,
   });
+
+  const notifications: Notification[] = Array.isArray(rawNotifications)
+    ? (rawNotifications as any[]).filter((n): n is Notification => n != null && typeof n === "object" && "id" in n)
+    : [];
 
   const { data: countData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/count", userId],
@@ -63,11 +67,11 @@ export function useNotifications(userId = DEMO_USER) {
     es.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === "notification") {
+        if (msg.type === "notification" && msg.payload != null && typeof msg.payload === "object" && "id" in msg.payload) {
           // Prepend new notification to the list
           qc.setQueryData<Notification[]>(
             ["/api/notifications", userId],
-            (old = []) => [msg.payload, ...old]
+            (old = []) => [msg.payload, ...(old ?? []).filter(n => n != null)]
           );
           qc.setQueryData<{ count: number }>(
             ["/api/notifications/count", userId],
