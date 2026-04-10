@@ -581,6 +581,37 @@ const CUSTOM_SCHEMA: SchemaRow[] = [
 ];
 
 /* ═══════════════════════════════════════════════════════
+   DYNAMIC SCHEMA BUILDER
+═══════════════════════════════════════════════════════ */
+function buildDynamicSchema(agentId: string, agentType: string, policy: any): SchemaRow[] {
+  const p = policy ?? {};
+  const tc = p.typeConfig ?? {};
+  const cap = p.uiCapitalAmount ? `${Number(p.uiCapitalAmount) * 1_000_000}_000000` : "0";
+  const shortId = agentId?.startsWith("0x") ? agentId.slice(2, 10) : agentId?.slice(0, 8) ?? "00000000";
+  const pHash = p.policyHash ?? tc.policyHash ?? "—";
+
+  const base: SchemaRow[] = [
+    { k: "agent_id",          v: `0x${shortId}` },  { k: "agent_type",            v: agentType.toLowerCase() },
+    { k: "status",            v: "deployed" },       { k: "version",               v: "4" },
+    { k: "capital_allocation",v: cap },              { k: "policy_hash",            v: pHash ? `${String(pHash).slice(0, 10)}...` : "—" },
+    { k: "erc8004_registry",  v: "registered" },     { k: "last_proof_nonce",       v: "0xa48f" },
+    { k: "proof_expiry_seconds", v: "600" },         { k: "sub_account_balance",    v: cap },
+  ];
+
+  const typeRows: SchemaRow[] = Object.entries(tc)
+    .filter(([k]) => !["policyHash"].includes(k))
+    .slice(0, 12)
+    .map(([k, v]) => ({
+      k: k.replace(/([A-Z])/g, "_$1").toLowerCase(),
+      v: Array.isArray(v) ? `[${(v as unknown[]).join(", ")}]` : String(v ?? ""),
+    }));
+
+  const all = [...base, ...typeRows];
+  if (all.length % 2 !== 0) all.push({ k: "", v: "" });
+  return all;
+}
+
+/* ═══════════════════════════════════════════════════════
    TRADING EQUITY CURVE CROSSHAIR
 ═══════════════════════════════════════════════════════ */
 const CrosshairCursor = ({ points, width, height, payload }: any) => {
@@ -625,17 +656,22 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
   const chartSet = CHART_DATA[chartTab] ?? CHART_DATA["1H"];
 
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$100,000";
-  const dailySpendCap = p.spendLimit ? `$${(parseInt(p.spendLimit) / 1_000_000).toLocaleString()}` : "$25,000";
+  const dailyLossCap = p.typeConfig?.max_daily_loss_percent ? `-${p.typeConfig.max_daily_loss_percent}%` : "-5%";
   const maxPositionSize = p.typeConfig?.max_position_size_usdc ? `$${Number(p.typeConfig.max_position_size_usdc).toLocaleString()}` : "$20,000";
-  const maxLeverage = p.typeConfig?.max_leverage ? `${p.typeConfig.max_leverage}x` : "3x";
-  const allowedMkts = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]).join(" · ");
-  const killSwitch = p.maxDrawdown ? `-${p.maxDrawdown}% equity` : "-15% equity";
+  const maxLeverage = p.typeConfig?.max_position_leverage ? `${p.typeConfig.max_position_leverage}x` : "3x";
+  const allowedMkts = (p.typeConfig?.allowed_markets?.length ? p.typeConfig.allowed_markets : p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["BTC", "ETH", "SOL"]).join(" · ");
+  const killSwitch = p.typeConfig?.kill_switch_drawdown ? `-${p.typeConfig.kill_switch_drawdown}% equity` : p.maxDrawdown ? `-${p.maxDrawdown}% equity` : "-15% equity";
+  const cumulativeExposure = p.typeConfig?.cumulative_exposure_limit ? `$${Number(p.typeConfig.cumulative_exposure_limit).toLocaleString()}` : "$60,000";
+  const cooldown = p.typeConfig?.cooldown_window_seconds ? `${p.typeConfig.cooldown_window_seconds}s` : "60 sec";
+  const orderTypes = Array.isArray(p.typeConfig?.order_types) ? p.typeConfig.order_types.join(" · ") : "Limit · Stop";
+  const maxSlippage = p.typeConfig?.max_slippage_bps ? `${p.typeConfig.max_slippage_bps} bps` : "30 bps";
+  const strategyLabel = p.typeConfig?.strategy_type ? p.typeConfig.strategy_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Perpetual long/short";
 
   const policyRows: PolicyCell[][] = [
-    [{ label: "Strategy", value: "Perpetual long/short" }, { label: "Daily Spend Cap", value: dailySpendCap }, { label: "Max Position Size", value: maxPositionSize }],
-    [{ label: "Max Leverage", value: maxLeverage }, { label: "Allowed Markets", value: allowedMkts }, { label: "Order Types", value: "Limit · Stop" }],
-    [{ label: "Max Slippage", value: "30 bps" }, { label: "Cooldown", value: "60 sec" }, { label: "Approval Threshold", value: "> 90% of cap" }],
-    [{ label: "Max Daily Loss", value: "- 5%" }, { label: "Kill Switch Drawdown", value: killSwitch }, { label: "Cumulative Exposure", value: "$60,000" }],
+    [{ label: "Strategy", value: strategyLabel }, { label: "Max Daily Loss", value: dailyLossCap }, { label: "Max Position Size", value: maxPositionSize }],
+    [{ label: "Max Leverage", value: maxLeverage }, { label: "Allowed Markets", value: allowedMkts }, { label: "Order Types", value: orderTypes }],
+    [{ label: "Max Slippage", value: maxSlippage }, { label: "Cooldown", value: cooldown }, { label: "Approval Threshold", value: "> 90% of cap" }],
+    [{ label: "Kill Switch Drawdown", value: killSwitch }, { label: "Cumulative Exposure", value: cumulativeExposure }, { label: "Capital Allocated", value: capitalAmt }],
   ];
 
   return (
@@ -733,7 +769,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
           <PolicyGrid rows={policyRows} onEdit={onEdit} />
 
           {/* Schema */}
-          <SchemaSection rows={TRADING_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "trading", rawPolicy)} />
 
           {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -774,18 +810,22 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$100,000";
-  const protocols = (p.typeConfig?.protocols?.length ? p.typeConfig.protocols : ["Morpho", "Aave v3"]).join(" · ");
+  const protocolRaw = p.typeConfig?.protocol ?? p.typeConfig?.protocols;
+  const protocols = Array.isArray(protocolRaw) ? protocolRaw.join(" · ") : (protocolRaw ? String(protocolRaw).replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Morpho · Aave v3");
   const maxSupply = p.typeConfig?.max_supply_usd ? `$${Number(p.typeConfig.max_supply_usd).toLocaleString()}` : "$1,000,000";
-  const collateral = (p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["ETH", "wBTC", "stETH", "cbBTC"]).join(" · ");
+  const collateral = (p.typeConfig?.allowed_collateral_assets?.length ? p.typeConfig.allowed_collateral_assets : p.uiAllowedAssets?.length ? p.uiAllowedAssets : ["ETH", "wBTC", "stETH", "cbBTC"]).join(" · ");
+  const borrowAssets = (p.typeConfig?.allowed_borrow_assets?.length ? p.typeConfig.allowed_borrow_assets : ["USDC", "DAI"]).join(" · ");
   const targetLTV = p.typeConfig?.target_ltv_percent ? `${p.typeConfig.target_ltv_percent}%` : "55%";
   const maxLTVOrig = p.typeConfig?.max_ltv_percent ? `${p.typeConfig.max_ltv_percent}%` : "65%";
-  const maxProtocol = p.typeConfig?.max_protocol_exposure_pct ? `${p.typeConfig.max_protocol_exposure_pct}%` : "60%";
-  const liqCeiling = p.typeConfig?.max_liquidation_risk_pct ? `${p.typeConfig.max_liquidation_risk_pct}% LTV` : "75% LTV";
+  const rebalThreshold = p.typeConfig?.rebalance_threshold_percent ? `${p.typeConfig.rebalance_threshold_percent}% from target` : "8% from target";
+  const maxProtocol = (p.typeConfig?.max_protocol_exposure_percent ?? p.typeConfig?.max_protocol_exposure_pct) ? `${p.typeConfig.max_protocol_exposure_percent ?? p.typeConfig.max_protocol_exposure_pct}%` : "60%";
+  const liqCeiling = (p.typeConfig?.max_liquidation_risk_percent ?? p.typeConfig?.max_liquidation_risk_pct) ? `${p.typeConfig.max_liquidation_risk_percent ?? p.typeConfig.max_liquidation_risk_pct}% LTV` : "75% LTV";
+  const minAPY = p.typeConfig?.min_apy_target_percent ? `${p.typeConfig.min_apy_target_percent}%` : "5.5%";
 
   const policyRows: PolicyCell[][] = [
     [{ label: "Protocols", value: protocols }, { label: "Max Supply", value: maxSupply }, { label: "Collateral Assets", value: collateral }],
-    [{ label: "Borrow Assets", value: "USDC · USDT" }, { label: "Min APY Targets", value: "5.5%" }, { label: "Target LTV", value: targetLTV }],
-    [{ label: "Max LTV at Origination", value: maxLTVOrig }, { label: "Rebalance Threshold", value: "8% from target" }, { label: "Max Protocol Exposure", value: maxProtocol }],
+    [{ label: "Borrow Assets", value: borrowAssets }, { label: "Min APY Target", value: minAPY }, { label: "Target LTV", value: targetLTV }],
+    [{ label: "Max LTV at Origination", value: maxLTVOrig }, { label: "Rebalance Threshold", value: rebalThreshold }, { label: "Max Protocol Exposure", value: maxProtocol }],
     [{ label: "Liquidation Risk Ceiling", value: liqCeiling }, { label: "Book LTV Breaker", value: "> 70% halt" }, { label: "Default Rate Breaker", value: "> 1.5% · 90d" }],
   ];
 
@@ -854,7 +894,7 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
           </div>
 
           <PolicyGrid rows={policyRows} onEdit={onEdit} />
-          <SchemaSection rows={LENDING_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "lending", rawPolicy)} />
 
           {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -905,13 +945,16 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
   const maxStable = p.typeConfig?.max_stable_pair_concentration ?? 40;
   const ilTol = p.typeConfig?.impermanent_loss_tolerance_percent ?? 2;
   const exitBelow = p.typeConfig?.exit_if_apy_below_percent ? `${p.typeConfig.exit_if_apy_below_percent}% of entry` : "60% of entry";
-  const protocols = (p.typeConfig?.protocol_allowlist ?? ["morpho", "aave_v3", "pendle", "sky"]).join(", ");
+  const protocols = Array.isArray(p.typeConfig?.protocol_allowlist)
+    ? p.typeConfig.protocol_allowlist.join(", ")
+    : (p.typeConfig?.protocol_allowlist ?? "morpho, aave_v3, pendle, sky");
 
+  const strategyTypeLabel = p.typeConfig?.strategy_type ? p.typeConfig.strategy_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Stable farming";
   const policyRows: PolicyCell[][] = [
-    [{ label: "Strategy", value: "Stable farming" }, { label: "Target APY", value: `${targetAPY}%` }, { label: "Min APY Floor", value: `${minAPY}%` }],
+    [{ label: "Strategy", value: strategyTypeLabel }, { label: "Target APY", value: `${targetAPY}%` }, { label: "Min APY Floor", value: `${minAPY}%` }],
     [{ label: "Exit if APY Drops Below", value: exitBelow }, { label: "Max Position Size", value: maxPosition }, { label: "Max Per Protocol", value: `${maxStable}%` }],
     [{ label: "Max Slippage", value: `${slippage} bps` }, { label: "IL Tolerance", value: `${ilTol}%` }, { label: "Rebalance Frequency", value: rebalanceFreq }],
-    [{ label: "Protocol Downgrade", value: "- 2 tiers · Exit" }, { label: "TVL Drain Breaker", value: "- 30% · 24hr" }, { label: "Stable Peg Breaker", value: "< 0.995 · Exit" }],
+    [{ label: "Protocol Allowlist", value: String(protocols) }, { label: "TVL Drain Breaker", value: "- 30% · 24hr" }, { label: "Stable Peg Breaker", value: "< 0.995 · Exit" }],
   ];
 
   return (
@@ -955,7 +998,7 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
           </div>
 
           <PolicyGrid rows={policyRows} onEdit={onEdit} />
-          <SchemaSection rows={YIELD_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "yield", rawPolicy)} />
 
           {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -993,18 +1036,17 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$1,224,000";
-  const perTxLimit = p.spendLimit ? `$${(parseInt(p.spendLimit) / 1_000_000).toLocaleString()}` : "$10,000";
-  const dailyBudget = p.typeConfig?.daily_spend_budget_usdc ? `$${(Number(p.typeConfig.daily_spend_budget_usdc) / 1_000_000).toLocaleString()}` : "$25,000";
-  const dailyTxCount = p.typeConfig?.daily_transaction_count_limit ?? 2000;
-  const execWindow = p.typeConfig?.execution_window ?? "24/7";
-  const x402MaxReq = p.typeConfig?.x402_max_per_request_usdc ? `$${(Number(p.typeConfig.x402_max_per_request_usdc) / 1_000_000).toLocaleString()}` : "Not capped";
-  const approvalThresh = p.approvalThreshold && p.approvalThreshold !== "0" ? `> $${Number(p.approvalThreshold).toLocaleString()}` : "> $10,000";
+  const perTxLimit = p.typeConfig?.per_transaction_limit_usdc ? `$${Number(p.typeConfig.per_transaction_limit_usdc).toLocaleString()}` : "$10,000";
+  const dailyBudget = p.typeConfig?.daily_spend_budget_usdc ? `$${Number(p.typeConfig.daily_spend_budget_usdc).toLocaleString()}` : "$25,000";
+  const approvalAbove = p.typeConfig?.require_approval_above_usdc ? `> $${Number(p.typeConfig.require_approval_above_usdc).toLocaleString()}` : "> $1,000";
+  const velocityCap = p.typeConfig?.counterparty_velocity_usdc ? `$${Number(p.typeConfig.counterparty_velocity_usdc).toLocaleString()} / 24h` : "$50,000 / 24h";
+  const paymentTypeLabel = p.typeConfig?.payment_type ? p.typeConfig.payment_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Recurring + subscriptions";
 
   const policyRows: PolicyCell[][] = [
-    [{ label: "Payment Type", value: "Recurring + subscriptions" }, { label: "Per-TX limit", value: perTxLimit }, { label: "Daily Budget", value: dailyBudget }],
-    [{ label: "Daily TX Count", value: String(dailyTxCount) }, { label: "Approval Threshold", value: approvalThresh }, { label: "Execution Window", value: execWindow }],
-    [{ label: "x402 Enabled", value: "Yes · 12 Hosts" }, { label: "x402 Max / Request", value: x402MaxReq }, { label: "Sanctions Screening", value: "OFAC + Chainalysis" }],
-    [{ label: "Velocity / Counterparty", value: "$50k / 24h" }, { label: "Volume Spike", value: "5x · 24hr · Freeze" }, { label: "Sanctions Hit", value: "Block + alert" }],
+    [{ label: "Payment Type", value: paymentTypeLabel }, { label: "Per-TX Limit", value: perTxLimit }, { label: "Daily Budget", value: dailyBudget }],
+    [{ label: "Approval Threshold", value: approvalAbove }, { label: "Velocity / Counterparty", value: velocityCap }, { label: "Sanctions Screening", value: "OFAC + Chainalysis" }],
+    [{ label: "x402 Enabled", value: "Yes" }, { label: "Volume Spike Breaker", value: "5× · 24hr · Freeze" }, { label: "Sanctions Hit", value: "Block + alert" }],
+    [{ label: "Capital Allocated", value: capitalAmt }, { label: "Execution Window", value: "24/7" }, { label: "ERC-8004 Registry", value: "Registered" }],
   ];
 
   return (
@@ -1049,7 +1091,7 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
           </div>
 
           <PolicyGrid rows={policyRows} onEdit={onEdit} />
-          <SchemaSection rows={PAYMENTS_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "payments", rawPolicy)} />
 
           {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -1089,23 +1131,27 @@ const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBa
   agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
 }) => {
   const p = rawPolicy ?? {};
-  const trackedAgents = p.typeConfig?.tracked_agents ?? 5;
+  const trackedAgentsRaw = p.typeConfig?.tracked_agents;
+  const trackedAgents = trackedAgentsRaw === "all" ? "All" : (trackedAgentsRaw ?? "All");
   const maxAlerts = p.typeConfig?.max_alerts_per_day ?? 10;
-  const computeCap = p.typeConfig?.compute_budget_usdc
-    ? `$${(Number(p.typeConfig.compute_budget_usdc) / 1_000_000).toLocaleString()} / month`
-    : "$250 / month";
+  const computeCap = p.typeConfig?.compute_cap_usdc
+    ? `$${Number(p.typeConfig.compute_cap_usdc).toLocaleString()} / month`
+    : (p.typeConfig?.compute_budget_usdc ? `$${(Number(p.typeConfig.compute_budget_usdc) / 1_000_000).toLocaleString()} / month` : "$250 / month");
   const execCap = p.typeConfig?.execution_limit_usdc
     ? `$${(Number(p.typeConfig.execution_limit_usdc) / 1_000_000).toLocaleString()} / action`
     : "$5,000 / action";
+  const criticalRouting = p.typeConfig?.critical_routing ?? "Dash + Slack + SMS";
+  const reportFreq = p.typeConfig?.report_frequency ? (p.typeConfig.report_frequency.charAt(0).toUpperCase() + p.typeConfig.report_frequency.slice(1)) : "Daily";
+  const allowedActionsLabel = p.typeConfig?.allowed_actions ? p.typeConfig.allowed_actions.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Pause agent only";
   const allowedActions = Array.isArray(p.typeConfig?.execution_whitelist)
     ? p.typeConfig.execution_whitelist.join(", ")
     : "Pause agent only";
 
   const policyRows: PolicyCell[][] = [
-    [{ label: "Tracked Agents", value: `All (${trackedAgents})` }, { label: "Tracked Positions", value: "All open" }, { label: "Report Frequency", value: "Daily 09:00 GST" }],
-    [{ label: "Recommendations", value: "Included" }, { label: "Critical Routing", value: "Dash + Slack + SMS" }, { label: "Max Alerts / Day", value: String(maxAlerts) }],
+    [{ label: "Tracked Agents", value: `${trackedAgents}` }, { label: "Tracked Positions", value: "All open" }, { label: "Report Frequency", value: `${reportFreq} 09:00 GST` }],
+    [{ label: "Recommendations", value: "Included" }, { label: "Critical Routing", value: criticalRouting }, { label: "Max Alerts / Day", value: String(maxAlerts) }],
     [{ label: "Compute Cap", value: computeCap }, { label: "Auto Execute", value: "Enabled · Whitelist" }, { label: "Execution Cap", value: execCap }],
-    [{ label: "Allowed Actions", value: allowedActions }, { label: "Daily Action Cap", value: "3" }, { label: "Sanctions Hit", value: "Move funds · Trade" }],
+    [{ label: "Allowed Actions", value: allowedActionsLabel }, { label: "Daily Action Cap", value: "3" }, { label: "Sanctions Hit", value: "Move funds · Trade" }],
   ];
 
   return (
@@ -1146,7 +1192,7 @@ const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBa
           </div>
 
           <PolicyGrid rows={policyRows} onEdit={onEdit} />
-          <SchemaSection rows={ANALYTICS_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "analytics", rawPolicy)} />
 
           {/* Transaction History */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -1197,15 +1243,19 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$5,000";
   const primaryLimit = p.typeConfig?.primary_limit_usdc
-    ? `$${(Number(p.typeConfig.primary_limit_usdc) / 1_000_000).toLocaleString()} / Order`
+    ? `$${Number(p.typeConfig.primary_limit_usdc).toLocaleString()} / Order`
     : "$500 / Order";
-  const secondaryLimit = p.typeConfig?.secondary_limit_usdc
-    ? `$${(Number(p.typeConfig.secondary_limit_usdc) / 1_000_000).toLocaleString()} / Day`
+  const secondaryLimit = (p.typeConfig?.secondary_limit_usdc ?? p.typeConfig?.secondary_limit)
+    ? `$${Number(p.typeConfig.secondary_limit_usdc ?? p.typeConfig.secondary_limit).toLocaleString()} / Day`
     : "$25,000 / Day";
   const opsPerHour = p.typeConfig?.max_operations_per_hour ?? 1200;
   const execWindow = p.typeConfig?.execution_window ?? "24/7";
   const sandboxDays = p.typeConfig?.sandbox_days_required ?? 14;
   const circuitBreaker = p.typeConfig?.circuit_breaker_loss_pct ? `-${p.typeConfig.circuit_breaker_loss_pct}% PnL · Pause` : "-8% PnL · Pause";
+  const objective = p.typeConfig?.objective ?? "";
+  const complexityLevel = p.typeConfig?.complexity_level ? (p.typeConfig.complexity_level.charAt(0).toUpperCase() + p.typeConfig.complexity_level.slice(1)) : "Medium";
+  const runtimeLabel = p.typeConfig?.runtime ?? "Node 20";
+  const sourceType = p.typeConfig?.source_type ? p.typeConfig.source_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "GitHub Repo";
 
   const gradDays = 4;
   const gradRequired = sandboxDays;
@@ -1257,13 +1307,13 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
               <div className="flex flex-col gap-[4px] flex-1 px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Target Outcome</span>
                 <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">
-                  {p.typeConfig?.objective?.slice(0, 40) ?? "Positive PnL · Sharpe > 1.0"}
+                  {objective?.slice(0, 60) || "Positive PnL · Sharpe > 1.0"}
                 </span>
               </div>
               <div className="flex flex-col gap-[4px] w-[160px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
                 <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Complexity</span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px] capitalize">
-                  {p.typeConfig?.complexity_level ?? "Medium"}
+                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">
+                  {complexityLevel}
                 </span>
               </div>
             </div>
@@ -1316,14 +1366,18 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-[8px]">
+                <div className="grid grid-cols-3 gap-[8px]">
                   <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
                     <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
                     <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{execWindow}</span>
                   </div>
                   <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{execWindowDesc}</span>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Runtime</span>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{runtimeLabel}</span>
+                  </div>
+                  <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
+                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Source Type</span>
+                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{sourceType}</span>
                   </div>
                 </div>
               </div>
@@ -1346,7 +1400,7 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
             </div>
           </div>
 
-          <SchemaSection rows={CUSTOM_SCHEMA} />
+          <SchemaSection rows={buildDynamicSchema(agent.id, "custom", rawPolicy)} />
 
           {/* Capability Invocation Log */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>

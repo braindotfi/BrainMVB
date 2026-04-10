@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
@@ -122,6 +122,8 @@ const TypeBadge = ({ type }: { type: string }) => (
   </div>
 );
 
+const ALL_CUSTOM_TOOLS_LIST = ["Read Balance","Read Orderbook","Read Market Data","Place Limit Order","Cancel Order","Place Market Order","Open Perp","Transfer Internal","Withdraw External","Contract Call"];
+
 /* ─── Helpers ─── */
 const formatUsd = (raw: string): string => {
   const clean = raw.replace(/[^0-9.]/g, "");
@@ -222,14 +224,69 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
   /* ── Policy params ── */
   const policyParams = useMemo<Record<string, unknown>>(() => {
-    if (selectedType === "trading") return { strategy_type: t_strategy_type, max_position_size_usdc: parseUsd(t_max_position_size_usdc), max_daily_loss_percent: parseInt(t_max_daily_loss_percent), allowed_markets: t_allowed_markets, cooldown_window_seconds: parseInt(t_cooldown_window_seconds), cumulative_exposure_limit: parseUsd(t_cumulative_exposure_limit), order_types: t_order_types, max_slippage_bps: parseInt(t_max_slippage_bps), max_position_leverage: parseInt(t_max_position_leverage) };
-    if (selectedType === "lending") return { protocol: l_protocol, max_supply_usd: parseUsd(l_max_supply_usd), allowed_collateral_assets: l_allowed_collateral_assets, allowed_borrow_assets: l_allowed_borrow_assets, max_ltv_percent: parseInt(l_max_ltv_percent), target_ltv_percent: parseInt(l_target_ltv_percent), rebalance_threshold_percent: parseInt(l_rebalance_threshold_percent), max_liquidation_risk_percent: parseInt(l_max_liquidation_risk_percent), max_protocol_exposure_percent: parseInt(l_max_protocol_exposure_percent), min_apy_target_percent: parseInt(l_min_apy_target_percent) };
-    if (selectedType === "yield") return { strategy_type: y_strategy_type, min_apy_percent: parseInt(y_min_apy_percent), target_apy_percent: parseInt(y_target_apy_percent), exit_if_apy_below_percent: parseInt(y_exit_if_apy_below_percent), max_slippage_bps: parseInt(y_max_slippage_bps), max_stable_pair_concentration: parseInt(y_max_stable_pair_concentration), max_position_size_usdc: parseUsd(y_max_position_size_usdc) };
-    if (selectedType === "payments") return { payment_type: p_payment_type, per_transaction_limit_usdc: parseUsd(p_per_transaction_limit_usdc), daily_spend_budget_usdc: parseUsd(p_daily_spend_budget_usdc), require_approval_above_usdc: parseUsd(p_require_approval_above_usdc) };
-    if (selectedType === "analytics") return { tracked_agents: a_tracked_agents, report_frequency: a_report_frequency };
-    if (selectedType === "custom") return { complexity_level: c_complexity_level, allowed_tools: c_allowed_tools, primary_limit_usdc: parseUsd(c_primary_limit), secondary_limit: parseUsd(c_secondary_limit) };
+    if (selectedType === "trading") return {
+      strategy_type: t_strategy_type,
+      max_position_size_usdc: parseUsd(t_max_position_size_usdc),
+      max_daily_loss_percent: parseInt(t_max_daily_loss_percent),
+      kill_switch_drawdown: parseInt(t_kill_switch_drawdown),
+      allowed_markets: t_allowed_markets,
+      cooldown_window_seconds: parseInt(t_cooldown_window_seconds),
+      cumulative_exposure_limit: parseUsd(t_cumulative_exposure_limit),
+      order_types: t_order_types,
+      max_slippage_bps: parseInt(t_max_slippage_bps),
+      max_position_leverage: parseInt(t_max_position_leverage),
+    };
+    if (selectedType === "lending") return {
+      protocol: l_protocol,
+      max_supply_usd: parseUsd(l_max_supply_usd),
+      allowed_collateral_assets: l_allowed_collateral_assets,
+      allowed_borrow_assets: l_allowed_borrow_assets,
+      max_ltv_percent: parseInt(l_max_ltv_percent),
+      target_ltv_percent: parseInt(l_target_ltv_percent),
+      rebalance_threshold_percent: parseInt(l_rebalance_threshold_percent),
+      max_liquidation_risk_percent: parseInt(l_max_liquidation_risk_percent),
+      max_protocol_exposure_percent: parseInt(l_max_protocol_exposure_percent),
+      min_apy_target_percent: parseInt(l_min_apy_target_percent),
+    };
+    if (selectedType === "yield") return {
+      strategy_type: y_strategy_type,
+      min_apy_percent: parseInt(y_min_apy_percent),
+      target_apy_percent: parseInt(y_target_apy_percent),
+      exit_if_apy_below_percent: parseInt(y_exit_if_apy_below_percent),
+      max_slippage_bps: parseInt(y_max_slippage_bps),
+      max_stable_pair_concentration: parseInt(y_max_stable_pair_concentration),
+      max_position_size_usdc: parseUsd(y_max_position_size_usdc),
+      protocol_allowlist: y_protocols,
+    };
+    if (selectedType === "payments") return {
+      payment_type: p_payment_type,
+      per_transaction_limit_usdc: parseUsd(p_per_transaction_limit_usdc),
+      daily_spend_budget_usdc: parseUsd(p_daily_spend_budget_usdc),
+      require_approval_above_usdc: parseUsd(p_require_approval_above_usdc),
+      counterparty_velocity_usdc: parseUsd(p_counterparty_velocity),
+    };
+    if (selectedType === "analytics") return {
+      tracked_agents: a_tracked_agents,
+      report_frequency: a_report_frequency,
+      critical_routing: a_critical_routing,
+      max_alerts_per_day: parseInt(a_max_alerts_per_day),
+      compute_cap_usdc: parseUsd(a_compute_cap),
+      allowed_actions: a_allowed_actions,
+      execution_whitelist: [a_allowed_actions],
+    };
+    if (selectedType === "custom") return {
+      objective: c_objective,
+      complexity_level: c_complexity_level,
+      source_type: c_source_type,
+      runtime: c_runtime,
+      repo_url: c_repo_url,
+      allowed_tools: c_allowed_tools,
+      forbidden_tools: ALL_CUSTOM_TOOLS_LIST.filter(t => !c_allowed_tools.includes(t)),
+      primary_limit_usdc: parseUsd(c_primary_limit),
+      secondary_limit_usdc: parseUsd(c_secondary_limit),
+    };
     return {};
-  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_stable_pair_concentration, y_max_position_size_usdc, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, a_tracked_agents, a_report_frequency, c_complexity_level, c_allowed_tools, c_primary_limit, c_secondary_limit]);
+  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_stable_pair_concentration, y_max_position_size_usdc, y_protocols, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
 
   const policyHash = useMemo(() => selectedType ? computePolicyHash(selectedType, policyParams) : "", [selectedType, policyParams]);
 
@@ -450,7 +507,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     width: 6, height: 6,
                     background: i <= step ? "#FFFFFF" : "#FF9500",
                     opacity: i <= step ? 1 : 0.4,
-                    mixBlendMode: i > step ? "plus-lighter" : "normal",
+                    mixBlendMode: (i > step ? "plus-lighter" : "normal") as React.CSSProperties["mixBlendMode"],
                   }}
                 />
               ))}
