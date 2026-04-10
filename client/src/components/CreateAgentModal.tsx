@@ -29,7 +29,7 @@ const avatarOptions = [
   "/figmaAssets/avatars-6.svg", "/figmaAssets/avatars-7.svg", "/figmaAssets/avatars-8.svg", "/figmaAssets/avatars-9.svg",
 ];
 
-const STEPS = ["Agent Type", "Identity", "Configuration", "Capital", "Policy Preview", "Authorization", "Review"];
+const STEPS = ["Agent Type", "Identity", "Capital", "Configuration", "Preview & Sign", "Review"];
 const AVAILABLE_BALANCE = 865040.30;
 
 /* ─── Enforcement checks per type (sourced from schema doc) ─── */
@@ -153,9 +153,9 @@ const Radio = ({ label, fieldName, options, value, onChange, cols = 2, hint }: {
         const sel = value === opt;
         return (
           <button key={opt} onClick={() => onChange(opt)}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs [font-family:'Gilroy-SemiBold',Helvetica] transition-all ${sel ? "border-brain-v1dark-orange bg-[#2a1500] text-brain-v1light-orange" : "border-[#1d2131] bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:border-[#414965]"}`}>
+            className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs [font-family:'Gilroy-SemiBold',Helvetica] transition-all ${sel ? "border-[#7631ee] bg-[#240757] text-[#a8b9f4]" : "border-[#1d2131] bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:border-[#414965]"}`}>
             <span className="text-left">{opt}</span>
-            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${sel ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-brain-v1baby-blue-30"}`}>
+            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${sel ? "border-[#7631ee] bg-[#7631ee]" : "border-brain-v1baby-blue-30"}`}>
               {sel && <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </div>
           </button>
@@ -389,8 +389,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const canProceed = () => {
     if (step === 0) return !!selectedType;
     if (step === 1) return !!agentName;
-    if (step === 3) return !!capital && !balanceError;
-    if (step === 5) return isEditMode || (authSig && terms);
+    if (step === 2) return !!capital && !balanceError;
+    if (step === 4) return isEditMode || (authSig && terms);
     return true;
   };
 
@@ -780,38 +780,63 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       <div className="relative z-10 w-[560px] max-h-[90vh] flex flex-col bg-[#0d1017] border border-[#1d2131] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* SUCCESS */}
-        {launched && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0d1017] gap-5 px-8 overflow-y-auto py-8">
-            <div className="w-20 h-20 rounded-full bg-brain-v1dark-orange/20 border border-brain-v1dark-orange/30 flex items-center justify-center flex-shrink-0">
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M18 6L22 14L31 15.5L24.5 22L26 31L18 27L10 31L11.5 22L5 15.5L14 14L18 6Z" fill="#ff9500" fillOpacity="0.15" stroke="#ff9500" strokeWidth="1.5" strokeLinejoin="round" /></svg>
-            </div>
-            <div className="text-center">
-              <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">{isEditMode ? "Changes saved!" : `${agentName || "Agent"} is live!`}</h3>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">Deployed and policy committed on-chain.</p>
-            </div>
-            <div className="w-full flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
-              {selectedAvatar ? <img src={selectedAvatar} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" /> : (
-                <div className="w-10 h-10 rounded-xl bg-brain-v1dark-orange/20 flex items-center justify-center flex-shrink-0 text-lg">{agentTypes.find((t) => t.id === selectedType)?.icon ?? "🤖"}</div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm truncate">{agentName}</p>
-                <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] capitalize">{selectedType} agent</p>
+        {launched && (() => {
+          const demoAgentId = "0x" + policyHash.slice(2, 10).toUpperCase();
+          const demoSubAccount = "0x" + policyHash.slice(10, 18).toUpperCase() + "…" + policyHash.slice(-4).toUpperCase();
+          const demoTxId = "0x" + policyHash.slice(18, 26).toUpperCase() + "…" + policyHash.slice(-8, -4).toUpperCase();
+          return (
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0d1017] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1d2131] flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-brain-v1green animate-pulse" />
+                  <span className="text-xs text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">Live</span>
+                </div>
+                <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                </button>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <div className="w-2 h-2 rounded-full bg-brain-v1green animate-pulse" />
-                <span className="text-xs text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">Active</span>
+              <div className="flex-1 flex flex-col gap-5 px-6 py-6">
+                <div className="flex items-center gap-4">
+                  {selectedAvatar ? (
+                    <img src={selectedAvatar} alt="" className="w-14 h-14 rounded-2xl object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-2xl bg-[#240757] flex items-center justify-center text-2xl flex-shrink-0">{agentTypes.find((t) => t.id === selectedType)?.icon ?? "🤖"}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-xl truncate">{isEditMode ? "Changes saved!" : `${agentName || "Agent"} is live!`}</h3>
+                    <span className="px-2.5 py-0.5 bg-[#240757] rounded-full text-[#a8b9f4] text-[11px] [font-family:'Gilroy-SemiBold',Helvetica] capitalize inline-block mt-1">{selectedType}</span>
+                  </div>
+                </div>
+                <div className="bg-[#06070a] rounded-2xl border border-[#1d2131] overflow-hidden">
+                  {[
+                    { label: "Agent ID",         value: demoAgentId,       color: "#a8b9f4" },
+                    { label: "Sub-Account",       value: demoSubAccount,    color: "#a8b9f4" },
+                    { label: "Policy Hash",       value: policyHash.slice(0, 12) + "…" + policyHash.slice(-6), color: "#42bf23" },
+                    { label: "Allocated Capital", value: `$${capital || "0"} ${capitalAsset}`, color: "white" },
+                    { label: "ERC-8004 Registry", value: "Registered",      color: "#42bf23" },
+                    { label: "Deployment TX ID",  value: demoTxId,          color: "#a8b9f4" },
+                  ].map(({ label, value, color }, i, arr) => (
+                    <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < arr.length - 1 ? "border-b border-[#1d2131]" : ""}`}>
+                      <span className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica]">{label}</span>
+                      <code className="text-[11px] [font-family:'JetBrains_Mono',Helvetica]" style={{ color }}>{value}</code>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed text-center">Your new AI agent will appear on your dashboard shortly. It is already live and operating according to your policies.</p>
+                <div className="flex gap-3">
+                  <button onClick={handleClose} data-testid="button-home"
+                    className="flex-1 py-3.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl text-brain-v1baby-blue-60 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:border-[#414965] hover:text-white transition-all">
+                    Home
+                  </button>
+                  <button onClick={() => { onViewMyAgents ? onViewMyAgents() : handleClose(); }} data-testid="button-view-agent"
+                    className="flex-1 py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity">
+                    View Agent →
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="w-full bg-[#06070a] rounded-2xl border border-[#1d2131] px-4 py-3 flex flex-col gap-1">
-              <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest mb-1">policy_hash</p>
-              <code className="text-[10px] text-[#42bf23] [font-family:'JetBrains_Mono',Helvetica] break-all">{policyHash}</code>
-            </div>
-            <button onClick={() => { onViewMyAgents ? onViewMyAgents() : handleClose(); }}
-              className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity flex-shrink-0">
-              View in My Agents →
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* HEADER */}
         <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-[#1d2131] flex-shrink-0">
@@ -845,16 +870,16 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 {agentTypes.map((t) => {
                   const sel = selectedType === t.id;
                   return (
-                    <button key={t.id} onClick={() => setSelectedType(t.id)}
-                      className={`flex flex-col gap-2 p-4 rounded-2xl border text-left transition-all ${sel ? "border-brain-v1dark-orange bg-[#2a1500]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"}`}>
+                    <button key={t.id} onClick={() => setSelectedType(t.id)} data-testid={`agent-type-${t.id}`}
+                      className={`flex flex-col gap-2 p-4 rounded-2xl border text-left transition-all ${sel ? "border-[#7631ee] bg-[#240757]" : "border-[#1d2131] bg-[#06070a] hover:border-[#414965]"}`}>
                       <div className="flex items-center justify-between">
                         <span className="text-2xl">{t.icon}</span>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${sel ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-brain-v1baby-blue-30"}`}>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${sel ? "border-[#7631ee] bg-[#7631ee]" : "border-brain-v1baby-blue-30"}`}>
                           {sel && <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                         </div>
                       </div>
                       <div>
-                        <div className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm ${sel ? "text-brain-v1light-orange" : "text-white"}`}>{t.label}</div>
+                        <div className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm ${sel ? "text-[#a8b9f4]" : "text-white"}`}>{t.label}</div>
                         <div className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 leading-relaxed">{t.desc}</div>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -910,11 +935,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             </div>
           )}
 
-          {/* STEP 2 — Configuration */}
-          {step === 2 && <ConfigStep />}
-
-          {/* STEP 3 — Capital */}
-          {step === 3 && (
+          {/* STEP 2 — Capital */}
+          {step === 2 && (
             <div className="flex flex-col gap-4">
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Set the initial capital allocation. This value is stored in USDC wei in the BrainAccount smart contract.</p>
 
@@ -956,70 +978,83 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             </div>
           )}
 
-          {/* STEP 4 — Policy Preview */}
+          {/* STEP 3 — Configuration (type-specific) */}
+          {step === 3 && <ConfigStep />}
+
+          {/* STEP 4 — Preview & Sign (Policy Preview + Authorization merged) */}
           {step === 4 && (
-            <div className="flex flex-col gap-7">
+            <div className="flex flex-col gap-5">
+              {/* Capital summary */}
+              <div className="flex items-center justify-between p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest">Capital Allocated</span>
+                  <span className="[font-family:'JetBrains_Mono',Helvetica] text-white text-base">${capital || "0"} {capitalAsset}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-brain-v1green" />
+                  <span className="text-xs text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">Ready</span>
+                </div>
+              </div>
+
+              {/* Policy hash */}
               <div>
                 <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-sm mb-1">Policy Hash</p>
-                <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mb-3">Deterministic keccak256 of your agent's policy parameters. Any change to a field changes the hash. This hash is committed on-chain via <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">setPolicy(bytes32)</code>.</p>
+                <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mb-3">Inputs are validated and hashed deterministically into a 32-byte commitment via keccak256.</p>
                 <PolicyHashSection />
               </div>
 
-              <div className="border-t border-[#1d2131] pt-5">
+              {/* Enforcement Stack (collapsible summary) */}
+              <div className="border-t border-[#1d2131] pt-4">
                 <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-sm mb-1">Enforcement Stack</p>
                 <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mb-3">Three independent layers enforce your policy at every stage of the execution pipeline.</p>
                 <EnforcementStack />
               </div>
 
-              <div className="border-t border-[#1d2131] pt-5">
+              {/* Tool schema */}
+              <div className="border-t border-[#1d2131] pt-4">
                 <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-sm mb-1">Claude Tool Schema</p>
                 <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mb-3">Tool definitions available to the ReAct loop for this agent type.</p>
                 <ToolSchemaSection />
               </div>
-            </div>
-          )}
 
-          {/* STEP 5 — Authorization */}
-          {step === 5 && (
-            <div className="flex flex-col gap-4">
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.</p>
-              <div className="p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
+              {/* Authorization checkboxes */}
+              <div className="border-t border-[#1d2131] pt-4 flex flex-col gap-3">
                 <p className="text-xs text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] leading-relaxed">
-                  Authorizing will call <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">authorizeAgent(agent_id, capital_allocation)</code> on your BrainAccount. Policy hash <code className="text-[#42bf23] [font-family:'JetBrains_Mono',Helvetica]">{policyHash.slice(0, 14)}…</code> will be committed via <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">setPolicy(bytes32)</code>. You can revoke at any time via <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">revokeAgent(agent_id)</code>.
+                  Authorizing will call <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">authorizeAgent(agent_id, capital_allocation)</code> on your BrainAccount. Policy hash <code className="text-[#42bf23] [font-family:'JetBrains_Mono',Helvetica]">{policyHash.slice(0, 14)}…</code> will be committed via <code className="text-[#a8b9f4] [font-family:'JetBrains_Mono',Helvetica]">setPolicy(bytes32)</code>.
                 </p>
+                {[
+                  { id: "auth", label: "I authorize this agent to act on my behalf", sublabel: "The agent will operate within the defined policy hash commitment.", val: authSig, set: setAuthSig },
+                  { id: "terms", label: "I agree to the Brain Finance Agent Terms", sublabel: "Including liability, risk disclosures, and platform policies.", val: terms, set: setTerms },
+                ].map(({ id, label, sublabel, val, set }) => (
+                  <button key={id} onClick={() => set(!val)} data-testid={`checkbox-${id}`} className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all w-full ${val ? "border-[#7631ee] bg-[#240757]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"}`}>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${val ? "border-[#7631ee] bg-[#7631ee]" : "border-[#414965]"}`}>
+                      {val && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                    </div>
+                    <div>
+                      <p className={`text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ${val ? "text-[#a8b9f4]" : "text-white"}`}>{label}</p>
+                      <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mt-0.5">{sublabel}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
-              {[
-                { id: "auth", label: "I authorize this agent to act on my behalf", sublabel: "The agent will operate within the defined policy hash commitment.", val: authSig, set: setAuthSig },
-                { id: "terms", label: "I agree to the Brain Finance Agent Terms", sublabel: "Including liability, risk disclosures, and platform policies.", val: terms, set: setTerms },
-              ].map(({ id, label, sublabel, val, set }) => (
-                <button key={id} onClick={() => set(!val)} className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all w-full ${val ? "border-brain-v1dark-orange bg-[#2a1500]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"}`}>
-                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${val ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-[#414965]"}`}>
-                    {val && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                  </div>
-                  <div>
-                    <p className={`text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ${val ? "text-brain-v1light-orange" : "text-white"}`}>{label}</p>
-                    <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mt-0.5">{sublabel}</p>
-                  </div>
-                </button>
-              ))}
             </div>
           )}
 
-          {/* STEP 6 — Review */}
-          {step === 6 && (
+          {/* STEP 5 — Review */}
+          {step === 5 && (
             <div className="flex flex-col gap-4">
               <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Review all schema fields before launching.</p>
 
               {/* Identity card */}
               <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
                 {selectedAvatar ? <img src={selectedAvatar} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" /> : (
-                  <div className="w-12 h-12 rounded-xl bg-brain-v1dark-orange flex items-center justify-center text-xl flex-shrink-0">{agentTypes.find((t) => t.id === selectedType)?.icon ?? "🤖"}</div>
+                  <div className="w-12 h-12 rounded-xl bg-[#240757] flex items-center justify-center text-xl flex-shrink-0">{agentTypes.find((t) => t.id === selectedType)?.icon ?? "🤖"}</div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-base truncate">{agentName || "Unnamed Agent"}</p>
                   {agentDesc && <p className="text-[11px] text-brain-v1baby-blue-60 [font-family:'Gilroy-Medium',Helvetica] mt-0.5 line-clamp-1">{agentDesc}</p>}
                 </div>
-                <span className="px-3 py-1 bg-brain-v1dark-orange/20 rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] capitalize flex-shrink-0">{selectedType}</span>
+                <span className="px-3 py-1 bg-[#240757] rounded-full text-[#a8b9f4] text-xs [font-family:'Gilroy-SemiBold',Helvetica] capitalize flex-shrink-0">{selectedType}</span>
               </div>
 
               <p className="text-[10px] text-brain-v1baby-blue-30 [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-widest px-1">Core Inputs</p>
