@@ -189,17 +189,49 @@ const ACheckbox = ({ checked, onChange }: { checked: boolean; onChange: () => vo
   </button>
 );
 
-const ADropdown = ({ label, value, onChange, children }: { label: React.ReactNode; value: string; onChange: (v: string) => void; children: React.ReactNode }) => (
-  <div className="flex flex-col gap-[4px]">
-    <div className="flex gap-[4px] items-center">{typeof label === "string" ? <FieldLabel>{label}</FieldLabel> : label}</div>
-    <div className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full">
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="bg-transparent text-white text-[16px] outline-none flex-1 cursor-pointer appearance-none min-w-0">
-        {children}
-      </select>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 pointer-events-none"><path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+const ADropdown = ({ label, value, onChange, options }: {
+  label: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) => {
+  const [open, setOpen] = useState(false);
+  const currentLabel = options.find(o => o.value === value)?.label ?? value;
+  return (
+    <div className="flex flex-col gap-[4px] relative">
+      {open && <div className="fixed inset-0 z-[49]" onClick={() => setOpen(false)} />}
+      <div className="flex gap-[4px] items-center">
+        {typeof label === "string" ? <FieldLabel>{label}</FieldLabel> : label}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left"
+      >
+        <span className="flex-1 font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] truncate min-w-0">
+          {currentLabel}
+        </span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 pointer-events-none">
+          <path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-[50] mt-[4px] bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[8px] shadow-[0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full text-left p-[8px] rounded-[8px] font-['Gilroy-Medium',sans-serif] text-[16px] leading-[20px] transition-colors ${opt.value === value ? "text-white bg-[#1d2132]" : "text-[#a8b9f4] hover:bg-[#1d2132]"}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const AToggleSwitch = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
   <button onClick={onToggle} className={`relative h-[24px] w-[40px] rounded-[100px] shrink-0 ${on ? "bg-[#123509]" : "bg-[#222737]"}`}>
@@ -499,6 +531,23 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [a_allowed_actions, setA_allowed_actions]     = useState("pause_agent_only");
   const [a_daily_action_cap, setA_daily_action_cap]   = useState("3");
   const [a_sanctions_hit_actions, setA_sanctions_hit_actions] = useState<string[]>(["Move funds", "Trade"]);
+  type AlertRule = { name: string; condition: string; agent: string; channel: string; action: string; actionColor: string };
+  const [a_alert_rules, setA_alert_rules] = useState<AlertRule[]>([
+    { name: "Trader drawdown",  condition: "PnL 24h < -10%",       agent: "Trader-Alpha",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
+    { name: "LTV Warning",       condition: "Any Loan LTV > 70%",    agent: "Lending-Core",  channel: "Slack",       action: "Notify", actionColor: "#ff9500" },
+    { name: "Vendor Anomaly",    condition: "Vendor Spend > 3x avg", agent: "Payments-Hub",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
+  ]);
+  const [showAddRuleModal, setShowAddRuleModal] = useState(false);
+  /* Add Alert Rule form fields */
+  const [ar_name, setAr_name]           = useState("");
+  const [ar_agent, setAr_agent]         = useState("Trader-Alpha");
+  const [ar_condition, setAr_condition] = useState("24h PnL");
+  const [ar_comparator, setAr_comparator] = useState("<");
+  const [ar_figure, setAr_figure]       = useState("");
+  const [ar_symbol, setAr_symbol]       = useState("%");
+  const [ar_sustained, setAr_sustained] = useState("5 Minutes");
+  const [ar_notify_via, setAr_notify_via] = useState("Slack + SMS");
+  const [ar_action, setAr_action]       = useState("pause");
 
   /* ══ CUSTOM ══ */
   const [c_objective, setC_objective]             = useState("");
@@ -1041,6 +1090,166 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 className="flex-1 bg-[#123509] font-['Gilroy-SemiBold',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
               >
                 Save Recipient
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ══ ADD ALERT RULE POPUP (overlays full modal) ══ */}
+        {showAddRuleModal && selectedType === "analytics" && (
+          <div className="absolute inset-0 z-20 bg-[#11141b] flex flex-col rounded-[24px] overflow-hidden">
+            {/* Title bar */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] flex items-center justify-center relative shrink-0">
+              <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">New Alert Rule</p>
+              <button
+                type="button"
+                onClick={() => setShowAddRuleModal(false)}
+                className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+              >
+                <X size={16} className="text-[#6c779d]" />
+              </button>
+            </div>
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-[24px] flex flex-col gap-[24px]">
+              <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+                Define when this scout should flag something or take action.
+              </p>
+              {/* Rule Name */}
+              <div className="flex flex-col gap-[8px]">
+                <FieldLabel>Rule Name</FieldLabel>
+                <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] bg-[#222737] ${ar_name ? "border border-[#414965]" : ""}`}>
+                  <input
+                    value={ar_name}
+                    onChange={(e) => setAr_name(e.target.value)}
+                    placeholder="e.g. Trader Drawdown"
+                    className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                  />
+                </div>
+              </div>
+              {/* CONDITION */}
+              <div className="flex flex-col gap-[16px]">
+                <SectionDivider title="CONDITION" />
+                <div className="grid grid-cols-2 gap-[16px]">
+                  <ADropdown
+                    label={<><FieldLabel>Agent</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                    value={ar_agent} onChange={setAr_agent}
+                    options={[
+                      {value:"Trader-Alpha",label:"Trader-Alpha"},
+                      {value:"Lending-Core",label:"Lending-Core"},
+                      {value:"Yield-Harvester",label:"Yield-Harvester"},
+                      {value:"Payments-Hub",label:"Payments-Hub"},
+                      {value:"Market-Maker-01",label:"Market-Maker-01"},
+                    ]}
+                  />
+                  <ADropdown
+                    label={<><FieldLabel>Condition</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                    value={ar_condition} onChange={setAr_condition}
+                    options={[
+                      {value:"24h PnL",label:"24h PnL"},
+                      {value:"LTV",label:"LTV"},
+                      {value:"Vendor Spend",label:"Vendor Spend"},
+                      {value:"Drawdown",label:"Drawdown"},
+                      {value:"APY",label:"APY"},
+                    ]}
+                  />
+                  <ADropdown
+                    label={<><FieldLabel>Under or Above</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                    value={ar_comparator} onChange={setAr_comparator}
+                    options={[
+                      {value:"<",label:"< (Under)"},
+                      {value:">",label:"> (Above)"},
+                      {value:"=",label:"= (Equal)"},
+                    ]}
+                  />
+                  <div className="flex flex-col gap-[4px]">
+                    <FieldLabel>Figure</FieldLabel>
+                    <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] bg-[#222737] ${ar_figure ? "border border-[#414965]" : ""}`}>
+                      <input
+                        value={ar_figure}
+                        onChange={(e) => setAr_figure(e.target.value)}
+                        placeholder="-10"
+                        type="number"
+                        className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                      />
+                    </div>
+                  </div>
+                  <ADropdown
+                    label={<><FieldLabel>Symbol</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                    value={ar_symbol} onChange={setAr_symbol}
+                    options={[
+                      {value:"%",label:"%"},
+                      {value:"$",label:"$"},
+                      {value:"x",label:"x (multiplier)"},
+                    ]}
+                  />
+                  <ADropdown
+                    label={<><FieldLabel>Sustained For</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                    value={ar_sustained} onChange={setAr_sustained}
+                    options={[
+                      {value:"5 Minutes",label:"5 Minutes"},
+                      {value:"15 Minutes",label:"15 Minutes"},
+                      {value:"1 Hour",label:"1 Hour"},
+                      {value:"Instant",label:"Instant"},
+                    ]}
+                  />
+                </div>
+              </div>
+              {/* ACTION */}
+              <div className="flex flex-col gap-[16px]">
+                <SectionDivider title="ACTION" />
+                <div className="grid grid-cols-2 gap-[16px]">
+                  <ADropdown
+                    label="Notify Via"
+                    value={ar_notify_via} onChange={setAr_notify_via}
+                    options={[
+                      {value:"Dashboard",label:"Dashboard"},
+                      {value:"Slack",label:"Slack"},
+                      {value:"Slack + SMS",label:"Slack + SMS"},
+                    ]}
+                  />
+                  <ADropdown
+                    label="Action"
+                    value={ar_action} onChange={setAr_action}
+                    options={[
+                      {value:"pause",label:"Pause Agent"},
+                      {value:"notify",label:"Notify Only"},
+                      {value:"log",label:"Log Only"},
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Bottom buttons */}
+            <div className="border-t border-[#1d2132] p-[24px] flex gap-[16px] items-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowAddRuleModal(false)}
+                className="flex-1 bg-[#222737] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const actionLabel = ar_action === "pause" ? "Pause" : ar_action === "notify" ? "Notify" : "Log";
+                  const actionColor = ar_action === "pause" ? "#d20344" : ar_action === "notify" ? "#ff9500" : "#6c779d";
+                  const condition = `${ar_condition} ${ar_comparator} ${ar_figure}${ar_symbol}`;
+                  setA_alert_rules(prev => [...prev, {
+                    name: ar_name.trim() || "New Rule",
+                    condition,
+                    agent: ar_agent,
+                    channel: ar_notify_via,
+                    action: actionLabel,
+                    actionColor,
+                  }]);
+                  setShowAddRuleModal(false);
+                  setAr_name(""); setAr_figure(""); setAr_agent("Trader-Alpha");
+                  setAr_condition("24h PnL"); setAr_comparator("<"); setAr_symbol("%");
+                  setAr_sustained("5 Minutes"); setAr_notify_via("Slack + SMS"); setAr_action("pause");
+                }}
+                className="flex-1 bg-[#123509] font-['Gilroy-SemiBold',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+              >
+                Save Rule
               </button>
             </div>
           </div>
@@ -2089,11 +2298,6 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
                   );
                   const toggleAll = () => setA_selected_agent_ids(allChecked ? [] : AGENT_LIST.map(a => a.id));
-                  const ALERT_RULES = [
-                    { name: "Trader drawdown",  condition: "PnL 24h < -10%",       agent: "Trader-Alpha",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
-                    { name: "LTV Warning",       condition: "Any Loan LTV > 70%",    agent: "Lending-Core",  channel: "Slack",       action: "Notify", actionColor: "#ff9500" },
-                    { name: "Vendor Anomaly",    condition: "Vendor Spend > 3x avg", agent: "Payments-Hub",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
-                  ];
                   return (
                     <div className="flex flex-col gap-[24px] w-full">
                       {/* AGENTS */}
@@ -2121,14 +2325,14 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <SectionDivider title="ALERT RULES" />
                         <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
                           <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] flex-1">Each rule has a condition and an action.</p>
-                          <button className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                          <button type="button" onClick={() => setShowAddRuleModal(true)} className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.33V12.67M3.33 8H12.67" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round"/></svg>
                             <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
                           </button>
                         </div>
                         <div className="flex flex-col gap-[8px] w-full">
-                          {ALERT_RULES.map((rule) => (
-                            <div key={rule.name} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px] w-full">
+                          {a_alert_rules.map((rule, idx) => (
+                            <div key={`${rule.name}-${idx}`} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px] w-full">
                               <div className="flex flex-1 items-center justify-between min-w-0">
                                 <div className="flex flex-col gap-[4px] items-start justify-center shrink-0">
                                   <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{rule.name}</p>
@@ -2143,7 +2347,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                                   <p className="font-['Gilroy-SemiBold',sans-serif] text-[14px] leading-[20px] whitespace-nowrap" style={{ color: rule.actionColor }}>{rule.action}</p>
                                 </div>
                               </div>
-                              <button className="relative size-[24px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
+                              <button type="button" onClick={() => setA_alert_rules(prev => prev.filter((_, i) => i !== idx))} className="relative size-[24px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round"/></svg>
                               </button>
                             </div>
@@ -2155,29 +2359,29 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[16px] w-full">
                         <SectionDivider title="REPORTING" />
                         <div className="grid grid-cols-2 gap-[16px]">
-                          <ADropdown label="Report Frequency" value={a_report_frequency} onChange={setA_report_frequency}>
-                            <option value="hourly"  className="bg-[#0a0c10]">Hourly</option>
-                            <option value="daily"   className="bg-[#0a0c10]">Daily</option>
-                            <option value="weekly"  className="bg-[#0a0c10]">Weekly</option>
-                            <option value="monthly" className="bg-[#0a0c10]">Monthly</option>
-                          </ADropdown>
-                          <ADropdown label="Critical Routing" value={a_critical_routing} onChange={setA_critical_routing}>
-                            <option value="Dashboard"               className="bg-[#0a0c10]">Dashboard</option>
-                            <option value="Dashboard + Slack"       className="bg-[#0a0c10]">Dashboard + Slack</option>
-                            <option value="Dashboard + Slack + SMS" className="bg-[#0a0c10]">Dashboard + Slack + SMS</option>
-                          </ADropdown>
-                          <ADropdown label="Max Alerts / Day" value={a_max_alerts_per_day} onChange={setA_max_alerts_per_day}>
-                            <option value="5"         className="bg-[#0a0c10]">5</option>
-                            <option value="10"        className="bg-[#0a0c10]">10</option>
-                            <option value="25"        className="bg-[#0a0c10]">25</option>
-                            <option value="Unlimited" className="bg-[#0a0c10]">Unlimited</option>
-                          </ADropdown>
-                          <ADropdown label="Compute Cap / Month" value={a_compute_cap} onChange={setA_compute_cap}>
-                            <option value="100"  className="bg-[#0a0c10]">$100</option>
-                            <option value="250"  className="bg-[#0a0c10]">$250</option>
-                            <option value="500"  className="bg-[#0a0c10]">$500</option>
-                            <option value="1000" className="bg-[#0a0c10]">$1,000</option>
-                          </ADropdown>
+                          <ADropdown label="Report Frequency" value={a_report_frequency} onChange={setA_report_frequency} options={[
+                            {value:"hourly",label:"Hourly"},
+                            {value:"daily",label:"Daily"},
+                            {value:"weekly",label:"Weekly"},
+                            {value:"monthly",label:"Monthly"},
+                          ]} />
+                          <ADropdown label="Critical Routing" value={a_critical_routing} onChange={setA_critical_routing} options={[
+                            {value:"Dashboard",label:"Dashboard"},
+                            {value:"Dashboard + Slack",label:"Dashboard + Slack"},
+                            {value:"Dashboard + Slack + SMS",label:"Dashboard + Slack + SMS"},
+                          ]} />
+                          <ADropdown label="Max Alerts / Day" value={a_max_alerts_per_day} onChange={setA_max_alerts_per_day} options={[
+                            {value:"5",label:"5"},
+                            {value:"10",label:"10"},
+                            {value:"25",label:"25"},
+                            {value:"Unlimited",label:"Unlimited"},
+                          ]} />
+                          <ADropdown label="Compute Cap / Month" value={a_compute_cap} onChange={setA_compute_cap} options={[
+                            {value:"100",label:"$100"},
+                            {value:"250",label:"$250"},
+                            {value:"500",label:"$500"},
+                            {value:"1000",label:"$1,000"},
+                          ]} />
                         </div>
                         <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
                           <div className="flex flex-1 flex-col gap-[4px] items-start leading-[20px] min-w-0">
@@ -2199,17 +2403,25 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <AToggleSwitch on={a_auto_execute} onToggle={() => setA_auto_execute(!a_auto_execute)} />
                         </div>
                         <div className="grid grid-cols-2 gap-[16px]">
-                          <ADropdown label={<><FieldLabel>Allowed Actions</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>} value={a_allowed_actions} onChange={setA_allowed_actions}>
-                            <option value="pause_agent_only" className="bg-[#0a0c10]">Pause Agent Only</option>
-                            <option value="pause_rebalance"  className="bg-[#0a0c10]">Pause + Rebalance</option>
-                            <option value="custom_whitelist" className="bg-[#0a0c10]">Custom Whitelist</option>
-                          </ADropdown>
-                          <ADropdown label={<><FieldLabel>Daily Action Cap</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>} value={a_daily_action_cap} onChange={setA_daily_action_cap}>
-                            <option value="1"  className="bg-[#0a0c10]">1</option>
-                            <option value="3"  className="bg-[#0a0c10]">3</option>
-                            <option value="5"  className="bg-[#0a0c10]">5</option>
-                            <option value="10" className="bg-[#0a0c10]">10</option>
-                          </ADropdown>
+                          <ADropdown
+                            label={<><FieldLabel>Allowed Actions</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                            value={a_allowed_actions} onChange={setA_allowed_actions}
+                            options={[
+                              {value:"pause_agent_only",label:"Pause Agent Only"},
+                              {value:"pause_rebalance",label:"Pause + Rebalance"},
+                              {value:"custom_whitelist",label:"Custom Whitelist"},
+                            ]}
+                          />
+                          <ADropdown
+                            label={<><FieldLabel>Daily Action Cap</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
+                            value={a_daily_action_cap} onChange={setA_daily_action_cap}
+                            options={[
+                              {value:"1",label:"1"},
+                              {value:"3",label:"3"},
+                              {value:"5",label:"5"},
+                              {value:"10",label:"10"},
+                            ]}
+                          />
                         </div>
                       </div>
                     </div>
