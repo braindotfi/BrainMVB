@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
-import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet, Trash2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -220,6 +220,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [agentName, setAgentName]       = useState("");
   const [agentDesc, setAgentDesc]       = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("");
+  const [avatarFileName, setAvatarFileName] = useState("");
   const [capital, setCapital]             = useState("");
   const [capitalAsset, setCapitalAsset]   = useState("USDC");
   const [showAssetDrop, setShowAssetDrop] = useState(false);
@@ -665,40 +666,54 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                 <div className="flex flex-col gap-[16px] items-start w-full">
                   {/* Avatar picker row */}
-                  <div
-                    className="bg-[#0a0c10] flex gap-[8px] h-[64px] items-center px-[16px] rounded-[16px] w-full cursor-pointer"
-                    onClick={() => setShowAvatarPicker((v) => !v)}
-                  >
-                    {/* Avatar thumbnail — 40×40, rounded-[20px] */}
-                    <div className="relative overflow-hidden rounded-[20px] size-[40px] shrink-0">
-                      {selectedAvatar ? (
+                  {selectedAvatar ? (
+                    /* ── Selected state: thumbnail + filename + red trash ── */
+                    <div className="bg-[#0a0c10] flex items-center h-[64px] px-[16px] rounded-[16px] w-full">
+                      {/* Avatar thumbnail — clickable to change */}
+                      <div
+                        className="relative overflow-hidden rounded-[20px] size-[40px] shrink-0 cursor-pointer"
+                        onClick={() => setShowAvatarPicker((v) => !v)}
+                      >
                         <img src={selectedAvatar} alt="" className="absolute inset-0 size-full object-cover" />
-                      ) : (
-                        <>
-                          <div className="absolute inset-0 bg-[#1d2132]" />
-                          <div className="absolute inset-[20%] flex items-center justify-center">
-                            <ImageIcon size={24} className="text-[#6c779d]" style={{ width: 24, height: 24 }} />
-                          </div>
-                        </>
-                      )}
+                      </div>
+                      {/* Filename */}
+                      <p className="flex-1 mx-[8px] font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] truncate min-w-0">
+                        {avatarFileName || selectedAvatar.split("/").pop() || "avatar"}
+                      </p>
+                      {/* Red trash button */}
+                      <button
+                        type="button"
+                        data-testid="button-remove-avatar"
+                        className="size-[40px] rounded-[100px] bg-[#2d0808] flex items-center justify-center shrink-0 hover:bg-[#3d0c0c] transition-colors"
+                        onClick={() => { setSelectedAvatar(""); setAvatarFileName(""); setShowAvatarPicker(false); }}
+                      >
+                        <Trash2 size={18} className="text-[#FF3B30]" />
+                      </button>
                     </div>
-
-                    {/* Label — 20px when empty, 16px when filled */}
-                    <p className={`flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] leading-[24px] min-w-0 truncate ${selectedAvatar ? "text-[16px]" : "text-[20px]"}`}>
-                      {selectedAvatar ? "Change Avatar" : "Add Avatar"}
-                    </p>
-
-                    {/* Action button — 32px + icon (empty) | 40px + image icon (filled) */}
-                    <button
-                      className={`rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors ${selectedAvatar ? "size-[40px]" : "size-[32px]"}`}
-                      onClick={(e) => { e.stopPropagation(); setShowAvatarPicker((v) => !v); }}
+                  ) : (
+                    /* ── Empty state: clickable row to open picker ── */
+                    <div
+                      className="bg-[#0a0c10] flex gap-[8px] h-[64px] items-center px-[16px] rounded-[16px] w-full cursor-pointer"
+                      onClick={() => setShowAvatarPicker((v) => !v)}
                     >
-                      {selectedAvatar
-                        ? <ImageIcon size={20} className="text-[#6c779d]" />
-                        : <Plus size={16} className="text-[#6c779d]" />
-                      }
-                    </button>
-                  </div>
+                      <div className="relative overflow-hidden rounded-[20px] size-[40px] shrink-0">
+                        <div className="absolute inset-0 bg-[#1d2132]" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <ImageIcon size={20} className="text-[#6c779d]" />
+                        </div>
+                      </div>
+                      <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[20px] leading-[24px] min-w-0 truncate">
+                        Add Avatar
+                      </p>
+                      <button
+                        type="button"
+                        className="rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0 size-[32px] hover:bg-[#222737] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setShowAvatarPicker((v) => !v); }}
+                      >
+                        <Plus size={16} className="text-[#6c779d]" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Avatar grid picker */}
                   {showAvatarPicker && (
@@ -706,7 +721,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       {avatarOptions.map((av) => (
                         <button
                           key={av}
-                          onClick={() => { setSelectedAvatar(av); setShowAvatarPicker(false); }}
+                          onClick={() => { setSelectedAvatar(av); setAvatarFileName(""); setShowAvatarPicker(false); }}
                           className={`rounded-[12px] overflow-hidden border-2 transition-all ${selectedAvatar === av ? "border-[#7631ee]" : "border-transparent hover:border-[#414965]"}`}
                         >
                           <img src={av} alt="" className="w-full aspect-square object-cover" />
@@ -1577,6 +1592,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           if (file) {
             const url = URL.createObjectURL(file);
             setSelectedAvatar(url);
+            setAvatarFileName(file.name);
+            setShowAvatarPicker(false);
           }
         }} />
       </div>
