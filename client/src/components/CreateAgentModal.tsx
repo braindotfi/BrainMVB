@@ -605,7 +605,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     className="rounded-full shrink-0 transition-colors duration-300"
                     style={{
                       width: 8, height: 8,
-                      background: i === step ? "#7631EE" : "#240757",
+                      background: i <= step ? "#7631EE" : "#240757",
                     }}
                   />
                 ))}
