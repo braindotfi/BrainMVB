@@ -596,18 +596,16 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               </button>
             )}
 
-            {/* Pagination dots — 96×24px frame, 5×8px dots, 8px gap, 12px side margins */}
-            <div className="flex items-center justify-center w-[96px] h-[24px]">
+            {/* Pagination dots — pill bg #12032D, active #7631EE, inactive #240757 */}
+            <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
               <div className="flex items-center gap-[8px]">
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className="rounded-full transition-all duration-300 shrink-0"
+                    className="rounded-full shrink-0 transition-colors duration-300"
                     style={{
                       width: 8, height: 8,
-                      background: i <= step ? "#FFFFFF" : "#FF9500",
-                      opacity: i <= step ? 1 : 0.4,
-                      mixBlendMode: (i > step ? "plus-lighter" : "normal") as React.CSSProperties["mixBlendMode"],
+                      background: i === step ? "#7631EE" : "#240757",
                     }}
                   />
                 ))}
