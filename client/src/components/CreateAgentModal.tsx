@@ -388,16 +388,32 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [p_payment_type, setP_payment_type]                         = useState("recurring_bills");
   const [p_per_transaction_limit_usdc, setP_per_transaction_limit_usdc] = useState("10,000");
   const [p_daily_spend_budget_usdc, setP_daily_spend_budget_usdc]   = useState("25,000");
-  const [p_require_approval_above_usdc, setP_require_approval_above_usdc] = useState("1,000");
+  const [p_daily_tx_count, setP_daily_tx_count]                     = useState("2,000");
+  const [p_require_approval_above_usdc, setP_require_approval_above_usdc] = useState("10,000");
+  const [p_execution_window, setP_execution_window]                 = useState("24/7");
+  const [p_x402_enabled, setP_x402_enabled]                         = useState(true);
+  const [p_x402_host_count, setP_x402_host_count]                   = useState("12");
+  const [p_x402_max_per_request, setP_x402_max_per_request]         = useState("50");
   const [p_counterparty_velocity, setP_counterparty_velocity]       = useState("50,000");
+  const [p_volume_spike_x, setP_volume_spike_x]                     = useState("5");
+  const [p_volume_spike_window, setP_volume_spike_window]           = useState("24hr");
+  const [p_volume_spike_action, setP_volume_spike_action]           = useState("Freeze");
+  const [p_sanctions_hit_action, setP_sanctions_hit_action]         = useState("Block + alert");
 
   /* ══ ANALYTICS ══ */
-  const [a_tracked_agents, setA_tracked_agents]   = useState("all");
-  const [a_report_frequency, setA_report_frequency] = useState("daily");
-  const [a_critical_routing, setA_critical_routing] = useState("Dash + Slack + SMS");
-  const [a_max_alerts_per_day, setA_max_alerts_per_day] = useState("50");
-  const [a_compute_cap, setA_compute_cap]         = useState("250");
-  const [a_allowed_actions, setA_allowed_actions] = useState("pause_agent_only");
+  const [a_tracked_agents, setA_tracked_agents]       = useState("all");
+  const [a_tracked_positions, setA_tracked_positions] = useState("all_open");
+  const [a_report_frequency, setA_report_frequency]   = useState("daily");
+  const [a_recommendations, setA_recommendations]     = useState("included");
+  const [a_critical_routing, setA_critical_routing]   = useState("Dash + Slack + SMS");
+  const [a_max_alerts_per_day, setA_max_alerts_per_day] = useState("10");
+  const [a_compute_cap, setA_compute_cap]             = useState("250");
+  const [a_auto_execute, setA_auto_execute]           = useState(true);
+  const [a_auto_execute_scope, setA_auto_execute_scope] = useState("whitelist");
+  const [a_execution_cap_usdc, setA_execution_cap_usdc] = useState("5,000");
+  const [a_allowed_actions, setA_allowed_actions]     = useState("pause_agent_only");
+  const [a_daily_action_cap, setA_daily_action_cap]   = useState("3");
+  const [a_sanctions_hit_actions, setA_sanctions_hit_actions] = useState<string[]>(["Move funds", "Trade"]);
 
   /* ══ CUSTOM ══ */
   const [c_objective, setC_objective]             = useState("");
@@ -641,23 +657,62 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       { label: "Rebalance",         value: y_rebalance_cooldown },
       { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
-    if (selectedType === "payments") return [
-      { label: "Payment Type",     value: p_payment_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Per-TX Limit",     value: `$${parseUsd(p_per_transaction_limit_usdc).toLocaleString()}` },
-      { label: "Daily Budget",     value: `$${parseUsd(p_daily_spend_budget_usdc).toLocaleString()}` },
-      { label: "Approve Above",    value: `$${parseUsd(p_require_approval_above_usdc).toLocaleString()}` },
-      { label: "Velocity (24h)",   value: `$${parseUsd(p_counterparty_velocity).toLocaleString()}` },
-      { label: "Sanctions",        value: "OFAC + Chainalysis" },
-      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
-    ];
-    if (selectedType === "analytics") return [
-      { label: "Tracked Agents",    value: a_tracked_agents === "all" ? "All agents" : a_tracked_agents },
-      { label: "Reporting",         value: a_report_frequency.replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Critical Routing",  value: a_critical_routing },
-      { label: "Alerts/Day Cap",    value: a_max_alerts_per_day },
-      { label: "Compute Cap",       value: `$${parseUsd(a_compute_cap).toLocaleString()}/mo` },
-      { label: "Allowed Actions",   value: a_allowed_actions.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-    ];
+    if (selectedType === "payments") {
+      const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + subscriptions", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
+      const fmtK = (n: number) => n >= 1000 ? `$${(n/1000).toLocaleString()}k` : `$${n.toLocaleString()}`;
+      const dotList = (items: string[]) => (
+        <div className="flex flex-wrap gap-[4px] items-center mt-auto">
+          {items.map((item, i) => (
+            <span key={item} className="flex items-center gap-[4px]">
+              {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
+              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+            </span>
+          ))}
+        </div>
+      );
+      return [
+        { label: "Payment Type",            value: fmtPayType(p_payment_type) },
+        { label: "Per-TX Limit",            value: `$${parseUsd(p_per_transaction_limit_usdc).toLocaleString()}` },
+        { label: "Daily Budget",            value: `$${parseUsd(p_daily_spend_budget_usdc).toLocaleString()}` },
+        { label: "Daily TX Count",          value: p_daily_tx_count },
+        { label: "Approval Threshold",      value: `> $${parseUsd(p_require_approval_above_usdc).toLocaleString()}`, },
+        { label: "Execution Window",        value: p_execution_window },
+        { label: "x402 Enabled",            value: p_x402_enabled ? `Yes · ${p_x402_host_count} Hosts` : "No", valueNode: p_x402_enabled ? dotList(["Yes", `${p_x402_host_count} Hosts`]) : undefined },
+        { label: "x402 Max / Request",      value: `$${p_x402_max_per_request}` },
+        { label: "Sanctions Screening",     value: "OFAC + Chainalysis" },
+        { label: "Velocity / Counterparty", value: `${fmtK(parseUsd(p_counterparty_velocity))} / 24h` },
+        { label: "Volume Spike",            value: `${p_volume_spike_x}x · ${p_volume_spike_window} · ${p_volume_spike_action}`, valueNode: dotList([`${p_volume_spike_x}x`, p_volume_spike_window, p_volume_spike_action]) },
+        { label: "Sanctions Hit",           value: p_sanctions_hit_action },
+      ];
+    }
+    if (selectedType === "analytics") {
+      const fmtReportFreq = (v: string) => (({ daily: "Daily 09:00 GST", weekly: "Weekly", hourly: "Hourly" } as Record<string,string>)[v] || v.replace(/\b\w/g,c=>c.toUpperCase()));
+      const fmtActions = (v: string) => (({ pause_agent_only: "Pause agent only", rebalance: "Rebalance", halt_all: "Halt all" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
+      const dotList = (items: string[]) => (
+        <div className="flex flex-wrap gap-[4px] items-center mt-auto">
+          {items.map((item, i) => (
+            <span key={item} className="flex items-center gap-[4px]">
+              {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
+              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+            </span>
+          ))}
+        </div>
+      );
+      return [
+        { label: "Tracked Agents",     value: a_tracked_agents === "all" ? "All (5)" : "Selected" },
+        { label: "Tracked Positions",  value: a_tracked_positions === "all_open" ? "All open" : a_tracked_positions },
+        { label: "Report Frequency",   value: fmtReportFreq(a_report_frequency) },
+        { label: "Recommendations",    value: a_recommendations === "included" ? "Included" : "Excluded" },
+        { label: "Critical Routing",   value: a_critical_routing },
+        { label: "Max Alerts / Day",   value: a_max_alerts_per_day },
+        { label: "Compute Cap",        value: `$${parseUsd(a_compute_cap).toLocaleString()} / month` },
+        { label: "Auto Execute",       value: a_auto_execute ? `Enabled · ${a_auto_execute_scope.charAt(0).toUpperCase() + a_auto_execute_scope.slice(1)}` : "Disabled", valueNode: a_auto_execute ? dotList(["Enabled", a_auto_execute_scope.charAt(0).toUpperCase() + a_auto_execute_scope.slice(1)]) : undefined },
+        { label: "Execution Cap",      value: `$${parseUsd(a_execution_cap_usdc).toLocaleString()} / action` },
+        { label: "Allowed Actions",    value: fmtActions(a_allowed_actions) },
+        { label: "Daily Action Cap",   value: a_daily_action_cap },
+        { label: "Sanctions Hit",      value: a_sanctions_hit_actions.join(" · "), valueNode: dotList(a_sanctions_hit_actions) },
+      ];
+    }
     if (selectedType === "custom") return [
       { label: "Objective",        value: c_objective.slice(0, 24) || "Custom" },
       { label: "Complexity",       value: c_complexity_level.replace(/\b\w/g, c => c.toUpperCase()) },
