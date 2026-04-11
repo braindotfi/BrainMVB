@@ -548,6 +548,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [ar_sustained, setAr_sustained] = useState("5 Minutes");
   const [ar_notify_via, setAr_notify_via] = useState("Slack + SMS");
   const [ar_action, setAr_action]       = useState("pause");
+  const [ar_route_slack, setAr_route_slack] = useState(true);
+  const [ar_route_sms, setAr_route_sms]   = useState(true);
 
   /* ══ CUSTOM ══ */
   const [c_objective, setC_objective]             = useState("");
@@ -659,8 +661,6 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     if (prefill.maxLTV) setL_max_ltv_percent(prefill.maxLTV);
     if (prefill.targetAPY) setY_target_apy_percent(prefill.targetAPY);
     if (prefill.minAPY) setY_min_apy_percent(prefill.minAPY);
-    if (prefill.maxSinglePayment) setP_per_transaction_limit_usdc(prefill.maxSinglePayment);
-    if (prefill.monthlyBudgetCap) setP_daily_spend_budget_usdc(prefill.monthlyBudgetCap);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -1115,7 +1115,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 Define when this scout should flag something or take action.
               </p>
               {/* Rule Name */}
-              <div className="flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[16px]">
                 <FieldLabel>Rule Name</FieldLabel>
                 <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] bg-[#222737] ${ar_name ? "border border-[#414965]" : ""}`}>
                   <input
@@ -1146,19 +1146,22 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     value={ar_condition} onChange={setAr_condition}
                     options={[
                       {value:"24h PnL",label:"24h PnL"},
-                      {value:"LTV",label:"LTV"},
-                      {value:"Vendor Spend",label:"Vendor Spend"},
-                      {value:"Drawdown",label:"Drawdown"},
-                      {value:"APY",label:"APY"},
+                      {value:"7d PnL",label:"7d PnL"},
+                      {value:"Open Position Count",label:"Open Position Count"},
+                      {value:"Cumulative Exposure",label:"Cumulative Exposure"},
+                      {value:"Privacy Violations",label:"Privacy Violations"},
+                      {value:"Sharpe Ratio",label:"Sharpe Ratio"},
+                      {value:"Win Rate",label:"Win Rate"},
                     ]}
                   />
                   <ADropdown
                     label={<><FieldLabel>Under or Above</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
                     value={ar_comparator} onChange={setAr_comparator}
                     options={[
-                      {value:"<",label:"< (Under)"},
-                      {value:">",label:"> (Above)"},
-                      {value:"=",label:"= (Equal)"},
+                      {value:">",label:"> (Greater)"},
+                      {value:"<",label:"< (Less)"},
+                      {value:"=",label:"= (Equals)"},
+                      {value:"changes_by",label:"Changes by"},
                     ]}
                   />
                   <div className="flex flex-col gap-[4px]">
@@ -1178,44 +1181,102 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     value={ar_symbol} onChange={setAr_symbol}
                     options={[
                       {value:"%",label:"%"},
-                      {value:"$",label:"$"},
-                      {value:"x",label:"x (multiplier)"},
+                      {value:"USDC",label:"USDC"},
+                      {value:"bps",label:"bps"},
                     ]}
                   />
                   <ADropdown
                     label={<><FieldLabel>Sustained For</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>}
                     value={ar_sustained} onChange={setAr_sustained}
                     options={[
-                      {value:"5 Minutes",label:"5 Minutes"},
-                      {value:"15 Minutes",label:"15 Minutes"},
-                      {value:"1 Hour",label:"1 Hour"},
-                      {value:"Instant",label:"Instant"},
+                      {value:"Trigger Immediately",label:"Trigger Immediately"},
+                      {value:"1 min",label:"1 min"},
+                      {value:"5 mins",label:"5 mins"},
+                      {value:"15 mins",label:"15 mins"},
+                      {value:"1 hour",label:"1 hour"},
                     ]}
                   />
                 </div>
               </div>
               {/* ACTION */}
-              <div className="flex flex-col gap-[16px]">
+              <div className="flex flex-col gap-[8px]">
                 <SectionDivider title="ACTION" />
-                <div className="grid grid-cols-2 gap-[16px]">
-                  <ADropdown
-                    label="Notify Via"
-                    value={ar_notify_via} onChange={setAr_notify_via}
-                    options={[
-                      {value:"Dashboard",label:"Dashboard"},
-                      {value:"Slack",label:"Slack"},
-                      {value:"Slack + SMS",label:"Slack + SMS"},
-                    ]}
-                  />
-                  <ADropdown
-                    label="Action"
-                    value={ar_action} onChange={setAr_action}
-                    options={[
-                      {value:"pause",label:"Pause Agent"},
-                      {value:"notify",label:"Notify Only"},
-                      {value:"log",label:"Log Only"},
-                    ]}
-                  />
+                <div className="grid grid-cols-2 gap-[12px] mt-[8px]">
+                  {/* Notify Only */}
+                  <button
+                    type="button"
+                    onClick={() => setAr_action("notify")}
+                    className="bg-[#0a0c10] flex items-center p-[16px] rounded-[16px] w-full text-left"
+                  >
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex items-start justify-between w-full">
+                        <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Notify Only</span>
+                        <div className={`relative shrink-0 size-[20px] rounded-full border ${ar_action === "notify" ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
+                          {ar_action === "notify" && <div className="absolute bg-[#7631ee] inset-[20%] rounded-full" />}
+                        </div>
+                      </div>
+                      <p className="font-['Gilroy-Medium',sans-serif] text-[#414965] text-[12px] leading-[12px]">Surface the signal in the feed</p>
+                    </div>
+                  </button>
+                  {/* Pause Agent */}
+                  <button
+                    type="button"
+                    onClick={() => setAr_action("pause")}
+                    className="bg-[#0a0c10] flex items-center p-[16px] rounded-[16px] w-full text-left"
+                  >
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex items-start justify-between w-full">
+                        <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Pause Agent</span>
+                        <div className={`relative shrink-0 size-[20px] rounded-full border ${ar_action === "pause" ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
+                          {ar_action === "pause" && <div className="absolute bg-[#7631ee] inset-[20%] rounded-full" />}
+                        </div>
+                      </div>
+                      <p className="font-['Gilroy-Medium',sans-serif] text-[#414965] text-[12px] leading-[12px]">Requires auto-execute</p>
+                    </div>
+                  </button>
+                </div>
+                {/* Info box */}
+                <div className="border border-[#1d2132] flex items-start gap-[8px] p-[8px] rounded-[12px] w-full">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-[1px]"><circle cx="8" cy="8" r="7" stroke="#414965" strokeWidth="1.2"/><path d="M8 7v4M8 5.5v.5" stroke="#414965" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">
+                    Pause is available because this scout has auto-execute with pause_agent in its whitelist. To allow other actions, expand the whitelist in the previous step.
+                  </p>
+                </div>
+              </div>
+              {/* ROUTING */}
+              <div className="flex flex-col gap-[16px]">
+                <SectionDivider title="ROUTING" />
+                {/* Dashboard Feed — always on */}
+                <div className="flex gap-[16px] items-center w-full">
+                  <ACheckbox checked={true} onChange={() => {}} />
+                  <div className="flex flex-1 items-center gap-[16px] min-w-0">
+                    <span className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Dashboard Feed</span>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Always On</span>
+                  </div>
+                </div>
+                {/* Slack */}
+                <div className="flex gap-[16px] items-center w-full">
+                  <ACheckbox checked={ar_route_slack} onChange={() => setAr_route_slack(v => !v)} />
+                  <div className="flex flex-1 items-center gap-[16px] min-w-0">
+                    <div className="flex flex-1 items-center gap-[4px] min-w-0">
+                      <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">Slack</span>
+                      <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
+                      <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">#brain-alerts</span>
+                    </div>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
+                  </div>
+                </div>
+                {/* SMS */}
+                <div className="flex gap-[16px] items-center w-full">
+                  <ACheckbox checked={ar_route_sms} onChange={() => setAr_route_sms(v => !v)} />
+                  <div className="flex flex-1 items-center gap-[16px] min-w-0">
+                    <div className="flex flex-1 items-center gap-[4px] min-w-0">
+                      <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">SMS</span>
+                      <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
+                      <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">+971...4821</span>
+                    </div>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1231,21 +1292,23 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <button
                 type="button"
                 onClick={() => {
-                  const actionLabel = ar_action === "pause" ? "Pause" : ar_action === "notify" ? "Notify" : "Log";
-                  const actionColor = ar_action === "pause" ? "#d20344" : ar_action === "notify" ? "#ff9500" : "#6c779d";
+                  const actionLabel = ar_action === "pause" ? "Pause" : "Notify";
+                  const actionColor = ar_action === "pause" ? "#d20344" : "#ff9500";
                   const condition = `${ar_condition} ${ar_comparator} ${ar_figure}${ar_symbol}`;
+                  const channels = ["Dashboard", ...(ar_route_slack ? ["Slack"] : []), ...(ar_route_sms ? ["SMS"] : [])];
                   setA_alert_rules(prev => [...prev, {
                     name: ar_name.trim() || "New Rule",
                     condition,
                     agent: ar_agent,
-                    channel: ar_notify_via,
+                    channel: channels.join(" + "),
                     action: actionLabel,
                     actionColor,
                   }]);
                   setShowAddRuleModal(false);
                   setAr_name(""); setAr_figure(""); setAr_agent("Trader-Alpha");
-                  setAr_condition("24h PnL"); setAr_comparator("<"); setAr_symbol("%");
-                  setAr_sustained("5 Minutes"); setAr_notify_via("Slack + SMS"); setAr_action("pause");
+                  setAr_condition("24h PnL"); setAr_comparator(">"); setAr_symbol("%");
+                  setAr_sustained("Trigger Immediately"); setAr_action("pause");
+                  setAr_route_slack(true); setAr_route_sms(true);
                 }}
                 className="flex-1 bg-[#123509] font-['Gilroy-SemiBold',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
               >
