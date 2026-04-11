@@ -1,10 +1,11 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
   Tooltip,
+  Customized,
 } from "recharts";
 import { useAuth } from "@/lib/authContext";
 
@@ -177,57 +178,32 @@ const CfBtn = ({ label, active, onClick }: { label: string; active: boolean; onC
   </button>
 );
 
-/* ── Cash Flow crosshair cursor (orange dashed + price pill, same as trading equity curve) ── */
-const CfCrosshairCursor = ({ points, width, height, payload }: any) => {
-  if (!points?.length) return null;
-  const { x, y } = points[0];
-
-  const val = payload?.[0]?.value;
-  const formatted = val != null
-    ? `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-    : "";
-
-  const charW = 6.2;
-  const padX  = 8;
-  const pillH = 18;
-  const pillRx = 9;
-  const textW  = formatted.length * charW;
-  const pillW  = textW + padX * 2;
-
-  let pillX = x + 6;
-  if (pillX + pillW > width - 4) pillX = x - pillW - 6;
-
-  const pillY = y - pillH / 2;
-
-  const inflowY  = points[0]?.y ?? y;
-  const outflowY = points[1]?.y ?? null;
-
+/* ── Cash Flow crosshair — Customized component uses yAxisMap for pixel-perfect line tracking ── */
+const CfCrosshair = (chartProps: any) => {
+  const { activeCoordinate, activePayload, yAxisMap, width, height, margin } = chartProps;
+  if (!activeCoordinate || !activePayload?.length) return null;
+  const x = activeCoordinate.x;
+  const yAxis = Object.values(yAxisMap ?? {})[0] as any;
+  const scaler = typeof yAxis?.scale === "function" ? yAxis.scale : () => activeCoordinate.y;
+  const inflowVal  = activePayload[0]?.value ?? 0;
+  const outflowVal = activePayload[1]?.value ?? null;
+  const inflowY  = scaler(inflowVal);
+  const outflowY = outflowVal !== null ? scaler(outflowVal) : null;
+  const mT = margin?.top ?? 0; const mL = margin?.left ?? 0;
+  const mB = margin?.bottom ?? 0; const mR = margin?.right ?? 0;
+  const formatted = `$${Number(inflowVal).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const charW = 6.2; const padX = 8; const pillH = 18; const pillRx = 9;
+  const pillW = formatted.length * charW + padX * 2;
+  let pillX = x + 6; if (pillX + pillW > width - mR - 4) pillX = x - pillW - 6;
+  const pillY = inflowY - pillH / 2;
   return (
     <g>
-      <line x1={x} y1={0} x2={x} y2={height}
-        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-      <line x1={0} y1={y} x2={width} y2={y}
-        stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <line x1={x} y1={mT} x2={x} y2={height - mB} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <line x1={mL} y1={inflowY} x2={width - mR} y2={inflowY} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
       <circle cx={x} cy={inflowY} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
-      {outflowY !== null && (
-        <circle cx={x} cy={outflowY} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />
-      )}
-      {formatted && (
-        <g>
-          <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
-          <text
-            x={pillX + pillW / 2}
-            y={pillY + pillH / 2 + 3.5}
-            textAnchor="middle"
-            fill="#ff9500"
-            fontSize={10}
-            fontFamily="'Gilroy-SemiBold', Helvetica"
-            fontWeight="600"
-          >
-            {formatted}
-          </text>
-        </g>
-      )}
+      {outflowY !== null && <circle cx={x} cy={outflowY} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />}
+      <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
+      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
     </g>
   );
 };
@@ -237,31 +213,12 @@ const CF_Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$560
 const CF_X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
 
 const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
-  const [ch, setCh] = useState<{ x: number; y: number; y2: number | null; val: number } | null>(null);
-  const chartWrapRef = useRef<HTMLDivElement>(null);
-
   return (
   <div className="relative w-full h-full flex flex-col">
     {/* Chart area — full width */}
-    <div ref={chartWrapRef} className="relative flex-1">
+    <div className="relative flex-1">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
-          onMouseMove={(e: any) => {
-            if (e?.activeCoordinate && e?.activePayload?.length) {
-              const inflowCoord  = e.activePayload?.[0]?.coordinate ?? e.activeCoordinate;
-              const outflowCoord = e.activePayload?.[1]?.coordinate ?? null;
-              setCh({
-                x: e.activeCoordinate.x,
-                y: inflowCoord?.y ?? e.activeCoordinate.y,
-                y2: outflowCoord?.y ?? null,
-                val: e.activePayload[0]?.value ?? 0,
-              });
-            }
-          }}
-          onMouseLeave={() => setCh(null)}
-        >
+        <AreaChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="cfInflow" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#42bf23" stopOpacity={0.28} />
@@ -273,36 +230,13 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
             </linearGradient>
           </defs>
           <Tooltip content={() => null} cursor={false} isAnimationActive={false} />
-          <Area
-            type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
-            fill="url(#cfInflow)" dot={false} activeDot={false} isAnimationActive={false} name="Inflow"
-          />
-          <Area
-            type="monotone" dataKey="outflow" stroke="#d20344" strokeWidth={1.5}
-            fill="url(#cfOutflow)" dot={false} activeDot={false} isAnimationActive={false} name="Outflow"
-          />
+          <Area type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
+            fill="url(#cfInflow)" dot={false} activeDot={false} isAnimationActive={false} name="Inflow" />
+          <Area type="monotone" dataKey="outflow" stroke="#d20344" strokeWidth={1.5}
+            fill="url(#cfOutflow)" dot={false} activeDot={false} isAnimationActive={false} name="Outflow" />
+          <Customized component={CfCrosshair} />
         </AreaChart>
       </ResponsiveContainer>
-
-      {ch && (() => {
-        const w = chartWrapRef.current?.clientWidth ?? 400;
-        const h = chartWrapRef.current?.clientHeight ?? 200;
-        const formatted = `$${Number(ch.val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-        const charW = 6.2; const padX = 8; const pillH = 18; const pillRx = 9;
-        const pillW = formatted.length * charW + padX * 2;
-        let pillX = ch.x + 6; if (pillX + pillW > w - 4) pillX = ch.x - pillW - 6;
-        const pillY = ch.y - pillH / 2;
-        return (
-          <svg className="absolute inset-0 pointer-events-none" width={w} height={h} style={{ overflow: "visible" }}>
-            <line x1={ch.x} y1={0} x2={ch.x} y2={h} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-            <line x1={0} y1={ch.y} x2={w} y2={ch.y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
-            <circle cx={ch.x} cy={ch.y} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
-            {ch.y2 !== null && <circle cx={ch.x} cy={ch.y2} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />}
-            <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
-            <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
-          </svg>
-        );
-      })()}
 
       {/* Y-axis labels overlaid on right edge */}
       <div className="absolute inset-y-0 right-0 flex flex-col justify-between py-[8px] pr-[8px]" style={{ pointerEvents: "none" }}>
