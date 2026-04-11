@@ -726,28 +726,20 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     ];
     if (selectedType === "payments") {
       const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + Bills", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402 API" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
-      const dotList = (items: string[]) => (
-        <div className="flex flex-wrap gap-[4px] items-center mt-auto">
-          {items.map((item, i) => (
-            <span key={item} className="flex items-center gap-[4px]">
-              {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
-              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
-            </span>
-          ))}
-        </div>
-      );
+      const firstR = p_recipient_list[0];
       return [
-        { label: "Payment Type",    value: fmtPayType(p_payment_type) },
-        { label: "Per-TX Limit",    value: p_per_tx_limit },
-        { label: "Daily Budget",    value: p_daily_budget },
-        { label: "Approve Above",   value: p_approve_above },
-        { label: "Recipients",      value: `${p_recipient_list.length} recipient${p_recipient_list.length !== 1 ? "s" : ""}`, valueNode: dotList(p_recipient_list.map(r => r.name)) },
-        { label: "x402 Enabled",    value: p_x402_on ? "On" : "Off" },
-        { label: "x402 Max / Req",  value: `$${p_x402_max_slider}` },
-        { label: "Velocity (24h)",  value: p_velocity_24h },
-        { label: "Volume Spike",    value: p_vol_spike },
-        { label: "Sanctions",       value: p_sanctions_screen },
-        { label: "Dup. Window",     value: p_dup_window },
+        { label: "Payment Type",              value: fmtPayType(p_payment_type) },
+        { label: "Per-TX Limit",              value: p_per_tx_limit },
+        { label: "Daily Budget",              value: p_daily_budget },
+        { label: "Approve Above",             value: p_approve_above },
+        { label: "Payment Recipient",         value: firstR ? firstR.name : "None" },
+        { label: "Payment Amount",            value: firstR ? firstR.amount : "—" },
+        { label: "Execution Window",          value: firstR ? firstR.freq : "—" },
+        { label: "x402 Max / Request",        value: p_x402_on ? `$${p_x402_max_slider}` : "Off" },
+        { label: "Counterparty Velocity",     value: p_velocity_24h },
+        { label: "Volume Spike Breaker",      value: p_vol_spike },
+        { label: "Sanctions Screening",       value: p_sanctions_screen },
+        { label: "Duplicate Detection Window", value: p_dup_window },
       ];
     }
     if (selectedType === "analytics") {
@@ -2203,7 +2195,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <div className="flex flex-col gap-[24px] items-start w-full">
 
                 {/* Agent identity card */}
-                <div className="bg-[#0a0c10] flex gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+                <div className="bg-[#0a0c10] flex gap-[8px] items-start p-[16px] rounded-[16px] w-full">
                   <div className="rounded-[12px] size-[40px] overflow-hidden shrink-0 bg-[#1d2132]">
                     {selectedAvatar
                       ? <img src={selectedAvatar} alt="" className="size-full object-cover" />
@@ -2216,7 +2208,9 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <TypeBadge type={selectedType} />
                     </div>
                     <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-4">
-                      {agentDesc || `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} AI agent for automated execution.`}
+                      {agentDesc || (selectedType === "payments"
+                        ? "An agent that automates payments, transfers, and recurring transactions based on your rules to streamline treasury movement and keep funds flowing efficiently across accounts, wallets, and recipients."
+                        : `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} AI agent for automated execution.`)}
                     </p>
                   </div>
                 </div>
@@ -2322,7 +2316,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 data-testid="button-create-agent"
                 className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
-                {launching ? "Creating Agent…" : "Create Agent"}
+                {launching ? "Creating Agent…" : selectedType === "payments" ? "Commit Policy & Deploy Agent" : "Create Agent"}
               </button>
             )}
           </div>
