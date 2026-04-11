@@ -142,7 +142,7 @@ const ConfigSlider = ({
       </div>
       <div className="relative h-[32px] flex items-center w-full">
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[6px] rounded-full bg-[#222737]" />
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[6px] rounded-full bg-[#7631ee]" style={{ width: `${pct}%` }} />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[6px] rounded-full bg-[#FF9500]" style={{ width: `${pct}%` }} />
         <input
           type="range" min={min} max={max} value={n}
           onChange={(e) => onChange(e.target.value)}
@@ -150,7 +150,7 @@ const ConfigSlider = ({
           style={{ height: "32px", margin: 0 }}
         />
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[24px] rounded-full bg-[#7631ee] border-[4px] border-[#11141b] pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[24px] rounded-full bg-white border-[4px] border-[#11141b] pointer-events-none"
           style={{ left: `${pct}%` }}
         />
       </div>
@@ -176,13 +176,13 @@ const SmallDropdown = ({
         <ChevronDown size={24} className="text-[#6c779d] shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#1d2132] border border-[#222737] rounded-[8px] overflow-hidden">
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#0a0c10] rounded-[12px] overflow-hidden py-[8px]" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
           {options.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`w-full text-left px-[12px] py-[8px] font-['Gilroy-Medium',sans-serif] text-[14px] hover:bg-[#222737] transition-colors ${value === opt.value ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}
+              className="w-full text-left px-[8px] h-[36px] flex items-center font-['Gilroy-Medium',sans-serif] text-[16px] text-[#a8b9f4] hover:bg-[#1d2132] transition-colors"
             >{opt.label}</button>
           ))}
         </div>
@@ -964,8 +964,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           options={[
                             { value: "market",      label: "Market" },
                             { value: "limit",       label: "Limit" },
+                            { value: "stop_market", label: "Stop Market" },
                             { value: "stop_limit",  label: "Stop Limit" },
-                            { value: "take_profit", label: "Take Profit" },
+                            { value: "take_market", label: "Take Market" },
+                            { value: "take_limit",  label: "Take Limit" },
+                            { value: "scale",       label: "Scale" },
+                            { value: "twap",        label: "TWAP" },
                           ]}
                           open={t_open_drop === "orderTypes"}
                           onOpen={() => setT_open_drop(t_open_drop === "orderTypes" ? null : "orderTypes")}
@@ -975,11 +979,14 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           label="Max Leverage"
                           value={t_max_position_leverage}
                           options={[
-                            { value: "1",  label: "1×" },
-                            { value: "2",  label: "2×" },
-                            { value: "3",  label: "3×" },
-                            { value: "5",  label: "5×" },
-                            { value: "10", label: "10×" },
+                            { value: "1",   label: "1x" },
+                            { value: "2",   label: "2x" },
+                            { value: "3",   label: "3x" },
+                            { value: "5",   label: "5x" },
+                            { value: "10",  label: "10x" },
+                            { value: "25",  label: "25x" },
+                            { value: "50",  label: "50x" },
+                            { value: "100", label: "100x" },
                           ]}
                           open={t_open_drop === "leverage"}
                           onOpen={() => setT_open_drop(t_open_drop === "leverage" ? null : "leverage")}
@@ -1002,11 +1009,15 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                                 type="button"
                                 onClick={() => setT_allowed_markets(tog(t_allowed_markets, mkt))}
                                 data-testid={`chip-market-${mkt}`}
-                                className={`flex items-center gap-[8px] px-[12px] py-[10px] rounded-[12px] h-[40px] transition-colors ${sel ? "bg-[#240757]" : "bg-[#0a0c10]"}`}
+                                className="flex items-center gap-[8px] px-[12px] rounded-[12px] h-[40px] bg-[#0a0c10] transition-colors"
                               >
                                 <span className={`font-['Gilroy-Medium',sans-serif] text-[16px] leading-[20px] whitespace-nowrap ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{mkt}</span>
-                                <div className={`relative overflow-hidden size-[20px] rounded-full border flex-shrink-0 ${sel ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
-                                  {sel && <div className="absolute inset-[20%] rounded-full bg-[#7631ee]" />}
+                                <div className={`size-[20px] rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${sel ? "bg-[#42bf23]" : "border border-[#222737] bg-[#06070a]"}`}>
+                                  {sel && (
+                                    <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                                      <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  )}
                                 </div>
                               </button>
                             );
@@ -1021,6 +1032,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           value={t_max_slippage_bps}
                           options={[
                             { value: "10",  label: "10 bps" },
+                            { value: "20",  label: "20 bps" },
                             { value: "30",  label: "30 bps" },
                             { value: "50",  label: "50 bps" },
                             { value: "100", label: "100 bps" },
@@ -1033,10 +1045,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           label="Cooldown Window"
                           value={t_cooldown_window_seconds}
                           options={[
-                            { value: "60",   label: "60 sec" },
-                            { value: "300",  label: "5 min" },
-                            { value: "900",  label: "15 min" },
-                            { value: "3600", label: "60 min" },
+                            { value: "10",  label: "10 sec" },
+                            { value: "30",  label: "30 sec" },
+                            { value: "60",  label: "60 sec" },
+                            { value: "300", label: "5 min" },
+                            { value: "900", label: "15 min" },
                           ]}
                           open={t_open_drop === "cooldown"}
                           onOpen={() => setT_open_drop(t_open_drop === "cooldown" ? null : "cooldown")}
