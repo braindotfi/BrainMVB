@@ -35,7 +35,11 @@ const allAgents = [
 type Agent = typeof allAgents[0];
 
 const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agent & { onAdd: (id: string) => void }) => (
-  <div className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0">
+  <div
+    className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+    onClick={() => onAdd(id)}
+    data-testid={`item-agent-${id}`}
+  >
     {avatarType === "img" ? (
       <img className="w-12 h-12 flex-shrink-0" alt={name} src={avatarSrc} />
     ) : (
@@ -49,14 +53,12 @@ const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agen
         {description}
       </div>
     </div>
-    <button
-      data-testid={`button-add-agent-${id}`}
-      onClick={() => onAdd(id)}
-      className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+    <div
+      className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0"
       title={`View ${name}`}
     >
       <img className="absolute top-1 left-1 w-4 h-4" alt="Add" src="/figmaAssets/icons.svg" />
-    </button>
+    </div>
   </div>
 );
 

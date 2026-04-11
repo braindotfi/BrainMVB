@@ -95,11 +95,14 @@ const fmtUsd = (n: number): { int: string; dec: string } => {
 
 const CATEGORY_LABEL: Record<string, string> = {
   trading:    "Trading Agent",
+  lending:    "Lending Agent",
+  yield:      "Yield Agent",
   payments:   "Payments Agent",
+  analytics:  "Analytics Agent",
+  custom:     "Custom Agent",
   research:   "Research Agent",
   automation: "Automation Agent",
   swarm:      "Swarm Agent",
-  yield:      "Yield Agent",
 };
 
 /* ── Shared UI primitives ── */
