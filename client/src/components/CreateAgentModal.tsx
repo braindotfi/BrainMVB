@@ -236,7 +236,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [t_max_position_size_usdc, setT_max_position_size_usdc] = useState("10,000");
   const [t_max_daily_loss_percent, setT_max_daily_loss_percent] = useState("20");
   const [t_allowed_markets, setT_allowed_markets]               = useState<string[]>(["BTC-USDC", "ETH-USDC"]);
-  const [t_cooldown_window_seconds, setT_cooldown_window_seconds] = useState("3600");
+  const [t_cooldown_window_seconds, setT_cooldown_window_seconds] = useState("300");
   const [t_cumulative_exposure_limit, setT_cumulative_exposure_limit] = useState("50,000");
   const [t_daily_spend_cap, setT_daily_spend_cap]               = useState("10,000");
   const [t_order_types, setT_order_types]                       = useState<string[]>(["stop_limit"]);
@@ -439,19 +439,27 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const demoPolicyShort = policyHash ? policyHash.slice(0, 6) + "…" + policyHash.slice(-4) : "0x9f3c…6a5f";
 
   /* ── Policy preview cards per type ── */
+  const cooldownLabel = (s: string): string => {
+    const map: Record<string, string> = { "10": "10 sec", "30": "30 sec", "60": "60 sec", "300": "5 min", "900": "15 min" };
+    return map[s] ?? `${s}s`;
+  };
+
   const policyPreviewCards: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }[] = (() => {
     if (selectedType === "trading") return [
       { label: "Max Daily Loss",        value: `-${t_max_daily_loss_percent}%` },
       { label: "Kill Switch",           value: `-${t_kill_switch_drawdown}%` },
       { label: "Approval Threshold",    value: `> 90%` },
       { label: "Markets",               value: t_allowed_markets.join(" · "), valueNode: (
-          <div className="flex gap-[4px] items-center mt-auto">
+          <div className="flex flex-wrap gap-[4px] items-center mt-auto">
             {t_allowed_markets.slice(0, 3).map((m, i) => (
               <span key={m} className="flex items-center gap-[4px]">
                 {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
                 <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
               </span>
             ))}
+            {t_allowed_markets.length > 3 && (
+              <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[12px]">+{t_allowed_markets.length - 3}</span>
+            )}
           </div>
         )
       },
@@ -466,53 +474,60 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           </div>
         )
       },
-      { label: "Cooldown",              value: `${t_cooldown_window_seconds}s` },
-      { label: "Max Position Size",     value: `$${Number(t_max_position_size_usdc).toLocaleString()}` },
-      { label: "Cumulative Exposure",   value: `$${Number(t_cumulative_exposure_limit).toLocaleString()}` },
+      { label: "Cooldown",              value: cooldownLabel(t_cooldown_window_seconds) },
+      { label: "Max Position Size",     value: `$${parseUsd(t_max_position_size_usdc).toLocaleString()}` },
+      { label: "Cumulative Exposure",   value: `$${parseUsd(t_cumulative_exposure_limit).toLocaleString()}` },
       { label: "Max Leverage",          value: `${t_max_position_leverage}×` },
       { label: "Strategy",              value: t_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Capital Allocated",     value: `$${Number(capital || 0).toLocaleString()} ${capitalAsset}` },
-      { label: "Daily Spend Cap",       value: `$${Number(t_daily_spend_cap).toLocaleString()}` },
+      { label: "Capital Allocated",     value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
+      { label: "Daily Spend Cap",       value: `$${parseUsd(t_daily_spend_cap).toLocaleString()}` },
     ];
     if (selectedType === "lending") return [
-      { label: "Borrow Assets",    value: l_allowed_borrow_assets.join(", ") },
+      { label: "Protocol",         value: l_protocol.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Borrow Assets",    value: l_allowed_borrow_assets.join(", ") || "—" },
       { label: "Min APY Target",   value: `${l_min_apy_target_percent}%` },
       { label: "Max LTV",          value: `${l_max_ltv_percent}%` },
       { label: "Target LTV",       value: `${l_target_ltv_percent}%` },
-      { label: "Max Supply",       value: `$${l_max_supply_usd}` },
-      { label: "Protocol",         value: l_protocol },
+      { label: "Max Supply",       value: `$${parseUsd(l_max_supply_usd).toLocaleString()}` },
+      { label: "Collateral",       value: l_allowed_collateral_assets.slice(0, 3).join(", ") + (l_allowed_collateral_assets.length > 3 ? ` +${l_allowed_collateral_assets.length - 3}` : "") || "—" },
+      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     if (selectedType === "yield") return [
-      { label: "Strategy",       value: y_strategy_type.replace(/_/g, " ") },
-      { label: "Target APY",     value: `${y_target_apy_percent}%` },
-      { label: "Min APY",        value: `${y_min_apy_percent}%` },
-      { label: "Max Slippage",   value: `${y_max_slippage_bps} bps` },
-      { label: "Max Position",   value: `$${y_max_position_size_usdc}` },
-      { label: "Stable Conc.",   value: `${y_max_stable_pair_concentration}%` },
+      { label: "Strategy",          value: y_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Target APY",        value: `${y_target_apy_percent}%` },
+      { label: "Min APY",           value: `${y_min_apy_percent}%` },
+      { label: "Exit If APY Below", value: `${y_exit_if_apy_below_percent}%` },
+      { label: "Max Slippage",      value: `${y_max_slippage_bps} bps` },
+      { label: "Max Position",      value: `$${parseUsd(y_max_position_size_usdc).toLocaleString()}` },
+      { label: "Stable Conc.",      value: `${y_max_stable_pair_concentration}%` },
+      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     if (selectedType === "payments") return [
-      { label: "Payment Type",    value: p_payment_type.replace(/_/g, " ") },
-      { label: "Per-TX Limit",    value: `$${p_per_transaction_limit_usdc}` },
-      { label: "Daily Budget",    value: `$${p_daily_spend_budget_usdc}` },
-      { label: "Approve Above",   value: `$${p_require_approval_above_usdc}` },
-      { label: "Velocity (24h)",  value: `$${p_counterparty_velocity}` },
-      { label: "Sanctions",       value: "OFAC + Chainalysis" },
+      { label: "Payment Type",     value: p_payment_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Per-TX Limit",     value: `$${parseUsd(p_per_transaction_limit_usdc).toLocaleString()}` },
+      { label: "Daily Budget",     value: `$${parseUsd(p_daily_spend_budget_usdc).toLocaleString()}` },
+      { label: "Approve Above",    value: `$${parseUsd(p_require_approval_above_usdc).toLocaleString()}` },
+      { label: "Velocity (24h)",   value: `$${parseUsd(p_counterparty_velocity).toLocaleString()}` },
+      { label: "Sanctions",        value: "OFAC + Chainalysis" },
+      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     if (selectedType === "analytics") return [
-      { label: "Tracked Agents",    value: "All (5)" },
-      { label: "Tracked Positions", value: "All open" },
-      { label: "Reporting",         value: a_report_frequency },
+      { label: "Tracked Agents",    value: a_tracked_agents === "all" ? "All agents" : a_tracked_agents },
+      { label: "Reporting",         value: a_report_frequency.replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Critical Routing",  value: a_critical_routing },
       { label: "Alerts/Day Cap",    value: a_max_alerts_per_day },
-      { label: "Compute Cap",       value: `$${a_compute_cap}/mo` },
-      { label: "Allowed Actions",   value: "Pause only" },
+      { label: "Compute Cap",       value: `$${parseUsd(a_compute_cap).toLocaleString()}/mo` },
+      { label: "Allowed Actions",   value: a_allowed_actions.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
     ];
     if (selectedType === "custom") return [
-      { label: "Complexity",       value: c_complexity_level },
-      { label: "Source Type",      value: c_source_type.replace(/_/g, " ") },
-      { label: "Primary Limit",    value: `$${c_primary_limit}` },
-      { label: "Secondary Limit",  value: `$${c_secondary_limit}` },
-      { label: "Tools Enabled",    value: `${c_allowed_tools.length} tools` },
+      { label: "Objective",        value: c_objective.slice(0, 24) || "Custom" },
+      { label: "Complexity",       value: c_complexity_level.replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Source Type",      value: c_source_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
       { label: "Runtime",          value: c_runtime },
+      { label: "Primary Limit",    value: `$${parseUsd(c_primary_limit).toLocaleString()}` },
+      { label: "Secondary Limit",  value: `$${parseUsd(c_secondary_limit).toLocaleString()}` },
+      { label: "Tools Enabled",    value: `${c_allowed_tools.length} tool${c_allowed_tools.length !== 1 ? "s" : ""}` },
+      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     return [];
   })();
