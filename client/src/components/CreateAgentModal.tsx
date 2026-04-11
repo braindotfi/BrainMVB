@@ -3,7 +3,115 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
-import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet, Trash2 } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet, Trash2, Search } from "lucide-react";
+
+/* ── Collateral asset list ── */
+const COLLATERAL_ASSETS: { ticker: string; name: string; color: string }[] = [
+  { ticker: "ETH",    name: "Ethereum",          color: "#627EEA" },
+  { ticker: "WBTC",   name: "Wrapped Bitcoin",    color: "#F7931A" },
+  { ticker: "stETH",  name: "Lido Staked ETH",    color: "#00A3FF" },
+  { ticker: "cbETH",  name: "Coinbase ETH",        color: "#0052FF" },
+  { ticker: "rETH",   name: "Rocket Pool ETH",     color: "#FF6B35" },
+  { ticker: "wstETH", name: "Wrapped stETH",       color: "#00A3FF" },
+  { ticker: "cbBTC",  name: "Coinbase BTC",        color: "#F7931A" },
+  { ticker: "USDC",   name: "USD Coin",             color: "#2775CA" },
+  { ticker: "USDT",   name: "Tether",               color: "#26A17B" },
+  { ticker: "DAI",    name: "Dai",                  color: "#F5AC37" },
+  { ticker: "FRAX",   name: "Frax",                 color: "#8B8B8B" },
+  { ticker: "LINK",   name: "Chainlink",            color: "#2A5ADA" },
+  { ticker: "UNI",    name: "Uniswap",              color: "#FF007A" },
+  { ticker: "AAVE",   name: "Aave",                 color: "#B6509E" },
+  { ticker: "CRV",    name: "Curve",                color: "#FF3F3F" },
+  { ticker: "MKR",    name: "Maker",                color: "#1AAB9B" },
+  { ticker: "ARB",    name: "Arbitrum",             color: "#12AAFF" },
+  { ticker: "OP",     name: "Optimism",             color: "#FF0420" },
+  { ticker: "MATIC",  name: "Polygon",              color: "#8247E5" },
+  { ticker: "SNX",    name: "Synthetix",            color: "#00D1FF" },
+  { ticker: "COMP",   name: "Compound",             color: "#00D395" },
+  { ticker: "GHO",    name: "GHO Token",            color: "#9B85F5" },
+  { ticker: "sDAI",   name: "Savings DAI",          color: "#F5AC37" },
+];
+
+/* ── Asset Search Popup (module-level component) ── */
+const AssetSearchPopup = ({ selected, onToggle, onClose }: {
+  selected: string[];
+  onToggle: (ticker: string) => void;
+  onClose: () => void;
+}) => {
+  const [query, setQuery] = useState("");
+  const filtered = COLLATERAL_ASSETS.filter(a =>
+    !query ||
+    a.ticker.toLowerCase().includes(query.toLowerCase()) ||
+    a.name.toLowerCase().includes(query.toLowerCase())
+  );
+  return (
+    <div className="absolute inset-0 bg-[#11141b] rounded-[24px] z-50 flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 h-[56px] relative flex items-center justify-center border-b border-[#1d2132]">
+        <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[16px] leading-[24px]">Select Asset</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+        >
+          <X size={16} className="text-[#6c779d]" />
+        </button>
+      </div>
+      <div className="flex flex-col flex-1 overflow-hidden px-[8px] pt-[8px] gap-[8px]">
+        <div className="flex items-center gap-[8px] bg-[#222737] rounded-[12px] h-[40px] px-[12px] flex-shrink-0">
+          <Search size={16} className="text-[#6c779d] shrink-0" />
+          <input
+            autoFocus
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search assets..."
+            className="flex-1 bg-transparent text-[#a8b9f4] text-[14px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#6c779d] outline-none"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} className="flex items-center">
+              <X size={14} className="text-[#6c779d]" />
+            </button>
+          )}
+        </div>
+        <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[24px] px-[8px] flex-shrink-0">
+          Search Results Assets
+        </p>
+        <div className="overflow-y-auto flex-1 flex flex-col pb-[8px]">
+          {filtered.map(asset => {
+            const isSel = selected.includes(asset.ticker);
+            return (
+              <button
+                key={asset.ticker}
+                type="button"
+                onClick={() => onToggle(asset.ticker)}
+                className="flex items-center gap-[8px] w-full h-[48px] px-[8px] hover:bg-[#1d2132] rounded-[8px] transition-colors flex-shrink-0"
+              >
+                <div
+                  className="size-[32px] rounded-full flex items-center justify-center shrink-0 text-white font-['Gilroy-SemiBold',sans-serif] text-[10px] leading-none"
+                  style={{ background: asset.color }}
+                >
+                  {asset.ticker.slice(0, 3)}
+                </div>
+                <p className="flex-1 text-left font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[32px] min-w-0 truncate">
+                  {asset.name} ({asset.ticker})
+                </p>
+                <div className={`size-[20px] rounded-full flex items-center justify-center shrink-0 transition-colors ${isSel ? "bg-[#42bf23]" : "border border-[#222737] bg-[#06070a]"}`}>
+                  {isSel && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="text-center font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] py-[24px]">No assets found</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface Props {
   open: boolean;
@@ -246,16 +354,19 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [t_open_drop, setT_open_drop]                           = useState<null | string>(null);
 
   /* ══ LENDING ══ */
-  const [l_protocol, setL_protocol]                               = useState("morpho");
+  const [l_protocol, setL_protocol]                               = useState("morpho_blue");
   const [l_max_supply_usd, setL_max_supply_usd]                   = useState("50,000");
-  const [l_allowed_collateral_assets, setL_allowed_collateral_assets] = useState<string[]>(["ETH", "WBTC", "stETH"]);
+  const [l_allowed_collateral_assets, setL_allowed_collateral_assets] = useState<string[]>(["ETH", "stETH", "cbBTC"]);
   const [l_allowed_borrow_assets, setL_allowed_borrow_assets]     = useState<string[]>(["USDC", "DAI"]);
-  const [l_max_ltv_percent, setL_max_ltv_percent]                 = useState("70");
-  const [l_target_ltv_percent, setL_target_ltv_percent]           = useState("55");
+  const [l_max_ltv_percent, setL_max_ltv_percent]                 = useState("30");
+  const [l_target_ltv_percent, setL_target_ltv_percent]           = useState("40");
   const [l_rebalance_threshold_percent, setL_rebalance_threshold_percent] = useState("5");
   const [l_max_liquidation_risk_percent, setL_max_liquidation_risk_percent] = useState("10");
-  const [l_max_protocol_exposure_percent, setL_max_protocol_exposure_percent] = useState("80");
+  const [l_max_protocol_exposure_percent, setL_max_protocol_exposure_percent] = useState("17");
   const [l_min_apy_target_percent, setL_min_apy_target_percent]   = useState("4");
+  const [l_liquidation_risk_ceiling, setL_liquidation_risk_ceiling] = useState("20");
+  const [l_halt_ltv_exceeds, setL_halt_ltv_exceeds]               = useState("80");
+  const [l_show_asset_picker, setL_show_asset_picker]             = useState(false);
 
   /* ══ YIELD ══ */
   const [y_strategy_type, setY_strategy_type]                     = useState("stable_farming");
@@ -540,6 +651,17 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
       {/* Modal shell */}
       <div className="relative z-10 w-[480px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
+
+        {/* ══ ASSET SEARCH POPUP (overlays full modal) ══ */}
+        {l_show_asset_picker && (
+          <AssetSearchPopup
+            selected={l_allowed_collateral_assets}
+            onToggle={(ticker) => setL_allowed_collateral_assets(prev =>
+              prev.includes(ticker) ? prev.filter(a => a !== ticker) : [...prev, ticker]
+            )}
+            onClose={() => setL_show_asset_picker(false)}
+          />
+        )}
 
         {/* ══ CONFIRMATION SCREEN (no header) ══ */}
         {launched && (
@@ -1127,16 +1249,21 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 {/* LENDING CONFIG */}
                 {selectedType === "lending" && (
                   <div className="flex flex-col gap-[24px] w-full">
+
+                    {/* ── PROTOCOLS ── */}
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="PROTOCOLS" />
                       <div className="flex flex-col gap-[4px]">
-                        <FieldLabel>Lending Vehicle</FieldLabel>
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Lending Vehicle</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
                         <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
                           {[
-                            { id: "morpho",          label: "Morpho",          desc: "Optimized peer-to-peer lending with off-chain matching and on-chain settlement." },
-                            { id: "aave",            label: "Aave v3",         desc: "Industry-standard lending with robust liquidity pools and risk management." },
-                            { id: "compound",        label: "Compound",        desc: "Algorithmic money market with cToken model for automated interest accrual." },
-                            { id: "custom_contract", label: "Custom Contract", desc: "Use a custom ERC-4626 vault or bespoke lending contract." },
+                            { id: "morpho_blue", label: "Morpho Blue",  desc: "Base · A rated" },
+                            { id: "aave_v3",     label: "Aave v3",      desc: "Base · A rated" },
+                            { id: "compound_v3", label: "Compound v3",  desc: "Base · A rated" },
+                            { id: "spark",       label: "Spark",        desc: "Base · A rated" },
                           ].map((opt) => (
                             <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={l_protocol === opt.id} onClick={() => setL_protocol(opt.id)} />
                           ))}
@@ -1144,49 +1271,100 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       </div>
                     </div>
 
+                    {/* ── CONTROLS ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="RISK CONTROLS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max LTV %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={l_max_ltv_percent} onChange={(e) => setL_max_ltv_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="70" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                      <SectionDivider title="CONTROLS" />
+
+                      {/* Accepted Collateral — tag chips + add button */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Accepted Collateral</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Target LTV %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={l_target_ltv_percent} onChange={(e) => setL_target_ltv_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="55" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                        <div className="flex flex-wrap gap-[8px] items-center w-full mt-[4px]">
+                          {l_allowed_collateral_assets.map(ticker => (
+                            <div key={ticker} className="h-[40px] flex items-center gap-[8px] px-[12px] bg-[#0a0c10] rounded-[100px]">
+                              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px]">{ticker}</span>
+                              <button
+                                type="button"
+                                onClick={() => setL_allowed_collateral_assets(l_allowed_collateral_assets.filter(a => a !== ticker))}
+                                className="flex items-center justify-center"
+                              >
+                                <X size={14} className="text-[#6c779d] hover:text-[#a8b9f4] transition-colors" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            data-testid="button-add-collateral"
+                            onClick={() => setL_show_asset_picker(true)}
+                            className="size-[40px] rounded-[100px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+                          >
+                            <Plus size={16} className="text-[#6c779d]" />
+                          </button>
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Supply (USD)</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={l_max_supply_usd} onChange={(e) => setL_max_supply_usd(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="50,000" />
-                          </div>
+                      </div>
+
+                      {/* Max Exposure Per Protocol */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Max Exposure Per Protocol</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Min APY Target %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={l_min_apy_target_percent} onChange={(e) => setL_min_apy_target_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="4" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                        <ConfigSlider min={1} max={20} value={l_max_protocol_exposure_percent} onChange={setL_max_protocol_exposure_percent} unit="" />
+                      </div>
+
+                      {/* Target LTV */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Target LTV</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
+                        <ConfigSlider min={1} max={100} value={l_target_ltv_percent} onChange={setL_target_ltv_percent} unit="%" />
+                      </div>
+
+                      {/* Max LTV at Origination */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Max LTV at Origination</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider min={1} max={100} value={l_max_ltv_percent} onChange={setL_max_ltv_percent} unit="%" />
+                      </div>
+
+                      {/* Rebalance Threshold */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Rebalance Threshold</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider min={1} max={20} value={l_rebalance_threshold_percent} onChange={setL_rebalance_threshold_percent} unit="%" />
                       </div>
                     </div>
 
+                    {/* ── SAFETY ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="COLLATERAL ASSETS" />
-                      <ChipGroup options={["ETH","WBTC","stETH","cbETH","USDC","DAI"]} selected={l_allowed_collateral_assets} onToggle={(v) => setL_allowed_collateral_assets(tog(l_allowed_collateral_assets, v))} />
+                      <SectionDivider title="SAFETY" />
+
+                      {/* Liquidation Risk Ceiling */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Liquidation Risk Ceiling</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider min={1} max={100} value={l_liquidation_risk_ceiling} onChange={setL_liquidation_risk_ceiling} unit="%" />
+                      </div>
+
+                      {/* Halt New Loans if Book LTV Exceeds */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Halt New Loans if Book LTV Exceeds</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider min={1} max={100} value={l_halt_ltv_exceeds} onChange={setL_halt_ltv_exceeds} unit="%" />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="BORROW ASSETS" />
-                      <ChipGroup options={["USDC","DAI","USDT","ETH"]} selected={l_allowed_borrow_assets} onToggle={(v) => setL_allowed_borrow_assets(tog(l_allowed_borrow_assets, v))} />
-                    </div>
                   </div>
                 )}
 
