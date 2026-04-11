@@ -650,43 +650,45 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   };
 
   const policyPreviewCards: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }[] = (() => {
-    if (selectedType === "trading") return [
-      { label: "Max Daily Loss",        value: `-${t_max_daily_loss_percent}%` },
-      { label: "Kill Switch",           value: `-${t_kill_switch_drawdown}%` },
-      { label: "Approval Threshold",    value: `> 90%` },
-      { label: "Markets",               value: t_allowed_markets.join(" · "), valueNode: (
-          <div className="flex flex-wrap gap-[4px] items-center mt-auto">
-            {t_allowed_markets.slice(0, 3).map((m, i) => (
-              <span key={m} className="flex items-center gap-[4px]">
-                {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
-                <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
-              </span>
-            ))}
-            {t_allowed_markets.length > 3 && (
-              <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[12px]">+{t_allowed_markets.length - 3}</span>
-            )}
-          </div>
-        )
-      },
-      { label: "Order Types",           value: t_order_types.map(o => o.replace(/_/g, " ")).join(" · "), valueNode: (
-          <div className="flex gap-[4px] items-center mt-auto">
-            {t_order_types.map((o, i) => (
-              <span key={o} className="flex items-center gap-[4px]">
-                {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
-                <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px] capitalize">{o.replace(/_/g, " ")}</span>
-              </span>
-            ))}
-          </div>
-        )
-      },
-      { label: "Cooldown",              value: cooldownLabel(t_cooldown_window_seconds) },
-      { label: "Max Position Size",     value: `$${parseUsd(t_max_position_size_usdc).toLocaleString()}` },
-      { label: "Cumulative Exposure",   value: `$${parseUsd(t_cumulative_exposure_limit).toLocaleString()}` },
-      { label: "Max Leverage",          value: `${t_max_position_leverage}×` },
-      { label: "Strategy",              value: t_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Capital Allocated",     value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
-      { label: "Daily Spend Cap",       value: `$${parseUsd(t_daily_spend_cap).toLocaleString()}` },
-    ];
+    if (selectedType === "trading") {
+      const dotList = (items: string[]) => (
+        <div className="flex flex-wrap gap-[4px] items-center mt-auto">
+          {items.map((item, i) => (
+            <span key={item} className="flex items-center gap-[4px]">
+              {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
+              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+            </span>
+          ))}
+        </div>
+      );
+      return [
+        { label: "Capital Allocated",   value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
+        { label: "Strategy",            value: t_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+        { label: "Max Position Size",   value: `$${parseUsd(t_max_position_size_usdc).toLocaleString()}` },
+        { label: "Daily Spend Cap",     value: `$${parseUsd(t_daily_spend_cap).toLocaleString()}` },
+        { label: "Max Daily Loss",      value: `-${t_max_daily_loss_percent}%` },
+        { label: "Kill Switch",         value: `-${t_kill_switch_drawdown}%` },
+        { label: "Max Slippage",        value: `${t_max_slippage_bps} bps` },
+        { label: "Cooldown Window",     value: cooldownLabel(t_cooldown_window_seconds) },
+        { label: "Max Leverage",        value: `${t_max_position_leverage}×` },
+        { label: "Cumulative Exposure", value: `$${parseUsd(t_cumulative_exposure_limit).toLocaleString()}` },
+        { label: "Order Types",         value: t_order_types.map(o => o.replace(/_/g, " ")).join(" · "), valueNode: dotList(t_order_types.map(o => o.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()))) },
+        { label: "Allowed Markets",     value: t_allowed_markets.join(" · "), valueNode: (
+            <div className="flex flex-wrap gap-[4px] items-center mt-auto">
+              {t_allowed_markets.slice(0, 3).map((m, i) => (
+                <span key={m} className="flex items-center gap-[4px]">
+                  {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
+                  <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
+                </span>
+              ))}
+              {t_allowed_markets.length > 3 && (
+                <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[12px]">+{t_allowed_markets.length - 3}</span>
+              )}
+            </div>
+          )
+        },
+      ];
+    }
     if (selectedType === "lending") {
       const fmtProtocol = (p: string) => (({
         morpho_blue: "Morpho Blue", aave_v3: "Aave v3", compound_v3: "Compound v3", spark: "Spark",
@@ -702,6 +704,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         </div>
       );
       return [
+        { label: "Capital Allocated",        value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
         { label: "Lending Vehicle",          value: fmtProtocol(l_protocol), valueNode: dotList([fmtProtocol(l_protocol)]) },
         { label: "Collateral Assets",        value: l_allowed_collateral_assets.join(", "), valueNode: dotList(l_allowed_collateral_assets.length ? l_allowed_collateral_assets : ["—"]) },
         { label: "Max Protocol Exposure",    value: `${l_max_protocol_exposure_percent}%` },
@@ -713,16 +716,19 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       ];
     }
     if (selectedType === "yield") return [
-      { label: "Strategy",          value: y_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Target APY",        value: `${y_target_apy_percent}%` },
-      { label: "Min APY",           value: `${y_min_apy_percent}%` },
-      { label: "Exit If APY Below", value: `${y_exit_if_apy_below_percent}%` },
-      { label: "Max Slippage",      value: `${y_max_slippage_bps} bps` },
-      { label: "Max Exposure",      value: `${y_max_exposure_percent}%` },
-      { label: "Max Position",      value: `$${parseUsd(y_max_position_size_usdc).toLocaleString()}` },
-      { label: "IL Tolerance",      value: y_il_tolerance },
-      { label: "Rebalance",         value: y_rebalance_cooldown },
-      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
+      { label: "Capital Allocated",        value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
+      { label: "Strategy",                 value: y_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
+      { label: "Target APY",               value: `${y_target_apy_percent}%` },
+      { label: "Min APY Floor",            value: `${y_min_apy_percent}%` },
+      { label: "Exit if APY Drops Below",  value: `${y_exit_if_apy_below_percent}%` },
+      { label: "Max Position Size",        value: `$${parseUsd(y_max_position_size_usdc).toLocaleString()}` },
+      { label: "Max Per Protocol",         value: `${y_max_exposure_percent}%` },
+      { label: "Max Slippage",             value: `${y_max_slippage_bps} bps` },
+      { label: "IL Tolerance",             value: y_il_tolerance },
+      { label: "Rebalance Frequency",      value: y_rebalance_cooldown },
+      { label: "Protocol Downgrade",       value: y_protocol_downgrade },
+      { label: "TVL Drain Breaker",        value: y_tvl_drain_breaker },
+      { label: "Stable Peg Breaker",       value: y_stable_peg_breaker },
     ];
     if (selectedType === "payments") {
       const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + Bills", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402 API" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
@@ -757,6 +763,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         </div>
       );
       return [
+        { label: "Capital Allocated",  value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
         { label: "Tracked Agents",     value: a_tracked_agents === "all" ? "All (5)" : "Selected" },
         { label: "Tracked Positions",  value: a_tracked_positions === "all_open" ? "All open" : a_tracked_positions },
         { label: "Report Frequency",   value: fmtReportFreq(a_report_frequency) },
@@ -764,7 +771,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         { label: "Critical Routing",   value: a_critical_routing },
         { label: "Max Alerts / Day",   value: a_max_alerts_per_day },
         { label: "Compute Cap",        value: `$${parseUsd(a_compute_cap).toLocaleString()} / month` },
-        { label: "Auto Execute",       value: a_auto_execute ? `Enabled · ${a_auto_execute_scope.charAt(0).toUpperCase() + a_auto_execute_scope.slice(1)}` : "Disabled", valueNode: a_auto_execute ? dotList(["Enabled", a_auto_execute_scope.charAt(0).toUpperCase() + a_auto_execute_scope.slice(1)]) : undefined },
+        { label: "Auto Execute",       value: a_auto_execute ? `Enabled` : "Disabled" },
         { label: "Execution Cap",      value: `$${parseUsd(a_execution_cap_usdc).toLocaleString()} / action` },
         { label: "Allowed Actions",    value: fmtActions(a_allowed_actions) },
         { label: "Daily Action Cap",   value: a_daily_action_cap },
@@ -2209,9 +2216,13 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <TypeBadge type={selectedType} />
                     </div>
                     <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-4">
-                      {agentDesc || (selectedType === "payments"
-                        ? "An agent that automates payments, transfers, and recurring transactions based on your rules to streamline treasury movement and keep funds flowing efficiently across accounts, wallets, and recipients."
-                        : `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} AI agent for automated execution.`)}
+                      {agentDesc || ({
+                        trading:   "An AI-powered trading agent that analyzes market trends and executes trades automatically, optimizing portfolios for maximum returns with minimal risk.",
+                        lending:   "A smart lending agent that helps users borrow, lend, and manage credit with clear rules and automated execution.",
+                        yield:     "An AI agent that automatically moves idle funds into optimized yield strategies while managing risk, liquidity, and capital allocation in real time.",
+                        payments:  "An agent that automates payments, transfers, and recurring transactions based on your rules to streamline treasury movement and keep funds flowing efficiently across accounts, wallets, and recipients.",
+                        analytics: "A Brain agent that tracks performance, monitors activity, and surfaces insights to help you make better financial decisions.",
+                      } as Record<string, string>)[selectedType] || `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} AI agent for automated execution.`}
                     </p>
                   </div>
                 </div>
