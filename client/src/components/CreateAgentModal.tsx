@@ -465,7 +465,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [a_tracked_positions, setA_tracked_positions] = useState("all_open");
   const [a_report_frequency, setA_report_frequency]   = useState("daily");
   const [a_recommendations, setA_recommendations]     = useState("included");
-  const [a_critical_routing, setA_critical_routing]   = useState("Dash + Slack + SMS");
+  const [a_critical_routing, setA_critical_routing]   = useState("Dashboard + Slack + SMS");
   const [a_max_alerts_per_day, setA_max_alerts_per_day] = useState("10");
   const [a_compute_cap, setA_compute_cap]             = useState("250");
   const [a_auto_execute, setA_auto_execute]           = useState(true);
@@ -750,8 +750,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       ];
     }
     if (selectedType === "analytics") {
-      const fmtReportFreq = (v: string) => (({ daily: "Daily 09:00 GST", weekly: "Weekly", hourly: "Hourly" } as Record<string,string>)[v] || v.replace(/\b\w/g,c=>c.toUpperCase()));
-      const fmtActions = (v: string) => (({ pause_agent_only: "Pause agent only", rebalance: "Rebalance", halt_all: "Halt all" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
+      const fmtReportFreq = (v: string) => (({ hourly: "Hourly", daily: "Daily 09:00 GST", weekly: "Weekly", monthly: "Monthly" } as Record<string,string>)[v] || v.replace(/\b\w/g,c=>c.toUpperCase()));
+      const fmtActions = (v: string) => (({ pause_agent_only: "Pause Agent Only", pause_rebalance: "Pause + Rebalance", custom_whitelist: "Custom Whitelist" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
       const dotList = (items: string[]) => (
         <div className="flex flex-wrap gap-[4px] items-center mt-auto">
           {items.map((item, i) => (
@@ -2072,29 +2072,43 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <FieldLabel>Routine Reports</FieldLabel>
                           <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
                             <select value={a_report_frequency} onChange={(e) => setA_report_frequency(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="daily" className="bg-[#0a0c10]">Daily</option>
-                              <option value="weekly" className="bg-[#0a0c10]">Weekly</option>
-                              <option value="hourly" className="bg-[#0a0c10]">Hourly</option>
+                              <option value="hourly"  className="bg-[#0a0c10]">Hourly</option>
+                              <option value="daily"   className="bg-[#0a0c10]">Daily</option>
+                              <option value="weekly"  className="bg-[#0a0c10]">Weekly</option>
+                              <option value="monthly" className="bg-[#0a0c10]">Monthly</option>
                             </select>
                           </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
                           <FieldLabel>Compute Cap / Month</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={a_compute_cap} onChange={(e) => setA_compute_cap(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="250" />
+                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
+                            <select value={a_compute_cap} onChange={(e) => setA_compute_cap(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
+                              <option value="100"  className="bg-[#0a0c10]">$100</option>
+                              <option value="250"  className="bg-[#0a0c10]">$250</option>
+                              <option value="500"  className="bg-[#0a0c10]">$500</option>
+                              <option value="1000" className="bg-[#0a0c10]">$1,000</option>
+                            </select>
                           </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
                           <FieldLabel>Max Alerts / Day</FieldLabel>
                           <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <input value={a_max_alerts_per_day} onChange={(e) => setA_max_alerts_per_day(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full" placeholder="50" />
+                            <select value={a_max_alerts_per_day} onChange={(e) => setA_max_alerts_per_day(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
+                              <option value="5"         className="bg-[#0a0c10]">5</option>
+                              <option value="10"        className="bg-[#0a0c10]">10</option>
+                              <option value="25"        className="bg-[#0a0c10]">25</option>
+                              <option value="Unlimited" className="bg-[#0a0c10]">Unlimited</option>
+                            </select>
                           </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
                           <FieldLabel>Critical Routing</FieldLabel>
                           <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <input value={a_critical_routing} onChange={(e) => setA_critical_routing(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full" placeholder="Dash + Slack + SMS" />
+                            <select value={a_critical_routing} onChange={(e) => setA_critical_routing(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
+                              <option value="Dashboard"                  className="bg-[#0a0c10]">Dashboard</option>
+                              <option value="Dashboard + Slack"          className="bg-[#0a0c10]">Dashboard + Slack</option>
+                              <option value="Dashboard + Slack + SMS"    className="bg-[#0a0c10]">Dashboard + Slack + SMS</option>
+                            </select>
                           </div>
                         </div>
                       </div>
@@ -2102,14 +2116,27 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="ACTION PERMISSIONS" />
-                      <div className="flex flex-col gap-[4px]">
-                        <FieldLabel>Allowed Actions</FieldLabel>
-                        <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                          <select value={a_allowed_actions} onChange={(e) => setA_allowed_actions(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                            <option value="pause_agent_only" className="bg-[#0a0c10]">Pause agent only</option>
-                            <option value="rebalance" className="bg-[#0a0c10]">Rebalance</option>
-                            <option value="halt_all" className="bg-[#0a0c10]">Halt all</option>
-                          </select>
+                      <div className="grid grid-cols-2 gap-[12px]">
+                        <div className="flex flex-col gap-[4px]">
+                          <FieldLabel>Allowed Actions</FieldLabel>
+                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
+                            <select value={a_allowed_actions} onChange={(e) => setA_allowed_actions(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
+                              <option value="pause_agent_only"  className="bg-[#0a0c10]">Pause Agent Only</option>
+                              <option value="pause_rebalance"   className="bg-[#0a0c10]">Pause + Rebalance</option>
+                              <option value="custom_whitelist"  className="bg-[#0a0c10]">Custom Whitelist</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-[4px]">
+                          <FieldLabel>Daily Action Cap</FieldLabel>
+                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
+                            <select value={a_daily_action_cap} onChange={(e) => setA_daily_action_cap(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
+                              <option value="1"  className="bg-[#0a0c10]">1</option>
+                              <option value="3"  className="bg-[#0a0c10]">3</option>
+                              <option value="5"  className="bg-[#0a0c10]">5</option>
+                              <option value="10" className="bg-[#0a0c10]">10</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     </div>
