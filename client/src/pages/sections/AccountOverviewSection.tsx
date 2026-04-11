@@ -992,7 +992,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     return (
                       <button
                         key={cardIdx}
-                        onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setDropdownOpen(false); }}
+                        onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
@@ -1023,7 +1023,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     return (
                       <button
                         key={agent.id}
-                        onClick={() => handleSwitchAccount(agent.id)}
+                        onClick={() => { handleSwitchAccount(agent.id); setCollapsedAccount(agent.id); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
