@@ -392,18 +392,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         style={{ left: collapsed ? "76px" : "280px" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-base">Notifications</span>
+        <div className="flex items-center justify-between px-[16px] py-[16px]">
+          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Notifications</span>
           <div className="flex items-center gap-2">
             <button
               onClick={markAllRead}
-              className="px-3 py-1 rounded-full bg-[#1a1f30] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[11px] hover:text-white transition-colors"
+              className="h-6 flex items-center px-[10px] rounded-[100px] bg-[#222737] [font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
             >
               Mark all read
             </button>
             <button
               onClick={() => setNotificationsOpen(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#222737] text-[#6c779d] hover:opacity-80 transition-opacity"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -461,9 +461,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               onClick={() => setNotificationsOpen(false)}
               className="w-full flex items-center justify-center gap-2 py-[10px] bg-[#222737] hover:opacity-80 transition-opacity rounded-[100px]"
             >
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm">View All Notifications</span>
+              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#6c779d] text-sm">View All Notifications</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 8H13M9 4L13 8L9 12" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </Link>
