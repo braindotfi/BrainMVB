@@ -728,6 +728,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + Bills", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402 API" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
       const firstR = p_recipient_list[0];
       return [
+        { label: "Capital Allocated",          value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
         { label: "Payment Type",              value: fmtPayType(p_payment_type) },
         { label: "Per-TX Limit",              value: p_per_tx_limit },
         { label: "Daily Budget",              value: p_daily_budget },
@@ -740,7 +741,6 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         { label: "Volume Spike Breaker",      value: p_vol_spike },
         { label: "Sanctions Screening",       value: p_sanctions_screen },
         { label: "Duplicate Detection Window", value: p_dup_window },
-        { label: "Capital Allocated",          value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
       ];
     }
     if (selectedType === "analytics") {
