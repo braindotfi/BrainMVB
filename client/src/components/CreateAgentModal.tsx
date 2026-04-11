@@ -373,9 +373,15 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [y_min_apy_percent, setY_min_apy_percent]                 = useState("4");
   const [y_target_apy_percent, setY_target_apy_percent]           = useState("8");
   const [y_exit_if_apy_below_percent, setY_exit_if_apy_below_percent] = useState("3");
-  const [y_max_slippage_bps, setY_max_slippage_bps]               = useState("133");
-  const [y_max_stable_pair_concentration, setY_max_stable_pair_concentration] = useState("40");
-  const [y_max_position_size_usdc, setY_max_position_size_usdc]   = useState("25,000");
+  const [y_max_slippage_bps, setY_max_slippage_bps]               = useState("25");
+  const [y_max_position_size_usdc, setY_max_position_size_usdc]   = useState("100,000");
+  const [y_max_exposure_percent, setY_max_exposure_percent]       = useState("30");
+  const [y_il_tolerance, setY_il_tolerance]                       = useState("0% (No LP)");
+  const [y_protocol_downgrade, setY_protocol_downgrade]           = useState("1 tier");
+  const [y_stable_peg_breaker, setY_stable_peg_breaker]           = useState("< .998");
+  const [y_tvl_drain_breaker, setY_tvl_drain_breaker]             = useState("-20% / 24h");
+  const [y_rebalance_cooldown, setY_rebalance_cooldown]           = useState("4h");
+  const [y_dd, setY_dd]                                           = useState("");
   const [y_protocols, setY_protocols] = useState<string[]>(["Morphy", "Aave v3"]);
 
   /* ══ PAYMENTS ══ */
@@ -439,9 +445,14 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       target_apy_percent: parseInt(y_target_apy_percent),
       exit_if_apy_below_percent: parseInt(y_exit_if_apy_below_percent),
       max_slippage_bps: parseInt(y_max_slippage_bps),
-      max_stable_pair_concentration: parseInt(y_max_stable_pair_concentration),
+      max_exposure_percent: parseInt(y_max_exposure_percent),
+      il_tolerance: y_il_tolerance,
       max_position_size_usdc: parseUsd(y_max_position_size_usdc),
       protocol_allowlist: y_protocols,
+      protocol_downgrade: y_protocol_downgrade,
+      stable_peg_breaker: y_stable_peg_breaker,
+      tvl_drain_breaker: y_tvl_drain_breaker,
+      rebalance_cooldown: y_rebalance_cooldown,
     };
     if (selectedType === "payments") return {
       payment_type: p_payment_type,
@@ -471,7 +482,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       secondary_limit_usdc: parseUsd(c_secondary_limit),
     };
     return {};
-  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_stable_pair_concentration, y_max_position_size_usdc, y_protocols, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
+  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_exposure_percent, y_il_tolerance, y_max_position_size_usdc, y_protocols, y_protocol_downgrade, y_stable_peg_breaker, y_tvl_drain_breaker, y_rebalance_cooldown, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
 
   const policyHash = useMemo(() => selectedType ? computePolicyHash(selectedType, policyParams) : "", [selectedType, policyParams]);
 
@@ -609,8 +620,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       { label: "Min APY",           value: `${y_min_apy_percent}%` },
       { label: "Exit If APY Below", value: `${y_exit_if_apy_below_percent}%` },
       { label: "Max Slippage",      value: `${y_max_slippage_bps} bps` },
+      { label: "Max Exposure",      value: `${y_max_exposure_percent}%` },
       { label: "Max Position",      value: `$${parseUsd(y_max_position_size_usdc).toLocaleString()}` },
-      { label: "Stable Conc.",      value: `${y_max_stable_pair_concentration}%` },
+      { label: "IL Tolerance",      value: y_il_tolerance },
+      { label: "Rebalance",         value: y_rebalance_cooldown },
       { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     if (selectedType === "payments") return [
@@ -1370,51 +1383,87 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                 {/* YIELD CONFIG */}
                 {selectedType === "yield" && (
-                  <div className="flex flex-col gap-[24px] w-full">
+                  <div className="flex flex-col gap-[24px] w-full" onClick={() => y_dd && setY_dd("")}>
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="CONTROLS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
+                      {/* APY Sliders */}
+                      <div className="flex flex-col gap-[12px] w-full">
                         <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Target APY %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={y_target_apy_percent} onChange={(e) => setY_target_apy_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="8" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                          <FieldLabel>Target APY</FieldLabel>
+                          <ConfigSlider min={1} max={20} value={y_target_apy_percent} onChange={setY_target_apy_percent} unit="%" />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Min APY Floor %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={y_min_apy_percent} onChange={(e) => setY_min_apy_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="4" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                          <FieldLabel>Min APY Floor</FieldLabel>
+                          <ConfigSlider min={1} max={20} value={y_min_apy_percent} onChange={setY_min_apy_percent} unit="%" />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Exit if APY Below %</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={y_exit_if_apy_below_percent} onChange={(e) => setY_exit_if_apy_below_percent(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="3" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                          <FieldLabel>Exit if APY Drops Below</FieldLabel>
+                          <ConfigSlider min={1} max={20} value={y_exit_if_apy_below_percent} onChange={setY_exit_if_apy_below_percent} unit="%" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Exposure / Protocol</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={y_max_stable_pair_concentration} onChange={(e) => setY_max_stable_pair_concentration(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="40" />
-                            <span className="text-[#6c779d] text-[14px]">%</span>
-                          </div>
+                      </div>
+                      {/* Dropdowns 2-col grid */}
+                      <div className="grid grid-cols-2 gap-[16px] w-full">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Max Exposure / Protocol"
+                            value={y_max_exposure_percent}
+                            options={[
+                              { label: "25%", value: "25" },
+                              { label: "30%", value: "30" },
+                              { label: "40%", value: "40" },
+                              { label: "50%", value: "50" },
+                            ]}
+                            open={y_dd === "max_exposure"}
+                            onOpen={() => setY_dd(y_dd === "max_exposure" ? "" : "max_exposure")}
+                            onChange={(v) => { setY_max_exposure_percent(v); setY_dd(""); }}
+                          />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Position Size</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={y_max_position_size_usdc} onChange={(e) => setY_max_position_size_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="25,000" />
-                          </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Max Position Size"
+                            value={y_max_position_size_usdc}
+                            options={[
+                              { label: "$50,000",     value: "50,000" },
+                              { label: "$100,000",    value: "100,000" },
+                              { label: "$250,000",    value: "250,000" },
+                              { label: "$500,000",    value: "500,000" },
+                              { label: "$750,000",    value: "750,000" },
+                              { label: "$1,000,000",  value: "1,000,000" },
+                            ]}
+                            open={y_dd === "max_position"}
+                            onOpen={() => setY_dd(y_dd === "max_position" ? "" : "max_position")}
+                            onChange={(v) => { setY_max_position_size_usdc(v); setY_dd(""); }}
+                          />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Slippage (bps)</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <input value={y_max_slippage_bps} onChange={(e) => setY_max_slippage_bps(e.target.value)} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="133" />
-                            <span className="text-[#6c779d] text-[14px]">bps</span>
-                          </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Max Slippage"
+                            value={y_max_slippage_bps}
+                            options={[
+                              { label: "10 bps", value: "10" },
+                              { label: "25 bps", value: "25" },
+                              { label: "50 bps", value: "50" },
+                              { label: "75 bps", value: "75" },
+                            ]}
+                            open={y_dd === "max_slippage"}
+                            onOpen={() => setY_dd(y_dd === "max_slippage" ? "" : "max_slippage")}
+                            onChange={(v) => { setY_max_slippage_bps(v); setY_dd(""); }}
+                          />
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="IL Tolerance"
+                            value={y_il_tolerance}
+                            options={[
+                              { label: "0% (No LP)", value: "0% (No LP)" },
+                              { label: "1%",         value: "1%" },
+                              { label: "2%",         value: "2%" },
+                              { label: "5%",         value: "5%" },
+                            ]}
+                            open={y_dd === "il_tolerance"}
+                            onOpen={() => setY_dd(y_dd === "il_tolerance" ? "" : "il_tolerance")}
+                            onChange={(v) => { setY_il_tolerance(v); setY_dd(""); }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1435,6 +1484,71 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         ].map((opt) => (
                           <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={y_strategy_type === opt.id} onClick={() => setY_strategy_type(opt.id)} />
                         ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-[16px] w-full">
+                      <SectionDivider title="SAFETY" />
+                      <div className="grid grid-cols-2 gap-[16px] w-full">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Protocol Downgrade"
+                            value={y_protocol_downgrade}
+                            options={[
+                              { label: "1 tier",  value: "1 tier" },
+                              { label: "2 tiers", value: "2 tiers" },
+                              { label: "Pause",   value: "Pause" },
+                              { label: "Exit",    value: "Exit" },
+                              { label: "Any",     value: "Any" },
+                            ]}
+                            open={y_dd === "protocol_downgrade"}
+                            onOpen={() => setY_dd(y_dd === "protocol_downgrade" ? "" : "protocol_downgrade")}
+                            onChange={(v) => { setY_protocol_downgrade(v); setY_dd(""); }}
+                          />
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="TVL Drain Breaker"
+                            value={y_tvl_drain_breaker}
+                            options={[
+                              { label: "-20% / 24h", value: "-20% / 24h" },
+                              { label: "-30% / 24h", value: "-30% / 24h" },
+                              { label: "-40% / 24h", value: "-40% / 24h" },
+                            ]}
+                            open={y_dd === "tvl_drain"}
+                            onOpen={() => setY_dd(y_dd === "tvl_drain" ? "" : "tvl_drain")}
+                            onChange={(v) => { setY_tvl_drain_breaker(v); setY_dd(""); }}
+                          />
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Stable Peg Breaker"
+                            value={y_stable_peg_breaker}
+                            options={[
+                              { label: "< .998", value: "< .998" },
+                              { label: "< .995", value: "< .995" },
+                              { label: "< .99",  value: "< .99" },
+                            ]}
+                            open={y_dd === "stable_peg"}
+                            onOpen={() => setY_dd(y_dd === "stable_peg" ? "" : "stable_peg")}
+                            onChange={(v) => { setY_stable_peg_breaker(v); setY_dd(""); }}
+                          />
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SmallDropdown
+                            label="Rebalance Cooldown"
+                            value={y_rebalance_cooldown}
+                            options={[
+                              { label: "4h",  value: "4h" },
+                              { label: "12h", value: "12h" },
+                              { label: "24h", value: "24h" },
+                              { label: "72h", value: "72h" },
+                            ]}
+                            open={y_dd === "rebalance_cooldown"}
+                            onOpen={() => setY_dd(y_dd === "rebalance_cooldown" ? "" : "rebalance_cooldown")}
+                            onChange={(v) => { setY_rebalance_cooldown(v); setY_dd(""); }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
