@@ -1,16 +1,6 @@
-import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
-
-type FilterTab = "all" | "agents" | "banking" | "insights";
-
-const CATEGORY_MAP: Record<FilterTab, string[]> = {
-  all: [],
-  agents: ["AGENT_PAYMENT_EXECUTED", "AGENT_POLICY_REJECTED", "AGENT_OBJECTIVE_COMPLETE"],
-  banking: ["CARD_TRANSACTION", "TRANSACTION_CONFIRMED", "BALANCE_LOW"],
-  insights: ["insights"],
-};
 
 function NotifAvatar({ type }: { type: string }) {
   if (type === "insights") {
@@ -28,7 +18,7 @@ function NotifAvatar({ type }: { type: string }) {
   }
   return (
     <div
-      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
+      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
       style={{ background: "#1a1f30" }}
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -44,12 +34,7 @@ function NotifAvatar({ type }: { type: string }) {
 }
 
 export const NotificationsPage = (): JSX.Element => {
-  const { notifications, unreadCount, isLoading, sseConnected, markRead, markAllRead } = useNotifications();
-  const [tab, setTab] = useState<FilterTab>("all");
-
-  const filtered = tab === "all"
-    ? notifications
-    : notifications.filter(n => CATEGORY_MAP[tab].includes(n.type));
+  const { notifications, unreadCount, isLoading, markRead, markAllRead } = useNotifications();
 
   const formatTime = (ts: string) => {
     try { return formatDistanceToNow(new Date(ts), { addSuffix: false }); }
@@ -58,57 +43,24 @@ export const NotificationsPage = (): JSX.Element => {
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <h2
-            className="text-[20px] leading-[24px]"
-            style={{ color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
-          >
-            Notifications
-          </h2>
-          <div className="flex items-center gap-1.5">
-            <div
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: sseConnected ? "#22c55e" : "#ef4444" }}
-            />
-            <span className="text-xs" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>
-              {sseConnected ? "Live" : "Offline"}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              data-testid="mark-all-read-btn"
-              className="px-[10px] py-[4px] rounded-[100px] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
-              style={{ background: "#222737", color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
-            >
-              Mark all read
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 px-4 pb-3 flex-shrink-0">
-        {(["all", "agents", "banking", "insights"] as FilterTab[]).map(t => (
+      {/* Header */}
+      <div className="flex items-center justify-between px-[16px] py-[16px] flex-shrink-0">
+        <h2
+          className="text-[20px] leading-[24px]"
+          style={{ color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
+        >
+          Notifications
+        </h2>
+        {unreadCount > 0 && (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            data-testid={`notif-tab-${t}`}
-            className="px-3 py-1.5 rounded-full text-[12px] capitalize transition-colors"
-            style={{
-              background: tab === t ? "#240757" : "transparent",
-              color: tab === t ? "#9d5cf5" : "#414965",
-              fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
-              border: tab === t ? "1px solid #4a1a9e" : "1px solid transparent",
-            }}
+            onClick={markAllRead}
+            data-testid="mark-all-read-btn"
+            className="h-6 flex items-center px-[10px] rounded-[100px] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
+            style={{ background: "#222737", color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
           >
-            {t}
+            Mark All As Read
           </button>
-        ))}
+        )}
       </div>
 
       {/* Notification list */}
@@ -120,7 +72,7 @@ export const NotificationsPage = (): JSX.Element => {
               <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>Loading notifications…</span>
             </div>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <span className="text-3xl">🔔</span>
             <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>
@@ -129,7 +81,7 @@ export const NotificationsPage = (): JSX.Element => {
           </div>
         ) : (
           <div className="flex flex-col gap-[8px] px-[16px] py-[8px]">
-            {filtered.map((n, i) => (
+            {notifications.map((n, i) => (
               <div key={n.id} className="flex flex-col gap-[8px]">
                 {/* Row */}
                 <div
@@ -174,7 +126,7 @@ export const NotificationsPage = (): JSX.Element => {
                 </div>
 
                 {/* Divider */}
-                {i < filtered.length - 1 && (
+                {i < notifications.length - 1 && (
                   <div className="w-full border-b border-[#1d2132]" />
                 )}
               </div>
