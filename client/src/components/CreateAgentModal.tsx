@@ -163,7 +163,7 @@ const RadioCard = ({
 const PolicyInfoCard = ({
   label, value, valueColor = "#a8b9f4", valueNode
 }: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }) => (
-  <div className="bg-[#0a0c10] flex flex-col h-[58px] items-start p-[12px] rounded-[16px]">
+  <div className="bg-[#0a0c10] flex flex-col min-h-[62px] items-start p-[12px] rounded-[16px]">
     <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[14px]">{label}</p>
     {valueNode
       ? <div className="mt-auto">{valueNode}</div>
@@ -604,16 +604,31 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       { label: "Capital Allocated",     value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
       { label: "Daily Spend Cap",       value: `$${parseUsd(t_daily_spend_cap).toLocaleString()}` },
     ];
-    if (selectedType === "lending") return [
-      { label: "Protocol",         value: l_protocol.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
-      { label: "Borrow Assets",    value: l_allowed_borrow_assets.join(", ") || "—" },
-      { label: "Min APY Target",   value: `${l_min_apy_target_percent}%` },
-      { label: "Max LTV",          value: `${l_max_ltv_percent}%` },
-      { label: "Target LTV",       value: `${l_target_ltv_percent}%` },
-      { label: "Max Supply",       value: `$${parseUsd(l_max_supply_usd).toLocaleString()}` },
-      { label: "Collateral",       value: l_allowed_collateral_assets.slice(0, 3).join(", ") + (l_allowed_collateral_assets.length > 3 ? ` +${l_allowed_collateral_assets.length - 3}` : "") || "—" },
-      { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
-    ];
+    if (selectedType === "lending") {
+      const fmtProtocol = (p: string) => (({
+        morpho_blue: "Morpho Blue", aave_v3: "Aave v3", compound_v3: "Compound v3", spark: "Spark",
+      } as Record<string, string>)[p] || p.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
+      const dotList = (items: string[]) => (
+        <div className="flex flex-wrap gap-[4px] items-center mt-auto">
+          {items.map((item, i) => (
+            <span key={item} className="flex items-center gap-[4px]">
+              {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
+              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+            </span>
+          ))}
+        </div>
+      );
+      return [
+        { label: "Lending Vehicle",          value: fmtProtocol(l_protocol), valueNode: dotList([fmtProtocol(l_protocol)]) },
+        { label: "Collateral Assets",        value: l_allowed_collateral_assets.join(", "), valueNode: dotList(l_allowed_collateral_assets.length ? l_allowed_collateral_assets : ["—"]) },
+        { label: "Max Protocol Exposure",    value: `${l_max_protocol_exposure_percent}%` },
+        { label: "Target LTV",               value: `${l_target_ltv_percent}%` },
+        { label: "Max LTV at Origination",   value: `${l_max_ltv_percent}%` },
+        { label: "Rebalance Threshold",      value: `${l_rebalance_threshold_percent}% from target` },
+        { label: "Liquidation Risk Ceiling", value: `${l_liquidation_risk_ceiling}% LTV` },
+        { label: "Book LTV Breaker",         value: `> ${l_halt_ltv_exceeds}% halt` },
+      ];
+    }
     if (selectedType === "yield") return [
       { label: "Strategy",          value: y_strategy_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) },
       { label: "Target APY",        value: `${y_target_apy_percent}%` },
