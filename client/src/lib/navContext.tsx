@@ -24,6 +24,7 @@ export interface AgentPrefillData {
   maxSinglePayment?:        string;
   monthlyBudgetCap?:        string;
   autoApprovalThreshold?:   string;
+  typeConfig?:    Record<string, any>;
 }
 
 interface NavContextType {

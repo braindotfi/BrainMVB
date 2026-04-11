@@ -51,6 +51,7 @@ function buildPrefill(agent: AgentData, rawPolicy?: any): AgentPrefillData {
     maxSinglePayment: String(p.maxSinglePayment ?? 500),
     monthlyBudgetCap: String(p.monthlyBudgetCap ?? 2000),
     autoApprovalThreshold: String(p.autoApprovalThreshold ?? 50),
+    typeConfig: p.typeConfig ?? {},
   };
 }
 

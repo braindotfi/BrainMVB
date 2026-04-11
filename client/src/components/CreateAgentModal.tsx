@@ -652,15 +652,75 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     setLaunched(false); setLaunching(false); setAuthSig(false); setTerms(false);
     setShowAvatarPicker(false);
     if (!prefill) return;
+    // Generic fields
     setSelectedType(prefill.type || "");
     setAgentName(prefill.name || "");
     setAgentDesc(prefill.description || "");
     setSelectedAvatar(prefill.avatar || "");
     setCapital(prefill.capital || "");
     setCapitalAsset(prefill.capitalAsset || "USDC");
-    if (prefill.maxLTV) setL_max_ltv_percent(prefill.maxLTV);
-    if (prefill.targetAPY) setY_target_apy_percent(prefill.targetAPY);
-    if (prefill.minAPY) setY_min_apy_percent(prefill.minAPY);
+    // Type-specific fields from saved typeConfig
+    const tc = prefill.typeConfig ?? {};
+    const s = (v: unknown) => v != null ? String(v) : "";
+    const fmtUsdc = (v: unknown) => v != null ? Number(v).toLocaleString() : "";
+    const arr = (v: unknown): string[] => Array.isArray(v) ? v : [];
+    const type = (prefill.type || "").toLowerCase();
+    if (type === "trading") {
+      if (tc.strategy_type)             setT_strategy_type(tc.strategy_type);
+      if (tc.max_position_size_usdc)    setT_max_position_size_usdc(fmtUsdc(tc.max_position_size_usdc));
+      if (tc.max_daily_loss_percent)    setT_max_daily_loss_percent(s(tc.max_daily_loss_percent));
+      if (tc.allowed_markets)           setT_allowed_markets(arr(tc.allowed_markets));
+      if (tc.cooldown_window_seconds)   setT_cooldown_window_seconds(s(tc.cooldown_window_seconds));
+      if (tc.cumulative_exposure_limit) setT_cumulative_exposure_limit(fmtUsdc(tc.cumulative_exposure_limit));
+      if (tc.daily_spend_cap)           setT_daily_spend_cap(fmtUsdc(tc.daily_spend_cap));
+      if (tc.order_types)               setT_order_types(arr(tc.order_types));
+      if (tc.max_slippage_bps)          setT_max_slippage_bps(s(tc.max_slippage_bps));
+      if (tc.max_position_leverage)     setT_max_position_leverage(s(tc.max_position_leverage));
+      if (tc.kill_switch_drawdown)      setT_kill_switch_drawdown(s(tc.kill_switch_drawdown));
+    } else if (type === "lending") {
+      if (tc.protocol)                       setL_protocol(tc.protocol);
+      if (tc.max_supply_usd)                 setL_max_supply_usd(fmtUsdc(tc.max_supply_usd));
+      if (tc.allowed_collateral_assets)      setL_allowed_collateral_assets(arr(tc.allowed_collateral_assets));
+      if (tc.allowed_borrow_assets)          setL_allowed_borrow_assets(arr(tc.allowed_borrow_assets));
+      if (tc.max_ltv_percent)                setL_max_ltv_percent(s(tc.max_ltv_percent));
+      if (tc.target_ltv_percent)             setL_target_ltv_percent(s(tc.target_ltv_percent));
+      if (tc.rebalance_threshold_percent)    setL_rebalance_threshold_percent(s(tc.rebalance_threshold_percent));
+      if (tc.max_liquidation_risk_percent)   setL_max_liquidation_risk_percent(s(tc.max_liquidation_risk_percent));
+      if (tc.max_protocol_exposure_percent)  setL_max_protocol_exposure_percent(s(tc.max_protocol_exposure_percent));
+      if (tc.min_apy_target_percent)         setL_min_apy_target_percent(s(tc.min_apy_target_percent));
+    } else if (type === "yield") {
+      if (tc.strategy_type)            setY_strategy_type(tc.strategy_type);
+      if (tc.min_apy_percent)          setY_min_apy_percent(s(tc.min_apy_percent));
+      if (tc.target_apy_percent)       setY_target_apy_percent(s(tc.target_apy_percent));
+      if (tc.exit_if_apy_below_percent) setY_exit_if_apy_below_percent(s(tc.exit_if_apy_below_percent));
+      if (tc.max_slippage_bps)         setY_max_slippage_bps(s(tc.max_slippage_bps));
+      if (tc.max_exposure_percent)     setY_max_exposure_percent(s(tc.max_exposure_percent));
+      if (tc.il_tolerance)             setY_il_tolerance(tc.il_tolerance);
+      if (tc.max_position_size_usdc)   setY_max_position_size_usdc(fmtUsdc(tc.max_position_size_usdc));
+      if (tc.protocol_allowlist)       setY_protocols(arr(tc.protocol_allowlist));
+      if (tc.protocol_downgrade)       setY_protocol_downgrade(tc.protocol_downgrade);
+      if (tc.stable_peg_breaker)       setY_stable_peg_breaker(tc.stable_peg_breaker);
+      if (tc.tvl_drain_breaker)        setY_tvl_drain_breaker(tc.tvl_drain_breaker);
+      if (tc.rebalance_cooldown)       setY_rebalance_cooldown(tc.rebalance_cooldown);
+    } else if (type === "payments") {
+      if (tc.payment_type)           setP_payment_type(tc.payment_type);
+      if (tc.per_tx_limit)           setP_per_tx_limit(tc.per_tx_limit);
+      if (tc.daily_budget)           setP_daily_budget(tc.daily_budget);
+      if (tc.approve_above)          setP_approve_above(tc.approve_above);
+      if (tc.velocity_24h)           setP_velocity_24h(tc.velocity_24h);
+      if (tc.volume_spike)           setP_vol_spike(tc.volume_spike);
+      if (tc.sanctions)              setP_sanctions_screen(tc.sanctions);
+      if (tc.duplicate_window)       setP_dup_window(tc.duplicate_window);
+      if (tc.x402_enabled != null)   setP_x402_on(!!tc.x402_enabled);
+      if (tc.x402_max_per_request)   setP_x402_max_slider(s(tc.x402_max_per_request));
+    } else if (type === "analytics") {
+      if (tc.tracked_agents)     setA_tracked_agents(tc.tracked_agents);
+      if (tc.report_frequency)   setA_report_frequency(tc.report_frequency);
+      if (tc.critical_routing)   setA_critical_routing(tc.critical_routing);
+      if (tc.max_alerts_per_day) setA_max_alerts_per_day(s(tc.max_alerts_per_day));
+      if (tc.compute_cap_usdc)   setA_compute_cap(fmtUsdc(tc.compute_cap_usdc));
+      if (tc.allowed_actions)    setA_allowed_actions(tc.allowed_actions);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
