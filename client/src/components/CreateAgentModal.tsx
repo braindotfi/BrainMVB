@@ -399,6 +399,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [p_volume_spike_window, setP_volume_spike_window]           = useState("24hr");
   const [p_volume_spike_action, setP_volume_spike_action]           = useState("Freeze");
   const [p_sanctions_hit_action, setP_sanctions_hit_action]         = useState("Block + alert");
+  const [p_recipients, setP_recipients]                             = useState<string[]>(["0x71C7...3AC5", "payroll.eth"]);
+  const [p_recip_input, setP_recip_input]                           = useState("");
 
   /* ══ ANALYTICS ══ */
   const [a_tracked_agents, setA_tracked_agents]       = useState("all");
@@ -476,6 +478,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       daily_spend_budget_usdc: parseUsd(p_daily_spend_budget_usdc),
       require_approval_above_usdc: parseUsd(p_require_approval_above_usdc),
       counterparty_velocity_usdc: parseUsd(p_counterparty_velocity),
+      recipients: p_recipients,
+      volume_spike_trigger_x: Number(p_volume_spike_x),
     };
     if (selectedType === "analytics") return {
       tracked_agents: a_tracked_agents,
@@ -498,7 +502,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       secondary_limit_usdc: parseUsd(c_secondary_limit),
     };
     return {};
-  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_exposure_percent, y_il_tolerance, y_max_position_size_usdc, y_protocols, y_protocol_downgrade, y_stable_peg_breaker, y_tvl_drain_breaker, y_rebalance_cooldown, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
+  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_exposure_percent, y_il_tolerance, y_max_position_size_usdc, y_protocols, y_protocol_downgrade, y_stable_peg_breaker, y_tvl_drain_breaker, y_rebalance_cooldown, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, p_volume_spike_x, p_recipients, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
 
   const policyHash = useMemo(() => selectedType ? computePolicyHash(selectedType, policyParams) : "", [selectedType, policyParams]);
 
@@ -1101,7 +1105,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {selectedType === "trading"   && "Position controls, trading parameters, and market constraints for autonomous trading execution."}
                     {selectedType === "lending"   && "Protocols, lending parameters, and LTV constraints for autonomous lending execution."}
                     {selectedType === "yield"     && "Yield targets, slippage constraints, and circuit breakers for capital optimization."}
-                    {selectedType === "payments"  && "Budget controls, recipient management, and safety breakers for automated payment execution."}
+                    {selectedType === "payments"  && "Recipient rules, payment limits, and velocity controls for autonomous payment execution."}
                     {selectedType === "analytics" && "Monitoring scope, alert rules, reporting frequency, and action permissions."}
                     {selectedType === "custom"    && "Define your objective, tool permissions, and execution boundaries."}
                   </p>
@@ -1634,62 +1638,160 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 {/* PAYMENTS CONFIG */}
                 {selectedType === "payments" && (
                   <div className="flex flex-col gap-[24px] w-full">
+
+                    {/* ── PAYMENT TYPE ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="CONTROLS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Per-TX Limit</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={p_per_transaction_limit_usdc} onChange={(e) => setP_per_transaction_limit_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="10,000" />
-                          </div>
+                      <SectionDivider title="PAYMENT TYPE" />
+                      <div className="flex flex-col gap-[4px]">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Payment Mode</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Daily Budget</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={p_daily_spend_budget_usdc} onChange={(e) => setP_daily_spend_budget_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="25,000" />
-                          </div>
+                        <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
+                          {[
+                            { id: "recurring_bills",  label: "Recurring + Bills",  desc: "Automates recurring subscriptions and bill payments on a fixed schedule." },
+                            { id: "direct_transfers", label: "Direct Transfers",    desc: "Initiates one-time transfers to whitelisted recipient addresses." },
+                            { id: "batch_payroll",    label: "Batch Payroll",       desc: "Executes scheduled multi-recipient payroll distributions." },
+                            { id: "x402",             label: "x402 API",            desc: "Handles machine-to-machine micropayments via the x402 protocol." },
+                          ].map((opt) => (
+                            <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={p_payment_type === opt.id} onClick={() => setP_payment_type(opt.id)} />
+                          ))}
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Approve Above</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={p_require_approval_above_usdc} onChange={(e) => setP_require_approval_above_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="1,000" />
-                          </div>
+                      </div>
+                    </div>
+
+                    {/* ── PAYMENT RECIPIENT ── */}
+                    <div className="flex flex-col gap-[16px] w-full">
+                      <SectionDivider title="PAYMENT RECIPIENT" />
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Recipients</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Payment Type</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={p_payment_type} onChange={(e) => setP_payment_type(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="recurring_bills" className="bg-[#0a0c10]">Recurring + subscriptions</option>
-                              <option value="direct_transfers" className="bg-[#0a0c10]">Direct Transfers</option>
-                              <option value="batch_payroll" className="bg-[#0a0c10]">Batch Payroll</option>
-                              <option value="x402" className="bg-[#0a0c10]">x402</option>
-                            </select>
+                        <div className="flex flex-wrap gap-[8px] items-center w-full mt-[4px]">
+                          {p_recipients.map((recip) => (
+                            <div key={recip} className="h-[40px] flex items-center gap-[8px] px-[12px] bg-[#0a0c10] rounded-[100px]">
+                              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{recip}</span>
+                              <button
+                                type="button"
+                                onClick={() => setP_recipients(p_recipients.filter(r => r !== recip))}
+                                className="flex items-center justify-center"
+                              >
+                                <X size={14} className="text-[#6c779d] hover:text-[#a8b9f4] transition-colors" />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-[8px]">
+                            <input
+                              value={p_recip_input}
+                              onChange={(e) => setP_recip_input(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && p_recip_input.trim()) {
+                                  setP_recipients([...p_recipients, p_recip_input.trim()]);
+                                  setP_recip_input("");
+                                }
+                              }}
+                              placeholder="0x… or ENS name"
+                              className="bg-[#0a0c10] text-[#a8b9f4] text-[14px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#414965] outline-none h-[40px] px-[12px] rounded-[100px] min-w-[160px]"
+                            />
+                            <button
+                              type="button"
+                              data-testid="button-add-recipient"
+                              onClick={() => {
+                                if (p_recip_input.trim()) {
+                                  setP_recipients([...p_recipients, p_recip_input.trim()]);
+                                  setP_recip_input("");
+                                }
+                              }}
+                              className="size-[40px] rounded-[100px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+                            >
+                              <Plus size={16} className="text-[#6c779d]" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* ── CONTROLS ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="SAFETY CIRCUIT BREAKERS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Velocity (24h)</FieldLabel>
-                          <div className="bg-[#222737] flex items-center gap-[4px] px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-[#6c779d] text-[14px]">$</span>
-                            <input value={p_counterparty_velocity} onChange={(e) => setP_counterparty_velocity(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))} className="bg-transparent text-white text-[14px] outline-none flex-1 min-w-0" placeholder="50,000" />
-                          </div>
+                      <SectionDivider title="CONTROLS" />
+
+                      {/* Per-TX Limit */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Per-TX Limit</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Sanctions</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <span className="text-white text-[14px]">OFAC + Chainalysis</span>
-                          </div>
+                        <ConfigSlider
+                          min={1} max={100}
+                          value={String(Math.round(parseUsd(p_per_transaction_limit_usdc) / 1000) || 10)}
+                          onChange={(v) => setP_per_transaction_limit_usdc(formatUsd(String(Number(v) * 1000)))}
+                          unit="k"
+                        />
+                      </div>
+
+                      {/* Daily Budget */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Daily Budget</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
                         </div>
+                        <ConfigSlider
+                          min={1} max={500}
+                          value={String(Math.round(parseUsd(p_daily_spend_budget_usdc) / 1000) || 25)}
+                          onChange={(v) => setP_daily_spend_budget_usdc(formatUsd(String(Number(v) * 1000)))}
+                          unit="k"
+                        />
+                      </div>
+
+                      {/* Approval Threshold */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Approval Threshold</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider
+                          min={1} max={100}
+                          value={String(Math.round(parseUsd(p_require_approval_above_usdc) / 1000) || 10)}
+                          onChange={(v) => setP_require_approval_above_usdc(formatUsd(String(Number(v) * 1000)))}
+                          unit="k"
+                        />
                       </div>
                     </div>
+
+                    {/* ── SAFETY ── */}
+                    <div className="flex flex-col gap-[16px] w-full">
+                      <SectionDivider title="SAFETY" />
+
+                      {/* Counterparty Velocity Cap */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Counterparty Velocity Cap (24h)</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider
+                          min={1} max={200}
+                          value={String(Math.round(parseUsd(p_counterparty_velocity) / 1000) || 50)}
+                          onChange={(v) => setP_counterparty_velocity(formatUsd(String(Number(v) * 1000)))}
+                          unit="k"
+                        />
+                      </div>
+
+                      {/* Volume Spike Trigger */}
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <div className="flex gap-[4px] items-center">
+                          <FieldLabel>Volume Spike Trigger</FieldLabel>
+                          <Info size={20} className="text-[#414965]" />
+                        </div>
+                        <ConfigSlider
+                          min={2} max={20}
+                          value={p_volume_spike_x}
+                          onChange={setP_volume_spike_x}
+                          unit="x"
+                        />
+                      </div>
+                    </div>
+
                   </div>
                 )}
 
