@@ -9,6 +9,58 @@ interface Props {
   onClose: () => void;
 }
 
+function GiftIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <rect x="5" y="18" width="30" height="4" rx="2" fill="#7631ee" opacity="0.6"/>
+      <rect x="8" y="22" width="24" height="14" rx="2" fill="#7631ee" opacity="0.5"/>
+      <rect x="5" y="16" width="30" height="6" rx="2" stroke="#7631ee" strokeWidth="1.5" fill="none"/>
+      <rect x="8" y="22" width="24" height="14" rx="2" stroke="#7631ee" strokeWidth="1.5" fill="none"/>
+      <path d="M20 16V36" stroke="#7631ee" strokeWidth="1.5"/>
+      <path d="M20 16C20 16 16 13 15 10C14 7 16 5 18 6C20 7 20 10 20 10C20 10 20 7 22 6C24 5 26 7 25 10C24 13 20 16 20 16Z" stroke="#7631ee" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function TeamIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <circle cx="15" cy="14" r="5" stroke="#6c779d" strokeWidth="1.6"/>
+      <path d="M5 32c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round"/>
+      <circle cx="28" cy="14" r="4" stroke="#6c779d" strokeWidth="1.6"/>
+      <path d="M32 32c0-4.418-3.582-8-8-8" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function CoinStackIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <ellipse cx="20" cy="12" rx="10" ry="4" stroke="#6c779d" strokeWidth="1.6"/>
+      <path d="M10 12v5c0 2.209 4.477 4 10 4s10-1.791 10-4v-5" stroke="#6c779d" strokeWidth="1.6"/>
+      <path d="M10 17v5c0 2.209 4.477 4 10 4s10-1.791 10-4v-5" stroke="#6c779d" strokeWidth="1.6"/>
+      <path d="M10 22v5c0 2.209 4.477 4 10 4s10-1.791 10-4v-5" stroke="#6c779d" strokeWidth="1.6"/>
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="4" width="9" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M4 4V3C4 2.172 4.672 1.5 5.5 1.5H12C12.828 1.5 13.5 2.172 13.5 3V9.5C13.5 10.328 12.828 11 12 11H11" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 8H13M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -42,24 +94,20 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-[3px]"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={onClose} />
 
-      {/* Modal */}
-      <div className="relative z-10 w-[400px] max-h-[88vh] flex flex-col bg-[#0d1017] border border-[#1d2132] rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-[400px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden">
 
-        {/* Header bar */}
-        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
-          <div className="w-6" />
-          <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base leading-tight">
+        {/* Header */}
+        <div className="flex items-center justify-between px-[16px] h-[56px] flex-shrink-0 border-b border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
+          <div className="w-8" />
+          <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
             Invite Friends
           </h2>
           <button
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-lg text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors"
+            data-testid="close-invite-modal"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#222737] text-[#6c779d] hover:opacity-80 transition-opacity"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -68,173 +116,143 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-4 pb-6 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto px-[23px] py-[16px] flex flex-col gap-[16px]">
 
-          {/* Purple promo banner */}
-          <div className="flex items-center gap-3 p-4 bg-[#1e0a3c] border border-[#3b1a70] rounded-2xl">
-            <div className="w-10 h-10 rounded-xl bg-[#7631ee] flex items-center justify-center flex-shrink-0 text-xl">
-              🎁
+          {/* Hero banner */}
+          <div className="flex gap-[8px] items-start p-[16px] bg-[#240757] rounded-[16px] h-[100px] flex-shrink-0">
+            <div className="w-[40px] h-[40px] flex-shrink-0">
+              <GiftIcon />
             </div>
-            <div>
-              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1purple text-sm leading-tight">
+            <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-[20px] leading-[24px]">
                 Invite and earn 50 $BRAIN
               </p>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
+              <p className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px]">
                 Invite your friends and family and earn 50 $BRAIN per referral
               </p>
             </div>
           </div>
 
-          {/* 2-column stats */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col items-center gap-2 p-4 bg-[#111827] border border-[#1d2132] rounded-2xl">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-brain-v1baby-blue-60">
-                <circle cx="10" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M3 22c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <circle cx="19" cy="9" r="3" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M22 22c0-3.314-2.686-6-6-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-brain-v1white text-2xl leading-tight">21</span>
-              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs text-center leading-tight">Friends Joined</span>
+          {/* Stats widgets — NO border/stroke */}
+          <div className="flex gap-[16px]">
+            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
+              <TeamIcon />
+              <div className="flex flex-col gap-[4px] items-center w-full text-center">
+                <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">21</span>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">Friends Joined</span>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-2 p-4 bg-[#111827] border border-[#1d2132] rounded-2xl">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-brain-v1baby-blue-60">
-                <ellipse cx="14" cy="9" rx="7" ry="3" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M7 9v4c0 1.657 3.134 3 7 3s7-1.343 7-3V9" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M7 13v4c0 1.657 3.134 3 7 3s7-1.343 7-3v-4" stroke="currentColor" strokeWidth="1.4" />
-              </svg>
-              <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-brain-v1white text-2xl leading-tight">1050</span>
-              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs text-center leading-tight">$BRAIN Earned</span>
+            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
+              <CoinStackIcon />
+              <div className="flex flex-col gap-[4px] items-center w-full text-center">
+                <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">1050</span>
+                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">$BRAIN Earned</span>
+              </div>
             </div>
           </div>
 
           {/* Referral Link */}
-          <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+          <div className="flex flex-col gap-[4px]">
+            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Referral Link
             </label>
-            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
-              <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1white text-sm flex-1 truncate">
+            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
+              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1 truncate">
                 {REFERRAL_URL}
               </span>
               <button
                 onClick={handleCopyLink}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
-                  copied
-                    ? "bg-brain-v1dark-green text-brain-v1green"
-                    : "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
+                data-testid="copy-referral-link"
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                  copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
-                {copied ? (
-                  "Copied!"
-                ) : (
-                  <>
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                      <rect x="0.75" y="2.75" width="6.5" height="6.5" rx="1.25" stroke="currentColor" strokeWidth="1.2" />
-                      <path d="M2.75 2.75V1.75C2.75 1.199 3.199 0.75 3.75 0.75H8.25C8.801 0.75 9.25 1.199 9.25 1.75V6.25C9.25 6.801 8.801 7.25 8.25 7.25H7.25" stroke="currentColor" strokeWidth="1.2" />
-                    </svg>
-                    Copy
-                  </>
-                )}
+                {copied ? "Copied!" : <><CopyIcon />Copy</>}
               </button>
             </div>
           </div>
 
           {/* Referral Code */}
-          <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+          <div className="flex flex-col gap-[4px]">
+            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Referral Code
             </label>
-            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm flex-1 tracking-widest">
+            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
+              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1">
                 {REFERRAL_CODE}
               </span>
               <button
                 onClick={handleCopyCode}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
-                  codeCopied
-                    ? "bg-brain-v1dark-green text-brain-v1green"
-                    : "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
+                data-testid="copy-referral-code"
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                  codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
-                {codeCopied ? (
-                  "Copied!"
-                ) : (
-                  <>
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                      <rect x="0.75" y="2.75" width="6.5" height="6.5" rx="1.25" stroke="currentColor" strokeWidth="1.2" />
-                      <path d="M2.75 2.75V1.75C2.75 1.199 3.199 0.75 3.75 0.75H8.25C8.801 0.75 9.25 1.199 9.25 1.75V6.25C9.25 6.801 8.801 7.25 8.25 7.25H7.25" stroke="currentColor" strokeWidth="1.2" />
-                    </svg>
-                    Copy
-                  </>
-                )}
+                {codeCopied ? "Copied!" : <><CopyIcon />Copy</>}
               </button>
             </div>
           </div>
 
           {/* Invite by Email */}
-          <div className="flex flex-col gap-2">
-            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+          <div className="flex flex-col gap-[4px]">
+            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Invite by Email
             </label>
-            <div className="flex items-center gap-2 px-4 py-3 bg-[#111827] border border-[#1d2132] rounded-2xl">
+            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
-                placeholder="|johndoe@mail.com"
-                className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+                placeholder="johndoe@mail.com"
+                className="flex-1 bg-transparent text-white text-[16px] leading-[20px] [font-family:'Gilroy-Medium',Helvetica] placeholder-[#6c779d] outline-none"
               />
               <button
                 onClick={handleEmailSend}
                 disabled={!email.trim()}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-all ${
+                data-testid="send-invite-email"
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
                   emailSent
-                    ? "bg-brain-v1dark-green text-brain-v1green"
+                    ? "bg-[#0d3320] text-[#22c55e]"
                     : email.trim()
-                    ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80"
-                    : "text-brain-v1baby-blue-30 cursor-not-allowed"
+                    ? "text-[#ff9500] hover:opacity-80"
+                    : "text-[#ff9500] opacity-50 cursor-not-allowed"
                 }`}
               >
-                {emailSent ? "Sent!" : (
-                  <>
-                    Send
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 5h6M6 3l2 2-2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </>
-                )}
+                {emailSent ? "Sent!" : <>Send<ArrowIcon /></>}
               </button>
             </div>
           </div>
 
           {/* Share on Socials */}
-          <div className="flex flex-col gap-3">
-            <label className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+          <div className="flex flex-col gap-[4px]">
+            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[16px] leading-[24px]">
               Share on Socials
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-[8px]">
               <button
                 onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — the AI agent marketplace for DeFi! ${REFERRAL_URL}`)}`)}
-                className="w-12 h-12 rounded-full bg-[#0a0a0a] hover:opacity-80 transition-opacity flex items-center justify-center border border-[#1d2132]"
+                className="bg-black rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                data-testid="share-x"
                 title="Share on X"
               >
-                <SiX size={18} color="#ffffff" />
+                <SiX size={24} color="#ffffff" />
               </button>
               <button
                 onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance!")}`)}
-                className="w-12 h-12 rounded-full bg-[#0088cc] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-[#0088cc] rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                data-testid="share-telegram"
                 title="Share on Telegram"
               >
-                <SiTelegram size={20} color="#ffffff" />
+                <SiTelegram size={24} color="#ffffff" />
               </button>
               <button
                 onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! ${REFERRAL_URL}`)}`)}
-                className="w-12 h-12 rounded-full bg-[#25d366] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-[#075e54] rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                data-testid="share-whatsapp"
                 title="Share on WhatsApp"
               >
-                <SiWhatsapp size={20} color="#ffffff" />
+                <SiWhatsapp size={24} color="#ffffff" />
               </button>
             </div>
           </div>
