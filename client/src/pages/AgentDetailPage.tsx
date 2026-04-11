@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -653,6 +653,8 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
   agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
 }) => {
   const [chartTab, setChartTab] = useState("1H");
+  const [ch, setCh] = useState<{ x: number; y: number; val: number } | null>(null);
+  const equityWrapRef = useRef<HTMLDivElement>(null);
   const p = rawPolicy ?? {};
   const chartSet = CHART_DATA[chartTab] ?? CHART_DATA["1H"];
 
@@ -709,21 +711,48 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                   ))}
                 </div>
               </div>
-              <div className="relative flex-1" style={{ minHeight: "284px" }}>
+              <div ref={equityWrapRef} className="relative flex-1" style={{ minHeight: "284px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartSet.pts} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+                  <AreaChart
+                    data={chartSet.pts}
+                    margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+                    onMouseMove={(e: any) => {
+                      if (e?.activeCoordinate && e?.activePayload?.length) {
+                        setCh({ x: e.activeCoordinate.x, y: e.activeCoordinate.y, val: e.activePayload[0]?.value ?? 0 });
+                      }
+                    }}
+                    onMouseLeave={() => setCh(null)}
+                  >
                     <defs>
                       <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#42bf23" stopOpacity={0.32} />
                         <stop offset="100%" stopColor="#42bf23" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Tooltip content={() => null} cursor={<CrosshairCursor />} isAnimationActive={false} />
+                    <Tooltip content={() => null} cursor={false} isAnimationActive={false} />
                     <Area type="monotone" dataKey="v" stroke="#42bf23" strokeWidth={1.5}
                       fill="url(#greenGrad)" dot={false} isAnimationActive={false}
                       activeDot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
+                {ch && (() => {
+                  const w = equityWrapRef.current?.clientWidth ?? 400;
+                  const h = equityWrapRef.current?.clientHeight ?? 284;
+                  const formatted = `$${Number(ch.val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+                  const charW = 6.2; const padX = 8; const pillH = 18; const pillRx = 9;
+                  const pillW = formatted.length * charW + padX * 2;
+                  let pillX = ch.x + 6; if (pillX + pillW > w - 4) pillX = ch.x - pillW - 6;
+                  const pillY = ch.y - pillH / 2;
+                  return (
+                    <svg className="absolute inset-0 pointer-events-none" width={w} height={h} style={{ overflow: "visible" }}>
+                      <line x1={ch.x} y1={0} x2={ch.x} y2={h} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+                      <line x1={0} y1={ch.y} x2={w} y2={ch.y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+                      <circle cx={ch.x} cy={ch.y} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
+                      <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
+                      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
+                    </svg>
+                  );
+                })()}
                 <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none" style={{ paddingTop: "8px", paddingBottom: "4px" }}>
                   {chartSet.yLabels.map((lbl) => (
                     <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right" style={{ color: "#6c779d" }}>{lbl}</span>

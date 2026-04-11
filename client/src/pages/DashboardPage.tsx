@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ResponsiveContainer,
@@ -236,12 +236,32 @@ const CfCrosshairCursor = ({ points, width, height, payload }: any) => {
 const CF_Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"];
 const CF_X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
 
-const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
+const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
+  const [ch, setCh] = useState<{ x: number; y: number; y2: number | null; val: number } | null>(null);
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+
+  return (
   <div className="relative w-full h-full flex flex-col">
     {/* Chart area — full width */}
-    <div className="relative flex-1">
+    <div ref={chartWrapRef} className="relative flex-1">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+        <AreaChart
+          data={data}
+          margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+          onMouseMove={(e: any) => {
+            if (e?.activeCoordinate && e?.activePayload?.length) {
+              const inflowCoord  = e.activePayload?.[0]?.coordinate ?? e.activeCoordinate;
+              const outflowCoord = e.activePayload?.[1]?.coordinate ?? null;
+              setCh({
+                x: e.activeCoordinate.x,
+                y: inflowCoord?.y ?? e.activeCoordinate.y,
+                y2: outflowCoord?.y ?? null,
+                val: e.activePayload[0]?.value ?? 0,
+              });
+            }
+          }}
+          onMouseLeave={() => setCh(null)}
+        >
           <defs>
             <linearGradient id="cfInflow" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#42bf23" stopOpacity={0.28} />
@@ -252,11 +272,7 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
               <stop offset="100%" stopColor="#d20344" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <Tooltip
-            content={() => null}
-            cursor={<CfCrosshairCursor />}
-            isAnimationActive={false}
-          />
+          <Tooltip content={() => null} cursor={false} isAnimationActive={false} />
           <Area
             type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
             fill="url(#cfInflow)" dot={false} activeDot={false} isAnimationActive={false} name="Inflow"
@@ -267,6 +283,26 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
           />
         </AreaChart>
       </ResponsiveContainer>
+
+      {ch && (() => {
+        const w = chartWrapRef.current?.clientWidth ?? 400;
+        const h = chartWrapRef.current?.clientHeight ?? 200;
+        const formatted = `$${Number(ch.val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        const charW = 6.2; const padX = 8; const pillH = 18; const pillRx = 9;
+        const pillW = formatted.length * charW + padX * 2;
+        let pillX = ch.x + 6; if (pillX + pillW > w - 4) pillX = ch.x - pillW - 6;
+        const pillY = ch.y - pillH / 2;
+        return (
+          <svg className="absolute inset-0 pointer-events-none" width={w} height={h} style={{ overflow: "visible" }}>
+            <line x1={ch.x} y1={0} x2={ch.x} y2={h} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+            <line x1={0} y1={ch.y} x2={w} y2={ch.y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+            <circle cx={ch.x} cy={ch.y} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
+            {ch.y2 !== null && <circle cx={ch.x} cy={ch.y2} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />}
+            <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
+            <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
+          </svg>
+        );
+      })()}
 
       {/* Y-axis labels overlaid on right edge */}
       <div className="absolute inset-y-0 right-0 flex flex-col justify-between py-[8px] pr-[8px]" style={{ pointerEvents: "none" }}>
@@ -307,7 +343,8 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 /* ── Activity + Alert data (static demo) ── */
 type RichSpan = { text: string; bold: boolean };

@@ -531,7 +531,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       <button
                         key={cardIdx}
                         data-testid={`button-account-${label.toLowerCase().replace(/\s/g, "-")}`}
-                        onClick={() => { setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setActiveCard(cardIdx); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
+                        onClick={() => { setCollapsedAccount(null); setActiveAccount(null); setCollapsedCardIndex(cardIdx); setActiveCard(cardIdx); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
@@ -563,7 +563,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       <button
                         key={agent.id}
                         data-testid={`button-account-agent-${agent.id}`}
-                        onClick={() => { setCollapsedAccount(agent.id); setCollapsedDropdownOpen(false); }}
+                        onClick={() => { setCollapsedAccount(agent.id); setActiveAccount(agent.id); setActiveCard(0); setCollapsedDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
