@@ -740,6 +740,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         { label: "Volume Spike Breaker",      value: p_vol_spike },
         { label: "Sanctions Screening",       value: p_sanctions_screen },
         { label: "Duplicate Detection Window", value: p_dup_window },
+        { label: "Capital Allocated",          value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
       ];
     }
     if (selectedType === "analytics") {
@@ -2316,7 +2317,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 data-testid="button-create-agent"
                 className={`w-full font-['Gilroy-SemiBold',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
-                {launching ? "Creating Agent…" : selectedType === "payments" ? "Commit Policy & Deploy Agent" : "Create Agent"}
+                {launching ? "Creating Agent…" : "Create Agent"}
               </button>
             )}
           </div>
