@@ -299,6 +299,51 @@ const SmallDropdown = ({
   </div>
 );
 
+/* ─── Payments dropdown w/ label + info icon ─── */
+const PD = ({ label, value, options, ddId, openDd, setOpenDd, onChange }: {
+  label: string; value: string; options: string[]; ddId: string;
+  openDd: string | null; setOpenDd: (v: string | null) => void; onChange: (v: string) => void;
+}) => {
+  const isOpen = openDd === ddId;
+  return (
+    <div className="flex flex-col gap-[4px]">
+      {label && (
+        <div className="flex gap-[4px] items-start">
+          <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{label}</p>
+          <Info size={20} className="text-[#414965] shrink-0" />
+        </div>
+      )}
+      <div className="relative">
+        <button type="button" onClick={() => setOpenDd(isOpen ? null : ddId)}
+          className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px] cursor-pointer">
+          <span className="flex-1 text-left font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px]">{value}</span>
+          <ChevronDown size={24} className="text-[#6c779d] shrink-0" />
+        </button>
+        {isOpen && (
+          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[8px]"
+            style={{ boxShadow: "0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39)" }}>
+            {options.map((opt) => (
+              <button key={opt} type="button"
+                onClick={() => { onChange(opt); setOpenDd(null); }}
+                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] font-['Gilroy-Medium',sans-serif] text-[16px] leading-[20px] hover:bg-[#1d2132] transition-colors ${value === opt ? "text-white" : "text-[#a8b9f4]"}`}>
+                {opt}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── x402 toggle switch ─── */
+const PaySwitch = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
+  <button type="button" onClick={onToggle}
+    className={`h-[24px] w-[40px] rounded-[100px] relative flex-shrink-0 transition-colors ${on ? "bg-[#123509]" : "bg-[#222737]"}`}>
+    <div className={`absolute top-[4px] size-[16px] rounded-full transition-all duration-200 ${on ? "left-[20px] bg-[#42bf23]" : "left-[4px] bg-[#6c779d]"}`} />
+  </button>
+);
+
 const ALL_CUSTOM_TOOLS_LIST = ["Read Balance","Read Orderbook","Read Market Data","Place Limit Order","Cancel Order","Place Market Order","Open Perp","Transfer Internal","Withdraw External","Contract Call"];
 
 /* ─── Helpers ─── */
@@ -385,22 +430,35 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [y_protocols, setY_protocols] = useState<string[]>(["Morphy", "Aave v3"]);
 
   /* ══ PAYMENTS ══ */
-  const [p_payment_type, setP_payment_type]                         = useState("recurring_bills");
-  const [p_per_transaction_limit_usdc, setP_per_transaction_limit_usdc] = useState("10,000");
-  const [p_daily_spend_budget_usdc, setP_daily_spend_budget_usdc]   = useState("25,000");
-  const [p_daily_tx_count, setP_daily_tx_count]                     = useState("2,000");
-  const [p_require_approval_above_usdc, setP_require_approval_above_usdc] = useState("10,000");
-  const [p_execution_window, setP_execution_window]                 = useState("24/7");
-  const [p_x402_enabled, setP_x402_enabled]                         = useState(true);
-  const [p_x402_host_count, setP_x402_host_count]                   = useState("12");
-  const [p_x402_max_per_request, setP_x402_max_per_request]         = useState("50");
-  const [p_counterparty_velocity, setP_counterparty_velocity]       = useState("50,000");
-  const [p_volume_spike_x, setP_volume_spike_x]                     = useState("5");
-  const [p_volume_spike_window, setP_volume_spike_window]           = useState("24hr");
-  const [p_volume_spike_action, setP_volume_spike_action]           = useState("Freeze");
-  const [p_sanctions_hit_action, setP_sanctions_hit_action]         = useState("Block + alert");
-  const [p_recipients, setP_recipients]                             = useState<string[]>(["0x71C7...3AC5", "payroll.eth"]);
-  const [p_recip_input, setP_recip_input]                           = useState("");
+  const [p_payment_type, setP_payment_type]     = useState("recurring_bills");
+  const [p_per_tx_limit, setP_per_tx_limit]     = useState("$10,000");
+  const [p_daily_budget, setP_daily_budget]     = useState("$25,000");
+  const [p_approve_above, setP_approve_above]   = useState("$10,000");
+  const [p_velocity_24h, setP_velocity_24h]     = useState("$50,000");
+  const [p_vol_spike, setP_vol_spike]           = useState("5x Baseline");
+  const [p_sanctions_screen, setP_sanctions_screen] = useState("OFAC + Chainalysis");
+  const [p_dup_window, setP_dup_window]         = useState("60 min");
+  const [p_x402_on, setP_x402_on]               = useState(true);
+  const [p_x402_max_slider, setP_x402_max_slider] = useState("3");
+  const [p_recipient_list, setP_recipient_list] = useState<{name: string; address: string; tag: string; amount: string; freq: string}[]>([
+    { name: "Linear",           address: "0x8c2a...3f10",     tag: "USDC",  amount: "$200",   freq: "Monthly"  },
+    { name: "Anthropic API",    address: "x402 Host",         tag: "x402",  amount: "$50",    freq: "Per Call" },
+    { name: "DMCC Office Rent", address: "WireX Beneficiary", tag: "WireX", amount: "$3,000", freq: "Monthly"  },
+  ]);
+  const [showAddRecipient, setShowAddRecipient] = useState(false);
+  const [p_open_dd, setP_open_dd]               = useState<string | null>(null);
+  /* Add Recipient popup */
+  const [pr_rail, setPr_rail]                   = useState("usdc");
+  const [pr_name, setPr_name]                   = useState("");
+  const [pr_address, setPr_address]             = useState("");
+  const [pr_per_payment, setPr_per_payment]     = useState("");
+  const [pr_monthly_cap, setPr_monthly_cap]     = useState("");
+  const [pr_recurrence, setPr_recurrence]       = useState("scheduled");
+  const [pr_frequency, setPr_frequency]         = useState("Monthly");
+  const [pr_dd, setPr_dd]                       = useState("");
+  const [pr_mm, setPr_mm]                       = useState("");
+  const [pr_yyyy, setPr_yyyy]                   = useState("");
+  const [pr_first_approval, setPr_first_approval] = useState(true);
 
   /* ══ ANALYTICS ══ */
   const [a_tracked_agents, setA_tracked_agents]       = useState("all");
@@ -474,12 +532,17 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
     };
     if (selectedType === "payments") return {
       payment_type: p_payment_type,
-      per_transaction_limit_usdc: parseUsd(p_per_transaction_limit_usdc),
-      daily_spend_budget_usdc: parseUsd(p_daily_spend_budget_usdc),
-      require_approval_above_usdc: parseUsd(p_require_approval_above_usdc),
-      counterparty_velocity_usdc: parseUsd(p_counterparty_velocity),
-      recipients: p_recipients,
-      volume_spike_trigger_x: Number(p_volume_spike_x),
+      per_tx_limit: p_per_tx_limit,
+      daily_budget: p_daily_budget,
+      approve_above: p_approve_above,
+      velocity_24h: p_velocity_24h,
+      volume_spike: p_vol_spike,
+      sanctions: p_sanctions_screen,
+      duplicate_window: p_dup_window,
+      x402_enabled: p_x402_on,
+      x402_max_per_request: Number(p_x402_max_slider),
+      recipient_count: p_recipient_list.length,
+      recipients: p_recipient_list.map(r => r.name),
     };
     if (selectedType === "analytics") return {
       tracked_agents: a_tracked_agents,
@@ -502,7 +565,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       secondary_limit_usdc: parseUsd(c_secondary_limit),
     };
     return {};
-  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_exposure_percent, y_il_tolerance, y_max_position_size_usdc, y_protocols, y_protocol_downgrade, y_stable_peg_breaker, y_tvl_drain_breaker, y_rebalance_cooldown, p_payment_type, p_per_transaction_limit_usdc, p_daily_spend_budget_usdc, p_require_approval_above_usdc, p_counterparty_velocity, p_volume_spike_x, p_recipients, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
+  }, [selectedType, t_strategy_type, t_max_position_size_usdc, t_max_daily_loss_percent, t_kill_switch_drawdown, t_allowed_markets, t_cooldown_window_seconds, t_cumulative_exposure_limit, t_daily_spend_cap, t_order_types, t_max_slippage_bps, t_max_position_leverage, l_protocol, l_max_supply_usd, l_allowed_collateral_assets, l_allowed_borrow_assets, l_max_ltv_percent, l_target_ltv_percent, l_rebalance_threshold_percent, l_max_liquidation_risk_percent, l_max_protocol_exposure_percent, l_min_apy_target_percent, y_strategy_type, y_min_apy_percent, y_target_apy_percent, y_exit_if_apy_below_percent, y_max_slippage_bps, y_max_exposure_percent, y_il_tolerance, y_max_position_size_usdc, y_protocols, y_protocol_downgrade, y_stable_peg_breaker, y_tvl_drain_breaker, y_rebalance_cooldown, p_payment_type, p_per_tx_limit, p_daily_budget, p_approve_above, p_velocity_24h, p_vol_spike, p_sanctions_screen, p_dup_window, p_x402_on, p_x402_max_slider, p_recipient_list, a_tracked_agents, a_report_frequency, a_critical_routing, a_max_alerts_per_day, a_compute_cap, a_allowed_actions, c_objective, c_complexity_level, c_source_type, c_runtime, c_repo_url, c_allowed_tools, c_primary_limit, c_secondary_limit]);
 
   const policyHash = useMemo(() => selectedType ? computePolicyHash(selectedType, policyParams) : "", [selectedType, policyParams]);
 
@@ -662,8 +725,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
       { label: "Capital Allocated", value: `$${parseUsd(capital).toLocaleString()} ${capitalAsset}` },
     ];
     if (selectedType === "payments") {
-      const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + subscriptions", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
-      const fmtK = (n: number) => n >= 1000 ? `$${(n/1000).toLocaleString()}k` : `$${n.toLocaleString()}`;
+      const fmtPayType = (v: string) => (({ recurring_bills: "Recurring + Bills", direct_transfers: "Direct Transfers", batch_payroll: "Batch Payroll", x402: "x402 API" } as Record<string,string>)[v] || v.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()));
       const dotList = (items: string[]) => (
         <div className="flex flex-wrap gap-[4px] items-center mt-auto">
           {items.map((item, i) => (
@@ -675,18 +737,17 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
         </div>
       );
       return [
-        { label: "Payment Type",            value: fmtPayType(p_payment_type) },
-        { label: "Per-TX Limit",            value: `$${parseUsd(p_per_transaction_limit_usdc).toLocaleString()}` },
-        { label: "Daily Budget",            value: `$${parseUsd(p_daily_spend_budget_usdc).toLocaleString()}` },
-        { label: "Daily TX Count",          value: p_daily_tx_count },
-        { label: "Approval Threshold",      value: `> $${parseUsd(p_require_approval_above_usdc).toLocaleString()}`, },
-        { label: "Execution Window",        value: p_execution_window },
-        { label: "x402 Enabled",            value: p_x402_enabled ? `Yes · ${p_x402_host_count} Hosts` : "No", valueNode: p_x402_enabled ? dotList(["Yes", `${p_x402_host_count} Hosts`]) : undefined },
-        { label: "x402 Max / Request",      value: `$${p_x402_max_per_request}` },
-        { label: "Sanctions Screening",     value: "OFAC + Chainalysis" },
-        { label: "Velocity / Counterparty", value: `${fmtK(parseUsd(p_counterparty_velocity))} / 24h` },
-        { label: "Volume Spike",            value: `${p_volume_spike_x}x · ${p_volume_spike_window} · ${p_volume_spike_action}`, valueNode: dotList([`${p_volume_spike_x}x`, p_volume_spike_window, p_volume_spike_action]) },
-        { label: "Sanctions Hit",           value: p_sanctions_hit_action },
+        { label: "Payment Type",    value: fmtPayType(p_payment_type) },
+        { label: "Per-TX Limit",    value: p_per_tx_limit },
+        { label: "Daily Budget",    value: p_daily_budget },
+        { label: "Approve Above",   value: p_approve_above },
+        { label: "Recipients",      value: `${p_recipient_list.length} recipient${p_recipient_list.length !== 1 ? "s" : ""}`, valueNode: dotList(p_recipient_list.map(r => r.name)) },
+        { label: "x402 Enabled",    value: p_x402_on ? "On" : "Off" },
+        { label: "x402 Max / Req",  value: `$${p_x402_max_slider}` },
+        { label: "Velocity (24h)",  value: p_velocity_24h },
+        { label: "Volume Spike",    value: p_vol_spike },
+        { label: "Sanctions",       value: p_sanctions_screen },
+        { label: "Dup. Window",     value: p_dup_window },
       ];
     }
     if (selectedType === "analytics") {
@@ -748,6 +809,216 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             )}
             onClose={() => setL_show_asset_picker(false)}
           />
+        )}
+
+        {/* ══ ADD RECIPIENT POPUP (overlays full modal) ══ */}
+        {showAddRecipient && selectedType === "payments" && (
+          <div className="absolute inset-0 z-20 bg-[#11141b] flex flex-col rounded-[24px] overflow-hidden">
+            {/* Title bar */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] flex items-center justify-center relative shrink-0">
+              <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">Add Recipient</p>
+              <button
+                type="button"
+                data-testid="button-close-add-recipient"
+                onClick={() => setShowAddRecipient(false)}
+                className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+              >
+                <X size={16} className="text-[#6c779d]" />
+              </button>
+            </div>
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-[24px] flex flex-col gap-[24px]">
+              <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+                Add a recipient this agent can pay. Each recipient has it's own cap and recurrence.
+              </p>
+              <div className="flex flex-col gap-[24px]">
+                {/* RAIL */}
+                <div className="flex flex-col gap-[16px]">
+                  <SectionDivider title="RAIL" />
+                  <div className="grid grid-cols-2 gap-[12px]">
+                    {[
+                      { id: "usdc",  label: "USDC",  desc: "On-chain direct transfer" },
+                      { id: "x402",  label: "x402",   desc: "Machine payments per call" },
+                      { id: "wirex", label: "WireX",  desc: "Fiat beneficiary · AED, USD, EUR" },
+                    ].map((opt) => (
+                      <RadioCard key={opt.id} label={opt.label} desc={opt.desc} checked={pr_rail === opt.id} onClick={() => setPr_rail(opt.id)} />
+                    ))}
+                  </div>
+                </div>
+                {/* Recipient Name */}
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex gap-[4px] items-start">
+                    <FieldLabel>Recipient Name</FieldLabel>
+                    <Info size={20} className="text-[#414965] shrink-0" />
+                  </div>
+                  <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] bg-[#222737] ${pr_name ? "border border-[#414965]" : ""}`}>
+                    <input
+                      value={pr_name}
+                      onChange={(e) => setPr_name(e.target.value)}
+                      placeholder="Maya R. Contractor"
+                      data-testid="input-recipient-name"
+                      className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                    />
+                  </div>
+                </div>
+                {/* Wallet Address */}
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex gap-[4px] items-start">
+                    <FieldLabel>Wallet Address</FieldLabel>
+                    <Info size={20} className="text-[#414965] shrink-0" />
+                  </div>
+                  <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
+                    <input
+                      value={pr_address}
+                      onChange={(e) => setPr_address(e.target.value)}
+                      placeholder="0x91de4f2a8b1c33d2e9a7c5e3d2b1a9f8e7c63a40"
+                      data-testid="input-recipient-address"
+                      className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                    />
+                  </div>
+                </div>
+                <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">
+                  Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.
+                </p>
+                {/* PAYMENT CAPS */}
+                <div className="flex flex-col gap-[16px]">
+                  <SectionDivider title="PAYMENT CAPS" />
+                  <div className="flex gap-[16px] items-start">
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex gap-[4px] items-start">
+                        <FieldLabel>Per-Payment Cap</FieldLabel>
+                        <Info size={20} className="text-[#414965] shrink-0" />
+                      </div>
+                      <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
+                        <input
+                          value={pr_per_payment}
+                          onChange={(e) => setPr_per_payment(e.target.value)}
+                          placeholder="$500"
+                          data-testid="input-per-payment-cap"
+                          className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex gap-[4px] items-start">
+                        <FieldLabel>Monthly Cap</FieldLabel>
+                        <Info size={20} className="text-[#414965] shrink-0" />
+                      </div>
+                      <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
+                        <input
+                          value={pr_monthly_cap}
+                          onChange={(e) => setPr_monthly_cap(e.target.value)}
+                          placeholder="$5,000"
+                          data-testid="input-monthly-cap"
+                          className="flex-1 bg-transparent font-['Gilroy-Medium',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* RECURRENCE */}
+                <div className="flex flex-col gap-[16px]">
+                  <SectionDivider title="RECURRENCE" />
+                  <div className="grid grid-cols-2 gap-[12px]">
+                    {[
+                      { id: "on_demand", label: "On Demand",  desc: "Agent pays when triggered" },
+                      { id: "scheduled", label: "Scheduled",  desc: "Repeat on a fixed cadence" },
+                    ].map((opt) => (
+                      <RadioCard key={opt.id} label={opt.label} desc={opt.desc} checked={pr_recurrence === opt.id} onClick={() => setPr_recurrence(opt.id)} />
+                    ))}
+                  </div>
+                  <div className="flex gap-[16px] items-start">
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex gap-[4px] items-start">
+                        <FieldLabel>Frequency</FieldLabel>
+                        <Info size={20} className="text-[#414965] shrink-0" />
+                      </div>
+                      <div className="relative">
+                        <button type="button" onClick={() => setP_open_dd(p_open_dd === "pr_freq" ? null : "pr_freq")}
+                          className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px]">
+                          <span className="flex-1 text-left font-['Gilroy-Medium',sans-serif] text-white text-[16px]">{pr_frequency}</span>
+                          <ChevronDown size={24} className="text-[#6c779d]" />
+                        </button>
+                        {p_open_dd === "pr_freq" && (
+                          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[8px]"
+                            style={{ boxShadow: "0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39)" }}>
+                            {["Daily","Weekly","Monthly","Per Call"].map((opt) => (
+                              <button key={opt} type="button"
+                                onClick={() => { setPr_frequency(opt); setP_open_dd(null); }}
+                                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] font-['Gilroy-Medium',sans-serif] text-[16px] hover:bg-[#1d2132] transition-colors ${pr_frequency === opt ? "text-white" : "text-[#a8b9f4]"}`}>
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-[4px] min-w-0">
+                      <div className="flex gap-[4px] items-start">
+                        <FieldLabel>First Payment</FieldLabel>
+                        <Info size={20} className="text-[#414965] shrink-0" />
+                      </div>
+                      <div className="flex gap-[4px]">
+                        <input value={pr_dd} onChange={(e) => setPr_dd(e.target.value)} placeholder="DD"
+                          className="flex-1 bg-[#222737] font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                        <input value={pr_mm} onChange={(e) => setPr_mm(e.target.value)} placeholder="MM"
+                          className="flex-1 bg-[#222737] font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                        <input value={pr_yyyy} onChange={(e) => setPr_yyyy(e.target.value)} placeholder="YYYY"
+                          className="flex-1 bg-[#222737] font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* FIRST PAYMENT APPROVAL */}
+                <div className="flex flex-col gap-[16px]">
+                  <SectionDivider title="FIRST PAYMENT APPROVAL" />
+                  <div className="flex gap-[16px] items-start">
+                    <button
+                      type="button"
+                      onClick={() => setPr_first_approval(!pr_first_approval)}
+                      className={`overflow-hidden relative shrink-0 size-[20px] rounded-[4px] border border-solid transition-colors ${pr_first_approval ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
+                    >
+                      {pr_first_approval && (
+                        <svg className="absolute inset-[3px]" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="#7631EE" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </button>
+                    <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+                      Because this is a new counterparty, require my explicit approval before the first payment. Subsequent payments up to the cap will execute automatically.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Bottom buttons */}
+            <div className="border-t border-[#1d2132] p-[24px] flex gap-[16px] items-center shrink-0">
+              <button type="button" className="flex-1 bg-[#222737] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity">
+                Import CSV
+              </button>
+              <button
+                type="button"
+                data-testid="button-save-recipient"
+                onClick={() => {
+                  const tagMap: Record<string, string> = { usdc: "USDC", x402: "x402", wirex: "WireX" };
+                  setP_recipient_list([...p_recipient_list, {
+                    name: pr_name.trim() || "New Recipient",
+                    address: pr_address.trim() || "0x...",
+                    tag: tagMap[pr_rail] || "USDC",
+                    amount: pr_per_payment.trim() || "$0",
+                    freq: pr_frequency,
+                  }]);
+                  setShowAddRecipient(false);
+                  setPr_name(""); setPr_address(""); setPr_per_payment(""); setPr_monthly_cap("");
+                  setPr_dd(""); setPr_mm(""); setPr_yyyy(""); setPr_rail("usdc");
+                  setPr_recurrence("scheduled"); setPr_frequency("Monthly"); setPr_first_approval(true);
+                }}
+                className="flex-1 bg-[#123509] font-['Gilroy-SemiBold',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+              >
+                Save Recipient
+              </button>
+            </div>
+          </div>
         )}
 
         {/* ══ CONFIRMATION SCREEN (no header) ══ */}
@@ -1105,7 +1376,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {selectedType === "trading"   && "Position controls, trading parameters, and market constraints for autonomous trading execution."}
                     {selectedType === "lending"   && "Protocols, lending parameters, and LTV constraints for autonomous lending execution."}
                     {selectedType === "yield"     && "Yield targets, slippage constraints, and circuit breakers for capital optimization."}
-                    {selectedType === "payments"  && "Recipient rules, payment limits, and velocity controls for autonomous payment execution."}
+                    {selectedType === "payments"  && "Payment controls, recipients, and parameters for autonomous payment execution."}
                     {selectedType === "analytics" && "Monitoring scope, alert rules, reporting frequency, and action permissions."}
                     {selectedType === "custom"    && "Define your objective, tool permissions, and execution boundaries."}
                   </p>
@@ -1637,77 +1908,25 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                 {/* PAYMENTS CONFIG */}
                 {selectedType === "payments" && (
-                  <div className="flex flex-col gap-[24px] w-full">
+                  <div className="flex flex-col gap-[24px] w-full" onClick={() => p_open_dd && setP_open_dd(null)}>
 
-                    {/* ── PAYMENT TYPE ── */}
+                    {/* ── PAYMENTS ── */}
                     <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="PAYMENT TYPE" />
+                      <SectionDivider title="PAYMENTS" />
                       <div className="flex flex-col gap-[4px]">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Payment Mode</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                        <div className="flex gap-[4px] items-start">
+                          <FieldLabel>Payment Type</FieldLabel>
+                          <Info size={20} className="text-[#414965] shrink-0" />
                         </div>
                         <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
                           {[
-                            { id: "recurring_bills",  label: "Recurring + Bills",  desc: "Automates recurring subscriptions and bill payments on a fixed schedule." },
+                            { id: "recurring_bills",  label: "Recurring + Bills",  desc: "Automates recurring bill payments on a fixed schedule." },
                             { id: "direct_transfers", label: "Direct Transfers",    desc: "Initiates one-time transfers to whitelisted recipient addresses." },
                             { id: "batch_payroll",    label: "Batch Payroll",       desc: "Executes scheduled multi-recipient payroll distributions." },
-                            { id: "x402",             label: "x402 API",            desc: "Handles machine-to-machine micropayments via the x402 protocol." },
+                            { id: "x402",             label: "x402 API",            desc: "Handles machine-to-machine payments via the x402 protocol." },
                           ].map((opt) => (
-                            <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={p_payment_type === opt.id} onClick={() => setP_payment_type(opt.id)} />
+                            <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={p_payment_type === opt.id} onClick={() => { setP_payment_type(opt.id); setP_open_dd(null); }} />
                           ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ── PAYMENT RECIPIENT ── */}
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="PAYMENT RECIPIENT" />
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Recipients</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
-                        </div>
-                        <div className="flex flex-wrap gap-[8px] items-center w-full mt-[4px]">
-                          {p_recipients.map((recip) => (
-                            <div key={recip} className="h-[40px] flex items-center gap-[8px] px-[12px] bg-[#0a0c10] rounded-[100px]">
-                              <span className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{recip}</span>
-                              <button
-                                type="button"
-                                onClick={() => setP_recipients(p_recipients.filter(r => r !== recip))}
-                                className="flex items-center justify-center"
-                              >
-                                <X size={14} className="text-[#6c779d] hover:text-[#a8b9f4] transition-colors" />
-                              </button>
-                            </div>
-                          ))}
-                          <div className="flex items-center gap-[8px]">
-                            <input
-                              value={p_recip_input}
-                              onChange={(e) => setP_recip_input(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && p_recip_input.trim()) {
-                                  setP_recipients([...p_recipients, p_recip_input.trim()]);
-                                  setP_recip_input("");
-                                }
-                              }}
-                              placeholder="0x… or ENS name"
-                              className="bg-[#0a0c10] text-[#a8b9f4] text-[14px] font-['Gilroy-Medium',sans-serif] placeholder:text-[#414965] outline-none h-[40px] px-[12px] rounded-[100px] min-w-[160px]"
-                            />
-                            <button
-                              type="button"
-                              data-testid="button-add-recipient"
-                              onClick={() => {
-                                if (p_recip_input.trim()) {
-                                  setP_recipients([...p_recipients, p_recip_input.trim()]);
-                                  setP_recip_input("");
-                                }
-                              }}
-                              className="size-[40px] rounded-[100px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
-                            >
-                              <Plus size={16} className="text-[#6c779d]" />
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -1716,79 +1935,115 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="CONTROLS" />
 
-                      {/* Per-TX Limit */}
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Per-TX Limit</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
-                        </div>
-                        <ConfigSlider
-                          min={1} max={100}
-                          value={String(Math.round(parseUsd(p_per_transaction_limit_usdc) / 1000) || 10)}
-                          onChange={(v) => setP_per_transaction_limit_usdc(formatUsd(String(Number(v) * 1000)))}
-                          unit="k"
-                        />
+                      {/* 2×2 dropdown grid (3 fields) */}
+                      <div className="grid grid-cols-2 gap-[16px]" onClick={(e) => e.stopPropagation()}>
+                        <PD label="Per-TX Limit" value={p_per_tx_limit}
+                          options={["$1,000","$5,000","$10,000","$50,000"]}
+                          ddId="per_tx" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_per_tx_limit} />
+                        <PD label="Daily Budget" value={p_daily_budget}
+                          options={["$5,000","$15,000","$25,000","$100,000"]}
+                          ddId="daily" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_daily_budget} />
+                        <PD label="Approve Above" value={p_approve_above}
+                          options={["$1,000","$5,000","$10,000","Always"]}
+                          ddId="approve" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_approve_above} />
                       </div>
 
-                      {/* Daily Budget */}
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Daily Budget</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                      {/* Payment Recipients */}
+                      <div className="flex flex-col gap-[16px]">
+                        <div className="flex flex-col gap-[4px]">
+                          <div className="flex gap-[4px] items-start">
+                            <FieldLabel>Payment Recipients</FieldLabel>
+                            <Info size={20} className="text-[#414965] shrink-0" />
+                          </div>
+                          <div className="border border-[#1d2132] flex gap-[16px] items-center p-[16px] rounded-[12px]">
+                            <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">
+                              Add recipients individually or import a CSV. Each gets its own per-payment cap.
+                            </p>
+                            <button
+                              type="button"
+                              data-testid="button-open-add-recipient"
+                              onClick={(e) => { e.stopPropagation(); setShowAddRecipient(true); }}
+                              className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0"
+                            >
+                              <Plus size={16} className="text-[#6c779d] shrink-0" />
+                              <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
+                            </button>
+                          </div>
                         </div>
-                        <ConfigSlider
-                          min={1} max={500}
-                          value={String(Math.round(parseUsd(p_daily_spend_budget_usdc) / 1000) || 25)}
-                          onChange={(v) => setP_daily_spend_budget_usdc(formatUsd(String(Number(v) * 1000)))}
-                          unit="k"
-                        />
+                        {/* Recipient rows */}
+                        <div className="flex flex-col gap-[8px]">
+                          {p_recipient_list.map((r, idx) => (
+                            <div key={idx} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px]">
+                              <div className="flex flex-1 items-center justify-between min-w-0">
+                                <div className="flex flex-col gap-[4px] items-start justify-center">
+                                  <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{r.name}</p>
+                                  <div className="flex gap-[4px] items-center">
+                                    <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.address}</p>
+                                    <div className="size-[4px] rounded-full bg-[#6c779d] shrink-0" />
+                                    <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center px-[8px] py-[3px] rounded-[22px] shrink-0">
+                                      <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">{r.tag}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-[4px] items-end justify-center ml-[8px]">
+                                  <p className="font-['JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] text-right whitespace-nowrap">{r.amount}</p>
+                                  <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.freq}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                data-testid={`button-delete-recipient-${idx}`}
+                                onClick={(e) => { e.stopPropagation(); setP_recipient_list(p_recipient_list.filter((_, i) => i !== idx)); }}
+                                className="relative rounded-[100px] size-[24px] bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors"
+                              >
+                                <X size={12} className="text-[#6c779d]" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
-                      {/* Approval Threshold */}
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Approval Threshold</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                      {/* x402 Toggle */}
+                      <div className="border border-[#1d2132] flex gap-[16px] items-center p-[16px] rounded-[12px]">
+                        <div className="flex flex-1 flex-col gap-[4px] items-start min-w-0">
+                          <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] w-full">Accept x402 Micropayments</p>
+                          <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">Pay-per-call API access for AI workloads</p>
                         </div>
-                        <ConfigSlider
-                          min={1} max={100}
-                          value={String(Math.round(parseUsd(p_require_approval_above_usdc) / 1000) || 10)}
-                          onChange={(v) => setP_require_approval_above_usdc(formatUsd(String(Number(v) * 1000)))}
-                          unit="k"
-                        />
+                        <PaySwitch on={p_x402_on} onToggle={() => setP_x402_on(!p_x402_on)} />
                       </div>
+
+                      {/* Max x402 slider */}
+                      {p_x402_on && (
+                        <div className="flex flex-col gap-[4px]">
+                          <FieldLabel>Max x402 Payment Per Request</FieldLabel>
+                          <ConfigSlider min={1} max={5} value={p_x402_max_slider} onChange={setP_x402_max_slider} unit="" />
+                        </div>
+                      )}
                     </div>
 
                     {/* ── SAFETY ── */}
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="SAFETY" />
-
-                      {/* Counterparty Velocity Cap */}
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Counterparty Velocity Cap (24h)</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
-                        </div>
-                        <ConfigSlider
-                          min={1} max={200}
-                          value={String(Math.round(parseUsd(p_counterparty_velocity) / 1000) || 50)}
-                          onChange={(v) => setP_counterparty_velocity(formatUsd(String(Number(v) * 1000)))}
-                          unit="k"
-                        />
-                      </div>
-
-                      {/* Volume Spike Trigger */}
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <div className="flex gap-[4px] items-center">
-                          <FieldLabel>Volume Spike Trigger</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
-                        </div>
-                        <ConfigSlider
-                          min={2} max={20}
-                          value={p_volume_spike_x}
-                          onChange={setP_volume_spike_x}
-                          unit="x"
-                        />
+                      <div className="grid grid-cols-2 gap-[16px]" onClick={(e) => e.stopPropagation()}>
+                        <PD label="CounterParty Velocity (24h)" value={p_velocity_24h}
+                          options={["$10,000","$25,000","$50,000","$100,000"]}
+                          ddId="velocity" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_velocity_24h} />
+                        <PD label="Volume Spike Breaker" value={p_vol_spike}
+                          options={["3x Baseline","5x Baseline","10x Baseline"]}
+                          ddId="spike" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_vol_spike} />
+                        <PD label="Sanctions Screening" value={p_sanctions_screen}
+                          options={["OFAC + Chainalysis","OFAC only"]}
+                          ddId="sanctions" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_sanctions_screen} />
+                        <PD label="Duplicate Detection Window" value={p_dup_window}
+                          options={["15 mins","30 mins","60 mins"]}
+                          ddId="dupwindow" openDd={p_open_dd} setOpenDd={setP_open_dd}
+                          onChange={setP_dup_window} />
                       </div>
                     </div>
 
