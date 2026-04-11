@@ -244,7 +244,7 @@ const PolicyGrid = ({ rows, onEdit }: { rows: PolicyCell[][]; onEdit?: () => voi
 type SchemaRow = { k: string; v: string };
 
 const SchemaSection = ({ rows }: { rows: SchemaRow[] }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const pairs: [SchemaRow, SchemaRow | null][] = [];
   for (let i = 0; i < rows.length; i += 2) {
     pairs.push([rows[i], rows[i + 1] ?? null]);
