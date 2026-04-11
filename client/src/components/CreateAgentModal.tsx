@@ -1470,20 +1470,27 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
 
                     <div className="flex flex-col gap-[16px] w-full">
                       <SectionDivider title="PROTOCOL ALLOWLIST" />
-                      <ChipGroup options={["Morphy","Aave v3","Pendle","Sky","Compound","Curve"]} selected={y_protocols} onToggle={(v) => setY_protocols(tog(y_protocols, v))} />
-                    </div>
-
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="STRATEGY TYPE" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        {[
-                          { id: "stable_farming",    label: "Stable Farming",    desc: "Low-risk stablecoin yield across lending protocols." },
-                          { id: "lp_on_dex",         label: "LP on DEX",         desc: "Provide liquidity on Uniswap v3 or Aerodrome for fee income." },
-                          { id: "perpetual_funding", label: "Perpetual Funding",  desc: "Capture funding rate arbitrage on perpetual markets." },
-                          { id: "curve_convex",      label: "Curve/Convex",      desc: "Optimize Curve LP positions with Convex boost stacking." },
-                        ].map((opt) => (
-                          <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={y_strategy_type === opt.id} onClick={() => setY_strategy_type(opt.id)} />
-                        ))}
+                      <div className="flex flex-wrap gap-[12px]">
+                        {["Morphy","Aave v3","Pendle","Sky","Compound","Curve"].map((protocol) => {
+                          const sel = y_protocols.includes(protocol);
+                          return (
+                            <button
+                              key={protocol}
+                              type="button"
+                              onClick={() => setY_protocols(tog(y_protocols, protocol))}
+                              className="bg-[#0a0c10] flex gap-[8px] items-center px-[12px] py-[10px] rounded-[12px] transition-colors hover:bg-[#111520]"
+                            >
+                              <span className={`font-['Gilroy-Medium',sans-serif] text-[14px] leading-[20px] ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{protocol}</span>
+                              <div className={`size-[20px] rounded-full shrink-0 flex items-center justify-center transition-colors ${sel ? "bg-[#123509] border border-[rgba(66,191,35,0.2)]" : "bg-[#06070a] border border-[#222737]"}`}>
+                                {sel && (
+                                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                    <path d="M1 4L3.5 6.5L9 1" stroke="#42BF23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
