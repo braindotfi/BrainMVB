@@ -183,6 +183,30 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
 );
 
+const ACheckbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+  <button onClick={onChange} className={`shrink-0 size-[20px] rounded-[4px] border flex items-center justify-center ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
+    {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#7631EE" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+  </button>
+);
+
+const ADropdown = ({ label, value, onChange, children }: { label: React.ReactNode; value: string; onChange: (v: string) => void; children: React.ReactNode }) => (
+  <div className="flex flex-col gap-[4px]">
+    <div className="flex gap-[4px] items-center">{typeof label === "string" ? <FieldLabel>{label}</FieldLabel> : label}</div>
+    <div className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full">
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="bg-transparent text-white text-[16px] outline-none flex-1 cursor-pointer appearance-none min-w-0">
+        {children}
+      </select>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 pointer-events-none"><path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    </div>
+  </div>
+);
+
+const AToggleSwitch = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
+  <button onClick={onToggle} className={`relative h-[24px] w-[40px] rounded-[100px] shrink-0 ${on ? "bg-[#123509]" : "bg-[#222737]"}`}>
+    <div className={`absolute top-[4px] size-[16px] rounded-full transition-all ${on ? "left-[20px] bg-[#42bf23]" : "left-[4px] bg-[#6c779d]"}`} />
+  </button>
+);
+
 const TextInput = ({
   value, onChange, placeholder, type = "text"
 }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => (
@@ -461,6 +485,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [pr_first_approval, setPr_first_approval] = useState(true);
 
   /* ══ ANALYTICS ══ */
+  const [a_selected_agent_ids, setA_selected_agent_ids] = useState<string[]>(["trader_alpha", "lending_core", "yield_harvester"]);
   const [a_tracked_agents, setA_tracked_agents]       = useState("all");
   const [a_tracked_positions, setA_tracked_positions] = useState("all_open");
   const [a_report_frequency, setA_report_frequency]   = useState("daily");
@@ -1377,7 +1402,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {selectedType === "lending"   && "Protocols, lending parameters, and LTV constraints for autonomous lending execution."}
                     {selectedType === "yield"     && "Yield targets, slippage constraints, and circuit breakers for capital optimization."}
                     {selectedType === "payments"  && "Payment controls, recipients, and parameters for autonomous payment execution."}
-                    {selectedType === "analytics" && "Monitoring scope, alert rules, reporting frequency, and action permissions."}
+                    {selectedType === "analytics" && "Agents, rules, and reporting controls for autonomous analytics execution."}
                     {selectedType === "custom"    && "Define your objective, tool permissions, and execution boundaries."}
                   </p>
                 </div>
@@ -2051,97 +2076,145 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 )}
 
                 {/* ANALYTICS CONFIG */}
-                {selectedType === "analytics" && (
-                  <div className="flex flex-col gap-[24px] w-full">
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="AGENTS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        {[
-                          { id: "all",      label: "All Agents",     desc: "Monitor all 5 active agents across your account." },
-                          { id: "selected", label: "Selected Agents", desc: "Choose specific agents to track and monitor." },
-                        ].map((opt) => (
-                          <RadioCard key={opt.id} label={opt.label} desc={opt.desc} small checked={a_tracked_agents === opt.id} onClick={() => setA_tracked_agents(opt.id)} />
-                        ))}
+                {selectedType === "analytics" && (() => {
+                  const AGENT_LIST = [
+                    { id: "trader_alpha",    label: "Trader-Alpha" },
+                    { id: "lending_core",    label: "Lending-Core" },
+                    { id: "yield_harvester", label: "Yield-Harvester" },
+                    { id: "payments_hub",    label: "Payments-Hub" },
+                    { id: "market_maker",    label: "Market-Maker-01" },
+                  ];
+                  const allChecked = a_selected_agent_ids.length === AGENT_LIST.length;
+                  const toggleAgent = (id: string) => setA_selected_agent_ids(prev =>
+                    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                  );
+                  const toggleAll = () => setA_selected_agent_ids(allChecked ? [] : AGENT_LIST.map(a => a.id));
+                  const ALERT_RULES = [
+                    { name: "Trader drawdown",  condition: "PnL 24h < -10%",       agent: "Trader-Alpha",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
+                    { name: "LTV Warning",       condition: "Any Loan LTV > 70%",    agent: "Lending-Core",  channel: "Slack",       action: "Notify", actionColor: "#ff9500" },
+                    { name: "Vendor Anomaly",    condition: "Vendor Spend > 3x avg", agent: "Payments-Hub",  channel: "Slack + SMS", action: "Pause",  actionColor: "#d20344" },
+                  ];
+                  return (
+                    <div className="flex flex-col gap-[24px] w-full">
+                      {/* AGENTS */}
+                      <div className="flex flex-col gap-[16px] w-full">
+                        <SectionDivider title="AGENTS" />
+                        <div className="grid grid-cols-2 gap-x-[16px] gap-y-[16px]">
+                          <div className="flex gap-[16px] items-start">
+                            <ACheckbox checked={allChecked} onChange={toggleAll} />
+                            <div className="flex items-center gap-[4px]">
+                              <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">All Agents</span>
+                              <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[4px] py-px rounded-[20px] font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">5 Active</span>
+                            </div>
+                          </div>
+                          {AGENT_LIST.map((ag) => (
+                            <div key={ag.id} className="flex gap-[16px] items-start">
+                              <ACheckbox checked={a_selected_agent_ids.includes(ag.id)} onChange={() => toggleAgent(ag.id)} />
+                              <span className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">{ag.label}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="REPORTING" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Routine Reports</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_report_frequency} onChange={(e) => setA_report_frequency(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="hourly"  className="bg-[#0a0c10]">Hourly</option>
-                              <option value="daily"   className="bg-[#0a0c10]">Daily</option>
-                              <option value="weekly"  className="bg-[#0a0c10]">Weekly</option>
-                              <option value="monthly" className="bg-[#0a0c10]">Monthly</option>
-                            </select>
-                          </div>
+                      {/* ALERT RULES */}
+                      <div className="flex flex-col gap-[16px] w-full">
+                        <SectionDivider title="ALERT RULES" />
+                        <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
+                          <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] flex-1">Each rule has a condition and an action.</p>
+                          <button className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.33V12.67M3.33 8H12.67" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
+                          </button>
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Compute Cap / Month</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_compute_cap} onChange={(e) => setA_compute_cap(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="100"  className="bg-[#0a0c10]">$100</option>
-                              <option value="250"  className="bg-[#0a0c10]">$250</option>
-                              <option value="500"  className="bg-[#0a0c10]">$500</option>
-                              <option value="1000" className="bg-[#0a0c10]">$1,000</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Max Alerts / Day</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_max_alerts_per_day} onChange={(e) => setA_max_alerts_per_day(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="5"         className="bg-[#0a0c10]">5</option>
-                              <option value="10"        className="bg-[#0a0c10]">10</option>
-                              <option value="25"        className="bg-[#0a0c10]">25</option>
-                              <option value="Unlimited" className="bg-[#0a0c10]">Unlimited</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Critical Routing</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_critical_routing} onChange={(e) => setA_critical_routing(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="Dashboard"                  className="bg-[#0a0c10]">Dashboard</option>
-                              <option value="Dashboard + Slack"          className="bg-[#0a0c10]">Dashboard + Slack</option>
-                              <option value="Dashboard + Slack + SMS"    className="bg-[#0a0c10]">Dashboard + Slack + SMS</option>
-                            </select>
-                          </div>
+                        <div className="flex flex-col gap-[8px] w-full">
+                          {ALERT_RULES.map((rule) => (
+                            <div key={rule.name} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px] w-full">
+                              <div className="flex flex-1 items-center justify-between min-w-0">
+                                <div className="flex flex-col gap-[4px] items-start justify-center shrink-0">
+                                  <p className="font-['Gilroy-SemiBold',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{rule.name}</p>
+                                  <div className="flex gap-[4px] items-center">
+                                    <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.condition}</span>
+                                    <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
+                                    <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.agent}</span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-[4px] items-end justify-center shrink-0">
+                                  <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] text-right whitespace-nowrap">{rule.channel}</p>
+                                  <p className="font-['Gilroy-SemiBold',sans-serif] text-[14px] leading-[20px] whitespace-nowrap" style={{ color: rule.actionColor }}>{rule.action}</p>
+                                </div>
+                              </div>
+                              <button className="relative size-[24px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col gap-[16px] w-full">
-                      <SectionDivider title="ACTION PERMISSIONS" />
-                      <div className="grid grid-cols-2 gap-[12px]">
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Allowed Actions</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_allowed_actions} onChange={(e) => setA_allowed_actions(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="pause_agent_only"  className="bg-[#0a0c10]">Pause Agent Only</option>
-                              <option value="pause_rebalance"   className="bg-[#0a0c10]">Pause + Rebalance</option>
-                              <option value="custom_whitelist"  className="bg-[#0a0c10]">Custom Whitelist</option>
-                            </select>
-                          </div>
+                      {/* REPORTING */}
+                      <div className="flex flex-col gap-[16px] w-full">
+                        <SectionDivider title="REPORTING" />
+                        <div className="grid grid-cols-2 gap-[16px]">
+                          <ADropdown label="Report Frequency" value={a_report_frequency} onChange={setA_report_frequency}>
+                            <option value="hourly"  className="bg-[#0a0c10]">Hourly</option>
+                            <option value="daily"   className="bg-[#0a0c10]">Daily</option>
+                            <option value="weekly"  className="bg-[#0a0c10]">Weekly</option>
+                            <option value="monthly" className="bg-[#0a0c10]">Monthly</option>
+                          </ADropdown>
+                          <ADropdown label="Critical Routing" value={a_critical_routing} onChange={setA_critical_routing}>
+                            <option value="Dashboard"               className="bg-[#0a0c10]">Dashboard</option>
+                            <option value="Dashboard + Slack"       className="bg-[#0a0c10]">Dashboard + Slack</option>
+                            <option value="Dashboard + Slack + SMS" className="bg-[#0a0c10]">Dashboard + Slack + SMS</option>
+                          </ADropdown>
+                          <ADropdown label="Max Alerts / Day" value={a_max_alerts_per_day} onChange={setA_max_alerts_per_day}>
+                            <option value="5"         className="bg-[#0a0c10]">5</option>
+                            <option value="10"        className="bg-[#0a0c10]">10</option>
+                            <option value="25"        className="bg-[#0a0c10]">25</option>
+                            <option value="Unlimited" className="bg-[#0a0c10]">Unlimited</option>
+                          </ADropdown>
+                          <ADropdown label="Compute Cap / Month" value={a_compute_cap} onChange={setA_compute_cap}>
+                            <option value="100"  className="bg-[#0a0c10]">$100</option>
+                            <option value="250"  className="bg-[#0a0c10]">$250</option>
+                            <option value="500"  className="bg-[#0a0c10]">$500</option>
+                            <option value="1000" className="bg-[#0a0c10]">$1,000</option>
+                          </ADropdown>
                         </div>
-                        <div className="flex flex-col gap-[4px]">
-                          <FieldLabel>Daily Action Cap</FieldLabel>
-                          <div className="bg-[#222737] flex items-center px-[12px] py-[10px] rounded-[12px]">
-                            <select value={a_daily_action_cap} onChange={(e) => setA_daily_action_cap(e.target.value)} className="bg-transparent text-white text-[14px] outline-none w-full cursor-pointer appearance-none">
-                              <option value="1"  className="bg-[#0a0c10]">1</option>
-                              <option value="3"  className="bg-[#0a0c10]">3</option>
-                              <option value="5"  className="bg-[#0a0c10]">5</option>
-                              <option value="10" className="bg-[#0a0c10]">10</option>
-                            </select>
+                        <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
+                          <div className="flex flex-1 flex-col gap-[4px] items-start leading-[20px] min-w-0">
+                            <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] w-full">Include recommendations in reports</p>
+                            <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] w-full">Suggest rebalances and policy tweaks based on observed activity</p>
                           </div>
+                          <AToggleSwitch on={a_recommendations === "included"} onToggle={() => setA_recommendations(a_recommendations === "included" ? "excluded" : "included")} />
+                        </div>
+                      </div>
+
+                      {/* ACTION PERMISSIONS */}
+                      <div className="flex flex-col gap-[16px] w-full">
+                        <SectionDivider title="ACTION PERMISSIONS" />
+                        <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
+                          <div className="flex flex-1 flex-col gap-[4px] items-start leading-[20px] min-w-0">
+                            <p className="font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] w-full">Allow auto-execute</p>
+                            <p className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[14px] w-full">Enables actions defined in alert rules</p>
+                          </div>
+                          <AToggleSwitch on={a_auto_execute} onToggle={() => setA_auto_execute(!a_auto_execute)} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-[16px]">
+                          <ADropdown label={<><FieldLabel>Allowed Actions</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>} value={a_allowed_actions} onChange={setA_allowed_actions}>
+                            <option value="pause_agent_only" className="bg-[#0a0c10]">Pause Agent Only</option>
+                            <option value="pause_rebalance"  className="bg-[#0a0c10]">Pause + Rebalance</option>
+                            <option value="custom_whitelist" className="bg-[#0a0c10]">Custom Whitelist</option>
+                          </ADropdown>
+                          <ADropdown label={<><FieldLabel>Daily Action Cap</FieldLabel><svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0"><rect x="2" y="2" width="16" height="16" rx="4" stroke="#6c779d" strokeWidth="1.2"/><path d="M10 9v5M10 7v.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round"/></svg></>} value={a_daily_action_cap} onChange={setA_daily_action_cap}>
+                            <option value="1"  className="bg-[#0a0c10]">1</option>
+                            <option value="3"  className="bg-[#0a0c10]">3</option>
+                            <option value="5"  className="bg-[#0a0c10]">5</option>
+                            <option value="10" className="bg-[#0a0c10]">10</option>
+                          </ADropdown>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* CUSTOM CONFIG */}
                 {selectedType === "custom" && (
