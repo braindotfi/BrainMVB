@@ -630,6 +630,7 @@ const CrosshairCursor = ({ points, width, height, payload }: any) => {
     <g>
       <line x1={x} y1={0} x2={x} y2={height} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
       <line x1={0} y1={y} x2={width} y2={y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <circle cx={x} cy={y} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
       {formatted && (
         <g>
           <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
@@ -720,7 +721,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                     <Tooltip content={() => null} cursor={<CrosshairCursor />} isAnimationActive={false} />
                     <Area type="monotone" dataKey="v" stroke="#42bf23" strokeWidth={1.5}
                       fill="url(#greenGrad)" dot={false} isAnimationActive={false}
-                      activeDot={{ r: 3, fill: "#42bf23", stroke: "#0a0c10", strokeWidth: 2 }} />
+                      activeDot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
                 <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none" style={{ paddingTop: "8px", paddingBottom: "4px" }}>

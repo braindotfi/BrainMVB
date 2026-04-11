@@ -199,12 +199,19 @@ const CfCrosshairCursor = ({ points, width, height, payload }: any) => {
 
   const pillY = y - pillH / 2;
 
+  const inflowY  = points[0]?.y ?? y;
+  const outflowY = points[1]?.y ?? null;
+
   return (
     <g>
       <line x1={x} y1={0} x2={x} y2={height}
         stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
       <line x1={0} y1={y} x2={width} y2={y}
         stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
+      <circle cx={x} cy={inflowY} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
+      {outflowY !== null && (
+        <circle cx={x} cy={outflowY} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />
+      )}
       {formatted && (
         <g>
           <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
@@ -252,11 +259,11 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => (
           />
           <Area
             type="monotone" dataKey="inflow" stroke="#42bf23" strokeWidth={1.5}
-            fill="url(#cfInflow)" dot={false} isAnimationActive={false} name="Inflow"
+            fill="url(#cfInflow)" dot={false} activeDot={false} isAnimationActive={false} name="Inflow"
           />
           <Area
             type="monotone" dataKey="outflow" stroke="#d20344" strokeWidth={1.5}
-            fill="url(#cfOutflow)" dot={false} isAnimationActive={false} name="Outflow"
+            fill="url(#cfOutflow)" dot={false} activeDot={false} isAnimationActive={false} name="Outflow"
           />
         </AreaChart>
       </ResponsiveContainer>
