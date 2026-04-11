@@ -380,7 +380,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const NotificationsPanel = () => (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-300 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-300 bg-black/50 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         onClick={() => setNotificationsOpen(false)}
       />
       <div
@@ -459,7 +459,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           <Link href="/notifications">
             <button
               onClick={() => setNotificationsOpen(false)}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#131927] hover:bg-[#1a2133] transition-colors rounded-xl"
+              className="w-full flex items-center justify-center gap-2 py-[10px] bg-[#222737] hover:opacity-80 transition-opacity rounded-[100px]"
             >
               <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-sm">View All Notifications</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
