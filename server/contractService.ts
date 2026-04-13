@@ -306,6 +306,98 @@ export async function deployBrainAccount(ownerAddress: Address): Promise<{ hash:
   return { hash, address: accountAddress };
 }
 
+// ── Reputation Ranking ────────────────────────────────────────────────────────
+
+export type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+
+export interface AgentReputation {
+  score: number;
+  tier: ReputationTier;
+  rankLabel: string;       // e.g. "#4 of 312"
+  percentile: number;      // 0-100, higher = better
+  validationCount: number;
+  totalVolumeUsd: number;
+}
+
+// Seeded demo reputations keyed by agent id
+const DEMO_REPUTATIONS: Record<string, AgentReputation> = {
+  alphaflow:     { score: 2840,  tier: "Gold",      rankLabel: "#4 of 312",   percentile: 82, validationCount: 284,  totalVolumeUsd: 49800 },
+  yieldpilot:    { score: 720,   tier: "Silver",    rankLabel: "#18 of 312",  percentile: 62, validationCount: 72,   totalVolumeUsd: 9800  },
+  risksentinel:  { score: 14200, tier: "Diamond",   rankLabel: "#2 of 312",   percentile: 96, validationCount: 1420, totalVolumeUsd: 210000 },
+  signalseer:    { score: 2100,  tier: "Gold",      rankLabel: "#7 of 312",   percentile: 78, validationCount: 210,  totalVolumeUsd: 38400 },
+  trendradar:    { score: 320,   tier: "Bronze",    rankLabel: "#78 of 312",  percentile: 34, validationCount: 32,   totalVolumeUsd: 4200  },
+  taskforgepro:  { score: 550,   tier: "Silver",    rankLabel: "#22 of 312",  percentile: 55, validationCount: 55,   totalVolumeUsd: 7600  },
+  inboxzero:     { score: 180,   tier: "Bronze",    rankLabel: "#121 of 312", percentile: 22, validationCount: 18,   totalVolumeUsd: 1800  },
+  opscommander:  { score: 480,   tier: "Silver",    rankLabel: "#28 of 312",  percentile: 50, validationCount: 48,   totalVolumeUsd: 6200  },
+  paystream:     { score: 1800,  tier: "Gold",      rankLabel: "#9 of 312",   percentile: 74, validationCount: 180,  totalVolumeUsd: 29400 },
+  invoicebot:    { score: 110,   tier: "Bronze",    rankLabel: "#155 of 312", percentile: 15, validationCount: 11,   totalVolumeUsd: 920   },
+  dealcloser:    { score: 650,   tier: "Silver",    rankLabel: "#14 of 312",  percentile: 60, validationCount: 65,   totalVolumeUsd: 10200 },
+  swarmalpha:    { score: 2300,  tier: "Gold",      rankLabel: "#6 of 312",   percentile: 79, validationCount: 230,  totalVolumeUsd: 41600 },
+};
+
+function scoreTier(score: number): { tier: ReputationTier; percentile: number } {
+  if (score >= 50000) return { tier: "Legendary", percentile: 99 };
+  if (score >= 10000) return { tier: "Diamond",   percentile: 95 };
+  if (score >= 2000)  return { tier: "Gold",       percentile: 80 };
+  if (score >= 500)   return { tier: "Silver",     percentile: 55 };
+  return                     { tier: "Bronze",     percentile: 25 };
+}
+
+function computeReputationFromMetrics(
+  validationCount: bigint,
+  totalVolumeUsdc: bigint,
+  lastActiveAt: bigint,
+): AgentReputation {
+  const validations   = Number(validationCount);
+  const volumeDollars = Number(totalVolumeUsdc) / 1_000_000;
+  const lastActive    = Number(lastActiveAt);
+
+  const now = Math.floor(Date.now() / 1000);
+  let recency = 0;
+  if (lastActive > 0) {
+    const daysSince = (now - lastActive) / 86400;
+    if (daysSince <= 7)  recency = 500;
+    else if (daysSince <= 30) recency = 200;
+    else if (daysSince <= 90) recency = 50;
+  }
+
+  const score = Math.round(validations * 10 + volumeDollars * 0.1 + recency);
+  const { tier, percentile } = scoreTier(score);
+  return {
+    score,
+    tier,
+    rankLabel: "—",
+    percentile,
+    validationCount: validations,
+    totalVolumeUsd: volumeDollars,
+  };
+}
+
+/**
+ * Return the on-chain reputation ranking for a given agent.
+ * Falls back to demo data when CONTRACT_MODE=demo or the registry is unavailable.
+ */
+export async function getAgentReputation(agentId: string): Promise<AgentReputation> {
+  const demo = DEMO_REPUTATIONS[agentId.toLowerCase()];
+  if (CONTRACT_MODE === "demo" || !DEPLOYED_ADDRESSES.agentRegistry) {
+    return demo ?? {
+      score: 0, tier: "Bronze", rankLabel: "Unranked",
+      percentile: 0, validationCount: 0, totalVolumeUsd: 0,
+    };
+  }
+  try {
+    const record = await getRegistryRecord(agentId as Hex);
+    if (!record) return demo ?? computeReputationFromMetrics(0n, 0n, 0n);
+    return computeReputationFromMetrics(
+      record.validationCount,
+      record.totalVolumeUsdc,
+      record.lastActiveAt,
+    );
+  } catch {
+    return demo ?? computeReputationFromMetrics(0n, 0n, 0n);
+  }
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 export function formatUsdc(amount: bigint): string {

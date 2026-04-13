@@ -1,8 +1,30 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Shield } from "lucide-react";
 import { agents, AgentStatus, AgentRule } from "@/lib/agentsData";
+
+type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+
+interface AgentReputation {
+  score: number;
+  tier: ReputationTier;
+  rankLabel: string;
+  percentile: number;
+  validationCount: number;
+  totalVolumeUsd: number;
+}
+
+const TIER_CONFIG: Record<ReputationTier, {
+  bg: string; border: string; text: string; subtext: string; shield: string;
+}> = {
+  Legendary: { bg: "bg-[#1a0840]", border: "border-[rgba(157,92,245,0.25)]", text: "text-[#9d5cf5]", subtext: "text-[#7631ee]", shield: "#9d5cf5" },
+  Diamond:   { bg: "bg-[#0a1a2e]", border: "border-[rgba(56,189,248,0.25)]", text: "text-[#38bdf8]", subtext: "text-[#0ea5e9]", shield: "#38bdf8" },
+  Gold:      { bg: "bg-[#1a0e00]", border: "border-[rgba(255,149,0,0.25)]",  text: "text-[#ff9500]", subtext: "text-[#b86800]", shield: "#ff9500" },
+  Silver:    { bg: "bg-[#10131a]", border: "border-[rgba(168,185,244,0.25)]",text: "text-[#a8b9f4]", subtext: "text-[#6c779d]", shield: "#a8b9f4" },
+  Bronze:    { bg: "bg-[#140c00]", border: "border-[rgba(205,124,47,0.25)]", text: "text-[#cd7c2f]", subtext: "text-[#8b5a1f]", shield: "#cd7c2f" },
+};
 
 const riskColors = {
   low:    { bg: "bg-[#123509]", border: "border-[rgba(66,191,35,0.2)]", text: "text-[#42bf23]" },
@@ -42,6 +64,13 @@ export const AgentManagePage = (): JSX.Element => {
   const [riskLevel, setRiskLevel] = useState(agent?.riskLevel ?? "medium");
   const [schedule, setSchedule] = useState(agent?.schedule ?? "");
   const [saved, setSaved] = useState(false);
+
+  const { data: reputation } = useQuery<AgentReputation>({
+    queryKey: ["/api/agents", params.id, "reputation"],
+    queryFn: () => fetch(`/api/agents/${params.id}/reputation`).then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!params.id,
+  });
 
   const statusMutation = useMutation({
     mutationFn: async (status: AgentStatus) => {
@@ -169,6 +198,50 @@ export const AgentManagePage = (): JSX.Element => {
               </div>
             ))}
           </div>
+
+          {/* ── Reputation Ranking ── */}
+          {reputation && (() => {
+            const tc = TIER_CONFIG[reputation.tier];
+            return (
+              <div
+                className={`rounded-[12px] p-4 border ${tc.bg} ${tc.border} flex items-center gap-4`}
+                data-testid="card-reputation"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: `${tc.shield}18` }}>
+                  <Shield size={20} color={tc.shield} strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px] ${tc.text}`}>
+                      {reputation.tier}
+                    </span>
+                    {reputation.rankLabel !== "—" && reputation.rankLabel !== "Unranked" && (
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
+                        Rank {reputation.rankLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
+                      Top {100 - reputation.percentile}% · {reputation.validationCount.toLocaleString()} on-chain validations
+                    </span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
+                      ${reputation.totalVolumeUsd.toLocaleString()} lifetime volume
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <div className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px] ${tc.text}`}>
+                    {reputation.score.toLocaleString()}
+                  </div>
+                  <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-0.5">
+                    Rep Score
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Description ── */}
           <div className="bg-[#0a0c10] rounded-[12px] p-4 border border-[#1d2132]">

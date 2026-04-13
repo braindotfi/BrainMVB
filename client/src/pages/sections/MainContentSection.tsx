@@ -1,7 +1,18 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
+
+type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+
+const TIER_STYLES: Record<ReputationTier, { dot: string; text: string }> = {
+  Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
+  Diamond:   { dot: "bg-[#38bdf8]", text: "text-[#38bdf8]" },
+  Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
+  Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
+  Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
+};
 
 const trendingAgentsRow1 = [
   { id: "alphaflow", name: "AlphaFlow", description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.", avatarSrc: "/figmaAssets/avatars-3.svg", avatarType: "img" },
@@ -34,33 +45,57 @@ const allAgents = [
 
 type Agent = typeof allAgents[0];
 
-const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agent & { onAdd: (id: string) => void }) => (
-  <div
-    className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-    onClick={() => onAdd(id)}
-    data-testid={`item-agent-${id}`}
-  >
-    {avatarType === "img" ? (
-      <img className="w-12 h-12 flex-shrink-0" alt={name} src={avatarSrc} />
-    ) : (
-      <div className="bg-cover bg-[50%_50%] w-12 h-12 flex-shrink-0 rounded-full" style={{ backgroundImage: `url(${avatarSrc})` }} />
-    )}
-    <div className="flex flex-col items-start justify-center flex-1 min-w-0">
-      <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm tracking-[0] leading-5 whitespace-nowrap">
-        {name}
-      </div>
-      <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-[11px] tracking-[0] leading-[14px] w-full line-clamp-2">
-        {description}
-      </div>
-    </div>
+const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agent & { onAdd: (id: string) => void }) => {
+  const { data: rep } = useQuery<{ tier: ReputationTier; rankLabel: string }>({
+    queryKey: ["/api/agents", id, "reputation"],
+    queryFn: () => fetch(`/api/agents/${id}/reputation`).then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const tierStyle = rep ? TIER_STYLES[rep.tier] : null;
+
+  return (
     <div
-      className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0"
-      title={`View ${name}`}
+      className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+      onClick={() => onAdd(id)}
+      data-testid={`item-agent-${id}`}
     >
-      <img className="absolute top-1 left-1 w-4 h-4" alt="Add" src="/figmaAssets/icons.svg" />
+      {avatarType === "img" ? (
+        <img className="w-12 h-12 flex-shrink-0" alt={name} src={avatarSrc} />
+      ) : (
+        <div className="bg-cover bg-[50%_50%] w-12 h-12 flex-shrink-0 rounded-full" style={{ backgroundImage: `url(${avatarSrc})` }} />
+      )}
+      <div className="flex flex-col items-start justify-center flex-1 min-w-0 gap-0.5">
+        <div className="flex items-center gap-1.5">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm leading-5 whitespace-nowrap">
+            {name}
+          </span>
+          {tierStyle && rep && (
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ${tierStyle.text} whitespace-nowrap`}
+              data-testid={`badge-reputation-${id}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tierStyle.dot}`} />
+              {rep.tier}
+              {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
+                <span className="text-[#414965] font-normal">· {rep.rankLabel}</span>
+              )}
+            </span>
+          )}
+        </div>
+        <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-[11px] tracking-[0] leading-[14px] w-full line-clamp-2">
+          {description}
+        </div>
+      </div>
+      <div
+        className="relative w-6 h-6 bg-brain-v1dark-orange rounded-[100px] flex-shrink-0"
+        title={`View ${name}`}
+      >
+        <img className="absolute top-1 left-1 w-4 h-4" alt="Add" src="/figmaAssets/icons.svg" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AgentRow = ({ agents, onAdd }: { agents: Agent[]; onAdd: (id: string) => void }) => (
   <div className="flex items-start gap-4 w-full">

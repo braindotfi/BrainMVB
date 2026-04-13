@@ -14,6 +14,7 @@ import {
   getRemainingBudget,
   getAgentPolicyHash,
   getRegistryRecord,
+  getAgentReputation,
   formatUsdc,
   DEPLOYED_ADDRESSES,
   CONTRACT_MODE,
@@ -543,6 +544,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.json(memories);
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch memory" });
+    }
+  });
+
+  // Agent reputation (on-chain ranking derived from AgentRegistry)
+  app.get("/api/agents/:id/reputation", async (req, res) => {
+    try {
+      const rep = await getAgentReputation(req.params.id);
+      return res.json(rep);
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to fetch reputation" });
     }
   });
 
