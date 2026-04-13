@@ -308,7 +308,9 @@ export async function deployBrainAccount(ownerAddress: Address): Promise<{ hash:
 
 // ── Reputation Ranking ────────────────────────────────────────────────────────
 
-export type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+export type ReputationTier =
+  | "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze"
+  | "New" | "Unranked" | "Caution";
 
 export interface AgentReputation {
   score: number;
@@ -317,36 +319,54 @@ export interface AgentReputation {
   percentile: number;      // 0-100, higher = better
   validationCount: number;
   totalVolumeUsd: number;
+  ageLabel?: string;       // e.g. "1 day old" — present when tier = "New"
 }
 
 // Seeded demo reputations keyed by agent id
 const DEMO_REPUTATIONS: Record<string, AgentReputation> = {
-  alphaflow:     { score: 2840,  tier: "Gold",      rankLabel: "#4 of 312",   percentile: 82, validationCount: 284,  totalVolumeUsd: 49800 },
-  yieldpilot:    { score: 720,   tier: "Silver",    rankLabel: "#18 of 312",  percentile: 62, validationCount: 72,   totalVolumeUsd: 9800  },
+  alphaflow:     { score: 2840,  tier: "Gold",      rankLabel: "#4 of 312",   percentile: 82, validationCount: 284,  totalVolumeUsd: 49800  },
+  yieldpilot:    { score: 720,   tier: "Silver",    rankLabel: "#18 of 312",  percentile: 62, validationCount: 72,   totalVolumeUsd: 9800   },
   risksentinel:  { score: 14200, tier: "Diamond",   rankLabel: "#2 of 312",   percentile: 96, validationCount: 1420, totalVolumeUsd: 210000 },
-  signalseer:    { score: 2100,  tier: "Gold",      rankLabel: "#7 of 312",   percentile: 78, validationCount: 210,  totalVolumeUsd: 38400 },
-  trendradar:    { score: 320,   tier: "Bronze",    rankLabel: "#78 of 312",  percentile: 34, validationCount: 32,   totalVolumeUsd: 4200  },
-  taskforgepro:  { score: 550,   tier: "Silver",    rankLabel: "#22 of 312",  percentile: 55, validationCount: 55,   totalVolumeUsd: 7600  },
-  inboxzero:     { score: 180,   tier: "Bronze",    rankLabel: "#121 of 312", percentile: 22, validationCount: 18,   totalVolumeUsd: 1800  },
-  opscommander:  { score: 480,   tier: "Silver",    rankLabel: "#28 of 312",  percentile: 50, validationCount: 48,   totalVolumeUsd: 6200  },
-  paystream:     { score: 1800,  tier: "Gold",      rankLabel: "#9 of 312",   percentile: 74, validationCount: 180,  totalVolumeUsd: 29400 },
-  invoicebot:    { score: 110,   tier: "Bronze",    rankLabel: "#155 of 312", percentile: 15, validationCount: 11,   totalVolumeUsd: 920   },
-  dealcloser:    { score: 650,   tier: "Silver",    rankLabel: "#14 of 312",  percentile: 60, validationCount: 65,   totalVolumeUsd: 10200 },
-  swarmalpha:    { score: 2300,  tier: "Gold",      rankLabel: "#6 of 312",   percentile: 79, validationCount: 230,  totalVolumeUsd: 41600 },
+  signalseer:    { score: 2100,  tier: "Gold",      rankLabel: "#7 of 312",   percentile: 78, validationCount: 210,  totalVolumeUsd: 38400  },
+  trendradar:    { score: -240,  tier: "Caution",   rankLabel: "Flagged",     percentile: 4,  validationCount: 24,   totalVolumeUsd: 3100   },
+  taskforgepro:  { score: 550,   tier: "Silver",    rankLabel: "#22 of 312",  percentile: 55, validationCount: 55,   totalVolumeUsd: 7600   },
+  inboxzero:     { score: 0,     tier: "New",       rankLabel: "—",           percentile: 0,  validationCount: 0,    totalVolumeUsd: 0,  ageLabel: "2 days old" },
+  opscommander:  { score: 480,   tier: "Silver",    rankLabel: "#28 of 312",  percentile: 50, validationCount: 48,   totalVolumeUsd: 6200   },
+  paystream:     { score: 1800,  tier: "Gold",      rankLabel: "#9 of 312",   percentile: 74, validationCount: 180,  totalVolumeUsd: 29400  },
+  invoicebot:    { score: 22,    tier: "Unranked",  rankLabel: "—",           percentile: 5,  validationCount: 2,    totalVolumeUsd: 220    },
+  dealcloser:    { score: 650,   tier: "Silver",    rankLabel: "#14 of 312",  percentile: 60, validationCount: 65,   totalVolumeUsd: 10200  },
+  swarmalpha:    { score: 2300,  tier: "Gold",      rankLabel: "#6 of 312",   percentile: 79, validationCount: 230,  totalVolumeUsd: 41600  },
 };
 
-function scoreTier(score: number): { tier: ReputationTier; percentile: number } {
+const THREE_DAYS_SEC = 3 * 24 * 60 * 60;
+
+function scoreTier(
+  score: number,
+  validationCount: number,
+  createdAtSec?: number,
+): { tier: ReputationTier; percentile: number } {
+  // Age check — if the agent was registered < 3 days ago, always "New"
+  if (createdAtSec !== undefined) {
+    const ageSec = Math.floor(Date.now() / 1000) - createdAtSec;
+    if (ageSec < THREE_DAYS_SEC) return { tier: "New", percentile: 0 };
+  }
+  // Negative score = Caution
+  if (score < 0)  return { tier: "Caution",  percentile: 2 };
+  // Not enough on-chain activity to rank
+  if (score < 100 && validationCount < 5) return { tier: "Unranked", percentile: 5 };
+  // Standard tiers
   if (score >= 50000) return { tier: "Legendary", percentile: 99 };
   if (score >= 10000) return { tier: "Diamond",   percentile: 95 };
-  if (score >= 2000)  return { tier: "Gold",       percentile: 80 };
-  if (score >= 500)   return { tier: "Silver",     percentile: 55 };
-  return                     { tier: "Bronze",     percentile: 25 };
+  if (score >= 2000)  return { tier: "Gold",      percentile: 80 };
+  if (score >= 500)   return { tier: "Silver",    percentile: 55 };
+  return                     { tier: "Bronze",    percentile: 25 };
 }
 
 function computeReputationFromMetrics(
   validationCount: bigint,
   totalVolumeUsdc: bigint,
   lastActiveAt: bigint,
+  createdAtSec?: number,
 ): AgentReputation {
   const validations   = Number(validationCount);
   const volumeDollars = Number(totalVolumeUsdc) / 1_000_000;
@@ -361,40 +381,73 @@ function computeReputationFromMetrics(
     else if (daysSince <= 90) recency = 50;
   }
 
+  // Penalise for failed validations (not tracked here — use raw score as-is)
   const score = Math.round(validations * 10 + volumeDollars * 0.1 + recency);
-  const { tier, percentile } = scoreTier(score);
+  const { tier, percentile } = scoreTier(score, validations, createdAtSec);
+
+  let ageLabel: string | undefined;
+  if (tier === "New" && createdAtSec !== undefined) {
+    const ageDays = Math.floor((now - createdAtSec) / 86400);
+    ageLabel = ageDays <= 0 ? "less than a day old" : ageDays === 1 ? "1 day old" : `${ageDays} days old`;
+  }
+
   return {
     score,
     tier,
-    rankLabel: "—",
+    rankLabel: tier === "New" || tier === "Unranked" || tier === "Caution" ? "—" : "—",
     percentile,
     validationCount: validations,
     totalVolumeUsd: volumeDollars,
+    ageLabel,
   };
 }
 
 /**
  * Return the on-chain reputation ranking for a given agent.
  * Falls back to demo data when CONTRACT_MODE=demo or the registry is unavailable.
+ * Pass `createdAt` (JS Date or ISO string) for the "New" tier check.
  */
-export async function getAgentReputation(agentId: string): Promise<AgentReputation> {
+export async function getAgentReputation(
+  agentId: string,
+  createdAt?: Date | string,
+): Promise<AgentReputation> {
+  const createdAtSec = createdAt ? Math.floor(new Date(createdAt).getTime() / 1000) : undefined;
   const demo = DEMO_REPUTATIONS[agentId.toLowerCase()];
+
   if (CONTRACT_MODE === "demo" || !DEPLOYED_ADDRESSES.agentRegistry) {
-    return demo ?? {
-      score: 0, tier: "Bronze", rankLabel: "Unranked",
-      percentile: 0, validationCount: 0, totalVolumeUsd: 0,
-    };
+    // For user-created agents (not in demo map), apply the age / score logic
+    if (!demo) {
+      const fallback = computeReputationFromMetrics(0n, 0n, 0n, createdAtSec);
+      return fallback;
+    }
+    // If a createdAt was supplied and within 3 days, override the demo tier to "New"
+    if (createdAtSec !== undefined) {
+      const ageSec = Math.floor(Date.now() / 1000) - createdAtSec;
+      if (ageSec < THREE_DAYS_SEC) {
+        const ageDays = Math.floor(ageSec / 86400);
+        return {
+          ...demo,
+          tier: "New",
+          rankLabel: "—",
+          percentile: 0,
+          ageLabel: ageDays <= 0 ? "less than a day old" : ageDays === 1 ? "1 day old" : `${ageDays} days old`,
+        };
+      }
+    }
+    return demo;
   }
+
   try {
     const record = await getRegistryRecord(agentId as Hex);
-    if (!record) return demo ?? computeReputationFromMetrics(0n, 0n, 0n);
+    if (!record) return demo ?? computeReputationFromMetrics(0n, 0n, 0n, createdAtSec);
     return computeReputationFromMetrics(
       record.validationCount,
       record.totalVolumeUsdc,
       record.lastActiveAt,
+      createdAtSec,
     );
   } catch {
-    return demo ?? computeReputationFromMetrics(0n, 0n, 0n);
+    return demo ?? computeReputationFromMetrics(0n, 0n, 0n, createdAtSec);
   }
 }
 

@@ -4,13 +4,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
-type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 const REP_TIER_STYLES: Record<RepTier, { dot: string; text: string }> = {
   Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
   Diamond:   { dot: "bg-[#38bdf8]", text: "text-[#38bdf8]" },
   Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
   Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
   Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
+  New:       { dot: "bg-[#00d4aa]", text: "text-[#00d4aa]" },
+  Unranked:  { dot: "bg-[#414965]", text: "text-[#6c779d]" },
+  Caution:   { dot: "bg-[#d20344]", text: "text-[#d20344]" },
 };
 
 /* ── Per-agent spend cap mock data ── */

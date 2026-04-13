@@ -100,14 +100,17 @@ const Skeleton = ({ className }: { className?: string }) => (
 );
 
 /* ── Reputation Banner ── */
-type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
-interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; }
+type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
+interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; ageLabel?: string; }
 const REP_TC: Record<RepTier, { bg: string; border: string; text: string; shield: string }> = {
   Legendary: { bg: "#1a0840", border: "rgba(157,92,245,0.25)",  text: "#9d5cf5", shield: "#9d5cf5" },
   Diamond:   { bg: "#0a1a2e", border: "rgba(56,189,248,0.25)",  text: "#38bdf8", shield: "#38bdf8" },
   Gold:      { bg: "#1a0e00", border: "rgba(255,149,0,0.25)",   text: "#ff9500", shield: "#ff9500" },
   Silver:    { bg: "#10131a", border: "rgba(168,185,244,0.25)", text: "#a8b9f4", shield: "#a8b9f4" },
   Bronze:    { bg: "#140c00", border: "rgba(205,124,47,0.25)",  text: "#cd7c2f", shield: "#cd7c2f" },
+  New:       { bg: "#001a16", border: "rgba(0,212,170,0.25)",   text: "#00d4aa", shield: "#00d4aa" },
+  Unranked:  { bg: "#0d0f14", border: "rgba(65,73,101,0.25)",   text: "#6c779d", shield: "#414965" },
+  Caution:   { bg: "#1a0009", border: "rgba(210,3,68,0.3)",     text: "#d20344", shield: "#d20344" },
 };
 const ReputationBanner = ({ agentId }: { agentId: string }) => {
   const { data: rep } = useQuery<AgentRep>({
@@ -118,6 +121,17 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
   });
   if (!rep) return null;
   const tc = REP_TC[rep.tier];
+
+  const subtitle = rep.tier === "New"
+    ? rep.ageLabel ? `${rep.ageLabel} · building reputation` : "Newly registered · building reputation"
+    : rep.tier === "Unranked"
+    ? `${rep.validationCount} on-chain validations · not enough activity to rank`
+    : rep.tier === "Caution"
+    ? `${Math.abs(rep.score)} negative score · ${rep.validationCount} failed or disputed validations`
+    : `Top ${100 - rep.percentile}% · ${rep.validationCount.toLocaleString()} on-chain validations`;
+
+  const scoreLabel = rep.tier === "Caution" ? `−${Math.abs(rep.score)}` : rep.tier === "New" || rep.tier === "Unranked" ? "—" : rep.score.toLocaleString();
+
   return (
     <div
       className="rounded-[16px] p-[16px] flex items-center gap-[16px]"
@@ -133,24 +147,31 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
           <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px]" style={{ color: tc.text }}>
             {rep.tier}
           </span>
-          {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
+          {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && rep.tier !== "New" && rep.tier !== "Caution" && (
             <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
               Rank {rep.rankLabel}
+            </span>
+          )}
+          {rep.tier === "Caution" && (
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] px-[8px] py-[2px] rounded-full" style={{ background: "rgba(210,3,68,0.15)", color: "#d20344" }}>
+              Under review
             </span>
           )}
         </div>
         <div className="flex items-center gap-[12px] mt-[4px] flex-wrap">
           <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
-            Top {100 - rep.percentile}% · {rep.validationCount.toLocaleString()} on-chain validations
+            {subtitle}
           </span>
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
-            ${rep.totalVolumeUsd.toLocaleString()} lifetime volume
-          </span>
+          {rep.tier !== "New" && rep.tier !== "Unranked" && rep.totalVolumeUsd > 0 && (
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
+              ${rep.totalVolumeUsd.toLocaleString()} lifetime volume
+            </span>
+          )}
         </div>
       </div>
       <div className="flex-shrink-0 text-right">
         <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px]" style={{ color: tc.text }}>
-          {rep.score.toLocaleString()}
+          {scoreLabel}
         </div>
         <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-[2px]">
           Rep Score

@@ -550,7 +550,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Agent reputation (on-chain ranking derived from AgentRegistry)
   app.get("/api/agents/:id/reputation", async (req, res) => {
     try {
-      const rep = await getAgentReputation(req.params.id);
+      // Try to get createdAt from DB for the "New" tier check
+      let createdAt: Date | undefined;
+      try {
+        const dbAgent = await storage.getAgent(req.params.id);
+        if (dbAgent?.createdAt) createdAt = new Date(dbAgent.createdAt);
+      } catch { /* not a DB agent — use demo data */ }
+      const rep = await getAgentReputation(req.params.id, createdAt);
       return res.json(rep);
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch reputation" });

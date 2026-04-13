@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shield } from "lucide-react";
 import { agents, AgentStatus, AgentRule } from "@/lib/agentsData";
 
-type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 
 interface AgentReputation {
   score: number;
@@ -14,6 +14,7 @@ interface AgentReputation {
   percentile: number;
   validationCount: number;
   totalVolumeUsd: number;
+  ageLabel?: string;
 }
 
 const TIER_CONFIG: Record<ReputationTier, {
@@ -24,6 +25,9 @@ const TIER_CONFIG: Record<ReputationTier, {
   Gold:      { bg: "bg-[#1a0e00]", border: "border-[rgba(255,149,0,0.25)]",  text: "text-[#ff9500]", subtext: "text-[#b86800]", shield: "#ff9500" },
   Silver:    { bg: "bg-[#10131a]", border: "border-[rgba(168,185,244,0.25)]",text: "text-[#a8b9f4]", subtext: "text-[#6c779d]", shield: "#a8b9f4" },
   Bronze:    { bg: "bg-[#140c00]", border: "border-[rgba(205,124,47,0.25)]", text: "text-[#cd7c2f]", subtext: "text-[#8b5a1f]", shield: "#cd7c2f" },
+  New:       { bg: "bg-[#001a16]", border: "border-[rgba(0,212,170,0.25)]",  text: "text-[#00d4aa]", subtext: "text-[#00a07c]", shield: "#00d4aa" },
+  Unranked:  { bg: "bg-[#0d0f14]", border: "border-[rgba(65,73,101,0.25)]",  text: "text-[#6c779d]", subtext: "text-[#414965]", shield: "#414965" },
+  Caution:   { bg: "bg-[#1a0009]", border: "border-[rgba(210,3,68,0.3)]",    text: "text-[#d20344]", subtext: "text-[#8b001f]", shield: "#d20344" },
 };
 
 const riskColors = {
@@ -202,6 +206,19 @@ export const AgentManagePage = (): JSX.Element => {
           {/* ── Reputation Ranking ── */}
           {reputation && (() => {
             const tc = TIER_CONFIG[reputation.tier];
+            const tier = reputation.tier;
+            const subtitle =
+              tier === "New"
+                ? reputation.ageLabel ? `${reputation.ageLabel} · building reputation` : "Newly registered · building reputation"
+                : tier === "Unranked"
+                ? `${reputation.validationCount} on-chain validations · not enough activity to rank`
+                : tier === "Caution"
+                ? `${Math.abs(reputation.score)} negative score · ${reputation.validationCount} failed or disputed validations`
+                : `Top ${100 - reputation.percentile}% · ${reputation.validationCount.toLocaleString()} on-chain validations`;
+            const scoreLabel =
+              tier === "Caution" ? `−${Math.abs(reputation.score)}`
+              : tier === "New" || tier === "Unranked" ? "—"
+              : reputation.score.toLocaleString();
             return (
               <div
                 className={`rounded-[12px] p-4 border ${tc.bg} ${tc.border} flex items-center gap-4`}
@@ -214,26 +231,34 @@ export const AgentManagePage = (): JSX.Element => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px] ${tc.text}`}>
-                      {reputation.tier}
+                      {tier}
                     </span>
-                    {reputation.rankLabel !== "—" && reputation.rankLabel !== "Unranked" && (
+                    {reputation.rankLabel !== "—" && tier !== "New" && tier !== "Unranked" && tier !== "Caution" && (
                       <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
                         Rank {reputation.rankLabel}
+                      </span>
+                    )}
+                    {tier === "Caution" && (
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] px-2 py-0.5 rounded-full"
+                        style={{ background: "rgba(210,3,68,0.15)", color: "#d20344" }}>
+                        Under review
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
-                      Top {100 - reputation.percentile}% · {reputation.validationCount.toLocaleString()} on-chain validations
+                      {subtitle}
                     </span>
-                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
-                      ${reputation.totalVolumeUsd.toLocaleString()} lifetime volume
-                    </span>
+                    {tier !== "New" && tier !== "Unranked" && reputation.totalVolumeUsd > 0 && (
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
+                        ${reputation.totalVolumeUsd.toLocaleString()} lifetime volume
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
                   <div className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px] ${tc.text}`}>
-                    {reputation.score.toLocaleString()}
+                    {scoreLabel}
                   </div>
                   <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-0.5">
                     Rep Score

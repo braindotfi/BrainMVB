@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
-type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 
 const TIER_STYLES: Record<ReputationTier, { dot: string; text: string }> = {
   Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
@@ -12,6 +12,9 @@ const TIER_STYLES: Record<ReputationTier, { dot: string; text: string }> = {
   Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
   Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
   Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
+  New:       { dot: "bg-[#00d4aa]", text: "text-[#00d4aa]" },
+  Unranked:  { dot: "bg-[#414965]", text: "text-[#6c779d]" },
+  Caution:   { dot: "bg-[#d20344]", text: "text-[#d20344]" },
 };
 
 const trendingAgentsRow1 = [
