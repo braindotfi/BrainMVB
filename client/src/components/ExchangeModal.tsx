@@ -279,11 +279,11 @@ export function ExchangeModal({ open, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
 
-      <div className="relative z-10 w-[500px] max-h-[90vh] flex flex-col bg-[#0d1017] border border-[#1d2131] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative z-10 w-[500px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* Success overlay */}
         {confirmed && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0d1017] gap-4 px-8">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#11141b] gap-4 px-8">
             <div className="w-16 h-16 rounded-full bg-brain-v1dark-green flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <path d="M5 14L11 20L23 8" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -335,41 +335,36 @@ export function ExchangeModal({ open, onClose }: Props) {
         ) : !confirmed ? (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 px-6 pt-6 pb-5 border-b border-[#1d2131] flex-shrink-0">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
               {step > 1 && (
                 <button
                   onClick={() => setStep((s) => (s - 1) as Step)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+                  className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
                   data-testid="btn-modal-back"
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M8 2L4 6L8 10" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M8 2L4 6L8 10" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
               )}
-              <div className="flex-1 min-w-0">
-                <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
-                  {step === 4 ? "Review Details" : "Exchange Asset"}
-                </h2>
-                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">
-                  {stepLabels[step - 1]}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {[1, 2, 3, 4].map((n) => (
-                  <div
-                    key={n}
-                    className={`w-6 h-1.5 rounded-full transition-colors ${n <= step ? "bg-brain-v1green" : "bg-[#1d2131]"}`}
-                  />
-                ))}
+              <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
+                <div className="flex items-center gap-[8px]">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div
+                      key={n}
+                      className="rounded-full shrink-0 transition-colors duration-300"
+                      style={{ width: 8, height: 8, background: n <= step ? "#7631EE" : "#240757" }}
+                    />
+                  ))}
+                </div>
               </div>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+                className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
                 data-testid="btn-exchange-close"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
@@ -540,7 +535,7 @@ export function ExchangeModal({ open, onClose }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-5 border-t border-[#1d2131] flex-shrink-0">
+            <div className="px-6 py-5 border-t border-[#1d2132] flex-shrink-0">
               {step < 4 ? (
                 <button
                   onClick={() => setStep((s) => (s + 1) as Step)}

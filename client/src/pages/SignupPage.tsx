@@ -159,13 +159,30 @@ function LazyEmbeddedAuth({
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
   }
 
+  const appearance = {
+    colors: {
+      background: "#11141b",
+      backgroundSecondary: "#1d2132",
+      backgroundTertiary: "#222737",
+      inputBackground: "#222737",
+      textPrimary: "#e8eaf0",
+      textSecondary: "#6c779d",
+      accent: "#7631ee",
+      buttonBackground: "#7631ee",
+      border: "#1d2132",
+      danger: "#d20344",
+      textLink: "#a8b9f4",
+    },
+    borderRadius: "12px",
+  };
+
   return (
     <Provider apiKey={apiKey}>
-      <AuthProv loginMethods={["email", "google"]}>
+      <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
         <WalletProv createOnLogin={{ chain: "base-sepolia", signer: { type: "email" } }}>
           <AuthWatcher useAuthHook={useAuthHook!} useWalletHook={useWalletHook!} onSuccess={onSuccess}>
             <div className="w-full max-w-[420px]">
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+              <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
                 <Comp />
               </div>
             </div>
