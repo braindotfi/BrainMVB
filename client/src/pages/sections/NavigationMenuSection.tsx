@@ -259,12 +259,8 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           style={{ borderBottom: "1px solid #1d2132", background: "rgba(10,12,16,0.92)", backdropFilter: "blur(10px)" }}
         >
           <div className="flex items-center gap-[8px]">
-            <div
-              className="w-[8px] h-[8px] rounded-full flex-shrink-0"
-              style={{ background: "#7631ee", animation: "pulse 2s infinite" }}
-            />
             <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "16px", lineHeight: "22px", color: "#a8b9f4" }}>
-              Insights for You
+              Insights
             </span>
           </div>
           <button
