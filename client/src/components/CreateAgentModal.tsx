@@ -439,7 +439,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [terms, setTerms]     = useState(false);
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched]   = useState(false);
-  const [expandedDeploySteps, setExpandedDeploySteps] = useState<Set<number>>(new Set([1, 2, 3, 4]));
+  const [expandedDeploySteps, setExpandedDeploySteps] = useState<Set<number>>(new Set());
 
   /* ══ TRADING ══ */
   const [t_strategy_type, setT_strategy_type]                   = useState("perpetual_long_short");
