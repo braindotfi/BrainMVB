@@ -182,52 +182,108 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
 };
 
 /* ═══════════════════════════════════════════════════════
-   SHARED TOP BAR  (Back ← | Edit · Stop · Kill →)
+   SHARED TOP BAR  (Back ← | Edit · Stop · Delete →)
 ═══════════════════════════════════════════════════════ */
-const AgentTopBar = ({ onBack, onEdit, isActive, onToggle }: {
+const AgentTopBar = ({ onBack, onEdit, isActive, onToggle, onDelete, agentName }: {
   onBack: () => void; onEdit: () => void; isActive: boolean; onToggle: () => void;
-}) => (
-  <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
-    <button onClick={onBack} data-testid="button-back"
-      className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center hover:opacity-70"
-      style={{ background: "#1d2132" }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-    <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
-      {/* Edit (grey) */}
-      <button onClick={onEdit} data-testid="button-edit-agent"
-        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
-        style={{ background: "#222737" }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
-      </button>
-      {/* Stop / Start */}
-      <button data-testid="button-stop-agent" onClick={onToggle}
-        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
-        style={{ background: "#350011" }}>
-        {isActive
-          ? <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-          : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2L10 6L3 10V2Z" fill="#d20344" /></svg>}
-        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
-          {isActive ? "Stop" : "Start"}
-        </span>
-      </button>
-      {/* Kill */}
-      <button data-testid="button-kill-agent"
-        className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
-        style={{ background: "#350011" }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
-      </button>
-    </div>
-  </div>
-);
+  onDelete: () => void; agentName: string;
+}) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  return (
+    <>
+      <div className="relative flex-shrink-0" style={{ height: "64px", background: "#11141b" }}>
+        <button onClick={onBack} data-testid="button-back"
+          className="absolute left-[16px] top-[16px] w-[32px] h-[32px] rounded-[100px] flex items-center justify-center hover:opacity-70"
+          style={{ background: "#1d2132" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3.5L6 8L10 12.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <div className="absolute right-[16px] top-[16px] flex items-center gap-[8px]">
+          {/* Edit (grey) */}
+          <button onClick={onEdit} data-testid="button-edit-agent"
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+            style={{ background: "#222737" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+          </button>
+          {/* Stop / Start */}
+          <button data-testid="button-stop-agent" onClick={onToggle}
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+            style={{ background: "#350011" }}>
+            {isActive
+              ? <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
+              : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2L10 6L3 10V2Z" fill="#d20344" /></svg>}
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+              {isActive ? "Stop" : "Start"}
+            </span>
+          </button>
+          {/* Delete */}
+          <button data-testid="button-delete-agent" onClick={() => setShowConfirm(true)}
+            className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
+            style={{ background: "#350011" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4M6 7v5M10 7v5M3 4l.8 9.2a.8.8 0 0 0 .8.8h6.8a.8.8 0 0 0 .8-.8L13 4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Delete</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Delete confirmation dialog ── */}
+      {showConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowConfirm(false); }}
+        >
+          <div
+            className="flex flex-col gap-[20px] p-[24px] rounded-[20px] w-[320px]"
+            style={{ background: "#11141b", border: "1px solid #1d2132", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
+          >
+            {/* Icon */}
+            <div className="w-[48px] h-[48px] rounded-full flex items-center justify-center mx-auto" style={{ background: "#350011" }}>
+              <svg width="22" height="22" viewBox="0 0 16 16" fill="none">
+                <path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4M6 7v5M10 7v5M3 4l.8 9.2a.8.8 0 0 0 .8.8h6.8a.8.8 0 0 0 .8-.8L13 4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            {/* Text */}
+            <div className="flex flex-col gap-[8px] text-center">
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-[16px] leading-[20px]">
+                Delete Agent
+              </span>
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[18px]">
+                Are you sure you want to delete <span className="text-[#a8b9f4] font-medium">{agentName}</span>? This action cannot be undone.
+              </p>
+            </div>
+            {/* Buttons */}
+            <div className="flex gap-[8px]">
+              <button
+                data-testid="button-delete-cancel"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-[10px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] font-medium hover:opacity-80 transition-opacity"
+                style={{ background: "#1d2132" }}
+              >
+                Cancel
+              </button>
+              <button
+                data-testid="button-delete-confirm"
+                onClick={() => { setShowConfirm(false); onDelete(); }}
+                className="flex-1 py-[10px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] text-white text-[13px] font-semibold hover:opacity-80 transition-opacity"
+                style={{ background: "#d20344" }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 /* ═══════════════════════════════════════════════════════
    SHARED HEADER CARD
@@ -729,8 +785,8 @@ const TIME_TABS = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 /* ═══════════════════════════════════════════════════════
    TRADING AGENT VIEW  (Figma 3380-32372)
 ═══════════════════════════════════════════════════════ */
-const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const [chartTab, setChartTab] = useState("1H");
   const p = rawPolicy ?? {};
@@ -757,7 +813,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -888,8 +944,8 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 /* ═══════════════════════════════════════════════════════
    LENDING AGENT VIEW  (Figma 3390-32625)
 ═══════════════════════════════════════════════════════ */
-const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$100,000";
@@ -914,7 +970,7 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -1017,8 +1073,8 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 /* ═══════════════════════════════════════════════════════
    YIELD AGENT VIEW  (Figma 3393-33496)
 ═══════════════════════════════════════════════════════ */
-const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$1,224,000";
@@ -1044,7 +1100,7 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -1118,8 +1174,8 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
 /* ═══════════════════════════════════════════════════════
    PAYMENTS AGENT VIEW  (Figma 3437-34303)
 ═══════════════════════════════════════════════════════ */
-const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$1,224,000";
@@ -1138,7 +1194,7 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -1216,8 +1272,8 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
 /* ═══════════════════════════════════════════════════════
    ANALYTICS AGENT VIEW  (Figma 3438-35039)
 ═══════════════════════════════════════════════════════ */
-const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const p = rawPolicy ?? {};
   const trackedAgentsRaw = p.typeConfig?.tracked_agents;
@@ -1245,7 +1301,7 @@ const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBa
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -1328,8 +1384,8 @@ const XIcon = () => (
   </svg>
 );
 
-const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }: {
-  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void;
+const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack, onDelete, agentName }: {
+  agent: AgentData; rawPolicy: any; isActive: boolean; onToggle: () => void; onEdit: () => void; onBack: () => void; onDelete: () => void; agentName: string;
 }) => {
   const p = rawPolicy ?? {};
   const capitalAmt = p.uiCapitalAmount ? `$${Number(p.uiCapitalAmount).toLocaleString()}` : "$5,000";
@@ -1375,7 +1431,7 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
 
   return (
     <div className="flex flex-col h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} />
+      <AgentTopBar onBack={onBack} onEdit={onEdit} isActive={isActive} onToggle={onToggle} onDelete={onDelete} agentName={agentName} />
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[16px] p-[16px] pb-8">
 
@@ -1572,6 +1628,25 @@ export const AgentDetailPage = (): JSX.Element => {
     statusMutation.mutate(next);
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/agents/${params.id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/agents"] });
+      navigate("/agents");
+    },
+  });
+
+  const handleDelete = () => {
+    if (apiAgent) {
+      deleteMutation.mutate();
+    } else {
+      navigate("/agents");
+    }
+  };
+
   const getPrefill = useCallback((): AgentPrefillData | undefined => {
     if (!agent) return undefined;
     return buildPrefill(agent, rawPolicy);
@@ -1587,6 +1662,8 @@ export const AgentDetailPage = (): JSX.Element => {
     onToggle: handleToggle,
     onEdit: () => openEdit(1),
     onBack: () => window.history.back(),
+    onDelete: handleDelete,
+    agentName: agent?.name ?? "this agent",
   };
 
   /* Loading */

@@ -547,6 +547,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Delete agent
+  app.delete("/api/agents/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteAgent(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Agent not found" });
+      return res.json({ success: true });
+    } catch (error) {
+      return res.status(500).json({ error: "Failed to delete agent" });
+    }
+  });
+
   // Agent reputation (on-chain ranking derived from AgentRegistry)
   app.get("/api/agents/:id/reputation", async (req, res) => {
     try {

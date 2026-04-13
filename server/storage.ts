@@ -31,6 +31,7 @@ export interface IStorage {
   listAgents(ownerId?: string): Promise<Agent[]>;
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: string, updates: Partial<InsertAgent>): Promise<Agent | undefined>;
+  deleteAgent(id: string): Promise<boolean>;
   getAgentStatus(agentId: string): Promise<AgentStatus | undefined>;
   setAgentStatus(agentId: string, status: AgentStatus): Promise<AgentStatus>;
 
@@ -150,6 +151,9 @@ export class MemStorage implements IStorage {
     const updated = { ...existing, ...updates, lastActiveAt: new Date() };
     this.agents.set(id, updated);
     return updated;
+  }
+  async deleteAgent(id: string): Promise<boolean> {
+    return this.agents.delete(id);
   }
   async getAgentStatus(agentId: string): Promise<AgentStatus | undefined> {
     const agent = this.agents.get(agentId);
@@ -312,6 +316,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(agentsTable.id, id))
       .returning();
     return row ?? undefined;
+  }
+  async deleteAgent(id: string): Promise<boolean> {
+    const result = await db.delete(agentsTable).where(eq(agentsTable.id, id)).returning({ id: agentsTable.id });
+    return result.length > 0;
   }
   async getAgentStatus(agentId: string): Promise<AgentStatus | undefined> {
     const [row] = await db.select({ status: agentsTable.status }).from(agentsTable).where(eq(agentsTable.id, agentId)).limit(1);
