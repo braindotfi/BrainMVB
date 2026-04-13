@@ -822,12 +822,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-bank"
-              className="w-[40px] h-[40px] rounded-[20px] overflow-hidden flex items-center justify-center transition-opacity"
-              style={{ background: "rgba(255,149,0,0.18)" }}
+              className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="#ff9500" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={hoveredIcon === "bank" ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/1734631d-84a1-45bd-98f1-2f2d8c1b152f"} />
+              <div className="absolute left-[8px] size-[24px] top-[8px]">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={hoveredIcon === "bank" ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/5b1a6f26-a8c2-47ab-b4fc-e85aa0796935"} />
+              </div>
             </button>
             {hoveredIcon === "bank" && (
               <div
@@ -909,11 +909,28 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           >
             <button
               data-testid="button-collapsed-transactions"
-              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors bg-[#11141b]"
+              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center transition-colors bg-[#11141b] overflow-clip relative"
             >
-              <svg width="22" height="18" viewBox="0 0 22.3812 18.1988" fill="none">
-                <path d="M1.00017 5.62925L2.64504 8.47826C2.85468 8.84136 3.31899 8.96577 3.6821 8.75613L6.31195 7.23779M21.381 12.5635L19.7362 9.71454C19.5265 9.35144 19.0623 9.22698 18.6991 9.43666L15.8501 11.0815M4.17248 13.1483C6.40865 17.0215 11.3612 18.3485 15.2344 16.1123C17.5453 14.7781 18.9987 12.4486 19.2915 9.98041M18.1984 5.05045C15.9622 1.17731 11.0097 -0.149741 7.1365 2.08643C4.82554 3.42067 3.37219 5.75015 3.07943 8.2184" stroke={hoveredIcon === "transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              {hoveredIcon === "transactions" ? (
+                <div className="overflow-clip relative size-[24px]">
+                  <div className="absolute inset-[12.08%_3.35%_12.09%_3.4%]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f4b3667-896e-4f8e-84f3-ff3db0f1bbdf" />
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-clip relative size-[24px]">
+                  <div className="absolute inset-[29.17%_41.67%]">
+                    <div className="absolute inset-[-10%_-25%]">
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bbbbe5df-e21b-4e9f-8507-7555e90f6a33" />
+                    </div>
+                  </div>
+                  <div className="absolute inset-[16.25%_7.52%_16.25%_7.56%]">
+                    <div className="absolute inset-[-6.17%_-4.91%]">
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a81167fa-846b-456b-a37f-c387ca6add52" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </button>
             {hoveredIcon === "transactions" && (
               <div
