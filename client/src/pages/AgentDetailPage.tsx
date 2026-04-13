@@ -1633,25 +1633,25 @@ export const AgentDetailPage = (): JSX.Element => {
       const res = await apiRequest("DELETE", `/api/agents/${params.id}`);
       return res.json();
     },
-    onMutate: () => {
-      qc.setQueryData<any[]>(["/api/agents"], (old) =>
-        old ? old.filter((a: any) => a.id !== params.id) : old
-      );
-    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/agents"] });
-      navigate("/agents");
-    },
-    onError: () => {
       qc.invalidateQueries({ queryKey: ["/api/agents"] });
     },
   });
 
   const handleDelete = () => {
+    if (!params.id) return;
+    try {
+      const stored: string[] = JSON.parse(localStorage.getItem("brain-deleted-agents") || "[]");
+      if (!stored.includes(params.id)) {
+        localStorage.setItem("brain-deleted-agents", JSON.stringify([...stored, params.id]));
+      }
+    } catch {}
+    qc.setQueryData<any[]>(["/api/agents"], (old) =>
+      old ? old.filter((a: any) => a.id !== params.id) : old
+    );
+    navigate("/agents");
     if (apiAgent) {
       deleteMutation.mutate();
-    } else {
-      navigate("/agents");
     }
   };
 

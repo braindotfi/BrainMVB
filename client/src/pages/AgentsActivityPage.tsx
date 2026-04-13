@@ -235,7 +235,15 @@ export const AgentsActivityPage = (): JSX.Element => {
       createdByUser: true,
     }));
 
-  const allAgents: AgentData[] = [...agents, ...apiAgents];
+  const [deletedIds] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem("brain-deleted-agents") || "[]"));
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const allAgents: AgentData[] = [...agents, ...apiAgents].filter((a) => !deletedIds.has(a.id));
 
   /* Build spend map including API agents (derive from capitalAmount) */
   const spendMap: Record<string, { cap: string; unit: string; pct: number }> = {
