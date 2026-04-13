@@ -258,6 +258,16 @@ export const AgentsActivityPage = (): JSX.Element => {
   );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setAgentStatuses((prev) => {
+      const next: Record<string, AgentStatus> = {};
+      allAgents.forEach((a) => {
+        next[a.id] = prev[a.id] ?? a.status;
+      });
+      return next;
+    });
+  }, [apiAgentsRaw]);
+
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: AgentStatus }) => {
       const res = await fetch(`/api/agents/${id}/status`, {
