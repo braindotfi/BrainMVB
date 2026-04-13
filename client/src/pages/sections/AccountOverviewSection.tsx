@@ -918,7 +918,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               onClick={onToggle}
               title="Collapse account panel"
               data-testid="button-collapse-account"
-              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] hover:bg-[#1a1f2e] transition-colors"
+              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]"
+              style={{ background: "#222737" }}
             >
               <img src="/figmaAssets/nav-collapse-icon.svg" width="18" height="16" alt="Collapse" />
             </button>

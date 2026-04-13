@@ -743,8 +743,8 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <button
               onClick={onToggle}
               title="Expand menu"
-              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors mb-0"
-              style={{ background: "rgba(168,185,244,0.15)" }}
+              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] mb-0"
+              style={{ background: "#222737" }}
             >
               <ExpandIcon />
             </button>
@@ -752,7 +752,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             {/* Brain logo icon — below expand button */}
             <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
               <img
-                className="w-8 h-8 object-contain"
+                className="w-[32px] h-[32px] object-contain"
                 alt="Brain"
                 src="/figmaAssets/frame-1000002163.svg"
               />
@@ -830,14 +830,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             />
             <div className="[font-family:'Space Grotesk',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
               <span className="text-[#7631ee]">br</span>
-              <span className="text-[#ffffff]">ai</span>
-              <span className="text-[#7631ee]">n</span>
+              <span className="text-[#ffffff]">ᴬ</span>
+              <span className="text-[#7631ee]">in</span>
             </div>
           </div>
           <button
             onClick={onToggle}
             title="Collapse menu"
-            className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] transition-colors hover:opacity-80"
+            className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]"
             style={{ background: "rgba(168,185,244,0.15)" }}
           >
             <CollapseIcon />
