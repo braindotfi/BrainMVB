@@ -34,6 +34,7 @@ function AppLayout() {
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
   const [, navigate] = useLocation();
 
   if (!isLoggedIn) {
@@ -91,6 +92,7 @@ function AppLayout() {
           onCreateAgent={() => setCreateAgentOpen(true)}
           onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
           onExchange={() => setExchangeOpen(true)}
+          focusExchangesTrigger={focusExchangesTrigger}
         />
       </div>
 
@@ -129,6 +131,7 @@ function AppLayout() {
       <ExchangeModal
         open={exchangeOpen}
         onClose={() => setExchangeOpen(false)}
+        onConfirmed={() => setFocusExchangesTrigger(n => n + 1)}
       />
     </div>
     </NavContext.Provider>

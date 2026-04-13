@@ -243,9 +243,10 @@ function SearchPanel({
 interface Props {
   open: boolean;
   onClose: () => void;
+  onConfirmed?: () => void;
 }
 
-export function ExchangeModal({ open, onClose }: Props) {
+export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
@@ -253,7 +254,6 @@ export function ExchangeModal({ open, onClose }: Props) {
   const [fromAsset, setFromAsset] = useState<Asset | null>(null);
   const [toAsset, setToAsset] = useState<Asset | null>(null);
   const [amount, setAmount] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const { wirexAccounts } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
@@ -273,7 +273,6 @@ export function ExchangeModal({ open, onClose }: Props) {
       setToAsset(null);
       setAmount("");
       setSearchOpen(false);
-      setConfirmed(false);
       setConfirming(false);
     }, 300);
   };
@@ -310,24 +309,37 @@ export function ExchangeModal({ open, onClose }: Props) {
 
   const handleConfirm = () => {
     setConfirming(true);
+    const snapFrom  = fromAsset;
+    const snapTo    = toAsset;
+    const snapAmt   = amount;
     setTimeout(() => {
-      setConfirming(false);
-      setConfirmed(true);
       const now = new Date();
       const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
       const dateStr = `${now.getDate()} ${now.toLocaleString("en-US", { weekday: "short" })}`;
-      const amtNum = parseFloat(amount || "0");
+      const amtNum = parseFloat(snapAmt || "0");
       addTransaction({
         type: "exchange",
-        label: `Exchanged ${amtNum} ${fromAsset?.ticker ?? ""} → ${toAsset?.ticker ?? ""}`,
+        label: `Exchanged ${amtNum} ${snapFrom?.ticker ?? ""} → ${snapTo?.ticker ?? ""}`,
         time: timeStr,
         date: dateStr,
-        amount: `-${amtNum} ${fromAsset?.ticker ?? ""}`,
+        amount: `-${amtNum} ${snapFrom?.ticker ?? ""}`,
         positive: false,
         txHash: generateTxHash(),
         accountId: null,
       });
-    }, 1800);
+      // Auto-close and signal parent to show the Exchanges tab
+      onClose();
+      onConfirmed?.();
+      // Reset internal state after close animation
+      setTimeout(() => {
+        setStep(1);
+        setFromAsset(null);
+        setToAsset(null);
+        setAmount("");
+        setSearchOpen(false);
+        setConfirming(false);
+      }, 300);
+    }, 1200);
   };
 
   return (
@@ -336,49 +348,8 @@ export function ExchangeModal({ open, onClose }: Props) {
 
       <div className="relative z-10 w-[420px] max-h-[90vh] flex flex-col bg-[#0a0c10] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
-        {/* Success overlay */}
-        {confirmed && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0c10] gap-4 px-8">
-            <div className="w-16 h-16 rounded-full bg-brain-v1dark-green flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <path d="M5 14L11 20L23 8" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <h3 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-2xl">Exchange Submitted!</h3>
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                {amount} {fromAsset?.ticker} → {toAsset?.ticker} is being processed.
-              </p>
-            </div>
-            <div className="w-full bg-brain-v1baby-blue-15 rounded-2xl p-4 text-left space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">From</span>
-                <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{fromAsset?.name} ({fromAsset?.ticker})</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">To</span>
-                <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{toAsset?.name} ({toAsset?.ticker})</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">Amount</span>
-                <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{amount} {fromAsset?.ticker}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">Status</span>
-                <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1green text-xs">Confirmed</span>
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
-            >
-              Done
-            </button>
-          </div>
-        )}
-
         {/* SEARCH SUB-PANEL */}
-        {!confirmed && searchOpen ? (
+        {searchOpen ? (
           <SearchPanel
             query={searchQuery}
             onQueryChange={setSearchQuery}
@@ -387,7 +358,7 @@ export function ExchangeModal({ open, onClose }: Props) {
             onSelect={selectAsset}
             onClose={() => setSearchOpen(false)}
           />
-        ) : !confirmed ? (
+        ) : (
           <>
             {/* Header */}
             <div className="backdrop-blur-[10px] bg-[rgba(10,12,16,0.8)] border-b border-[#1d2132] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
@@ -659,7 +630,7 @@ export function ExchangeModal({ open, onClose }: Props) {
               )}
             </div>
           </>
-        ) : null}
+        )}
       </div>
     </div>
   );

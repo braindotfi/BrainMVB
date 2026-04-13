@@ -280,9 +280,10 @@ interface Props {
   onCreateAgent: () => void;
   onSend?: (cardType: "wallet" | "bank") => void;
   onExchange?: () => void;
+  focusExchangesTrigger?: number;
 }
 
-export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange }: Props): JSX.Element => {
+export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange, focusExchangesTrigger }: Props): JSX.Element => {
   const { wirexAccounts, user } = useAuth();
 
   const { data: agentsRaw = [] } = useQuery<any[]>({ queryKey: ["/api/agents"] });
@@ -314,6 +315,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [activeAccount, setActiveAccount]       = useState<string | null>(null);
   // Card carousel — 0=wallet, 1=debit, 2=bank; only for "Your Account"
   const [activeCard, setActiveCard]             = useState(0);
+
+  // Switch to Transactions/Exchanges tab when an exchange is confirmed
+  useEffect(() => {
+    if (!focusExchangesTrigger) return;
+    setActiveAccount(null);
+    setActiveCard(0);
+    setActiveTab("Transactions");
+    setTransactionFilter("Exchanges");
+  }, [focusExchangesTrigger]);
   // Collapsed icon strip hover state
   const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
