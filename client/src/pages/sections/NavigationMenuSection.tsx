@@ -259,9 +259,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           style={{ borderBottom: "1px solid #1d2132", background: "rgba(10,12,16,0.92)", backdropFilter: "blur(10px)" }}
         >
           <div className="flex items-center gap-[8px]">
-            <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "16px", lineHeight: "22px", color: "#a8b9f4" }}>
-              Insights
-            </span>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Insights</span>
           </div>
           <button
             onClick={() => setInsightsOpen(false)}
