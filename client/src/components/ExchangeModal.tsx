@@ -134,71 +134,106 @@ function SearchPanel({
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 px-6 pt-6 pb-5 border-b border-[#1d2131] flex-shrink-0">
-        <div className="flex-1 min-w-0">
-          <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">Select Asset</h2>
-          <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">Search or pick from your holdings</p>
-        </div>
+      {/* Header */}
+      <div className="backdrop-blur-[10px] flex items-center justify-between p-[16px] flex-shrink-0 w-full">
+        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">
+          Select Asset
+        </p>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-xl bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 transition-colors flex-shrink-0"
+          className="size-[24px] rounded-[100px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors flex-shrink-0"
           data-testid="btn-search-close"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 1L9 9M9 1L1 9" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" />
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1 1L7 7M7 1L1 7" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-6 py-5">
-        <div className="flex items-center gap-2 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl px-4 py-3 mb-5 focus-within:border-[#414965] transition-colors">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="7" cy="7" r="4.5" stroke="#6c779d" strokeWidth="1.3" />
-            <path d="M10.5 10.5L13.5 13.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search by name or ticker…"
-            value={query}
-            onChange={e => onQueryChange(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-brain-v1white text-sm [font-family:'Plus Jakarta Sans',Helvetica] placeholder:text-brain-v1baby-blue-60"
-            autoFocus
-            data-testid="input-asset-search"
-          />
-        </div>
-        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-3">All Assets</p>
-        <div className="flex flex-col gap-2">
-          {assets.map(asset => (
-            <button
-              key={asset.id}
-              onClick={() => onSelect(asset)}
-              className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
-                selected?.id === asset.id
-                  ? "border-brain-v1dark-orange bg-[#2a1500]"
-                  : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"
-              }`}
-              data-testid={`btn-asset-${asset.id}`}
-            >
-              <AssetIcon asset={asset} size={36} />
-              <div className="flex-1 min-w-0">
-                <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm transition-colors ${selected?.id === asset.id ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
-                  {asset.name}
-                </p>
-                <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{asset.ticker} · {asset.balance}</p>
-              </div>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                selected?.id === asset.id ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-brain-v1baby-blue-30"
-              }`}>
-                {selected?.id === asset.id && (
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                    <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-            </button>
-          ))}
-          {assets.length === 0 && (
-            <p className="text-brain-v1baby-blue-60 text-sm text-center py-6 [font-family:'Plus Jakarta Sans',Helvetica]">No assets found</p>
-          )}
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-[8px] p-[8px]">
+          {/* Search field */}
+          <div className="bg-[#222737] border border-[#414965] rounded-[8px] p-[8px] flex gap-[8px] items-center w-full">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+              <circle cx="6.5" cy="6.5" r="4" stroke="#6c779d" strokeWidth="1.3" />
+              <path d="M10 10L13.5 13.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by name or ticker…"
+              value={query}
+              onChange={e => onQueryChange(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-white text-[16px] [font-family:'Plus Jakarta Sans',Helvetica] placeholder:text-[#6c779d] min-w-0"
+              autoFocus
+              data-testid="input-asset-search"
+            />
+            {query && (
+              <button
+                onClick={() => onQueryChange("")}
+                className="size-[16px] rounded-[30px] bg-[#414965] flex items-center justify-center flex-shrink-0 hover:bg-[#6c779d] transition-colors"
+                data-testid="btn-search-clear"
+              >
+                <svg width="7" height="7" viewBox="0 0 7 7" fill="none">
+                  <path d="M1 1L6 6M6 1L1 6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Section label + asset list */}
+          <div className="flex flex-col items-start w-full">
+            <div className="flex items-center px-[8px] w-full">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[15px] tracking-[-0.6px] leading-[24px]">
+                {query ? "Search Results" : "All Assets"}
+              </p>
+            </div>
+            <div className="flex flex-col w-full">
+              {assets.map(asset => (
+                <button
+                  key={asset.id}
+                  onClick={() => onSelect(asset)}
+                  className={`flex items-center justify-between p-[8px] rounded-[8px] w-full text-left transition-colors ${
+                    selected?.id === asset.id ? "bg-[#11141b]" : "hover:bg-[#0d1017]"
+                  }`}
+                  data-testid={`btn-asset-${asset.id}`}
+                >
+                  <div className="flex gap-[8px] items-center flex-shrink-0">
+                    <AssetIcon asset={asset} size={32} />
+                    <div className="flex flex-col gap-0.5">
+                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[24px] whitespace-nowrap">
+                        {asset.name} ({asset.ticker})
+                      </p>
+                      <p className="[font-family:'JetBrains_Mono',Helvetica] text-[#6c779d] text-xs">
+                        {asset.balance}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Radio */}
+                  <div
+                    className="overflow-clip flex-shrink-0 size-[20px] rounded-full relative"
+                    style={
+                      selected?.id === asset.id
+                        ? { background: "#123509", border: "1px solid rgba(66,191,35,0.2)" }
+                        : { background: "#06070a", border: "1px solid #222737" }
+                    }
+                  >
+                    {selected?.id === asset.id && (
+                      <svg
+                        className="absolute inset-[20%]"
+                        viewBox="0 0 10 10" fill="none"
+                      >
+                        <path d="M1.5 5L4 7.5L8.5 2" stroke="#42bf23" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              ))}
+              {assets.length === 0 && (
+                <p className="text-[#6c779d] text-sm text-center py-6 [font-family:'Plus Jakarta Sans',Helvetica]">No assets found</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
@@ -526,7 +561,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                         </p>
                       </div>
                       <button
-                        onClick={() => setStep(1)}
+                        onClick={() => openSearch("from")}
                         className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-from"
                       >
@@ -546,7 +581,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                         </p>
                       </div>
                       <button
-                        onClick={() => setStep(3)}
+                        onClick={() => openSearch("to")}
                         className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-to"
                       >
