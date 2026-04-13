@@ -19,7 +19,7 @@ interface DailyInsight {
 }
 
 const mainMenuItems = [
-  { id: "agents", label: "Agents", icon: "/figmaAssets/navbar-icons-1.svg", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
+  { id: "agents", label: "Agents", icon: "/figmaAssets/nav-agent-normal.png", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
   { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/nav-marketplace-normal.png", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
 ];
 
@@ -43,13 +43,13 @@ const EthIcon = () => (
 
 const CollapseIcon = () => (
   <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 6L11 9L14 12M12 9H19M3 17H5C6.10457 17 7 16.1046 7 15V3C7 1.89543 6.10457 1 5 1H3C1.89543 1 1 1.89543 1 3V15C1 16.1046 1.89543 17 3 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 6L11 9L14 12M12 9H19M3 17H5C6.10457 17 7 16.1046 7 15V3C7 1.89543 6.10457 1 5 1H3C1.89543 1 1 1.89543 1 3V15C1 16.1046 1.89543 17 3 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const ExpandIcon = () => (
   <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#A8B9F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M11 6L14 9L11 12M13 9H6M3 17H17C18.1046 17 19 16.1046 19 15V3C19 1.89543 18.1046 1 17 1H3C1.89543 1 1 1.89543 1 3V15C1 16.1046 1.89543 17 3 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -171,6 +171,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const insightsGeneratedAt = insightsResponse?.generatedAt ? new Date(insightsResponse.generatedAt) : null;
 
   const isActive = (path: string) => {
+    if (path === "/dashboard") return location === "/" || location === "" || location.startsWith("/dashboard");
     if (path === "/") return location === "/" || location === "";
     return location.startsWith(path);
   };
@@ -754,7 +755,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img
                 className="w-[32px] h-[32px] object-contain"
                 alt="Brain"
-                src="/figmaAssets/frame-1000002163.svg"
+                src="/figmaAssets/brain-icon-simple.svg"
               />
             </div>
 
@@ -824,14 +825,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <img
-              className="w-6 h-6 object-contain flex-shrink-0"
+              className="w-8 h-8 object-contain flex-shrink-0"
               alt="Brain"
-              src="/figmaAssets/frame-1000002163.svg"
+              src="/figmaAssets/brain-icon-simple.svg"
             />
-            <div className="[font-family:'Space Grotesk',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
+            <div className="[font-family:'Oxanium',sans-serif] font-normal text-transparent text-[28px] leading-[24px] whitespace-nowrap select-none">
               <span className="text-[#7631ee]">br</span>
-              <span className="text-[#ffffff]">ᴬ</span>
-              <span className="text-[#7631ee]">in</span>
+              <span className="text-[#ffffff]">ai</span>
+              <span className="text-[#7631ee]">n</span>
             </div>
           </div>
           <button
