@@ -425,6 +425,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const { wirexAccounts } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
   const availableBalanceDisplay = walletAcc?.balance ? `$${walletAcc.balance}` : "$0.00";
+  const availableBalanceNum = walletAcc?.balance ? parseFloat(walletAcc.balance.replace(/,/g, "")) : 0;
   const [step, setStep] = useState(initialStep);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
@@ -730,6 +731,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   }, [open]);
 
   const capitalNum = parseUsd(capital);
+  const capitalExceedsBalance = capitalNum > 0 && capitalNum > availableBalanceNum;
   const autoTicker = agentName ? "$" + agentName.toUpperCase().replace(/\s/g, "").slice(0, 8) : "";
 
   /* ── Mutations ── */
@@ -761,7 +763,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const canProceed = () => {
     if (step === 0) return !!selectedType;
     if (step === 1) return !!agentName;
-    if (step === 2) return !!capital;
+    if (step === 2) return capitalNum > 0 && !capitalExceedsBalance;
     if (step === 4) return isEditMode || (authSig && terms);
     return true;
   };
@@ -1699,6 +1701,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           </button>
                         ))}
                       </div>
+                      {capitalExceedsBalance && (
+                        <p className="font-['Plus Jakarta Sans',sans-serif] text-red-400 text-[12px] leading-[16px] mt-[2px]">
+                          Amount exceeds your available balance of {availableBalanceDisplay}
+                        </p>
+                      )}
                     </div>
                   </div>
 
