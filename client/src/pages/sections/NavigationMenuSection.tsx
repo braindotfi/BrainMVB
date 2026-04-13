@@ -21,6 +21,7 @@ interface DailyInsight {
 const mainMenuItems = [
   { id: "agents", label: "Agents", icon: "/figmaAssets/nav-agent-normal.png", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
   { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/nav-marketplace-normal.png", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
+  { id: "assistant", label: "Assistant", icon: "/figmaAssets/nav-assistant-normal.png", activeIcon: "/figmaAssets/nav-assistant-active.png", path: "/assistant", emoji: null },
 ];
 
 const initialNotifications = [
@@ -737,6 +738,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       <>
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
         <NotificationsPanel />
+        <InsightsPanel />
         <ChatHistoryPanel />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
           <div className="flex flex-col flex-1 items-center mt-2 gap-1 w-full px-[7px]">
@@ -785,6 +787,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica", fontSize: "9px", lineHeight: "13px", color: "#6c779d" }}>{unreadCount}</span>
                 </div>
               )}
+            </button>
+
+            <button title="Insights" onClick={() => setInsightsOpen((v) => !v)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+              <InsightsIcon active={insightsOpen} />
             </button>
 
           </div>
@@ -906,6 +912,21 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 <CountBadge count={unreadCount} />
               )}
               {notificationsOpen && (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                  <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              onClick={() => setInsightsOpen((v) => !v)}
+              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+            >
+              <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                <InsightsIcon active={insightsOpen} />
+              </div>
+              <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Insights</span>
+              {insightsOpen && (
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
                   <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

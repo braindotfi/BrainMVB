@@ -12,6 +12,7 @@ import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { AssistantPage } from "@/pages/AssistantPage";
 import { Marketplace } from "@/pages/Marketplace";
 import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
@@ -71,7 +72,7 @@ function AppLayout() {
           <Switch>
             <Route path="/" component={DashboardPage} />
             <Route path="/dashboard" component={DashboardPage} />
-            <Route path="/assistant">{() => <Redirect to="/dashboard" />}</Route>
+            <Route path="/assistant" component={AssistantPage} />
             <Route path="/marketplace" component={Marketplace} />
             <Route path="/perks">{() => <Redirect to="/dashboard" />}</Route>
             <Route path="/agents" component={AgentsActivityPage} />
