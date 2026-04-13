@@ -513,49 +513,45 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {/* ===== STEP 4: REVIEW DETAILS ===== */}
           {!sent && state.step === 4 && (
             <div className="flex flex-col gap-4">
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
+              <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px]">
                 Please review your transaction details before confirming.
               </p>
 
               {/* From card */}
-              <div className="flex flex-col gap-1">
-                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">From</label>
-                <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
-                  <div className="w-10 h-10 bg-brain-v1dark-orange rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="#ff9500" strokeWidth="1.5"/><path d="M2 10H22" stroke="#ff9500" strokeWidth="1.5"/></svg>
+              <div className="flex flex-col gap-[4px]">
+                <label className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">From</label>
+                <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                  <div className="w-8 h-8 bg-[#4a2300] rounded-[12px] flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="#ff9500" strokeWidth="1.5"/><path d="M2 10H22" stroke="#ff9500" strokeWidth="1.5"/></svg>
                   </div>
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">Your Account</p>
-                    <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">1652 ···· 6995 · AED</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px]">Your Account</p>
                   </div>
                 </div>
               </div>
 
               {/* Arrow */}
               <div className="flex items-center justify-center">
-                <div className="w-8 h-8 bg-brain-v1baby-blue-15 rounded-full flex items-center justify-center">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M3 8L7 12L11 8" stroke="#8899bb" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <div className="w-8 h-8 bg-[#06070a] border border-[#1d2132] rounded-full flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M3 8L7 12L11 8" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </div>
               </div>
 
               {/* To card */}
-              <div className="flex flex-col gap-1">
-                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">To</label>
-                <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
-                  <div className="w-10 h-10 bg-brain-v1baby-blue-15 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+              <div className="flex flex-col gap-[4px]">
+                <label className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">To</label>
+                <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                  <div className="w-8 h-8 bg-[#11141b] rounded-[12px] flex items-center justify-center text-xl shrink-0">
                     {state.recipientType === "bank" ? "🏦" : state.recipientType === "wallet" ? "👛" : "🤖"}
                   </div>
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{getRecipientLabel()}</p>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">
-                      {state.recipientType === "bank" ? "Bank Transfer" : state.recipientType === "wallet" ? "Crypto Wallet" : "AI Agent Account"}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">{getRecipientLabel()}</p>
                   </div>
                 </div>
               </div>
 
               {/* Transaction details */}
-              <div className="flex flex-col gap-2 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
+              <div className="flex flex-col gap-2 p-4 bg-[#06070a] border border-[#1d2132] rounded-[16px]">
                 <DetailRow label="Amount" value={`${parseFloat(state.amount || "0").toFixed(2)} ${selectedAsset.ticker}`} valueColor="text-brain-v1white" />
                 <div className="h-px bg-[#1d2131]" />
                 <DetailRow label="Asset" value={`${selectedAsset.name} (${selectedAsset.ticker})`} />
@@ -587,7 +583,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
               <button
                 onClick={handleNext}
                 disabled={!canContinue}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-base transition-all ${
                   canContinue
                     ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -597,23 +593,23 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
               </button>
             ) : (
-              <button
-                onClick={handleConfirm}
-                disabled={sending}
-                className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-orange rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1light-orange text-base hover:opacity-80 transition-opacity disabled:opacity-50"
-              >
-                {sending ? (
-                  <>
-                    <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
-                      <path d="M7 2A5 5 0 0112 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    Confirming...
-                  </>
-                ) : (
-                  <>Confirm & Send</>
-                )}
-              </button>
+              <div className="flex gap-[16px]">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                  data-testid="btn-send-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={sending}
+                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                  data-testid="btn-send-confirm"
+                >
+                  {sending ? "Confirming…" : "Confirm"}
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -296,17 +296,23 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 </p>
               </div>
 
-              <button
-                onClick={handleAddAccount}
-                disabled={!recipientName.trim() || !iban.trim()}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
-                  recipientName.trim() && iban.trim()
-                    ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
-                    : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                }`}
-              >
-                Add Bank Account
-              </button>
+              <div className="flex gap-[16px]">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                  data-testid="btn-addaccount-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAccount}
+                  disabled={!recipientName.trim() || !iban.trim()}
+                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                  data-testid="btn-addaccount-confirm"
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           )}
 
@@ -403,17 +409,23 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 </p>
               </div>
 
-              <button
-                onClick={handleAddAccount}
-                disabled={!walletAddress.trim()}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
-                  walletAddress.trim()
-                    ? "bg-[#0a1a30] border border-[#4da3ff] text-[#4da3ff] hover:bg-[#0d2040]"
-                    : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                }`}
-              >
-                Connect Wallet
-              </button>
+              <div className="flex gap-[16px]">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                  data-testid="btn-wallet-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAccount}
+                  disabled={!walletAddress.trim()}
+                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                  data-testid="btn-wallet-confirm"
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           )}
 
@@ -472,23 +484,21 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 </div>
               </div>
 
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-[16px] w-full">
                 <button
-                  onClick={() => setStep("wallet")}
-                  className="flex-1 py-3.5 rounded-2xl bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 [font-family:'Plus Jakarta Sans',Helvetica] text-sm hover:bg-brain-v1baby-blue-30 transition-colors"
+                  onClick={handleClose}
+                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                  data-testid="btn-walletqr-cancel"
                 >
-                  Back
+                  Cancel
                 </button>
                 <button
                   onClick={handleAddAccount}
                   disabled={!walletAddress.trim()}
-                  className={`flex-1 py-3.5 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm transition-all ${
-                    walletAddress.trim()
-                      ? "bg-[#0a1a30] border border-[#4da3ff] text-[#4da3ff] hover:bg-[#0d2040]"
-                      : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                  }`}
+                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                  data-testid="btn-walletqr-confirm"
                 >
-                  Connect Wallet
+                  Confirm
                 </button>
               </div>
             </div>
@@ -548,17 +558,23 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 </button>
               ))}
 
-              <button
-                onClick={handleAddAccount}
-                disabled={!selectedAgent}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all mt-1 ${
-                  selectedAgent
-                    ? "bg-[#090517] border border-[#a855f7] text-[#a855f7] hover:bg-[#0d0820]"
-                    : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                }`}
-              >
-                Link Agent Account
-              </button>
+              <div className="flex gap-[16px] mt-1">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                  data-testid="btn-agent-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAccount}
+                  disabled={!selectedAgent}
+                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                  data-testid="btn-agent-confirm"
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           )}
         </div>

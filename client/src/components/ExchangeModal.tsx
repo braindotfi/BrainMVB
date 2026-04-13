@@ -81,16 +81,17 @@ function AssetSelectCard({
 }) {
   if (asset) {
     return (
-      <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
-        <AssetIcon asset={asset} size={36} />
-        <div className="flex-1 min-w-0">
-          <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{asset.name}</p>
-          <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{asset.ticker} · {asset.balance}</p>
+      <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full shrink-0">
+        <div className="flex flex-1 gap-[8px] items-center min-w-0">
+          <AssetIcon asset={asset} size={32} />
+          <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
+            {asset.name} <span className="text-[#6c779d]">({asset.ticker})</span>
+          </p>
         </div>
         {(onEdit || readOnly) && (
           <button
             onClick={onEdit}
-            className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+            className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
             data-testid="btn-edit-asset"
           >
             Edit
@@ -102,15 +103,13 @@ function AssetSelectCard({
   return (
     <button
       onClick={onOpen}
-      className="flex items-center justify-between w-full p-4 rounded-2xl border border-dashed border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965] transition-colors text-left"
+      className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full text-left hover:border-[#414965] transition-colors"
       data-testid="btn-select-asset"
     >
-      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-sm">{placeholder}</span>
-      <div className="w-7 h-7 rounded-full bg-brain-v1dark-orange flex items-center justify-center flex-shrink-0">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M6 2V10M2 6H10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </div>
+      <span className="flex-1 [font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[16px] leading-[24px]">{placeholder}</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+        <path d="M6 3L11 8L6 13" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
   );
 }
@@ -468,23 +467,24 @@ export function ExchangeModal({ open, onClose }: Props) {
 
               {/* STEP 4 — Review */}
               {step === 4 && (
-                <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                <div className="flex flex-col gap-[16px]">
+                  <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px]">
                     Confirm the details before submitting your exchange.
                   </p>
 
                   {/* From asset */}
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging From</p>
-                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
-                      {fromAsset && <AssetIcon asset={fromAsset} size={36} />}
-                      <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{fromAsset?.name}</p>
-                        <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{fromAsset?.ticker} · {fromAsset?.balance}</p>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Exchanging From</p>
+                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                      <div className="flex flex-1 gap-[8px] items-center min-w-0">
+                        {fromAsset && <AssetIcon asset={fromAsset} size={32} />}
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
+                          {fromAsset?.name} <span className="text-[#6c779d]">({fromAsset?.ticker})</span>
+                        </p>
                       </div>
                       <button
                         onClick={() => setStep(1)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-from"
                       >
                         Edit
@@ -493,17 +493,18 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </div>
 
                   {/* To asset */}
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging To</p>
-                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
-                      {toAsset && <AssetIcon asset={toAsset} size={36} />}
-                      <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{toAsset?.name}</p>
-                        <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{toAsset?.ticker} · {toAsset?.balance}</p>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Target Asset</p>
+                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                      <div className="flex flex-1 gap-[8px] items-center min-w-0">
+                        {toAsset && <AssetIcon asset={toAsset} size={32} />}
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
+                          {toAsset?.name} <span className="text-[#6c779d]">({toAsset?.ticker})</span>
+                        </p>
                       </div>
                       <button
                         onClick={() => setStep(3)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-to"
                       >
                         Edit
@@ -512,17 +513,22 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </div>
 
                   {/* Amount */}
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchange Amount</p>
-                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
-                      <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">
-                          {parseFloat(amount || "0").toLocaleString()} <span className="text-brain-v1baby-blue-60">{fromAsset?.ticker}</span>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Exchange Amount</p>
+                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                      <div className="flex flex-1 gap-[8px] items-center min-w-0">
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
+                          {parseFloat(amount || "0").toLocaleString()}
                         </p>
+                        <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px]">
+                          <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">
+                            {fromAsset?.ticker}
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => setStep(2)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-amount"
                       >
                         Edit
@@ -540,7 +546,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                 <button
                   onClick={() => setStep((s) => (s + 1) as Step)}
                   disabled={!canContinue}
-                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
+                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-base transition-all ${
                     canContinue
                       ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                       : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -553,24 +559,23 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </svg>
                 </button>
               ) : (
-                <button
-                  onClick={handleConfirm}
-                  disabled={confirming}
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-green rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1green text-base hover:opacity-80 transition-opacity disabled:opacity-50"
-                  data-testid="btn-exchange-confirm"
-                >
-                  {confirming ? (
-                    <>
-                      <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
-                        <path d="M7 2A5 5 0 0112 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                      Confirming…
-                    </>
-                  ) : (
-                    <>Confirm & Exchange</>
-                  )}
-                </button>
+                <div className="flex gap-[16px]">
+                  <button
+                    onClick={handleClose}
+                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                    data-testid="btn-exchange-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={confirming}
+                    className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                    data-testid="btn-exchange-confirm"
+                  >
+                    {confirming ? "Confirming…" : "Confirm"}
+                  </button>
+                </div>
               )}
             </div>
           </>
