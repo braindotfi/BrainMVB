@@ -845,30 +845,48 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           <button
             data-testid="button-collapsed-add"
             onClick={() => setAddOpen(true)}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
-            style={{ background: "rgba(255,149,0,0.18)" }}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
           >
-            <img className="w-6 h-6" alt="Add" src="/figmaAssets/icons-4.svg" />
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4851320b-a0c5-40fd-8118-2c173dfd25f1" />
+            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+              <div className="absolute inset-[16.67%]">
+                <div className="absolute inset-[-6.25%]">
+                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c903837d-5e64-41ed-8a00-101d641016ee" />
+                </div>
+              </div>
+            </div>
           </button>
 
           {/* ── Send icon: full circle ── */}
           <button
             data-testid="button-collapsed-send"
             onClick={() => onSend?.("wallet")}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
-            style={{ background: "rgba(255,149,0,0.18)" }}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
           >
-            <img className="w-6 h-6" alt="Send" src="/figmaAssets/icons-14.svg" />
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bde98f2c-378d-4f45-ac22-10f078756f73" />
+            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+              <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
+                <div className="absolute inset-[-8.51%]">
+                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/1e70a882-3832-44fc-8a11-dbfe44d2f995" />
+                </div>
+              </div>
+            </div>
           </button>
 
           {/* ── Exchange icon: full circle ── */}
           <button
             data-testid="button-collapsed-exchange"
             onClick={onExchange}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-opacity opacity-80 hover:opacity-100"
-            style={{ background: "rgba(255,149,0,0.18)" }}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
           >
-            <img className="w-6 h-6" alt="Exchange" src="/figmaAssets/icons-9.svg" />
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/edf0684e-1ba3-4bf5-811f-a38442ad4e9a" />
+            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+              <div className="absolute inset-[17.94%_16.48%_17.96%_16.47%]">
+                <div className="absolute inset-[-6.5%_-6.21%]">
+                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/96ab50bb-4215-4885-9dd4-3200d3eb521f" />
+                </div>
+              </div>
+            </div>
           </button>
 
           {/* ── Horizontal divider ── */}
