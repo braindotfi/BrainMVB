@@ -811,6 +811,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     <>
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <NotificationsPanel />
+      <InsightsPanel />
       <ChatHistoryPanel />
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
         {/* Brain logo row — collapse button lives here on the right */}
