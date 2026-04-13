@@ -20,10 +20,7 @@ export function SignupPage() {
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       {/* ── Topbar ── */}
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <div className="flex items-center gap-2">
-          <img src="/figmaAssets/frame-1000002163.svg" alt="Brain" className="w-6 h-6" />
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-xl tracking-tight">brain</span>
-        </div>
+        <img src="/figmaAssets/brainfull2x.png" alt="Brain Finance" className="h-[32px] object-contain" />
       </header>
 
       {/* ── Centered auth form ── */}
@@ -103,7 +100,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         data-testid="button-demo-login"
         className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        <img src="/figmaAssets/frame-1000002163.svg" alt="" className="w-5 h-5 opacity-70" />
+        <img src="/figmaAssets/brain2x.png" alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo
       </button>
       <p className="text-[#414965] text-xs">
@@ -150,7 +147,7 @@ function LazyEmbeddedAuth({
         setProvider(() => m.CrossmintProvider);
         setAuthProv(() => m.CrossmintAuthProvider);
         setWalletProv(() => m.CrossmintWalletProvider);
-        setUseAuthHook(() => m.useAuth);
+        setUseAuthHook(() => m.useCrossmintAuth);
         setUseWalletHook(() => m.useWallet);
       })
       .catch(() => setSdkError(true));
