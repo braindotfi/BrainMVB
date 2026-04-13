@@ -921,7 +921,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]"
               style={{ background: "#222737" }}
             >
-              <img src="/figmaAssets/nav-collapse-icon.svg" width="18" height="16" alt="Collapse" />
+              <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
             {/* Header pill input field */}
             <div className="flex-1 flex items-center gap-2 h-[40px] px-2 bg-brain-v1baby-blue-15 rounded-[8px]">
