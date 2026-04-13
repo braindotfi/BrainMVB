@@ -21,7 +21,6 @@ interface DailyInsight {
 const mainMenuItems = [
   { id: "agents", label: "Agents", path: "/agents" },
   { id: "marketplace", label: "Marketplace", path: "/marketplace" },
-  { id: "transactions", label: "Transactions", path: "/transactions" },
 ];
 
 const initialNotifications = [
@@ -883,7 +882,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                     {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
                     {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                    {item.id === "transactions" && <TransactionsIcon active={isActive(item.path)} />}
                   </button>
                 </Link>
               </div>
@@ -977,7 +975,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                       <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
                         {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
                         {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                        {item.id === "transactions" && <TransactionsIcon active={isActive(item.path)} />}
                       </div>
                       <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                         {item.label}

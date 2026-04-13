@@ -531,10 +531,18 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
                     style={{ background: "#7631ee" }}
                   >
-                    <div className="w-[32px] h-[32px] rounded-[100px] flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.25)" }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
+                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
+                      <div className="absolute left-0 size-[32px] top-0">
+                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" />
+                      </div>
+                      <div className="absolute left-0 size-[32px] top-0">
+                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" />
+                      </div>
+                      <div className="absolute left-[8px] size-[16px] top-[8px]">
+                        <div className="absolute inset-[-7.03%]">
+                          <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" />
+                        </div>
+                      </div>
                     </div>
                     <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
@@ -555,10 +563,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => { setCollapsedAccount(null); setActiveAccount(null); setCollapsedCardIndex(cardIdx); setActiveCard(cardIdx); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                        <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                          <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                          </div>
                         </div>
                         <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {label}
@@ -999,10 +1008,18 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
                     style={{ background: "#7631ee" }}
                   >
-                    <div className="w-[32px] h-[32px] rounded-[100px] flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.25)" }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
+                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
+                      <div className="absolute left-0 size-[32px] top-0">
+                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" />
+                      </div>
+                      <div className="absolute left-0 size-[32px] top-0">
+                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" />
+                      </div>
+                      <div className="absolute left-[8px] size-[16px] top-[8px]">
+                        <div className="absolute inset-[-7.03%]">
+                          <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" />
+                        </div>
+                      </div>
                     </div>
                     <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
@@ -1022,10 +1039,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); }}
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="w-[32px] h-[32px] rounded-[16px] flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#222737" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                        <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                          <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                          </div>
                         </div>
                         <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {label}
@@ -1184,9 +1202,26 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     onClick={() => setActiveTab("Transactions")}
                     className="flex items-center gap-[6px] bg-transparent border-none p-0 cursor-pointer"
                   >
-                    <svg width="24" height="20" viewBox="0 0 22.3812 18.1988" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1.00017 5.62925L2.64504 8.47826C2.85468 8.84136 3.31899 8.96577 3.6821 8.75613L6.31195 7.23779M21.381 12.5635L19.7362 9.71454C19.5265 9.35144 19.0623 9.22698 18.6991 9.43666L15.8501 11.0815M4.17248 13.1483C6.40865 17.0215 11.3612 18.3485 15.2344 16.1123C17.5453 14.7781 18.9987 12.4486 19.2915 9.98041M18.1984 5.05045C15.9622 1.17731 11.0097 -0.149741 7.1365 2.08643C4.82554 3.42067 3.37219 5.75015 3.07943 8.2184" stroke={activeTab === "Transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    {activeTab === "Transactions" ? (
+                      <div className="overflow-clip relative size-[24px] flex-shrink-0">
+                        <div className="absolute inset-[12.08%_3.35%_12.09%_3.4%]">
+                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f4b3667-896e-4f8e-84f3-ff3db0f1bbdf" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="overflow-clip relative size-[24px] flex-shrink-0">
+                        <div className="absolute inset-[29.17%_41.67%]">
+                          <div className="absolute inset-[-10%_-25%]">
+                            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bbbbe5df-e21b-4e9f-8507-7555e90f6a33" />
+                          </div>
+                        </div>
+                        <div className="absolute inset-[16.25%_7.52%_16.25%_7.56%]">
+                          <div className="absolute inset-[-6.17%_-4.91%]">
+                            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a81167fa-846b-456b-a37f-c387ca6add52" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Transactions" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
                       Transactions
                     </span>
