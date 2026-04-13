@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useAuth } from "@/lib/authContext";
 
 type RecipientType = "bank" | "wallet" | "agent" | null;
 type Step = 1 | 2 | 3 | 4;
@@ -100,6 +101,12 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
   const [state, setState] = useState<SendState>(INITIAL);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const { wirexAccounts } = useAuth();
+  const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const liveAssets = useMemo(() =>
+    assets.map(a => a.id === "usd" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a),
+    [walletAcc?.balance]
+  );
 
   if (!open) return null;
 
@@ -110,7 +117,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
     setTimeout(() => { setState(INITIAL); setSent(false); setSending(false); }, 300);
   };
 
-  const selectedAsset = assets.find((a) => a.id === state.assetId) ?? assets[0];
+  const selectedAsset = liveAssets.find((a) => a.id === state.assetId) ?? liveAssets[0];
   const totalAmount = state.amount
     ? (parseFloat(state.amount.replace(/,/g, "") || "0") + parseFloat(FEE)).toFixed(2)
     : "0.00";
@@ -464,7 +471,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
               <div className="flex flex-col gap-2">
                 <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Asset</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {assets.map((a) => {
+                  {liveAssets.map((a) => {
                     const sel = state.assetId === a.id;
                     return (
                       <button

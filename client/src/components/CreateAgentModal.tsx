@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
+import { useAuth } from "@/lib/authContext";
 import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet, Trash2, Search } from "lucide-react";
 
 /* ── Collateral asset list ── */
@@ -421,6 +422,9 @@ function computePolicyHash(type: string, params: Record<string, unknown>): strin
 /* ═══════════════════════ MAIN COMPONENT ═══════════════════════ */
 export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 0, prefill, agentId }: Props): JSX.Element | null => {
   const isEditMode = !!prefill && !!agentId;
+  const { wirexAccounts } = useAuth();
+  const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const availableBalanceDisplay = walletAcc?.balance ? `$${walletAcc.balance}` : "$0.00";
   const [step, setStep] = useState(initialStep);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
@@ -1710,7 +1714,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {/* Right: balance + asset tag */}
                     <div className="flex flex-1 gap-[4px] items-center justify-end min-w-0">
                       <span className="flex-1 font-['JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px] text-right min-w-0">
-                        $865,942.49
+                        {availableBalanceDisplay}
                       </span>
                       <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center px-[4px] py-[1px] rounded-[20px] shrink-0">
                         <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useAuth } from "@/lib/authContext";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -217,6 +218,12 @@ export function ExchangeModal({ open, onClose }: Props) {
   const [amount, setAmount] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const { wirexAccounts } = useAuth();
+  const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const liveAllAssets = useMemo(() =>
+    allAssets.map(a => a.id === "usd" ? { ...a, balance: walletAcc?.balance ? `${walletAcc.balance} USD` : a.balance } : a),
+    [walletAcc?.balance]
+  );
 
   if (!open) return null;
 
@@ -245,7 +252,7 @@ export function ExchangeModal({ open, onClose }: Props) {
     setSearchOpen(false);
   };
 
-  const filteredAssets = allAssets.filter(a =>
+  const filteredAssets = liveAllAssets.filter(a =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.ticker.toLowerCase().includes(searchQuery.toLowerCase())
   );
