@@ -279,7 +279,7 @@ interface Props {
   onToggle: () => void;
   onCreateAgent: () => void;
   onSend?: (cardType: "wallet" | "bank") => void;
-  onExchange?: () => void;
+  onExchange?: (cardType: "wallet" | "bank") => void;
   focusExchangesTrigger?: number;
 }
 
@@ -876,7 +876,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── Exchange icon: full circle ── */}
           <button
             data-testid="button-collapsed-exchange"
-            onClick={onExchange}
+            onClick={() => onExchange?.(collapsedCardIndex === 2 ? "bank" : "wallet")}
             className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
           >
             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/edf0684e-1ba3-4bf5-811f-a38442ad4e9a" />
@@ -1143,7 +1143,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={
                           action.label === "Send"     ? () => onSend?.(cardType) :
                           action.label === "Add"      ? () => setAddOpen(true) :
-                          action.label === "Exchange" ? onExchange :
+                          action.label === "Exchange" ? () => onExchange?.(cardType) :
                           undefined
                         }
                         className="flex flex-col items-center justify-center gap-1 flex-1 cursor-pointer group"

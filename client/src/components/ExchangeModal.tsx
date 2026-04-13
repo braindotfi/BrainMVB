@@ -39,6 +39,25 @@ function FigmaWalletIcon() {
   );
 }
 
+function FigmaBankIcon() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+      </div>
+    </div>
+  );
+}
+
+function AccountIcon({ accountType }: { accountType: "wallet" | "bank" }) {
+  return accountType === "bank" ? <FigmaBankIcon /> : <FigmaWalletIcon />;
+}
+
+function accountLabel(accountType: "wallet" | "bank"): string {
+  return accountType === "bank" ? "Bank Account" : "Stablecoin Account";
+}
+
 function AssetIcon({ asset, size = 32 }: { asset: Asset; size?: number }) {
   const s = `${size}px`;
   if (asset.icon) {
@@ -257,9 +276,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onConfirmed?: () => void;
+  accountType?: "wallet" | "bank";
 }
 
-export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
+export function ExchangeModal({ open, onClose, onConfirmed, accountType = "wallet" }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
@@ -421,9 +441,9 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
                   <div className="flex flex-col gap-[4px]">
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                     <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
-                      <FigmaWalletIcon />
+                      <AccountIcon accountType={accountType} />
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
-                        {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                        {accountLabel(accountType)}
                       </p>
                     </div>
                   </div>
@@ -489,9 +509,9 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
                     <div className="flex flex-col gap-[4px] w-full">
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                       <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
-                        <FigmaWalletIcon />
+                        <AccountIcon accountType={accountType} />
                         <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
-                          {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                          {accountLabel(accountType)}
                         </p>
                       </div>
                     </div>
@@ -538,9 +558,9 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
                   <div className="flex flex-col gap-[4px]">
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                      <FigmaWalletIcon />
+                      <AccountIcon accountType={accountType} />
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 truncate">
-                        {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                        {accountLabel(accountType)}
                       </p>
                     </div>
                   </div>

@@ -34,6 +34,7 @@ function AppLayout() {
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [exchangeCardType, setExchangeCardType] = useState<"wallet" | "bank">("wallet");
   const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
   const [, navigate] = useLocation();
 
@@ -91,7 +92,7 @@ function AppLayout() {
           onToggle={() => setAccountCollapsed((v) => !v)}
           onCreateAgent={() => setCreateAgentOpen(true)}
           onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
-          onExchange={() => setExchangeOpen(true)}
+          onExchange={(cardType) => { setExchangeCardType(cardType); setExchangeOpen(true); }}
           focusExchangesTrigger={focusExchangesTrigger}
         />
       </div>
@@ -132,6 +133,7 @@ function AppLayout() {
         open={exchangeOpen}
         onClose={() => setExchangeOpen(false)}
         onConfirmed={() => setFocusExchangesTrigger(n => n + 1)}
+        accountType={exchangeCardType}
       />
     </div>
     </NavContext.Provider>
