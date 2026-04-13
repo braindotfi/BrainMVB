@@ -47,7 +47,7 @@ export const NotificationsPage = (): JSX.Element => {
       <div className="flex items-center justify-between px-[16px] py-[16px] flex-shrink-0">
         <h2
           className="text-[20px] leading-[24px]"
-          style={{ color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
+          style={{ color: "#6c779d", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
         >
           Notifications
         </h2>
@@ -56,7 +56,7 @@ export const NotificationsPage = (): JSX.Element => {
             onClick={markAllRead}
             data-testid="mark-all-read-btn"
             className="h-6 flex items-center px-[10px] rounded-[100px] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
-            style={{ background: "#222737", color: "#6c779d", fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif" }}
+            style={{ background: "#222737", color: "#6c779d", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
           >
             Mark All As Read
           </button>
@@ -69,13 +69,13 @@ export const NotificationsPage = (): JSX.Element => {
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>Loading notifications…</span>
+              <span className="text-sm" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>Loading notifications…</span>
             </div>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <span className="text-3xl">🔔</span>
-            <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}>
+            <span className="text-sm" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>
               No notifications yet
             </span>
           </div>
@@ -100,14 +100,14 @@ export const NotificationsPage = (): JSX.Element => {
                         className="flex-1 min-w-0 text-[16px]"
                         style={{
                           color: !n.read ? "#ff9500" : "#a8b9f4",
-                          fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                          fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                         }}
                       >
                         {n.title}
                       </p>
                       <p
                         className="text-[14px] whitespace-nowrap flex-shrink-0"
-                        style={{ color: "#6c779d", fontFamily: "'Gilroy-Medium', Helvetica, sans-serif" }}
+                        style={{ color: "#6c779d", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
                       >
                         {formatTime(n.createdAt)}
                       </p>
@@ -117,7 +117,7 @@ export const NotificationsPage = (): JSX.Element => {
                       className="text-[14px] leading-[16px] w-full"
                       style={{
                         color: !n.read ? "#a8b9f4" : "#6c779d",
-                        fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                        fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                       }}
                     >
                       {n.body}

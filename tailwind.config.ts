@@ -69,14 +69,15 @@ module.exports = {
       },
       fontFamily: {
         "subheading-2x-small": "var(--subheading-2x-small-font-family)",
+        "plus-jakarta": ['"Plus Jakarta Sans"', "sans-serif"],
+        outfit: ['"Outfit"', "sans-serif"],
+        "space-grotesk": ['"Space Grotesk"', "sans-serif"],
+        mono: ['"JetBrains Mono"', "monospace"],
         sans: [
+          '"Plus Jakarta Sans"',
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
-          '"Apple Color Emoji"',
-          '"Segoe UI Emoji"',
-          '"Segoe UI Symbol"',
-          '"Noto Color Emoji"',
         ],
       },
       borderRadius: {

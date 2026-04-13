@@ -145,8 +145,8 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 <path d="M5 14L11 20L23 8" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1white text-xl">Account Added!</span>
-            <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Your account has been connected successfully.</span>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1white text-xl">Account Added!</span>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">Your account has been connected successfully.</span>
           </div>
         )}
 
@@ -163,10 +163,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
             </button>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
+            <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
               Add Money
             </h2>
-            <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">
+            <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">
               {step === "select-type" && "What account should we fund?"}
               {step === "bank" && "Enter your bank account details"}
               {step === "wallet" && "Enter your wallet address"}
@@ -206,14 +206,14 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-base">
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-base">
                         {type.label}
                       </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ${type.iconColor} bg-black/30`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ${type.iconColor} bg-black/30`}>
                         {type.badge}
                       </span>
                     </div>
-                    <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                       {type.description}
                     </p>
                   </div>
@@ -237,13 +237,13 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     <path d="M14 3L24 9H4L14 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1white text-sm flex-1">Bank Account</span>
-                <button onClick={handleBack} className="text-[#ff9500] text-xs [font-family:'Gilroy-SemiBold',Helvetica]">Change</button>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1white text-sm flex-1">Bank Account</span>
+                <button onClick={handleBack} className="text-[#ff9500] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">Change</button>
               </div>
 
               {/* Recipient Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">
                   Recipient Name
                 </label>
                 <div className="flex items-center gap-2 px-4 h-14 bg-[#222737] rounded-2xl">
@@ -252,13 +252,13 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
                     placeholder="John Smith"
-                    className="flex-1 bg-transparent text-white text-xl [font-family:'Gilroy-Medium',Helvetica] placeholder-[#414965] outline-none"
+                    className="flex-1 bg-transparent text-white text-xl [font-family:'Plus Jakarta Sans',Helvetica] placeholder-[#414965] outline-none"
                   />
                   <button
                     onClick={() => handlePaste("recipientName")}
                     className="flex items-center justify-center px-3 py-2 bg-[#4a2300] rounded-full flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
                   >
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-xs whitespace-nowrap">
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#ff9500] text-xs whitespace-nowrap">
                       {copiedField === "recipientName" ? "Pasted!" : "Paste"}
                     </span>
                   </button>
@@ -267,7 +267,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
 
               {/* IBAN Bank Number */}
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">
                   IBAN Bank Number
                 </label>
                 <div className="flex items-center gap-2 px-4 h-14 bg-[#222737] rounded-2xl">
@@ -282,7 +282,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     onClick={() => handlePaste("iban")}
                     className="flex items-center justify-center px-3 py-2 bg-[#4a2300] rounded-full flex-shrink-0 hover:bg-[#5a2d00] transition-colors"
                   >
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-xs whitespace-nowrap">
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#ff9500] text-xs whitespace-nowrap">
                       {copiedField === "iban" ? "Pasted!" : "Paste"}
                     </span>
                   </button>
@@ -295,7 +295,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M7 5V7M7 9V9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
                   Your bank account will be verified within 1–2 business days. Make sure the IBAN matches your account exactly.
                 </p>
               </div>
@@ -303,7 +303,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               <button
                 onClick={handleAddAccount}
                 disabled={!recipientName.trim() || !iban.trim()}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
                   recipientName.trim() && iban.trim()
                     ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -326,13 +326,13 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     <path d="M2 11H26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </div>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1white text-sm flex-1">Your Wallet</span>
-                <button onClick={handleBack} className="text-[#4da3ff] text-xs [font-family:'Gilroy-SemiBold',Helvetica]">Change</button>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1white text-sm flex-1">Your Wallet</span>
+                <button onClick={handleBack} className="text-[#4da3ff] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">Change</button>
               </div>
 
               {/* Wallet Address */}
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">
                   Wallet Address
                 </label>
                 <div className="flex items-center gap-2 px-4 h-14 bg-[#222737] rounded-2xl">
@@ -377,14 +377,14 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
 
               {/* Network chips */}
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">
                   Network
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {["Ethereum", "Polygon", "BNB Chain", "Arbitrum", "Base"].map((net, i) => (
                     <button
                       key={net}
-                      className={`px-3 py-1.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${
+                      className={`px-3 py-1.5 rounded-full text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${
                         i === 0
                           ? "bg-[#050d1a] border border-[#4da3ff] text-[#4da3ff]"
                           : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border border-transparent hover:border-[#4da3ff] hover:text-[#4da3ff]"
@@ -402,7 +402,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M7 5V7M7 9V9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
                   Make sure to select the correct network. Sending funds to the wrong network may result in permanent loss.
                 </p>
               </div>
@@ -410,7 +410,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               <button
                 onClick={handleAddAccount}
                 disabled={!walletAddress.trim()}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
                   walletAddress.trim()
                     ? "bg-[#0a1a30] border border-[#4da3ff] text-[#4da3ff] hover:bg-[#0d2040]"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -425,7 +425,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           {step === "wallet-qr" && (
             <div className="flex flex-col items-center gap-5">
               <div className="flex flex-col items-center gap-2 text-center">
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                   Point your camera at a wallet QR code
                 </p>
               </div>
@@ -450,13 +450,13 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     <rect x="7.5" y="25.5" width="7" height="7" rx="1" fill="#414965" />
                     <path d="M22 22H25V25H22V22ZM28 22H31V25H28V22ZM22 28H25V31H22V28ZM28 28H31V31H28V28Z" fill="#414965" />
                   </svg>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-xs">Scan QR Code</span>
+                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-xs">Scan QR Code</span>
                 </div>
               </div>
 
               {/* Manual input fallback */}
               <div className="flex flex-col gap-1.5 w-full">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-sm text-center">
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-sm text-center">
                   — or paste address manually —
                 </label>
                 <div className="flex items-center gap-2 px-4 h-14 bg-[#222737] rounded-2xl">
@@ -471,7 +471,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     onClick={() => handlePaste("walletAddress")}
                     className="px-3 py-1.5 bg-[#4a2300] rounded-full hover:bg-[#5a2d00] transition-colors"
                   >
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-xs">Paste</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#ff9500] text-xs">Paste</span>
                   </button>
                 </div>
               </div>
@@ -479,14 +479,14 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               <div className="flex gap-2 w-full">
                 <button
                   onClick={() => setStep("wallet")}
-                  className="flex-1 py-3.5 rounded-2xl bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 [font-family:'Gilroy-SemiBold',Helvetica] text-sm hover:bg-brain-v1baby-blue-30 transition-colors"
+                  className="flex-1 py-3.5 rounded-2xl bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 [font-family:'Plus Jakarta Sans',Helvetica] text-sm hover:bg-brain-v1baby-blue-30 transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleAddAccount}
                   disabled={!walletAddress.trim()}
-                  className={`flex-1 py-3.5 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-all ${
+                  className={`flex-1 py-3.5 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm transition-all ${
                     walletAddress.trim()
                       ? "bg-[#0a1a30] border border-[#4da3ff] text-[#4da3ff] hover:bg-[#0d2040]"
                       : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -511,8 +511,8 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                     <path d="M6 16H3M22 16H25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </div>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1white text-sm flex-1">AI Agent Account</span>
-                <button onClick={handleBack} className="text-[#a855f7] text-xs [font-family:'Gilroy-SemiBold',Helvetica]">Change</button>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1white text-sm flex-1">AI Agent Account</span>
+                <button onClick={handleBack} className="text-[#a855f7] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">Change</button>
               </div>
 
               {agentList.map((agent) => (
@@ -530,17 +530,17 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">{agent.name}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{agent.name}</span>
                       <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-xs">{agent.ticker}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] px-1.5 py-0.5 bg-brain-v1baby-blue-15 rounded text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">{agent.type}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-brain-v1dark-green rounded text-brain-v1green [font-family:'Gilroy-SemiBold',Helvetica]">{agent.status}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-brain-v1baby-blue-15 rounded text-brain-v1baby-blue-30 [font-family:'Plus Jakarta Sans',Helvetica]">{agent.type}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-brain-v1dark-green rounded text-brain-v1green [font-family:'Plus Jakarta Sans',Helvetica]">{agent.status}</span>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-brain-v1green text-sm">{agent.apy}</div>
-                    <div className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-30 text-[10px]">APY</div>
+                    <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-30 text-[10px]">APY</div>
                   </div>
                   {selectedAgent === agent.id && (
                     <div className="w-5 h-5 rounded-full bg-[#a855f7] flex items-center justify-center flex-shrink-0">
@@ -555,7 +555,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               <button
                 onClick={handleAddAccount}
                 disabled={!selectedAgent}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all mt-1 ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all mt-1 ${
                   selectedAgent
                     ? "bg-[#090517] border border-[#a855f7] text-[#a855f7] hover:bg-[#0d0820]"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"

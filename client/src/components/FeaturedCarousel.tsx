@@ -75,14 +75,14 @@ export const FeaturedCarousel = ({ onSlideClick, autoPlay = true }: FeaturedCaro
             width: "336px",
           }}
         >
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1purple text-sm tracking-[0] leading-4">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1purple text-sm tracking-[0] leading-4">
             {slide.label}
           </span>
           <div className="flex flex-col items-start w-full">
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-[32px] tracking-[0] leading-10 w-full">
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-[32px] tracking-[0] leading-10 w-full">
               {slide.title}
             </span>
-            <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1purple text-base tracking-[0] leading-5 w-full">
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1purple text-base tracking-[0] leading-5 w-full">
               {slide.description}
             </span>
           </div>

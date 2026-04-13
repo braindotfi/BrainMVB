@@ -106,11 +106,11 @@ const CardHeader = ({
       <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
     )}
     <div className="flex items-center gap-2 flex-1">
-      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1white text-[32px] text-center leading-8 whitespace-nowrap">
+      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1white text-[32px] text-center leading-8 whitespace-nowrap">
         {balance}
       </span>
       <div className="inline-flex items-start px-1.5 py-0.5 bg-brain-v1white-30 rounded-[100px]">
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-xs leading-3 whitespace-nowrap">
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-xs leading-3 whitespace-nowrap">
           {currency}
         </span>
       </div>
@@ -400,7 +400,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     const popupBase = "w-[300px] bg-[#11141b] border border-[#1e2235] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden";
     const popupHeader = (title: string) => (
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2235]">
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-white text-base">{title}</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-base">{title}</span>
         <button
           onClick={() => setHoveredIcon(null)}
           className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white transition-colors"
@@ -442,7 +442,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         <div className="w-[310px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
           {/* Header */}
           <div className="flex items-center justify-between p-[16px]">
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
               Accounts
             </span>
             <button
@@ -479,7 +479,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
                 )}
                 {/* Label */}
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                   {isYourCollapsedAccount
                     ? (["Crypto Account", "Debit Card", "Bank Account"] as const)[collapsedCardIndex as 0|1|2] ?? "Your Account"
                     : (selectedAgent?.name ?? "Account")}
@@ -515,7 +515,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         <path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
                     </div>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
                     </span>
                   </button>
@@ -539,11 +539,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </div>
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {label}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -567,11 +567,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {agent.name}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -645,21 +645,21 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <button
                 key={tab}
                 onClick={() => setCollapsedAssetFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
               >{tab}</button>
             ))}
           </div>
           <div className="flex flex-col gap-3 px-3 pb-3 overflow-y-auto">
             {filteredAssets.length === 0 ? (
-              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Gilroy-Medium',Helvetica]">No assets in this category</p>
+              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No assets in this category</p>
             ) : filteredAssets.map((asset, idx) => (
               <div key={`${asset.ticker}-${idx}`} className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 w-full">
                   <img className="w-8 h-8 flex-shrink-0" alt={asset.name} src={asset.icon} />
                   <div className="flex items-center justify-center gap-2 flex-1">
                     <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4">{asset.name}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs">{asset.ticker}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4">{asset.name}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-xs">{asset.ticker}</span>
                     </div>
                     <div className="flex flex-col items-end flex-1">
                       <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#42bf23] text-sm text-right">{asset.value}</span>
@@ -710,13 +710,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <button
                 key={tab}
                 onClick={() => setCollapsedTxFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
+                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
               >{tab}</button>
             ))}
           </div>
           <div className="flex flex-col overflow-y-auto px-3 pb-3">
             {filteredTx.length === 0 ? (
-              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Gilroy-Medium',Helvetica]">No transactions in this category</p>
+              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No transactions in this category</p>
             ) : filteredTx.map((tx, idx) => (
               <div key={tx.id} className="flex flex-col">
                 <div className="flex items-center gap-2 py-3">
@@ -731,8 +731,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   </div>
                   <div className="flex-1 min-w-0 flex items-center gap-2">
                     <div className="flex flex-col gap-0.5 flex-shrink-0 min-w-0">
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4 whitespace-nowrap truncate max-w-[140px]">{tx.label}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-xs">{tx.time} · {tx.date}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4 whitespace-nowrap truncate max-w-[140px]">{tx.label}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-xs">{tx.time} · {tx.date}</span>
                     </div>
                     <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-sm text-right ${tx.positive ? "text-[#42bf23]" : "text-[#d20344]"}`}>
                       {tx.amount}
@@ -779,7 +779,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
 
           {/* ── "Wallet" label ── */}
-          <span className="text-[#414965] text-[9px] [font-family:'Gilroy-SemiBold',Helvetica] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
+          <span className="text-[#414965] text-[9px] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
 
           {/* ── Bank icon: WalletIcons style — squircle rounded-[20px] ── */}
           <div
@@ -934,7 +934,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               ) : (
                 <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
               )}
-              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
                 {activeAccount
                   ? agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Your Account"
                   : "Your Account"}
@@ -977,7 +977,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         <path d="M7 2V12M2 7H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
                     </div>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
                     </span>
                   </button>
@@ -1000,11 +1000,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             <path d="M3 11h18M5 11v8M19 11v8M5 19h14M9 14v4M12 14v4M15 14v4M12 5L20 11M12 5L4 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </div>
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {label}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -1027,11 +1027,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
-                        <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {agent.name}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -1071,7 +1071,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         <div className="relative w-10 h-10 bg-brain-v1dark-orange rounded-[100px] flex items-center justify-center group-hover:opacity-80 transition-opacity">
                           <img className="w-6 h-6" alt={action.label} src={action.icon} />
                         </div>
-                        <span className="self-stretch [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-xs text-center leading-[14px] transition-colors">
+                        <span className="self-stretch [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 group-hover:text-brain-v1white text-xs text-center leading-[14px] transition-colors">
                           {action.label}
                         </span>
                       </button>
@@ -1149,7 +1149,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       <path d="M14.3 4.44444C18.5526 4.44444 22 7.92667 22 12.2222C22 16.5178 18.5526 20 14.3 20C10.0474 20 6.6 16.5178 6.6 12.2222C6.6 7.92667 10.0474 4.44444 14.3 4.44444Z" fill={activeTab === "Assets" ? "#9d5cf5" : "#6c779d"}/>
                       <path d="M7.7 0C9.83147 0 11.7607 0.874835 13.1549 2.28841C8.2267 2.86175 4.4 7.09058 4.4 12.2222C4.4 13.1777 4.53253 14.1021 4.78027 14.9772C1.97542 13.8153 0 11.0295 0 7.77778C0 3.48223 3.44741 0 7.7 0Z" fill={activeTab === "Assets" ? "#9d5cf5" : "#6c779d"}/>
                     </svg>
-                    <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Assets" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
+                    <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Assets" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
                       Assets
                     </span>
                   </button>
@@ -1160,7 +1160,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     <svg width="24" height="20" viewBox="0 0 22.3812 18.1988" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M1.00017 5.62925L2.64504 8.47826C2.85468 8.84136 3.31899 8.96577 3.6821 8.75613L6.31195 7.23779M21.381 12.5635L19.7362 9.71454C19.5265 9.35144 19.0623 9.22698 18.6991 9.43666L15.8501 11.0815M4.17248 13.1483C6.40865 17.0215 11.3612 18.3485 15.2344 16.1123C17.5453 14.7781 18.9987 12.4486 19.2915 9.98041M18.1984 5.05045C15.9622 1.17731 11.0097 -0.149741 7.1365 2.08643C4.82554 3.42067 3.37219 5.75015 3.07943 8.2184" stroke={activeTab === "Transactions" ? "#a8b9f4" : "#6c779d"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Transactions" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
+                    <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap transition-colors ${activeTab === "Transactions" ? "text-brain-v1baby-blue-100" : "text-brain-v1baby-blue-30"}`}>
                       Transactions
                     </span>
                   </button>
@@ -1175,7 +1175,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => setActiveFilter(filter)}
                         className={`flex items-center justify-center px-[16px] py-[8px] flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${activeFilter === filter ? "bg-[#123509]" : "bg-[#06070a]"}`}
                       >
-                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${activeFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
+                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${activeFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
                           {filter}
                         </span>
                       </button>
@@ -1189,7 +1189,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         onClick={() => setTransactionFilter(filter)}
                         className={`flex items-center justify-center px-[16px] py-[8px] flex-1 rounded-[100px] border-none cursor-pointer transition-colors ${transactionFilter === filter ? "bg-[#123509]" : "bg-[#06070a]"}`}
                       >
-                        <span className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${transactionFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
+                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] whitespace-nowrap ${transactionFilter === filter ? "text-[#42bf23]" : "text-[#414965]"}`}>
                           {filter}
                         </span>
                       </button>
@@ -1209,7 +1209,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     {filtered.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 w-full gap-2 text-brain-v1baby-blue-30">
                         <span className="text-2xl">💼</span>
-                        <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No {activeFilter.toLowerCase()} assets</span>
+                        <span className="text-xs [font-family:'Plus Jakarta Sans',Helvetica]">No {activeFilter.toLowerCase()} assets</span>
                       </div>
                     ) : filtered.map((asset, index) => (
                       <div key={`${asset.ticker}-${index}`} className="flex flex-col self-stretch w-full gap-4">
@@ -1217,8 +1217,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           <img className="w-10 h-10 flex-shrink-0" alt={`${asset.name} icon`} src={asset.icon} />
                           <div className="flex items-center justify-center gap-2 flex-1">
                             <div className="inline-flex flex-col items-start gap-1 flex-shrink-0">
-                              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">{asset.name}</span>
-                              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap">{asset.ticker}</span>
+                              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">{asset.name}</span>
+                              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap">{asset.ticker}</span>
                             </div>
                             <div className="flex flex-col items-start justify-center gap-1 flex-1">
                               <span className="self-stretch [font-family:'JetBrains_Mono',Helvetica] font-medium text-brain-v1green text-base text-right leading-5">{asset.value}</span>
@@ -1247,7 +1247,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     {filtered.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 w-full gap-2 text-brain-v1baby-blue-30">
                         <span className="text-2xl">📋</span>
-                        <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No {transactionFilter.toLowerCase()} found</span>
+                        <span className="text-xs [font-family:'Plus Jakarta Sans',Helvetica]">No {transactionFilter.toLowerCase()} found</span>
                       </div>
                     ) : filtered.map((tx, index) => (
                       <div key={tx.id} className="flex flex-col self-stretch w-full">
@@ -1269,11 +1269,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           </div>
                           <div className="flex-1 min-w-0 flex items-center gap-2">
                             <div className="flex flex-col gap-1 flex-shrink-0">
-                              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">{tx.label}</span>
+                              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">{tx.label}</span>
                               <div className="flex items-center gap-1">
-                                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.time}</span>
+                                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.time}</span>
                                 <div className="w-1 h-1 bg-brain-v1baby-blue-30 rounded-full flex-shrink-0" />
-                                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.date}</span>
+                                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.date}</span>
                               </div>
                             </div>
                             <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-xl text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>

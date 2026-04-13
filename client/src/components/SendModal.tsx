@@ -75,7 +75,7 @@ const INITIAL: SendState = {
 const StepDot = ({ n, current }: { n: number; current: number }) => (
   <div className="flex items-center">
     <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${
+      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${
         n < current
           ? "bg-brain-v1green text-white"
           : n === current
@@ -188,11 +188,11 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
             </button>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
+            <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
               {sent ? "Transfer Complete" : "Send Money"}
             </h2>
             {!sent && (
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">
                 {stepLabels[state.step - 1]}
               </p>
             )}
@@ -229,10 +229,10 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                 </svg>
               </div>
               <div>
-                <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">
+                <h3 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-2xl">
                   {state.amount ? `$${parseFloat(state.amount).toFixed(2)} Sent!` : "Transfer Complete!"}
                 </h3>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                   Your transfer to {getRecipientLabel()} was successful.
                 </p>
               </div>
@@ -244,7 +244,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
               </div>
               <button
                 onClick={handleClose}
-                className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
+                className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
               >
                 Done
               </button>
@@ -254,7 +254,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {/* ===== STEP 1: SELECT TYPE ===== */}
           {!sent && state.step === 1 && (
             <div className="flex flex-col gap-3">
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                 Choose where you'd like to send funds.
               </p>
               <div className="flex flex-col gap-3 mt-2">
@@ -274,10 +274,10 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                         {rt.icon}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-colors ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
+                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-colors ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
                           {rt.label}
                         </p>
-                        <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
                           {rt.description}
                         </p>
                       </div>
@@ -299,7 +299,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {!sent && state.step === 2 && state.recipientType === "bank" && (
             <div className="flex flex-col gap-3">
               <RecipientTypeTabs current="bank" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Select a linked bank account.
               </p>
               <div className="flex flex-col gap-2 mt-1">
@@ -315,7 +315,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                     >
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: b.color }}>🏦</div>
                       <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{b.bank}</p>
+                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{b.bank}</p>
                         <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{b.number} · {b.type}</p>
                       </div>
                       <RadioDot selected={selected} />
@@ -326,7 +326,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                   <div className="w-10 h-10 rounded-xl bg-brain-v1baby-blue-15 flex items-center justify-center flex-shrink-0">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" /></svg>
                   </div>
-                  <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">Add new bank account</span>
+                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">Add new bank account</span>
                 </button>
               </div>
             </div>
@@ -336,12 +336,12 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {!sent && state.step === 2 && state.recipientType === "wallet" && (
             <div className="flex flex-col gap-3">
               <RecipientTypeTabs current="wallet" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Enter or paste the recipient's wallet address.
               </p>
               <div className="flex flex-col gap-2 mt-1">
                 <div className="flex flex-col gap-1">
-                  <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">Wallet Address</label>
+                  <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">Wallet Address</label>
                   <div className="flex items-center gap-2 bg-[#222737] rounded-2xl px-4 h-14">
                     <input
                       type="text"
@@ -357,22 +357,22 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                           set({ walletAddress: text });
                         } catch {}
                       }}
-                      className="text-[10px] [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors px-2 py-1 rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 flex-shrink-0"
+                      className="text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors px-2 py-1 rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 flex-shrink-0"
                     >
                       Paste
                     </button>
                   </div>
                   {state.walletAddress && state.walletAddress.length < 10 && (
-                    <p className="text-brain-v1pink-red text-xs [font-family:'Gilroy-Medium',Helvetica]">Please enter a valid wallet address</p>
+                    <p className="text-brain-v1pink-red text-xs [font-family:'Plus Jakarta Sans',Helvetica]">Please enter a valid wallet address</p>
                   )}
                 </div>
 
                 {/* Network selector */}
                 <div className="flex flex-col gap-1 mt-2">
-                  <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Network</label>
+                  <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Network</label>
                   <div className="grid grid-cols-3 gap-2">
                     {["Ethereum", "BNB Chain", "Polygon"].map((net) => (
-                      <button key={net} className="px-3 py-2 bg-brain-v1baby-blue-15 border border-[#1d2131] hover:border-[#414965] rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors">
+                      <button key={net} className="px-3 py-2 bg-brain-v1baby-blue-15 border border-[#1d2131] hover:border-[#414965] rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors">
                         {net}
                       </button>
                     ))}
@@ -386,7 +386,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {!sent && state.step === 2 && state.recipientType === "agent" && (
             <div className="flex flex-col gap-3">
               <RecipientTypeTabs current="agent" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 Select an AI agent account to fund.
               </p>
               <div className="flex flex-col gap-2 mt-1">
@@ -402,12 +402,12 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                     >
                       <div className="w-10 h-10 rounded-xl bg-brain-v1headerfooterbg flex items-center justify-center text-xl flex-shrink-0">{a.icon}</div>
                       <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.name}</p>
-                        <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{a.ticker} · {a.type}</p>
+                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.name}</p>
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{a.ticker} · {a.type}</p>
                       </div>
                       <div className="text-right mr-2 flex-shrink-0">
                         <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1green text-sm">{a.balance}</p>
-                        <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-30 text-[10px]">balance</p>
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-30 text-[10px]">balance</p>
                       </div>
                       <RadioDot selected={selected} />
                     </button>
@@ -426,14 +426,14 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                   {state.recipientType === "bank" ? "🏦" : state.recipientType === "wallet" ? "👛" : "🤖"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-[10px] uppercase tracking-wider">Sending to</p>
-                  <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm truncate">{getRecipientLabel()}</p>
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-[10px] uppercase tracking-wider">Sending to</p>
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm truncate">{getRecipientLabel()}</p>
                 </div>
               </div>
 
               {/* Amount input */}
               <div className="flex flex-col gap-2">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base">Amount</label>
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">Amount</label>
                 <div className="flex items-center gap-3 px-4 h-14 bg-[#222737] rounded-2xl">
                   <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#414965] text-xl flex-shrink-0">$</span>
                   <input
@@ -448,7 +448,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                 </div>
 
                 {parseFloat(state.amount || "0") > parseFloat(selectedAsset.balance.replace(/,/g, "")) && parseFloat(state.amount || "0") > 0 && (
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-red-400 text-xs">
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs">
                     Amount exceeds your available balance of {selectedAsset.balance} {selectedAsset.ticker}
                   </p>
                 )}
@@ -459,7 +459,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                     <button
                       key={v}
                       onClick={() => set({ amount: v })}
-                      className="flex-1 py-1.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-[#414965] transition-colors"
+                      className="flex-1 py-1.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-[#414965] transition-colors"
                     >
                       ${parseInt(v).toLocaleString()}
                     </button>
@@ -469,7 +469,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
 
               {/* Asset selector */}
               <div className="flex flex-col gap-2">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Asset</label>
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Asset</label>
                 <div className="grid grid-cols-2 gap-2">
                   {liveAssets.map((a) => {
                     const sel = state.assetId === a.id;
@@ -483,7 +483,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                       >
                         <img src={a.icon} alt={a.ticker} className="w-8 h-8 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-xs ${sel ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.ticker}</p>
+                          <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-xs ${sel ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.ticker}</p>
                           <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-[10px] truncate">{a.balance}</p>
                         </div>
                       </button>
@@ -494,7 +494,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
 
               {/* Fee row */}
               {state.amount && parseFloat(state.amount) > 0 && (
-                <div className="flex flex-col gap-1 p-3 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] text-xs [font-family:'Gilroy-Medium',Helvetica]">
+                <div className="flex flex-col gap-1 p-3 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">
                   <div className="flex justify-between text-brain-v1baby-blue-60">
                     <span>Amount</span>
                     <span className="text-brain-v1white [font-family:'JetBrains_Mono',Helvetica]">${parseFloat(state.amount).toFixed(2)} {selectedAsset.ticker}</span>
@@ -504,7 +504,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                     <span className="[font-family:'JetBrains_Mono',Helvetica]">${FEE}</span>
                   </div>
                   <div className="h-px bg-[#1d2131] my-1" />
-                  <div className="flex justify-between font-semibold text-brain-v1white [font-family:'Gilroy-SemiBold',Helvetica]">
+                  <div className="flex justify-between font-semibold text-brain-v1white [font-family:'Plus Jakarta Sans',Helvetica]">
                     <span>Total</span>
                     <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1light-orange">${totalAmount}</span>
                   </div>
@@ -516,19 +516,19 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
           {/* ===== STEP 4: REVIEW DETAILS ===== */}
           {!sent && state.step === 4 && (
             <div className="flex flex-col gap-4">
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                 Please review your transaction details before confirming.
               </p>
 
               {/* From card */}
               <div className="flex flex-col gap-1">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">From</label>
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">From</label>
                 <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
                   <div className="w-10 h-10 bg-brain-v1dark-orange rounded-xl flex items-center justify-center flex-shrink-0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="#ff9500" strokeWidth="1.5"/><path d="M2 10H22" stroke="#ff9500" strokeWidth="1.5"/></svg>
                   </div>
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">Your Account</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">Your Account</p>
                     <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">1652 ···· 6995 · AED</p>
                   </div>
                 </div>
@@ -543,14 +543,14 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
 
               {/* To card */}
               <div className="flex flex-col gap-1">
-                <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">To</label>
+                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">To</label>
                 <div className="flex items-center gap-3 p-4 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-2xl">
                   <div className="w-10 h-10 bg-brain-v1baby-blue-15 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
                     {state.recipientType === "bank" ? "🏦" : state.recipientType === "wallet" ? "👛" : "🤖"}
                   </div>
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">{getRecipientLabel()}</p>
-                    <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{getRecipientLabel()}</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">
                       {state.recipientType === "bank" ? "Bank Transfer" : state.recipientType === "wallet" ? "Crypto Wallet" : "AI Agent Account"}
                     </p>
                   </div>
@@ -575,7 +575,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                   <path d="M7 5V8" stroke="#ff9500" strokeWidth="1.2" strokeLinecap="round"/>
                   <circle cx="7" cy="10" r="0.5" fill="#ff9500"/>
                 </svg>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
                   Transactions are irreversible. Please verify recipient details before confirming.
                 </p>
               </div>
@@ -590,7 +590,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
               <button
                 onClick={handleNext}
                 disabled={!canContinue}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
+                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
                   canContinue
                     ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                     : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -603,7 +603,7 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
               <button
                 onClick={handleConfirm}
                 disabled={sending}
-                className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-orange rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1light-orange text-base hover:opacity-80 transition-opacity disabled:opacity-50"
+                className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-orange rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1light-orange text-base hover:opacity-80 transition-opacity disabled:opacity-50"
               >
                 {sending ? (
                   <>
@@ -647,7 +647,7 @@ const DetailRow = ({
   valueColor?: string;
 }) => (
   <div className="flex justify-between items-center gap-2">
-    <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
+    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
     <span className={`[font-family:'JetBrains_Mono',Helvetica] text-xs ${valueColor} truncate max-w-[60%] text-right`}>{value}</span>
   </div>
 );
@@ -675,7 +675,7 @@ const RecipientTypeTabs = ({
         <button
           key={t}
           onClick={() => onChange(t)}
-          className={`flex items-center gap-1.5 flex-1 justify-center py-2 rounded-xl text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-all ${
+          className={`flex items-center gap-1.5 flex-1 justify-center py-2 rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-all ${
             sel
               ? "bg-brain-v1dark-orange text-brain-v1light-orange"
               : "text-brain-v1baby-blue-60 hover:text-brain-v1white"

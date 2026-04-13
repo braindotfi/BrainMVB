@@ -101,7 +101,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
         {/* Header */}
         <div className="flex items-center justify-between px-[16px] h-[56px] flex-shrink-0 border-b border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
           <div className="w-8" />
-          <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
+          <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
             Invite Friends
           </h2>
           <button
@@ -124,10 +124,10 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               <GiftIcon />
             </div>
             <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-              <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#7631ee] text-[20px] leading-[24px]">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#7631ee] text-[20px] leading-[24px]">
                 Invite and earn 50 $BRAIN
               </p>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px]">
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-white text-[16px] leading-[20px]">
                 Invite your friends and family and earn 50 $BRAIN per referral
               </p>
             </div>
@@ -138,32 +138,32 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
             <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
               <TeamIcon />
               <div className="flex flex-col gap-[4px] items-center w-full text-center">
-                <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">21</span>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">Friends Joined</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">21</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">Friends Joined</span>
               </div>
             </div>
             <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
               <CoinStackIcon />
               <div className="flex flex-col gap-[4px] items-center w-full text-center">
-                <span className="[font-family:'Gilroy-Bold',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">1050</span>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">$BRAIN Earned</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-bold text-white text-[32px] leading-[32px] w-full">1050</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">$BRAIN Earned</span>
               </div>
             </div>
           </div>
 
           {/* Referral Link */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Referral Link
             </label>
             <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
-              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1 truncate">
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1 truncate">
                 {REFERRAL_URL}
               </span>
               <button
                 onClick={handleCopyLink}
                 data-testid="copy-referral-link"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
                   copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
@@ -174,17 +174,17 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Referral Code */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Referral Code
             </label>
             <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
-              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1">
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-white text-[16px] leading-[20px] flex-1">
                 {REFERRAL_CODE}
               </span>
               <button
                 onClick={handleCopyCode}
                 data-testid="copy-referral-code"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
                   codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
@@ -195,7 +195,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Invite by Email */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[20px]">
               Invite by Email
             </label>
             <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
@@ -205,13 +205,13 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
                 placeholder="johndoe@mail.com"
-                className="flex-1 bg-transparent text-white text-[16px] leading-[20px] [font-family:'Gilroy-Medium',Helvetica] placeholder-[#6c779d] outline-none"
+                className="flex-1 bg-transparent text-white text-[16px] leading-[20px] [font-family:'Plus Jakarta Sans',Helvetica] placeholder-[#6c779d] outline-none"
               />
               <button
                 onClick={handleEmailSend}
                 disabled={!email.trim()}
                 data-testid="send-invite-email"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy-SemiBold',Helvetica] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
                   emailSent
                     ? "bg-[#0d3320] text-[#22c55e]"
                     : email.trim()
@@ -226,7 +226,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Share on Socials */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[16px] leading-[24px]">
               Share on Socials
             </label>
             <div className="flex items-center gap-[8px]">

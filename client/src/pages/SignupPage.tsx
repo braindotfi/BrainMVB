@@ -22,7 +22,7 @@ export function SignupPage() {
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
         <div className="flex items-center gap-2">
           <img src="/figmaAssets/frame-1000002163.svg" alt="Brain" className="w-6 h-6" />
-          <span className="[font-family:'Gilroy-Bold',Helvetica] text-white text-xl tracking-tight">brain</span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-xl tracking-tight">brain</span>
         </div>
       </header>
 
@@ -37,7 +37,7 @@ export function SignupPage() {
 
       {/* ── Footer ── */}
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <span className="[font-family:'Mont-Regular',Helvetica] text-[#3a4060] text-sm">
+        <span className="[font-family:'Outfit',Helvetica] text-[#3a4060] text-sm">
           Copyright © 2025 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
@@ -74,7 +74,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
     return (
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[#a8b9f4] text-base [font-family:'Gilroy-Medium',Helvetica]">
+        <span className="text-[#a8b9f4] text-base [font-family:'Plus Jakarta Sans',Helvetica]">
           Setting up your wallet &amp; accounts…
         </span>
       </div>
@@ -93,7 +93,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
       {/* Divider */}
       <div className="flex items-center gap-3 w-full">
         <div className="flex-1 h-px bg-[#1d2132]" />
-        <span className="text-[#414965] text-xs [font-family:'Mont-Regular',Helvetica]">or continue with demo</span>
+        <span className="text-[#414965] text-xs [font-family:'Outfit',Helvetica]">or continue with demo</span>
         <div className="flex-1 h-px bg-[#1d2132]" />
       </div>
 
@@ -101,7 +101,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
       <button
         onClick={handleDemoLogin}
         data-testid="button-demo-login"
-        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
+        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
         <img src="/figmaAssets/frame-1000002163.svg" alt="" className="w-5 h-5 opacity-70" />
         Continue with Demo

@@ -120,7 +120,7 @@ const Tag = ({ children, color = "grey" }: { children: React.ReactNode; color?: 
   return (
     <span
       className="flex-shrink-0 inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] whitespace-nowrap"
-      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text, fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", lineHeight: "14px" }}
+      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text, fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "11px", lineHeight: "14px" }}
     >{children}</span>
   );
 };
@@ -128,7 +128,7 @@ const Tag = ({ children, color = "grey" }: { children: React.ReactNode; color?: 
 const CategoryTag = ({ children }: { children: React.ReactNode }) => (
   <span
     className="flex-shrink-0 inline-flex items-center justify-center px-[4px] py-[1px] rounded-[20px] whitespace-nowrap"
-    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)", color: "#6c779d", fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "11px", lineHeight: "14px" }}
+    style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)", color: "#6c779d", fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "11px", lineHeight: "14px" }}
   >{children}</span>
 );
 
@@ -139,7 +139,7 @@ const PanelHeader = ({ title, right }: { title: string; right?: React.ReactNode 
     className="flex items-center justify-between px-[16px] flex-shrink-0"
     style={{ height: "48px", borderBottom: `1px solid ${BORDER}`, background: CARD_BG }}
   >
-    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>{title}</span>
+    <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>{title}</span>
     {right}
   </div>
 );
@@ -155,8 +155,8 @@ const StatCard = ({
   tags: React.ReactNode;
 }) => (
   <div className="flex-1 flex flex-col gap-[8px] p-[16px] rounded-[16px]" style={{ background: CARD_BG }}>
-    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "14px", color: "#414965" }}>{label}</span>
-    <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+    <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "13px", lineHeight: "14px", color: "#414965" }}>{label}</span>
+    <p style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
       <span style={{ fontSize: "20px", lineHeight: "24px", color: "#a8b9f4" }}>{mainInt}</span>
       {mainDec && <span style={{ fontSize: "16px", lineHeight: "24px", color: subColor || "#a8b9f4" }}>{mainDec}</span>}
     </p>
@@ -174,7 +174,7 @@ const CfBtn = ({ label, active, onClick }: { label: string; active: boolean; onC
     className="flex items-center justify-center px-[8px] py-[4px] rounded-[100px] flex-shrink-0 transition-colors"
     style={{ background: active ? "#4a2300" : "transparent" }}
   >
-    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: active ? "#ff9500" : "#414965" }}>{label}</span>
+    <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "12px", lineHeight: "16px", color: active ? "#ff9500" : "#414965" }}>{label}</span>
   </button>
 );
 
@@ -203,7 +203,7 @@ const CfCrosshair = (chartProps: any) => {
       <circle cx={x} cy={inflowY} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
       {outflowY !== null && <circle cx={x} cy={outflowY} r={3} fill="#d20344" stroke="#0a0c10" strokeWidth={2} />}
       <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
-      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
+      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Plus Jakarta Sans', Helvetica" fontWeight="600">{formatted}</text>
     </g>
   );
 };
@@ -241,7 +241,7 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
       {/* Y-axis labels overlaid on right edge */}
       <div className="absolute inset-y-0 right-0 flex flex-col justify-between py-[8px] pr-[8px]" style={{ pointerEvents: "none" }}>
         {CF_Y_LABELS.map((l) => (
-          <span key={l} style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", color: "#6c779d", textAlign: "right", lineHeight: "14px" }}>{l}</span>
+          <span key={l} style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "10px", color: "#6c779d", textAlign: "right", lineHeight: "14px" }}>{l}</span>
         ))}
       </div>
     </div>
@@ -249,7 +249,7 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
     {/* X-axis labels row */}
     <div className="flex-shrink-0 flex items-center justify-between px-[4px] py-[4px]" style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
       {CF_X_LABELS.map((l, i) => (
-        <span key={i} style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "10px", color: "#6c779d", padding: "0 4px" }}>{l}</span>
+        <span key={i} style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "10px", color: "#6c779d", padding: "0 4px" }}>{l}</span>
       ))}
     </div>
 
@@ -258,8 +258,8 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
       <div className="flex gap-[8px] items-start">
         <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#42bf23" }} />
         <div className="flex flex-col">
-          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Inflow</span>
-          <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+          <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Inflow</span>
+          <p style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
             <span style={{ fontSize: "16px", lineHeight: "24px" }}>$6,245</span>
             <span style={{ fontSize: "13px", lineHeight: "24px" }}>.23</span>
           </p>
@@ -268,8 +268,8 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
       <div className="flex gap-[8px] items-start">
         <div className="flex-shrink-0 mt-[6px] h-[4px] w-[10px] rounded-[2px]" style={{ background: "#d20344" }} />
         <div className="flex flex-col">
-          <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Outflow</span>
-          <p style={{ fontFamily: "'Gilroy-Medium',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
+          <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "12px", lineHeight: "14px", color: "#6c779d" }}>Outflow</span>
+          <p style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: 0, lineHeight: 0, color: "#a8b9f4" }}>
             <span style={{ fontSize: "16px", lineHeight: "24px" }}>$1,536</span>
             <span style={{ fontSize: "13px", lineHeight: "24px" }}>.69</span>
           </p>
@@ -308,8 +308,8 @@ const AccountRow = ({
 }) => (
   <div className="flex items-start justify-between">
     <div className="flex flex-col gap-[4px] min-w-0 mr-[8px]">
-      <span className="truncate" style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{name}</span>
-      <span className="truncate" style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{sub}</span>
+      <span className="truncate" style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{name}</span>
+      <span className="truncate" style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{sub}</span>
     </div>
     <div className="flex flex-col items-end gap-[3px] flex-shrink-0">
       <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>{amount}</span>
@@ -505,7 +505,7 @@ export const DashboardPage = (): JSX.Element => {
             {/* Empty state */}
             {!walletAcc && !user?.walletAddress && agents.length === 0 && (
               <div className="flex-1 flex items-center justify-center">
-                <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", color: "#414965" }}>Connect your wallet to see accounts</span>
+                <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "13px", color: "#414965" }}>Connect your wallet to see accounts</span>
               </div>
             )}
           </div>
@@ -536,19 +536,19 @@ export const DashboardPage = (): JSX.Element => {
             className="flex items-center justify-between px-[16px] flex-shrink-0"
             style={{ height: "48px", borderBottom: `1px solid ${BORDER}`, background: "rgba(10,12,16,0.8)", backdropFilter: "blur(10px)" }}
           >
-            <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>Recent Activity</span>
+            <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "16px", lineHeight: "24px", color: "#a8b9f4" }}>Recent Activity</span>
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col gap-[12px] px-[16px] py-[12px]">
             {activityItems.map((item, i) => (
               <div key={i} className="flex flex-col gap-[12px]">
                 <div className="flex flex-col gap-[4px]">
-                  <p style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
+                  <p style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
                     {item.spans.map((s, j) => (
                       <span key={j} style={{ color: s.bold ? "#a8b9f4" : "#6c779d" }}>{s.text}</span>
                     ))}
                   </p>
                   <div className="flex items-center gap-[8px]">
-                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
+                    <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
                     <CategoryTag>{item.tag}</CategoryTag>
                   </div>
                 </div>
@@ -569,11 +569,11 @@ export const DashboardPage = (): JSX.Element => {
               <div key={i} className="flex flex-col gap-[12px]">
                 <div className="flex flex-col gap-[8px]">
                   <div className="flex flex-col gap-[4px]">
-                    <p style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
+                    <p style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "14px", lineHeight: "20px", color: "#a8b9f4" }}>
                       {item.actor && <span>{item.actor}</span>}
                       <span style={{ color: item.actor ? "#6c779d" : "#a8b9f4" }}>{item.message}</span>
                     </p>
-                    <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
+                    <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>{item.time}</span>
                   </div>
                   {item.requiresAction && (
                     <div className="flex gap-[8px]">
@@ -585,7 +585,7 @@ export const DashboardPage = (): JSX.Element => {
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                           <path d="M3 8.5L6.5 12L13 5" stroke="#42bf23" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#42bf23" }}>Approve</span>
+                        <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#42bf23" }}>Approve</span>
                       </button>
                       <button
                         data-testid="button-deny-alert"
@@ -595,7 +595,7 @@ export const DashboardPage = (): JSX.Element => {
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                           <path d="M4.5 4.5L11.5 11.5M11.5 4.5L4.5 11.5" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round"/>
                         </svg>
-                        <span style={{ fontFamily: "'Gilroy-SemiBold',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#d20344" }}>Deny</span>
+                        <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "12px", lineHeight: "16px", color: "#d20344" }}>Deny</span>
                       </button>
                     </div>
                   )}

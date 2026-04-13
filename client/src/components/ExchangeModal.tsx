@@ -46,7 +46,7 @@ const stepLabels = ["From Asset", "Amount", "To Asset", "Review"];
 const StepDot = ({ n, current }: { n: number; current: number }) => (
   <div className="flex items-center">
     <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold transition-colors ${
+      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${
         n < current
           ? "bg-brain-v1green text-white"
           : n === current
@@ -84,13 +84,13 @@ function AssetSelectCard({
       <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
         <AssetIcon asset={asset} size={36} />
         <div className="flex-1 min-w-0">
-          <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">{asset.name}</p>
+          <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{asset.name}</p>
           <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{asset.ticker} · {asset.balance}</p>
         </div>
         {(onEdit || readOnly) && (
           <button
             onClick={onEdit}
-            className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+            className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
             data-testid="btn-edit-asset"
           >
             Edit
@@ -105,7 +105,7 @@ function AssetSelectCard({
       className="flex items-center justify-between w-full p-4 rounded-2xl border border-dashed border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965] transition-colors text-left"
       data-testid="btn-select-asset"
     >
-      <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-60 text-sm">{placeholder}</span>
+      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-sm">{placeholder}</span>
       <div className="w-7 h-7 rounded-full bg-brain-v1dark-orange flex items-center justify-center flex-shrink-0">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M6 2V10M2 6H10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
@@ -134,8 +134,8 @@ function SearchPanel({
     <>
       <div className="flex items-center gap-3 px-6 pt-6 pb-5 border-b border-[#1d2131] flex-shrink-0">
         <div className="flex-1 min-w-0">
-          <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">Select Asset</h2>
-          <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">Search or pick from your holdings</p>
+          <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">Select Asset</h2>
+          <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">Search or pick from your holdings</p>
         </div>
         <button
           onClick={onClose}
@@ -158,12 +158,12 @@ function SearchPanel({
             placeholder="Search by name or ticker…"
             value={query}
             onChange={e => onQueryChange(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder:text-brain-v1baby-blue-60"
+            className="flex-1 bg-transparent outline-none text-brain-v1white text-sm [font-family:'Plus Jakarta Sans',Helvetica] placeholder:text-brain-v1baby-blue-60"
             autoFocus
             data-testid="input-asset-search"
           />
         </div>
-        <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-3">All Assets</p>
+        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-3">All Assets</p>
         <div className="flex flex-col gap-2">
           {assets.map(asset => (
             <button
@@ -178,7 +178,7 @@ function SearchPanel({
             >
               <AssetIcon asset={asset} size={36} />
               <div className="flex-1 min-w-0">
-                <p className={`[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm transition-colors ${selected?.id === asset.id ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
+                <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm transition-colors ${selected?.id === asset.id ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
                   {asset.name}
                 </p>
                 <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{asset.ticker} · {asset.balance}</p>
@@ -195,7 +195,7 @@ function SearchPanel({
             </button>
           ))}
           {assets.length === 0 && (
-            <p className="text-brain-v1baby-blue-60 text-sm text-center py-6 [font-family:'Gilroy-Medium',Helvetica]">No assets found</p>
+            <p className="text-brain-v1baby-blue-60 text-sm text-center py-6 [font-family:'Plus Jakarta Sans',Helvetica]">No assets found</p>
           )}
         </div>
       </div>
@@ -290,32 +290,32 @@ export function ExchangeModal({ open, onClose }: Props) {
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-2xl">Exchange Submitted!</h3>
-              <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
+              <h3 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-2xl">Exchange Submitted!</h3>
+              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
                 {amount} {fromAsset?.ticker} → {toAsset?.ticker} is being processed.
               </p>
             </div>
             <div className="w-full bg-brain-v1baby-blue-15 rounded-2xl p-4 text-left space-y-2">
               <div className="flex justify-between items-center">
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">From</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">From</span>
                 <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{fromAsset?.name} ({fromAsset?.ticker})</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">To</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">To</span>
                 <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{toAsset?.name} ({toAsset?.ticker})</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">Amount</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">Amount</span>
                 <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs">{amount} {fromAsset?.ticker}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs">Status</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">Status</span>
                 <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1green text-xs">Confirmed</span>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
+              className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
             >
               Done
             </button>
@@ -348,10 +348,10 @@ export function ExchangeModal({ open, onClose }: Props) {
                 </button>
               )}
               <div className="flex-1 min-w-0">
-                <h2 className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
+                <h2 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-2xl leading-tight">
                   {step === 4 ? "Review Details" : "Exchange Asset"}
                 </h2>
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-sm mt-0.5">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-sm mt-0.5">
                   {stepLabels[step - 1]}
                 </p>
               </div>
@@ -380,7 +380,7 @@ export function ExchangeModal({ open, onClose }: Props) {
               {/* STEP 1 — Select From Asset */}
               {step === 1 && (
                 <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                     Choose which asset you'd like to exchange.
                   </p>
                   <AssetSelectCard
@@ -395,31 +395,31 @@ export function ExchangeModal({ open, onClose }: Props) {
               {/* STEP 2 — Enter Amount */}
               {step === 2 && (
                 <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                     Enter the amount you'd like to exchange.
                   </p>
                   <div>
-                    <label className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#414965] text-base block mb-2">Amount</label>
+                    <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base block mb-2">Amount</label>
                     <div className="flex items-center bg-[#222737] rounded-2xl px-4 h-14">
                       <input
                         type="number"
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="flex-1 bg-transparent outline-none text-white text-xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold placeholder:text-[#414965] min-w-0"
+                        className="flex-1 bg-transparent outline-none text-white text-xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold placeholder:text-[#414965] min-w-0"
                         data-testid="input-exchange-amount"
                       />
-                      <span className="text-[#414965] text-sm [font-family:'Gilroy-SemiBold',Helvetica] font-semibold ml-2 flex-shrink-0">
+                      <span className="text-[#414965] text-sm [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ml-2 flex-shrink-0">
                         {fromAsset?.ticker ?? ""}
                       </span>
                     </div>
                     {fromAsset && (
-                      <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-xs mt-1.5">
+                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-1.5">
                         Available: {fromAsset.balance}
                       </p>
                     )}
                     {amountExceedsBalance && (
-                      <p className="[font-family:'Gilroy-Medium',Helvetica] text-red-400 text-xs mt-1">
+                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs mt-1">
                         Amount exceeds your available balance of {fromAsset?.balance}
                       </p>
                     )}
@@ -430,12 +430,12 @@ export function ExchangeModal({ open, onClose }: Props) {
               {/* STEP 3 — Select To Asset */}
               {step === 3 && (
                 <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                     Choose which asset you'd like to receive.
                   </p>
 
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Current Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Current Asset</p>
                     <AssetSelectCard
                       asset={fromAsset}
                       placeholder=""
@@ -454,7 +454,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </div>
 
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Target Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Target Asset</p>
                     <AssetSelectCard
                       asset={toAsset}
                       placeholder="Select an asset to exchange into"
@@ -464,7 +464,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </div>
 
                   {toAsset && fromAsset && toAsset.id === fromAsset.id && (
-                    <p className="[font-family:'Gilroy-Medium',Helvetica] text-red-400 text-xs">
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs">
                       Target asset must be different from source asset.
                     </p>
                   )}
@@ -474,22 +474,22 @@ export function ExchangeModal({ open, onClose }: Props) {
               {/* STEP 4 — Review */}
               {step === 4 && (
                 <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Gilroy-Medium',Helvetica] text-brain-v1baby-blue-60 text-sm">
+                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
                     Confirm the details before submitting your exchange.
                   </p>
 
                   {/* From asset */}
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging From</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging From</p>
                     <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
                       {fromAsset && <AssetIcon asset={fromAsset} size={36} />}
                       <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">{fromAsset?.name}</p>
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{fromAsset?.name}</p>
                         <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{fromAsset?.ticker} · {fromAsset?.balance}</p>
                       </div>
                       <button
                         onClick={() => setStep(1)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
                         data-testid="btn-edit-from"
                       >
                         Edit
@@ -499,16 +499,16 @@ export function ExchangeModal({ open, onClose }: Props) {
 
                   {/* To asset */}
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging To</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchanging To</p>
                     <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
                       {toAsset && <AssetIcon asset={toAsset} size={36} />}
                       <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">{toAsset?.name}</p>
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">{toAsset?.name}</p>
                         <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{toAsset?.ticker} · {toAsset?.balance}</p>
                       </div>
                       <button
                         onClick={() => setStep(3)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
                         data-testid="btn-edit-to"
                       >
                         Edit
@@ -518,16 +518,16 @@ export function ExchangeModal({ open, onClose }: Props) {
 
                   {/* Amount */}
                   <div>
-                    <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchange Amount</p>
+                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Exchange Amount</p>
                     <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#1d2131] bg-brain-v1baby-blue-15">
                       <div className="flex-1 min-w-0">
-                        <p className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm">
+                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm">
                           {parseFloat(amount || "0").toLocaleString()} <span className="text-brain-v1baby-blue-60">{fromAsset?.ticker}</span>
                         </p>
                       </div>
                       <button
                         onClick={() => setStep(2)}
-                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Gilroy-SemiBold',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="px-3 py-1 bg-brain-v1dark-orange rounded-full text-brain-v1light-orange text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold hover:opacity-80 transition-opacity flex-shrink-0"
                         data-testid="btn-edit-amount"
                       >
                         Edit
@@ -545,7 +545,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                 <button
                   onClick={() => setStep((s) => (s + 1) as Step)}
                   disabled={!canContinue}
-                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-base transition-all ${
+                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-all ${
                     canContinue
                       ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
                       : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
@@ -561,7 +561,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                 <button
                   onClick={handleConfirm}
                   disabled={confirming}
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-green rounded-2xl [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-base hover:opacity-80 transition-opacity disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-brain-v1dark-green rounded-2xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1green text-base hover:opacity-80 transition-opacity disabled:opacity-50"
                   data-testid="btn-exchange-confirm"
                 >
                   {confirming ? (

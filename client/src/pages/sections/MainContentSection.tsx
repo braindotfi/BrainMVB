@@ -46,10 +46,10 @@ const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agen
       <div className="bg-cover bg-[50%_50%] w-12 h-12 flex-shrink-0 rounded-full" style={{ backgroundImage: `url(${avatarSrc})` }} />
     )}
     <div className="flex flex-col items-start justify-center flex-1 min-w-0">
-      <div className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1white text-sm tracking-[0] leading-5 whitespace-nowrap">
+      <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm tracking-[0] leading-5 whitespace-nowrap">
         {name}
       </div>
-      <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-brain-v1baby-blue-60 text-[11px] tracking-[0] leading-[14px] w-full line-clamp-2">
+      <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-[11px] tracking-[0] leading-[14px] w-full line-clamp-2">
         {description}
       </div>
     </div>
@@ -78,11 +78,11 @@ const AgentRow = ({ agents, onAdd }: { agents: Agent[]; onAdd: (id: string) => v
 const AgentSection = ({ title, row1, row2, onAdd }: { title: string; row1: Agent[]; row2: Agent[]; onAdd: (id: string) => void }) => (
   <div className="flex flex-col items-start gap-4 w-full">
     <div className="flex items-start justify-between w-full">
-      <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xl tracking-[0] leading-6 whitespace-nowrap">
+      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xl tracking-[0] leading-6 whitespace-nowrap">
         {title}
       </span>
       <button className="inline-flex items-center justify-center gap-0.5 px-2.5 py-1 bg-brain-v1baby-blue-15 rounded-[100px] cursor-pointer">
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-brain-v1baby-blue-100 text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">See All</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-100 text-xs font-semibold tracking-[0] leading-4 whitespace-nowrap">See All</span>
         <img className="w-4 h-4" alt="Arrow" src="/figmaAssets/icons-1.svg" />
       </button>
     </div>
@@ -137,7 +137,7 @@ export const MainContentSection = (): JSX.Element => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agents..."
-              className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Gilroy-Medium',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
+              className="flex-1 bg-transparent text-brain-v1white text-sm [font-family:'Plus Jakarta Sans',Helvetica] placeholder-brain-v1baby-blue-30 outline-none"
             />
             {search && (
               <button onClick={() => setSearch("")} className="text-brain-v1baby-blue-30 hover:text-brain-v1white transition-colors flex-shrink-0">
@@ -177,14 +177,14 @@ export const MainContentSection = (): JSX.Element => {
           {filtered !== null ? (
             <div className="flex flex-col gap-4 w-full">
               <div className="flex items-center justify-between">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xl">
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xl">
                   Results <span className="text-brain-v1baby-blue-30 text-base">({filtered.length})</span>
                 </span>
               </div>
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
                   <span className="text-3xl">🔍</span>
-                  <span className="text-sm text-brain-v1baby-blue-30 [font-family:'Gilroy-Medium',Helvetica]">
+                  <span className="text-sm text-brain-v1baby-blue-30 [font-family:'Plus Jakarta Sans',Helvetica]">
                     No agents found for "{search}"
                   </span>
                 </div>

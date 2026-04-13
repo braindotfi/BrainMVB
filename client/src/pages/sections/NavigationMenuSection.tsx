@@ -119,7 +119,7 @@ const CountBadge = ({ count, purple = false }: { count: number; purple?: boolean
     className="flex items-center justify-center flex-shrink-0 px-[4px] py-[2px] rounded-[4px]"
     style={{ background: purple ? "rgba(118,49,238,0.18)" : "#222737", minWidth: "18px" }}
   >
-    <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "12px", lineHeight: "12px", color: purple ? "#9d5cf5" : "#6c779d", textAlign: "center" as const }}>
+    <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica", fontSize: "12px", lineHeight: "12px", color: purple ? "#9d5cf5" : "#6c779d", textAlign: "center" as const }}>
       {count}
     </span>
   </div>
@@ -262,7 +262,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className="w-[8px] h-[8px] rounded-full flex-shrink-0"
               style={{ background: "#7631ee", animation: "pulse 2s infinite" }}
             />
-            <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif", fontSize: "16px", lineHeight: "22px", color: "#a8b9f4" }}>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "16px", lineHeight: "22px", color: "#a8b9f4" }}>
               Insights for You
             </span>
           </div>
@@ -282,12 +282,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           {insightsLoading || insightsGenerating ? (
             <div className="flex items-center gap-[8px]">
               <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee] animate-pulse flex-shrink-0" />
-              <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#6c779d" }}>
+              <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#6c779d" }}>
                 Brain AI is analysing your accounts…
               </p>
             </div>
           ) : (
-            <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
+            <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
               Brain AI analysed your accounts and found {insightsData.length} personalised recommendations.
             </p>
           )}
@@ -325,7 +325,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 >
                   <span
                     style={{
-                      fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                       fontSize: "10px",
                       lineHeight: "13px",
                       letterSpacing: "0.07em",
@@ -337,7 +337,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   </span>
                   <p
                     style={{
-                      fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                       fontSize: "13px",
                       lineHeight: "19px",
                       color: "#d0d8f0",
@@ -347,7 +347,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   </p>
                   <span
                     style={{
-                      fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                       fontSize: "12px",
                       lineHeight: "16px",
                       color: c.tag,
@@ -366,7 +366,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           className="flex-shrink-0 px-[16px] py-[12px]"
           style={{ borderTop: "1px solid #1d2132" }}
         >
-          <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "11px", lineHeight: "15px", color: "#414965", textAlign: "center" as const }}>
+          <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "11px", lineHeight: "15px", color: "#414965", textAlign: "center" as const }}>
             {insightsGeneratedAt
               ? `Last updated ${insightsGeneratedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Refreshes every 24h · Powered by Brain AI`
               : "Insights refresh every 24 hours · Powered by Brain AI"}
@@ -393,11 +393,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       >
         {/* Header */}
         <div className="flex items-center justify-between px-[16px] py-[16px]">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Notifications</span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Notifications</span>
           <div className="flex items-center gap-2">
             <button
               onClick={markAllRead}
-              className="h-6 flex items-center px-[10px] rounded-[100px] bg-[#222737] [font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
+              className="h-6 flex items-center px-[10px] rounded-[100px] bg-[#222737] [font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
             >
               Mark all read
             </button>
@@ -417,7 +417,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
               <span className="text-2xl">🔔</span>
-              <span className="text-xs [font-family:'Gilroy-Medium',Helvetica]">No notifications</span>
+              <span className="text-xs [font-family:'Plus Jakarta Sans',Helvetica]">No notifications</span>
             </div>
           ) : notifications.map((n, i) => (
             <div
@@ -438,11 +438,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-[13px] leading-snug [font-family:'Gilroy-SemiBold',Helvetica] ${!n.read ? "text-[#f97316]" : "text-[#8899bb]"}`}>
+                <p className={`text-[13px] leading-snug [font-family:'Plus Jakarta Sans',Helvetica] ${!n.read ? "text-[#f97316]" : "text-[#8899bb]"}`}>
                   {n.title}
                 </p>
-                <p className="text-[11px] text-[#6c779d] [font-family:'Gilroy-Medium',Helvetica] mt-1 leading-relaxed">{n.body}</p>
-                <p className="text-[11px] text-[#414965] [font-family:'Gilroy-Medium',Helvetica] mt-1">{n.time}</p>
+                <p className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] mt-1 leading-relaxed">{n.body}</p>
+                <p className="text-[11px] text-[#414965] [font-family:'Plus Jakarta Sans',Helvetica] mt-1">{n.time}</p>
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
@@ -461,7 +461,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               onClick={() => setNotificationsOpen(false)}
               className="w-full flex items-center justify-center gap-2 py-[10px] bg-[#222737] hover:opacity-80 transition-opacity rounded-[100px]"
             >
-              <span className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-[#6c779d] text-sm">View All Notifications</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#6c779d] text-sm">View All Notifications</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -574,7 +574,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           >
             <span
               style={{
-                fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                 fontWeight: 600,
                 fontSize: "20px",
                 lineHeight: "24px",
@@ -602,7 +602,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                   <path d="M4 7h20M4 14h14M4 21h8" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
-                <p style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", lineHeight: "18px", color: "#414965" }}>
+                <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "13px", lineHeight: "18px", color: "#414965" }}>
                   No chat history yet.<br />Start a conversation with Brain.
                 </p>
               </div>
@@ -613,7 +613,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                     {/* Month label */}
                     <div style={{ paddingLeft: "8px", paddingBottom: "4px" }}>
                       <span style={{
-                        fontFamily: "'Gilroy-SemiBold', Helvetica, sans-serif",
+                        fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                         fontWeight: 600,
                         fontSize: "12px",
                         lineHeight: "16px",
@@ -643,7 +643,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                             <span
                               className="flex-1 truncate group-hover/row:text-[#ff9500] transition-colors"
                               style={{
-                                fontFamily: "'Gilroy-Medium', Helvetica, sans-serif",
+                                fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
                                 fontSize: "14px",
                                 lineHeight: "18px",
                                 color: "#6c779d",
@@ -698,7 +698,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                                   <circle cx="11" cy="11.5" r="1.8" stroke="#6c779d" strokeWidth="1.1"/>
                                   <path d="M4.7 6.1L9.3 3.4M4.7 7.9L9.3 10.6" stroke="#6c779d" strokeWidth="1.1" strokeLinecap="round"/>
                                 </svg>
-                                <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", color: "#6c779d" }}>
+                                <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "13px", color: "#6c779d" }}>
                                   Share
                                 </span>
                               </button>
@@ -712,7 +712,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                                   <path d="M2 4h10M5 4V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V4M5.5 6.5v4M8.5 6.5v4M3.5 4l.7 7.5a.5.5 0 0 0 .5.5h4.6a.5.5 0 0 0 .5-.5L10.5 4" stroke="#d20344" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <span style={{ fontFamily: "'Gilroy-Medium', Helvetica, sans-serif", fontSize: "13px", color: "#d20344" }}>
+                                <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "13px", color: "#d20344" }}>
                                   Delete
                                 </span>
                               </button>
@@ -781,7 +781,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img className="w-5 h-5" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
               {unreadCount > 0 && (
                 <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center px-[4px] py-[1px] rounded-[4px] min-w-[14px]" style={{ background: "#1a1f2e" }}>
-                  <span style={{ fontFamily: "'Gilroy-SemiBold', Helvetica", fontSize: "9px", lineHeight: "13px", color: "#6c779d" }}>{unreadCount}</span>
+                  <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica", fontSize: "9px", lineHeight: "13px", color: "#6c779d" }}>{unreadCount}</span>
                 </div>
               )}
             </button>
@@ -828,7 +828,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               alt="Brain"
               src="/figmaAssets/frame-1000002163.svg"
             />
-            <div className="[font-family:'Gridular-Regular',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
+            <div className="[font-family:'Space Grotesk',Helvetica] font-normal text-transparent text-[24px] leading-7 whitespace-nowrap select-none">
               <span className="text-[#7631ee]">br</span>
               <span className="text-[#ffffff]">ai</span>
               <span className="text-[#7631ee]">n</span>
@@ -848,7 +848,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center px-2 py-0 w-full">
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
             </div>
 
             <div className="flex flex-col items-start gap-1 w-full">
@@ -858,7 +858,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
                     <DashboardIcon active={isActive("/dashboard")} />
                   </div>
-                  <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                  <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/dashboard") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                     Dashboard
                   </span>
                   {isActive("/dashboard") && (
@@ -875,7 +875,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                     <Link href={item.path} className="w-full">
                       <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                         <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                        <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                           {item.label}
                         </span>
                         {isActive(item.path) && (
@@ -889,7 +889,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                     <Link href={item.path} className="w-full">
                       <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                         <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                        <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                           {item.emoji ? `${item.emoji} ` : ""}{item.label}
                         </span>
                         {isActive(item.path) && (
@@ -910,7 +910,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           {/* Other section */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center justify-center gap-2 px-2 py-0 w-full">
-              <span className="flex-1 [font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Other</span>
+              <span className="flex-1 [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Other</span>
             </div>
 
             <button
@@ -918,7 +918,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
               <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
-              <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
+              <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
               {unreadCount > 0 && (
                 <CountBadge count={unreadCount} />
               )}
@@ -934,16 +934,16 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
               <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-6 h-6 flex-shrink-0" style={{ mixBlendMode: "lighten" }} />
-              <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${shareOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Invite Friends</span>
+              <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${shareOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Invite Friends</span>
               <div className="flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-green rounded-full flex-shrink-0">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
               </div>
             </button>
 
             <Link href="/settings" className="w-full">
               <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                 <img className="w-6 h-6 flex-shrink-0" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
-                <span className={`[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/settings") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Settings</span>
+                <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/settings") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Settings</span>
                 {isActive("/settings") && (
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
                     <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -958,14 +958,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
           <button onClick={onCreateAgent} className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
             <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
-            {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
+            {!collapsed && <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
           </button>
           <button
             onClick={onLogout}
             className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity"
           >
             <img className="w-6 h-6 flex-shrink-0" alt="Logout" src="/figmaAssets/logout-icon.svg" />
-            {!collapsed && <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-base font-semibold leading-5 whitespace-nowrap">Logout</span>}
+            {!collapsed && <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-base font-semibold leading-5 whitespace-nowrap">Logout</span>}
           </button>
         </div>
       </nav>

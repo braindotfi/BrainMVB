@@ -120,7 +120,7 @@ const AgentTopBar = ({ onBack, onEdit, isActive, onToggle }: {
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Edit</span>
       </button>
       {/* Stop / Start */}
       <button data-testid="button-stop-agent" onClick={onToggle}
@@ -129,7 +129,7 @@ const AgentTopBar = ({ onBack, onEdit, isActive, onToggle }: {
         {isActive
           ? <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
           : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2L10 6L3 10V2Z" fill="#d20344" /></svg>}
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
           {isActive ? "Stop" : "Start"}
         </span>
       </button>
@@ -140,7 +140,7 @@ const AgentTopBar = ({ onBack, onEdit, isActive, onToggle }: {
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M4 4L12 12M12 4L4 12" stroke="#d20344" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Kill</span>
       </button>
     </div>
   </div>
@@ -159,28 +159,28 @@ const AgentHeaderCard = ({ agent, agentType, agentId }: {
       </div>
       <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
         <div className="flex items-center gap-[4px]">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
             style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px] capitalize">{agentType}</span>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] capitalize">{agentType}</span>
           </div>
         </div>
         <div className="flex items-center gap-[8px] flex-wrap">
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
             Deployed: {agent.deployedAt}
           </span>
           <Dot />
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
             ID: {shortId(agentId)}
           </span>
           <Dot />
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">
             Owner: {truncShort(agent.walletAddress)}
           </span>
         </div>
       </div>
     </div>
-    <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{agent.description}</p>
+    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{agent.description}</p>
   </div>
 );
 
@@ -189,10 +189,10 @@ const AgentHeaderCard = ({ agent, agentType, agentId }: {
 ═══════════════════════════════════════════════════════ */
 const StatCard = ({ label, value, sup, color }: { label: string; value: string; sup?: string; color?: string }) => (
   <div className="rounded-[16px] p-[16px] flex flex-col gap-[8px] flex-1 min-w-0" style={{ background: "#0a0c10" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
+    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[13px] leading-[14px] whitespace-nowrap">{label}</span>
     <p style={{ color: color ?? "#a8b9f4", fontSize: 0, lineHeight: 0 }}>
-      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[20px] leading-[24px]">{value}</span>
-      {sup && <span className="[font-family:'Gilroy-Medium',Helvetica] text-[16px] leading-[24px]">{sup}</span>}
+      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[20px] leading-[24px]">{value}</span>
+      {sup && <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[24px]">{sup}</span>}
     </p>
   </div>
 );
@@ -206,11 +206,11 @@ const PolicyGrid = ({ rows, onEdit }: { rows: PolicyCell[][]; onEdit?: () => voi
   <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
     <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
       <div className="flex items-center gap-[8px]">
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
         <Dot />
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
         <Dot />
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
       </div>
       {onEdit && (
         <button onClick={onEdit}
@@ -219,7 +219,7 @@ const PolicyGrid = ({ rows, onEdit }: { rows: PolicyCell[][]; onEdit?: () => voi
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
         </button>
       )}
     </div>
@@ -229,8 +229,8 @@ const PolicyGrid = ({ rows, onEdit }: { rows: PolicyCell[][]; onEdit?: () => voi
           {row.map((cell, ci) => (
             <div key={ci} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]"
               style={{ background: "#11141b" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cell.label}</span>
-              <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{cell.value}</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{cell.label}</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{cell.value}</span>
             </div>
           ))}
         </div>
@@ -254,11 +254,11 @@ const SchemaSection = ({ rows }: { rows: SchemaRow[] }) => {
     <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
       <div className="px-[16px] py-[12px] flex items-center justify-between"
         style={{ borderBottom: expanded ? "1px solid #1d2132" : "none" }}>
-        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Schema</span>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Schema</span>
         <div className="flex items-center gap-[8px]">
           <button className="flex items-center gap-[4px] px-[12px] py-[7px] rounded-[100px] hover:opacity-80"
             style={{ background: "#222737" }}>
-            <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">View Raw →</span>
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">View Raw →</span>
           </button>
           <button onClick={() => setExpanded(v => !v)}
             className="w-[28px] h-[28px] rounded-full flex items-center justify-center hover:opacity-70"
@@ -292,16 +292,16 @@ const SchemaSection = ({ rows }: { rows: SchemaRow[] }) => {
 ═══════════════════════════════════════════════════════ */
 const TxSectionTitle = ({ title }: { title: string }) => (
   <div className="px-[16px] h-[48px] flex items-center flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{title}</span>
+    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">{title}</span>
   </div>
 );
 
 const TxHeaderCell = ({ children, right }: { children: string; right?: boolean }) => (
-  <span className={`[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] ${right ? "text-right" : ""}`}>{children}</span>
+  <span className={`[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[11px] leading-[14px] ${right ? "text-right" : ""}`}>{children}</span>
 );
 
 const TxCell = ({ children, mono, muted, right }: { children: React.ReactNode; mono?: boolean; muted?: boolean; right?: boolean }) => (
-  <span className={`${mono ? "[font-family:'JetBrains_Mono',Helvetica]" : "[font-family:'Gilroy-SemiBold',Helvetica]"} text-[${muted ? "#6c779d" : "#a8b9f4"}] text-[12px] leading-[16px] ${right ? "text-right" : ""} truncate`}
+  <span className={`${mono ? "[font-family:'JetBrains_Mono',Helvetica]" : "[font-family:'Plus Jakarta Sans',Helvetica]"} text-[${muted ? "#6c779d" : "#a8b9f4"}] text-[12px] leading-[16px] ${right ? "text-right" : ""} truncate`}
     style={{ color: muted ? "#6c779d" : "#a8b9f4" }}>
     {children}
   </span>
@@ -310,7 +310,7 @@ const TxCell = ({ children, mono, muted, right }: { children: React.ReactNode; m
 const StatusBadge = ({ label, color, bg }: { label: string; color: string; bg: string }) => (
   <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] w-fit"
     style={{ background: bg }}>
-    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color }}>{label}</span>
+    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color }}>{label}</span>
   </div>
 );
 
@@ -332,7 +332,7 @@ const RailBadge = ({ rail }: { rail: string }) => {
   return (
     <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] w-fit"
       style={{ background: c.bg }}>
-      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color: c.color }}>{rail}</span>
+      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] leading-[14px] whitespace-nowrap" style={{ color: c.color }}>{rail}</span>
     </div>
   );
 };
@@ -636,7 +636,7 @@ const TradingCrosshair = (chartProps: any) => {
       <line x1={mL} y1={y} x2={width - mR} y2={y} stroke="#ff9500" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.55} />
       <circle cx={x} cy={y} r={3} fill="#42bf23" stroke="#0a0c10" strokeWidth={2} />
       <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={pillRx} fill="#4a2300" />
-      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Gilroy-SemiBold', Helvetica" fontWeight="600">{formatted}</text>
+      <text x={pillX + pillW / 2} y={pillY + pillH / 2 + 3.5} textAnchor="middle" fill="#ff9500" fontSize={10} fontFamily="'Plus Jakarta Sans', Helvetica" fontWeight="600">{formatted}</text>
     </g>
   );
 };
@@ -695,11 +695,11 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             {/* Equity Curve */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
               <div className="flex items-center justify-between px-[16px] py-[12px] h-[48px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Equity Curve</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Equity Curve</span>
                 <div className="flex gap-[2px] p-[2px] rounded-[400px]" style={{ background: "#06070a" }}>
                   {TIME_TABS.map((tab) => (
                     <button key={tab} onClick={() => setChartTab(tab)}
-                      className="px-[8px] py-[4px] text-[12px] [font-family:'Gilroy-SemiBold',Helvetica] transition-all rounded-[100px] leading-[16px]"
+                      className="px-[8px] py-[4px] text-[12px] [font-family:'Plus Jakarta Sans',Helvetica] transition-all rounded-[100px] leading-[16px]"
                       style={{ background: chartTab === tab ? "#4a2300" : "transparent", color: chartTab === tab ? "#ff9500" : "#414965" }}>
                       {tab}
                     </button>
@@ -723,13 +723,13 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
                 </ResponsiveContainer>
                 <div className="absolute right-[8px] top-0 bottom-0 flex flex-col justify-between pointer-events-none" style={{ paddingTop: "8px", paddingBottom: "4px" }}>
                   {chartSet.yLabels.map((lbl) => (
-                    <span key={lbl} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px] text-right" style={{ color: "#6c779d" }}>{lbl}</span>
+                    <span key={lbl} className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] leading-[14px] text-right" style={{ color: "#6c779d" }}>{lbl}</span>
                   ))}
                 </div>
               </div>
               <div className="flex items-center justify-between px-[8px] py-[4px]" style={{ borderTop: "1px solid #1d2132" }}>
                 {chartSet.xLabels.map((lbl, i) => (
-                  <span key={i} className="[font-family:'Gilroy-SemiBold',Helvetica] text-[10px] leading-[14px]" style={{ color: "#6c779d" }}>{lbl}</span>
+                  <span key={i} className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] leading-[14px]" style={{ color: "#6c779d" }}>{lbl}</span>
                 ))}
               </div>
             </div>
@@ -737,18 +737,18 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             {/* Open Positions */}
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
               <div className="px-[16px] py-[12px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Open Positions</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Open Positions</span>
               </div>
               <div className="flex flex-col gap-[12px] px-[16px] py-[12px]">
                 {OPEN_POSITIONS.map((pos, i) => (
                   <div key={i}>
                     <div className="flex items-start justify-between">
                       <div className="flex flex-col gap-[4px]">
-                        <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{pos.market}</span>
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{pos.market}</span>
                         <div className="flex items-center gap-[4px]">
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.dir}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.dir}</span>
                           <Dot />
-                          <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.lev}</span>
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{pos.lev}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-[2px]">
@@ -847,21 +847,21 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
           <div className="grid grid-cols-2 gap-[16px]">
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
               <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Outstanding Loans</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Outstanding Loans</span>
               </div>
               <div className="flex flex-col px-[16px] py-[12px] gap-[12px]">
                 {OUTSTANDING_LOANS.map((loan, i) => (
                   <div key={i} className="flex items-center gap-[8px]">
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.addr}</span>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">{loan.protocol} · {loan.collateral}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.addr}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">{loan.protocol} · {loan.collateral}</span>
                     </div>
                     <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: ltvBg(loan.ltv) }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[11px] leading-[14px]" style={{ color: ltvColor(loan.ltv) }}>LTV {loan.ltv}%</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] leading-[14px]" style={{ color: ltvColor(loan.ltv) }}>LTV {loan.ltv}%</span>
                     </div>
                     <div className="flex flex-col items-end flex-shrink-0">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.amount}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[12px] leading-[16px]" style={{ color: loan.pos ? "#42bf23" : "#d20344" }}>{loan.pct}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[13px] leading-[18px]">{loan.amount}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[12px] leading-[16px]" style={{ color: loan.pos ? "#42bf23" : "#d20344" }}>{loan.pct}</span>
                     </div>
                   </div>
                 ))}
@@ -870,21 +870,21 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
 
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
               <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">LTV Distribution</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">LTV Distribution</span>
               </div>
               <div className="flex flex-col px-[16px] py-[12px] gap-[16px]">
                 {LTV_DISTRIBUTION.map((band) => (
                   <div key={band.label} className="flex flex-col gap-[6px]">
                     <div className="flex items-center justify-between">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{band.label}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{band.loans} Loans</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">{band.label}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{band.loans} Loans</span>
                     </div>
                     <div className="h-[6px] rounded-full w-full" style={{ background: "#1d2132" }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${band.pct}%`, background: band.color }} />
                     </div>
                   </div>
                 ))}
-                <p className="[font-family:'Gilroy-Medium',Helvetica] text-[#414965] text-[12px] leading-[16px]">
+                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[12px] leading-[16px]">
                   Nearest to threshold: 74% (0xc37...043d1)
                 </p>
               </div>
@@ -974,17 +974,17 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
           {/* Current Allocations */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Current Allocations</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Current Allocations</span>
             </div>
             <div className="flex flex-col px-[16px] py-[12px] gap-[16px]">
               {YIELD_ALLOCATIONS.map((alloc, i) => (
                 <div key={i} className="flex flex-col gap-[6px]">
                   <div className="flex items-center justify-between">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{alloc.protocol}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[14px] leading-[20px]">{alloc.protocol}</span>
                     <div className="flex items-center gap-[16px]">
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">APY {alloc.apy}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">APY {alloc.apy}</span>
                       <span className="[font-family:'JetBrains_Mono',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{alloc.amount}</span>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[16px] w-[32px] text-right">{alloc.pct}%</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px] w-[32px] text-right">{alloc.pct}%</span>
                     </div>
                   </div>
                   <div className="h-[6px] rounded-full w-full" style={{ background: "#1d2132" }}>
@@ -1066,7 +1066,7 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
           {/* Allowlisted Recipients */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Allowlisted Recipients</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Allowlisted Recipients</span>
             </div>
             <div className="px-[16px]">
               <div className="grid gap-[8px] py-[10px]"
@@ -1076,8 +1076,8 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
               {ALLOWLISTED_RECIPIENTS.map((r, i) => (
                 <div key={i} className="grid gap-[8px] py-[10px]" style={{ gridTemplateColumns: "1fr 70px 100px 90px 80px", borderTop: "1px solid #0d1018" }}>
                   <div className="flex flex-col">
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">{r.name}</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{r.sub}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[12px] leading-[16px]">{r.name}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{r.sub}</span>
                   </div>
                   <div><RailBadge rail={r.rail} /></div>
                   <TxCell>{r.cap}</TxCell>
@@ -1171,7 +1171,7 @@ const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBa
           {/* Alert Rules */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Alert Rules</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Alert Rules</span>
             </div>
             <div className="px-[16px]">
               <div className="grid gap-[8px] py-[10px]"
@@ -1299,18 +1299,18 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
           {/* Objective */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
-              <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Objective</span>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[24px]">Objective</span>
             </div>
             <div className="flex gap-[8px] p-[16px]">
               <div className="flex flex-col gap-[4px] flex-1 px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Target Outcome</span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Target Outcome</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">
                   {objective?.slice(0, 60) || "Positive PnL · Sharpe > 1.0"}
                 </span>
               </div>
               <div className="flex flex-col gap-[4px] w-[160px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Complexity</span>
-                <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Complexity</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">
                   {complexityLevel}
                 </span>
               </div>
@@ -1321,11 +1321,11 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] py-[12px] flex items-center justify-between" style={{ borderBottom: "1px solid #1d2132" }}>
               <div className="flex items-center gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">Policies</span>
                 <Dot />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">V4</span>
                 <Dot />
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[20px]">edited on-chain 42 days ago</span>
               </div>
               <button onClick={onEdit}
                 className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] hover:opacity-80 flex-shrink-0"
@@ -1333,17 +1333,17 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                   <path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L5.167 13.5l-3.5.833.833-3.5L11.333 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px]">Edit</span>
               </button>
             </div>
             <div className="flex flex-col gap-[16px] p-[16px]">
               {/* Tools Allowed */}
               <div className="flex flex-col gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Tools Allowed</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Tools Allowed</span>
                 <div className="grid grid-cols-3 gap-[8px]">
                   {toolsGrid.map((tool, i) => (
                     <div key={i} className="flex items-center justify-between px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{tool.name}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[13px] leading-[16px]">{tool.name}</span>
                       {tool.allowed ? <CheckIcon /> : <XIcon />}
                     </div>
                   ))}
@@ -1351,7 +1351,7 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
               </div>
               {/* Numeric Limits */}
               <div className="flex flex-col gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Numeric Limits</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Numeric Limits</span>
                 <div className="grid grid-cols-3 gap-[8px]">
                   {[
                     { label: "Primary Limit", value: primaryLimit },
@@ -1359,29 +1359,29 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
                     { label: "Operations / Hour", value: String(opsPerHour) },
                   ].map((c) => (
                     <div key={c.label} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-3 gap-[8px]">
                   <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{execWindow}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Execution Window</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{execWindow}</span>
                   </div>
                   <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Runtime</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{runtimeLabel}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Runtime</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{runtimeLabel}</span>
                   </div>
                   <div className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                    <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Source Type</span>
-                    <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{sourceType}</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">Source Type</span>
+                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{sourceType}</span>
                   </div>
                 </div>
               </div>
               {/* Safety Circuit Breakers */}
               <div className="flex flex-col gap-[8px]">
-                <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Safety Circuit Breakers</span>
+                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[11px] leading-[14px] uppercase tracking-widest">Safety Circuit Breakers</span>
                 <div className="grid grid-cols-3 gap-[8px]">
                   {[
                     { label: "Graduation", value: `${gradDays} / ${gradRequired} Days Clean` },
@@ -1389,8 +1389,8 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
                     { label: "Undeclared Tool", value: "Block + Alert" },
                   ].map((c) => (
                     <div key={c.label} className="flex flex-col gap-[4px] px-[12px] py-[10px] rounded-[8px]" style={{ background: "#11141b" }}>
-                      <span className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
-                      <span className="[font-family:'Gilroy-Medium',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px]">{c.label}</span>
+                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px]">{c.value}</span>
                     </div>
                   ))}
                 </div>
@@ -1522,10 +1522,10 @@ export const AgentDetailPage = (): JSX.Element => {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#11141b] rounded-[16px] border border-[#1d2132]">
         <span className="text-4xl">🤖</span>
-        <p className="[font-family:'Gilroy-SemiBold',Helvetica] text-[#414965] text-[14px]">Agent not found</p>
+        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[14px]">Agent not found</p>
         <button onClick={() => navigate("/agents")}
           className="px-4 py-2 rounded-full text-sm hover:opacity-80"
-          style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy-SemiBold', Helvetica" }}>
+          style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Plus Jakarta Sans', Helvetica" }}>
           Back to Agents
         </button>
       </div>
