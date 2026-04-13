@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Shield } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AreaChart, Area, Tooltip, ResponsiveContainer, Customized } from "recharts";
 import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
@@ -97,6 +98,67 @@ const Dot = () => <div className="w-[4px] h-[4px] rounded-full flex-shrink-0" st
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse rounded-[8px] ${className ?? ""}`} style={{ background: "#1d2132" }} />
 );
+
+/* ── Reputation Banner ── */
+type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; }
+const REP_TC: Record<RepTier, { bg: string; border: string; text: string; shield: string }> = {
+  Legendary: { bg: "#1a0840", border: "rgba(157,92,245,0.25)",  text: "#9d5cf5", shield: "#9d5cf5" },
+  Diamond:   { bg: "#0a1a2e", border: "rgba(56,189,248,0.25)",  text: "#38bdf8", shield: "#38bdf8" },
+  Gold:      { bg: "#1a0e00", border: "rgba(255,149,0,0.25)",   text: "#ff9500", shield: "#ff9500" },
+  Silver:    { bg: "#10131a", border: "rgba(168,185,244,0.25)", text: "#a8b9f4", shield: "#a8b9f4" },
+  Bronze:    { bg: "#140c00", border: "rgba(205,124,47,0.25)",  text: "#cd7c2f", shield: "#cd7c2f" },
+};
+const ReputationBanner = ({ agentId }: { agentId: string }) => {
+  const { data: rep } = useQuery<AgentRep>({
+    queryKey: ["/api/agents", agentId, "reputation"],
+    queryFn: () => fetch(`/api/agents/${agentId}/reputation`).then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!agentId,
+  });
+  if (!rep) return null;
+  const tc = REP_TC[rep.tier];
+  return (
+    <div
+      className="rounded-[16px] p-[16px] flex items-center gap-[16px]"
+      style={{ background: tc.bg, border: `1px solid ${tc.border}` }}
+      data-testid="card-reputation"
+    >
+      <div className="flex-shrink-0 w-[40px] h-[40px] rounded-full flex items-center justify-center"
+        style={{ background: `${tc.shield}18` }}>
+        <Shield size={20} color={tc.shield} strokeWidth={2} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-[8px] flex-wrap">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px]" style={{ color: tc.text }}>
+            {rep.tier}
+          </span>
+          {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
+              Rank {rep.rankLabel}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-[12px] mt-[4px] flex-wrap">
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
+            Top {100 - rep.percentile}% · {rep.validationCount.toLocaleString()} on-chain validations
+          </span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
+            ${rep.totalVolumeUsd.toLocaleString()} lifetime volume
+          </span>
+        </div>
+      </div>
+      <div className="flex-shrink-0 text-right">
+        <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px]" style={{ color: tc.text }}>
+          {rep.score.toLocaleString()}
+        </div>
+        <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-[2px]">
+          Rep Score
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ═══════════════════════════════════════════════════════
    SHARED TOP BAR  (Back ← | Edit · Stop · Kill →)
@@ -690,6 +752,8 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             <StatCard label="Sharpe"       value="1.8" />
           </div>
 
+          <ReputationBanner agentId={agent.id} />
+
           {/* Equity Curve + Open Positions */}
           <div className="grid grid-cols-2 gap-[16px]">
             {/* Equity Curve */}
@@ -843,6 +907,8 @@ const LendingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             <StatCard label="Defaults · 90d" value="0" />
           </div>
 
+          <ReputationBanner agentId={agent.id} />
+
           {/* Outstanding Loans + LTV Distribution */}
           <div className="grid grid-cols-2 gap-[16px]">
             <div className="rounded-[16px] overflow-hidden flex flex-col" style={{ background: "#0a0c10" }}>
@@ -971,6 +1037,8 @@ const YieldAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack }
             <StatCard label="Rebalances · 30d" value="6" />
           </div>
 
+          <ReputationBanner agentId={agent.id} />
+
           {/* Current Allocations */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
             <div className="px-[16px] h-[48px] flex items-center" style={{ borderBottom: "1px solid #1d2132" }}>
@@ -1062,6 +1130,8 @@ const PaymentsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBac
             <StatCard label="Avg Size"        value="$154" />
             <StatCard label="Pending Review"  value="4" color="#ff9500" />
           </div>
+
+          <ReputationBanner agentId={agent.id} />
 
           {/* Allowlisted Recipients */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -1167,6 +1237,8 @@ const AnalyticsAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBa
             <StatCard label="Auto Actions"    value="2" />
             <StatCard label="Compute · 30d"   value="$132" />
           </div>
+
+          <ReputationBanner agentId={agent.id} />
 
           {/* Alert Rules */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -1295,6 +1367,8 @@ const CustomAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack 
             <StatCard label="Policy Violations"  value={String(violationCount)} />
             <StatCard label="Graduation Score"   value={`${graduationScore}%`} />
           </div>
+
+          <ReputationBanner agentId={agent.id} />
 
           {/* Objective */}
           <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>

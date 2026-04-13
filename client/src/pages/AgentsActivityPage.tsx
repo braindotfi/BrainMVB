@@ -4,6 +4,15 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
+type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze";
+const REP_TIER_STYLES: Record<RepTier, { dot: string; text: string }> = {
+  Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
+  Diamond:   { dot: "bg-[#38bdf8]", text: "text-[#38bdf8]" },
+  Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
+  Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
+  Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
+};
+
 /* ── Per-agent spend cap mock data ── */
 const SPEND_DATA: Record<string, { cap: string; unit: string; pct: number }> = {
   alphaflow:     { cap: "$5k",    unit: "/day", pct: 62 },
@@ -42,6 +51,13 @@ const AgentCard = ({
   const isActive = currentStatus === "active";
   const barColor = usedColor(spend.pct);
 
+  const { data: rep } = useQuery<{ tier: RepTier; rankLabel: string }>({
+    queryKey: ["/api/agents", agent.id, "reputation"],
+    queryFn: () => fetch(`/api/agents/${agent.id}/reputation`).then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const repStyle = rep ? REP_TIER_STYLES[rep.tier] : null;
+
   return (
     <div
       data-testid={`card-agent-${agent.id}`}
@@ -61,9 +77,20 @@ const AgentCard = ({
 
         {/* Name + type tag */}
         <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate w-full">
-            {agent.name}
-          </span>
+          <div className="flex items-center gap-[6px]">
+            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate">
+              {agent.name}
+            </span>
+            {repStyle && rep && (
+              <span
+                className={`inline-flex items-center gap-[4px] text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 ${repStyle.text}`}
+                data-testid={`badge-reputation-${agent.id}`}
+              >
+                <span className={`w-[6px] h-[6px] rounded-full flex-shrink-0 ${repStyle.dot}`} />
+                {rep.tier}
+              </span>
+            )}
+          </div>
           <div className="inline-flex w-fit items-center justify-center px-[8px] py-[3px] rounded-[22px]"
             style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
             <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
