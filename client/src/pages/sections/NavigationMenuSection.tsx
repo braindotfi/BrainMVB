@@ -755,7 +755,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <img
                 className="w-[32px] h-[32px] object-contain"
                 alt="Brain"
-                src="/figmaAssets/brain-icon-simple.svg"
+                src="/figmaAssets/brain2x.png"
               />
             </div>
 
@@ -787,19 +787,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               )}
             </button>
 
-            <button
-              title="Invite Friends"
-              onClick={() => setShareOpen(true)}
-              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
-            >
-              <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-5 h-5" style={{ mixBlendMode: "lighten" }} />
-            </button>
-
-            <Link href="/settings">
-              <button title="Settings" className="flex items-center justify-center w-9 h-9 rounded-xl bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15 transition-colors">
-                <img className="w-5 h-5" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
-              </button>
-            </Link>
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
@@ -823,17 +810,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
         {/* Brain logo row — collapse button lives here on the right */}
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center flex-1 min-w-0">
             <img
-              className="w-8 h-8 object-contain flex-shrink-0"
+              className="h-[32px] object-contain flex-shrink-0"
               alt="Brain"
-              src="/figmaAssets/brain-icon-simple.svg"
+              src="/figmaAssets/brainfull2x.png"
             />
-            <div className="[font-family:'Oxanium',sans-serif] font-normal text-transparent text-[28px] leading-[24px] whitespace-nowrap select-none">
-              <span className="text-[#7631ee]">br</span>
-              <span className="text-[#ffffff]">ai</span>
-              <span className="text-[#7631ee]">n</span>
-            </div>
           </div>
           <button
             onClick={onToggle}
@@ -930,28 +912,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               )}
             </button>
 
-            <button
-              onClick={() => setShareOpen(true)}
-              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${shareOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
-            >
-              <img src={shareOpen ? "/figmaAssets/nav-invite-active.png" : "/figmaAssets/nav-invite-normal.png"} alt="Invite Friends" className="w-6 h-6 flex-shrink-0" style={{ mixBlendMode: "lighten" }} />
-              <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${shareOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Invite Friends</span>
-              <div className="flex items-center justify-center px-1.5 py-0.5 bg-brain-v1dark-green rounded-full flex-shrink-0">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1green text-[10px] leading-3 whitespace-nowrap">+50 $BRAIN</span>
-              </div>
-            </button>
-
-            <Link href="/settings" className="w-full">
-              <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                <img className="w-6 h-6 flex-shrink-0" alt="Settings" src="/figmaAssets/navbar-icons-5.svg" />
-                <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/settings") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Settings</span>
-                {isActive("/settings") && (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                    <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            </Link>
           </div>
         </div>
 
