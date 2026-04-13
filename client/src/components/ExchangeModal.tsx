@@ -103,13 +103,15 @@ function AssetSelectCard({
   return (
     <button
       onClick={onOpen}
-      className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full text-left hover:border-[#414965] transition-colors"
+      className="flex items-center gap-[8px] bg-[#222737] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full text-left hover:bg-[#2a2f45] transition-colors"
       data-testid="btn-select-asset"
     >
-      <span className="flex-1 [font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[16px] leading-[24px]">{placeholder}</span>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-        <path d="M6 3L11 8L6 13" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <span className="flex-1 [font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">{placeholder}</span>
+      <div className="size-[32px] rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 2V12M2 7H12" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
     </button>
   );
 }
@@ -373,47 +375,54 @@ export function ExchangeModal({ open, onClose }: Props) {
 
               {/* STEP 1 — Select From Asset */}
               {step === 1 && (
-                <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
-                    Choose which asset you'd like to exchange.
-                  </p>
-                  <AssetSelectCard
-                    asset={fromAsset}
-                    placeholder="Select Asset"
-                    onOpen={() => openSearch("from")}
-                    onEdit={() => openSearch("from")}
-                  />
+                <div className="flex flex-col gap-[24px]">
+                  <div className="flex flex-col">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging from?</p>
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
+                    <AssetSelectCard
+                      asset={fromAsset}
+                      placeholder="Select asset"
+                      onOpen={() => openSearch("from")}
+                      onEdit={() => openSearch("from")}
+                    />
+                  </div>
                 </div>
               )}
 
               {/* STEP 2 — Enter Amount */}
               {step === 2 && (
-                <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
-                    Enter the amount you'd like to exchange.
-                  </p>
-                  <div>
-                    <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base block mb-2">Amount</label>
-                    <div className="flex items-center bg-[#222737] rounded-2xl px-4 h-14">
+                <div className="flex flex-col gap-[24px]">
+                  <div className="flex flex-col">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Amount</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">How much to exchange?</p>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    <div className="flex items-center gap-[2px] bg-[#222737] border border-[#6c779d] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <input
                         type="number"
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="flex-1 bg-transparent outline-none text-white text-xl [font-family:'Plus Jakarta Sans',Helvetica] font-semibold placeholder:text-[#414965] min-w-0"
+                        className="flex-1 bg-transparent outline-none text-white text-[20px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold placeholder:text-[#414965] min-w-0"
                         data-testid="input-exchange-amount"
+                        autoFocus
                       />
-                      <span className="text-[#414965] text-sm [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ml-2 flex-shrink-0">
-                        {fromAsset?.ticker ?? ""}
-                      </span>
+                      <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px] shrink-0 ml-2">
+                        <span className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">
+                          {fromAsset?.ticker ?? "USD"}
+                        </span>
+                      </div>
                     </div>
                     {fromAsset && (
-                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-1.5">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px]">
                         Available: {fromAsset.balance}
                       </p>
                     )}
                     {amountExceedsBalance && (
-                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs mt-1">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-red-400 text-[12px]">
                         Amount exceeds your available balance of {fromAsset?.balance}
                       </p>
                     )}
@@ -423,42 +432,43 @@ export function ExchangeModal({ open, onClose }: Props) {
 
               {/* STEP 3 — Select To Asset */}
               {step === 3 && (
-                <div className="flex flex-col gap-3">
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
-                    Choose which asset you'd like to receive.
-                  </p>
-
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Current Asset</p>
-                    <AssetSelectCard
-                      asset={fromAsset}
-                      placeholder=""
-                      onEdit={() => { setStep(1); }}
-                      readOnly
-                    />
+                <div className="flex flex-col gap-[24px]">
+                  <div className="flex flex-col">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging to?</p>
                   </div>
 
-                  <div className="flex justify-center my-1">
-                    <div className="w-10 h-10 rounded-full bg-brain-v1dark-orange flex items-center justify-center shadow-lg">
+                  <div className="flex flex-col gap-[24px] items-center">
+                    <div className="flex flex-col gap-[4px] w-full">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
+                      <AssetSelectCard
+                        asset={fromAsset}
+                        placeholder=""
+                        onEdit={() => setStep(1)}
+                        readOnly
+                      />
+                    </div>
+
+                    <div className="size-[40px] rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0">
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M5 3L5 17M5 17L2 14M5 17L8 14" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M15 17L15 3M15 3L12 6M15 3L18 6" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M5 3L5 17M5 17L2 14M5 17L8 14" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M15 17L15 3M15 3L12 6M15 3L18 6" stroke="#6c779d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
+                    </div>
+
+                    <div className="flex flex-col gap-[4px] w-full">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
+                      <AssetSelectCard
+                        asset={toAsset}
+                        placeholder="Select asset"
+                        onOpen={() => openSearch("to")}
+                        onEdit={() => openSearch("to")}
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Target Asset</p>
-                    <AssetSelectCard
-                      asset={toAsset}
-                      placeholder="Select Asset"
-                      onOpen={() => openSearch("to")}
-                      onEdit={() => openSearch("to")}
-                    />
-                  </div>
-
                   {toAsset && fromAsset && toAsset.id === fromAsset.id && (
-                    <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-red-400 text-[12px]">
                       Target asset must be different from source asset.
                     </p>
                   )}
@@ -472,9 +482,26 @@ export function ExchangeModal({ open, onClose }: Props) {
                     Confirm the details before submitting your exchange.
                   </p>
 
-                  {/* From asset */}
+                  {/* From account (wallet/bank) */}
                   <div className="flex flex-col gap-[4px]">
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Exchanging From</p>
+                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                      <div className="size-[32px] rounded-[16px] bg-[#1d2132] flex items-center justify-center shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <rect x="2" y="7" width="20" height="13" rx="2" stroke="#a8b9f4" strokeWidth="1.5" />
+                          <path d="M2 11H22" stroke="#a8b9f4" strokeWidth="1.5" />
+                          <circle cx="17" cy="16" r="1.5" fill="#a8b9f4" />
+                        </svg>
+                      </div>
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] flex-1 truncate">
+                        {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* From asset */}
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Current Asset</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         {fromAsset && <AssetIcon asset={fromAsset} size={32} />}
@@ -543,21 +570,23 @@ export function ExchangeModal({ open, onClose }: Props) {
             {/* Footer */}
             <div className="px-6 py-5 border-t border-[#1d2132] flex-shrink-0">
               {step < 4 ? (
-                <button
-                  onClick={() => setStep((s) => (s + 1) as Step)}
-                  disabled={!canContinue}
-                  className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-base transition-all ${
-                    canContinue
-                      ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
-                      : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                  }`}
-                  data-testid="btn-exchange-next"
-                >
-                  Continue
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M5 2L10 7L5 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </button>
+                <div className="flex gap-[16px]">
+                  <button
+                    onClick={handleClose}
+                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                    data-testid="btn-exchange-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setStep((s) => (s + 1) as Step)}
+                    disabled={!canContinue}
+                    className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-40"
+                    data-testid="btn-exchange-next"
+                  >
+                    Next
+                  </button>
+                </div>
               ) : (
                 <div className="flex gap-[16px]">
                   <button
