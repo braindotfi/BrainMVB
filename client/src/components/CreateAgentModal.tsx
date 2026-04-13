@@ -439,6 +439,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [terms, setTerms]     = useState(false);
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched]   = useState(false);
+  const [expandedDeploySteps, setExpandedDeploySteps] = useState<Set<number>>(new Set([1, 2, 3, 4]));
 
   /* ══ TRADING ══ */
   const [t_strategy_type, setT_strategy_type]                   = useState("perpetual_long_short");
@@ -2681,20 +2682,39 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       { n: 2, title: "Capital Transfers",  desc: "USDC moves from your treasury to the agent's sub-account" },
                       { n: 3, title: "Agent Registers",    desc: "ERC-8004 entry created with the policy hash and your owner address" },
                       { n: 4, title: "Agent Goes Live",    desc: "Starts executing within the policy envelope while every action is verified against the hash" },
-                    ].map(({ n, title, desc }) => (
-                      <div key={n} className="flex flex-col w-full">
-                        <div className="flex gap-[16px] items-center w-full">
-                          <div className="bg-[#0a0c10] flex items-center justify-center h-[32px] w-[48px] rounded-[100px] shrink-0">
-                            <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[16px] leading-[16px]">{n}</span>
+                    ].map(({ n, title, desc }) => {
+                      const isExpanded = expandedDeploySteps.has(n);
+                      const toggle = () => setExpandedDeploySteps(prev => {
+                        const next = new Set(prev);
+                        if (next.has(n)) next.delete(n); else next.add(n);
+                        return next;
+                      });
+                      return (
+                        <div key={n} className="flex flex-col w-full">
+                          <div className="flex gap-[16px] items-center w-full">
+                            <div className="bg-[#0a0c10] flex items-center justify-center h-[32px] w-[48px] rounded-[100px] shrink-0">
+                              <span className="font-['Gilroy-SemiBold',sans-serif] text-[#6c779d] text-[16px] leading-[16px]">{n}</span>
+                            </div>
+                            <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[32px] min-w-0">{title}</p>
+                            <button
+                              type="button"
+                              onClick={toggle}
+                              className="shrink-0 hover:opacity-70 transition-opacity"
+                            >
+                              {isExpanded
+                                ? <ChevronUp size={24} className="text-[#6c779d]" />
+                                : <ChevronDown size={24} className="text-[#6c779d]" />
+                              }
+                            </button>
                           </div>
-                          <p className="flex-1 font-['Gilroy-Medium',sans-serif] text-[#a8b9f4] text-[16px] leading-[32px] min-w-0">{title}</p>
-                          <ChevronUp size={24} className="text-[#6c779d] shrink-0" />
+                          {isExpanded && (
+                            <div className="pl-[64px] w-full">
+                              <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">{desc}</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="pl-[64px] w-full">
-                          <p className="font-['Gilroy-Medium',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">{desc}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
