@@ -280,11 +280,11 @@ export function ExchangeModal({ open, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
 
-      <div className="relative z-10 w-[420px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative z-10 w-[420px] max-h-[90vh] flex flex-col bg-[#0a0c10] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* Success overlay */}
         {confirmed && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#11141b] gap-4 px-8">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0c10] gap-4 px-8">
             <div className="w-16 h-16 rounded-full bg-brain-v1dark-green flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <path d="M5 14L11 20L23 8" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -336,7 +336,7 @@ export function ExchangeModal({ open, onClose }: Props) {
         ) : !confirmed ? (
           <>
             {/* Header */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(10,12,16,0.8)] border-b border-[#1d2132] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
               {step > 1 && (
                 <button
                   onClick={() => setStep((s) => (s - 1) as Step)}
@@ -477,23 +477,20 @@ export function ExchangeModal({ open, onClose }: Props) {
 
               {/* STEP 4 — Review */}
               {step === 4 && (
-                <div className="flex flex-col gap-[16px]">
-                  <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px]">
-                    Confirm the details before submitting your exchange.
-                  </p>
-
+                <div className="flex flex-col gap-[12px]">
                   {/* From account (wallet/bank) */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Exchanging From</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                      <div className="size-[32px] rounded-[16px] bg-[#1d2132] flex items-center justify-center shrink-0">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <rect x="2" y="7" width="20" height="13" rx="2" stroke="#a8b9f4" strokeWidth="1.5" />
-                          <path d="M2 11H22" stroke="#a8b9f4" strokeWidth="1.5" />
-                          <circle cx="17" cy="16" r="1.5" fill="#a8b9f4" />
+                      <div className="size-[32px] rounded-[16px] bg-[#1d2132] flex items-center justify-center shrink-0 overflow-hidden">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <rect x="1" y="5" width="14" height="9" rx="1.5" stroke="#a8b9f4" strokeWidth="1.2"/>
+                          <path d="M1 8h14" stroke="#a8b9f4" strokeWidth="1.2"/>
+                          <circle cx="11.5" cy="10.5" r="1" fill="#a8b9f4"/>
+                          <path d="M4.5 5V4a3 3 0 0 1 7 0v1" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/>
                         </svg>
                       </div>
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] flex-1 truncate">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 truncate">
                         {walletAcc ? "Stablecoin Account" : "Your Wallet"}
                       </p>
                     </div>
@@ -501,12 +498,12 @@ export function ExchangeModal({ open, onClose }: Props) {
 
                   {/* From asset */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Current Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         {fromAsset && <AssetIcon asset={fromAsset} size={32} />}
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
-                          {fromAsset?.name} <span className="text-[#6c779d]">({fromAsset?.ticker})</span>
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] truncate">
+                          {fromAsset?.name} ({fromAsset?.ticker})
                         </p>
                       </div>
                       <button
@@ -521,12 +518,12 @@ export function ExchangeModal({ open, onClose }: Props) {
 
                   {/* To asset */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Target Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         {toAsset && <AssetIcon asset={toAsset} size={32} />}
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
-                          {toAsset?.name} <span className="text-[#6c779d]">({toAsset?.ticker})</span>
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] truncate">
+                          {toAsset?.name} ({toAsset?.ticker})
                         </p>
                       </div>
                       <button
@@ -541,10 +538,10 @@ export function ExchangeModal({ open, onClose }: Props) {
 
                   {/* Amount */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">Exchange Amount</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchange Amount</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">
                           {parseFloat(amount || "0").toLocaleString()}
                         </p>
                         <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px]">
