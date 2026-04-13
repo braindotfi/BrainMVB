@@ -279,7 +279,7 @@ export function ExchangeModal({ open, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
 
-      <div className="relative z-10 w-[500px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative z-10 w-[420px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
 
         {/* Success overlay */}
         {confirmed && (
@@ -380,7 +380,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                   </p>
                   <AssetSelectCard
                     asset={fromAsset}
-                    placeholder="Select an asset to exchange from"
+                    placeholder="Select Asset"
                     onOpen={() => openSearch("from")}
                     onEdit={() => openSearch("from")}
                   />
@@ -452,7 +452,7 @@ export function ExchangeModal({ open, onClose }: Props) {
                     <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs mb-2">Target Asset</p>
                     <AssetSelectCard
                       asset={toAsset}
-                      placeholder="Select an asset to exchange into"
+                      placeholder="Select Asset"
                       onOpen={() => openSearch("to")}
                       onEdit={() => openSearch("to")}
                     />
