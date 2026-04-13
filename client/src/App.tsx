@@ -77,6 +77,7 @@ function AppLayout() {
             <Route path="/assistant" component={AssistantPage} />
             <Route path="/marketplace" component={Marketplace} />
             <Route path="/perks">{() => <Redirect to="/dashboard" />}</Route>
+            <Route path="/transactions">{() => <Redirect to="/dashboard" />}</Route>
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/manage/:id" component={AgentManagePage} />
             <Route path="/notifications" component={NotificationsPage} />

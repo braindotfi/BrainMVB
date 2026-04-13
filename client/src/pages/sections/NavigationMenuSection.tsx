@@ -19,8 +19,9 @@ interface DailyInsight {
 }
 
 const mainMenuItems = [
-  { id: "agents", label: "Agents", icon: "/figmaAssets/nav-agent-normal.png", activeIcon: "/figmaAssets/nav-agent-active.png", path: "/agents", emoji: null },
-  { id: "marketplace", label: "Marketplace", icon: "/figmaAssets/nav-marketplace-normal.png", activeIcon: "/figmaAssets/nav-marketplace-active.png", path: "/marketplace", emoji: null },
+  { id: "agents", label: "Agents", path: "/agents" },
+  { id: "marketplace", label: "Marketplace", path: "/marketplace" },
+  { id: "transactions", label: "Transactions", path: "/transactions" },
 ];
 
 const initialNotifications = [
@@ -39,7 +40,7 @@ const EthIcon = () => (
   </svg>
 );
 
-/* ── Sidebar icon components — exact paths from Figma 3146:45452 ── */
+/* ── Sidebar icon components — Figma assets ── */
 
 const CollapseIcon = () => (
   <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -53,66 +54,181 @@ const ExpandIcon = () => (
   </svg>
 );
 
-const DashboardIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#6c779d";
-  return (
-    <svg width="18" height="13" viewBox="0 0 22.2997 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path fill={c} d="M11 0C14.0788 0 16.8608 1.26625 18.8574 3.30469L10.0811 12.082C9.57337 12.5897 9.57337 13.4122 10.0811 13.9199C10.5887 14.4275 11.4113 14.4276 11.9189 13.9199L20.4561 5.38184C21.4353 7.0265 22 8.9469 22 11C22 12.367 21.7485 13.6747 21.292 14.8818C21.0263 15.5843 20.3242 16 19.5732 16H2.42676C1.67575 16 0.973681 15.5843 0.708008 14.8818C0.251487 13.6747 0 12.367 0 11C0 4.92487 4.92487 0 11 0ZM14.2949 3.38086C12.9078 2.781 11.3823 2.57143 9.88477 2.77441C8.38727 2.9775 6.97319 3.58574 5.7959 4.5332C4.61853 5.48092 3.72154 6.73263 3.20312 8.15234C2.68479 9.57204 2.56385 11.1065 2.85352 12.5898C2.99115 13.2945 3.67426 13.7538 4.37891 13.6162C5.08324 13.4784 5.54275 12.7962 5.40527 12.0918C5.20631 11.073 5.28949 10.019 5.64551 9.04395C6.00153 8.06899 6.61725 7.20942 7.42578 6.55859C8.2343 5.90789 9.20594 5.49006 10.2344 5.35059C11.2627 5.21129 12.3102 5.35568 13.2627 5.76758C13.9215 6.05206 14.6868 5.74861 14.9717 5.08984C15.2563 4.43119 14.9533 3.66604 14.2949 3.38086ZM20.0811 2.08203C20.5887 1.57435 21.4113 1.57435 21.9189 2.08203C22.4265 2.58972 22.4266 3.41227 21.9189 3.91992L20.4561 5.38184C20.0062 4.62625 19.4691 3.92919 18.8574 3.30469L20.0811 2.08203Z"/>
-    </svg>
-  );
-};
+const DashboardIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[16.67%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f227a2e-b9c7-4983-8211-f9a363b72e2e" />
+    </div>
+    <div className="absolute inset-[23.75%_2.92%_23.75%_44.58%]">
+      <div className="absolute inset-[-8.93%_-17.86%_-26.79%_-17.86%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3b26a6d-fe0c-4b92-b480-0a13701c7b91" />
+      </div>
+    </div>
+    <div className="absolute flex inset-[27.91%_33.01%_26.5%_15.41%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="-rotate-90 flex-none h-[100cqw] w-[100cqh]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-9.09%_-20.56%_-27.26%_-20.56%]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9d1e66d0-cba8-445f-8d5a-f1dd22377e6a" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="overflow-clip relative size-[24px]">
+    <div className="absolute inset-[16.67%_2.92%_16.67%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f3fe4ed0-52d6-41ac-ac44-514919c74e23" />
+    </div>
+  </div>
+);
 
-const InsightsIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#6c779d";
-  const rays: Array<[number, number, number]> = [
-    [12,   2,    0],
-    [22,   12,   90],
-    [2,    12,   90],
-    [19.4, 4.6,  45],
-    [4.6,  4.6,  135],
-    [19.4, 19.4, 135],
-    [4.6,  19.4, 45],
-  ];
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(4.75,4.375)">
-        <path fill={c} d="M0 7.25C0 3.246 3.246 0 7.25 0C11.254 0 14.5 3.246 14.5 7.25C14.5 9.886 13.097 11.929 11.055 13.158C10.954 13.219 10.905 13.3 10.892 13.367L10.646 14.593C10.617 14.739 10.57 14.878 10.508 15.007H3.992C3.93 14.878 3.883 14.739 3.854 14.593L3.608 13.367C3.595 13.3 3.546 13.219 3.446 13.158C1.403 11.929 0 9.886 0 7.25Z"/>
-      </g>
-      <g transform="translate(9.25,20.38)">
-        <path fill={c} d="M0 0V0.743C0 1.709 0.784 2.493 1.75 2.493H3.75C4.717 2.493 5.5 1.709 5.5 0.743V0H0Z"/>
-      </g>
-      {rays.map(([cx, cy, angle], i) => {
-        const rad = (angle * Math.PI) / 180;
-        return (
-          <line
-            key={i}
-            x1={cx + Math.sin(rad) * -1.5}
-            y1={cy - Math.cos(rad) * 1.5}
-            x2={cx + Math.sin(rad) * 1.5}
-            y2={cy + Math.cos(rad) * 1.5}
-            stroke={c}
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        );
-      })}
-    </svg>
-  );
-};
+const AgentsIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[8.33%_0_16.67%_0]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/b53c2bad-67a2-4081-b85b-88b5e3b9d279" />
+    </div>
+    <div className="absolute inset-[33.33%_29.17%]">
+      <div className="absolute inset-[-14.06%_-22.5%_-42.19%_-22.5%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2bedcb17-5224-441c-a164-ac242bfb04c1" />
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[8.33%_0_16.67%_0]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3b33f363-c70c-4227-9760-55006068912e" />
+    </div>
+  </div>
+);
 
-const PerksIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#9d5cf5" : "#6c779d";
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(3,7)">
-        <path fill={c} d="M8 6V15H5.7998C4.11978 15 3.27941 14.9998 2.6377 14.6729C2.07347 14.3853 1.61472 13.9265 1.32715 13.3623C1.00018 12.7206 1 11.8802 1 10.2002V6H8ZM16 0C16.465 0 16.698 0 16.8887 0.0508C17.406 0.1895 17.8105 0.594 17.9492 1.1113C18.0003 1.3021 18 1.535 18 2C18 2.465 18.0003 2.6979 17.9492 2.8887C17.8105 3.406 17.406 3.8105 16.8887 3.9492C16.698 4.0003 16.465 4 16 4H2C1.535 4 1.3021 4.0003 1.1113 3.9492C0.594 3.8105 0.1895 3.406 0.0508 2.8887C0 2.6979 0 2.465 0 2C0 1.535 0 1.3021 0.0508 1.1113C0.1895 0.594 0.594 0.1895 1.1113 0.0508C1.3021 0 1.535 0 2 0H16ZM17 10.2002C17 11.8802 16.9998 12.7206 16.6729 13.3623C16.3853 13.9265 15.9265 14.3853 15.3623 14.6729C14.7206 14.9998 13.8802 15 12.2002 15H10V6H17V10.2002Z"/>
-      </g>
-      <g transform="translate(5,3)">
-        <path stroke={c} strokeWidth="2" strokeLinejoin="round" fill="none" d="M7 6V4.857M7 6H4.214C2.439 6 1 4.561 1 2.786C1 1.799 1.799 1 2.786 1H3.143C5.273 1 7 2.727 7 4.857M7 6H9.786C11.561 6 13 4.561 13 2.786C13 1.799 12.2 1 11.214 1H10.857C8.727 1 7 2.727 7 4.857"/>
-      </g>
-    </svg>
-  );
-};
+const MarketplaceIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[8.33%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ecd60c4a-1a93-449f-8700-97904d23811e" />
+    </div>
+    <div className="absolute inset-[17.59%_13.38%_54.63%_13.38%]">
+      <div className="absolute inset-[-16.88%_-12.8%_-50.63%_-12.8%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/84e800e1-8442-437c-9e23-22f3eff49f9f" />
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[8.33%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3b5d2a25-eaa9-45cc-b255-0c85fd1fb455" />
+    </div>
+  </div>
+);
+
+const TransactionsIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="overflow-clip relative size-[24px]">
+    <div className="absolute inset-[12.08%_3.35%_12.09%_3.4%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f4b3667-896e-4f8e-84f3-ff3db0f1bbdf" />
+    </div>
+  </div>
+) : (
+  <div className="overflow-clip relative size-[24px]">
+    <div className="absolute inset-[29.17%_41.67%]">
+      <div className="absolute inset-[-10%_-25%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bbbbe5df-e21b-4e9f-8507-7555e90f6a33" />
+      </div>
+    </div>
+    <div className="absolute inset-[16.25%_7.52%_16.25%_7.56%]">
+      <div className="absolute inset-[-6.17%_-4.91%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a81167fa-846b-456b-a37f-c387ca6add52" />
+      </div>
+    </div>
+  </div>
+);
+
+const InsightsIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[18.23%_19.79%_4.69%_19.79%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8d1f58a5-c7fc-4f1b-b42a-eca62f597c3e" />
+    </div>
+    <div className="absolute inset-[2.08%_2.06%_14.92%_2.1%]">
+      <div className="absolute inset-[-5.65%_-9.78%_-16.94%_-9.78%]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/d6d364a2-7a39-41d1-b687-7602abbdc72f" />
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[84.93%_38.54%_4.69%_38.54%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8c264f27-02ae-4470-8aec-c56636a70462" />
+    </div>
+    <div className="absolute inset-[18.23%_19.79%_19.24%_19.79%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/78291a4d-ffb1-4a59-bf79-e3f32ebd0c08" />
+    </div>
+    <div className="absolute bottom-[89.58%] left-1/2 right-1/2 top-[6.25%]">
+      <div className="absolute inset-[-100%_-1px]">
+        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/b53c5ec7-1ebe-4ee3-9e19-a694184c7711" />
+      </div>
+    </div>
+    <div className="absolute flex inset-[49.98%_6.23%_50.02%_89.6%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[100cqw] rotate-90 w-[2287600000cqh]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5be84bbf-c88f-41d7-bc2a-2d9ad369bf23" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="absolute flex inset-[49.98%_89.56%_50.02%_6.27%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[100cqw] rotate-90 w-[2287600000cqh]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5be84bbf-c88f-41d7-bc2a-2d9ad369bf23" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="absolute flex inset-[77.97%_19.03%_19.08%_78.02%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[hypot(-100cqw,-100cqh)] rotate-135 w-[hypot(-100cqw,100cqh)]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8e9818e7-201a-4925-a638-5ef38c7a2028" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="absolute flex inset-[19.04%_77.95%_78.01%_19.1%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[hypot(-100cqw,-100cqh)] rotate-135 w-[hypot(-100cqw,100cqh)]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8e9818e7-201a-4925-a638-5ef38c7a2028" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="absolute flex inset-[19.04%_19.03%_78.01%_78.03%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[hypot(-100cqw,100cqh)] rotate-45 w-[hypot(100cqw,100cqh)]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/1f61de9c-52ab-4d9b-9b1b-6b8752a2871f" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="absolute flex inset-[77.97%_77.95%_19.08%_19.1%] items-center justify-center" style={{ containerType: "size" }}>
+      <div className="flex-none h-[hypot(-100cqw,100cqh)] rotate-45 w-[hypot(100cqw,100cqh)]">
+        <div className="relative size-full">
+          <div className="absolute inset-[-100%_-1px]">
+            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/1f61de9c-52ab-4d9b-9b1b-6b8752a2871f" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const NotificationsIcon = ({ active }: { active: boolean }) => (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={active ? "https://www.figma.com/api/mcp/asset/53ab837b-84c5-4115-b620-fce90feae4df" : "https://www.figma.com/api/mcp/asset/2264c645-7926-443d-96e0-06d18d9fb764"} />
+    </div>
+  </div>
+);
 
 const CountBadge = ({ count, purple = false }: { count: number; purple?: boolean }) => (
   <div
@@ -765,7 +881,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               <div key={item.id} className="w-full flex flex-col items-center">
                 <Link href={item.path}>
                   <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                    <img className="w-5 h-5" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
+                    {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
+                    {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
+                    {item.id === "transactions" && <TransactionsIcon active={isActive(item.path)} />}
                   </button>
                 </Link>
               </div>
@@ -774,7 +892,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <div className="w-8 h-px bg-[#1d2132] my-1" />
 
             <button title="Notifications" onClick={() => setNotificationsOpen((v) => !v)} className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${notificationsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-              <img className="w-5 h-5" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
+              <NotificationsIcon active={notificationsOpen} />
               {unreadCount > 0 && (
                 <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center px-[4px] py-[1px] rounded-[4px] min-w-[14px]" style={{ background: "#1a1f2e" }}>
                   <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica", fontSize: "9px", lineHeight: "13px", color: "#6c779d" }}>{unreadCount}</span>
@@ -854,35 +972,23 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
-                  {item.id === "assistant" ? (
-                    <Link href={item.path} className="w-full">
-                      <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                          {item.label}
-                        </span>
-                        {isActive(item.path) && (
-                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                            <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </button>
-                    </Link>
-                  ) : (
-                    <Link href={item.path} className="w-full">
-                      <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                        <img className="w-6 h-6 flex-shrink-0" alt={item.label} src={isActive(item.path) ? item.activeIcon : item.icon} />
-                        <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                          {item.emoji ? `${item.emoji} ` : ""}{item.label}
-                        </span>
-                        {isActive(item.path) && (
-                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                            <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </button>
-                    </Link>
-                  )}
+                  <Link href={item.path} className="w-full">
+                    <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                        {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
+                        {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
+                        {item.id === "transactions" && <TransactionsIcon active={isActive(item.path)} />}
+                      </div>
+                      <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                        {item.label}
+                      </span>
+                      {isActive(item.path) && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                          <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </button>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -900,7 +1006,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               onClick={() => setNotificationsOpen((v) => !v)}
               className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${notificationsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
             >
-              <img className="w-6 h-6 flex-shrink-0" alt="Notifications" src={notificationsOpen ? "/figmaAssets/nav-notifications-active.png" : "/figmaAssets/notif-icon.svg"} />
+              <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                <NotificationsIcon active={notificationsOpen} />
+              </div>
               <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${notificationsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Notifications</span>
               {unreadCount > 0 && (
                 <CountBadge count={unreadCount} />
