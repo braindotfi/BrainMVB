@@ -825,7 +825,7 @@ const TradingAgentView = ({ agent, rawPolicy, isActive, onToggle, onEdit, onBack
             <StatCard label="Capital Allocated" value={capitalAmt} />
             <StatCard label="PnL (30d)"    value="+$47,832" sup=".10" color="#42bf23" />
             <StatCard label="Win Rate"     value="62"       sup="%"   />
-            <StatCard label="Trades (30d)" value="184" />
+            <StatCard label="Exchanges (30d)" value="184" />
             <StatCard label="Sharpe"       value="1.8" />
           </div>
 

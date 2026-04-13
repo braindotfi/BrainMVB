@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
+import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -221,6 +222,7 @@ export function ExchangeModal({ open, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
   const { wirexAccounts } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const { addTransaction } = useTransactions();
   const liveAllAssets = useMemo(() =>
     allAssets.map(a => a.id === "usd" ? { ...a, balance: walletAcc?.balance ? `${walletAcc.balance} USD` : a.balance } : a),
     [walletAcc?.balance]
@@ -273,7 +275,24 @@ export function ExchangeModal({ open, onClose }: Props) {
 
   const handleConfirm = () => {
     setConfirming(true);
-    setTimeout(() => { setConfirming(false); setConfirmed(true); }, 1800);
+    setTimeout(() => {
+      setConfirming(false);
+      setConfirmed(true);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+      const dateStr = `${now.getDate()} ${now.toLocaleString("en-US", { weekday: "short" })}`;
+      const amtNum = parseFloat(amount || "0");
+      addTransaction({
+        type: "exchange",
+        label: `Exchanged ${amtNum} ${fromAsset?.ticker ?? ""} → ${toAsset?.ticker ?? ""}`,
+        time: timeStr,
+        date: dateStr,
+        amount: `-${amtNum} ${fromAsset?.ticker ?? ""}`,
+        positive: false,
+        txHash: generateTxHash(),
+        accountId: null,
+      });
+    }, 1800);
   };
 
   return (

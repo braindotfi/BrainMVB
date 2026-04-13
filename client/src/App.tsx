@@ -21,6 +21,7 @@ import { CreateAgentModal } from "@/components/CreateAgentModal";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
 import { NavContext, AgentPrefillData } from "@/lib/navContext";
+import { TransactionProvider } from "@/lib/transactionContext";
 
 function AppLayout() {
   const { isLoggedIn, logout } = useAuth();
@@ -137,10 +138,12 @@ function AppLayout() {
 function App() {
   return (
     <Web3Provider>
-      <TooltipProvider>
-        <Toaster />
-        <AppLayout />
-      </TooltipProvider>
+      <TransactionProvider>
+        <TooltipProvider>
+          <Toaster />
+          <AppLayout />
+        </TooltipProvider>
+      </TransactionProvider>
     </Web3Provider>
   );
 }

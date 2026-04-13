@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
 import { useAuth, type WirexAccount } from "@/lib/authContext";
+import { useTransactions } from "@/lib/transactionContext";
 
 /* ─── Contextual data per card ─── */
 const walletData = {
@@ -373,9 +374,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     ? ["All", "Cash", "Crypto"]
     : ["All", "Cash"];
 
-  // Debit (index 1) and IBAN/Bank (index 2) cards have no Trades in transaction filters
+  // Debit (index 1) and IBAN/Bank (index 2) cards have no Exchanges in transaction filters
   const txFilterTabs = activeCard === 0
-    ? ["All", "Trades", "Deposits", "Withdrawals"]
+    ? ["All", "Exchanges", "Deposits", "Withdrawals"]
     : ["All", "Deposits", "Withdrawals"];
 
   // Reset activeFilter to "All" when switching to a card that doesn't support the current filter
@@ -383,17 +384,27 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     if (activeCard !== 0 && activeFilter === "Crypto") setActiveFilter("All");
   }, [activeCard, activeFilter]);
 
-  // Reset transactionFilter if "Trades" is selected while on Debit (1) or IBAN/Bank (2) cards
+  // Reset transactionFilter if "Exchanges" is selected while on Debit (1) or IBAN/Bank (2) cards
   useEffect(() => {
-    if (activeCard !== 0 && transactionFilter === "Trades") setTransactionFilter("All");
+    if (activeCard !== 0 && transactionFilter === "Exchanges") setTransactionFilter("All");
   }, [activeCard, transactionFilter]);
+
+  // Merge live exchange transactions (from context) into wallet transaction list
+  const { transactions: ctxTransactions } = useTransactions();
+  const walletCtxTxs = useMemo(
+    () => ctxTransactions.filter(t => t.accountId === null || t.accountId === undefined),
+    [ctxTransactions]
+  );
 
   // For agent accounts: wallet card (0) uses crypto data, debit card (1) uses cash data
   const agentCardData = !isYourAccount
     ? (activeCard === 1 ? agentDebitData : walletData)
     : null;
   const assetsData = isYourAccount ? (currentCardData?.assets ?? walletData.assets) : agentCardData!.assets;
-  const txData     = isYourAccount ? (currentCardData?.transactions ?? walletData.transactions) : agentCardData!.transactions;
+  const baseWalletTxs = walletData.transactions as Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }>;
+  const txData: Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }> = isYourAccount
+    ? (activeCard === 0 ? [...walletCtxTxs, ...baseWalletTxs] : (currentCardData?.transactions ?? walletData.transactions))
+    : agentCardData!.transactions;
 
   /* ── collapsed state ── */
   if (collapsed) {
@@ -417,7 +428,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     const collapsedHasTrades = collapsedCardIndex === 0;
 
     const collapsedAssetTabs = collapsedHasCrypto ? ["All", "Cash", "Crypto"] : ["All", "Cash"];
-    const collapsedTxTabs    = collapsedHasTrades  ? ["All", "Trades", "Deposits", "Withdrawals"] : ["All", "Deposits", "Withdrawals"];
+    const collapsedTxTabs    = collapsedHasTrades  ? ["All", "Exchanges", "Deposits", "Withdrawals"] : ["All", "Deposits", "Withdrawals"];
 
     const goCard = (dir: 1 | -1) => {
       setCollapsedCardIndex(prev => (prev + dir + CARDS.length) % CARDS.length);
@@ -677,8 +688,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
     const TransactionsPopup = () => {
       const safeFilter = collapsedTxTabs.includes(collapsedTxFilter) ? collapsedTxFilter : "All";
-      const filteredTx = activeCollapsedData.transactions.filter(t =>
-        safeFilter === "Trades"      ? t.type === "trade"      :
+      const collapsedBaseTxs = collapsedCardIndex === 0
+        ? [...walletCtxTxs, ...activeCollapsedData.transactions]
+        : activeCollapsedData.transactions;
+      const filteredTx = collapsedBaseTxs.filter(t =>
+        safeFilter === "Exchanges"   ? (t.type === "trade" || t.type === "exchange") :
         safeFilter === "Deposits"    ? t.type === "deposit"    :
         safeFilter === "Withdrawals" ? t.type === "withdrawal" : true
       );
@@ -1241,7 +1255,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               {/* Transactions list */}
               {activeTab === "Transactions" && (() => {
                 const filtered = txData.filter((t) =>
-                  transactionFilter === "Trades"       ? t.type === "trade"      :
+                  transactionFilter === "Exchanges"    ? (t.type === "trade" || t.type === "exchange") :
                   transactionFilter === "Deposits"     ? t.type === "deposit"    :
                   transactionFilter === "Withdrawals"  ? t.type === "withdrawal" : true
                 );
@@ -1271,15 +1285,26 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             )}
                           </div>
                           <div className="flex-1 min-w-0 flex items-center gap-2">
-                            <div className="flex flex-col gap-1 flex-shrink-0">
-                              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 whitespace-nowrap">{tx.label}</span>
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-100 text-base leading-5 truncate">{tx.label}</span>
                               <div className="flex items-center gap-1">
                                 <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.time}</span>
                                 <div className="w-1 h-1 bg-brain-v1baby-blue-30 rounded-full flex-shrink-0" />
                                 <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-30 text-sm leading-4">{tx.date}</span>
                               </div>
+                              {tx.txHash && (
+                                <a
+                                  href={`https://basescan.org/tx/${tx.txHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="[font-family:'JetBrains_Mono',Helvetica] text-[10px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors truncate"
+                                  data-testid={`link-txhash-${tx.id}`}
+                                >
+                                  {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)}
+                                </a>
+                              )}
                             </div>
-                            <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-xl text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
+                            <span className={`flex-shrink-0 [font-family:'JetBrains_Mono',Helvetica] font-medium text-base text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
                               {tx.amount}
                             </span>
                           </div>
