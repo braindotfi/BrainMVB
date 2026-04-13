@@ -26,6 +26,19 @@ const allAssets: Asset[] = [
   { id: "matic",name: "Polygon",       ticker: "MATIC",color: "#8247e5", letter: "◆",  balance: "295.23 MATIC", icon: "/figmaAssets/crypto-icons-1.svg" },
 ];
 
+function FigmaWalletIcon() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5dd99a70-d49a-4d54-9b65-92532cbc409b" />
+      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
+        <div className="absolute inset-[12.5%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0594f386-bc3e-455e-99a8-7a612679898e" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssetIcon({ asset, size = 32 }: { asset: Asset; size?: number }) {
   const s = `${size}px`;
   if (asset.icon) {
@@ -406,10 +419,19 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging from?</p>
                   </div>
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
+                    <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
+                      <FigmaWalletIcon />
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
+                        {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Assets</p>
                     <AssetSelectCard
                       asset={fromAsset}
-                      placeholder="Select asset"
+                      placeholder="Select Asset"
                       onOpen={() => openSearch("from")}
                       onEdit={() => openSearch("from")}
                     />
@@ -465,6 +487,15 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
 
                   <div className="flex flex-col gap-[24px] items-center">
                     <div className="flex flex-col gap-[4px] w-full">
+                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
+                      <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
+                        <FigmaWalletIcon />
+                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
+                          {walletAcc ? "Stablecoin Account" : "Your Wallet"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-[4px] w-full">
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
                       <AssetSelectCard
                         asset={fromAsset}
@@ -507,14 +538,7 @@ export function ExchangeModal({ open, onClose, onConfirmed }: Props) {
                   <div className="flex flex-col gap-[4px]">
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                      <div className="size-[32px] rounded-[16px] bg-[#1d2132] flex items-center justify-center shrink-0 overflow-hidden">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <rect x="1" y="5" width="14" height="9" rx="1.5" stroke="#a8b9f4" strokeWidth="1.2"/>
-                          <path d="M1 8h14" stroke="#a8b9f4" strokeWidth="1.2"/>
-                          <circle cx="11.5" cy="10.5" r="1" fill="#a8b9f4"/>
-                          <path d="M4.5 5V4a3 3 0 0 1 7 0v1" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/>
-                        </svg>
-                      </div>
+                      <FigmaWalletIcon />
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 truncate">
                         {walletAcc ? "Stablecoin Account" : "Your Wallet"}
                       </p>
