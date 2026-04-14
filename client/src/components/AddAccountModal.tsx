@@ -461,7 +461,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           </div>
 
           {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px] pt-[0px] pb-[0px]">
+          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px] pb-[0px]">
             {/* Title */}
             <div className="flex flex-col">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
@@ -550,7 +550,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           </div>
 
           {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px]">
+          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
             {/* Title */}
             <div className="flex flex-col">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
@@ -647,7 +647,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           </div>
 
           {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px]">
+          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
             {/* Title */}
             <div className="flex flex-col">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
@@ -783,7 +783,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-[24px] px-[39px]">
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
           {/* Title */}
           <div className="flex flex-col">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
