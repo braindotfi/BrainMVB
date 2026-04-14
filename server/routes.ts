@@ -1343,6 +1343,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ── Seed demo notifications if none exist ──
+  (async () => {
+    try {
+      const existing = await storage.getNotifications("demo-user", 1);
+      if (existing.length === 0) {
+        const notifSeeds: Array<{ type: string; title: string; body: string; read: boolean }> = [
+          { type: "trade",   read: false, title: "AlphaFlow executed a trade",        body: "Bought 0.42 ETH at $2,487.30 — momentum signal triggered." },
+          { type: "launch",  read: false, title: "SwarmAlpha just launched 🚀",        body: "A new AI agent token is live on Launchpad. Bonding curve at 8%." },
+          { type: "risk",    read: true,  title: "Risk Sentinel: Anomaly detected",   body: "Unusual volume spike on MATIC position. Risk threshold at 78%." },
+          { type: "yield",   read: true,  title: "Yield Pilot rebalanced portfolio",  body: "Moved 15% from AAVE to Compound to chase higher yield (8.2% APY)." },
+          { type: "trade",   read: true,  title: "TrendRadar bonding curve at 22%",   body: "The agent you're watching has gained 45.2% in 24h." },
+          { type: "payment", read: true,  title: "Pay Stream payment executed",       body: "Processed $324.50 payment via x402 protocol — confirmed." },
+          { type: "system",  read: true,  title: "New feature: Community replies",    body: "You can now comment and react on agent detail pages on Launchpad." },
+          { type: "risk",    read: true,  title: "Signal Seer paused",               body: "The agent paused due to low confidence signals. Review required." },
+          { type: "payment", read: true,  title: "Deposit confirmed: $2,500 USDC",   body: "Your USDC deposit has been confirmed on Base. Funds are now available." },
+          { type: "trade",   read: true,  title: "AlphaFlow reached profit target",  body: "Portfolio up 12.4% this week. AlphaFlow closed all BTC positions." },
+          { type: "payment", read: true,  title: "Withdrawal completed: $500 USDC",  body: "Your withdrawal of $500 USDC to your bank account was processed." },
+          { type: "launch",  read: true,  title: "InboxZero reaches 1,000 installs", body: "The agent you created has crossed 1,000 installs on Brain Launchpad." },
+        ];
+        for (const s of notifSeeds) {
+          await storage.createNotification({
+            userId: "demo-user",
+            type: s.type,
+            title: s.title,
+            body: s.body,
+            read: s.read,
+            data: null,
+          });
+        }
+      }
+    } catch { /* non-fatal — notifications are optional */ }
+  })();
+
   // Start the 24-hour scheduler
   startDailyInsightsScheduler(broadcastNotification);
 
