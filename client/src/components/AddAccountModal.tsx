@@ -1,160 +1,245 @@
 import { useState } from "react";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
-// Step-1 icons (32px inverted)
-const S1_WALLET_BG  = "https://www.figma.com/api/mcp/asset/7de069dd-2dab-456f-9d36-abd90fa7e977";
-const S1_WALLET_VEC = "https://www.figma.com/api/mcp/asset/5e2c87e8-c022-4d1e-8b92-e31b7eb876e8";
-const S1_BANK_BG    = "https://www.figma.com/api/mcp/asset/23e48f18-8079-4624-9b6d-fe22cd655db8";
-const S1_BANK_VEC   = "https://www.figma.com/api/mcp/asset/35fb5b7d-00a0-43e7-850d-3befc84084be";
-const S1_AGENT_BG   = "https://www.figma.com/api/mcp/asset/d9400d24-90ed-4b0d-a4b5-187a31856c06";
-const S1_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/4e75716d-1fac-41f9-9b22-ce57a98785ce";
 
-// Step-2 icons (32px inverted)
-const S2_WALLET_BG  = "https://www.figma.com/api/mcp/asset/3434da22-1109-42c9-8463-766fc7d430d5";
-const S2_WALLET_VEC = "https://www.figma.com/api/mcp/asset/23badda0-cfc9-4344-b8bf-5243dc6265de";
-const S2_BANK_BG    = "https://www.figma.com/api/mcp/asset/81b93e22-61f1-4e63-b266-c055214925fc";
-const S2_BANK_VEC   = "https://www.figma.com/api/mcp/asset/38818791-1a61-47f7-89c2-0357f41dd7c9";
-const S2_AGENT_BG   = "https://www.figma.com/api/mcp/asset/ab71d477-c62c-4702-8fad-3faad2caad14";
-const S2_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/189f71b9-5ec7-4912-a5be-94895b2142e7";
+// Step-1 header back/close button
+const S1_BACK_BG  = "https://www.figma.com/api/mcp/asset/cf4cade6-b37c-4aa0-bf79-634da107797d";
+const S1_BACK_VEC = "https://www.figma.com/api/mcp/asset/14667b94-1f48-4199-9108-7b31792ff2a6";
+// Dropdown chevron-down arrow button (step 1 & step 2 account row right button)
+const S1_DROPDOWN_VEC = "https://www.figma.com/api/mcp/asset/ad4ace76-26d1-4c79-9f41-d6c3477b6b84";
 
-// Action buttons
-const COPY_BG1 = "https://www.figma.com/api/mcp/asset/b90f1407-4208-4418-a89f-2f3ef33c821e";
-const COPY_BG2 = "https://www.figma.com/api/mcp/asset/8002ccb5-6d93-42fe-823f-8ccd3b63c88f";
-const COPY_VEC = "https://www.figma.com/api/mcp/asset/31f37edc-175a-48fb-b07e-d250be6cb044";
-const QR_BG1   = "https://www.figma.com/api/mcp/asset/3b56051e-9208-4218-ab01-c9cf0e09973f";
-const QR_VEC   = "https://www.figma.com/api/mcp/asset/0f01ada3-665e-4f2e-a75c-0d6117893f07";
+// Account popup icons (32px inverted)
+const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/53dc43ca-99ce-483e-ab79-3fd381f2a0ad";
+const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/e7f668c8-24da-4d7c-ab44-b607b214e7e0";
+const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/48b93f10-f582-4bc3-b364-9a792e588ae0";
+const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/337a1c99-57d9-41bc-8558-fa858fd5a57f";
+const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/3a2688b7-b3e6-4688-afbd-dfb73fb21306";
+const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/4df2980c-57b9-4bdb-ab2d-c01cb02506ec";
+// Account popup search icon
+const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/ea07f1c0-1a0c-41e0-9537-132e06d08067";
+// Account popup close button
+const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/9c58cbce-ca1e-4719-a26a-f8db73c644fa";
+const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/dbccfd9a-3433-4851-b39e-b7bf246aa8c9";
 
-// Back button
-const BACK_BG  = "https://www.figma.com/api/mcp/asset/9808679d-bd1a-42b7-aa87-018d60bebe74";
-const BACK_VEC = "https://www.figma.com/api/mcp/asset/5ae57232-c024-4602-9449-3d9032ee935e";
+// Step-2 wallet icons & back button
+const S2W_WALLET_BG  = "https://www.figma.com/api/mcp/asset/39d8e016-c6a1-4616-8062-fbaf0bee1e99";
+const S2W_WALLET_VEC = "https://www.figma.com/api/mcp/asset/7c3ba310-e565-435f-9aca-aed9e1ede31b";
+const S2W_CHEVRON    = "https://www.figma.com/api/mcp/asset/a298e926-9620-407b-a06b-85bcd0cf1b4b";
+const S2W_BACK_BG    = "https://www.figma.com/api/mcp/asset/5c6835c6-1d75-46ab-84ad-f98f06d6797c";
+const S2W_BACK_VEC   = "https://www.figma.com/api/mcp/asset/4de9ea41-8d72-4eee-9384-82799afd82d5";
+// Step-2 wallet action buttons: button1 = QR (opens popup), button2 = Copy
+const S2W_BTN1_BG1   = "https://www.figma.com/api/mcp/asset/036bbbe5-4e9b-4553-bd26-1be56666dade";
+const S2W_BTN_BG2    = "https://www.figma.com/api/mcp/asset/ac7a61fa-e537-4df9-97a4-d60034d21119";
+const S2W_BTN1_VEC   = "https://www.figma.com/api/mcp/asset/226d9633-a136-4a49-bc54-c8724a4ab6de";
+const S2W_BTN2_BG1   = "https://www.figma.com/api/mcp/asset/691609ce-8429-43c0-b903-56124d59d782";
+const S2W_BTN2_VEC   = "https://www.figma.com/api/mcp/asset/29b769ca-506b-4714-9946-ffa9299d3c34";
+
+// Step-2 bank icons & back button
+const S2B_BANK_BG    = "https://www.figma.com/api/mcp/asset/6739ca24-54c6-486a-b70c-b2b95ce010bc";
+const S2B_BANK_VEC   = "https://www.figma.com/api/mcp/asset/47d54e4f-88ae-47e6-9290-9606e0744726";
+const S2B_CHEVRON    = "https://www.figma.com/api/mcp/asset/aa16e268-417a-4e63-b06c-3a4e8af8f987";
+const S2B_BACK_BG    = "https://www.figma.com/api/mcp/asset/f0fbca18-3bcc-41a0-8973-b2f21a531f3b";
+const S2B_BACK_VEC   = "https://www.figma.com/api/mcp/asset/00b78aca-79dc-4b13-8c97-ac4ca8b92192";
+
+// Step-2 agent icons & back button
+const S2A_AGENT_BG   = "https://www.figma.com/api/mcp/asset/02d26233-106d-4721-9094-ef74efef5fe2";
+const S2A_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/5e5f0798-b990-4ac7-9b19-e09c26b9d44d";
+const S2A_CHEVRON    = "https://www.figma.com/api/mcp/asset/01133503-ef3c-4900-b320-dccc6fbd689e";
+const S2A_BACK_BG    = "https://www.figma.com/api/mcp/asset/b448b504-05d8-4d0f-af71-684229f2825a";
+const S2A_BACK_VEC   = "https://www.figma.com/api/mcp/asset/d10d60c5-4156-4f4c-9de0-070a758aab68";
+// Step-2 agent action buttons
+const S2A_BTN1_BG1   = "https://www.figma.com/api/mcp/asset/d802ef72-2196-4968-8fcf-ba86b84557d5";
+const S2A_BTN_BG2    = "https://www.figma.com/api/mcp/asset/f46db8e0-492f-4caf-9d76-f7fbbe05dc44";
+const S2A_BTN1_VEC   = "https://www.figma.com/api/mcp/asset/d36d8c4f-4673-44e3-9722-46459b61a547";
+const S2A_BTN2_BG1   = "https://www.figma.com/api/mcp/asset/6c0660f8-4cc0-46e8-9901-e016424256f7";
+const S2A_BTN2_VEC   = "https://www.figma.com/api/mcp/asset/9937f657-b47c-4e50-8ba9-97104ee070c7";
 
 // QR popup
 const QR_CODE_IMG  = "https://www.figma.com/api/mcp/asset/8da785f9-4275-4cb3-a846-3abe2bde503d";
 const QR_COPY_VEC  = "https://www.figma.com/api/mcp/asset/ef78ebf4-d7f5-4aed-8828-2a4915e65363";
 
-// Paste button backgrounds (same QR layer used for paste pill)
-const PASTE_BG1 = "https://www.figma.com/api/mcp/asset/4080b4b7-65b1-44b9-9750-ba0e9a268f56";
-const PASTE_BG2 = "https://www.figma.com/api/mcp/asset/d5c4bc35-742b-4bb4-be38-cf647cdd829a";
+// ── Data ──────────────────────────────────────────────────────────────────────
+type AccountType = "wallet" | "bank" | "agent";
+type Step = "select" | "wallet" | "bank" | "agent";
 
-// ── Figma icon components ─────────────────────────────────────────────────────
-function WalletIcon32({ s }: { s: 1 | 2 }) {
-  return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_WALLET_BG : S2_WALLET_BG} />
-      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
-        <div className="absolute inset-[12.5%]">
-          <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_WALLET_VEC : S2_WALLET_VEC} />
-        </div>
-      </div>
-    </div>
-  );
+interface Account {
+  id: string;
+  type: AccountType;
+  name: string;
+  address: string | null;
 }
 
-function BankIcon32({ s }: { s: 1 | 2 }) {
-  return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_BANK_BG : S2_BANK_BG} />
-      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_BANK_VEC : S2_BANK_VEC} />
-      </div>
-    </div>
-  );
-}
+const ALL_ACCOUNTS: Account[] = [
+  { id: "bank",    type: "bank",   name: "Bank Account",       address: null },
+  { id: "wallet",  type: "wallet", name: "Your Wallet",        address: "0x7cB57B5A97eAbe94205C07890BE4c1aD31E486A8" },
+  { id: "yield",   type: "agent",  name: "Yield Agent",        address: "0xA1B2C3D4E5f12345678901234567890aAbBcCdD" },
+  { id: "trader",  type: "agent",  name: "TraderPro",          address: "0xB2C3D4E5F67890123456789012345678901AbcD" },
+  { id: "treasury",type: "agent",  name: "Treasury AI Agent",  address: "0xC3D4e5F678901234567890ABCDEF0123456789A" },
+];
 
-function AgentIcon32({ s }: { s: 1 | 2 }) {
-  return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_AGENT_BG : S2_AGENT_BG} />
-      <div className="absolute inset-[20%]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={s === 1 ? S1_AGENT_VEC : S2_AGENT_VEC} />
-      </div>
-    </div>
-  );
-}
-
-function CopyBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
-      data-testid="btn-copy-address"
-      title="Copy address"
-    >
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={COPY_BG1} />
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={COPY_BG2} />
-      <div className="absolute left-[8px] size-[16px] top-[8px]">
-        <div className="absolute inset-[16.65%_16.67%_16.68%_16.66%]">
-          <div className="absolute inset-[-7.03%]">
-            <img alt="" className="block max-w-none size-full" src={COPY_VEC} />
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function QRBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
-      data-testid="btn-show-qr"
-      title="Show QR code"
-    >
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={QR_BG1} />
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={COPY_BG2} />
-      <div className="absolute left-[8px] size-[16px] top-[8px]">
-        <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
-          <div className="absolute inset-[-7.03%]">
-            <img alt="" className="block max-w-none size-full" src={QR_VEC} />
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function truncAddr(addr: string): string {
   if (!addr || addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}...${addr.slice(-5)}`;
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-type AccountType = "bank" | "wallet" | "agent" | null;
-type Step = "select-type" | "bank" | "wallet" | "agent";
-
-const WALLET_ADDRESS = "0x7cB57B5A97eAbe94205C07890BE4c1aD31E486A8";
-
-const agentList = [
-  { id: "1", name: "AlphaFlow",     address: "0xA1B2C3D4E5f12345678901234567890aAbBcCdD" },
-  { id: "2", name: "SwarmAlpha",    address: "0xB2C3D4E5F67890123456789012345678901AbcD" },
-  { id: "3", name: "Risk Sentinel", address: "0xC3D4e5F678901234567890ABCDEF0123456789A" },
-  { id: "4", name: "YieldMax v2",   address: "0xD4E5F6789012345678901234567890ABCDEF012" },
-];
-
-// ── Chevron right SVG (for option rows) ───────────────────────────────────────
-function ChevronRight() {
+// ── Figma icon components ─────────────────────────────────────────────────────
+function WalletIconPopup() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <path d="M6 3L11 8L6 13" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_BG} />
+      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
+        <div className="absolute inset-[12.5%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_VEC} />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function ChevronDown() {
+function BankIconPopup() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path d="M6 9L12 15L18 9" stroke="#414965" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_BG} />
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_VEC} />
+      </div>
+    </div>
+  );
+}
+
+function AgentIconPopup() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_BG} />
+      <div className="absolute inset-[20%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_VEC} />
+      </div>
+    </div>
+  );
+}
+
+function WalletIconS2W() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2W_WALLET_BG} />
+      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
+        <div className="absolute inset-[12.5%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2W_WALLET_VEC} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BankIconS2B() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BANK_BG} />
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BANK_VEC} />
+      </div>
+    </div>
+  );
+}
+
+function AgentIconS2A() {
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2A_AGENT_BG} />
+      <div className="absolute inset-[20%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2A_AGENT_VEC} />
+      </div>
+    </div>
+  );
+}
+
+function AccountIconInPopup({ type }: { type: AccountType }) {
+  if (type === "wallet") return <WalletIconPopup />;
+  if (type === "bank")   return <BankIconPopup />;
+  return <AgentIconPopup />;
+}
+
+// ── Back/close button (top-left header) ───────────────────────────────────────
+function BackBtn({ bg, vec, onClick }: { bg: string; vec: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] overflow-hidden hover:opacity-80 transition-opacity"
+      data-testid="btn-modal-back"
+    >
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={bg} />
+      <div className="absolute left-[8px] size-[16px] top-[8px]">
+        <div className="absolute bottom-1/4 flex items-center justify-center left-[37.5%] right-[40.09%] top-1/4" style={{ containerType: "size" }}>
+          <div className="flex-none h-[100cqw] rotate-90 w-[100cqh]">
+            <div className="relative size-full">
+              <div className="absolute inset-[-20.92%_-9.38%]">
+                <img alt="" className="block max-w-none size-full" src={vec} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ── Dropdown chevron button (right side of account row) ───────────────────────
+function DropdownBtn({ chevronVec, onClick }: { chevronVec: string; onClick?: () => void }) {
+  return (
+    <div
+      className="relative rounded-[100px] shrink-0 size-[32px] cursor-pointer hover:opacity-80 transition-opacity"
+      onClick={onClick}
+    >
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={S1_BACK_BG} />
+      <div className="absolute left-[8px] size-[16px] top-[8px]">
+        <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
+          <div className="absolute inset-[-7.03%]">
+            <img alt="" className="block max-w-none size-full" src={chevronVec} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Address action buttons ────────────────────────────────────────────────────
+function AddrBtn1({
+  bg1, bg2, vec, onClick,
+}: { bg1: string; bg2: string; vec: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
+    >
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={bg1} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={bg2} />
+      <div className="absolute left-[8px] size-[16px] top-[8px]">
+        <div className="absolute inset-[16.65%_16.67%_16.68%_16.66%]">
+          <div className="absolute inset-[-7.03%]">
+            <img alt="" className="block max-w-none size-full" src={vec} />
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }
 
 // ── QR Popup ──────────────────────────────────────────────────────────────────
-function QRPopup({ address, onClose, onCopy, copied }: { address: string; onClose: () => void; onCopy: () => void; copied: boolean }) {
+function QRPopup({
+  address,
+  onClose,
+  onCopy,
+  copied,
+}: { address: string; onClose: () => void; onCopy: () => void; copied: boolean }) {
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[24px] flex flex-col gap-[16px] items-center p-[24px]">
+    <div
+      className="absolute inset-0 z-30 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0a0c10] border border-[#1d2132] rounded-[24px] flex flex-col gap-[16px] items-center p-[24px]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="relative shrink-0 size-[274px]">
           <img alt="QR Code" className="absolute block inset-0 max-w-none size-full" src={QR_CODE_IMG} />
         </div>
@@ -177,13 +262,96 @@ function QRPopup({ address, onClose, onCopy, copied }: { address: string; onClos
             {copied ? "Copied!" : "Copy Address"}
           </span>
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Account selector popup ────────────────────────────────────────────────────
+function AccountPopup({
+  accounts,
+  onSelect,
+  onClose,
+}: {
+  accounts: Account[];
+  onSelect: (acc: Account) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = accounts.filter((a) =>
+    a.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_17px_17px_0px_rgba(0,0,0,0.34),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_68px_27px_0px_rgba(0,0,0,0.06)]">
+      {/* Popup header */}
+      <div className="flex items-center justify-between px-[16px] py-[16px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+          Select Account
+        </p>
         <button
           onClick={onClose}
-          className="text-[#414965] text-[14px] [font-family:'Plus Jakarta Sans',sans-serif] hover:text-[#6c779d] transition-colors"
-          data-testid="btn-qr-close"
+          className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
+          data-testid="btn-popup-close"
         >
-          Close
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
+          <div className="absolute left-[4px] size-[16px] top-[4px]">
+            <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
+              <div className="absolute inset-[-8.04%]">
+                <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
+              </div>
+            </div>
+          </div>
         </button>
+      </div>
+
+      {/* Search + list */}
+      <div className="flex flex-col gap-[8px] p-[8px]">
+        {/* Search field */}
+        <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
+          <div className="relative shrink-0 size-[24px]">
+            <div className="absolute inset-[16.67%_16.67%_16.67%_16.66%]">
+              <div className="absolute inset-[-6.25%]">
+                <img alt="" className="block max-w-none size-full" src={POP_SEARCH_VEC} />
+              </div>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search"
+            className="bg-transparent flex-1 text-[#6c779d] text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-[#6c779d] min-w-0"
+            data-testid="input-account-search"
+          />
+        </div>
+
+        {/* List */}
+        <div className="flex flex-col">
+          <div className="flex items-center justify-center px-[8px] py-[4px]">
+            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">
+              All Assets
+            </p>
+          </div>
+          {filtered.map((acc, i) => (
+            <button
+              key={acc.id}
+              onClick={() => onSelect(acc)}
+              className={`flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132] ${
+                i === 0 ? "bg-[#11141b]" : ""
+              }`}
+              data-testid={`btn-account-${acc.id}`}
+            >
+              <AccountIconInPopup type={acc.type} />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] whitespace-nowrap">
+                {acc.name}
+              </p>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -193,45 +361,49 @@ function QRPopup({ address, onClose, onCopy, copied }: { address: string; onClos
 interface Props {
   open: boolean;
   onClose: () => void;
-  excludeTypes?: Array<"bank" | "wallet" | "agent">;
+  excludeTypes?: AccountType[];
 }
 
 export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
-  const [step, setStep] = useState<Step>("select-type");
-  const [selectedAgent, setSelectedAgent] = useState<typeof agentList[0] | null>(null);
+  const [step, setStep]               = useState<Step>("select");
+  const [selected, setSelected]       = useState<Account | null>(null);
+  const [popupOpen, setPopupOpen]     = useState(false);
+  const [qrOpen, setQrOpen]           = useState(false);
+  const [copied, setCopied]           = useState(false);
   const [recipientName, setRecipientName] = useState("");
-  const [iban, setIban] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [iban, setIban]               = useState("");
   const [pastedField, setPastedField] = useState<string | null>(null);
-  const [qrOpen, setQrOpen] = useState(false);
 
   if (!open) return null;
+
+  const availableAccounts = ALL_ACCOUNTS.filter(
+    (a) => !excludeTypes.includes(a.type)
+  );
 
   const handleClose = () => {
     onClose();
     setTimeout(() => {
-      setStep("select-type");
-      setSelectedAgent(null);
+      setStep("select");
+      setSelected(null);
+      setPopupOpen(false);
+      setQrOpen(false);
+      setCopied(false);
       setRecipientName("");
       setIban("");
-      setSuccess(false);
-      setCopied(false);
-      setQrOpen(false);
     }, 300);
   };
 
-  const handleTypeSelect = (type: AccountType) => {
-    if (type === "agent") {
-      setSelectedAgent(agentList[0]);
-    }
-    setStep(type as Step);
+  const handleBack = () => {
+    setStep("select");
+    setSelected(null);
     setQrOpen(false);
+    setPopupOpen(false);
   };
 
-  const handleBack = () => {
-    setStep("select-type");
-    setSelectedAgent(null);
+  const handleAccountSelect = (acc: Account) => {
+    setSelected(acc);
+    setStep(acc.type);
+    setPopupOpen(false);
     setQrOpen(false);
   };
 
@@ -245,245 +417,258 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
     let text = "";
     try { text = await navigator.clipboard.readText(); }
     catch { text = field === "iban" ? "AE070331234567890123456" : "John Smith"; }
+    if (!text) text = field === "iban" ? "AE070331234567890123456" : "John Smith";
     if (field === "recipientName") setRecipientName(text);
     else setIban(text);
     setPastedField(field);
     setTimeout(() => setPastedField(null), 1500);
   };
 
-  const handleConfirm = () => {
-    setSuccess(true);
-    setTimeout(() => handleClose(), 2000);
-  };
+  const activeAddr = selected?.address ?? "";
 
-  const activeAddress = step === "wallet" ? WALLET_ADDRESS : (selectedAgent?.address ?? "");
+  // ── STEP 1 ─────────────────────────────────────────────────────────────────
+  if (step === "select") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
-  const canConfirm = step === "wallet"
-    ? true
-    : step === "bank"
-    ? recipientName.trim().length > 0 && iban.trim().length > 0
-    : step === "agent"
-    ? !!selectedAgent
-    : false;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-
-      <div className="relative z-10 w-[402px] flex flex-col bg-[#0a0c10] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-        {/* Success overlay */}
-        {success && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0c10] gap-4">
-            <div className="w-16 h-16 rounded-full bg-[#123509] flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <path d="M5 14L11 20L23 8" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-xl">Account Added!</span>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-sm">Your account has been connected successfully.</span>
+          {/* Header */}
+          <div className="bg-[#0a0c10] h-[56px] relative">
+            <BackBtn bg={S1_BACK_BG} vec={S1_BACK_VEC} onClick={handleClose} />
           </div>
-        )}
 
-        {/* QR overlay */}
-        {qrOpen && (
-          <QRPopup
-            address={activeAddress}
-            onClose={() => setQrOpen(false)}
-            onCopy={() => handleCopy(activeAddress)}
-            copied={copied}
-          />
-        )}
+          {/* Content */}
+          <div className="flex flex-col gap-[24px] px-[39px] pt-[0px] pb-[0px]">
+            {/* Title */}
+            <div className="flex flex-col">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+                Add Money
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+                What account should we fund?
+              </p>
+            </div>
 
-        {/* ── Header ── */}
-        <div className="bg-[#0a0c10] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
-          {step !== "select-type" && (
+            {/* Account selector */}
+            <div className="relative">
+              <button
+                onClick={() => setPopupOpen((v) => !v)}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-select-account"
+              >
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                  Select Account
+                </p>
+                <DropdownBtn chevronVec={S1_DROPDOWN_VEC} />
+              </button>
+
+              {popupOpen && (
+                <AccountPopup
+                  accounts={availableAccounts}
+                  onSelect={handleAccountSelect}
+                  onClose={() => setPopupOpen(false)}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Close button */}
+          <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
-              onClick={handleBack}
-              className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] relative overflow-hidden hover:opacity-80 transition-opacity"
-              data-testid="btn-modal-back"
+              onClick={handleClose}
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              data-testid="btn-add-close"
             >
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={BACK_BG} />
-              <div className="absolute left-[8px] size-[16px] top-[8px]">
-                <div className="absolute bottom-1/4 flex items-center justify-center left-[37.5%] right-[40.09%] top-1/4" style={{ containerType: "size" }}>
-                  <div className="flex-none h-[100cqw] rotate-90 w-[100cqh]">
-                    <div className="relative size-full">
-                      <div className="absolute inset-[-20.92%_-9.38%]">
-                        <img alt="" className="block max-w-none size-full" src={BACK_VEC} />
-                      </div>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── STEP 2: Your Wallet ────────────────────────────────────────────────────
+  if (step === "wallet") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+
+          {/* QR overlay */}
+          {qrOpen && (
+            <QRPopup
+              address={activeAddr}
+              onClose={() => setQrOpen(false)}
+              onCopy={() => handleCopy(activeAddr)}
+              copied={copied}
+            />
+          )}
+
+          {/* Header */}
+          <div className="bg-[#0a0c10] h-[56px] relative">
+            <BackBtn bg={S2W_BACK_BG} vec={S2W_BACK_VEC} onClick={handleBack} />
+          </div>
+
+          {/* Content */}
+          <div className="flex flex-col gap-[24px] px-[39px]">
+            {/* Title */}
+            <div className="flex flex-col">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+                Add Money
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+                What account should we fund?
+              </p>
+            </div>
+
+            {/* Selected account row (clickable → reopen popup) */}
+            <div className="relative">
+              <button
+                onClick={() => { setPopupOpen((v) => !v); }}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-account-row"
+              >
+                <WalletIconS2W />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                  Your Wallet
+                </p>
+                <div className="relative shrink-0 size-[24px]">
+                  <div className="absolute bottom-[40.09%] left-1/4 right-1/4 top-[37.5%]">
+                    <div className="absolute inset-[-18.59%_-8.33%]">
+                      <img alt="" className="block max-w-none size-full" src={S2W_CHEVRON} />
                     </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          )}
-
-          {/* Step dots */}
-          <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
-            <div className="flex items-center gap-[8px]">
-              {[1, 2].map((n) => (
-                <div
-                  key={n}
-                  className="rounded-full shrink-0 transition-colors duration-300"
-                  style={{ width: 8, height: 8, background: (n === 1 || step !== "select-type") ? "#7631EE" : "#240757" }}
+              </button>
+              {popupOpen && (
+                <AccountPopup
+                  accounts={availableAccounts}
+                  onSelect={handleAccountSelect}
+                  onClose={() => setPopupOpen(false)}
                 />
-              ))}
+              )}
+            </div>
+
+            {/* Wallet Address */}
+            <div className="flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+                Wallet Address
+              </p>
+              <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
+                  {truncAddr(activeAddr)}
+                </p>
+                <div className="flex gap-[8px] items-center shrink-0">
+                  {/* Button 1: opens QR popup (icon = QR grid visual = S2W_BTN1_VEC) */}
+                  <AddrBtn1
+                    bg1={S2W_BTN1_BG1} bg2={S2W_BTN_BG2} vec={S2W_BTN1_VEC}
+                    onClick={() => setQrOpen(true)}
+                  />
+                  {/* Button 2: copies address (icon = copy-sheets visual = S2W_BTN2_VEC) */}
+                  <AddrBtn1
+                    bg1={S2W_BTN2_BG1} bg2={S2W_BTN_BG2} vec={S2W_BTN2_VEC}
+                    onClick={() => handleCopy(activeAddr)}
+                  />
+                </div>
+              </div>
+              {copied && (
+                <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+                  Address copied!
+                </p>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={handleClose}
-            className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
-            data-testid="btn-add-close"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          {/* Close button */}
+          <div className="px-[39px] pt-[24px] pb-[32px]">
+            <button
+              onClick={handleClose}
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              data-testid="btn-wallet-close"
+            >
+              Close
+            </button>
+          </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* ── Body ── */}
-        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px] pb-[32px]">
+  // ── STEP 2: Bank Account ───────────────────────────────────────────────────
+  if (step === "bank") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
-          {/* ── STEP 1: Select type ── */}
-          {step === "select-type" && (
-            <>
-              <div className="flex flex-col">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Add Money</p>
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">Which type of account?</p>
-              </div>
+          {/* Header */}
+          <div className="bg-[#0a0c10] h-[56px] relative">
+            <BackBtn bg={S2B_BACK_BG} vec={S2B_BACK_VEC} onClick={handleBack} />
+          </div>
 
-              <div className="flex flex-col gap-[8px]">
-                {!excludeTypes.includes("wallet") && (
-                  <button
-                    onClick={() => handleTypeSelect("wallet")}
-                    className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                    data-testid="btn-select-wallet"
-                  >
-                    <WalletIcon32 s={1} />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">Your Wallet</span>
-                    <ChevronRight />
-                  </button>
-                )}
-                {!excludeTypes.includes("bank") && (
-                  <button
-                    onClick={() => handleTypeSelect("bank")}
-                    className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                    data-testid="btn-select-bank"
-                  >
-                    <BankIcon32 s={1} />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">Bank Account</span>
-                    <ChevronRight />
-                  </button>
-                )}
-                {!excludeTypes.includes("agent") && (
-                  <button
-                    onClick={() => handleTypeSelect("agent")}
-                    className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                    data-testid="btn-select-agent"
-                  >
-                    <AgentIcon32 s={1} />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">AI Agent Account</span>
-                    <ChevronRight />
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+          {/* Content */}
+          <div className="flex flex-col gap-[24px] px-[39px]">
+            {/* Title */}
+            <div className="flex flex-col">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+                Add Money
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+                What account should we fund?
+              </p>
+            </div>
 
-          {/* ── STEP 2: Your Wallet ── */}
-          {step === "wallet" && (
-            <>
-              <div className="flex flex-col">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Add Money</p>
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">What account should we fund?</p>
-              </div>
-
-              {/* Account selector */}
+            {/* Selected account row */}
+            <div className="relative">
               <button
-                onClick={handleBack}
+                onClick={() => setPopupOpen((v) => !v)}
                 className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-account-selector"
+                data-testid="btn-account-row-bank"
               >
-                <WalletIcon32 s={2} />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">Your Wallet</span>
-                <ChevronDown />
-              </button>
-
-              {/* Wallet Address */}
-              <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Wallet Address</p>
-                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
-                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate">
-                    {truncAddr(WALLET_ADDRESS)}
-                  </p>
-                  <div className="flex gap-[8px] items-center shrink-0">
-                    <CopyBtn onClick={() => handleCopy(WALLET_ADDRESS)} />
-                    <QRBtn onClick={() => setQrOpen(true)} />
+                <BankIconS2B />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                  Bank Account
+                </p>
+                <div className="relative shrink-0 size-[24px]">
+                  <div className="absolute bottom-[40.09%] left-1/4 right-1/4 top-[37.5%]">
+                    <div className="absolute inset-[-18.59%_-8.33%]">
+                      <img alt="" className="block max-w-none size-full" src={S2B_CHEVRON} />
+                    </div>
                   </div>
                 </div>
-                {copied && (
-                  <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px]">Address copied!</p>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex gap-[16px]">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 h-[48px] bg-[#222737] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-                  data-testid="btn-add-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-                  data-testid="btn-add-next"
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ── STEP 2: Bank Account ── */}
-          {step === "bank" && (
-            <>
-              <div className="flex flex-col">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Add Money</p>
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">What account should we fund?</p>
-              </div>
-
-              {/* Account selector */}
-              <button
-                onClick={handleBack}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-account-selector-bank"
-              >
-                <BankIcon32 s={2} />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">Bank Account</span>
-                <ChevronDown />
               </button>
+              {popupOpen && (
+                <AccountPopup
+                  accounts={availableAccounts}
+                  onSelect={handleAccountSelect}
+                  onClose={() => setPopupOpen(false)}
+                />
+              )}
+            </div>
 
+            {/* Bank fields */}
+            <div className="flex flex-col gap-[24px]">
               {/* Recipient Name */}
               <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Account Name</p>
-                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+                  Recipient Name
+                </p>
+                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                   <input
                     type="text"
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
                     placeholder="John Smith"
-                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'Gilroy',sans-serif] placeholder:text-[#414965] outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 whitespace-nowrap"
                     data-testid="input-recipient-name"
                   />
                   <button
                     onClick={() => handlePaste("recipientName")}
-                    className="bg-[#4a2300] px-[12px] py-[6px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
+                    className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
                     data-testid="btn-paste-name"
                   >
-                    <span className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#ff9500] text-[12px] font-semibold whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
                       {pastedField === "recipientName" ? "Pasted!" : "Paste"}
                     </span>
                   </button>
@@ -492,137 +677,147 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
 
               {/* IBAN */}
               <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">IBAN Bank Number</p>
-                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+                  IBAN Bank Number
+                </p>
+                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                   <input
                     type="text"
                     value={iban}
                     onChange={(e) => setIban(e.target.value)}
                     placeholder="AE0703....123456"
-                    className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',sans-serif] placeholder:text-[#414965] outline-none tracking-wider min-w-0"
+                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
                     data-testid="input-iban"
                   />
                   <button
                     onClick={() => handlePaste("iban")}
-                    className="bg-[#4a2300] px-[12px] py-[6px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
+                    className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
                     data-testid="btn-paste-iban"
                   >
-                    <span className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#ff9500] text-[12px] font-semibold whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
                       {pastedField === "iban" ? "Pasted!" : "Paste"}
                     </span>
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Footer */}
-              <div className="flex gap-[16px]">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 h-[48px] bg-[#222737] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-                  data-testid="btn-add-cancel-bank"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!canConfirm}
-                  className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-40"
-                  data-testid="btn-add-next-bank"
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          )}
+          {/* Close button */}
+          <div className="px-[39px] pt-[24px] pb-[32px]">
+            <button
+              onClick={handleClose}
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              data-testid="btn-bank-close"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-          {/* ── STEP 2: AI Agent Account ── */}
-          {step === "agent" && (
-            <>
-              <div className="flex flex-col">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Add Money</p>
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">What account should we fund?</p>
-              </div>
+  // ── STEP 2: AI Agent Account ───────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+      <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
-              {/* Agent selector */}
-              <div className="flex flex-col gap-[4px]">
-                <div className="relative">
-                  <button
-                    onClick={handleBack}
-                    className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                    data-testid="btn-account-selector-agent"
-                  >
-                    <AgentIcon32 s={2} />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left">
-                      {selectedAgent?.name ?? "Select Agent"}
-                    </span>
-                    <ChevronDown />
-                  </button>
-                </div>
+        {/* QR overlay */}
+        {qrOpen && (
+          <QRPopup
+            address={activeAddr}
+            onClose={() => setQrOpen(false)}
+            onCopy={() => handleCopy(activeAddr)}
+            copied={copied}
+          />
+        )}
 
-                {/* Agent list (dropdown) */}
-                <div className="flex flex-col gap-[4px] mt-[4px]">
-                  {agentList.map((agent) => (
-                    <button
-                      key={agent.id}
-                      onClick={() => setSelectedAgent(agent)}
-                      className={`flex items-center gap-[8px] px-[16px] py-[10px] rounded-[12px] transition-colors ${
-                        selectedAgent?.id === agent.id ? "bg-[#123509] border border-[rgba(66,191,35,0.2)]" : "bg-[#11141b] hover:bg-[#1d2132]"
-                      }`}
-                      data-testid={`btn-agent-${agent.id}`}
-                    >
-                      <AgentIcon32 s={2} />
-                      <span className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px] flex-1 text-left">
-                        {agent.name}
-                      </span>
-                      {selectedAgent?.id === agent.id && (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <path d="M3 8L6.5 11.5L13 4.5" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* Header */}
+        <div className="bg-[#0a0c10] h-[56px] relative">
+          <BackBtn bg={S2A_BACK_BG} vec={S2A_BACK_VEC} onClick={handleBack} />
+        </div>
 
-              {/* Wallet Address */}
-              {selectedAgent && (
-                <div className="flex flex-col gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Wallet Address</p>
-                  <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate">
-                      {truncAddr(selectedAgent.address)}
-                    </p>
-                    <div className="flex gap-[8px] items-center shrink-0">
-                      <CopyBtn onClick={() => handleCopy(selectedAgent.address)} />
-                      <QRBtn onClick={() => setQrOpen(true)} />
-                    </div>
+        {/* Content */}
+        <div className="flex flex-col gap-[24px] px-[39px]">
+          {/* Title */}
+          <div className="flex flex-col">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+              Add Money
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+              What account should we fund?
+            </p>
+          </div>
+
+          {/* Selected account row */}
+          <div className="relative">
+            <button
+              onClick={() => setPopupOpen((v) => !v)}
+              className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+              data-testid="btn-account-row-agent"
+            >
+              <AgentIconS2A />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                {selected?.name ?? "Yield Agent"}
+              </p>
+              <div className="relative shrink-0 size-[24px]">
+                <div className="absolute bottom-[40.09%] left-1/4 right-1/4 top-[37.5%]">
+                  <div className="absolute inset-[-18.59%_-8.33%]">
+                    <img alt="" className="block max-w-none size-full" src={S2A_CHEVRON} />
                   </div>
-                  {copied && (
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px]">Address copied!</p>
-                  )}
                 </div>
-              )}
-
-              {/* Footer */}
-              <div className="flex gap-[16px]">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 h-[48px] bg-[#222737] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-                  data-testid="btn-add-cancel-agent"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!canConfirm}
-                  className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-40"
-                  data-testid="btn-add-next-agent"
-                >
-                  Next
-                </button>
               </div>
-            </>
-          )}
+            </button>
+            {popupOpen && (
+              <AccountPopup
+                accounts={availableAccounts}
+                onSelect={handleAccountSelect}
+                onClose={() => setPopupOpen(false)}
+              />
+            )}
+          </div>
+
+          {/* Wallet Address */}
+          <div className="flex flex-col gap-[4px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+              Wallet Address
+            </p>
+            <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+              <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
+                {truncAddr(activeAddr)}
+              </p>
+              <div className="flex gap-[8px] items-center shrink-0">
+                {/* Button 1: opens QR popup */}
+                <AddrBtn1
+                  bg1={S2A_BTN1_BG1} bg2={S2A_BTN_BG2} vec={S2A_BTN1_VEC}
+                  onClick={() => setQrOpen(true)}
+                />
+                {/* Button 2: copies address */}
+                <AddrBtn1
+                  bg1={S2A_BTN2_BG1} bg2={S2A_BTN_BG2} vec={S2A_BTN2_VEC}
+                  onClick={() => handleCopy(activeAddr)}
+                />
+              </div>
+            </div>
+            {copied && (
+              <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+                Address copied!
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Close button */}
+        <div className="px-[39px] pt-[24px] pb-[32px]">
+          <button
+            onClick={handleClose}
+            className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+            data-testid="btn-agent-close"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
