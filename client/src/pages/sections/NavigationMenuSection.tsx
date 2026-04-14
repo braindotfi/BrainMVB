@@ -405,7 +405,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       <div
         className={`fixed z-40 top-[12px] bottom-[12px] flex flex-col w-[360px] overflow-hidden
           transition-all duration-300 ease-out
-          ${insightsOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
+          ${insightsOpen ? "visible opacity-100 translate-x-0 pointer-events-auto" : "invisible opacity-0 -translate-x-4 pointer-events-none"}
         `}
         style={{
           left: collapsed ? "76px" : "280px",
@@ -614,7 +614,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
         {/* View All button */}
         <div className="px-4 py-4">
-          <Link href="/notifications">
+          <Link href="/notifications" className="outline-none focus:outline-none">
             <button
               onClick={() => setNotificationsOpen(false)}
               className="w-full flex items-center justify-center gap-2 py-[10px] bg-[#222737] hover:opacity-80 transition-opacity rounded-[100px]"
@@ -919,7 +919,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             </div>
 
             {/* Dashboard — first item */}
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="outline-none focus:outline-none">
               <button title="Dashboard" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                 <DashboardIcon active={isActive("/dashboard")} />
               </button>
@@ -927,7 +927,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
-                <Link href={item.path}>
+                <Link href={item.path} className="outline-none focus:outline-none">
                   <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                     {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
                     {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
@@ -1002,7 +1002,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
             <div className="flex flex-col items-start gap-1 w-full">
               {/* Dashboard — first item */}
-              <Link href="/dashboard" className="w-full">
+              <Link href="/dashboard" className="w-full outline-none focus:outline-none">
                 <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/dashboard") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                   <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
                     <DashboardIcon active={isActive("/dashboard")} />
@@ -1020,7 +1020,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
-                  <Link href={item.path} className="w-full">
+                  <Link href={item.path} className="w-full outline-none focus:outline-none">
                     <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                       <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
                         {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
