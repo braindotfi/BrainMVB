@@ -348,6 +348,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [collapsedDropdownOpen, setCollapsedDropdownOpen] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bankHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bankPopupLockedRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const collapsedDropdownRef = useRef<HTMLDivElement>(null);
   const bankPopupRef = useRef<HTMLDivElement>(null);
@@ -848,7 +849,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               setCollapsedDropdownOpen(false);
             }}
             onMouseLeave={() => {
-              bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
+              if (!bankPopupLockedRef.current) {
+                bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
+              }
             }}
           >
             <button
@@ -865,13 +868,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 className="absolute z-50"
                 style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
                 onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); }}
-                onMouseLeave={() => { bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150); }}
+                onMouseLeave={() => {
+                  if (!bankPopupLockedRef.current) {
+                    bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
+                  }
+                }}
                 onClick={() => {
+                  bankPopupLockedRef.current = true;
                   if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
-                  setTimeout(() => {
-                    if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
-                    setBankPopupOpen(true);
-                  }, 0);
+                  setTimeout(() => { bankPopupLockedRef.current = false; }, 500);
                 }}
               >
                 <BankPopup />
