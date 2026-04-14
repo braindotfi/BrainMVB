@@ -36,6 +36,7 @@ function AppLayout() {
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [exchangeCardType, setExchangeCardType] = useState<"wallet" | "bank">("wallet");
   const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
+  const [focusSendWithdrawalTrigger, setFocusSendWithdrawalTrigger] = useState<{ seq: number; sourceAccountType: "wallet" | "bank" } | null>(null);
   const [, navigate] = useLocation();
 
   if (!isLoggedIn) {
@@ -94,6 +95,7 @@ function AppLayout() {
           onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
           onExchange={(cardType) => { setExchangeCardType(cardType); setExchangeOpen(true); }}
           focusExchangesTrigger={focusExchangesTrigger}
+          focusSendWithdrawalTrigger={focusSendWithdrawalTrigger}
         />
       </div>
 
@@ -128,6 +130,9 @@ function AppLayout() {
         open={sendOpen}
         onClose={() => setSendOpen(false)}
         sourceAccountType={sendCardType}
+        onConfirmed={(type) =>
+          setFocusSendWithdrawalTrigger(prev => ({ seq: (prev?.seq ?? 0) + 1, sourceAccountType: type }))
+        }
       />
       <ExchangeModal
         open={exchangeOpen}

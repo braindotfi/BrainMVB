@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/authContext";
+import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface Props {
   onClose: () => void;
   sourceAccountType?: "wallet" | "bank";
   excludeTypes?: Array<"bank" | "wallet" | "agent">;
+  onConfirmed?: (sourceAccountType: "wallet" | "bank") => void;
 }
 
 // ── Static data ────────────────────────────────────────────────────────────────
@@ -392,8 +394,9 @@ function ReviewRow({ label, value, highlight }: { label: string; value: string; 
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export const SendModal = ({ open, onClose, sourceAccountType = "wallet", excludeTypes = [] }: Props): JSX.Element | null => {
+export const SendModal = ({ open, onClose, sourceAccountType = "wallet", excludeTypes = [], onConfirmed }: Props): JSX.Element | null => {
   const { wirexAccounts } = useAuth();
+  const { addTransaction } = useTransactions();
   const [state, setState]               = useState<SendState>(INITIAL);
   const [assetPopupOpen, setAssetPopupOpen] = useState(false);
   const [popupOpen, setPopupOpen]           = useState(false);
@@ -445,7 +448,22 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
   const handleConfirm = () => {
     setSending(true);
-    setTimeout(() => { setSending(false); setSent(true); }, 1800);
+    setTimeout(() => {
+      setSending(false);
+      setSent(true);
+      const now = new Date();
+      addTransaction({
+        type: "withdrawal",
+        label: `Sent ${state.amount} ${selectedAsset?.ticker ?? ""} to ${recipientLabel()}`,
+        time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+        date: now.toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+        amount: `-${state.amount} ${selectedAsset?.ticker ?? ""}`,
+        positive: false,
+        txHash: generateTxHash(),
+        accountId: sourceAccountType === "bank" ? "bank" : null,
+      });
+      onConfirmed?.(sourceAccountType);
+    }, 1800);
   };
 
   const canNext = (() => {

@@ -281,9 +281,10 @@ interface Props {
   onSend?: (cardType: "wallet" | "bank") => void;
   onExchange?: (cardType: "wallet" | "bank") => void;
   focusExchangesTrigger?: number;
+  focusSendWithdrawalTrigger?: { seq: number; sourceAccountType: "wallet" | "bank" } | null;
 }
 
-export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange, focusExchangesTrigger }: Props): JSX.Element => {
+export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange, focusExchangesTrigger, focusSendWithdrawalTrigger }: Props): JSX.Element => {
   const { wirexAccounts, user } = useAuth();
 
   const { data: agentsRaw = [] } = useQuery<any[]>({ queryKey: ["/api/agents"] });
@@ -324,6 +325,19 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     setActiveTab("Transactions");
     setTransactionFilter("Exchanges");
   }, [focusExchangesTrigger]);
+
+  // Switch to Transactions/Withdrawals tab for the correct account when a send is confirmed
+  useEffect(() => {
+    if (!focusSendWithdrawalTrigger?.seq) return;
+    const cardIdx = focusSendWithdrawalTrigger.sourceAccountType === "bank" ? 2 : 0;
+    setActiveAccount(null);
+    setActiveCard(cardIdx);
+    setActiveTab("Transactions");
+    setTransactionFilter("Withdrawals");
+    setCollapsedCardIndex(cardIdx);
+    setCollapsedTxFilter("Withdrawals");
+    setCollapsedAccount(null);
+  }, [focusSendWithdrawalTrigger]);
   // Collapsed icon strip hover state
   const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
@@ -399,10 +413,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     if (activeCard !== 0 && transactionFilter === "Exchanges") setTransactionFilter("All");
   }, [activeCard, transactionFilter]);
 
-  // Merge live exchange transactions (from context) into wallet transaction list
+  // Merge live transactions (from context) into the appropriate card list
   const { transactions: ctxTransactions } = useTransactions();
   const walletCtxTxs = useMemo(
     () => ctxTransactions.filter(t => t.accountId === null || t.accountId === undefined),
+    [ctxTransactions]
+  );
+  const bankCtxTxs = useMemo(
+    () => ctxTransactions.filter(t => t.accountId === "bank"),
     [ctxTransactions]
   );
 
@@ -412,8 +430,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     : null;
   const assetsData = isYourAccount ? (currentCardData?.assets ?? walletData.assets) : agentCardData!.assets;
   const baseWalletTxs = walletData.transactions as Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }>;
+  const baseBankTxs   = bankData.transactions  as Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }>;
   const txData: Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }> = isYourAccount
-    ? (activeCard === 0 ? [...walletCtxTxs, ...baseWalletTxs] : (currentCardData?.transactions ?? walletData.transactions))
+    ? (activeCard === 0
+        ? [...walletCtxTxs, ...baseWalletTxs]
+        : activeCard === 2
+          ? [...bankCtxTxs, ...baseBankTxs]
+          : (currentCardData?.transactions ?? walletData.transactions))
     : agentCardData!.transactions;
 
   /* ── collapsed state ── */
@@ -709,7 +732,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       const safeFilter = collapsedTxTabs.includes(collapsedTxFilter) ? collapsedTxFilter : "All";
       const collapsedBaseTxs = collapsedCardIndex === 0
         ? [...walletCtxTxs, ...activeCollapsedData.transactions]
-        : activeCollapsedData.transactions;
+        : collapsedCardIndex === 2
+          ? [...bankCtxTxs, ...activeCollapsedData.transactions]
+          : activeCollapsedData.transactions;
       const filteredTx = collapsedBaseTxs.filter(t =>
         safeFilter === "Exchanges"   ? (t.type === "trade" || t.type === "exchange") :
         safeFilter === "Deposits"    ? t.type === "deposit"    :
