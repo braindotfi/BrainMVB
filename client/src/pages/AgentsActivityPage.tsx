@@ -5,15 +5,52 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
 type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
-const REP_TC: Record<RepTier, { bg: string; border: string; text: string; dot: string }> = {
-  Legendary: { bg: "#1a0840", border: "rgba(157,92,245,0.30)",  text: "#9d5cf5", dot: "#9d5cf5" },
-  Diamond:   { bg: "#0a1a2e", border: "rgba(56,189,248,0.30)",  text: "#38bdf8", dot: "#38bdf8" },
-  Gold:      { bg: "#1a0e00", border: "rgba(255,149,0,0.30)",   text: "#ff9500", dot: "#ff9500" },
-  Silver:    { bg: "#10131a", border: "rgba(168,185,244,0.30)", text: "#a8b9f4", dot: "#a8b9f4" },
-  Bronze:    { bg: "#140c00", border: "rgba(205,124,47,0.30)",  text: "#cd7c2f", dot: "#cd7c2f" },
-  New:       { bg: "#001a16", border: "rgba(0,212,170,0.30)",   text: "#00d4aa", dot: "#00d4aa" },
-  Unranked:  { bg: "#0d0f14", border: "rgba(65,73,101,0.25)",   text: "#6c779d", dot: "#414965" },
-  Caution:   { bg: "#1a0009", border: "rgba(210,3,68,0.35)",    text: "#d20344", dot: "#d20344" },
+
+/* Figma node 3372:33198 — Badges component asset URLs */
+const BADGE_ICON: Record<RepTier, { url: string; flip?: boolean }> = {
+  Legendary: { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Diamond:   { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
+  Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
+  Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
+  New:       { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848" },
+  Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
+  Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
+};
+const BADGE_STYLE: Record<RepTier, { bg: React.CSSProperties["background"]; textGrad?: string; textSolid?: string }> = {
+  Legendary: { bg: "linear-gradient(107deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",  textGrad: "linear-gradient(105deg, #d4b4ff 0%, #9d5cf5 100%)" },
+  Diamond:   { bg: "linear-gradient(107deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",   textGrad: "linear-gradient(105deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)" },
+  Gold:      { bg: "linear-gradient(to right, #352502, #614b12)",                        textGrad: "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)" },
+  Silver:    { bg: "linear-gradient(to right, #2b363b, #3f4e55)",                        textGrad: "linear-gradient(101deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)" },
+  Bronze:    { bg: "linear-gradient(to right, #2d220e, #42321a)",                        textGrad: "linear-gradient(101deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)" },
+  New:       { bg: "linear-gradient(to right, #001a14, #00261d)",                        textGrad: "linear-gradient(100deg, #00d4aa 0%, #00a87f 100%)" },
+  Unranked:  { bg: "linear-gradient(to right, #21283b, #363d56)",                        textGrad: "linear-gradient(41deg, rgb(151,163,204) 23%, rgb(108,119,157) 76%)" },
+  Caution:   { bg: "#350011",                                                             textSolid: "#d20344" },
+};
+
+/* Compact reputation pill — matches Figma Badges component (node 3638:37529+) */
+const RepBadge = ({ tier, agentId }: { tier: RepTier; agentId: string }) => {
+  const icon = BADGE_ICON[tier];
+  const style = BADGE_STYLE[tier];
+  return (
+    <span
+      className="inline-flex items-center gap-[2px] px-[6px] py-[2px] rounded-[40px] flex-shrink-0"
+      style={{ background: style.bg as string }}
+      data-testid={`badge-reputation-${agentId}`}
+    >
+      <span className={`w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
+        <img src={icon.url} alt="" className="w-full h-full object-contain" />
+      </span>
+      <span
+        className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] font-semibold leading-[14px] whitespace-nowrap"
+        style={style.textGrad
+          ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+          : { color: style.textSolid }}
+      >
+        {tier}
+      </span>
+    </span>
+  );
 };
 
 /* ── Per-agent spend cap mock data ── */
@@ -59,7 +96,6 @@ const AgentCard = ({
     queryFn: () => fetch(`/api/agents/${agent.id}/reputation`).then((r) => r.json()),
     staleTime: 5 * 60 * 1000,
   });
-  const tc = rep ? REP_TC[rep.tier] : null;
 
   return (
     <div
@@ -80,26 +116,17 @@ const AgentCard = ({
 
         {/* Name + type tag */}
         <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
-          <div className="flex items-center gap-[6px]">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate">
-              {agent.name}
-            </span>
-            {tc && rep && (
-              <span
-                className="inline-flex items-center gap-[4px] px-[7px] py-[2px] rounded-[6px] text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 leading-[14px]"
-                style={{ background: tc.bg, border: `1px solid ${tc.border}`, color: tc.text }}
-                data-testid={`badge-reputation-${agent.id}`}
-              >
-                <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: tc.dot }} />
-                {rep.tier}
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate">
+            {agent.name}
+          </span>
+          <div className="flex items-center gap-[4px] flex-shrink-0">
+            <div className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+              style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
+                {agent.type}
               </span>
-            )}
-          </div>
-          <div className="inline-flex w-fit items-center justify-center px-[8px] py-[3px] rounded-[22px]"
-            style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
-              {agent.type}
-            </span>
+            </div>
+            {rep && <RepBadge tier={rep.tier} agentId={agent.id} />}
           </div>
         </div>
 
