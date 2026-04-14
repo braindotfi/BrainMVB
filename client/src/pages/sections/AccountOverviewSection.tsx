@@ -340,6 +340,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   }, [focusSendWithdrawalTrigger]);
   // Collapsed icon strip hover state
   const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
+  const [bankPopupOpen, setBankPopupOpen]       = useState(false);
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
   const [collapsedTxFilter, setCollapsedTxFilter]       = useState("All");
   const [collapsedCardIndex, setCollapsedCardIndex]     = useState(0);
@@ -348,6 +349,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const collapsedDropdownRef = useRef<HTMLDivElement>(null);
+  const bankPopupRef = useRef<HTMLDivElement>(null);
 
   const openHover = useCallback((icon: string) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -381,6 +383,17 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     if (collapsedDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [collapsedDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bankPopupRef.current && !bankPopupRef.current.contains(e.target as Node)) {
+        setBankPopupOpen(false);
+        setCollapsedDropdownOpen(false);
+      }
+    };
+    if (bankPopupOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [bankPopupOpen]);
 
   // Reset card to wallet whenever switching account (personal or any agent)
   const handleSwitchAccount = (id: string | null) => {
@@ -483,10 +496,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         return <AgentDebitCard agentName={selectedAgent?.name || "Agent"} />;
       })();
 
-      const cardSubLabel = isYourCollapsedAccount
-        ? (["Wallet", "Debit", "Bank"] as const)[collapsedCardIndex as 0|1|2]
-        : null;
-
       return (
         <div className="w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
           {/* Header — Figma 3272:29911 */}
@@ -495,7 +504,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               Accounts
             </span>
             <button
-              onClick={() => setHoveredIcon(null)}
+              onClick={() => setBankPopupOpen(false)}
               className="w-[24px] h-[24px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
               style={{ background: "#1d2132" }}
             >
@@ -530,7 +539,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 )}
                 {/* Label: "Your Account" or agent name */}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
+                  <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
                     {isYourCollapsedAccount ? "Your Account" : (selectedAgent?.name ?? "Account")}
                   </span>
                 </div>
@@ -809,7 +818,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} excludeTypes={[]} />
 
         {/* Backdrop shade — appears behind popup, on top of main content */}
-        {hoveredIcon && (
+        {(hoveredIcon || bankPopupOpen) && (
           <div
             className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300"
             style={{ pointerEvents: "none" }}
@@ -838,27 +847,22 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── "Wallet" label ── */}
           <span className="text-[#414965] text-[9px] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
 
-          {/* ── Bank icon: WalletIcons style — squircle rounded-[20px] ── */}
-          <div
-            className="relative flex-shrink-0"
-            onMouseEnter={() => openHover("bank")}
-            onMouseLeave={closeHover}
-          >
+          {/* ── Bank icon: click-to-toggle popup ── */}
+          <div className="relative flex-shrink-0" ref={bankPopupRef}>
             <button
               data-testid="button-collapsed-bank"
+              onClick={() => { setBankPopupOpen(prev => !prev); setCollapsedDropdownOpen(false); }}
               className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
             >
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={hoveredIcon === "bank" ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/1734631d-84a1-45bd-98f1-2f2d8c1b152f"} />
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/1734631d-84a1-45bd-98f1-2f2d8c1b152f"} />
               <div className="absolute left-[8px] size-[24px] top-[8px]">
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src={hoveredIcon === "bank" ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/5b1a6f26-a8c2-47ab-b4fc-e85aa0796935"} />
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/5b1a6f26-a8c2-47ab-b4fc-e85aa0796935"} />
               </div>
             </button>
-            {hoveredIcon === "bank" && (
+            {bankPopupOpen && (
               <div
                 className="absolute z-50"
                 style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={cancelClose}
-                onMouseLeave={closeHover}
               >
                 <BankPopup />
               </div>
