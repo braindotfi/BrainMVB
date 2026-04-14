@@ -37,4 +37,10 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  optimizeDeps: {
+    include: ["buffer"],
+  },
+  define: {
+    global: "globalThis",
+  },
 });

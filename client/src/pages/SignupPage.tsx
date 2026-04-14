@@ -112,15 +112,31 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
 
 class CrossmintErrorBoundary extends Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; errorMessage: string }
 > {
   constructor(props: any) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMessage: "" };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMessage: error?.message ?? "Unknown error" };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[Crossmint] EmbeddedAuthForm crashed:", error.message, info.componentStack);
+  }
   render() {
-    if (this.state.hasError) return null;
+    if (this.state.hasError) {
+      return (
+        <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
+          <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
+            Sign-in form unavailable — use Demo below
+          </p>
+          {process.env.NODE_ENV !== "production" && (
+            <p className="text-[#d20344] text-xs mt-1 break-all">{this.state.errorMessage}</p>
+          )}
+        </div>
+      );
+    }
     return this.props.children;
   }
 }
@@ -150,10 +166,21 @@ function LazyEmbeddedAuth({
         setUseAuthHook(() => m.useCrossmintAuth);
         setUseWalletHook(() => m.useWallet);
       })
-      .catch(() => setSdkError(true));
+      .catch((err: unknown) => {
+        console.error("[Crossmint] SDK import failed:", err);
+        setSdkError(true);
+      });
   }, []);
 
-  if (sdkError) return null;
+  if (sdkError) {
+    return (
+      <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
+        <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
+          Sign-in form unavailable — use Demo below
+        </p>
+      </div>
+    );
+  }
 
   if (!Comp || !Provider || !AuthProv || !WalletProv) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
