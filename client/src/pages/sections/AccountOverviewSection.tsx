@@ -972,7 +972,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       <AddAccountModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        excludeTypes={activeCard === 0 ? ["bank"] : activeCard === 2 ? ["wallet"] : []}
+        excludeTypes={[]}
       />
       <div className="flex-shrink-0 self-stretch">
 
