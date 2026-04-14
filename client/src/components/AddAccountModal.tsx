@@ -36,15 +36,15 @@ const S2W_BTN2_BG1   = "https://www.figma.com/api/mcp/asset/691609ce-8429-43c0-b
 const S2W_BTN2_VEC   = "https://www.figma.com/api/mcp/asset/29b769ca-506b-4714-9946-ffa9299d3c34";
 
 // Step-2 bank icons & back button
-const S2B_BANK_BG    = "https://www.figma.com/api/mcp/asset/6739ca24-54c6-486a-b70c-b2b95ce010bc";
-const S2B_BANK_VEC   = "https://www.figma.com/api/mcp/asset/47d54e4f-88ae-47e6-9290-9606e0744726";
-const S2B_CHEVRON    = "https://www.figma.com/api/mcp/asset/aa16e268-417a-4e63-b06c-3a4e8af8f987";
-const S2B_BACK_BG    = "https://www.figma.com/api/mcp/asset/f0fbca18-3bcc-41a0-8973-b2f21a531f3b";
-const S2B_BACK_VEC   = "https://www.figma.com/api/mcp/asset/00b78aca-79dc-4b13-8c97-ac4ca8b92192";
+const S2B_BANK_BG    = "https://www.figma.com/api/mcp/asset/b7866c34-cb02-484c-a8a6-799cfcd0d1ff";
+const S2B_BANK_VEC   = "https://www.figma.com/api/mcp/asset/ef7b89f0-0234-44ff-a621-f067b610852f";
+const S2B_CHEVRON    = "https://www.figma.com/api/mcp/asset/c575d3b5-e8e4-4a04-8559-3254112dc210";
+const S2B_BACK_BG    = "https://www.figma.com/api/mcp/asset/54a0369b-1693-409e-8dc5-8c2786c2d7d1";
+const S2B_BACK_VEC   = "https://www.figma.com/api/mcp/asset/139d4092-341e-43ea-a665-c1dd495d7cbe";
 // Step-2 bank copy buttons (one per field)
-const S2B_BTN_BG1    = "https://www.figma.com/api/mcp/asset/63c9f93a-9b5b-4d18-a79d-234adfd9703b";
-const S2B_BTN_BG2    = "https://www.figma.com/api/mcp/asset/a084a6f2-49d3-4059-a8fc-a910f14efcf1";
-const S2B_BTN_VEC    = "https://www.figma.com/api/mcp/asset/85bf6f49-945f-4c68-a868-06cadbf474e2";
+const S2B_BTN_BG1    = "https://www.figma.com/api/mcp/asset/c3ceeda6-0a72-41f9-b3e7-e364ba1e2019";
+const S2B_BTN_BG2    = "https://www.figma.com/api/mcp/asset/742fb92a-2c8b-426b-8d4a-650c4c5a7f8e";
+const S2B_BTN_VEC    = "https://www.figma.com/api/mcp/asset/bb18a37f-88ae-4670-b32f-c686390381b5";
 
 // Step-2 agent icons & back button
 const S2A_AGENT_BG   = "https://www.figma.com/api/mcp/asset/02d26233-106d-4721-9094-ef74efef5fe2";
@@ -85,6 +85,11 @@ const ALL_ACCOUNTS: Account[] = [
 function truncAddr(addr: string): string {
   if (!addr || addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}...${addr.slice(-5)}`;
+}
+
+function truncIban(iban: string): string {
+  if (!iban || iban.length <= 12) return iban;
+  return `${iban.slice(0, 6)}....${iban.slice(-6)}`;
 }
 
 // ── Figma icon components ─────────────────────────────────────────────────────
@@ -722,8 +727,8 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   IBAN Bank Number
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                  <p className="flex-1 [font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap tracking-wider" data-testid="text-iban">
-                    {iban || "—"}
+                  <p className="flex-1 [font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
+                    {iban ? truncIban(iban) : "—"}
                   </p>
                   <button
                     onClick={() => handleCopyField("iban")}
