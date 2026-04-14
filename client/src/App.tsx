@@ -127,7 +127,7 @@ function AppLayout() {
       <SendModal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
-        excludeTypes={sendCardType === "wallet" ? ["bank"] : sendCardType === "bank" ? ["wallet"] : []}
+        sourceAccountType={sendCardType}
       />
       <ExchangeModal
         open={exchangeOpen}

@@ -1,147 +1,340 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/authContext";
 
-type RecipientType = "bank" | "wallet" | "agent" | null;
+// ── Figma asset URLs ──────────────────────────────────────────────────────────
+
+// Header back button
+const BACK_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
+const BACK_VEC = "https://www.figma.com/api/mcp/asset/4356db82-74dc-481d-9b7b-397796b1864b";
+
+// Step progress indicator images (steps 1 / 2 / 3)
+const STEP1_IND = "https://www.figma.com/api/mcp/asset/d3625bf9-3c31-45d7-8df2-12919b08e899";
+const STEP2_IND = "https://www.figma.com/api/mcp/asset/2a0585ad-8b28-4d9a-b93c-f24bd071fd22";
+const STEP3_IND = "https://www.figma.com/api/mcp/asset/c626951f-19e6-483d-afd6-0e7ada278b3e";
+
+// Chevron-down for dropdown rows
+const CHEVRON_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
+const CHEVRON_VEC = "https://www.figma.com/api/mcp/asset/d0cdfad5-4308-445c-a111-b558f85127c9";
+
+// Popup: recipient-type icons (32 px inverted)
+const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/14bf435a-a003-4588-9029-5ce6973c3a94";
+const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/783e8c47-1571-4b96-9c63-cd875fc7a1e4";
+const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/b3dc8e97-fef3-4cff-8f76-054a05e520bf";
+const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/2a4569bd-623f-43e8-90d3-a53e41c7e325";
+const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/9e6a186b-9934-4809-b3f0-64b27f9fec60";
+const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/e857828a-6482-4b80-80af-4e56cecf3cf7";
+
+// Popup: search + close
+const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/66211182-8dde-42ab-a29d-ce2c7a43948c";
+const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/76c74d2e-e77a-4dd9-887d-333365e41eea";
+const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/f39dbbe8-075b-4e3f-aaf9-bdfac59b7309";
+
+// ── Types & data ──────────────────────────────────────────────────────────────
+
+type RecipientType = "bank" | "wallet" | "agent";
 type Step = 1 | 2 | 3 | 4;
 
 interface SendState {
   step: Step;
-  recipientType: RecipientType;
-  selectedBankId: string | null;
+  recipientType: RecipientType | null;
+  recipientName: string;
+  iban: string;
   walletAddress: string;
   selectedAgentId: string | null;
   amount: string;
-  assetId: string;
 }
-
-const bankAccounts = [
-  { id: "chase", bank: "Chase Bank", number: "****4521", type: "Checking", color: "#1a3a6e" },
-  { id: "citi", bank: "Citibank", number: "****7890", type: "Savings", color: "#0a2857" },
-  { id: "boa", bank: "Bank of America", number: "****2347", type: "Checking", color: "#6e1a1a" },
-];
-
-const agentAccounts = [
-  { id: "1", name: "AlphaFlow", ticker: "$ALPHA", icon: "⚡", type: "Trading", balance: "$354.00" },
-  { id: "2", name: "SwarmAlpha", ticker: "$SWRM", icon: "🤖", type: "Analytics", balance: "$1,205.40" },
-  { id: "3", name: "Risk Sentinel", ticker: "$RSKX", icon: "🛡", type: "Risk", balance: "$88.20" },
-];
-
-const assets = [
-  { id: "usd", name: "Dollar", ticker: "USD", balance: "10,000.00", value: "$10,000.00", icon: "/figmaAssets/crypto-icons-3.svg" },
-  { id: "eth", name: "Ethereum", ticker: "ETH", balance: "1.245", value: "$2,500.00", icon: "/figmaAssets/crypto-icons.svg" },
-  { id: "matic", name: "Polygon", ticker: "MATIC", balance: "295.23", value: "$16,832.85", icon: "/figmaAssets/crypto-icons-1.svg" },
-  { id: "bnb", name: "Binance", ticker: "BNB", balance: "1.245", value: "$2,500.00", icon: "/figmaAssets/crypto-icons-2.svg" },
-];
-
-const FEE = "0.50";
-
-const recipientTypes = [
-  {
-    id: "bank" as RecipientType,
-    label: "Bank Account",
-    icon: "🏦",
-    description: "Transfer via wire or ACH to a linked bank account",
-  },
-  {
-    id: "wallet" as RecipientType,
-    label: "Wallet Address",
-    icon: "👛",
-    description: "Send crypto to any blockchain wallet address",
-  },
-  {
-    id: "agent" as RecipientType,
-    label: "AI Agent Account",
-    icon: "🤖",
-    description: "Fund an AI agent account on Brain Finance",
-  },
-];
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  sourceAccountType?: "wallet" | "bank";
   excludeTypes?: Array<"bank" | "wallet" | "agent">;
 }
+
+const RECIPIENT_TYPES: { id: RecipientType; name: string }[] = [
+  { id: "wallet", name: "Wallet Address" },
+  { id: "bank",   name: "Bank Account" },
+  { id: "agent",  name: "AI Agent Account" },
+];
+
+const AGENT_ACCOUNTS = [
+  { id: "yield",    name: "Yield Agent",   address: "0xYld3F...4f2A" },
+  { id: "trader",   name: "TraderPro",     address: "0xTrd9c...1B7E" },
+  { id: "treasury", name: "Treasury AI",   address: "0xTrs2E...7D3F" },
+];
+
+const FEE = "0.50";
 
 const INITIAL: SendState = {
   step: 1,
   recipientType: null,
-  selectedBankId: null,
+  recipientName: "",
+  iban: "",
   walletAddress: "",
   selectedAgentId: null,
   amount: "",
-  assetId: "usd",
 };
 
-const StepDot = ({ n, current }: { n: number; current: number }) => (
-  <div className="flex items-center">
-    <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${
-        n < current
-          ? "bg-brain-v1green text-white"
-          : n === current
-          ? "bg-brain-v1dark-orange text-brain-v1light-orange"
-          : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30"
-      }`}
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] hover:opacity-80 transition-opacity"
+      data-testid="btn-send-back"
     >
-      {n < current ? (
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ) : n}
-    </div>
-    {n < 4 && (
-      <div className={`w-8 h-px mx-1 transition-colors ${n < current ? "bg-brain-v1green" : "bg-brain-v1baby-blue-15"}`} />
-    )}
-  </div>
-);
-
-const stepLabels = ["Type", "Recipient", "Amount", "Review"];
-
-export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
-  const [state, setState] = useState<SendState>(INITIAL);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const { wirexAccounts } = useAuth();
-  const walletAcc = wirexAccounts.find(a => a.type === "wallet");
-  const liveAssets = useMemo(() =>
-    assets.map(a => a.id === "usd" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a),
-    [walletAcc?.balance]
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={BACK_BG} />
+      <div className="absolute left-[8px] size-[16px] top-[8px]">
+        <div className="absolute bottom-1/4 flex items-center justify-center left-[37.5%] right-[40.09%] top-1/4" style={{ containerType: "size" }}>
+          <div className="flex-none h-[100cqw] rotate-90 w-[100cqh]">
+            <div className="relative size-full">
+              <div className="absolute inset-[-20.92%_-9.38%]">
+                <img alt="" className="block max-w-none size-full" src={BACK_VEC} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
   );
+}
+
+function ChevronBtn() {
+  return (
+    <div className="relative rounded-[100px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={CHEVRON_BG} />
+      <div className="absolute left-[8px] size-[16px] top-[8px]">
+        <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
+          <div className="absolute inset-[-7.03%]">
+            <img alt="" className="block max-w-none size-full" src={CHEVRON_VEC} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipientIcon({ type }: { type: RecipientType }) {
+  if (type === "bank") {
+    return (
+      <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_BG} />
+        <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_VEC} />
+        </div>
+      </div>
+    );
+  }
+  if (type === "agent") {
+    return (
+      <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_BG} />
+        <div className="absolute inset-[20%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_VEC} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_BG} />
+      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
+        <div className="absolute inset-[12.5%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_VEC} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipientPopup({
+  onSelect,
+  onClose,
+  excludeTypes = [],
+}: {
+  onSelect: (t: RecipientType) => void;
+  onClose: () => void;
+  excludeTypes?: Array<RecipientType>;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = RECIPIENT_TYPES.filter(
+    (r) => !excludeTypes.includes(r.id) && r.name.toLowerCase().includes(search.toLowerCase())
+  );
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
+      <div
+        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-[16px] py-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Select Account</p>
+          <button
+            onClick={onClose}
+            className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
+            data-testid="btn-send-popup-close"
+          >
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
+            <div className="absolute left-[4px] size-[16px] top-[4px]">
+              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
+                <div className="absolute inset-[-8.04%]">
+                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-[8px] p-[8px]">
+          <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
+            <div className="relative shrink-0 size-[24px]">
+              <div className="absolute inset-[16.67%]">
+                <div className="absolute inset-[-6.25%]">
+                  <img alt="" className="block max-w-none size-full" src={POP_SEARCH_VEC} />
+                </div>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="bg-transparent flex-1 text-[#6c779d] text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-[#6c779d] min-w-0"
+              data-testid="input-send-search"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex items-center justify-center px-[8px] py-[4px]">
+              <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Assets</p>
+            </div>
+            {filtered.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect(r.id)}
+                className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132]"
+                data-testid={`btn-recipient-${r.id}`}
+              >
+                <RecipientIcon type={r.id} />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] whitespace-nowrap">
+                  {r.name}
+                </p>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No results</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentPopup({ onSelect, onClose }: { onSelect: (id: string) => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
+      <div
+        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-[16px] py-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Select Agent</p>
+          <button onClick={onClose} className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
+            <div className="absolute left-[4px] size-[16px] top-[4px]">
+              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
+                <div className="absolute inset-[-8.04%]">
+                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+        <div className="flex flex-col p-[8px] gap-[4px]">
+          {AGENT_ACCOUNTS.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => onSelect(a.id)}
+              className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full hover:bg-[#1d2132] transition-colors text-left"
+              data-testid={`btn-agent-${a.id}`}
+            >
+              <RecipientIcon type="agent" />
+              <div className="flex flex-col min-w-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
+                <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.address}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function InputBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+      {children}
+    </div>
+  );
+}
+
+function ReviewRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-[8px]">
+      <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[16px] leading-[24px]">{label}</p>
+      <p className={`[font-family:'JetBrains_Mono',sans-serif] font-semibold text-[16px] leading-[24px] ${highlight ? "text-[#ff9500]" : "text-white"}`}>{value}</p>
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export const SendModal = ({ open, onClose, sourceAccountType = "wallet", excludeTypes = [] }: Props): JSX.Element | null => {
+  const { wirexAccounts } = useAuth();
+  const [state, setState] = useState<SendState>(INITIAL);
+  const [popupOpen, setPopupOpen]       = useState(false);
+  const [agentPopupOpen, setAgentPopupOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent]       = useState(false);
 
   if (!open) return null;
 
   const set = (patch: Partial<SendState>) => setState((prev) => ({ ...prev, ...patch }));
 
+  const bankAcc   = wirexAccounts.find((a) => a.type === "bank");
+  const walletAcc = wirexAccounts.find((a) => a.type === "wallet");
+  const sourceAcc = sourceAccountType === "bank" ? bankAcc : walletAcc;
+
   const handleClose = () => {
     onClose();
-    setTimeout(() => { setState(INITIAL); setSent(false); setSending(false); }, 300);
+    setTimeout(() => {
+      setState(INITIAL);
+      setPopupOpen(false);
+      setAgentPopupOpen(false);
+      setSent(false);
+      setSending(false);
+    }, 300);
   };
 
-  const selectedAsset = liveAssets.find((a) => a.id === state.assetId) ?? liveAssets[0];
-  const totalAmount = state.amount
-    ? (parseFloat(state.amount.replace(/,/g, "") || "0") + parseFloat(FEE)).toFixed(2)
-    : "0.00";
-
-  const canContinue = (() => {
-    if (state.step === 1) return state.recipientType !== null;
-    if (state.step === 2) {
-      if (state.recipientType === "bank") return state.selectedBankId !== null;
-      if (state.recipientType === "wallet") return state.walletAddress.length > 10;
-      if (state.recipientType === "agent") return state.selectedAgentId !== null;
-    }
-    if (state.step === 3) {
-      const amt = parseFloat(state.amount || "0");
-      const bal = parseFloat(selectedAsset.balance.replace(/,/g, ""));
-      return amt > 0 && amt <= bal;
-    }
-    return true;
-  })();
+  const handleBack = () => {
+    if (state.step > 1) set({ step: (state.step - 1) as Step });
+    setPopupOpen(false);
+    setAgentPopupOpen(false);
+  };
 
   const handleNext = () => {
     if (state.step < 4) set({ step: (state.step + 1) as Step });
-  };
-  const handleBack = () => {
-    if (state.step > 1) set({ step: (state.step - 1) as Step });
   };
 
   const handleConfirm = () => {
@@ -149,290 +342,269 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
     setTimeout(() => { setSending(false); setSent(true); }, 1800);
   };
 
-  const getRecipientLabel = () => {
-    if (state.recipientType === "bank") {
-      const b = bankAccounts.find((b) => b.id === state.selectedBankId);
-      return b ? `${b.bank} ${b.number}` : "Bank Account";
+  const canNext = (() => {
+    if (state.step === 1) return state.recipientType !== null;
+    if (state.step === 2) {
+      if (state.recipientType === "bank")   return state.recipientName.length > 0 && state.iban.length > 6;
+      if (state.recipientType === "wallet") return state.walletAddress.length > 10;
+      if (state.recipientType === "agent")  return state.selectedAgentId !== null;
     }
-    if (state.recipientType === "wallet") {
-      return state.walletAddress.slice(0, 8) + "..." + state.walletAddress.slice(-6);
-    }
-    if (state.recipientType === "agent") {
-      const a = agentAccounts.find((a) => a.id === state.selectedAgentId);
-      return a ? `${a.name} (${a.ticker})` : "AI Agent";
-    }
+    if (state.step === 3) return parseFloat(state.amount || "0") > 0;
+    return true;
+  })();
+
+  const selectedAgent = AGENT_ACCOUNTS.find((a) => a.id === state.selectedAgentId);
+  const truncAddr = (addr: string) => addr.slice(0, 8) + "..." + addr.slice(-6);
+
+  const recipientLabel = () => {
+    if (state.recipientType === "bank")   return `${state.recipientName}`;
+    if (state.recipientType === "wallet") return truncAddr(state.walletAddress);
+    if (state.recipientType === "agent")  return selectedAgent?.name ?? "AI Agent";
     return "";
   };
 
+  const stepInd = [STEP1_IND, STEP2_IND, STEP3_IND][(state.step as number) - 1] ?? STEP3_IND;
+
+  // ── Success state ──────────────────────────────────────────────────────────
+  if (sent) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Transfer Complete</p>
+          </div>
+          <div className="flex flex-col items-center gap-[24px] px-[39px] pt-[24px] pb-[32px] text-center">
+            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
+                {state.amount ? `$${parseFloat(state.amount).toFixed(2)} Sent!` : "Sent!"}
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
+                Transfer to {recipientLabel()} was successful.
+              </p>
+            </div>
+            <button
+              onClick={handleClose}
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
+      <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
-      {/* Modal panel */}
-      <div className="relative z-10 w-[520px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-        {/* Header */}
-        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] flex-shrink-0 h-[56px] relative flex items-center justify-center w-full">
-          {!sent && state.step > 1 && (
-            <button
-              onClick={handleBack}
-              className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
-              data-testid="btn-modal-back"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M8 2L4 6L8 10" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-          {sent ? (
-            <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[24px] font-semibold">Transfer Complete</p>
-          ) : (
-            <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
-              <div className="flex items-center gap-[8px]">
-                {[1, 2, 3, 4].map((n) => (
-                  <div
-                    key={n}
-                    className="rounded-full shrink-0 transition-colors duration-300"
-                    style={{ width: 8, height: 8, background: n <= state.step ? "#7631EE" : "#240757" }}
-                  />
-                ))}
-              </div>
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <div className="bg-[#0a0c10] h-[56px] relative flex items-center justify-center">
+          <BackBtn onClick={state.step === 1 ? handleClose : handleBack} />
+          {state.step < 4 ? (
+            <div className="h-[24px] w-[64px]">
+              <img alt="" className="block max-w-none size-full" src={stepInd} />
             </div>
+          ) : (
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+              Review Details
+            </p>
           )}
-          <button
-            onClick={handleClose}
-            className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
-            data-testid="btn-send-close"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        {/* ── Content ────────────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[24px]">
 
-          {/* ===== SUCCESS STATE ===== */}
-          {sent && (
-            <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
-              <div className="w-20 h-20 rounded-full bg-brain-v1dark-green flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+          {/* ── STEP 1: Select recipient type ────────────────────────────── */}
+          {state.step === 1 && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Where are we sending to?</p>
               </div>
-              <div>
-                <h3 className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-2xl">
-                  {state.amount ? `$${parseFloat(state.amount).toFixed(2)} Sent!` : "Transfer Complete!"}
-                </h3>
-                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                  Your transfer to {getRecipientLabel()} was successful.
-                </p>
-              </div>
-              <div className="w-full bg-brain-v1baby-blue-15 rounded-2xl p-4 text-left space-y-2">
-                <DetailRow label="To" value={getRecipientLabel()} />
-                <DetailRow label="Amount" value={`${state.amount || "0"} ${selectedAsset.ticker}`} />
-                <DetailRow label="Network Fee" value={`$${FEE}`} />
-                <DetailRow label="Status" value="Confirmed" valueColor="text-brain-v1green" />
-              </div>
+
               <button
-                onClick={handleClose}
-                className="w-full py-3.5 bg-brain-v1dark-orange rounded-2xl text-brain-v1light-orange [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm hover:opacity-80 transition-opacity"
+                onClick={() => setPopupOpen((v) => !v)}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-send-select"
               >
-                Done
+                {state.recipientType ? (
+                  <>
+                    <RecipientIcon type={state.recipientType} />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                      {RECIPIENT_TYPES.find((r) => r.id === state.recipientType)?.name}
+                    </p>
+                  </>
+                ) : (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                    Select Account
+                  </p>
+                )}
+                <ChevronBtn />
               </button>
-            </div>
+
+              {popupOpen && (
+                <RecipientPopup
+                  excludeTypes={excludeTypes}
+                  onSelect={(t) => { set({ recipientType: t }); setPopupOpen(false); }}
+                  onClose={() => setPopupOpen(false)}
+                />
+              )}
+            </>
           )}
 
-          {/* ===== STEP 1: SELECT TYPE ===== */}
-          {!sent && state.step === 1 && (
-            <div className="flex flex-col gap-3">
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">
-                Choose where you'd like to send funds.
-              </p>
-              <div className="flex flex-col gap-3 mt-2">
-                {recipientTypes.filter((rt) => !excludeTypes.includes(rt.id as "bank" | "wallet" | "agent")).map((rt) => {
-                  const selected = state.recipientType === rt.id;
-                  return (
-                    <button
-                      key={rt.id}
-                      onClick={() => set({ recipientType: rt.id })}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left ${
-                        selected
-                          ? "border-brain-v1dark-orange bg-[#2a1500]"
-                          : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors ${selected ? "bg-brain-v1dark-orange" : "bg-brain-v1baby-blue-15"}`}>
-                        {rt.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-base transition-colors ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>
-                          {rt.label}
-                        </p>
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5 leading-relaxed">
-                          {rt.description}
-                        </p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${selected ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-brain-v1baby-blue-30"}`}>
-                        {selected && (
-                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                            <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+          {/* ── STEP 2: Bank ─────────────────────────────────────────────── */}
+          {state.step === 2 && state.recipientType === "bank" && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
               </div>
-            </div>
-          )}
 
-          {/* ===== STEP 2: BANK ACCOUNT ===== */}
-          {!sent && state.step === 2 && state.recipientType === "bank" && (
-            <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="bank" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                Select a linked bank account.
-              </p>
-              <div className="flex flex-col gap-2 mt-1">
-                {bankAccounts.map((b) => {
-                  const selected = state.selectedBankId === b.id;
-                  return (
-                    <button
-                      key={b.id}
-                      onClick={() => set({ selectedBankId: b.id })}
-                      className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
-                        selected ? "border-brain-v1dark-orange bg-[#2a1500]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: b.color }}>🏦</div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{b.bank}</p>
-                        <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{b.number} · {b.type}</p>
-                      </div>
-                      <RadioDot selected={selected} />
-                    </button>
-                  );
-                })}
-                <button className="flex items-center gap-3 p-4 rounded-2xl border border-dashed border-[#1d2131] hover:border-[#414965] bg-transparent transition-all text-left">
-                  <div className="w-10 h-10 rounded-xl bg-brain-v1baby-blue-15 flex items-center justify-center flex-shrink-0">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                  </div>
-                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm">Add new bank account</span>
-                </button>
-              </div>
-            </div>
-          )}
+              <button
+                onClick={handleBack}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-send-type-bank"
+              >
+                <RecipientIcon type="bank" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Bank Account</p>
+                <ChevronBtn />
+              </button>
 
-          {/* ===== STEP 2: WALLET ADDRESS ===== */}
-          {!sent && state.step === 2 && state.recipientType === "wallet" && (
-            <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="wallet" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                Enter or paste the recipient's wallet address.
-              </p>
-              <div className="flex flex-col gap-2 mt-1">
-                <div className="flex flex-col gap-1">
-                  <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">Wallet Address</label>
-                  <div className="flex items-center gap-2 bg-[#222737] rounded-2xl px-4 h-14">
+              <div className="flex flex-col gap-[24px]">
+                <FieldRow label="Recipient Name">
+                  <InputBox>
                     <input
                       type="text"
-                      value={state.walletAddress}
-                      onChange={(e) => set({ walletAddress: e.target.value })}
-                      placeholder="0x... or bnb1... or sol..."
-                      className="flex-1 bg-transparent text-white text-lg [font-family:'JetBrains_Mono',Helvetica] placeholder-[#414965] outline-none"
+                      value={state.recipientName}
+                      onChange={(e) => set({ recipientName: e.target.value })}
+                      placeholder="John Smith"
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                      data-testid="input-send-recipient-name"
                     />
-                    <button
-                      onClick={async () => {
-                        try {
-                          const text = await navigator.clipboard.readText();
-                          set({ walletAddress: text });
-                        } catch {}
-                      }}
-                      className="text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors px-2 py-1 rounded-lg bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30 flex-shrink-0"
-                    >
-                      Paste
-                    </button>
-                  </div>
-                  {state.walletAddress && state.walletAddress.length < 10 && (
-                    <p className="text-brain-v1pink-red text-xs [font-family:'Plus Jakarta Sans',Helvetica]">Please enter a valid wallet address</p>
+                  </InputBox>
+                </FieldRow>
+                <FieldRow label="IBAN Bank Number">
+                  <InputBox>
+                    <input
+                      type="text"
+                      value={state.iban}
+                      onChange={(e) => set({ iban: e.target.value })}
+                      placeholder="AE0703...123456"
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
+                      data-testid="input-send-iban"
+                    />
+                  </InputBox>
+                </FieldRow>
+              </div>
+            </>
+          )}
+
+          {/* ── STEP 2: Wallet ───────────────────────────────────────────── */}
+          {state.step === 2 && state.recipientType === "wallet" && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
+              </div>
+
+              <button
+                onClick={handleBack}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-send-type-wallet"
+              >
+                <RecipientIcon type="wallet" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Wallet Address</p>
+                <ChevronBtn />
+              </button>
+
+              <FieldRow label="Wallet Address">
+                <InputBox>
+                  <input
+                    type="text"
+                    value={state.walletAddress}
+                    onChange={(e) => set({ walletAddress: e.target.value })}
+                    placeholder="0x..."
+                    className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                    data-testid="input-send-wallet-addr"
+                  />
+                  <button
+                    onClick={async () => { try { const t = await navigator.clipboard.readText(); set({ walletAddress: t }); } catch {} }}
+                    className="bg-[#4a2300] px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] shrink-0 hover:opacity-80 transition-opacity"
+                    data-testid="btn-send-paste-addr"
+                  >
+                    Paste
+                  </button>
+                </InputBox>
+                {state.walletAddress && state.walletAddress.length < 10 && (
+                  <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[13px] mt-[4px]">Please enter a valid wallet address</p>
+                )}
+              </FieldRow>
+            </>
+          )}
+
+          {/* ── STEP 2: Agent ─────────────────────────────────────────────── */}
+          {state.step === 2 && state.recipientType === "agent" && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
+              </div>
+
+              <button
+                onClick={handleBack}
+                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                data-testid="btn-send-type-agent"
+              >
+                <RecipientIcon type="agent" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">AI Agent Account</p>
+                <ChevronBtn />
+              </button>
+
+              <FieldRow label="Select Agent">
+                <button
+                  onClick={() => setAgentPopupOpen((v) => !v)}
+                  className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                  data-testid="btn-send-select-agent"
+                >
+                  {selectedAgent ? (
+                    <>
+                      <RecipientIcon type="agent" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">{selectedAgent.name}</p>
+                    </>
+                  ) : (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Select Agent</p>
                   )}
-                </div>
-
-                {/* Network selector */}
-                <div className="flex flex-col gap-1 mt-2">
-                  <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Network</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["Ethereum", "BNB Chain", "Polygon"].map((net) => (
-                      <button key={net} className="px-3 py-2 bg-brain-v1baby-blue-15 border border-[#1d2131] hover:border-[#414965] rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white transition-colors">
-                        {net}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <ChevronBtn />
+                </button>
+                {agentPopupOpen && (
+                  <AgentPopup
+                    onSelect={(id) => { set({ selectedAgentId: id }); setAgentPopupOpen(false); }}
+                    onClose={() => setAgentPopupOpen(false)}
+                  />
+                )}
+              </FieldRow>
+            </>
           )}
 
-          {/* ===== STEP 2: AI AGENT ACCOUNT ===== */}
-          {!sent && state.step === 2 && state.recipientType === "agent" && (
-            <div className="flex flex-col gap-3">
-              <RecipientTypeTabs current="agent" excludeTypes={excludeTypes} onChange={(t) => set({ recipientType: t, selectedBankId: null, walletAddress: "", selectedAgentId: null })} />
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-sm mt-1">
-                Select an AI agent account to fund.
-              </p>
-              <div className="flex flex-col gap-2 mt-1">
-                {agentAccounts.map((a) => {
-                  const selected = state.selectedAgentId === a.id;
-                  return (
-                    <button
-                      key={a.id}
-                      onClick={() => set({ selectedAgentId: a.id })}
-                      className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
-                        selected ? "border-brain-v1dark-orange bg-[#2a1500]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-brain-v1headerfooterbg flex items-center justify-center text-xl flex-shrink-0">{a.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-sm ${selected ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.name}</p>
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs mt-0.5">{a.ticker} · {a.type}</p>
-                      </div>
-                      <div className="text-right mr-2 flex-shrink-0">
-                        <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1green text-sm">{a.balance}</p>
-                        <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-30 text-[10px]">balance</p>
-                      </div>
-                      <RadioDot selected={selected} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ===== STEP 3: SEND AMOUNT ===== */}
-          {!sent && state.step === 3 && (
-            <div className="flex flex-col gap-4">
-              {/* Recipient summary */}
-              <div className="flex items-center gap-2 p-3 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
-                <div className="text-xl flex-shrink-0">
-                  {state.recipientType === "bank" ? "🏦" : state.recipientType === "wallet" ? "👛" : "🤖"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-[10px] uppercase tracking-wider">Sending to</p>
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm truncate">{getRecipientLabel()}</p>
-                </div>
+          {/* ── STEP 3: Amount ───────────────────────────────────────────── */}
+          {state.step === 3 && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Amount</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">How much are we sending?</p>
               </div>
 
-              {/* Amount input */}
-              <div className="flex flex-col gap-2">
-                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-base">Amount</label>
-                <div className="flex items-center gap-3 px-4 h-14 bg-[#222737] rounded-2xl">
-                  <span className="[font-family:'JetBrains_Mono',Helvetica] font-bold text-[#414965] text-xl flex-shrink-0">$</span>
+              <FieldRow label="Amount">
+                <InputBox>
+                  <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#414965] text-[20px] shrink-0">$</span>
                   <input
                     type="number"
                     min="0"
@@ -440,244 +612,97 @@ export const SendModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Elem
                     value={state.amount}
                     onChange={(e) => set({ amount: e.target.value })}
                     placeholder="0.00"
-                    className="flex-1 bg-transparent text-white text-2xl [font-family:'JetBrains_Mono',Helvetica] font-bold placeholder-[#414965] outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-bold placeholder:text-[#414965] outline-none min-w-0"
+                    data-testid="input-send-amount"
                   />
-                </div>
+                </InputBox>
+              </FieldRow>
 
-                {parseFloat(state.amount || "0") > parseFloat(selectedAsset.balance.replace(/,/g, "")) && parseFloat(state.amount || "0") > 0 && (
-                  <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-red-400 text-xs">
-                    Amount exceeds your available balance of {selectedAsset.balance} {selectedAsset.ticker}
-                  </p>
-                )}
-
-                {/* Quick amounts */}
-                <div className="flex gap-2">
-                  {["100", "500", "1000", "5000"].map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => set({ amount: v })}
-                      className="flex-1 py-1.5 bg-brain-v1baby-blue-15 border border-[#1d2131] rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 hover:text-brain-v1white hover:border-[#414965] transition-colors"
-                    >
-                      ${parseInt(v).toLocaleString()}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex gap-[8px]">
+                {["100", "500", "1000", "5000"].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => set({ amount: v })}
+                    className="flex-1 py-[8px] bg-[#222737] border border-[#1d2132] rounded-[12px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] hover:text-white hover:border-[#414965] transition-colors"
+                    data-testid={`btn-send-quick-${v}`}
+                  >
+                    ${parseInt(v).toLocaleString()}
+                  </button>
+                ))}
               </div>
-
-              {/* Asset selector */}
-              <div className="flex flex-col gap-2">
-                <label className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1baby-blue-60 text-xs uppercase tracking-wider">Asset</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {liveAssets.map((a) => {
-                    const sel = state.assetId === a.id;
-                    return (
-                      <button
-                        key={a.id}
-                        onClick={() => set({ assetId: a.id })}
-                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${
-                          sel ? "border-brain-v1dark-orange bg-[#2a1500]" : "border-[#1d2131] bg-brain-v1baby-blue-15 hover:border-[#414965]"
-                        }`}
-                      >
-                        <img src={a.icon} alt={a.ticker} className="w-8 h-8 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-xs ${sel ? "text-brain-v1light-orange" : "text-brain-v1white"}`}>{a.ticker}</p>
-                          <p className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1baby-blue-30 text-[10px] truncate">{a.balance}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Fee row */}
-              {state.amount && parseFloat(state.amount) > 0 && (
-                <div className="flex flex-col gap-1 p-3 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">
-                  <div className="flex justify-between text-brain-v1baby-blue-60">
-                    <span>Amount</span>
-                    <span className="text-brain-v1white [font-family:'JetBrains_Mono',Helvetica]">${parseFloat(state.amount).toFixed(2)} {selectedAsset.ticker}</span>
-                  </div>
-                  <div className="flex justify-between text-brain-v1baby-blue-60">
-                    <span>Network fee</span>
-                    <span className="[font-family:'JetBrains_Mono',Helvetica]">${FEE}</span>
-                  </div>
-                  <div className="h-px bg-[#1d2131] my-1" />
-                  <div className="flex justify-between font-semibold text-brain-v1white [font-family:'Plus Jakarta Sans',Helvetica]">
-                    <span>Total</span>
-                    <span className="[font-family:'JetBrains_Mono',Helvetica] text-brain-v1light-orange">${totalAmount}</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            </>
           )}
 
-          {/* ===== STEP 4: REVIEW DETAILS ===== */}
-          {!sent && state.step === 4 && (
-            <div className="flex flex-col gap-4">
-              <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px]">
-                Please review your transaction details before confirming.
-              </p>
-
-              {/* From card */}
-              <div className="flex flex-col gap-[4px]">
-                <label className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">From</label>
-                <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                  <div className="w-8 h-8 bg-[#4a2300] rounded-[12px] flex items-center justify-center shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="#ff9500" strokeWidth="1.5"/><path d="M2 10H22" stroke="#ff9500" strokeWidth="1.5"/></svg>
-                  </div>
+          {/* ── STEP 4: Review ───────────────────────────────────────────── */}
+          {state.step === 4 && (
+            <>
+              <FieldRow label="Sending From">
+                <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+                  <RecipientIcon type={sourceAccountType === "bank" ? "bank" : "wallet"} />
                   <div className="flex-1 min-w-0">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px]">Your Account</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate">
+                      {sourceAccountType === "bank"
+                        ? bankAcc?.nameOnAccount ?? "Bank Account"
+                        : walletAcc?.address
+                          ? truncAddr(walletAcc.address)
+                          : "Your Wallet"}
+                    </p>
                   </div>
                 </div>
-              </div>
+              </FieldRow>
 
-              {/* Arrow */}
-              <div className="flex items-center justify-center">
-                <div className="w-8 h-8 bg-[#06070a] border border-[#1d2132] rounded-full flex items-center justify-center">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M3 8L7 12L11 8" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </div>
-              </div>
-
-              {/* To card */}
-              <div className="flex flex-col gap-[4px]">
-                <label className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px]">To</label>
-                <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                  <div className="w-8 h-8 bg-[#11141b] rounded-[12px] flex items-center justify-center text-xl shrink-0">
-                    {state.recipientType === "bank" ? "🏦" : state.recipientType === "wallet" ? "👛" : "🤖"}
-                  </div>
+              <FieldRow label="Sending To">
+                <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+                  <RecipientIcon type={state.recipientType!} />
                   <div className="flex-1 min-w-0">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">{getRecipientLabel()}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate">
+                      {recipientLabel()}
+                    </p>
                   </div>
                 </div>
-              </div>
+              </FieldRow>
 
-              {/* Transaction details */}
-              <div className="flex flex-col gap-2 p-4 bg-[#06070a] border border-[#1d2132] rounded-[16px]">
-                <DetailRow label="Amount" value={`${parseFloat(state.amount || "0").toFixed(2)} ${selectedAsset.ticker}`} valueColor="text-brain-v1white" />
-                <div className="h-px bg-[#1d2131]" />
-                <DetailRow label="Asset" value={`${selectedAsset.name} (${selectedAsset.ticker})`} />
-                <DetailRow label="Network Fee" value={`$${FEE}`} />
-                <DetailRow label="Transfer method" value={state.recipientType === "bank" ? "Wire / ACH" : state.recipientType === "wallet" ? "On-chain" : "Internal"} />
-                <div className="h-px bg-[#1d2131]" />
-                <DetailRow label="Total" value={`$${totalAmount}`} valueColor="text-brain-v1light-orange" />
+              <div className="flex flex-col gap-[12px] bg-[#06070a] border border-[#1d2132] rounded-[16px] px-[16px] py-[16px]">
+                <ReviewRow label="Amount" value={`$${parseFloat(state.amount || "0").toFixed(2)}`} />
+                <div className="h-px bg-[#1d2132]" />
+                <ReviewRow label="Network Fee" value={`$${FEE}`} />
+                <div className="h-px bg-[#1d2132]" />
+                <ReviewRow label="Total" value={`$${(parseFloat(state.amount || "0") + parseFloat(FEE)).toFixed(2)}`} highlight />
               </div>
-
-              {/* Warning */}
-              <div className="flex items-start gap-2 p-3 bg-[#1a1400] border border-[#3a2800] rounded-2xl">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 mt-0.5">
-                  <path d="M7 1L13 12H1L7 1Z" stroke="#ff9500" strokeWidth="1.2" strokeLinejoin="round"/>
-                  <path d="M7 5V8" stroke="#ff9500" strokeWidth="1.2" strokeLinecap="round"/>
-                  <circle cx="7" cy="10" r="0.5" fill="#ff9500"/>
-                </svg>
-                <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs leading-relaxed">
-                  Transactions are irreversible. Please verify recipient details before confirming.
-                </p>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Footer */}
-        {!sent && (
-          <div className="px-6 py-5 border-t border-[#1d2132] flex-shrink-0">
-            {state.step < 4 ? (
-              <button
-                onClick={handleNext}
-                disabled={!canContinue}
-                className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-base transition-all ${
-                  canContinue
-                    ? "bg-brain-v1dark-orange text-brain-v1light-orange hover:opacity-80"
-                    : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-30 cursor-not-allowed opacity-50"
-                }`}
-              >
-                Continue
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-              </button>
-            ) : (
-              <div className="flex gap-[16px]">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-                  data-testid="btn-send-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={sending}
-                  className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
-                  data-testid="btn-send-confirm"
-                >
-                  {sending ? "Confirming…" : "Confirm"}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* ── Buttons ────────────────────────────────────────────────────── */}
+        <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
+          <button
+            onClick={handleClose}
+            className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+            data-testid="btn-send-cancel"
+          >
+            Cancel
+          </button>
+          {state.step < 4 ? (
+            <button
+              onClick={handleNext}
+              disabled={!canNext}
+              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${canNext ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              data-testid="btn-send-next"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              onClick={handleConfirm}
+              disabled={sending}
+              className="bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+              data-testid="btn-send-confirm"
+            >
+              {sending ? "Confirming…" : "Confirm"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 };
-
-// ── Sub-components ──
-
-const RadioDot = ({ selected }: { selected: boolean }) => (
-  <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${selected ? "border-brain-v1dark-orange bg-brain-v1dark-orange" : "border-brain-v1baby-blue-30"}`}>
-    {selected && (
-      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-        <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )}
-  </div>
-);
-
-const DetailRow = ({
-  label,
-  value,
-  valueColor = "text-brain-v1baby-blue-60",
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-}) => (
-  <div className="flex justify-between items-center gap-2">
-    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-brain-v1baby-blue-60 text-xs">{label}</span>
-    <span className={`[font-family:'JetBrains_Mono',Helvetica] text-xs ${valueColor} truncate max-w-[60%] text-right`}>{value}</span>
-  </div>
-);
-
-const recipientTypeLabels: Record<string, { label: string; icon: string }> = {
-  bank: { label: "Bank", icon: "🏦" },
-  wallet: { label: "Wallet", icon: "👛" },
-  agent: { label: "Agent", icon: "🤖" },
-};
-
-const RecipientTypeTabs = ({
-  current,
-  onChange,
-  excludeTypes = [],
-}: {
-  current: string;
-  onChange: (t: RecipientType) => void;
-  excludeTypes?: Array<"bank" | "wallet" | "agent">;
-}) => (
-  <div className="flex items-center gap-1 p-1 bg-brain-v1baby-blue-15 rounded-2xl border border-[#1d2131]">
-    {(["bank", "wallet", "agent"] as RecipientType[]).filter((t) => !excludeTypes.includes(t!)).map((t) => {
-      const info = recipientTypeLabels[t!];
-      const sel = current === t;
-      return (
-        <button
-          key={t}
-          onClick={() => onChange(t)}
-          className={`flex items-center gap-1.5 flex-1 justify-center py-2 rounded-xl text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-all ${
-            sel
-              ? "bg-brain-v1dark-orange text-brain-v1light-orange"
-              : "text-brain-v1baby-blue-60 hover:text-brain-v1white"
-          }`}
-        >
-          <span>{info.icon}</span>
-          <span>{info.label}</span>
-        </button>
-      );
-    })}
-  </div>
-);
