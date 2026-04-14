@@ -866,6 +866,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
                 onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); }}
                 onMouseLeave={() => { bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150); }}
+                onClick={() => {
+                  if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+                  setTimeout(() => {
+                    if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+                    setBankPopupOpen(true);
+                  }, 0);
+                }}
               >
                 <BankPopup />
               </div>
