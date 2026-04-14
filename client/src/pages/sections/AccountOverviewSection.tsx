@@ -528,19 +528,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 ) : (
                   <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
                 )}
-                {/* Label: "Your Account · Wallet/Debit/Bank" or agent name */}
-                <div className="flex items-center gap-[4px] flex-1 min-w-0 overflow-hidden">
-                  <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-shrink-0">
+                {/* Label: "Your Account" or agent name */}
+                <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
                     {isYourCollapsedAccount ? "Your Account" : (selectedAgent?.name ?? "Account")}
                   </span>
-                  {isYourCollapsedAccount && cardSubLabel && (
-                    <>
-                      <div className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: "#414965" }} />
-                      <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-shrink-0">
-                        {cardSubLabel}
-                      </span>
-                    </>
-                  )}
                 </div>
                 {/* Green checkmark + chevron */}
                 <div className="flex items-center gap-[8px] flex-shrink-0">
