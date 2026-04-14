@@ -1,7 +1,76 @@
-export function NotifAvatar({ type }: { type: string }) {
-  const t = type.toLowerCase();
+const KNOWN_AGENTS: { names: string[]; avatar: string }[] = [
+  { names: ["alphaflow", "alpha flow"],           avatar: "/figmaAssets/avatars-3.svg" },
+  { names: ["yield pilot", "yieldpilot"],         avatar: "/figmaAssets/avatars-9.svg" },
+  { names: ["risk sentinel", "risksentinel"],     avatar: "/figmaAssets/base.png" },
+  { names: ["signal seer", "signalseer"],         avatar: "/figmaAssets/avatars.svg" },
+  { names: ["trendradar", "trend radar"],         avatar: "/figmaAssets/avatars-5.svg" },
+  { names: ["taskforge", "task forge"],           avatar: "/figmaAssets/avatars-6.svg" },
+  { names: ["inboxzero", "inbox zero"],           avatar: "/figmaAssets/avatars-2.svg" },
+  { names: ["ops commander", "opscommander"],     avatar: "/figmaAssets/avatars-8.svg" },
+  { names: ["pay stream", "paystream"],           avatar: "/figmaAssets/avatars-1.svg" },
+  { names: ["invoice bot", "invoicebot"],         avatar: "/figmaAssets/avatars-4.svg" },
+  { names: ["deal closer", "dealcloser"],         avatar: "/figmaAssets/pexels-fauxels-3184418.png" },
+  { names: ["swarmalpha", "swarm alpha"],         avatar: "/figmaAssets/avatars-7.svg" },
+];
 
-  if (t.includes("trade") || t.includes("alpha") || t.includes("trend") || t.includes("buy") || t.includes("sell")) {
+export function NotifAvatar({ type, title }: { type: string; title?: string }) {
+  const t = type.toLowerCase();
+  const combined = `${t} ${(title ?? "").toLowerCase()}`;
+
+  for (const agent of KNOWN_AGENTS) {
+    if (agent.names.some((n) => combined.includes(n))) {
+      return (
+        <img
+          src={agent.avatar}
+          alt=""
+          className="flex-shrink-0 size-[40px] rounded-full object-cover"
+        />
+      );
+    }
+  }
+
+  if (combined.includes("deposit")) {
+    return (
+      <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#123509" }}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M16 4L4 16M4 16H10M4 16V10" stroke="#42bf23" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (combined.includes("withdraw")) {
+    return (
+      <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#350011" }}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 16L16 4M16 4H10M16 4V10" stroke="#d20344" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (combined.includes("send")) {
+    return (
+      <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#091a37" }}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 10H16M11 5L16 10L11 15" stroke="#5b8def" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (combined.includes("exchange") || combined.includes("swap")) {
+    return (
+      <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#1a1035" }}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 7H16M16 7L12 3M16 7L12 11" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M16 13H4M4 13L8 9M4 13L8 17" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (combined.includes("trade") || combined.includes("alpha") || combined.includes("trend") || combined.includes("buy") || combined.includes("sell")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#091a09" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -12,7 +81,7 @@ export function NotifAvatar({ type }: { type: string }) {
     );
   }
 
-  if (t.includes("launch") || t.includes("swarm") || t.includes("launchpad") || t.includes("rocket") || t.includes("bonding") || t.includes("install")) {
+  if (combined.includes("launch") || combined.includes("swarm") || combined.includes("launchpad") || combined.includes("rocket") || combined.includes("bonding") || combined.includes("install")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#1a1035" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -25,7 +94,7 @@ export function NotifAvatar({ type }: { type: string }) {
     );
   }
 
-  if (t.includes("risk") || t.includes("anomaly") || t.includes("alert") || t.includes("pause") || t.includes("threshold") || t.includes("sentinel") || t.includes("seer")) {
+  if (combined.includes("risk") || combined.includes("anomaly") || combined.includes("alert") || combined.includes("pause") || combined.includes("threshold") || combined.includes("sentinel") || combined.includes("seer")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#2a1200" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -37,7 +106,7 @@ export function NotifAvatar({ type }: { type: string }) {
     );
   }
 
-  if (t.includes("payment") || t.includes("pay") || t.includes("deposit") || t.includes("withdraw") || t.includes("transfer") || t.includes("tx") || t.includes("transaction")) {
+  if (combined.includes("payment") || combined.includes("pay") || combined.includes("transfer") || combined.includes("tx") || combined.includes("transaction")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#0a1929" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -49,7 +118,7 @@ export function NotifAvatar({ type }: { type: string }) {
     );
   }
 
-  if (t.includes("yield") || t.includes("rebalance") || t.includes("aave") || t.includes("compound") || t.includes("defi") || t.includes("pilot")) {
+  if (combined.includes("yield") || combined.includes("rebalance") || combined.includes("aave") || combined.includes("compound") || combined.includes("defi") || combined.includes("pilot")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#091818" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -61,7 +130,7 @@ export function NotifAvatar({ type }: { type: string }) {
     );
   }
 
-  if (t.includes("system") || t.includes("feature") || t.includes("update") || t.includes("communit") || t.includes("reply") || t.includes("platform")) {
+  if (combined.includes("system") || combined.includes("feature") || combined.includes("update") || combined.includes("communit") || combined.includes("reply") || combined.includes("platform")) {
     return (
       <div className="flex-shrink-0 size-[40px] rounded-full flex items-center justify-center" style={{ background: "#141928" }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

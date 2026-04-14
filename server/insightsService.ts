@@ -120,20 +120,6 @@ export async function startDailyInsightsScheduler(
     console.log("[Insights] Starting daily insights generation...");
     const insights = await generateInsights();
     console.log(`[Insights] Generated ${insights.length} insights at ${state.generatedAt?.toISOString()}`);
-
-    // Create notification
-    const notif = await storage.createNotification({
-      userId: DEMO_USER_ID,
-      type: "insights",
-      title: "Daily Insights Ready",
-      body: `Brain AI has analysed your accounts and found ${insights.length} personalised recommendations for you today.`,
-      data: { insightCount: insights.length, generatedAt: state.generatedAt?.toISOString() },
-      read: false,
-    });
-
-    // Broadcast via SSE
-    broadcastFn(DEMO_USER_ID, { type: "notification", notification: notif });
-    broadcastFn("anonymous", { type: "notification", notification: notif });
   };
 
   // Run immediately on startup

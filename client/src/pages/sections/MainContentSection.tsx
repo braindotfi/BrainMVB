@@ -33,9 +33,10 @@ const REP_BADGE_STYLE: Record<ReputationTier, { bg: string; textGrad?: string; t
   Caution:   { bg: "#350011",                                                               textSolid: "#d20344" },
 };
 
-const RepPill = ({ tier, id }: { tier: ReputationTier; id: string }) => {
+const RepPill = ({ tier, rankLabel, id }: { tier: ReputationTier; rankLabel?: string; id: string }) => {
   const icon = REP_BADGE_ICON[tier];
   const style = REP_BADGE_STYLE[tier];
+  const showRank = rankLabel && rankLabel !== "—" && rankLabel !== "Unranked";
   return (
     <span
       className="inline-flex items-center gap-[2px] px-[6px] py-[2px] rounded-[40px] flex-shrink-0"
@@ -45,14 +46,16 @@ const RepPill = ({ tier, id }: { tier: ReputationTier; id: string }) => {
       <span className={`w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
         <img src={icon.url} alt="" className="w-full h-full object-contain" />
       </span>
-      <span
-        className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"
-        style={style.textGrad
-          ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
-          : { color: style.textSolid }}
-      >
-        {tier}
-      </span>
+      {showRank && (
+        <span
+          className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"
+          style={style.textGrad
+            ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+            : { color: style.textSolid }}
+        >
+          {rankLabel}
+        </span>
+      )}
     </span>
   );
 };
@@ -129,11 +132,8 @@ const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agen
           <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[20px] whitespace-nowrap">
             {name}
           </span>
-          {rep && rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
-            <RankPill rankLabel={rep.rankLabel} id={id} />
-          )}
           {rep && (
-            <RepPill tier={rep.tier} id={id} />
+            <RepPill tier={rep.tier} rankLabel={rep.rankLabel} id={id} />
           )}
         </div>
         <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px] w-full line-clamp-2">

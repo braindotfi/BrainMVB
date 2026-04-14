@@ -631,7 +631,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = (req.query.userId as string) ?? "demo-user";
       const notifications = await storage.getNotifications(userId);
-      return res.json(notifications);
+      return res.json(notifications.filter((n: { type: string }) => n.type !== "insights"));
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch notifications" });
     }

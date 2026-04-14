@@ -59,7 +59,7 @@ export const NotificationsPage = (): JSX.Element => {
                     borderRadius: !n.read ? "8px" : "0",
                   }}
                 >
-                  <NotifAvatar type={n.type} />
+                  <NotifAvatar type={n.type} title={n.title} />
 
                   <div className="flex flex-col items-start min-w-0" style={{ flex: "1 0 0" }}>
                     <div className="flex flex-col items-start w-full" style={{ gap: "4px" }}>

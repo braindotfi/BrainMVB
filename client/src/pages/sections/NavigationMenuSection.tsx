@@ -582,7 +582,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   {/* Row */}
                   <div className={`flex gap-[8px] items-start p-[8px] ${!n.read ? "bg-[#222737] rounded-[8px]" : ""}`}>
                     {/* Type-specific avatar */}
-                    <NotifAvatar type={n.type} />
+                    <NotifAvatar type={n.type} title={n.title} />
                     {/* Text content — Figma 3127:36602 */}
                     <div className="flex flex-[1_0_0] flex-col gap-[4px] items-start min-h-px min-w-px not-italic">
                       <div className="flex items-center w-full gap-[8px]">
