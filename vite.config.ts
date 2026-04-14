@@ -153,6 +153,9 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   optimizeDeps: {
     esbuildOptions: {
+      // NOTE: changing this define busts the browserHash so browsers
+      // fetch fresh pre-bundled chunks (v1 = bs58+tweetnacl fully fixed).
+      define: { __BRAIN_DEP_VERSION__: '"v1"' },
       plugins: [esbuildStubPlugin],
     },
   },
