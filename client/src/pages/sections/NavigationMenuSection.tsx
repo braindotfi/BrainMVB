@@ -484,7 +484,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             ))
           ) : (
             insightsData.map((insight, i) => {
-              const isOpportunity = insight.kind === "opportunity";
               return (
                 <div
                   key={i}
@@ -498,13 +497,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   </p>
                   {insight.action && (
                     <button
-                      className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] w-full transition-opacity hover:opacity-80 flex-shrink-0"
-                      style={{ background: isOpportunity ? "#414965" : "#222737" }}
+                      className="group flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] w-full bg-[#222737] hover:bg-[#414965] transition-colors flex-shrink-0"
                     >
-                      <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 600, fontSize: "12px", lineHeight: "16px", color: isOpportunity ? "#a8b9f4" : "#6c779d", whiteSpace: "nowrap" }}>
+                      <span className="text-[#6c779d] group-hover:text-[#a8b9f4] transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 600, fontSize: "12px", lineHeight: "16px", whiteSpace: "nowrap" }}>
                         {insight.action}
                       </span>
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke={isOpportunity ? "#a8b9f4" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" className="text-[#6c779d] group-hover:text-[#a8b9f4] transition-colors flex-shrink-0">
                         <path d="M6 3l5 5-5 5" />
                       </svg>
                     </button>
