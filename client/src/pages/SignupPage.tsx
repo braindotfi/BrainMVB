@@ -18,12 +18,10 @@ export function SignupPage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
-      {/* ── Topbar ── */}
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
         <img src="/figmaAssets/brainfull2x.png" alt="Brain Finance" className="h-[32px] object-contain" />
       </header>
 
-      {/* ── Centered auth form ── */}
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
         {!keyLoaded ? (
           <div className="w-10 h-10 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
@@ -32,7 +30,6 @@ export function SignupPage() {
         )}
       </div>
 
-      {/* ── Footer ── */}
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
         <span className="[font-family:'Outfit',Helvetica] text-[#3a4060] text-sm">
           Copyright © 2025 Brain Finance. All rights reserved.
@@ -80,21 +77,18 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-[420px]">
-      {/* Crossmint form — wrapped in error boundary; hidden gracefully on failure */}
       {apiKey && (
         <CrossmintErrorBoundary>
           <LazyEmbeddedAuth apiKey={apiKey} onSuccess={handleOnboarding} />
         </CrossmintErrorBoundary>
       )}
 
-      {/* Divider */}
       <div className="flex items-center gap-3 w-full">
         <div className="flex-1 h-px bg-[#1d2132]" />
         <span className="text-[#414965] text-xs [font-family:'Outfit',Helvetica]">or continue with demo</span>
         <div className="flex-1 h-px bg-[#1d2132]" />
       </div>
 
-      {/* Demo login — always shown */}
       <button
         onClick={handleDemoLogin}
         data-testid="button-demo-login"
@@ -131,9 +125,9 @@ class CrossmintErrorBoundary extends Component<
           <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
             Sign-in form unavailable — use Demo below
           </p>
-          {process.env.NODE_ENV !== "production" && (
-            <p className="text-[#d20344] text-xs mt-1 break-all">{this.state.errorMessage}</p>
-          )}
+          <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">
+            [boundary] {this.state.errorMessage}
+          </p>
         </div>
       );
     }
@@ -154,7 +148,7 @@ function LazyEmbeddedAuth({
   const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
   const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
   const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
-  const [sdkError, setSdkError] = useState(false);
+  const [sdkError, setSdkError] = useState<string | null>(null);
 
   useEffect(() => {
     import("@crossmint/client-sdk-react-ui")
@@ -168,16 +162,20 @@ function LazyEmbeddedAuth({
       })
       .catch((err: unknown) => {
         const e = err as Error;
-        console.error("[Crossmint] SDK import failed:", e?.message ?? String(e), e?.stack ?? "");
-        setSdkError(true);
+        const msg = e?.message ?? String(err);
+        console.error("[Crossmint] SDK import failed:", msg, e?.stack ?? "");
+        setSdkError(msg);
       });
   }, []);
 
-  if (sdkError) {
+  if (sdkError !== null) {
     return (
       <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
         <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
           Sign-in form unavailable — use Demo below
+        </p>
+        <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">
+          [import] {sdkError}
         </p>
       </div>
     );

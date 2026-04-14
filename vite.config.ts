@@ -7,8 +7,9 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 export default defineConfig({
   plugins: [
     nodePolyfills({
-      include: ["buffer", "crypto"],
-      globals: { Buffer: true, process: true },
+      include: ["buffer", "crypto", "stream", "util", "events"],
+      globals: { Buffer: true, process: true, global: true },
+      protocolImports: true,
     }),
     react(),
     runtimeErrorOverlay(),
