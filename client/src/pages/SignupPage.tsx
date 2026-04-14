@@ -169,6 +169,7 @@ function LazyEmbeddedAuth({
       textSecondary: "#6c779d",
       accent: "#7631ee",
       buttonBackground: "#7631ee",
+      buttonText: "#ff9500",
       border: "#1d2132",
       danger: "#d20344",
       textLink: "#a8b9f4",
@@ -181,7 +182,7 @@ function LazyEmbeddedAuth({
       <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
         <WalletProv createOnLogin={{ chain: "base-sepolia", signer: { type: "email" } }}>
           <AuthWatcher useAuthHook={useAuthHook!} useWalletHook={useWalletHook!} onSuccess={onSuccess}>
-            <div className="w-full max-w-[420px]">
+            <div className="w-full max-w-[420px] crossmint-form-wrapper">
               <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
                 <Comp />
               </div>
