@@ -496,7 +496,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
         <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
-          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center">
+          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Transfer Complete</p>
           </div>
           <div className="flex flex-col items-center gap-[24px] px-[39px] pt-[24px] pb-[32px] text-center">
@@ -531,7 +531,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
       <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="bg-[#0a0c10] h-[56px] relative flex items-center justify-center">
+        <div className="bg-[#0a0c10] h-[56px] relative flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
           <BackBtn onClick={state.step === 1 ? handleClose : handleBack} />
           {state.step < 5
             ? <StepDots current={state.step} />

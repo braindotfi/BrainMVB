@@ -456,7 +456,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
         <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative">
+          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
             <BackBtn bg={S1_BACK_BG} vec={S1_BACK_VEC} onClick={handleClose} />
           </div>
 
@@ -545,7 +545,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           )}
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative">
+          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
             <BackBtn bg={S2W_BACK_BG} vec={S2W_BACK_VEC} onClick={handleBack} />
           </div>
 
@@ -642,7 +642,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
         <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative">
+          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
             <BackBtn bg={S2B_BACK_BG} vec={S2B_BACK_VEC} onClick={handleBack} />
           </div>
 
@@ -778,7 +778,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
         )}
 
         {/* Header */}
-        <div className="bg-[#0a0c10] h-[56px] relative">
+        <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
           <BackBtn bg={S2A_BACK_BG} vec={S2A_BACK_VEC} onClick={handleBack} />
         </div>
 
