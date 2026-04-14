@@ -238,8 +238,10 @@ export const MainContentSection = (): JSX.Element => {
             </div>
           ) : (
             <>
-              {/* Featured Carousel */}
-              <FeaturedCarousel />
+              {/* Featured Carousel — full-width, breaks out of px-4 container */}
+              <div className="-mx-4 w-[calc(100%+32px)]">
+                <FeaturedCarousel />
+              </div>
 
               {/* Separator — 1px line, same style as Launchpad */}
               <div className="w-full flex-shrink-0" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />

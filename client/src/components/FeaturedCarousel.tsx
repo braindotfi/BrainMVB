@@ -38,8 +38,8 @@ export const FeaturedCarousel = ({ onSlideClick, autoPlay = true }: FeaturedCaro
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-[16px] border-2 border-[rgba(118,49,238,0.7)] shadow-[0px_122px_34px_0px_rgba(0,0,0,0.01),0px_78px_31px_0px_rgba(0,0,0,0.04),0px_44px_26px_0px_rgba(0,0,0,0.15),0px_20px_20px_0px_rgba(0,0,0,0.26),0px_5px_11px_0px_rgba(0,0,0,0.29)]"
-      style={{ height: "200px", background: "#12032d" }}
+      className="relative w-full overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-0.5 before:rounded-2xl before:[background:linear-gradient(119deg,rgba(118,49,238,0.42)_0%,rgba(118,49,238,0)_36%,rgba(118,49,238,0.06)_67%,rgba(118,49,238,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none"
+      style={{ height: "200px", background: "#12032d", borderRadius: "16px" }}
     >
       {/* Ellipse 1488 — top right, rotated -30deg */}
       <div
