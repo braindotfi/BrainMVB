@@ -177,7 +177,7 @@ function LazyEmbeddedAuth({
     );
   }
 
-  if (!Comp || !Provider || !AuthProv) {
+  if (!Comp || !Provider || !AuthProv || !useAuthHook) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
   }
 
