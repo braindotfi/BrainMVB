@@ -11,6 +11,6 @@ echo "==> Installing dependencies..."
 npm install --legacy-peer-deps --no-audit --no-fund
 
 echo "==> Building application..."
-npm run build
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 echo "==> Build complete."
