@@ -172,21 +172,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     sourcemap: false,
-    chunkSizeWarningLimit: 2000,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules/@crossmint/")) return "vendor-crossmint";
-          if (id.includes("node_modules/@metamask/") || id.includes("node_modules/@walletconnect/") || id.includes("node_modules/metamask-sdk")) return "vendor-metamask";
-          if (id.includes("node_modules/wagmi") || id.includes("node_modules/viem") || id.includes("node_modules/@rainbow-me/")) return "vendor-web3";
-          if (id.includes("node_modules/@tanstack/")) return "vendor-tanstack";
-          if (id.includes("node_modules/react-dom")) return "vendor-react-dom";
-          if (id.includes("node_modules/react") && !id.includes("node_modules/react-dom")) return "vendor-react";
-          if (id.includes("node_modules/@radix-ui/") || id.includes("node_modules/lucide-react") || id.includes("node_modules/framer-motion")) return "vendor-ui";
-          if (id.includes("node_modules/")) return "vendor-misc";
-        },
-      },
-    },
+    chunkSizeWarningLimit: 5000,
   },
   server: {
     fs: {
