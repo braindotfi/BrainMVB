@@ -145,9 +145,7 @@ function LazyEmbeddedAuth({
   const [Comp, setComp] = useState<React.ComponentType<any> | null>(null);
   const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
   const [AuthProv, setAuthProv] = useState<React.ComponentType<any> | null>(null);
-  const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
   const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
-  const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,9 +154,7 @@ function LazyEmbeddedAuth({
         setComp(() => m.EmbeddedAuthForm);
         setProvider(() => m.CrossmintProvider);
         setAuthProv(() => m.CrossmintAuthProvider);
-        setWalletProv(() => m.CrossmintWalletProvider);
         setUseAuthHook(() => m.useCrossmintAuth);
-        setUseWalletHook(() => m.useWallet);
       })
       .catch((err: unknown) => {
         const e = err as Error;
@@ -181,7 +177,7 @@ function LazyEmbeddedAuth({
     );
   }
 
-  if (!Comp || !Provider || !AuthProv || !WalletProv) {
+  if (!Comp || !Provider || !AuthProv) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
   }
 
@@ -206,15 +202,13 @@ function LazyEmbeddedAuth({
   return (
     <Provider apiKey={apiKey}>
       <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
-        <WalletProv createOnLogin={{ chain: "base-sepolia", recovery: { type: "email" } }}>
-          <AuthWatcher useAuthHook={useAuthHook!} useWalletHook={useWalletHook!} onSuccess={onSuccess}>
-            <div className="w-full max-w-[420px] crossmint-form-wrapper">
-              <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
-                <Comp />
-              </div>
+        <AuthWatcher useAuthHook={useAuthHook!} onSuccess={onSuccess}>
+          <div className="w-full max-w-[420px] crossmint-form-wrapper">
+            <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
+              <Comp />
             </div>
-          </AuthWatcher>
-        </WalletProv>
+          </div>
+        </AuthWatcher>
       </AuthProv>
     </Provider>
   );
@@ -222,55 +216,22 @@ function LazyEmbeddedAuth({
 
 function AuthWatcher({
   useAuthHook,
-  useWalletHook,
   onSuccess,
   children,
 }: {
   useAuthHook: () => any;
-  useWalletHook: () => any;
   onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
   children: React.ReactNode;
 }) {
   const auth = useAuthHook();
-  const walletCtx = useWalletHook();
   const calledRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const walletAddressRef = useRef<string | undefined>(undefined);
-  walletAddressRef.current = walletCtx?.wallet?.address ?? undefined;
 
   useEffect(() => {
     if (auth?.status !== "logged-in" || !auth?.user) return;
     if (calledRef.current) return;
-
-    const walletStatus = walletCtx?.status;
-
-    if (walletStatus === "loaded") {
-      calledRef.current = true;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      onSuccess(auth.user.id, auth.user.email, walletCtx?.wallet?.address);
-      return;
-    }
-
-    if (walletStatus === "error") {
-      calledRef.current = true;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      onSuccess(auth.user.id, auth.user.email, undefined);
-      return;
-    }
-
-    if (!timerRef.current) {
-      timerRef.current = setTimeout(() => {
-        if (!calledRef.current) {
-          calledRef.current = true;
-          onSuccess(auth.user.id, auth.user.email, walletAddressRef.current);
-        }
-      }, 6000);
-    }
-  }, [auth?.status, auth?.user?.id, walletCtx?.status]);
-
-  useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
+    calledRef.current = true;
+    onSuccess(auth.user.id, auth.user.email, undefined);
+  }, [auth?.status, auth?.user?.id]);
 
   return <>{children}</>;
 }

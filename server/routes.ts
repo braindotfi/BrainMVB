@@ -828,9 +828,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // POST /api/wirex/onboard — called after Crossmint login to provision WireX accounts
   app.post("/api/wirex/onboard", async (req, res) => {
     try {
-      const { userId, email, walletAddress } = req.body;
+      const { userId, email } = req.body;
+      let { walletAddress } = req.body;
       console.log("[Onboard] userId:", userId, "email:", email, "walletAddress:", walletAddress);
       if (!email) return res.status(400).json({ error: "email required" });
+
+      // If wallet address not provided by client, fetch it from Crossmint API server-side
+      if (!walletAddress && email) {
+        try {
+          const crossmintKey = process.env.CROSSMINT_SERVER_API_KEY || process.env.CROSSMINT_CLIENT_API_KEY;
+          const baseUrl = "https://staging.crossmint.com";
+          const locator = encodeURIComponent(`email:${email}:evm-smart-wallet`);
+          const walletResp = await fetch(`${baseUrl}/api/v1-alpha2/wallets/${locator}`, {
+            headers: { "x-api-key": crossmintKey || "", "Content-Type": "application/json" },
+          });
+          if (walletResp.ok) {
+            const walletData = await walletResp.json();
+            walletAddress = walletData?.address ?? walletData?.publicKey ?? undefined;
+            console.log("[Onboard] Crossmint wallet fetch:", walletAddress);
+          } else {
+            console.log("[Onboard] Crossmint wallet fetch status:", walletResp.status);
+          }
+        } catch (walletErr: any) {
+          console.log("[Onboard] Crossmint wallet fetch error:", walletErr?.message);
+        }
+      }
 
       // Check/create WireX user — prefer the real Crossmint wallet address
       let wirexUser = await getWirexUser(email).catch((e) => { console.error("[Onboard] getUser error:", e.message); return null; });
