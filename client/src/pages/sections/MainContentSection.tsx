@@ -6,16 +6,74 @@ import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
 type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 
-const TIER_STYLES: Record<ReputationTier, { dot: string; text: string }> = {
-  Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
-  Diamond:   { dot: "bg-[#38bdf8]", text: "text-[#38bdf8]" },
-  Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
-  Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
-  Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
-  New:       { dot: "bg-[#00d4aa]", text: "text-[#00d4aa]" },
-  Unranked:  { dot: "bg-[#414965]", text: "text-[#6c779d]" },
-  Caution:   { dot: "bg-[#d20344]", text: "text-[#d20344]" },
+/* Figma 3647:35624 — rank pill: purple gradient + diamond icon */
+const DIAMOND_ICON = "https://www.figma.com/api/mcp/asset/12c6de88-6da2-44e8-9521-4864062c59a5";
+const RANK_BG = "linear-gradient(100deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)";
+const RANK_TEXT_GRAD = "linear-gradient(106deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)";
+
+/* Figma 3374:34168 — rep tier pill icon + gradient lookup */
+const REP_BADGE_ICON: Record<ReputationTier, { url: string; flip?: boolean }> = {
+  Legendary: { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Diamond:   { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
+  Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
+  Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
+  New:       { url: "https://www.figma.com/api/mcp/asset/149a8d54-d2ee-4c0f-91b6-fad1c96cc23e" },
+  Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
+  Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
 };
+const REP_BADGE_STYLE: Record<ReputationTier, { bg: string; textGrad?: string; textSolid?: string }> = {
+  Legendary: { bg: "linear-gradient(107deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",    textGrad: "linear-gradient(105deg, #d4b4ff 0%, #9d5cf5 100%)" },
+  Diamond:   { bg: "linear-gradient(107deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",      textGrad: "linear-gradient(105deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)" },
+  Gold:      { bg: "linear-gradient(to right, #352502, #614b12)",                          textGrad: "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)" },
+  Silver:    { bg: "linear-gradient(to right, #2b363b, #3f4e55)",                          textGrad: "linear-gradient(101deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)" },
+  Bronze:    { bg: "linear-gradient(to right, #2d220e, #42321a)",                          textGrad: "linear-gradient(101deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)" },
+  New:       { bg: "linear-gradient(102deg, rgb(0,55,44) 0%, rgb(11,75,62) 100%)",         textGrad: "linear-gradient(98deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)" },
+  Unranked:  { bg: "linear-gradient(to right, #21283b, #363d56)",                          textGrad: "linear-gradient(41deg, rgb(151,163,204) 23%, rgb(108,119,157) 76%)" },
+  Caution:   { bg: "#350011",                                                               textSolid: "#d20344" },
+};
+
+const RepPill = ({ tier, id }: { tier: ReputationTier; id: string }) => {
+  const icon = REP_BADGE_ICON[tier];
+  const style = REP_BADGE_STYLE[tier];
+  return (
+    <span
+      className="inline-flex items-center gap-[2px] px-[6px] py-[2px] rounded-[40px] flex-shrink-0"
+      style={{ background: style.bg }}
+      data-testid={`badge-reputation-${id}`}
+    >
+      <span className={`w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
+        <img src={icon.url} alt="" className="w-full h-full object-contain" />
+      </span>
+      <span
+        className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"
+        style={style.textGrad
+          ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+          : { color: style.textSolid }}
+      >
+        {tier}
+      </span>
+    </span>
+  );
+};
+
+const RankPill = ({ rankLabel, id }: { rankLabel: string; id: string }) => (
+  <span
+    className="inline-flex items-center gap-[2px] px-[6px] py-[2px] rounded-[40px] flex-shrink-0"
+    style={{ background: RANK_BG }}
+    data-testid={`badge-rank-${id}`}
+  >
+    <span className="w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center">
+      <img src={DIAMOND_ICON} alt="" className="w-full h-full object-contain" />
+    </span>
+    <span
+      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"
+      style={{ backgroundImage: RANK_TEXT_GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}
+    >
+      {rankLabel}
+    </span>
+  </span>
+);
 
 const trendingAgentsRow1 = [
   { id: "alphaflow", name: "AlphaFlow", description: "Executes automated trading strategies across crypto markets, optimizing for volatility, momentum, and liquidity signals in real time.", avatarSrc: "/figmaAssets/avatars-3.svg", avatarType: "img" },
@@ -55,38 +113,30 @@ const AgentItem = ({ id, name, description, avatarSrc, avatarType, onAdd }: Agen
     staleTime: 5 * 60 * 1000,
   });
 
-  const tierStyle = rep ? TIER_STYLES[rep.tier] : null;
-
   return (
     <div
-      className="flex items-center gap-2 flex-1 self-stretch rounded-lg min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+      className="flex items-center gap-[8px] flex-1 self-stretch rounded-lg min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
       onClick={() => onAdd(id)}
       data-testid={`item-agent-${id}`}
     >
       {avatarType === "img" ? (
-        <img className="w-12 h-12 flex-shrink-0" alt={name} src={avatarSrc} />
+        <img className="w-[48px] h-[48px] flex-shrink-0 rounded-[8px]" alt={name} src={avatarSrc} />
       ) : (
-        <div className="bg-cover bg-[50%_50%] w-12 h-12 flex-shrink-0 rounded-full" style={{ backgroundImage: `url(${avatarSrc})` }} />
+        <div className="bg-cover bg-[50%_50%] w-[48px] h-[48px] flex-shrink-0 rounded-[8px]" style={{ backgroundImage: `url(${avatarSrc})` }} />
       )}
-      <div className="flex flex-col items-start justify-center flex-1 min-w-0 gap-0.5">
-        <div className="flex items-center gap-1.5">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-brain-v1white text-sm leading-5 whitespace-nowrap">
+      <div className="flex flex-col items-start justify-center flex-1 min-w-0 gap-[4px]">
+        <div className="flex items-center gap-[4px] flex-wrap">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[20px] whitespace-nowrap">
             {name}
           </span>
-          {tierStyle && rep && (
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ${tierStyle.text} whitespace-nowrap`}
-              data-testid={`badge-reputation-${id}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tierStyle.dot}`} />
-              {rep.tier}
-              {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
-                <span className="text-[#414965] font-normal">· {rep.rankLabel}</span>
-              )}
-            </span>
+          {rep && rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && (
+            <RankPill rankLabel={rep.rankLabel} id={id} />
+          )}
+          {rep && (
+            <RepPill tier={rep.tier} id={id} />
           )}
         </div>
-        <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-brain-v1baby-blue-60 text-[11px] tracking-[0] leading-[14px] w-full line-clamp-2">
+        <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px] w-full line-clamp-2">
           {description}
         </div>
       </div>

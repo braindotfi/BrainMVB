@@ -13,19 +13,19 @@ const BADGE_ICON: Record<RepTier, { url: string; flip?: boolean }> = {
   Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
   Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
   Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
-  New:       { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848" },
+  New:       { url: "https://www.figma.com/api/mcp/asset/149a8d54-d2ee-4c0f-91b6-fad1c96cc23e" },
   Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
   Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
 };
-const BADGE_STYLE: Record<RepTier, { bg: React.CSSProperties["background"]; textGrad?: string; textSolid?: string }> = {
-  Legendary: { bg: "linear-gradient(107deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",  textGrad: "linear-gradient(105deg, #d4b4ff 0%, #9d5cf5 100%)" },
-  Diamond:   { bg: "linear-gradient(107deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",   textGrad: "linear-gradient(105deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)" },
-  Gold:      { bg: "linear-gradient(to right, #352502, #614b12)",                        textGrad: "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)" },
-  Silver:    { bg: "linear-gradient(to right, #2b363b, #3f4e55)",                        textGrad: "linear-gradient(101deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)" },
-  Bronze:    { bg: "linear-gradient(to right, #2d220e, #42321a)",                        textGrad: "linear-gradient(101deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)" },
-  New:       { bg: "linear-gradient(to right, #001a14, #00261d)",                        textGrad: "linear-gradient(100deg, #00d4aa 0%, #00a87f 100%)" },
-  Unranked:  { bg: "linear-gradient(to right, #21283b, #363d56)",                        textGrad: "linear-gradient(41deg, rgb(151,163,204) 23%, rgb(108,119,157) 76%)" },
-  Caution:   { bg: "#350011",                                                             textSolid: "#d20344" },
+const BADGE_STYLE: Record<RepTier, { bg: string; textGrad?: string; textSolid?: string }> = {
+  Legendary: { bg: "linear-gradient(107deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",       textGrad: "linear-gradient(105deg, #d4b4ff 0%, #9d5cf5 100%)" },
+  Diamond:   { bg: "linear-gradient(107deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",         textGrad: "linear-gradient(105deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)" },
+  Gold:      { bg: "linear-gradient(to right, #352502, #614b12)",                             textGrad: "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)" },
+  Silver:    { bg: "linear-gradient(to right, #2b363b, #3f4e55)",                             textGrad: "linear-gradient(101deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)" },
+  Bronze:    { bg: "linear-gradient(to right, #2d220e, #42321a)",                             textGrad: "linear-gradient(101deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)" },
+  New:       { bg: "linear-gradient(102deg, rgb(0,55,44) 0%, rgb(11,75,62) 100%)",            textGrad: "linear-gradient(98deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)" },
+  Unranked:  { bg: "linear-gradient(to right, #21283b, #363d56)",                             textGrad: "linear-gradient(41deg, rgb(151,163,204) 23%, rgb(108,119,157) 76%)" },
+  Caution:   { bg: "#350011",                                                                  textSolid: "#d20344" },
 };
 
 /* Compact reputation pill — matches Figma Badges component (node 3638:37529+) */
@@ -35,14 +35,14 @@ const RepBadge = ({ tier, agentId }: { tier: RepTier; agentId: string }) => {
   return (
     <span
       className="inline-flex items-center gap-[2px] px-[6px] py-[2px] rounded-[40px] flex-shrink-0"
-      style={{ background: style.bg as string }}
+      style={{ background: style.bg }}
       data-testid={`badge-reputation-${agentId}`}
     >
       <span className={`w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
         <img src={icon.url} alt="" className="w-full h-full object-contain" />
       </span>
       <span
-        className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] font-semibold leading-[14px] whitespace-nowrap"
+        className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"
         style={style.textGrad
           ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
           : { color: style.textSolid }}
