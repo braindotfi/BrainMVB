@@ -347,6 +347,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [collapsedAccount, setCollapsedAccount]         = useState<string | null>(null);
   const [collapsedDropdownOpen, setCollapsedDropdownOpen] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bankHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const collapsedDropdownRef = useRef<HTMLDivElement>(null);
   const bankPopupRef = useRef<HTMLDivElement>(null);
@@ -384,16 +385,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [collapsedDropdownOpen]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (bankPopupRef.current && !bankPopupRef.current.contains(e.target as Node)) {
-        setBankPopupOpen(false);
-        setCollapsedDropdownOpen(false);
-      }
-    };
-    if (bankPopupOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [bankPopupOpen]);
 
   // Reset card to wallet whenever switching account (personal or any agent)
   const handleSwitchAccount = (id: string | null) => {
@@ -847,11 +838,21 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           {/* ── "Wallet" label ── */}
           <span className="text-[#414965] text-[9px] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
 
-          {/* ── Bank icon: click-to-toggle popup ── */}
-          <div className="relative flex-shrink-0" ref={bankPopupRef}>
+          {/* ── Bank icon: hover-to-open popup ── */}
+          <div
+            className="relative flex-shrink-0"
+            ref={bankPopupRef}
+            onMouseEnter={() => {
+              if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+              setBankPopupOpen(true);
+              setCollapsedDropdownOpen(false);
+            }}
+            onMouseLeave={() => {
+              bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
+            }}
+          >
             <button
               data-testid="button-collapsed-bank"
-              onClick={() => { setBankPopupOpen(prev => !prev); setCollapsedDropdownOpen(false); }}
               className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
             >
               <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/1734631d-84a1-45bd-98f1-2f2d8c1b152f"} />
@@ -863,6 +864,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <div
                 className="absolute z-50"
                 style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); }}
+                onMouseLeave={() => { bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150); }}
               >
                 <BankPopup />
               </div>
