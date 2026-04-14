@@ -490,7 +490,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
       })();
 
       return (
-        <div className="w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
+        <div className="w-[388px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
           {/* Header — Figma 3272:29911 */}
           <div className="flex items-center justify-between p-[16px] border-b border-[#1d2132]" style={{ backdropFilter: "blur(10px)", background: "#0a0c10" }}>
             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
@@ -592,19 +592,21 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         key={cardIdx}
                         data-testid={`button-account-${label.toLowerCase().replace(/\s/g, "-")}`}
                         onClick={() => { setCollapsedAccount(null); setActiveAccount(null); setCollapsedCardIndex(cardIdx); setActiveCard(cardIdx); setCollapsedAssetFilter("All"); setCollapsedTxFilter("All"); setCollapsedDropdownOpen(false); }}
-                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
-                          <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                        <div className="flex items-center gap-[8px]">
+                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                            </div>
                           </div>
-                        </div>
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
-                          {label}
-                        </span>
-                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                            {label}
+                          </span>
+                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          </div>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -625,14 +627,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         key={agent.id}
                         data-testid={`button-account-agent-${agent.id}`}
                         onClick={() => { setCollapsedAccount(agent.id); setActiveAccount(agent.id); setActiveCard(0); setCollapsedDropdownOpen(false); }}
-                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
-                          {agent.name}
-                        </span>
-                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                        <div className="flex items-center gap-[8px]">
+                          <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                            {agent.name}
+                          </span>
+                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                          </div>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -1090,8 +1094,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
               {dropdownOpen && (
                 <div
-                  className="absolute right-0 top-[calc(100%+6px)] w-[280px] z-[51] flex flex-col p-[8px] rounded-[12px]"
-                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
+                  className="absolute right-0 top-[calc(100%+6px)] w-[358px] z-[51] flex flex-col p-[8px] rounded-[12px]"
+                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
                 >
                   {/* Add Agent Account — purple CTA */}
                   <button
@@ -1112,7 +1116,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         </div>
                       </div>
                     </div>
-                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
                     </span>
                   </button>
@@ -1128,19 +1132,21 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       <button
                         key={cardIdx}
                         onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); }}
-                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
-                          <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                        <div className="flex items-center gap-[8px]">
+                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                            </div>
                           </div>
-                        </div>
-                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
-                          {label}
-                        </span>
-                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                            {label}
+                          </span>
+                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          </div>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -1160,14 +1166,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       <button
                         key={agent.id}
                         onClick={() => { handleSwitchAccount(agent.id); setCollapsedAccount(agent.id); }}
-                        className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
-                        <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
-                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
-                          {agent.name}
-                        </span>
-                        <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                        <div className="flex items-center gap-[8px]">
+                          <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                            {agent.name}
+                          </span>
+                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
+                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                          </div>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">

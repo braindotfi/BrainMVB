@@ -210,9 +210,14 @@ const CfCrosshair = (chartProps: any) => {
 
 /* ── Cash Flow chart — full width, overlaid Y/X labels ── */
 const CF_Y_LABELS = ["$7000", "$6600", "$6400", "$6200", "$6000", "$5800", "$5600"];
-const CF_X_LABELS = ["03:00", "11:00", "19:00", "03:00"];
 
 const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
+  /* Derive 4 evenly-spaced X-axis labels from whichever data set is active */
+  const count = data.length;
+  const xLabels = count <= 4
+    ? data.map(d => d.time)
+    : [0, Math.floor(count / 3), Math.floor((2 * count) / 3), count - 1].map(i => data[i].time);
+
   return (
   <div className="relative w-full h-full flex flex-col">
     {/* Chart area — full width */}
@@ -246,9 +251,9 @@ const CashFlowChart = ({ data }: { data: CfPoint[] }) => {
       </div>
     </div>
 
-    {/* X-axis labels row */}
+    {/* X-axis labels row — derived from active period data */}
     <div className="flex-shrink-0 flex items-center justify-between px-[4px] py-[4px]" style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
-      {CF_X_LABELS.map((l, i) => (
+      {xLabels.map((l, i) => (
         <span key={i} style={{ fontFamily: "'Plus Jakarta Sans',Helvetica", fontSize: "10px", color: "#6c779d", padding: "0 4px" }}>{l}</span>
       ))}
     </div>
