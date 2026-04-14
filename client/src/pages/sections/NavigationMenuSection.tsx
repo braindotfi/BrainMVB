@@ -538,14 +538,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const NotificationsPanel = () => (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-300 bg-black/50 ${notificationsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-300 bg-black/50 ${notificationsOpen ? "visible opacity-100 pointer-events-auto" : "invisible opacity-0 pointer-events-none"}`}
         onClick={() => setNotificationsOpen(false)}
       />
       <div
         ref={notifPanelRef}
         className={`fixed z-40 top-[68px] flex flex-col w-[340px] rounded-2xl border border-[#1e2235] bg-[#0d1017] shadow-[0_20px_60px_rgba(0,0,0,0.7)]
           transition-all duration-300 ease-out overflow-hidden
-          ${notificationsOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"}
+          ${notificationsOpen ? "visible opacity-100 translate-y-0 pointer-events-auto" : "invisible opacity-0 -translate-y-2 pointer-events-none"}
         `}
         style={{ left: collapsed ? "76px" : "280px" }}
       >
@@ -708,7 +708,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           ref={historyPanelRef}
           className={`fixed z-40 top-[72px] bottom-[72px] flex flex-col w-[320px] overflow-hidden
             transition-all duration-300 ease-out
-            ${chatHistoryOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 -translate-x-4 pointer-events-none"}
+            ${chatHistoryOpen ? "visible opacity-100 translate-x-0 pointer-events-auto" : "invisible opacity-0 -translate-x-4 pointer-events-none"}
           `}
           style={{
             left: collapsed ? "76px" : "280px",
