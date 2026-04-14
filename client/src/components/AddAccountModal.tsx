@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/authContext";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
@@ -40,6 +41,10 @@ const S2B_BANK_VEC   = "https://www.figma.com/api/mcp/asset/47d54e4f-88ae-47e6-9
 const S2B_CHEVRON    = "https://www.figma.com/api/mcp/asset/aa16e268-417a-4e63-b06c-3a4e8af8f987";
 const S2B_BACK_BG    = "https://www.figma.com/api/mcp/asset/f0fbca18-3bcc-41a0-8973-b2f21a531f3b";
 const S2B_BACK_VEC   = "https://www.figma.com/api/mcp/asset/00b78aca-79dc-4b13-8c97-ac4ca8b92192";
+// Step-2 bank copy buttons (one per field)
+const S2B_BTN_BG1    = "https://www.figma.com/api/mcp/asset/63c9f93a-9b5b-4d18-a79d-234adfd9703b";
+const S2B_BTN_BG2    = "https://www.figma.com/api/mcp/asset/a084a6f2-49d3-4059-a8fc-a910f14efcf1";
+const S2B_BTN_VEC    = "https://www.figma.com/api/mcp/asset/85bf6f49-945f-4c68-a868-06cadbf474e2";
 
 // Step-2 agent icons & back button
 const S2A_AGENT_BG   = "https://www.figma.com/api/mcp/asset/02d26233-106d-4721-9094-ef74efef5fe2";
@@ -373,14 +378,26 @@ interface Props {
 }
 
 export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
+  const { wirexAccounts } = useAuth();
   const [step, setStep]               = useState<Step>("select");
   const [selected, setSelected]       = useState<Account | null>(null);
   const [popupOpen, setPopupOpen]     = useState(false);
   const [qrOpen, setQrOpen]           = useState(false);
   const [copied, setCopied]           = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState("");
   const [iban, setIban]               = useState("");
-  const [pastedField, setPastedField] = useState<string | null>(null);
+
+  // Auto-populate bank fields from the logged-in user's bank account
+  useEffect(() => {
+    if (step === "bank") {
+      const bankAcc = wirexAccounts.find((a) => a.type === "bank");
+      if (bankAcc) {
+        setRecipientName(bankAcc.nameOnAccount ?? "");
+        setIban(bankAcc.iban ?? "");
+      }
+    }
+  }, [step, wirexAccounts]);
 
   if (!open) return null;
 
@@ -396,6 +413,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
       setPopupOpen(false);
       setQrOpen(false);
       setCopied(false);
+      setCopiedField(null);
       setRecipientName("");
       setIban("");
     }, 300);
@@ -421,15 +439,12 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handlePaste = async (field: "recipientName" | "iban") => {
-    let text = "";
-    try { text = await navigator.clipboard.readText(); }
-    catch { text = field === "iban" ? "AE070331234567890123456" : "John Smith"; }
-    if (!text) text = field === "iban" ? "AE070331234567890123456" : "John Smith";
-    if (field === "recipientName") setRecipientName(text);
-    else setIban(text);
-    setPastedField(field);
-    setTimeout(() => setPastedField(null), 1500);
+  const handleCopyField = (field: "recipientName" | "iban") => {
+    const value = field === "recipientName" ? recipientName : iban;
+    if (!value) return;
+    navigator.clipboard.writeText(value).catch(() => {});
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 1500);
   };
 
   const activeAddr = selected?.address ?? "";
@@ -663,22 +678,24 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   Recipient Name
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                  <input
-                    type="text"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    placeholder="John Smith"
-                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 whitespace-nowrap"
-                    data-testid="input-recipient-name"
-                  />
+                  <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
+                    {recipientName || "—"}
+                  </p>
                   <button
-                    onClick={() => handlePaste("recipientName")}
-                    className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
-                    data-testid="btn-paste-name"
+                    onClick={() => handleCopyField("recipientName")}
+                    className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
+                    data-testid="btn-copy-name"
+                    title={copiedField === "recipientName" ? "Copied!" : "Copy"}
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
-                      {pastedField === "recipientName" ? "Pasted!" : "Paste"}
-                    </span>
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BTN_BG1} />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BTN_BG2} />
+                    <div className="absolute left-[8px] size-[16px] top-[8px]">
+                      <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
+                        <div className="absolute inset-[-7.03%]">
+                          <img alt="" className="block max-w-none size-full" src={S2B_BTN_VEC} />
+                        </div>
+                      </div>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -689,22 +706,24 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   IBAN Bank Number
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                  <input
-                    type="text"
-                    value={iban}
-                    onChange={(e) => setIban(e.target.value)}
-                    placeholder="AE0703....123456"
-                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
-                    data-testid="input-iban"
-                  />
+                  <p className="flex-1 [font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap tracking-wider" data-testid="text-iban">
+                    {iban || "—"}
+                  </p>
                   <button
-                    onClick={() => handlePaste("iban")}
-                    className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
-                    data-testid="btn-paste-iban"
+                    onClick={() => handleCopyField("iban")}
+                    className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
+                    data-testid="btn-copy-iban"
+                    title={copiedField === "iban" ? "Copied!" : "Copy"}
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px] whitespace-nowrap">
-                      {pastedField === "iban" ? "Pasted!" : "Paste"}
-                    </span>
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BTN_BG1} />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={S2B_BTN_BG2} />
+                    <div className="absolute left-[8px] size-[16px] top-[8px]">
+                      <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
+                        <div className="absolute inset-[-7.03%]">
+                          <img alt="" className="block max-w-none size-full" src={S2B_BTN_VEC} />
+                        </div>
+                      </div>
+                    </div>
                   </button>
                 </div>
               </div>
