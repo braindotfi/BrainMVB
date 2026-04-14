@@ -8,20 +8,29 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 const STUB_DIR = path.resolve(import.meta.dirname, "client/src/stubs");
 
 // Build a proper ESM module from the CJS tweetnacl source.
-// We replace the UMD footer so the lib writes into our __naclExports object,
-// then we re-export it as a default ESM export.
+// nacl-fast.js is a UMD IIFE: (function(nacl){ ... })(module.exports || self.nacl)
+// We strip the UMD footer and redirect the IIFE argument to our own exports
+// object, then re-export it as a default ESM export.
+//
+// NOTE: the old regex approach (`[^)]+`) failed because nacl's UMD footer has
+// nested parens: (self.nacl = self.nacl || {}) — the regex stopped at the
+// inner ) and never matched, leaving __naclExports empty ({}) at runtime.
+// We use exact string matching to avoid that.
 function buildTweetnaclEsm(): string {
+  const UMD_FOOTER =
+    `})(typeof module !== 'undefined' && module.exports ? module.exports : (self.nacl = self.nacl || {}));`;
   const src = fs.readFileSync(
     path.resolve(import.meta.dirname, "node_modules/tweetnacl/nacl-fast.js"),
     "utf-8",
   );
-  // Replace the UMD condition at the very end with our own export target.
-  // Original: })(typeof module !== 'undefined' && module.exports ? module.exports : (self.nacl = self.nacl || {}));
-  const patched = src.replace(
-    /\}\)\(typeof module[^)]+\);?\s*$/,
-    "})(__naclExports);",
-  );
-  return `const __naclExports = {};\n${patched}\nexport default __naclExports;\n`;
+  const trimmed = src.trimEnd();
+  if (!trimmed.endsWith(UMD_FOOTER)) {
+    // Fallback: export whatever self.nacl gets populated to
+    return `${src}\nexport default (typeof self !== 'undefined' ? self.nacl : {});\n`;
+  }
+  // Strip the UMD footer, redirect the IIFE to write into __naclExports
+  const body = trimmed.slice(0, trimmed.length - UMD_FOOTER.length);
+  return `const __naclExports = {};\n${body})(__naclExports);\nexport default __naclExports;\n`;
 }
 
 const TWEETNACL_ESM = buildTweetnaclEsm();
@@ -155,7 +164,7 @@ export default defineConfig({
     esbuildOptions: {
       // NOTE: changing this define busts the browserHash so browsers
       // fetch fresh pre-bundled chunks (v1 = bs58+tweetnacl fully fixed).
-      define: { __BRAIN_DEP_VERSION__: '"v1"' },
+      define: { __BRAIN_DEP_VERSION__: '"v2"' },
       plugins: [esbuildStubPlugin],
     },
   },
