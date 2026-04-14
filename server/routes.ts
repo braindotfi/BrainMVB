@@ -28,6 +28,7 @@ import {
   type TradeIntent,
 } from "./policyEngine";
 import {
+  WirexCard,
   createWirexUser,
   getWirexUser,
   getWirexWallets,
@@ -38,6 +39,19 @@ import {
 } from "./wirex";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+/**
+ * Safely convert a JSON-serialised numeric value to BigInt.
+ * Throws a descriptive Error (caught by the route try/catch) if the value is
+ * not a valid integer string, preventing server crashes from malformed input.
+ */
+function safeBigInt(val: unknown, field: string): bigint {
+  const str = String(val ?? "0").trim();
+  if (!/^-?\d+$/.test(str)) {
+    throw new Error(`Invalid integer value for "${field}": ${str}`);
+  }
+  return BigInt(str);
+}
 
 // SSE connections map: userId → Response[]
 const sseClients = new Map<string, Response[]>();
@@ -201,6 +215,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { messages } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: "Messages array required" });
+      }
+      if (messages.length > 50) {
+        return res.status(400).json({ error: "Too many messages (max 50)" });
+      }
+      for (const m of messages as Array<{ role: string; content: string }>) {
+        if (!["user", "assistant"].includes(m?.role)) {
+          return res.status(400).json({ error: "Invalid message role" });
+        }
+        if (typeof m?.content !== "string" || m.content.length > 8000) {
+          return res.status(400).json({ error: "Message content too long (max 8000 chars)" });
+        }
       }
       const response = await anthropic.messages.create({
         model: "claude-opus-4-5",
@@ -443,7 +468,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         executionWallet:      null,
         brainAccountAddress:  brainAccountAddress,
         policy,
-        status:               (["active","inactive","paused"].includes(d.status ?? "") ? d.status : "active") as any,
+        status:               (["active","inactive","paused"].includes(d.status ?? "") ? d.status : "active") as "active" | "inactive" | "paused",
         totalPaymentsExecuted: 0,
         totalVolumeUsdc:      "0",
         tokenAddress:         null,
@@ -865,9 +890,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Fetch accounts
       const [wallets, cards, bankAccounts] = await Promise.all([
-        getWirexWallets(email).catch(() => []),
-        getWirexCards(email).catch(() => []),
-        getWirexBankAccounts(email).catch(() => []),
+        getWirexWallets(email).catch((): never[] => []),
+        getWirexCards(email).catch((): WirexCard[] => []),
+        getWirexBankAccounts(email).catch((): never[] => []),
       ]);
 
       // If no virtual card yet, try to issue one
@@ -876,7 +901,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ? `${wirexUser.personal_info.first_name} ${wirexUser.personal_info.last_name}`
           : email.split("@")[0];
         await issueVirtualCard(email, fullName).catch(() => null);
-        const newCards = await getWirexCards(email).catch(() => []);
+        const newCards = await getWirexCards(email).catch((): WirexCard[] => []);
         cards.push(...newCards);
       }
 
@@ -964,9 +989,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const [wirexUser, wallets, cards, bankAccounts] = await Promise.all([
         getWirexUser(email).catch(() => null),
-        getWirexWallets(email).catch(() => []),
-        getWirexCards(email).catch(() => []),
-        getWirexBankAccounts(email).catch(() => []),
+        getWirexWallets(email).catch((): never[] => []),
+        getWirexCards(email).catch((): WirexCard[] => []),
+        getWirexBankAccounts(email).catch((): never[] => []),
       ]);
 
       const displayName = wirexUser?.personal_info
@@ -1231,19 +1256,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "intent and policy are required" });
       }
 
-      // Normalise bigint fields from JSON (JSON doesn't support BigInt)
+      // Normalise bigint fields from JSON (JSON doesn't support BigInt natively)
       const normIntent: PaymentIntent = {
         ...intent,
-        amount: BigInt(intent.amount as unknown as string),
+        amount: safeBigInt(intent.amount, "amount"),
       };
       const normPolicy: AgentPolicy = {
         ...policy,
-        spendLimit: BigInt(policy.spendLimit as unknown as string),
-        spentInWindow: BigInt(policy.spentInWindow as unknown as string),
-        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
-        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
-        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
-        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
+        spentInWindow:       safeBigInt(policy.spentInWindow, "spentInWindow"),
+        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
+        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
+        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
+        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
       };
 
       const result = await processPaymentIntent(normIntent, normPolicy);
@@ -1258,8 +1283,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         expiry: result.expiry,
         intentHash: result.intentHash,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
+      res.status(isValidation ? 400 : 500).json({
+        error: isValidation ? err.message : "Policy evaluation failed",
+      });
     }
   });
 
@@ -1284,19 +1312,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const normIntent: TradeIntent = {
         ...intent,
-        size: BigInt(intent.size as unknown as string),
-        priceLimit: intent.priceLimit ? BigInt(intent.priceLimit as unknown as string) : undefined,
+        size:       safeBigInt(intent.size, "size"),
+        priceLimit: intent.priceLimit ? safeBigInt(intent.priceLimit, "priceLimit") : undefined,
       };
       const normPolicy: AgentPolicy = {
         ...policy,
-        spendLimit: BigInt(policy.spendLimit as unknown as string),
-        spentInWindow: BigInt(policy.spentInWindow as unknown as string),
-        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
-        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
-        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
-        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
+        spentInWindow:       safeBigInt(policy.spentInWindow, "spentInWindow"),
+        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
+        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
+        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
+        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
       };
-      const exposure = currentExposure ? BigInt(currentExposure) : BigInt(0);
+      const exposure = currentExposure ? safeBigInt(currentExposure, "currentExposure") : BigInt(0);
 
       const result = await processTradeIntent(normIntent, normPolicy, exposure);
 
@@ -1310,8 +1338,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         expiry: result.expiry,
         intentHash: result.intentHash,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
+      res.status(isValidation ? 400 : 500).json({
+        error: isValidation ? err.message : "Policy evaluation failed",
+      });
     }
   });
 
@@ -1329,17 +1360,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const normPolicy = {
         ...policy,
-        spendLimit: BigInt(policy.spendLimit as unknown as string),
-        approvalThreshold: BigInt(policy.approvalThreshold as unknown as string),
-        maxPositionSize: BigInt(policy.maxPositionSize as unknown as string),
-        maxDailyLoss: BigInt(policy.maxDailyLoss as unknown as string),
-        maxCumulativeExposure: BigInt(policy.maxCumulativeExposure as unknown as string),
+        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
+        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
+        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
+        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
+        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
       };
 
       const hash = computePolicyHash(normPolicy);
       res.json({ policyHash: hash });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
+      res.status(isValidation ? 400 : 500).json({
+        error: isValidation ? err.message : "Policy hash computation failed",
+      });
     }
   });
 

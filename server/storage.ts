@@ -13,7 +13,7 @@ import {
   agentTransactions as agentTransactionsTable,
   notifications as notificationsTable,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
 
 export type AgentStatus = "active" | "inactive" | "paused";
@@ -127,18 +127,19 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const full: Agent = {
       ...agent,
+      website:              agent.website              ?? null,
+      avatarUrl:            agent.avatarUrl            ?? null,
+      metadataUri:          agent.metadataUri          ?? null,
+      executionWallet:      agent.executionWallet      ?? null,
+      brainAccountAddress:  agent.brainAccountAddress  ?? null,
+      policy:               agent.policy               ?? null,
+      tokenAddress:         agent.tokenAddress         ?? null,
+      bondingCurveAddress:  agent.bondingCurveAddress  ?? null,
+      aerodromePool:        agent.aerodromePool        ?? null,
       totalPaymentsExecuted: agent.totalPaymentsExecuted ?? 0,
-      totalVolumeUsdc: agent.totalVolumeUsdc ?? "0",
-      graduated: agent.graduated ?? false,
-      status: agent.status ?? "active",
-      avatarUrl: agent.avatarUrl ?? null,
-      metadataUri: agent.metadataUri ?? null,
-      executionWallet: agent.executionWallet ?? null,
-      brainAccountAddress: agent.brainAccountAddress ?? null,
-      policy: agent.policy ?? null,
-      tokenAddress: agent.tokenAddress ?? null,
-      bondingCurveAddress: agent.bondingCurveAddress ?? null,
-      aerodromePool: agent.aerodromePool ?? null,
+      totalVolumeUsdc:      agent.totalVolumeUsdc      ?? "0",
+      graduated:            agent.graduated            ?? false,
+      status:               agent.status               ?? "active",
       createdAt: now,
       lastActiveAt: now,
     };
@@ -226,7 +227,9 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
   async getUnreadCount(userId: string): Promise<number> {
-    return Array.from(this.notifs.values()).filter(n => n.userId === userId && !n.read).length;
+    return Array.from(this.notifs.values())
+      .filter(n => n.userId === userId && !n.read && n.type !== "insights")
+      .length;
   }
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const full: Notification = {
@@ -374,9 +377,13 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
   async getUnreadCount(userId: string): Promise<number> {
-    const rows = await db.select().from(notificationsTable)
-      .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.read, false)));
-    return rows.length;
+    const [result] = await db.select({ value: count() }).from(notificationsTable)
+      .where(and(
+        eq(notificationsTable.userId, userId),
+        eq(notificationsTable.read, false),
+        ne(notificationsTable.type, "insights"),
+      ));
+    return result?.value ?? 0;
   }
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const [row] = await db.insert(notificationsTable).values(notification).returning();

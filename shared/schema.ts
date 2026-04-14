@@ -45,7 +45,10 @@ export const agents = pgTable("agents", {
   graduated: boolean("graduated").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   lastActiveAt: timestamp("last_active_at").defaultNow(),
-});
+}, (t) => [
+  index("agents_owner_id_idx").on(t.ownerId),
+  index("agents_status_idx").on(t.status),
+]);
 
 export const insertAgentSchema = createInsertSchema(agents).omit({ createdAt: true, lastActiveAt: true });
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
@@ -67,7 +70,11 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   previewImages: text("preview_images").array(),
   capabilities: text("capabilities").array(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("marketplace_category_idx").on(t.category),
+  index("marketplace_featured_idx").on(t.featured),
+  index("marketplace_trending_idx").on(t.trending),
+]);
 
 export const insertMarketplaceListingSchema = createInsertSchema(marketplaceListings).omit({ id: true, createdAt: true });
 export type InsertMarketplaceListing = z.infer<typeof insertMarketplaceListingSchema>;
@@ -81,7 +88,9 @@ export const agentMemory = pgTable("agent_memory", {
   actionType: text("action_type"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("agent_memory_agent_id_idx").on(t.agentId),
+]);
 
 export const insertAgentMemorySchema = createInsertSchema(agentMemory).omit({ id: true, createdAt: true });
 export type InsertAgentMemory = z.infer<typeof insertAgentMemorySchema>;
@@ -99,7 +108,10 @@ export const agentTransactions = pgTable("agent_transactions", {
   status: text("status").default("pending"),  // pending|confirmed|failed
   blockNumber: bigint("block_number", { mode: "number" }),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("agent_txns_agent_id_idx").on(t.agentId),
+  index("agent_txns_status_idx").on(t.status),
+]);
 
 export const insertAgentTransactionSchema = createInsertSchema(agentTransactions).omit({ id: true, createdAt: true });
 export type InsertAgentTransaction = z.infer<typeof insertAgentTransactionSchema>;
@@ -115,7 +127,10 @@ export const notifications = pgTable("notifications", {
   data: jsonb("data"),
   read: boolean("read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("notifications_user_id_idx").on(t.userId),
+  index("notifications_user_read_idx").on(t.userId, t.read),
+]);
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
@@ -127,4 +142,6 @@ export const siweNonces = pgTable("siwe_nonces", {
   walletAddress: text("wallet_address"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("siwe_nonces_expires_at_idx").on(t.expiresAt),
+]);
