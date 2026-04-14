@@ -283,7 +283,14 @@ function AccountPopup({
   );
 
   return (
-    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_17px_17px_0px_rgba(0,0,0,0.34),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_68px_27px_0px_rgba(0,0,0,0.06)]">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
+        onClick={(e) => e.stopPropagation()}
+      >
       {/* Popup header */}
       <div className="flex items-center justify-between px-[16px] py-[16px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
@@ -352,6 +359,7 @@ function AccountPopup({
             <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
