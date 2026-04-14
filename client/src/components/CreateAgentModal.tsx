@@ -4,7 +4,15 @@ import { keccak256 } from "viem";
 import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
 import { useAuth } from "@/lib/authContext";
-import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Info, Image as ImageIcon, Wallet, Trash2, Search } from "lucide-react";
+import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Image as ImageIcon, Wallet, Trash2, Search } from "lucide-react";
+
+const InfoSquareIcon = ({ className = "" }: { className?: string }) => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className} style={{ flexShrink: 0 }}>
+    <rect x="2" y="2" width="16" height="16" rx="3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="10" cy="7" r="0.7" fill="currentColor" />
+    <path d="M10 10v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
 
 /* ── Collateral asset list ── */
 const COLLATERAL_ASSETS: { ticker: string; name: string; color: string }[] = [
@@ -367,7 +375,7 @@ const PD = ({ label, value, options, ddId, openDd, setOpenDd, onChange }: {
       {label && (
         <div className="flex gap-[4px] items-start">
           <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{label}</p>
-          <Info size={20} className="text-[#414965] shrink-0" />
+          <InfoSquareIcon className="text-[#6c779d] shrink-0" />
         </div>
       )}
       <div className="relative">
@@ -990,7 +998,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 <div className="flex flex-col gap-[4px]">
                   <div className="flex gap-[4px] items-start">
                     <FieldLabel>Recipient Name</FieldLabel>
-                    <Info size={20} className="text-[#414965] shrink-0" />
+                    <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                   </div>
                   <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] bg-[#222737] ${pr_name ? "border border-[#414965]" : ""}`}>
                     <input
@@ -1006,7 +1014,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 <div className="flex flex-col gap-[4px]">
                   <div className="flex gap-[4px] items-start">
                     <FieldLabel>Wallet Address</FieldLabel>
-                    <Info size={20} className="text-[#414965] shrink-0" />
+                    <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                   </div>
                   <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
                     <input
@@ -1028,7 +1036,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex gap-[4px] items-start">
                         <FieldLabel>Per-Payment Cap</FieldLabel>
-                        <Info size={20} className="text-[#414965] shrink-0" />
+                        <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                       </div>
                       <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
                         <input
@@ -1043,7 +1051,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex gap-[4px] items-start">
                         <FieldLabel>Monthly Cap</FieldLabel>
-                        <Info size={20} className="text-[#414965] shrink-0" />
+                        <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                       </div>
                       <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
                         <input
@@ -1072,7 +1080,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex gap-[4px] items-start">
                         <FieldLabel>Frequency</FieldLabel>
-                        <Info size={20} className="text-[#414965] shrink-0" />
+                        <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                       </div>
                       <div className="relative">
                         <button type="button" onClick={() => setP_open_dd(p_open_dd === "pr_freq" ? null : "pr_freq")}
@@ -1097,7 +1105,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex gap-[4px] items-start">
                         <FieldLabel>First Payment</FieldLabel>
-                        <Info size={20} className="text-[#414965] shrink-0" />
+                        <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                       </div>
                       <div className="flex gap-[4px]">
                         <input value={pr_dd} onChange={(e) => setPr_dd(e.target.value)} placeholder="DD"
@@ -1639,7 +1647,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {/* Label row */}
                     <div className="flex gap-[4px] items-center">
                       <FieldLabel>Capital Allocation</FieldLabel>
-                      <Info size={20} className="text-[#414965] shrink-0" />
+                      <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                     </div>
 
                     {/* Inputs + quick amounts wrapper — gap-[8px] between rows */}
@@ -1761,7 +1769,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Trading Type</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="grid grid-cols-2 gap-[12px] w-full mt-[4px]">
                           {[
@@ -1785,7 +1793,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Max Position Size</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
                           <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
@@ -1803,7 +1811,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Cumulative Exposure Limit</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
                           <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
@@ -1821,7 +1829,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Daily Spend Cap</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
                           <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
@@ -1877,7 +1885,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Allowed Markets</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="flex flex-wrap gap-[12px] w-full mt-[4px]">
                           {["BTC-USDC","ETH-USDC","SOL-USDC","ARB-USDC","OP-USDC","AVAX-USDC","BNB-USDC","MATIC-USDC"].map((mkt) => {
@@ -1945,7 +1953,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Max Daily Loss %</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider
                           min={1} max={50}
@@ -1959,7 +1967,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Kill Switch Drawdown</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider
                           min={1} max={20}
@@ -1983,7 +1991,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px]">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Lending Vehicle</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
                           {[
@@ -2006,7 +2014,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Accepted Collateral</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="flex flex-wrap gap-[8px] items-center w-full mt-[4px]">
                           {l_allowed_collateral_assets.map(ticker => (
@@ -2036,7 +2044,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Max Exposure Per Protocol</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={20} value={l_max_protocol_exposure_percent} onChange={setL_max_protocol_exposure_percent} unit="" />
                       </div>
@@ -2045,7 +2053,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Target LTV</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={100} value={l_target_ltv_percent} onChange={setL_target_ltv_percent} unit="%" />
                       </div>
@@ -2054,7 +2062,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Max LTV at Origination</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={100} value={l_max_ltv_percent} onChange={setL_max_ltv_percent} unit="%" />
                       </div>
@@ -2063,7 +2071,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Rebalance Threshold</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={20} value={l_rebalance_threshold_percent} onChange={setL_rebalance_threshold_percent} unit="%" />
                       </div>
@@ -2077,7 +2085,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Liquidation Risk Ceiling</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={100} value={l_liquidation_risk_ceiling} onChange={setL_liquidation_risk_ceiling} unit="%" />
                       </div>
@@ -2086,7 +2094,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px] items-start w-full">
                         <div className="flex gap-[4px] items-center">
                           <FieldLabel>Halt New Loans if Book LTV Exceeds</FieldLabel>
-                          <Info size={20} className="text-[#414965]" />
+                          <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <ConfigSlider min={1} max={100} value={l_halt_ltv_exceeds} onChange={setL_halt_ltv_exceeds} unit="%" />
                       </div>
@@ -2285,7 +2293,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[4px]">
                         <div className="flex gap-[4px] items-start">
                           <FieldLabel>Payment Type</FieldLabel>
-                          <Info size={20} className="text-[#414965] shrink-0" />
+                          <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                         </div>
                         <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
                           {[
@@ -2325,7 +2333,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <div className="flex flex-col gap-[4px]">
                           <div className="flex gap-[4px] items-start">
                             <FieldLabel>Payment Recipients</FieldLabel>
-                            <Info size={20} className="text-[#414965] shrink-0" />
+                            <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                           </div>
                           <div className="border border-[#1d2132] flex gap-[16px] items-center p-[16px] rounded-[12px]">
                             <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">

@@ -416,14 +416,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div
-          className="flex items-center justify-between flex-shrink-0 px-[16px] py-[14px]"
+          className="flex items-center justify-between flex-shrink-0 px-[16px] py-[16px]"
           style={{ borderBottom: "1px solid #1d2132", background: "rgba(10,12,16,0.92)", backdropFilter: "blur(10px)" }}
         >
-          <div className="flex items-center gap-[8px]">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Insights</span>
-          </div>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px", color: "#6c779d" }}>Insights</span>
           <button
             onClick={() => setInsightsOpen(false)}
             className="flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
@@ -435,100 +433,80 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           </button>
         </div>
 
-        {/* Sub-header */}
-        <div className="px-[16px] py-[10px] flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-          {insightsLoading || insightsGenerating ? (
-            <div className="flex items-center gap-[8px]">
-              <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee] animate-pulse flex-shrink-0" />
-              <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#6c779d" }}>
-                Brain AI is analysing your accounts…
-              </p>
-            </div>
-          ) : (
-            <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "12px", lineHeight: "16px", color: "#414965" }}>
-              Brain AI analysed your accounts and found {insightsData.length} personalised recommendations.
-            </p>
-          )}
-        </div>
+        {/* ── Scrollable content (sub-header + cards) ── */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-[8px] p-[8px]">
 
-        {/* Insight cards */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-[10px] p-[12px]">
+          {/* Brain AI status row */}
+          <div className="flex items-start gap-[8px] w-full">
+            <div className="flex-shrink-0 mt-[1px]">
+              {insightsLoading || insightsGenerating ? (
+                <div className="w-[16px] h-[16px] rounded-full border-[1.5px] border-[#7631ee] border-t-transparent animate-spin" />
+              ) : (
+                <div className="w-[16px] h-[16px] rounded-full flex items-center justify-center" style={{ background: "rgba(118,49,238,0.18)" }}>
+                  <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee]" />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-[8px] flex-1">
+              <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", color: "#6c779d" }}>
+                {insightsLoading || insightsGenerating
+                  ? "Brain AI is analysing your accounts…"
+                  : `Brain AI analysed your accounts and found ${insightsData.length} personalized recommendations.`}
+              </p>
+              {!insightsLoading && !insightsGenerating && insightsGeneratedAt && (
+                <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", color: "#6c779d" }}>
+                  Last Updated: {insightsGeneratedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Cards */}
           {(insightsLoading || insightsGenerating) && insightsData.length === 0 ? (
-            /* Loading skeleton */
             Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="flex flex-col gap-[8px] p-[12px] rounded-[12px] animate-pulse"
-                style={{ background: "rgba(118,49,238,0.04)", border: "1px solid rgba(118,49,238,0.10)", borderLeft: "3px solid rgba(118,49,238,0.25)", borderRadius: "0 12px 12px 0" }}
+                className="flex flex-col gap-[8px] p-[12px] rounded-[16px] animate-pulse"
+                style={{ border: "1px solid #1d2132" }}
               >
-                <div className="h-[10px] w-[80px] rounded bg-[#1d2132]" />
-                <div className="h-[13px] w-full rounded bg-[#1d2132]" />
-                <div className="h-[13px] w-4/5 rounded bg-[#1d2132]" />
-                <div className="h-[12px] w-[100px] rounded bg-[#1d2132]" />
+                <div className="h-[14px] w-[100px] rounded bg-[#1d2132]" />
+                <div className="h-[14px] w-full rounded bg-[#1d2132]" />
+                <div className="h-[14px] w-4/5 rounded bg-[#1d2132]" />
+                <div className="h-[32px] w-full rounded-[100px] bg-[#1d2132]" />
               </div>
             ))
           ) : (
             insightsData.map((insight, i) => {
-              const c = insightColors[insight.kind] ?? insightColors.info;
+              const isOpportunity = insight.kind === "opportunity";
               return (
                 <div
                   key={i}
-                  className="flex flex-col gap-[6px] p-[12px] cursor-pointer transition-all hover:brightness-110"
-                  style={{
-                    background: c.bg,
-                    border: `1px solid ${c.border}22`,
-                    borderLeft: `3px solid ${c.border}`,
-                    borderRadius: "0 12px 12px 0",
-                  }}
+                  className="flex flex-col gap-[8px] p-[12px] rounded-[16px]"
+                  style={{ border: `1px solid ${isOpportunity ? "#ff9500" : "#1d2132"}` }}
                 >
-                  <span
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
-                      fontSize: "10px",
-                      lineHeight: "13px",
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase" as const,
-                      color: c.tag,
-                    }}
-                  >
+                  <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 700, fontSize: "14px", lineHeight: "14px", color: "#ff9500" }}>
                     {insight.tag}
-                  </span>
-                  <p
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
-                      fontSize: "13px",
-                      lineHeight: "19px",
-                      color: "#d0d8f0",
-                    }}
-                  >
+                  </p>
+                  <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", color: "#a8b9f4" }}>
                     {insight.text}
                   </p>
-                  <span
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
-                      fontSize: "12px",
-                      lineHeight: "16px",
-                      color: c.tag,
-                    }}
-                  >
-                    {insight.action}
-                  </span>
+                  {insight.action && (
+                    <button
+                      className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] w-full transition-opacity hover:opacity-80 flex-shrink-0"
+                      style={{ background: isOpportunity ? "#414965" : "#222737" }}
+                    >
+                      <span style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 600, fontSize: "12px", lineHeight: "16px", color: isOpportunity ? "#a8b9f4" : "#6c779d", whiteSpace: "nowrap" }}>
+                        {insight.action}
+                      </span>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke={isOpportunity ? "#a8b9f4" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 3l5 5-5 5" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               );
             })
           )}
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex-shrink-0 px-[16px] py-[12px]"
-          style={{ borderTop: "1px solid #1d2132" }}
-        >
-          <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontSize: "11px", lineHeight: "15px", color: "#414965", textAlign: "center" as const }}>
-            {insightsGeneratedAt
-              ? `Last updated ${insightsGeneratedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Refreshes every 24h · Powered by Brain AI`
-              : "Insights refresh every 24 hours · Powered by Brain AI"}
-          </p>
         </div>
       </div>
     </>
