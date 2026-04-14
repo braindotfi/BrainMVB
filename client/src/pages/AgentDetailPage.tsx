@@ -225,10 +225,8 @@ const AgentTopBar = ({ onBack, onEdit, isActive, onToggle, onDelete, agentName }
           <button data-testid="button-delete-agent" onClick={() => setShowConfirm(true)}
             className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80"
             style={{ background: "#350011" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4M6 7v5M10 7v5M3 4l.8 9.2a.8.8 0 0 0 .8.8h6.8a.8.8 0 0 0 .8-.8L13 4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Delete</span>
+            <img src="/figmaAssets/icon-delete.svg" alt="" className="w-[16px] h-[16px] flex-shrink-0" />
+            <span className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Delete</span>
           </button>
         </div>
       </div>
@@ -241,41 +239,39 @@ const AgentTopBar = ({ onBack, onEdit, isActive, onToggle, onDelete, agentName }
           onClick={(e) => { if (e.target === e.currentTarget) setShowConfirm(false); }}
         >
           <div
-            className="flex flex-col gap-[20px] p-[24px] rounded-[20px] w-[320px]"
-            style={{ background: "#11141b", border: "1px solid #1d2132", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
+            className="flex flex-col overflow-hidden rounded-[16px] w-[320px]"
+            style={{
+              background: "#11141b",
+              border: "1px solid #1d2132",
+              boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)",
+            }}
           >
-            {/* Icon */}
-            <div className="w-[48px] h-[48px] rounded-full flex items-center justify-center mx-auto" style={{ background: "#350011" }}>
-              <svg width="22" height="22" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4M6 7v5M10 7v5M3 4l.8 9.2a.8.8 0 0 0 .8.8h6.8a.8.8 0 0 0 .8-.8L13 4" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            {/* Text */}
-            <div className="flex flex-col gap-[8px] text-center">
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-[16px] leading-[20px]">
+            {/* Title + description */}
+            <div className="flex flex-col gap-[8px] items-center px-[8px] py-[24px] text-center w-full">
+              <p className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full">
                 Delete Agent
-              </span>
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[18px]">
-                Are you sure you want to delete <span className="text-[#a8b9f4] font-medium">{agentName}</span>? This action cannot be undone.
+              </p>
+              <p className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full">
+                Are you sure you want to delete{agentName ? <> <span className="text-[#a8b9f4]">{agentName}</span></> : " this agent"}?
               </p>
             </div>
             {/* Buttons */}
-            <div className="flex gap-[8px]">
+            <div className="flex gap-[8px] items-start p-[8px] w-full">
               <button
                 data-testid="button-delete-cancel"
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-[10px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] font-medium hover:opacity-80 transition-opacity"
-                style={{ background: "#1d2132" }}
+                className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+                style={{ background: "#222737" }}
               >
-                Cancel
+                <span className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
               </button>
               <button
                 data-testid="button-delete-confirm"
                 onClick={() => { setShowConfirm(false); onDelete(); }}
-                className="flex-1 py-[10px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] text-white text-[13px] font-semibold hover:opacity-80 transition-opacity"
-                style={{ background: "#d20344" }}
+                className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+                style={{ background: "#350011" }}
               >
-                Delete
+                <span className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
               </button>
             </div>
           </div>

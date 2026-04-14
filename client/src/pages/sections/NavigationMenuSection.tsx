@@ -256,6 +256,53 @@ const insightColors = {
   info:        { tag: "#a8b9f4", border: "#a8b9f4", bg: "rgba(168,185,244,0.06)" },
 };
 
+const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCancel: () => void; onConfirm: () => void }) => {
+  if (!show) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        className="flex flex-col overflow-hidden rounded-[16px] w-[320px]"
+        style={{
+          background: "#11141b",
+          border: "1px solid #1d2132",
+          boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)",
+        }}
+      >
+        <div className="flex flex-col gap-[8px] items-center px-[8px] py-[24px] text-center w-full">
+          <p className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full">
+            Logout
+          </p>
+          <p className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full">
+            Are you sure you want to logout?
+          </p>
+        </div>
+        <div className="flex gap-[8px] items-start p-[8px] w-full">
+          <button
+            data-testid="button-logout-cancel"
+            onClick={onCancel}
+            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+            style={{ background: "#222737" }}
+          >
+            <span className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
+          </button>
+          <button
+            data-testid="button-logout-confirm"
+            onClick={onConfirm}
+            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+            style={{ background: "#350011" }}
+          >
+            <span className="[font-family:'Gilroy','Plus Jakarta Sans',Helvetica,sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLogout }: Props): JSX.Element => {
   const [location, navigate] = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -265,6 +312,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
   const [openMoreMenu, setOpenMoreMenu] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const historyPanelRef = useRef<HTMLDivElement>(null);
 
@@ -848,6 +896,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         <NotificationsPanel />
         <InsightsPanel />
         <ChatHistoryPanel />
+        <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
           <div className="flex flex-col flex-1 items-center mt-2 gap-1 w-full px-[7px]">
             {/* Expand button — top of collapsed sidebar (rounded-full, 40px) */}
@@ -908,7 +957,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
             </button>
-            <button title="Logout" onClick={onLogout} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
+            <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Logout" src="/figmaAssets/logout-icon.svg" />
             </button>
           </div>
@@ -923,6 +972,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       <NotificationsPanel />
       <InsightsPanel />
       <ChatHistoryPanel />
+      <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
         {/* Brain logo row — collapse button lives here on the right */}
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
@@ -1042,7 +1092,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             {!collapsed && <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>}
           </button>
           <button
-            onClick={onLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity"
           >
             <img className="w-6 h-6 flex-shrink-0" alt="Logout" src="/figmaAssets/logout-icon.svg" />
