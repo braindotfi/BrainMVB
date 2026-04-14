@@ -3,39 +3,38 @@ import { useAuth } from "@/lib/authContext";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
-// Header back button
 const BACK_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
 const BACK_VEC = "https://www.figma.com/api/mcp/asset/4356db82-74dc-481d-9b7b-397796b1864b";
 
-// Step progress indicator images (steps 1 / 2 / 3)
-const STEP1_IND = "https://www.figma.com/api/mcp/asset/d3625bf9-3c31-45d7-8df2-12919b08e899";
-const STEP2_IND = "https://www.figma.com/api/mcp/asset/2a0585ad-8b28-4d9a-b93c-f24bd071fd22";
-const STEP3_IND = "https://www.figma.com/api/mcp/asset/c626951f-19e6-483d-afd6-0e7ada278b3e";
-
-// Chevron-down for dropdown rows
 const CHEVRON_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
 const CHEVRON_VEC = "https://www.figma.com/api/mcp/asset/d0cdfad5-4308-445c-a111-b558f85127c9";
 
-// Popup: recipient-type icons (32 px inverted)
 const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/14bf435a-a003-4588-9029-5ce6973c3a94";
 const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/783e8c47-1571-4b96-9c63-cd875fc7a1e4";
 const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/b3dc8e97-fef3-4cff-8f76-054a05e520bf";
 const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/2a4569bd-623f-43e8-90d3-a53e41c7e325";
 const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/9e6a186b-9934-4809-b3f0-64b27f9fec60";
 const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/e857828a-6482-4b80-80af-4e56cecf3cf7";
-
-// Popup: search + close
 const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/66211182-8dde-42ab-a29d-ce2c7a43948c";
 const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/76c74d2e-e77a-4dd9-887d-333365e41eea";
 const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/f39dbbe8-075b-4e3f-aaf9-bdfac59b7309";
 
-// ── Types & data ──────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 type RecipientType = "bank" | "wallet" | "agent";
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
+
+interface AssetItem {
+  id: string;
+  name: string;
+  ticker: string;
+  icon: string;
+  balance: string;
+}
 
 interface SendState {
   step: Step;
+  selectedAssetId: string | null;
   recipientType: RecipientType | null;
   recipientName: string;
   iban: string;
@@ -51,6 +50,22 @@ interface Props {
   excludeTypes?: Array<"bank" | "wallet" | "agent">;
 }
 
+// ── Static data ────────────────────────────────────────────────────────────────
+
+const CRYPTO_ASSETS: AssetItem[] = [
+  { id: "usdc",  name: "USD Coin",   ticker: "USDC", icon: "/figmaAssets/crypto-icons-3.svg", balance: "2,040.30" },
+  { id: "eth",   name: "Ethereum",   ticker: "ETH",  icon: "/figmaAssets/crypto-icons.svg",   balance: "1.245" },
+  { id: "matic", name: "Polygon",    ticker: "MATIC", icon: "/figmaAssets/crypto-icons-1.svg", balance: "295.23" },
+  { id: "bnb",   name: "BNB Chain",  ticker: "BNB",  icon: "/figmaAssets/crypto-icons-2.svg", balance: "1.245" },
+];
+
+const FIAT_ASSETS: AssetItem[] = [
+  { id: "usd", name: "US Dollar",     ticker: "USD", icon: "🇺🇸", balance: "12,500.00" },
+  { id: "eur", name: "Euro",          ticker: "EUR", icon: "🇪🇺", balance: "0.00" },
+  { id: "gbp", name: "British Pound", ticker: "GBP", icon: "🇬🇧", balance: "0.00" },
+  { id: "aed", name: "UAE Dirham",    ticker: "AED", icon: "🇦🇪", balance: "0.00" },
+];
+
 const RECIPIENT_TYPES: { id: RecipientType; name: string }[] = [
   { id: "wallet", name: "Wallet Address" },
   { id: "bank",   name: "Bank Account" },
@@ -58,15 +73,16 @@ const RECIPIENT_TYPES: { id: RecipientType; name: string }[] = [
 ];
 
 const AGENT_ACCOUNTS = [
-  { id: "yield",    name: "Yield Agent",   address: "0xYld3F...4f2A" },
-  { id: "trader",   name: "TraderPro",     address: "0xTrd9c...1B7E" },
-  { id: "treasury", name: "Treasury AI",   address: "0xTrs2E...7D3F" },
+  { id: "yield",    name: "Yield Agent",  address: "0xYld3F...4f2A" },
+  { id: "trader",   name: "TraderPro",    address: "0xTrd9c...1B7E" },
+  { id: "treasury", name: "Treasury AI",  address: "0xTrs2E...7D3F" },
 ];
 
 const FEE = "0.50";
 
 const INITIAL: SendState = {
   step: 1,
+  selectedAssetId: null,
   recipientType: null,
   recipientName: "",
   iban: "",
@@ -75,7 +91,7 @@ const INITIAL: SendState = {
   amount: "",
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function BackBtn({ onClick }: { onClick: () => void }) {
   return (
@@ -115,6 +131,75 @@ function ChevronBtn() {
   );
 }
 
+function StepDots({ current }: { current: number }) {
+  return (
+    <div className="flex items-center gap-[8px] px-[12px] py-[6px] rounded-[100px]" style={{ background: "#12032D" }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <div
+          key={n}
+          className="rounded-full shrink-0 transition-colors duration-300"
+          style={{ width: 8, height: 8, background: n <= current ? "#7631EE" : "#240757" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PopupShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
+      <div
+        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-[16px] py-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">{title}</p>
+          <button onClick={onClose} className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
+            <div className="absolute left-[4px] size-[16px] top-[4px]">
+              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
+                <div className="absolute inset-[-8.04%]">
+                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
+      <div className="relative shrink-0 size-[24px]">
+        <div className="absolute inset-[16.67%]">
+          <div className="absolute inset-[-6.25%]">
+            <img alt="" className="block max-w-none size-full" src={POP_SEARCH_VEC} />
+          </div>
+        </div>
+      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search"
+        className="bg-transparent flex-1 text-[#6c779d] text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-[#6c779d] min-w-0"
+      />
+    </div>
+  );
+}
+
 function RecipientIcon({ type }: { type: RecipientType }) {
   if (type === "bank") {
     return (
@@ -148,127 +233,134 @@ function RecipientIcon({ type }: { type: RecipientType }) {
   );
 }
 
-function RecipientPopup({
+function AssetIcon({ asset }: { asset: AssetItem }) {
+  const isEmoji = !asset.icon.startsWith("/");
+  if (isEmoji) {
+    return (
+      <div className="shrink-0 size-[32px] rounded-[16px] bg-[#1d2132] flex items-center justify-center text-[18px]">
+        {asset.icon}
+      </div>
+    );
+  }
+  return (
+    <img src={asset.icon} alt={asset.ticker} className="shrink-0 size-[32px] rounded-[16px]" />
+  );
+}
+
+function AssetPopup({
+  assets,
+  selectedId,
   onSelect,
   onClose,
-  excludeTypes = [],
 }: {
+  assets: AssetItem[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = assets.filter(
+    (a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.ticker.toLowerCase().includes(search.toLowerCase())
+  );
+  return (
+    <PopupShell title="Select Asset" onClose={onClose}>
+      <div className="flex flex-col gap-[8px] p-[8px]">
+        <SearchBar value={search} onChange={setSearch} />
+        <div className="flex flex-col">
+          <div className="flex items-center px-[8px] py-[4px]">
+            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">Current Assets</p>
+          </div>
+          {filtered.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => onSelect(a.id)}
+              className={`flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors text-left ${selectedId === a.id ? "bg-[#1d2132]" : "hover:bg-[#1d2132]"}`}
+              data-testid={`btn-asset-${a.id}`}
+            >
+              <AssetIcon asset={a} />
+              <div className="flex flex-col flex-1 min-w-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
+                <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.balance} {a.ticker}</p>
+              </div>
+              {selectedId === a.id && (
+                <div className="shrink-0 w-[16px] h-[16px] rounded-full bg-[#7631EE] flex items-center justify-center">
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                    <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              )}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No assets found</p>
+          )}
+        </div>
+      </div>
+    </PopupShell>
+  );
+}
+
+function RecipientPopup({
+  excludeTypes = [],
+  onSelect,
+  onClose,
+}: {
+  excludeTypes?: Array<RecipientType>;
   onSelect: (t: RecipientType) => void;
   onClose: () => void;
-  excludeTypes?: Array<RecipientType>;
 }) {
   const [search, setSearch] = useState("");
   const filtered = RECIPIENT_TYPES.filter(
     (r) => !excludeTypes.includes(r.id) && r.name.toLowerCase().includes(search.toLowerCase())
   );
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
-      <div
-        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-[16px] py-[16px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Select Account</p>
-          <button
-            onClick={onClose}
-            className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
-            data-testid="btn-send-popup-close"
-          >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
-            <div className="absolute left-[4px] size-[16px] top-[4px]">
-              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
-                <div className="absolute inset-[-8.04%]">
-                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
-                </div>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-[8px] p-[8px]">
-          <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
-            <div className="relative shrink-0 size-[24px]">
-              <div className="absolute inset-[16.67%]">
-                <div className="absolute inset-[-6.25%]">
-                  <img alt="" className="block max-w-none size-full" src={POP_SEARCH_VEC} />
-                </div>
-              </div>
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
-              className="bg-transparent flex-1 text-[#6c779d] text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-[#6c779d] min-w-0"
-              data-testid="input-send-search"
-            />
+    <PopupShell title="Select Account" onClose={onClose}>
+      <div className="flex flex-col gap-[8px] p-[8px]">
+        <SearchBar value={search} onChange={setSearch} />
+        <div className="flex flex-col">
+          <div className="flex items-center px-[8px] py-[4px]">
+            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Accounts</p>
           </div>
-
-          <div className="flex flex-col">
-            <div className="flex items-center justify-center px-[8px] py-[4px]">
-              <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Assets</p>
-            </div>
-            {filtered.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => onSelect(r.id)}
-                className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132]"
-                data-testid={`btn-recipient-${r.id}`}
-              >
-                <RecipientIcon type={r.id} />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] whitespace-nowrap">
-                  {r.name}
-                </p>
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No results</p>
-            )}
-          </div>
+          {filtered.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => onSelect(r.id)}
+              className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132]"
+              data-testid={`btn-recipient-${r.id}`}
+            >
+              <RecipientIcon type={r.id} />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] whitespace-nowrap">{r.name}</p>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No results</p>
+          )}
         </div>
       </div>
-    </div>
+    </PopupShell>
   );
 }
 
 function AgentPopup({ onSelect, onClose }: { onSelect: (id: string) => void; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
-      <div
-        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-[16px] py-[16px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Select Agent</p>
-          <button onClick={onClose} className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity">
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
-            <div className="absolute left-[4px] size-[16px] top-[4px]">
-              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
-                <div className="absolute inset-[-8.04%]">
-                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
-                </div>
-              </div>
+    <PopupShell title="Select Agent" onClose={onClose}>
+      <div className="flex flex-col p-[8px] gap-[4px]">
+        {AGENT_ACCOUNTS.map((a) => (
+          <button
+            key={a.id}
+            onClick={() => onSelect(a.id)}
+            className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full hover:bg-[#1d2132] transition-colors text-left"
+            data-testid={`btn-agent-${a.id}`}
+          >
+            <RecipientIcon type="agent" />
+            <div className="flex flex-col min-w-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
+              <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.address}</p>
             </div>
           </button>
-        </div>
-        <div className="flex flex-col p-[8px] gap-[4px]">
-          {AGENT_ACCOUNTS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => onSelect(a.id)}
-              className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full hover:bg-[#1d2132] transition-colors text-left"
-              data-testid={`btn-agent-${a.id}`}
-            >
-              <RecipientIcon type="agent" />
-              <div className="flex flex-col min-w-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
-                <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.address}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
-    </div>
+    </PopupShell>
   );
 }
 
@@ -281,9 +373,9 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function InputBox({ children }: { children: React.ReactNode }) {
+function InputBox({ children, highlighted }: { children: React.ReactNode; highlighted?: boolean }) {
   return (
-    <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
+    <div className={`bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full border ${highlighted ? "border-[#6c779d]" : "border-transparent"}`}>
       {children}
     </div>
   );
@@ -302,8 +394,9 @@ function ReviewRow({ label, value, highlight }: { label: string; value: string; 
 
 export const SendModal = ({ open, onClose, sourceAccountType = "wallet", excludeTypes = [] }: Props): JSX.Element | null => {
   const { wirexAccounts } = useAuth();
-  const [state, setState] = useState<SendState>(INITIAL);
-  const [popupOpen, setPopupOpen]       = useState(false);
+  const [state, setState]               = useState<SendState>(INITIAL);
+  const [assetPopupOpen, setAssetPopupOpen] = useState(false);
+  const [popupOpen, setPopupOpen]           = useState(false);
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
@@ -314,12 +407,24 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
   const bankAcc   = wirexAccounts.find((a) => a.type === "bank");
   const walletAcc = wirexAccounts.find((a) => a.type === "wallet");
-  const sourceAcc = sourceAccountType === "bank" ? bankAcc : walletAcc;
+
+  // Build contextual asset list with live balance for primary asset
+  const availableAssets: AssetItem[] = sourceAccountType === "bank"
+    ? FIAT_ASSETS.map((a) => a.id === "usd" ? { ...a, balance: bankAcc?.balance ?? a.balance } : a)
+    : CRYPTO_ASSETS.map((a) => a.id === "usdc" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a);
+
+  const selectedAsset = availableAssets.find((a) => a.id === state.selectedAssetId) ?? null;
+  const availableBalance = selectedAsset ? parseFloat(selectedAsset.balance.replace(/,/g, "")) : 0;
+  const enteredAmount    = parseFloat(state.amount || "0");
+  const amountError = state.amount && enteredAmount > 0 && enteredAmount > availableBalance
+    ? `Exceeds available balance of ${selectedAsset?.balance} ${selectedAsset?.ticker}`
+    : null;
 
   const handleClose = () => {
     onClose();
     setTimeout(() => {
       setState(INITIAL);
+      setAssetPopupOpen(false);
       setPopupOpen(false);
       setAgentPopupOpen(false);
       setSent(false);
@@ -329,12 +434,13 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
   const handleBack = () => {
     if (state.step > 1) set({ step: (state.step - 1) as Step });
+    setAssetPopupOpen(false);
     setPopupOpen(false);
     setAgentPopupOpen(false);
   };
 
   const handleNext = () => {
-    if (state.step < 4) set({ step: (state.step + 1) as Step });
+    if (state.step < 5) set({ step: (state.step + 1) as Step });
   };
 
   const handleConfirm = () => {
@@ -343,13 +449,14 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   };
 
   const canNext = (() => {
-    if (state.step === 1) return state.recipientType !== null;
-    if (state.step === 2) {
+    if (state.step === 1) return state.selectedAssetId !== null;
+    if (state.step === 2) return state.recipientType !== null;
+    if (state.step === 3) {
       if (state.recipientType === "bank")   return state.recipientName.length > 0 && state.iban.length > 6;
       if (state.recipientType === "wallet") return state.walletAddress.length > 10;
       if (state.recipientType === "agent")  return state.selectedAgentId !== null;
     }
-    if (state.step === 3) return parseFloat(state.amount || "0") > 0;
+    if (state.step === 4) return enteredAmount > 0 && !amountError;
     return true;
   })();
 
@@ -357,15 +464,15 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const truncAddr = (addr: string) => addr.slice(0, 8) + "..." + addr.slice(-6);
 
   const recipientLabel = () => {
-    if (state.recipientType === "bank")   return `${state.recipientName}`;
+    if (state.recipientType === "bank")   return state.recipientName;
     if (state.recipientType === "wallet") return truncAddr(state.walletAddress);
     if (state.recipientType === "agent")  return selectedAgent?.name ?? "AI Agent";
     return "";
   };
 
-  const stepInd = [STEP1_IND, STEP2_IND, STEP3_IND][(state.step as number) - 1] ?? STEP3_IND;
+  const total = (enteredAmount + parseFloat(FEE)).toFixed(2);
 
-  // ── Success state ──────────────────────────────────────────────────────────
+  // ── Success ────────────────────────────────────────────────────────────────
   if (sent) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -382,7 +489,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             </div>
             <div className="flex flex-col gap-[4px]">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
-                {state.amount ? `$${parseFloat(state.amount).toFixed(2)} Sent!` : "Sent!"}
+                {state.amount ? `${state.amount} ${selectedAsset?.ticker ?? ""} Sent!` : "Sent!"}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
                 Transfer to {recipientLabel()} was successful.
@@ -405,50 +512,91 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="bg-[#0a0c10] h-[56px] relative flex items-center justify-center">
           <BackBtn onClick={state.step === 1 ? handleClose : handleBack} />
-          {state.step < 4 ? (
-            <div className="h-[24px] w-[64px]">
-              <img alt="" className="block max-w-none size-full" src={stepInd} />
-            </div>
-          ) : (
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
-              Review Details
-            </p>
-          )}
+          {state.step < 5
+            ? <StepDots current={state.step} />
+            : <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">Review Details</p>
+          }
         </div>
 
-        {/* ── Content ────────────────────────────────────────────────────── */}
+        {/* ── Content ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-[24px] px-[39px] pt-[24px]">
 
-          {/* ── STEP 1: Select recipient type ────────────────────────────── */}
+          {/* ── STEP 1: Select Asset ──────────────────────────────────────── */}
           {state.step === 1 && (
+            <>
+              <div className="flex flex-col">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">What are we sending?</p>
+              </div>
+
+              <FieldRow label="Current Assets">
+                <button
+                  onClick={() => setAssetPopupOpen((v) => !v)}
+                  className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                  data-testid="btn-send-select-asset"
+                >
+                  {selectedAsset ? (
+                    <>
+                      <AssetIcon asset={selectedAsset} />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                        {selectedAsset.name}
+                      </p>
+                      <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px] shrink-0 mr-[4px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                      Select Asset
+                    </p>
+                  )}
+                  <ChevronBtn />
+                </button>
+              </FieldRow>
+
+              {assetPopupOpen && (
+                <AssetPopup
+                  assets={availableAssets}
+                  selectedId={state.selectedAssetId}
+                  onSelect={(id) => { set({ selectedAssetId: id }); setAssetPopupOpen(false); }}
+                  onClose={() => setAssetPopupOpen(false)}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── STEP 2: Select Recipient Type ────────────────────────────── */}
+          {state.step === 2 && (
             <>
               <div className="flex flex-col">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Where are we sending to?</p>
               </div>
 
-              <button
-                onClick={() => setPopupOpen((v) => !v)}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-send-select"
-              >
-                {state.recipientType ? (
-                  <>
-                    <RecipientIcon type={state.recipientType} />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                      {RECIPIENT_TYPES.find((r) => r.id === state.recipientType)?.name}
+              <FieldRow label="Send To">
+                <button
+                  onClick={() => setPopupOpen((v) => !v)}
+                  className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                  data-testid="btn-send-select-recipient"
+                >
+                  {state.recipientType ? (
+                    <>
+                      <RecipientIcon type={state.recipientType} />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                        {RECIPIENT_TYPES.find((r) => r.id === state.recipientType)?.name}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                      Select Account
                     </p>
-                  </>
-                ) : (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                    Select Account
-                  </p>
-                )}
-                <ChevronBtn />
-              </button>
+                  )}
+                  <ChevronBtn />
+                </button>
+              </FieldRow>
 
               {popupOpen && (
                 <RecipientPopup
@@ -460,86 +608,57 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             </>
           )}
 
-          {/* ── STEP 2: Bank ─────────────────────────────────────────────── */}
-          {state.step === 2 && state.recipientType === "bank" && (
+          {/* ── STEP 3: Recipient Details – Bank ─────────────────────────── */}
+          {state.step === 3 && state.recipientType === "bank" && (
             <>
               <div className="flex flex-col">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
               </div>
-
-              <button
-                onClick={handleBack}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-send-type-bank"
-              >
+              <button onClick={handleBack} className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors">
                 <RecipientIcon type="bank" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Bank Account</p>
                 <ChevronBtn />
               </button>
-
               <div className="flex flex-col gap-[24px]">
                 <FieldRow label="Recipient Name">
                   <InputBox>
-                    <input
-                      type="text"
-                      value={state.recipientName}
-                      onChange={(e) => set({ recipientName: e.target.value })}
-                      placeholder="John Smith"
+                    <input type="text" value={state.recipientName} onChange={(e) => set({ recipientName: e.target.value })} placeholder="John Smith"
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
-                      data-testid="input-send-recipient-name"
-                    />
+                      data-testid="input-send-recipient-name" />
                   </InputBox>
                 </FieldRow>
                 <FieldRow label="IBAN Bank Number">
                   <InputBox>
-                    <input
-                      type="text"
-                      value={state.iban}
-                      onChange={(e) => set({ iban: e.target.value })}
-                      placeholder="AE0703...123456"
+                    <input type="text" value={state.iban} onChange={(e) => set({ iban: e.target.value })} placeholder="AE0703...123456"
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
-                      data-testid="input-send-iban"
-                    />
+                      data-testid="input-send-iban" />
                   </InputBox>
                 </FieldRow>
               </div>
             </>
           )}
 
-          {/* ── STEP 2: Wallet ───────────────────────────────────────────── */}
-          {state.step === 2 && state.recipientType === "wallet" && (
+          {/* ── STEP 3: Recipient Details – Wallet ───────────────────────── */}
+          {state.step === 3 && state.recipientType === "wallet" && (
             <>
               <div className="flex flex-col">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
               </div>
-
-              <button
-                onClick={handleBack}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-send-type-wallet"
-              >
+              <button onClick={handleBack} className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors">
                 <RecipientIcon type="wallet" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Wallet Address</p>
                 <ChevronBtn />
               </button>
-
               <FieldRow label="Wallet Address">
                 <InputBox>
-                  <input
-                    type="text"
-                    value={state.walletAddress}
-                    onChange={(e) => set({ walletAddress: e.target.value })}
-                    placeholder="0x..."
+                  <input type="text" value={state.walletAddress} onChange={(e) => set({ walletAddress: e.target.value })} placeholder="0x..."
                     className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
-                    data-testid="input-send-wallet-addr"
-                  />
-                  <button
-                    onClick={async () => { try { const t = await navigator.clipboard.readText(); set({ walletAddress: t }); } catch {} }}
+                    data-testid="input-send-wallet-addr" />
+                  <button onClick={async () => { try { const t = await navigator.clipboard.readText(); set({ walletAddress: t }); } catch {} }}
                     className="bg-[#4a2300] px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] shrink-0 hover:opacity-80 transition-opacity"
-                    data-testid="btn-send-paste-addr"
-                  >
+                    data-testid="btn-send-paste-addr">
                     Paste
                   </button>
                 </InputBox>
@@ -550,30 +669,22 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             </>
           )}
 
-          {/* ── STEP 2: Agent ─────────────────────────────────────────────── */}
-          {state.step === 2 && state.recipientType === "agent" && (
+          {/* ── STEP 3: Recipient Details – Agent ────────────────────────── */}
+          {state.step === 3 && state.recipientType === "agent" && (
             <>
               <div className="flex flex-col">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Money</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">Who are we sending to?</p>
               </div>
-
-              <button
-                onClick={handleBack}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                data-testid="btn-send-type-agent"
-              >
+              <button onClick={handleBack} className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors">
                 <RecipientIcon type="agent" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">AI Agent Account</p>
                 <ChevronBtn />
               </button>
-
               <FieldRow label="Select Agent">
-                <button
-                  onClick={() => setAgentPopupOpen((v) => !v)}
+                <button onClick={() => setAgentPopupOpen((v) => !v)}
                   className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
-                  data-testid="btn-send-select-agent"
-                >
+                  data-testid="btn-send-select-agent">
                   {selectedAgent ? (
                     <>
                       <RecipientIcon type="agent" />
@@ -585,95 +696,94 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <ChevronBtn />
                 </button>
                 {agentPopupOpen && (
-                  <AgentPopup
-                    onSelect={(id) => { set({ selectedAgentId: id }); setAgentPopupOpen(false); }}
-                    onClose={() => setAgentPopupOpen(false)}
-                  />
+                  <AgentPopup onSelect={(id) => { set({ selectedAgentId: id }); setAgentPopupOpen(false); }} onClose={() => setAgentPopupOpen(false)} />
                 )}
               </FieldRow>
             </>
           )}
 
-          {/* ── STEP 3: Amount ───────────────────────────────────────────── */}
-          {state.step === 3 && (
+          {/* ── STEP 4: Amount ───────────────────────────────────────────── */}
+          {state.step === 4 && (
             <>
               <div className="flex flex-col">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Send Amount</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">How much are we sending?</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">How much should we send?</p>
               </div>
 
-              <FieldRow label="Amount">
-                <InputBox>
-                  <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#414965] text-[20px] shrink-0">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={state.amount}
-                    onChange={(e) => set({ amount: e.target.value })}
-                    placeholder="0.00"
-                    className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-bold placeholder:text-[#414965] outline-none min-w-0"
-                    data-testid="input-send-amount"
-                  />
+              <div className="flex flex-col gap-[8px]">
+                <InputBox highlighted>
+                  <div className="flex flex-1 items-center gap-[2px] min-w-0">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={state.amount}
+                      onChange={(e) => set({ amount: e.target.value })}
+                      placeholder="0.00"
+                      autoFocus
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                      data-testid="input-send-amount"
+                    />
+                  </div>
+                  <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px] shrink-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] whitespace-nowrap">
+                      {selectedAsset?.ticker ?? "—"}
+                    </p>
+                  </div>
                 </InputBox>
-              </FieldRow>
 
-              <div className="flex gap-[8px]">
-                {["100", "500", "1000", "5000"].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => set({ amount: v })}
-                    className="flex-1 py-[8px] bg-[#222737] border border-[#1d2132] rounded-[12px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] hover:text-white hover:border-[#414965] transition-colors"
-                    data-testid={`btn-send-quick-${v}`}
-                  >
-                    ${parseInt(v).toLocaleString()}
-                  </button>
-                ))}
+                {/* Available balance */}
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">
+                  Available:{" "}
+                  <span className="text-[#6c779d]">
+                    {selectedAsset ? `${selectedAsset.balance} ${selectedAsset.ticker}` : "—"}
+                  </span>
+                </p>
+
+                {/* Error */}
+                {amountError && (
+                  <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[13px] leading-[18px]">{amountError}</p>
+                )}
               </div>
             </>
           )}
 
-          {/* ── STEP 4: Review ───────────────────────────────────────────── */}
-          {state.step === 4 && (
+          {/* ── STEP 5: Review ───────────────────────────────────────────── */}
+          {state.step === 5 && (
             <>
               <FieldRow label="Sending From">
                 <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
                   <RecipientIcon type={sourceAccountType === "bank" ? "bank" : "wallet"} />
-                  <div className="flex-1 min-w-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate">
-                      {sourceAccountType === "bank"
-                        ? bankAcc?.nameOnAccount ?? "Bank Account"
-                        : walletAcc?.address
-                          ? truncAddr(walletAcc.address)
-                          : "Your Wallet"}
-                    </p>
-                  </div>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate flex-1">
+                    {sourceAccountType === "bank"
+                      ? bankAcc?.nameOnAccount ?? "Bank Account"
+                      : walletAcc?.address ? truncAddr(walletAcc.address) : "Your Wallet"}
+                  </p>
                 </div>
               </FieldRow>
 
               <FieldRow label="Sending To">
                 <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
                   <RecipientIcon type={state.recipientType!} />
-                  <div className="flex-1 min-w-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate">
-                      {recipientLabel()}
-                    </p>
-                  </div>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate flex-1">
+                    {recipientLabel()}
+                  </p>
                 </div>
               </FieldRow>
 
               <div className="flex flex-col gap-[12px] bg-[#06070a] border border-[#1d2132] rounded-[16px] px-[16px] py-[16px]">
-                <ReviewRow label="Amount" value={`$${parseFloat(state.amount || "0").toFixed(2)}`} />
+                <ReviewRow label="Asset" value={selectedAsset ? `${selectedAsset.name} (${selectedAsset.ticker})` : "—"} />
                 <div className="h-px bg-[#1d2132]" />
+                <ReviewRow label="Amount" value={`${state.amount} ${selectedAsset?.ticker ?? ""}`} />
                 <ReviewRow label="Network Fee" value={`$${FEE}`} />
                 <div className="h-px bg-[#1d2132]" />
-                <ReviewRow label="Total" value={`$${(parseFloat(state.amount || "0") + parseFloat(FEE)).toFixed(2)}`} highlight />
+                <ReviewRow label="Total" value={`$${total}`} highlight />
               </div>
             </>
           )}
         </div>
 
-        {/* ── Buttons ────────────────────────────────────────────────────── */}
+        {/* ── Buttons ─────────────────────────────────────────────────────── */}
         <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
           <button
             onClick={handleClose}
@@ -682,7 +792,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
           >
             Cancel
           </button>
-          {state.step < 4 ? (
+          {state.step < 5 ? (
             <button
               onClick={handleNext}
               disabled={!canNext}
