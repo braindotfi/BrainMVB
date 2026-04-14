@@ -428,7 +428,6 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
 
   const handleAccountSelect = (acc: Account) => {
     setSelected(acc);
-    setStep(acc.type);
     setPopupOpen(false);
     setQrOpen(false);
   };
@@ -480,9 +479,18 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
                 data-testid="btn-select-account"
               >
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                  Select Account
-                </p>
+                {selected ? (
+                  <>
+                    <AccountIconInPopup type={selected.type} />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                      {selected.name}
+                    </p>
+                  </>
+                ) : (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                    Select Account
+                  </p>
+                )}
                 <DropdownBtn chevronVec={S1_DROPDOWN_VEC} />
               </button>
 
@@ -496,14 +504,22 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
             </div>
           </div>
 
-          {/* Close button */}
-          <div className="px-[39px] pt-[24px] pb-[32px]">
+          {/* Cancel + Next buttons */}
+          <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-              data-testid="btn-add-close"
+              className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              data-testid="btn-add-cancel"
             >
-              Close
+              Cancel
+            </button>
+            <button
+              onClick={() => selected && setStep(selected.type)}
+              disabled={!selected}
+              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              data-testid="btn-add-next"
+            >
+              Next
             </button>
           </div>
         </div>
