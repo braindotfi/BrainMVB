@@ -50,10 +50,20 @@ const bankData = {
 };
 
 const CARDS = [
-  { id: "wallet", label: "Your Account - Crypto", data: walletData  },
-  { id: "debit",  label: "Your Account - Debit",  data: debitData   },
-  { id: "bank",   label: "Your Account - Bank",   data: bankData    },
+  { id: "wallet", label: "Your Account - Crypto", type: "Crypto", data: walletData  },
+  { id: "debit",  label: "Your Account - Debit",  type: "Debit",  data: debitData   },
+  { id: "bank",   label: "Your Account - Bank",   type: "Bank",   data: bankData    },
 ];
+
+function CardDotLabel({ type }: { type: string }) {
+  return (
+    <span className="inline-flex items-center gap-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+      Your Account
+      <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 self-center" style={{ background: "#a8b9f4" }} />
+      {type}
+    </span>
+  );
+}
 
 /* Mock data for agent debit card */
 const agentDebitData = {
@@ -555,9 +565,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 )}
                 {/* Label: card-specific name or agent name */}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
-                    {isYourCollapsedAccount ? CARDS[collapsedCardIndex].label : (selectedAgent?.name ?? "Account")}
-                  </span>
+                  {isYourCollapsedAccount
+                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
+                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
+                  }
                 </div>
                 {/* Green checkmark + chevron */}
                 <div className="flex items-center gap-[8px] flex-shrink-0">
@@ -624,9 +635,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                               <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
                             </div>
                           </div>
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-                            {label}
-                          </span>
+                          <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
@@ -730,9 +739,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
                 )}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
-                    {isYourCollapsedAccount ? CARDS[collapsedCardIndex].label : (selectedAgent?.name ?? "Account")}
-                  </span>
+                  {isYourCollapsedAccount
+                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
+                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
+                  }
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -777,7 +787,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
                             <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" /></div>
                           </div>
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{label}</span>
+                          <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
@@ -886,9 +896,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
                 )}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
-                    {isYourCollapsedAccount ? CARDS[collapsedCardIndex].label : (selectedAgent?.name ?? "Account")}
-                  </span>
+                  {isYourCollapsedAccount
+                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
+                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
+                  }
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -933,7 +944,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
                             <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" /></div>
                           </div>
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{label}</span>
+                          <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
@@ -1281,11 +1292,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               ) : (
                 <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
               )}
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-base tracking-[0] leading-5 whitespace-nowrap truncate">
-                {activeAccount
-                  ? agentAccounts.find((a) => a.id === activeAccount)?.name ?? CARDS[activeCard].label
-                  : CARDS[activeCard].label}
-              </span>
+              {activeAccount
+                ? <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
+                    {agentAccounts.find((a) => a.id === activeAccount)?.name ?? CARDS[activeCard].type}
+                  </span>
+                : <CardDotLabel type={CARDS[activeCard].type} />
+              }
             </div>
 
             {/* Dropdown trigger */}
@@ -1357,9 +1369,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                               <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
                             </div>
                           </div>
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-                            {label}
-                          </span>
+                          <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
