@@ -441,15 +441,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
   /* ── collapsed state ── */
   if (collapsed) {
-    const popupBase = "w-[300px] bg-[#11141b] border border-[#1e2235] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden";
+    const popupBase = "w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-hidden shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]";
     const popupHeader = (title: string) => (
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2235]">
-        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-base">{title}</span>
+      <div className="flex items-center justify-between p-[16px] border-b border-[#1d2132] flex-shrink-0" style={{ backdropFilter: "blur(10px)", background: "#0a0c10" }}>
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">{title}</span>
         <button
           onClick={() => setHoveredIcon(null)}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white transition-colors"
+          className="w-[24px] h-[24px] rounded-[100px] flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
+          style={{ background: "#1d2132" }}
         >
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round"/></svg>
         </button>
       </div>
     );
@@ -461,7 +462,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     const collapsedHasTrades = collapsedCardIndex === 0;
 
     const collapsedAssetTabs = collapsedHasCrypto ? ["All", "Cash", "Crypto"] : ["All", "Cash"];
-    const collapsedTxTabs    = collapsedHasTrades  ? ["All", "Exchanges", "Deposits", "Withdrawals"] : ["All", "Deposits", "Withdrawals"];
+    const collapsedTxTabs    = collapsedHasTrades  ? ["All", "Trades", "Deposits", "Withdrawals"] : ["All", "Deposits", "Withdrawals"];
 
     const goCard = (dir: 1 | -1) => {
       setCollapsedCardIndex(prev => (prev + dir + CARDS.length) % CARDS.length);
@@ -671,58 +672,47 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         safeFilter === "Crypto" ? a.category === "crypto" : true
       );
       return (
-        <div className={popupBase} style={{ maxHeight: "420px", display: "flex", flexDirection: "column" }}>
-          {popupHeader(`Assets · ${activeCollapsedLabel}`)}
-          {/* Card switcher mini-dots */}
-          <div className="flex items-center justify-between px-3 py-2 flex-shrink-0" style={{ borderBottom: "1px solid #1e2235" }}>
-            <div className="flex items-center gap-1.5">
-              {CARDS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setCollapsedCardIndex(i); setCollapsedAssetFilter("All"); }}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
-                />
-              ))}
+        <div className={popupBase} style={{ maxHeight: "480px", display: "flex", flexDirection: "column" }}>
+          {popupHeader("Assets")}
+          {/* Content: tab bar + rows, all in one padded scrollable area */}
+          <div className="flex flex-col gap-[16px] p-[8px] overflow-y-auto flex-1">
+            {/* Tab bar — Figma TabAssets */}
+            <div className="flex gap-[2px] items-center p-[2px] rounded-[400px] flex-shrink-0" style={{ background: "#06070a" }}>
+              {collapsedAssetTabs.map(tab => {
+                const isActive = safeFilter === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setCollapsedAssetFilter(tab)}
+                    className="flex-1 flex items-center justify-center px-[16px] py-[8px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] transition-colors whitespace-nowrap"
+                    style={{ background: isActive ? "#123509" : "#06070a", color: isActive ? "#42bf23" : "#414965" }}
+                  >{tab}</button>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => goCard(-1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M5 1.5L2.5 4L5 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              </button>
-              <button onClick={() => goCard(1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1.5L5.5 4L3 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-          </div>
-          <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
-            {collapsedAssetTabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setCollapsedAssetFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
-              >{tab}</button>
-            ))}
-          </div>
-          <div className="flex flex-col gap-3 px-3 pb-3 overflow-y-auto">
-            {filteredAssets.length === 0 ? (
-              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No assets in this category</p>
-            ) : filteredAssets.map((asset, idx) => (
-              <div key={`${asset.ticker}-${idx}`} className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 w-full">
-                  <img className="w-8 h-8 flex-shrink-0" alt={asset.name} src={asset.icon} />
-                  <div className="flex items-center justify-center gap-2 flex-1">
-                    <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4">{asset.name}</span>
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-xs">{asset.ticker}</span>
-                    </div>
-                    <div className="flex flex-col items-end flex-1">
-                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#42bf23] text-sm text-right">{asset.value}</span>
-                      <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#6c779d] text-xs text-right">{asset.amount}</span>
+            {/* Asset rows */}
+            <div className="flex flex-col gap-[16px]">
+              {filteredAssets.length === 0 ? (
+                <p className="text-center text-[#414965] text-[12px] py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No assets in this category</p>
+              ) : filteredAssets.map((asset, idx) => (
+                <div key={`${asset.ticker}-${idx}`} className="flex flex-col gap-[16px]">
+                  <div className="flex gap-[8px] items-center w-full">
+                    <img className="w-[40px] h-[40px] flex-shrink-0" alt={asset.name} src={asset.icon} />
+                    <div className="flex flex-1 gap-[8px] items-center justify-center min-w-0">
+                      <div className="flex flex-col gap-[4px] items-start flex-shrink-0">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{asset.name}</span>
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[16px] whitespace-nowrap">{asset.ticker}</span>
+                      </div>
+                      <div className="flex flex-1 flex-col gap-[4px] items-end justify-center min-w-0">
+                        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#42bf23] text-[16px] leading-[20px] text-right w-full">{asset.value}</span>
+                        <span className="[font-family:'JetBrains_Mono',Helvetica] font-medium text-[#414965] text-[14px] leading-[16px] text-right w-full">{asset.amount}</span>
+                      </div>
                     </div>
                   </div>
+                  {idx < filteredAssets.length - 1 && <div className="h-px w-full" style={{ background: "#1d2132" }} />}
                 </div>
-                {idx < filteredAssets.length - 1 && <div className="h-px bg-[#1e2235] w-full" />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       );
@@ -736,70 +726,76 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
           ? [...bankCtxTxs, ...activeCollapsedData.transactions]
           : activeCollapsedData.transactions;
       const filteredTx = collapsedBaseTxs.filter(t =>
-        safeFilter === "Exchanges"   ? (t.type === "trade" || t.type === "exchange") :
+        safeFilter === "Trades"      ? (t.type === "trade" || t.type === "exchange") :
         safeFilter === "Deposits"    ? t.type === "deposit"    :
         safeFilter === "Withdrawals" ? t.type === "withdrawal" : true
       );
       return (
-        <div className={popupBase} style={{ maxHeight: "440px", display: "flex", flexDirection: "column" }}>
-          {popupHeader(`Transactions · ${activeCollapsedLabel}`)}
-          {/* Card switcher mini-dots */}
-          <div className="flex items-center justify-between px-3 py-2 flex-shrink-0" style={{ borderBottom: "1px solid #1e2235" }}>
-            <div className="flex items-center gap-1.5">
-              {CARDS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setCollapsedCardIndex(i); setCollapsedTxFilter("All"); }}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${i === collapsedCardIndex ? "w-4 bg-[#ff9500]" : "w-1.5 bg-[#414965] hover:bg-[#6c779d]"}`}
-                />
+        <div className={popupBase} style={{ maxHeight: "500px", display: "flex", flexDirection: "column" }}>
+          {popupHeader("Transactions")}
+          {/* Content: tab bar + rows, all in one padded scrollable area */}
+          <div className="flex flex-col gap-[16px] p-[8px] overflow-y-auto flex-1">
+            {/* Tab bar — Figma TabTrade */}
+            <div className="flex gap-[2px] items-center p-[2px] rounded-[400px] flex-shrink-0" style={{ background: "#06070a" }}>
+              {collapsedTxTabs.map(tab => {
+                const isActive = safeFilter === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setCollapsedTxFilter(tab)}
+                    className="flex-1 flex items-center justify-center px-[16px] py-[8px] rounded-[100px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[14px] leading-[16px] transition-colors whitespace-nowrap"
+                    style={{ background: isActive ? "#123509" : "#06070a", color: isActive ? "#42bf23" : "#414965" }}
+                  >{tab}</button>
+                );
+              })}
+            </div>
+            {/* Transaction rows */}
+            <div className="flex flex-col gap-[16px]">
+              {filteredTx.length === 0 ? (
+                <p className="text-center text-[#414965] text-[12px] py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No transactions in this category</p>
+              ) : filteredTx.map((tx, idx) => (
+                <div key={tx.id} className="flex flex-col gap-[16px]">
+                  <div className="flex gap-[8px] items-center">
+                    {/* 40×40 icon circle — Figma rounded-[160px] */}
+                    <div
+                      className="overflow-hidden relative rounded-[160px] flex-shrink-0 size-[40px] flex items-center justify-center"
+                      style={{ background: tx.type === "deposit" ? "#123509" : tx.type === "withdrawal" ? "#350011" : "#1d2132" }}
+                    >
+                      {tx.type === "deposit" ? (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path d="M15 5L5 15M5 15H13M5 15V7" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : tx.type === "withdrawal" ? (
+                        <div style={{ transform: "scale(1,-1)" }}>
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 5L5 15M5 15H13M5 15V7" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex flex-1 gap-[8px] items-center justify-center min-w-0">
+                      <div className="flex flex-col gap-[4px] items-start flex-shrink-0">
+                        <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{tx.label}</span>
+                        <div className="flex gap-[4px] items-center">
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[16px] whitespace-nowrap">{tx.time}</span>
+                          <div className="w-[3px] h-[3px] rounded-full flex-shrink-0" style={{ background: "#414965" }} />
+                          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#414965] text-[14px] leading-[16px] whitespace-nowrap">{tx.date}</span>
+                        </div>
+                      </div>
+                      <span
+                        className="flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-[20px] leading-[20px] text-right min-w-0"
+                        style={{ color: tx.positive ? "#42bf23" : "#d20344" }}
+                      >{tx.amount}</span>
+                    </div>
+                  </div>
+                  {idx < filteredTx.length - 1 && <div className="h-px w-full" style={{ background: "#1d2132" }} />}
+                </div>
               ))}
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => goCard(-1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M5 1.5L2.5 4L5 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              </button>
-              <button onClick={() => goCard(1)} className="w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] hover:bg-[#252b42] transition-colors">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1.5L5.5 4L3 6.5" stroke="#a8b9f4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-          </div>
-          <div className="flex mx-3 my-2 p-0.5 bg-[#0d1017] rounded-full flex-shrink-0">
-            {collapsedTxTabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setCollapsedTxFilter(tab)}
-                className={`flex-1 py-1.5 rounded-full text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${safeFilter === tab ? "bg-[#123509] text-brain-v1green" : "text-[#6c779d] hover:text-white"}`}
-              >{tab}</button>
-            ))}
-          </div>
-          <div className="flex flex-col overflow-y-auto px-3 pb-3">
-            {filteredTx.length === 0 ? (
-              <p className="text-center text-[#414965] text-xs py-4 [font-family:'Plus Jakarta Sans',Helvetica]">No transactions in this category</p>
-            ) : filteredTx.map((tx, idx) => (
-              <div key={tx.id} className="flex flex-col">
-                <div className="flex items-center gap-2 py-3">
-                  <div className="w-8 h-8 bg-[#0a0c10] rounded-full flex items-center justify-center flex-shrink-0">
-                    {tx.type === "deposit" ? (
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 15H13M5 15V7" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    ) : tx.type === "withdrawal" ? (
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 15L15 5M15 5H7M15 5V13" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <div className="flex flex-col gap-0.5 flex-shrink-0 min-w-0">
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-sm leading-4 whitespace-nowrap truncate max-w-[140px]">{tx.label}</span>
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-xs">{tx.time} · {tx.date}</span>
-                    </div>
-                    <span className={`flex-1 [font-family:'JetBrains_Mono',Helvetica] font-medium text-sm text-right ${tx.positive ? "text-[#42bf23]" : "text-[#d20344]"}`}>
-                      {tx.amount}
-                    </span>
-                  </div>
-                </div>
-                {idx < filteredTx.length - 1 && <div className="h-px bg-[#1e2235] w-full" />}
-              </div>
-            ))}
           </div>
         </div>
       );
