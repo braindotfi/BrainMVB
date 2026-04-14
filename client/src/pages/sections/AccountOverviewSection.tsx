@@ -500,7 +500,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
         <div className="w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] overflow-visible shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]">
           {/* Header — Figma 3272:29911 */}
           <div className="flex items-center justify-between p-[16px] border-b border-[#1d2132]" style={{ backdropFilter: "blur(10px)", background: "#0a0c10" }}>
-            <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
               Accounts
             </span>
             <button
@@ -539,7 +539,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 )}
                 {/* Label: "Your Account" or agent name */}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
+                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
                     {isYourCollapsedAccount ? "Your Account" : (selectedAgent?.name ?? "Account")}
                   </span>
                 </div>
@@ -582,7 +582,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         </div>
                       </div>
                     </div>
-                    <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
                       Add Agent Account
                     </span>
                   </button>
@@ -607,11 +607,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
                           </div>
                         </div>
-                        <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {label}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
@@ -635,11 +635,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                         className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                        <span className="font-['Gilroy:Medium',sans-serif] not-italic text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap flex-1 text-left">
                           {agent.name}
                         </span>
                         <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                          <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
                         </div>
                         {isSel && (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">

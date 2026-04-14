@@ -537,7 +537,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           className="flex items-center justify-between p-[16px] border-b border-[#1d2132] flex-shrink-0"
           style={{ backdropFilter: "blur(10px)", background: "#0a0c10" }}
         >
-          <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
             Notifications
           </span>
           <div className="flex items-center gap-[8px]">
@@ -548,7 +548,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className="flex items-center justify-center px-[10px] py-[4px] rounded-[100px] hover:opacity-80 transition-opacity"
               style={{ background: "#222737" }}
             >
-              <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">
                 Mark all read
               </span>
             </button>
@@ -580,7 +580,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
                 <span className="text-2xl">🔔</span>
-                <span className="font-['Gilroy:Medium',sans-serif] text-xs">No notifications</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-medium text-xs">No notifications</span>
               </div>
             ) : notifications.map((n, i) => {
               const isHighlighted = !n.read && i === 1;
@@ -596,14 +596,14 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                     {/* Text content — Figma 3127:36602 */}
                     <div className="flex flex-[1_0_0] flex-col gap-[8px] items-start min-h-px min-w-px not-italic">
                       <div className="flex flex-col gap-[4px] items-start w-full">
-                        <p className={`font-['Gilroy:SemiBold',sans-serif] leading-[20px] w-full text-[16px] ${!n.read ? "text-[#ff9500]" : "text-[#a8b9f4]"}`}>
+                        <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] w-full text-[16px] ${!n.read ? "text-[#ff9500]" : "text-[#a8b9f4]"}`}>
                           {n.title}
                         </p>
-                        <p className={`font-['Gilroy:Medium',sans-serif] leading-[16px] w-full text-[14px] ${!n.read ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>
+                        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] w-full text-[14px] ${!n.read ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>
                           {n.body}
                         </p>
                       </div>
-                      <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] text-[#6c779d] text-[14px] w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
                         {n.time}
                       </p>
                     </div>
@@ -629,7 +629,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               className="w-full flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
               style={{ background: "#222737" }}
             >
-              <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">
                 View All Notifications
               </span>
               <div className="relative flex-shrink-0 size-[24px]">
