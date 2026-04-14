@@ -497,7 +497,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
   const [p_daily_budget, setP_daily_budget]     = useState("$25,000");
   const [p_approve_above, setP_approve_above]   = useState("$10,000");
   const [p_velocity_24h, setP_velocity_24h]     = useState("$50,000");
-  const [p_vol_spike, setP_vol_spike]           = useState("5x Baseline");
+  const [p_vol_spike, setP_vol_spike]           = useState("5X Baseline");
   const [p_sanctions_screen, setP_sanctions_screen] = useState("OFAC + Chainalysis");
   const [p_dup_window, setP_dup_window]         = useState("60 min");
   const [p_x402_on, setP_x402_on]               = useState(true);
@@ -1855,17 +1855,17 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           onChange={(v) => { setT_order_types([v]); setT_open_drop(null); }}
                         />
                         <SmallDropdown
-                          label="Max Leverage"
+                          label="MAX Leverage"
                           value={t_max_position_leverage}
                           options={[
-                            { value: "1",   label: "1x" },
-                            { value: "2",   label: "2x" },
-                            { value: "3",   label: "3x" },
-                            { value: "5",   label: "5x" },
-                            { value: "10",  label: "10x" },
-                            { value: "25",  label: "25x" },
-                            { value: "50",  label: "50x" },
-                            { value: "100", label: "100x" },
+                            { value: "1",   label: "1X" },
+                            { value: "2",   label: "2X" },
+                            { value: "3",   label: "3X" },
+                            { value: "5",   label: "5X" },
+                            { value: "10",  label: "10X" },
+                            { value: "25",  label: "25X" },
+                            { value: "50",  label: "50X" },
+                            { value: "100", label: "100X" },
                           ]}
                           open={t_open_drop === "leverage"}
                           onOpen={() => setT_open_drop(t_open_drop === "leverage" ? null : "leverage")}
@@ -2402,7 +2402,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           ddId="velocity" openDd={p_open_dd} setOpenDd={setP_open_dd}
                           onChange={setP_velocity_24h} />
                         <PD label="Volume Spike Breaker" value={p_vol_spike}
-                          options={["3x Baseline","5x Baseline","10x Baseline"]}
+                          options={["3X Baseline","5X Baseline","10X Baseline"]}
                           ddId="spike" openDd={p_open_dd} setOpenDd={setP_open_dd}
                           onChange={setP_vol_spike} />
                         <PD label="Sanctions Screening" value={p_sanctions_screen}
