@@ -10,6 +10,7 @@ import {
 } from "@/lib/chatHistory";
 import { ShareModal } from "@/components/ShareModal";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NotifAvatar, formatNotifTime } from "@/components/NotifAvatar";
 
 interface DailyInsight {
   kind: "alert" | "opportunity" | "pattern" | "warning" | "info";
@@ -23,12 +24,6 @@ const mainMenuItems = [
   { id: "marketplace", label: "Marketplace", path: "/marketplace" },
 ];
 
-const initialNotifications = [
-  { id: "1", title: "AlphaFlow executed a trade", body: "Bought 0.45 ETH at $2,498", time: "2m ago", read: false },
-  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live on the Launchpad", time: "15m ago", read: false },
-  { id: "3", title: "Risk Sentinel: Anomaly detected", body: "Unusual volatility in BNB/USDC pair", time: "3h ago", read: true },
-  { id: "4", title: "Capital rebalanced successfully", body: "Portfolio adjusted to target weights", time: "12h ago", read: true },
-];
 
 const EthIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -308,7 +303,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
   const [openMoreMenu, setOpenMoreMenu] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -317,7 +311,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
   const historyPanelRef = useRef<HTMLDivElement>(null);
 
   const { unreadCount, markAllRead: markAllReadLive, notifications: liveNotifications } = useNotifications();
-  const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const popupNotifications = liveNotifications.slice(0, 5);
 
   // ── Daily Insights from API ──
   const { data: insightsResponse, isLoading: insightsLoading } = useQuery<{
@@ -341,7 +335,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
   const markAllRead = () => {
     markAllReadLive();
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   const loadSessions = () => setChatSessions(getChatSessions());
@@ -577,44 +570,37 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
           {/* Notification rows — Figma 3127:36596 */}
           <div className="flex flex-col gap-[8px]">
-            {notifications.length === 0 ? (
+            {popupNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
                 <span className="text-2xl">🔔</span>
                 <span className="[font-family:'Gilroy',sans-serif] font-medium text-xs">No notifications</span>
               </div>
-            ) : notifications.map((n, i) => {
-              const isHighlighted = !n.read && i === 1;
-              const isLast = i === notifications.length - 1;
+            ) : popupNotifications.map((n, i) => {
+              const isLast = i === popupNotifications.length - 1;
               return (
                 <div key={n.id} className="flex flex-col gap-[8px]">
                   {/* Row */}
-                  <div className={`flex gap-[8px] items-start p-[8px] ${isHighlighted ? "bg-[#11141b] rounded-[8px]" : ""}`}>
-                    {/* 40×40 CryptoIcon — Figma 3129:39243 */}
-                    <div className="relative flex-shrink-0 size-[40px]">
-                      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/e1dc51b8-8ef6-4092-ab5d-c3a1b2eab23c" />
-                    </div>
+                  <div className={`flex gap-[8px] items-start p-[8px] ${!n.read ? "bg-[#222737] rounded-[8px]" : ""}`}>
+                    {/* Type-specific avatar */}
+                    <NotifAvatar type={n.type} />
                     {/* Text content — Figma 3127:36602 */}
-                    <div className="flex flex-[1_0_0] flex-col gap-[8px] items-start min-h-px min-w-px not-italic">
-                      <div className="flex flex-col gap-[4px] items-start w-full">
-                        <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] w-full text-[16px] ${!n.read ? "text-[#ff9500]" : "text-[#a8b9f4]"}`}>
+                    <div className="flex flex-[1_0_0] flex-col gap-[4px] items-start min-h-px min-w-px not-italic">
+                      <div className="flex items-center w-full gap-[8px]">
+                        <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] flex-1 min-w-0 text-[14px] ${!n.read ? "text-[#ff9500]" : "text-[#a8b9f4]"}`}>
                           {n.title}
                         </p>
-                        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] w-full text-[14px] ${!n.read ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>
-                          {n.body}
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] text-[#6c779d] whitespace-nowrap flex-shrink-0">
+                          {formatNotifTime(n.createdAt)}
                         </p>
                       </div>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
-                        {n.time}
+                      <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] w-full text-[12px] ${!n.read ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>
+                        {n.body}
                       </p>
                     </div>
                   </div>
-                  {/* Divider — Figma imgVector948 (1px horizontal line) */}
+                  {/* Divider */}
                   {!isLast && (
-                    <div className="h-0 relative shrink-0 w-full">
-                      <div className="absolute inset-[-0.5px_0]">
-                        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8133e4df-f84f-40f0-aaf2-2d5082c4f62a" />
-                      </div>
-                    </div>
+                    <div className="w-full flex-shrink-0" style={{ height: "1px", background: "#1d2132" }} />
                   )}
                 </div>
               );
