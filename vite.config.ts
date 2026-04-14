@@ -30,7 +30,7 @@ function buildTweetnaclEsm(): string {
   }
   // Strip the UMD footer, redirect the IIFE to write into __naclExports
   const body = trimmed.slice(0, trimmed.length - UMD_FOOTER.length);
-  return `const __naclExports = {};\n${body})(__naclExports);\nexport default __naclExports;\n`;
+  return `const __naclExports = {};\n${body}})(__naclExports);\nexport default __naclExports;\n`;
 }
 
 const TWEETNACL_ESM = buildTweetnaclEsm();
@@ -164,7 +164,7 @@ export default defineConfig({
     esbuildOptions: {
       // NOTE: changing this define busts the browserHash so browsers
       // fetch fresh pre-bundled chunks (v1 = bs58+tweetnacl fully fixed).
-      define: { __BRAIN_DEP_VERSION__: '"v2"' },
+      define: { __BRAIN_DEP_VERSION__: '"v3"' },
       plugins: [esbuildStubPlugin],
     },
   },
