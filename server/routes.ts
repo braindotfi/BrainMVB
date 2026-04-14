@@ -1355,7 +1355,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           { type: "yield",   read: true,  title: "Yield Pilot rebalanced portfolio",  body: "Moved 15% from AAVE to Compound to chase higher yield (8.2% APY)." },
           { type: "trade",   read: true,  title: "TrendRadar bonding curve at 22%",   body: "The agent you're watching has gained 45.2% in 24h." },
           { type: "payment", read: true,  title: "Pay Stream payment executed",       body: "Processed $324.50 payment via x402 protocol — confirmed." },
-          { type: "system",  read: true,  title: "New feature: Community replies",    body: "You can now comment and react on agent detail pages on Launchpad." },
           { type: "risk",    read: true,  title: "Signal Seer paused",               body: "The agent paused due to low confidence signals. Review required." },
           { type: "payment", read: true,  title: "Deposit confirmed: $2,500 USDC",   body: "Your USDC deposit has been confirmed on Base. Funds are now available." },
           { type: "trade",   read: true,  title: "AlphaFlow reached profit target",  body: "Portfolio up 12.4% this week. AlphaFlow closed all BTC positions." },
