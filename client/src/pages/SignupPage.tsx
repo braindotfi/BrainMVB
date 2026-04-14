@@ -206,7 +206,7 @@ function LazyEmbeddedAuth({
   return (
     <Provider apiKey={apiKey}>
       <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
-        <WalletProv createOnLogin={{ chain: "base-sepolia", signer: { type: "email" } }}>
+        <WalletProv createOnLogin={{ chain: "base-sepolia", recovery: { type: "email" } }}>
           <AuthWatcher useAuthHook={useAuthHook!} useWalletHook={useWalletHook!} onSuccess={onSuccess}>
             <div className="w-full max-w-[420px] crossmint-form-wrapper">
               <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
