@@ -435,7 +435,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step === 1 && (
                 <div className="flex flex-col gap-[24px]">
                   <div className="flex flex-col">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging from?</p>
                   </div>
                   <div className="flex flex-col gap-[4px]">
@@ -501,7 +501,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step === 3 && (
                 <div className="flex flex-col gap-[24px]">
                   <div className="flex flex-col">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Asset</p>
+                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
                     <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging to?</p>
                   </div>
 
