@@ -438,13 +438,20 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
           {/* Brain AI status row */}
           <div className="flex items-start gap-[8px] w-full">
-            <div className="flex-shrink-0 mt-[1px]">
+            <div className="relative flex-shrink-0 size-[16px] mt-[1px]">
               {insightsLoading || insightsGenerating ? (
-                <div className="w-[16px] h-[16px] rounded-full border-[1.5px] border-[#7631ee] border-t-transparent animate-spin" />
+                <div className="w-[16px] h-[16px] rounded-full border-[1.5px] border-[#ff9500] border-t-transparent animate-spin" />
               ) : (
-                <div className="w-[16px] h-[16px] rounded-full flex items-center justify-center" style={{ background: "rgba(118,49,238,0.18)" }}>
-                  <div className="w-[6px] h-[6px] rounded-full bg-[#7631ee]" />
-                </div>
+                <>
+                  <div className="absolute flex items-center justify-center left-0 size-[16px] top-0">
+                    <div className="-rotate-90 flex-none">
+                      <img alt="" className="block size-[16px]" src="https://www.figma.com/api/mcp/asset/ced9d4e6-29fe-471c-b200-a170acaf397c" />
+                    </div>
+                  </div>
+                  <div className="absolute left-[2px] size-[12px] top-[2px]">
+                    <img alt="" className="block size-full" src="https://www.figma.com/api/mcp/asset/36accf9b-4056-450f-bc12-817e056fb67c" />
+                  </div>
+                </>
               )}
             </div>
             <div className="flex flex-col gap-[8px] flex-1">
@@ -454,7 +461,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                   : `Brain AI analysed your accounts and found ${insightsData.length} personalized recommendations.`}
               </p>
               {!insightsLoading && !insightsGenerating && insightsGeneratedAt && (
-                <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", color: "#6c779d" }}>
+                <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px", color: "#6c779d" }}>
                   Last Updated: {insightsGeneratedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
               )}
@@ -481,8 +488,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               return (
                 <div
                   key={i}
-                  className="flex flex-col gap-[8px] p-[12px] rounded-[16px]"
-                  style={{ border: `1px solid ${isOpportunity ? "#ff9500" : "#1d2132"}` }}
+                  className="flex flex-col gap-[8px] p-[12px] rounded-[16px] border border-[#1d2132] hover:border-[#ff9500] transition-colors duration-200"
                 >
                   <p style={{ fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 700, fontSize: "14px", lineHeight: "14px", color: "#ff9500" }}>
                     {insight.tag}
