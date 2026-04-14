@@ -167,7 +167,8 @@ function LazyEmbeddedAuth({
         setUseWalletHook(() => m.useWallet);
       })
       .catch((err: unknown) => {
-        console.error("[Crossmint] SDK import failed:", err);
+        const e = err as Error;
+        console.error("[Crossmint] SDK import failed:", e?.message ?? String(e), e?.stack ?? "");
         setSdkError(true);
       });
   }, []);
