@@ -349,6 +349,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bankHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bankPopupLockedRef = useRef(false);
+  const bankPopupPendingCloseRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const collapsedDropdownRef = useRef<HTMLDivElement>(null);
   const bankPopupRef = useRef<HTMLDivElement>(null);
@@ -845,11 +846,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             ref={bankPopupRef}
             onMouseEnter={() => {
               if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+              bankPopupPendingCloseRef.current = false;
               setBankPopupOpen(true);
               setCollapsedDropdownOpen(false);
             }}
             onMouseLeave={() => {
-              if (!bankPopupLockedRef.current) {
+              if (bankPopupLockedRef.current) {
+                bankPopupPendingCloseRef.current = true;
+              } else {
                 bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
               }
             }}
@@ -867,16 +871,25 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
               <div
                 className="absolute z-50"
                 style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); }}
+                onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); bankPopupPendingCloseRef.current = false; }}
                 onMouseLeave={() => {
-                  if (!bankPopupLockedRef.current) {
+                  if (bankPopupLockedRef.current) {
+                    bankPopupPendingCloseRef.current = true;
+                  } else {
                     bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
                   }
                 }}
                 onClick={() => {
                   bankPopupLockedRef.current = true;
+                  bankPopupPendingCloseRef.current = false;
                   if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
-                  setTimeout(() => { bankPopupLockedRef.current = false; }, 500);
+                  setTimeout(() => {
+                    bankPopupLockedRef.current = false;
+                    if (bankPopupPendingCloseRef.current) {
+                      bankPopupPendingCloseRef.current = false;
+                      setBankPopupOpen(false);
+                    }
+                  }, 500);
                 }}
               >
                 <BankPopup />
