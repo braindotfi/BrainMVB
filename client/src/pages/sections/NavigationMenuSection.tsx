@@ -25,7 +25,7 @@ const mainMenuItems = [
 
 const initialNotifications = [
   { id: "1", title: "AlphaFlow executed a trade", body: "Bought 0.45 ETH at $2,498", time: "2m ago", read: false },
-  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live in the Marketplace", time: "15m ago", read: false },
+  { id: "2", title: "SwarmAlpha just launched 🚀", body: "New agent is now live on the Launchpad", time: "15m ago", read: false },
   { id: "3", title: "Risk Sentinel: Anomaly detected", body: "Unusual volatility in BNB/USDC pair", time: "3h ago", read: true },
   { id: "4", title: "Capital rebalanced successfully", body: "Portfolio adjusted to target weights", time: "12h ago", read: true },
 ];
@@ -516,7 +516,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
     </>
   );
 
-  // ── Notifications popup panel ──
+  // ── Notifications popup panel — Figma 3127:36590 ──
   const NotificationsPanel = () => (
     <>
       <div
@@ -525,88 +525,123 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
       />
       <div
         ref={notifPanelRef}
-        className={`fixed z-40 top-[68px] flex flex-col w-[340px] rounded-2xl border border-[#1e2235] bg-[#0d1017] shadow-[0_20px_60px_rgba(0,0,0,0.7)]
-          transition-all duration-300 ease-out overflow-hidden
+        className={`fixed z-40 flex flex-col w-[402px] rounded-[16px] bg-[#0a0c10] border border-[#1d2132] overflow-hidden
+          shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]
+          transition-all duration-300 ease-out
           ${notificationsOpen ? "visible opacity-100 translate-y-0 pointer-events-auto" : "invisible opacity-0 -translate-y-2 pointer-events-none"}
         `}
-        style={{ left: collapsed ? "76px" : "280px" }}
+        style={{ left: collapsed ? "76px" : "280px", top: "68px" }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-[16px] py-[16px]">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">Notifications</span>
-          <div className="flex items-center gap-2">
+        {/* Header — Figma 3127:36591 */}
+        <div
+          className="flex items-center justify-between p-[16px] border-b border-[#1d2132] flex-shrink-0"
+          style={{ backdropFilter: "blur(10px)", background: "#0a0c10" }}
+        >
+          <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+            Notifications
+          </span>
+          <div className="flex items-center gap-[8px]">
+            {/* Mark all read pill — Figma 3127:36594 */}
             <button
               onClick={markAllRead}
-              className="h-6 flex items-center px-[10px] rounded-[100px] bg-[#222737] [font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[16px] hover:opacity-80 transition-opacity"
+              data-testid="button-mark-all-read"
+              className="flex items-center justify-center px-[10px] py-[4px] rounded-[100px] hover:opacity-80 transition-opacity"
+              style={{ background: "#222737" }}
             >
-              Mark all read
+              <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">
+                Mark all read
+              </span>
             </button>
+            {/* Close button — Figma 3127:36595 */}
             <button
               onClick={() => setNotificationsOpen(false)}
-              className="w-6 h-6 flex items-center justify-center rounded-full bg-[#222737] text-[#6c779d] hover:opacity-80 transition-opacity"
+              data-testid="button-close-notifications"
+              className="relative flex-shrink-0 size-[24px] rounded-[100px] hover:opacity-80 transition-opacity"
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <div className="absolute left-0 size-[24px] top-0">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/6ee85014-f176-430d-819a-046c77069efd" />
+              </div>
+              <div className="absolute left-[4px] size-[16px] top-[4px]">
+                <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
+                  <div className="absolute inset-[-8.04%]">
+                    <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f833e6ef-5350-420b-bcac-2597c06ce957" />
+                  </div>
+                </div>
+              </div>
             </button>
           </div>
         </div>
 
-        {/* Notification rows */}
-        <div className="flex flex-col">
-          {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
-              <span className="text-2xl">🔔</span>
-              <span className="text-xs [font-family:'Plus Jakarta Sans',Helvetica]">No notifications</span>
-            </div>
-          ) : notifications.map((n, i) => (
-            <div
-              key={n.id}
-              className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-[#131927] group ${
-                i < notifications.length - 1 ? "border-b border-[#1a1f2e]" : ""
-              } ${!n.read ? "bg-[#0f1420]" : ""}`}
-            >
-              {/* Icon — lightbulb for insights, eth for everything else */}
-              <div className="w-9 h-9 rounded-full bg-[#1a1f30] flex items-center justify-center flex-shrink-0 mt-0.5">
-                {n.type === "insights" ? (
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                    <path d="M9 2a5 5 0 0 1 3.5 8.5c-.5.5-.8 1.2-.8 1.8V13H6.3v-.7c0-.6-.3-1.3-.8-1.8A5 5 0 0 1 9 2Z" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M6.3 13.5h5.4M7 15.5h4" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  <EthIcon />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[13px] leading-snug [font-family:'Plus Jakarta Sans',Helvetica] ${!n.read ? "text-[#f97316]" : "text-[#8899bb]"}`}>
-                  {n.title}
-                </p>
-                <p className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] mt-1 leading-relaxed">{n.body}</p>
-                <p className="text-[11px] text-[#414965] [font-family:'Plus Jakarta Sans',Helvetica] mt-1">{n.time}</p>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded-full bg-[#1a1f30] text-[#6c779d] hover:text-white flex-shrink-0 mt-1"
-              >
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
-              </button>
-            </div>
-          ))}
-        </div>
+        {/* Content — Figma 3139:42111 */}
+        <div className="flex flex-col gap-[8px] p-[8px]">
 
-        {/* View All button */}
-        <div className="px-4 py-4">
+          {/* Notification rows — Figma 3127:36596 */}
+          <div className="flex flex-col gap-[8px]">
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#6c779d]">
+                <span className="text-2xl">🔔</span>
+                <span className="font-['Gilroy:Medium',sans-serif] text-xs">No notifications</span>
+              </div>
+            ) : notifications.map((n, i) => {
+              const isHighlighted = !n.read && i === 1;
+              const isLast = i === notifications.length - 1;
+              return (
+                <div key={n.id} className="flex flex-col gap-[8px]">
+                  {/* Row */}
+                  <div className={`flex gap-[8px] items-start p-[8px] ${isHighlighted ? "bg-[#11141b] rounded-[8px]" : ""}`}>
+                    {/* 40×40 CryptoIcon — Figma 3129:39243 */}
+                    <div className="relative flex-shrink-0 size-[40px]">
+                      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/e1dc51b8-8ef6-4092-ab5d-c3a1b2eab23c" />
+                    </div>
+                    {/* Text content — Figma 3127:36602 */}
+                    <div className="flex flex-[1_0_0] flex-col gap-[8px] items-start min-h-px min-w-px not-italic">
+                      <div className="flex flex-col gap-[4px] items-start w-full">
+                        <p className={`font-['Gilroy:SemiBold',sans-serif] leading-[20px] w-full text-[16px] ${!n.read ? "text-[#ff9500]" : "text-[#a8b9f4]"}`}>
+                          {n.title}
+                        </p>
+                        <p className={`font-['Gilroy:Medium',sans-serif] leading-[16px] w-full text-[14px] ${!n.read ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>
+                          {n.body}
+                        </p>
+                      </div>
+                      <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] text-[#6c779d] text-[14px] w-full">
+                        {n.time}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Divider — Figma imgVector948 (1px horizontal line) */}
+                  {!isLast && (
+                    <div className="h-0 relative shrink-0 w-full">
+                      <div className="absolute inset-[-0.5px_0]">
+                        <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/8133e4df-f84f-40f0-aaf2-2d5082c4f62a" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* View All Notifications button — Figma 3127:36652 */}
           <Link href="/notifications" className="outline-none focus:outline-none">
             <button
+              data-testid="button-view-all-notifications"
               onClick={() => setNotificationsOpen(false)}
-              className="w-full flex items-center justify-center gap-2 py-[10px] bg-[#222737] hover:opacity-80 transition-opacity rounded-[100px]"
+              className="w-full flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+              style={{ background: "#222737" }}
             >
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#6c779d] text-sm">View All Notifications</span>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8H13M9 4L13 8L9 12" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <span className="font-['Gilroy:SemiBold',sans-serif] not-italic text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">
+                View All Notifications
+              </span>
+              <div className="relative flex-shrink-0 size-[24px]">
+                <div className="absolute bottom-1/4 left-[16.67%] right-[16.67%] top-1/4">
+                  <div className="absolute inset-[-8.33%_-6.25%]">
+                    <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/d5b23fb2-3ba0-4014-99ac-0b7ce088ce86" />
+                  </div>
+                </div>
+              </div>
             </button>
           </Link>
+
         </div>
       </div>
     </>
