@@ -5,15 +5,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { agents, AgentStatus, AgentData } from "@/lib/agentsData";
 
 type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
-const REP_TIER_STYLES: Record<RepTier, { dot: string; text: string }> = {
-  Legendary: { dot: "bg-[#9d5cf5]", text: "text-[#9d5cf5]" },
-  Diamond:   { dot: "bg-[#38bdf8]", text: "text-[#38bdf8]" },
-  Gold:      { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
-  Silver:    { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
-  Bronze:    { dot: "bg-[#cd7c2f]", text: "text-[#cd7c2f]" },
-  New:       { dot: "bg-[#00d4aa]", text: "text-[#00d4aa]" },
-  Unranked:  { dot: "bg-[#414965]", text: "text-[#6c779d]" },
-  Caution:   { dot: "bg-[#d20344]", text: "text-[#d20344]" },
+const REP_TC: Record<RepTier, { bg: string; border: string; text: string; dot: string }> = {
+  Legendary: { bg: "#1a0840", border: "rgba(157,92,245,0.30)",  text: "#9d5cf5", dot: "#9d5cf5" },
+  Diamond:   { bg: "#0a1a2e", border: "rgba(56,189,248,0.30)",  text: "#38bdf8", dot: "#38bdf8" },
+  Gold:      { bg: "#1a0e00", border: "rgba(255,149,0,0.30)",   text: "#ff9500", dot: "#ff9500" },
+  Silver:    { bg: "#10131a", border: "rgba(168,185,244,0.30)", text: "#a8b9f4", dot: "#a8b9f4" },
+  Bronze:    { bg: "#140c00", border: "rgba(205,124,47,0.30)",  text: "#cd7c2f", dot: "#cd7c2f" },
+  New:       { bg: "#001a16", border: "rgba(0,212,170,0.30)",   text: "#00d4aa", dot: "#00d4aa" },
+  Unranked:  { bg: "#0d0f14", border: "rgba(65,73,101,0.25)",   text: "#6c779d", dot: "#414965" },
+  Caution:   { bg: "#1a0009", border: "rgba(210,3,68,0.35)",    text: "#d20344", dot: "#d20344" },
 };
 
 /* ── Per-agent spend cap mock data ── */
@@ -59,7 +59,7 @@ const AgentCard = ({
     queryFn: () => fetch(`/api/agents/${agent.id}/reputation`).then((r) => r.json()),
     staleTime: 5 * 60 * 1000,
   });
-  const repStyle = rep ? REP_TIER_STYLES[rep.tier] : null;
+  const tc = rep ? REP_TC[rep.tier] : null;
 
   return (
     <div
@@ -84,12 +84,13 @@ const AgentCard = ({
             <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate">
               {agent.name}
             </span>
-            {repStyle && rep && (
+            {tc && rep && (
               <span
-                className={`inline-flex items-center gap-[4px] text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 ${repStyle.text}`}
+                className="inline-flex items-center gap-[4px] px-[7px] py-[2px] rounded-[6px] text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold flex-shrink-0 leading-[14px]"
+                style={{ background: tc.bg, border: `1px solid ${tc.border}`, color: tc.text }}
                 data-testid={`badge-reputation-${agent.id}`}
               >
-                <span className={`w-[6px] h-[6px] rounded-full flex-shrink-0 ${repStyle.dot}`} />
+                <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: tc.dot }} />
                 {rep.tier}
               </span>
             )}
