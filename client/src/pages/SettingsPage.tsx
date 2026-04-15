@@ -1,19 +1,162 @@
-import { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/lib/authContext";
+import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-/* ─── Types ─────────────────────────────────────────────── */
+/* ─── Section type ───────────────────────────────────────── */
 type Section =
   | "profile"
   | "security"
   | "notifications"
   | "payments"
   | "agents"
-  | "legal";
+  | "legal"
+  | "account";
 
-/* ─── Sub-components ─────────────────────────────────────── */
+/* ─── Figma nav icon assets ───────────────────────────────── */
+/* Profile */
+const PROFILE_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/40bf94f9-02c5-4124-bbbe-194b53bc9d44";
+const PROFILE_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/a95ea493-a48b-4875-a1fd-4d38efce4772";
+const PROFILE_INACTIVE     = "https://www.figma.com/api/mcp/asset/280ec1db-5e7b-4d9a-8207-cf3e11257495";
+/* Security */
+const SECURITY_ACTIVE_OUTER  = "https://www.figma.com/api/mcp/asset/f6d5683e-439e-447d-be4a-d27e9129f063";
+const SECURITY_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/d446b882-8a19-4b47-91c5-f36bcabbb9e7";
+const SECURITY_INACTIVE      = "https://www.figma.com/api/mcp/asset/f5e08fcc-58d6-4554-b275-240fa35fa96a";
+/* Notifications */
+const NOTIF_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/7737596b-f439-4715-8154-8154fed0367e";
+const NOTIF_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/75b60027-c079-4aa3-8014-790a07a816d6";
+const NOTIF_INACTIVE     = "https://www.figma.com/api/mcp/asset/47de99a7-6419-42b2-9f2e-ca8a50625bbb";
+/* Payments */
+const PAYMENTS_ACTIVE   = "https://www.figma.com/api/mcp/asset/7aeb33cc-a5dc-4e64-8427-4886db8a0da2";
+const PAYMENTS_INACTIVE = "https://www.figma.com/api/mcp/asset/f4e169a0-347b-459d-b104-5eff95c39f6d";
+/* Agent Permissions */
+const AGENTS_ACTIVE   = "https://www.figma.com/api/mcp/asset/a89d7dcb-974b-4dca-822e-b57abc5326f2";
+const AGENTS_INACTIVE = "https://www.figma.com/api/mcp/asset/b17c0e4b-b8de-41fb-a3fe-ce6f5b2a213d";
+/* Legal */
+const LEGAL_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/5bc7660c-a56b-44a8-b43f-7b105831fa26";
+const LEGAL_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/8244ff00-397a-48ad-b496-f12b22ea8573";
+const LEGAL_INACTIVE     = "https://www.figma.com/api/mcp/asset/e2f1f8b2-d544-4a4c-afa6-88580edff410";
+/* Account */
+const ACCOUNT_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/651b66da-8fd0-463d-bacd-ae0b5892bf33";
+const ACCOUNT_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/65cee35c-54a1-4573-8847-881120b71bf2";
+const ACCOUNT_INACTIVE     = "https://www.figma.com/api/mcp/asset/0c61e3f2-991f-4671-bce8-dc018f7e14da";
 
+/* ─── Nav icon components ─────────────────────────────────── */
+const ProfileNavIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_12.5%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={PROFILE_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[33.33%_29.17%_16.67%_29.17%]">
+      <div className="absolute inset-[-9.38%_-22.5%_-28.13%_-22.5%]">
+        <img alt="" className="block max-w-none size-full" src={PROFILE_ACTIVE_DOT} />
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_12.5%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={PROFILE_INACTIVE} />
+    </div>
+  </div>
+);
+
+const SecurityNavIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SECURITY_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[17.5%_19.58%_21.67%_19.59%]">
+      <div className="absolute inset-[-7.71%_-15.41%_-23.12%_-15.41%]">
+        <img alt="" className="block max-w-none size-full" src={SECURITY_ACTIVE_STROKE} />
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SECURITY_INACTIVE} />
+    </div>
+  </div>
+);
+
+const NotifNavIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[33.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_ACTIVE_DOT} />
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_INACTIVE} />
+    </div>
+  </div>
+);
+
+const PaymentsNavIcon = ({ active }: { active: boolean }) => (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[16.67%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={active ? PAYMENTS_ACTIVE : PAYMENTS_INACTIVE} />
+    </div>
+  </div>
+);
+
+const AgentsNavIcon = ({ active }: { active: boolean }) => (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={active ? AGENTS_ACTIVE : AGENTS_INACTIVE} />
+    </div>
+  </div>
+);
+
+const LegalNavIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[33.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_ACTIVE_DOT} />
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_INACTIVE} />
+    </div>
+  </div>
+);
+
+const AccountNavIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[33.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_ACTIVE_DOT} />
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_INACTIVE} />
+    </div>
+  </div>
+);
+
+/* ─── Nav items definition ───────────────────────────────── */
+const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
+  { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
+  { id: "security",      label: "Security",          Icon: SecurityNavIcon },
+  { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
+  { id: "payments",      label: "Payments",          Icon: PaymentsNavIcon },
+  { id: "agents",        label: "Agent Permissions", Icon: AgentsNavIcon   },
+  { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
+  { id: "account",       label: "Account",           Icon: AccountNavIcon  },
+];
+
+/* ─── Shared primitives ─────────────────────────────────── */
 const Toggle = ({
   checked,
   onChange,
@@ -26,29 +169,43 @@ const Toggle = ({
   <button
     data-testid={testId}
     onClick={() => onChange(!checked)}
-    className="relative h-[24px] w-[44px] flex-shrink-0 cursor-pointer"
+    className={`relative h-[24px] w-[40px] flex-shrink-0 cursor-pointer ${checked ? "rounded-[100px]" : "rounded-[12px]"}`}
   >
     <div
-      className="absolute left-[2px] top-[2px] h-[20px] w-[40px] rounded-[100px] transition-colors"
+      className="absolute left-[2px] top-[2px] h-[20px] w-[36px] rounded-[100px]"
       style={{ background: checked ? "#123509" : "#222737" }}
     />
     <div
-      className="absolute top-[4px] size-[16px] rounded-[100px] transition-all"
+      className="absolute top-[4px] size-[16px] rounded-[100px] transition-all duration-150"
       style={{
         background: checked ? "#42bf23" : "#06070a",
-        left: checked ? "24px" : "4px",
+        left: checked ? "20px" : "4px",
       }}
     />
   </button>
 );
 
-const SectionLabel = ({ children }: { children: string }) => (
-  <span
-    className="text-[11px] uppercase tracking-widest"
-    style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
+const Card = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-[16px] overflow-hidden border border-[#1d2132]" style={{ background: "#0a0c10" }}>
+    {children}
+  </div>
+);
+
+const Divider = () => <div className="h-px bg-[#1d2132] mx-4" />;
+
+const RowIcon = ({ children, danger }: { children: React.ReactNode; danger?: boolean }) => (
+  <div
+    className="size-[40px] rounded-[12px] flex items-center justify-center flex-shrink-0"
+    style={{ background: danger ? "#1a0510" : "#161b28" }}
   >
     {children}
-  </span>
+  </div>
+);
+
+const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+    <path d="M5 3L9 7L5 11" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
 );
 
 const SettingRow = ({
@@ -58,6 +215,7 @@ const SettingRow = ({
   right,
   danger,
   onClick,
+  testId,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -65,202 +223,63 @@ const SettingRow = ({
   right?: React.ReactNode;
   danger?: boolean;
   onClick?: () => void;
+  testId?: string;
 }) => (
   <div
+    data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
     onClick={onClick}
-    data-testid={`setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
-    className={`flex items-center gap-4 px-4 py-3.5 transition-colors ${onClick ? "cursor-pointer hover:bg-[#131927]" : ""}`}
+    className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-[#0d1018] transition-colors" : ""}`}
   >
-    <div
-      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-      style={{ background: danger ? "#1a0510" : "#161b28" }}
-    >
-      {icon}
-    </div>
+    <RowIcon danger={danger}>{icon}</RowIcon>
     <div className="flex-1 min-w-0">
       <p
-        className="text-sm leading-snug"
+        className="text-[15px] leading-5"
         style={{
           color: danger ? "#d20344" : "#c8d4f0",
           fontFamily: "'Gilroy', sans-serif",
+          fontWeight: 500,
         }}
       >
         {label}
       </p>
       {sublabel && (
         <p
-          className="text-[12px] mt-0.5 leading-snug"
-          style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
+          className="text-[12px] mt-0.5 leading-[16px]"
+          style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 400 }}
         >
           {sublabel}
         </p>
       )}
     </div>
     {right && <div className="flex-shrink-0">{right}</div>}
-    {onClick && !right && (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
-        <path d="M5 3L9 7L5 11" stroke="#414965" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )}
+    {onClick && !right && <ChevronRight color={danger ? "#6b1a2a" : "#414965"} />}
   </div>
 );
 
-const Divider = () => (
-  <div className="h-px mx-4" style={{ background: "#1d2132" }} />
-);
-
-const Card = ({ children }: { children: React.ReactNode }) => (
-  <div
-    className="rounded-[16px] overflow-hidden"
-    style={{ background: "#0a0c10", border: "1px solid #1d2132" }}
+const SectionLabel = ({ children }: { children: string }) => (
+  <p
+    className="text-[11px] uppercase tracking-[0.08em] px-1 mb-2"
+    style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif", fontWeight: 600 }}
   >
     {children}
-  </div>
+  </p>
 );
 
-const SelectInput = ({
-  value,
-  onChange,
-  options,
-  testId,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  testId?: string;
-}) => (
-  <select
-    data-testid={testId}
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="appearance-none rounded-xl px-3 py-2 text-sm outline-none cursor-pointer"
-    style={{
-      background: "#161b28",
-      border: "1px solid #1d2132",
-      color: "#a8b9f4",
-      fontFamily: "'Gilroy', sans-serif",
-      minWidth: "120px",
-    }}
-  >
-    {options.map((o) => (
-      <option key={o.value} value={o.value}>{o.label}</option>
-    ))}
-  </select>
-);
-
-const AmountInput = ({
-  value,
-  onChange,
-  prefix,
-  testId,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  prefix?: string;
-  testId?: string;
-}) => (
-  <div
-    className="flex items-center gap-1.5 rounded-xl px-3 py-2"
-    style={{ background: "#161b28", border: "1px solid #1d2132" }}
-  >
-    {prefix && (
-      <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>
-        {prefix}
-      </span>
-    )}
-    <input
-      data-testid={testId}
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="bg-transparent outline-none w-20 text-sm text-right"
-      style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif" }}
-    />
-  </div>
-);
-
-/* ─── Sidebar nav items ──────────────────────────────────── */
-const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
-  {
-    id: "profile",
-    label: "Profile",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-        <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "security",
-    label: "Security",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2L3 4.5V8c0 3 2.5 5.5 5 6 2.5-.5 5-3 5-6V4.5L8 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2a5 5 0 0 1 5 5v3l1 2H2l1-2V7a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M6.5 13.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="4" width="12" height="9" rx="2" stroke="currentColor" strokeWidth="1.3" />
-        <path d="M2 7h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-        <path d="M5 10.5h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "agents",
-    label: "Agent Permissions",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="3" y="2" width="10" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" />
-        <circle cx="8" cy="7" r="2" stroke="currentColor" strokeWidth="1.3" />
-        <path d="M5.5 12c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "legal",
-    label: "Legal & Privacy",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2l1.5 3H13l-2.7 1.96 1.03 3.16L8 8.12 4.67 10.12l1.03-3.16L3 5h3.5L8 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3 14h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-];
-
-/* ─── Section renderers ──────────────────────────────────── */
+/* ─── Profile section ────────────────────────────────────── */
 function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
-  const kycStatuses = ["Verified", "Pending", "Not Started"];
-  const [kycStatus] = useState("Verified");
   const [name, setName] = useState("Kevin Brainsworth");
   const [email] = useState("kevin@brain.finance");
-  const [phone, setPhone] = useState("+1 (415) 555-0192");
+  const [phone] = useState("+1 (415) 555-0192");
   const [editing, setEditing] = useState(false);
+  const kycStatus = "Verified";
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Avatar + name */}
       <Card>
-        <div className="flex items-center gap-4 p-5">
+        <div className="flex items-center gap-4 p-4">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #7631ee, #4a1a9e)", color: "white", fontFamily: "'Gilroy', sans-serif" }}
+            className="size-[64px] rounded-full flex items-center justify-center text-[22px] flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#7631ee,#4a1a9e)", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 700 }}
           >
             {name.split(" ").map(n => n[0]).join("").slice(0, 2)}
           </div>
@@ -269,27 +288,28 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
               <input
                 data-testid="input-display-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-transparent outline-none border-b text-base w-full"
-                style={{ borderColor: "#7631ee", color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}
+                onChange={e => setName(e.target.value)}
+                className="bg-transparent outline-none border-b w-full text-base"
+                style={{ borderColor: "#7631ee", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }}
                 autoFocus
               />
             ) : (
-              <p className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}>{name}</p>
+              <p className="text-base" style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }}>{name}</p>
             )}
-            <p className="text-[12px] mt-0.5" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>{email}</p>
+            <p className="text-[12px] mt-0.5" style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif" }}>{email}</p>
           </div>
           <button
             data-testid="button-edit-profile"
             onClick={() => {
               if (editing) toast({ title: "Profile saved", description: "Your display name has been updated." });
-              setEditing((v) => !v);
+              setEditing(v => !v);
             }}
-            className="px-3 py-1.5 rounded-full text-xs transition-colors"
+            className="px-3 py-1.5 rounded-full text-xs transition-colors hover:opacity-80"
             style={{
               background: editing ? "#7631ee" : "#161b28",
-              color: editing ? "white" : "#6c779d",
+              color: editing ? "#fff" : "#6c779d",
               fontFamily: "'Gilroy', sans-serif",
+              fontWeight: 600,
               border: "1px solid #1d2132",
             }}
           >
@@ -298,22 +318,22 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
         </div>
       </Card>
 
-      {/* Identity details */}
       <div>
         <SectionLabel>Identity</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M5 8h4M5 10.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M5.5 9h5M5.5 11.5h3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="KYC Verification"
             sublabel="Identity fully verified"
             right={
               <span
-                className="px-2.5 py-1 rounded-full text-xs"
+                className="px-2.5 py-1 rounded-full text-[11px]"
                 style={{
-                  background: kycStatus === "Verified" ? "#0d2e0d" : "#2e1a0d",
-                  color: kycStatus === "Verified" ? "#42bf23" : "#ff9500",
+                  background: "#0d2e0d",
+                  color: "#42bf23",
                   fontFamily: "'Gilroy', sans-serif",
-                  border: `1px solid ${kycStatus === "Verified" ? "rgba(66,191,35,0.2)" : "rgba(255,149,0,0.2)"}`,
+                  fontWeight: 600,
+                  border: "1px solid rgba(66,191,35,0.2)",
                 }}
               >
                 {kycStatus}
@@ -322,15 +342,15 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M5 6h6M5 9h4M5 11.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="2" width="11" height="14" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M5 6.5h6M5 9.5h4M5 12h2.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Wallet Address"
             sublabel="0x00d0...86A8"
             right={
               <button
                 data-testid="button-copy-wallet"
                 onClick={() => { navigator.clipboard.writeText("0x00d03cB5a84f9E2d100d0486A8"); toast({ title: "Copied", description: "Wallet address copied to clipboard." }); }}
-                className="px-2.5 py-1 rounded-lg text-xs transition-colors hover:opacity-80"
-                style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", border: "1px solid #1d2132" }}
+                className="px-2.5 py-1 rounded-lg text-[11px] transition-colors hover:opacity-80"
+                style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, border: "1px solid #1d2132" }}
               >
                 Copy
               </button>
@@ -338,10 +358,29 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v10M1 14h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><rect x="6" y="9" width="4" height="5" rx="0.5" stroke="#6c779d" strokeWidth="1.3"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="5" y="1.5" width="8" height="15" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 13.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Phone Number"
             sublabel={phone}
             onClick={() => toast({ title: "Phone update", description: "An OTP has been sent to your current number." })}
+          />
+        </Card>
+      </div>
+
+      <div>
+        <SectionLabel>Connected Accounts</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2C5.13 2 2 5.13 2 9c0 3.09 1.99 5.72 4.77 6.66.35.06.48-.15.48-.33v-1.16c-1.94.42-2.35-.93-2.35-.93-.32-.8-.77-1.01-.77-1.01-.63-.43.05-.42.05-.42.7.05 1.06.71 1.06.71.62 1.05 1.62.75 2.02.57.06-.44.24-.75.44-.92-1.55-.18-3.18-.78-3.18-3.45 0-.76.27-1.38.72-1.87-.07-.18-.31-.88.07-1.84 0 0 .59-.19 1.92.72A6.65 6.65 0 019 5.8c.59 0 1.19.08 1.74.23 1.33-.91 1.92-.72 1.92-.72.38.96.14 1.66.07 1.84.45.49.72 1.11.72 1.87 0 2.68-1.63 3.27-3.19 3.44.25.22.47.64.47 1.29v1.91c0 .19.12.4.48.33C14.01 14.72 16 12.09 16 9c0-3.87-3.13-7-7-7z" fill="#6c779d"/></svg>}
+            label="GitHub"
+            sublabel="Not connected"
+            onClick={() => toast({ title: "GitHub", description: "GitHub connection coming soon." })}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M16 4.7c-.55.24-1.14.41-1.76.48.63-.38 1.12-1 1.35-1.72-.59.35-1.24.6-1.94.74A3.07 3.07 0 009.5 6.5c0 .24.03.47.07.7C6.85 7.07 4.57 5.78 3.08 3.8c-.26.45-.41.97-.41 1.53 0 1.06.54 2 1.36 2.55-.5-.02-.97-.15-1.38-.38v.04c0 1.48 1.05 2.72 2.45 3-.26.07-.52.1-.8.1-.2 0-.38-.02-.57-.05.39 1.2 1.5 2.07 2.83 2.09A6.15 6.15 0 012 13.8c.4.26.89.41 1.41.41a6.1 6.1 0 004.53-1.98A6.12 6.12 0 0016 4.7z" fill="#6c779d"/></svg>}
+            label="X (Twitter)"
+            sublabel="Not connected"
+            onClick={() => toast({ title: "X", description: "X connection coming soon." })}
           />
         </Card>
       </div>
@@ -349,6 +388,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
   );
 }
 
+/* ─── Security section ───────────────────────────────────── */
 function SecuritySection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
   const [twoFA, setTwoFA] = useState(true);
   const [biometric, setBiometric] = useState(false);
@@ -361,35 +401,36 @@ function SecuritySection({ toast }: { toast: ReturnType<typeof useToast>["toast"
         <SectionLabel>Authentication</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="#6c779d" strokeWidth="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><circle cx="8" cy="10" r="1" fill="#6c779d"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="5.5" y="8" width="7" height="7" rx="1.2" stroke="#6c779d" strokeWidth="1.3"/><path d="M6 8V6a3 3 0 016 0v2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><circle cx="9" cy="11.5" r="1" fill="#6c779d"/></svg>}
             label="Two-Factor Authentication"
-            sublabel={twoFA ? "Enabled via authenticator app" : "Disabled — your account is less secure"}
+            sublabel={twoFA ? "Enabled via authenticator app" : "Disabled — account is less secure"}
             right={<Toggle checked={twoFA} onChange={setTwoFA} testId="toggle-2fa" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M3 14a5 5 0 0 1 10 0" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a3.5 3.5 0 110 7 3.5 3.5 0 010-7Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M3 16a6 6 0 0112 0" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Biometric Login"
             sublabel="Use Face ID or fingerprint"
             right={<Toggle checked={biometric} onChange={setBiometric} testId="toggle-biometric" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 5v3.5l2 2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#6c779d" strokeWidth="1.3"/><path d="M9 5.5v4l2.5 2.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Session Timeout"
             sublabel="Auto-lock after inactivity"
             right={
-              <SelectInput
-                testId="select-session-timeout"
+              <select
+                data-testid="select-session-timeout"
                 value={sessionTimeout}
-                onChange={setSessionTimeout}
-                options={[
-                  { value: "15", label: "15 min" },
-                  { value: "30", label: "30 min" },
-                  { value: "60", label: "1 hour" },
-                  { value: "0", label: "Never" },
-                ]}
-              />
+                onChange={e => setSessionTimeout(e.target.value)}
+                className="appearance-none rounded-xl px-3 py-1.5 text-[13px] outline-none cursor-pointer"
+                style={{ background: "#161b28", border: "1px solid #1d2132", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, minWidth: "90px" }}
+              >
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 hour</option>
+                <option value="0">Never</option>
+              </select>
             }
           />
         </Card>
@@ -399,24 +440,43 @@ function SecuritySection({ toast }: { toast: ReturnType<typeof useToast>["toast"
         <SectionLabel>Account Activity</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 4l6-2 6 2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 7.5l7 4.5 7-4.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Login Alerts"
             sublabel="Email me on new sign-ins"
             right={<Toggle checked={loginAlerts} onChange={setLoginAlerts} testId="toggle-login-alerts" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v2M12.24 3.76l-1.41 1.41M14 8h-2M12.24 12.24l-1.41-1.41M8 14v-2M3.76 12.24l1.41-1.41M2 8h2M3.76 3.76l1.41 1.41" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v2.5M13.25 4.75l-1.77 1.77M15.5 9H13M13.25 13.25l-1.77-1.77M9 16v-2.5M4.75 13.25l1.77-1.77M2.5 9H5M4.75 4.75l1.77 1.77" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Login History"
             sublabel="View recent sign-in activity"
             onClick={() => toast({ title: "Login history", description: "Last login: Today at 6:58 PM from Chrome / macOS" })}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="#6c779d" strokeWidth="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="5.5" y="8" width="7" height="7" rx="1.2" stroke="#6c779d" strokeWidth="1.3"/><path d="M6 8V6a3 3 0 016 0v2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Change PIN"
             sublabel="Update your 6-digit transaction PIN"
             onClick={() => toast({ title: "Change PIN", description: "A verification code has been sent to your phone." })}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M7 5V3.5h4V5M5 5l.7 10h6.6L13 5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Active Sessions"
+            sublabel="Manage devices currently signed in"
+            onClick={() => toast({ title: "Active sessions", description: "1 active session found." })}
+          />
+        </Card>
+      </div>
+
+      <div>
+        <SectionLabel>Passkey</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="7" cy="8" r="4" stroke="#6c779d" strokeWidth="1.3"/><path d="M9.5 10.5l7 7M12.5 14.5l3-3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Add Passkey"
+            sublabel="Sign in with biometrics or a security key"
+            onClick={() => toast({ title: "Passkey", description: "Passkey registration coming soon." })}
           />
         </Card>
       </div>
@@ -424,12 +484,14 @@ function SecuritySection({ toast }: { toast: ReturnType<typeof useToast>["toast"
   );
 }
 
-function NotificationsSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
+/* ─── Notifications section ──────────────────────────────── */
+function NotificationsSection({ toast: _ }: { toast: ReturnType<typeof useToast>["toast"] }) {
   const [txAlerts, setTxAlerts] = useState(true);
   const [lowBalance, setLowBalance] = useState(true);
   const [securityAlerts, setSecurityAlerts] = useState(true);
   const [agentAlerts, setAgentAlerts] = useState(true);
   const [marketing, setMarketing] = useState(false);
+  const [priceAlerts, setPriceAlerts] = useState(false);
   const [emailChannel, setEmailChannel] = useState(true);
   const [pushChannel, setPushChannel] = useState(true);
   const [smsChannel, setSmsChannel] = useState(false);
@@ -440,35 +502,42 @@ function NotificationsSection({ toast }: { toast: ReturnType<typeof useToast>["t
         <SectionLabel>Alert Types</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 7h12" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M5 10.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 8h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M5.5 11.5h3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Transaction Alerts"
             sublabel="Notify on every payment or transfer"
             right={<Toggle checked={txAlerts} onChange={setTxAlerts} testId="toggle-tx-alerts" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v4l3 3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><circle cx="8" cy="9" r="6" stroke="#6c779d" strokeWidth="1.3"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5v4.5l3.5 3.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><circle cx="9" cy="10" r="7" stroke="#6c779d" strokeWidth="1.3"/></svg>}
             label="Low Balance Alerts"
             sublabel="Warn me when balance falls below $100"
             right={<Toggle checked={lowBalance} onChange={setLowBalance} testId="toggle-low-balance" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L3 4.5V8c0 3 2.5 5.5 5 6 2.5-.5 5-3 5-6V4.5L8 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L4 4.5V9c0 3.5 2.5 6 5 6.5 2.5-.5 5-3 5-6.5V4.5L9 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
             label="Security Alerts"
             sublabel="Logins, policy changes, suspicious activity"
             right={<Toggle checked={securityAlerts} onChange={setSecurityAlerts} testId="toggle-security-alerts" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="2" stroke="#6c779d" strokeWidth="1.3"/><circle cx="8" cy="7" r="2" stroke="#6c779d" strokeWidth="1.3"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3.5" y="2" width="11" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3"/><circle cx="9" cy="8" r="2.5" stroke="#6c779d" strokeWidth="1.3"/></svg>}
             label="Agent Activity"
             sublabel="When your agents execute actions"
             right={<Toggle checked={agentAlerts} onChange={setAgentAlerts} testId="toggle-agent-alerts" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2l4 6-4 6-4-6 4-6Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 3.6H15l-3.2 2.35 1.23 3.79L9 9.65 5.97 11.74l1.23-3.79L3.99 5.6H7.2L9 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Price Alerts"
+            sublabel="Significant moves on tracked assets"
+            right={<Toggle checked={priceAlerts} onChange={setPriceAlerts} testId="toggle-price-alerts" />}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9.5h14M9 2L5 9.5 9 17l4-7.5L9 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
             label="Marketing & Updates"
             sublabel="Product news and special offers"
             right={<Toggle checked={marketing} onChange={setMarketing} testId="toggle-marketing" />}
@@ -480,21 +549,21 @@ function NotificationsSection({ toast }: { toast: ReturnType<typeof useToast>["t
         <SectionLabel>Channels</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 6.5l6 4 6-4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 7.5l7 4.5 7-4.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Email"
             sublabel="kevin@brain.finance"
             right={<Toggle checked={emailChannel} onChange={setEmailChannel} testId="toggle-email-channel" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M7 12.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="5" y="1.5" width="8" height="15" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 13.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Push Notifications"
             sublabel="In-app and mobile alerts"
             right={<Toggle checked={pushChannel} onChange={setPushChannel} testId="toggle-push-channel" />}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-3 3v-3H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3.5 2h11a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0114.5 13H10l-3.5 4v-4H3.5A1.5 1.5 0 012 11.5v-8A1.5 1.5 0 013.5 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
             label="SMS"
             sublabel="+1 (415) 555-0192"
             right={<Toggle checked={smsChannel} onChange={setSmsChannel} testId="toggle-sms-channel" />}
@@ -505,12 +574,10 @@ function NotificationsSection({ toast }: { toast: ReturnType<typeof useToast>["t
   );
 }
 
+/* ─── Payments section ───────────────────────────────────── */
 function PaymentsSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
   const [currency, setCurrency] = useState("USD");
-  const [dailyLimit, setDailyLimit] = useState("10,000");
-  const [singleLimit, setSingleLimit] = useState("5,000");
   const [autoSave, setAutoSave] = useState(true);
-  const [autoSavePercent, setAutoSavePercent] = useState("10");
   const [roundups, setRoundups] = useState(false);
 
   return (
@@ -519,22 +586,23 @@ function PaymentsSection({ toast }: { toast: ReturnType<typeof useToast>["toast"
         <SectionLabel>Currency & Display</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 4v1.5M8 10.5V12M6 6.5C6 5.67 6.895 5 8 5s2 .67 2 1.5S9.105 8 8 8 6 8.83 6 9.5 6.895 11 8 11s2-.67 2-1.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#6c779d" strokeWidth="1.3"/><path d="M9 4.5V6M9 12v1.5M7 7.5C7 6.67 7.895 6 9 6s2 .67 2 1.5S10.105 9 9 9 7 9.83 7 10.5 7.895 12 9 12s2-.67 2-1.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Default Currency"
             sublabel="Used for balance display"
             right={
-              <SelectInput
-                testId="select-currency"
+              <select
+                data-testid="select-currency"
                 value={currency}
-                onChange={setCurrency}
-                options={[
-                  { value: "USD", label: "USD $" },
-                  { value: "EUR", label: "EUR €" },
-                  { value: "GBP", label: "GBP £" },
-                  { value: "AED", label: "AED د.إ" },
-                  { value: "USDC", label: "USDC" },
-                ]}
-              />
+                onChange={e => setCurrency(e.target.value)}
+                className="appearance-none rounded-xl px-3 py-1.5 text-[13px] outline-none cursor-pointer"
+                style={{ background: "#161b28", border: "1px solid #1d2132", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, minWidth: "90px" }}
+              >
+                <option value="USD">USD $</option>
+                <option value="EUR">EUR €</option>
+                <option value="GBP">GBP £</option>
+                <option value="AED">AED د.إ</option>
+                <option value="USDC">USDC</option>
+              </select>
             }
           />
         </Card>
@@ -544,117 +612,146 @@ function PaymentsSection({ toast }: { toast: ReturnType<typeof useToast>["toast"
         <SectionLabel>Spending Limits</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M1 12h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M6 8h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 13.5V6a1 1 0 011-1h12a1 1 0 011 1v7.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M1 13.5h16" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M7 9h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Daily Spend Limit"
-            sublabel="Maximum per calendar day"
-            right={<AmountInput testId="input-daily-limit" value={dailyLimit} onChange={setDailyLimit} prefix="$" />}
+            sublabel="$10,000 per calendar day"
+            onClick={() => toast({ title: "Spending limit", description: "Contact support to change your spending limits." })}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 7h12M5 10.5h2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 8h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><circle cx="6" cy="11.5" r="1" fill="#6c779d"/></svg>}
             label="Single Transaction Limit"
-            sublabel="Maximum per transaction"
-            right={<AmountInput testId="input-single-limit" value={singleLimit} onChange={setSingleLimit} prefix="$" />}
+            sublabel="$5,000 per transaction"
+            onClick={() => toast({ title: "Transaction limit", description: "Contact support to change your transaction limits." })}
           />
         </Card>
       </div>
 
       <div>
-        <SectionLabel>Savings</SectionLabel>
+        <SectionLabel>Smart Savings</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V7a5 5 0 0 1 10 0v6" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M1 13h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M6 10h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M14.5 9.5a5.5 5.5 0 01-5.5 5.5A5.5 5.5 0 013.5 9.5 5.5 5.5 0 019 4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 2v4l2 2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Auto-Save"
-            sublabel="Automatically save a % of each deposit"
+            sublabel="Save 10% of every deposit automatically"
             right={<Toggle checked={autoSave} onChange={setAutoSave} testId="toggle-auto-save" />}
           />
-          {autoSave && (
-            <>
-              <Divider />
-              <SettingRow
-                icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 12L13 4M5.5 4.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM10.5 14.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
-                label="Save Rate"
-                sublabel="Percentage of each inbound transfer"
-                right={<AmountInput testId="input-save-rate" value={autoSavePercent} onChange={setAutoSavePercent} prefix="%" />}
-              />
-            </>
-          )}
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 5v3l2 2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
-            label="Round-Up Investments"
-            sublabel="Round up spend to nearest dollar, invest the change"
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 14h14M5 14V7M9 14V4M13 14V9" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Round-Ups"
+            sublabel="Round up transactions and invest the change"
             right={<Toggle checked={roundups} onChange={setRoundups} testId="toggle-roundups" />}
           />
         </Card>
       </div>
+
+      <div>
+        <SectionLabel>Payment Methods</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 8h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M5.5 11.5h3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Add Payment Method"
+            sublabel="Link a bank account or card"
+            onClick={() => toast({ title: "Add payment method", description: "Payment method setup coming soon." })}
+          />
+        </Card>
+      </div>
     </div>
   );
 }
 
-function AgentsSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
-  const [agentTx, setAgentTx] = useState(true);
-  const [agentConfirm, setAgentConfirm] = useState(false);
-  const [maxAutoApprove, setMaxAutoApprove] = useState("500");
-  const [maxDailyAgent, setMaxDailyAgent] = useState("2,000");
-  const [agentTwoFA, setAgentTwoFA] = useState(false);
+/* ─── Agent Permissions section ──────────────────────────── */
+function AgentsSection({ toast: _ }: { toast: ReturnType<typeof useToast>["toast"] }) {
+  const [tradeApproval, setTradeApproval] = useState(true);
+  const [autoRebalance, setAutoRebalance] = useState(false);
+  const [spendingLimit, setSpendingLimit] = useState(true);
+  const [crossChain, setCrossChain] = useState(true);
+  const [maxPerTx, setMaxPerTx] = useState("500");
+  const [dailyMax, setDailyMax] = useState("2000");
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <SectionLabel>Permissions</SectionLabel>
+        <SectionLabel>Global Permissions</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="2" stroke="#6c779d" strokeWidth="1.3"/><circle cx="8" cy="7" r="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M5.5 12c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
-            label="Allow Agent Transactions"
-            sublabel="Let AI agents execute payments on your behalf"
-            right={<Toggle checked={agentTx} onChange={setAgentTx} testId="toggle-agent-tx" />}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L4 4.5V9c0 3.5 2.5 6 5 6.5 2.5-.5 5-3 5-6.5V4.5L9 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M6.5 9l2 2 3-3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Require Trade Approval"
+            sublabel="Confirm every trade over $100 manually"
+            right={<Toggle checked={tradeApproval} onChange={setTradeApproval} testId="toggle-trade-approval" />}
           />
-          {agentTx && (
-            <>
-              <Divider />
-              <SettingRow
-                icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L3 4.5V8c0 3 2.5 5.5 5 6 2.5-.5 5-3 5-6V4.5L8 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                label="Require 2FA for Agent Payments"
-                sublabel="Confirm agent spends via authenticator"
-                right={<Toggle checked={agentTwoFA} onChange={setAgentTwoFA} testId="toggle-agent-2fa" />}
-              />
-              <Divider />
-              <SettingRow
-                icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.3"/><path d="M8 4v1.5M8 10.5V12M6 6.5C6 5.67 6.895 5 8 5s2 .67 2 1.5S9.105 8 8 8 6 8.83 6 9.5 6.895 11 8 11s2-.67 2-1.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
-                label="Max Auto-Approve Amount"
-                sublabel="Amounts below this execute without confirmation"
-                right={<AmountInput testId="input-max-auto-approve" value={maxAutoApprove} onChange={setMaxAutoApprove} prefix="$" />}
-              />
-              <Divider />
-              <SettingRow
-                icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M1 12h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M6 8h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
-                label="Max Daily Agent Spend"
-                sublabel="Aggregate cap across all agents per day"
-                right={<AmountInput testId="input-max-daily-agent" value={maxDailyAgent} onChange={setMaxDailyAgent} prefix="$" />}
-              />
-            </>
-          )}
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9a7 7 0 0114 0M2 9a7 7 0 0014 0M9 2v14M5 4.5C5.83 6 7.33 7 9 7s3.17-1 4-2.5M5 13.5C5.83 12 7.33 11 9 11s3.17 1 4 2.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Auto-Rebalance"
+            sublabel="Automatically rebalance portfolio daily"
+            right={<Toggle checked={autoRebalance} onChange={setAutoRebalance} testId="toggle-auto-rebalance" />}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2C5.13 2 2 5.13 2 9s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zM9 6v4l3 1.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Enforce Spending Limits"
+            sublabel="Block agents from exceeding your caps"
+            right={<Toggle checked={spendingLimit} onChange={setSpendingLimit} testId="toggle-spending-limit" />}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a7 7 0 100 14A7 7 0 009 2Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 9h14M9 2c-2 2-3.5 4.5-3.5 7S7 14 9 16c2-2 3.5-4.5 3.5-7S11 4 9 2Z" stroke="#6c779d" strokeWidth="1.3"/></svg>}
+            label="Cross-Chain Operations"
+            sublabel="Allow agents to bridge assets cross-chain"
+            right={<Toggle checked={crossChain} onChange={setCrossChain} testId="toggle-cross-chain" />}
+          />
         </Card>
       </div>
 
-      {agentTx && (
-        <div>
-          <SectionLabel>Confirmation Rules</SectionLabel>
-          <Card>
-            <SettingRow
-              icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-              label="Manual Approval Required"
-              sublabel="Ask me before every agent transaction"
-              right={<Toggle checked={agentConfirm} onChange={setAgentConfirm} testId="toggle-agent-confirm" />}
-            />
-          </Card>
-        </div>
-      )}
+      <div>
+        <SectionLabel>Spending Caps</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#6c779d" strokeWidth="1.3"/><path d="M2 8h14" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Max per Transaction"
+            sublabel="Hard cap per single agent action"
+            right={
+              <div className="flex items-center gap-1.5 rounded-xl px-3 py-1.5" style={{ background: "#161b28", border: "1px solid #1d2132" }}>
+                <span className="text-[13px]" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>$</span>
+                <input
+                  data-testid="input-max-per-tx"
+                  type="text"
+                  value={maxPerTx}
+                  onChange={e => setMaxPerTx(e.target.value)}
+                  className="bg-transparent outline-none w-14 text-[13px] text-right"
+                  style={{ color: "#a8b9f4", fontFamily: "'JetBrains_Mono', sans-serif", fontWeight: 500 }}
+                />
+              </div>
+            }
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 14V6a1 1 0 011-1h12a1 1 0 011 1v8M1 14h16" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/><path d="M7 10.5h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Daily Agent Budget"
+            sublabel="Maximum total per day across all agents"
+            right={
+              <div className="flex items-center gap-1.5 rounded-xl px-3 py-1.5" style={{ background: "#161b28", border: "1px solid #1d2132" }}>
+                <span className="text-[13px]" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>$</span>
+                <input
+                  data-testid="input-daily-max"
+                  type="text"
+                  value={dailyMax}
+                  onChange={e => setDailyMax(e.target.value)}
+                  className="bg-transparent outline-none w-14 text-[13px] text-right"
+                  style={{ color: "#a8b9f4", fontFamily: "'JetBrains_Mono', sans-serif", fontWeight: 500 }}
+                />
+              </div>
+            }
+          />
+        </Card>
+      </div>
     </div>
   );
 }
 
+/* ─── Legal section ──────────────────────────────────────── */
 function LegalSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
   return (
     <div className="flex flex-col gap-5">
@@ -662,60 +759,51 @@ function LegalSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }
         <SectionLabel>Documents</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M10 2v4h3M6 8h4M6 10.5h4M6 5.5h1" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3.5" y="2" width="11" height="14" rx="1.5" stroke="#6c779d" strokeWidth="1.3"/><path d="M6 6.5h6M6 9.5h6M6 12.5h4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Terms of Service"
-            sublabel="Last updated Jan 2025"
-            onClick={() => toast({ title: "Opening Terms of Service…" })}
+            sublabel="Last updated March 2025"
+            onClick={() => window.open("https://brain.finance/terms", "_blank")}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L3 4.5V8c0 3 2.5 5.5 5 6 2.5-.5 5-3 5-6V4.5L8 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L4 4.5V9c0 3.5 2.5 6 5 6.5 2.5-.5 5-3 5-6.5V4.5L9 2Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
             label="Privacy Policy"
             sublabel="How we handle your data"
-            onClick={() => toast({ title: "Opening Privacy Policy…" })}
+            onClick={() => window.open("https://brain.finance/privacy", "_blank")}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M10 2v4h3" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#6c779d" strokeWidth="1.3"/><path d="M9 6v3.5l2.5 2.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Cookie Policy"
-            sublabel="Manage cookie preferences"
-            onClick={() => toast({ title: "Opening Cookie Policy…" })}
+            sublabel="Manage your cookie preferences"
+            onClick={() => window.open("https://brain.finance/cookies", "_blank")}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 9a6.5 6.5 0 0113 0c0 3.59-2.91 6.5-6.5 6.5S2.5 12.59 2.5 9Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M9 6.5v4M9 12v.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Disclosures"
+            sublabel="Risk disclosures and regulatory information"
+            onClick={() => window.open("https://brain.finance/disclosures", "_blank")}
           />
         </Card>
       </div>
 
       <div>
-        <SectionLabel>Your Data</SectionLabel>
+        <SectionLabel>Data Rights</SectionLabel>
         <Card>
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4.5 6L8 10l3.5-4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 13h12" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M5.5 7.5L9 11l3.5-3.5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 13.5v1A1.5 1.5 0 003.5 16h11a1.5 1.5 0 001.5-1.5v-1" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
             label="Export My Data"
             sublabel="Download a copy of your account data"
-            onClick={() => toast({ title: "Export requested", description: "Your data export will be emailed within 24 hours." })}
+            onClick={() => toast({ title: "Data export", description: "Your data export will be emailed to you within 24 hours." })}
           />
           <Divider />
           <SettingRow
-            icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M13 4l-.867 9.143A1 1 0 0 1 11.138 14H4.862a1 1 0 0 1-.995-.857L3 4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-            label="Delete My Data"
-            sublabel="Request erasure under GDPR / CCPA"
-            onClick={() => toast({ title: "Deletion request logged", description: "We'll confirm your erasure request within 48 hours.", variant: "destructive" })}
-          />
-        </Card>
-      </div>
-
-      <div>
-        <SectionLabel>Account</SectionLabel>
-        <Card>
-          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M7 5V3.5h4V5M5 5l.7 10h6.6L13 5" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Request Data Deletion"
+            sublabel="Permanently remove all your data"
             danger
-            icon={
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M10 2H6a1 1 0 0 0-1 1v1H3v1h10V4h-2V3a1 1 0 0 0-1-1ZM4 6l.762 7.619A1 1 0 0 0 5.757 14h4.486a1 1 0 0 0 .995-.881L12 6" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
-            label="Close Account"
-            sublabel="Permanently delete your Brain Finance account"
-            onClick={() => toast({ title: "Contact support", description: "Please email support@brain.finance to initiate account closure.", variant: "destructive" })}
+            onClick={() => toast({ title: "Data deletion", description: "Please contact support to process your deletion request." })}
           />
         </Card>
       </div>
@@ -723,114 +811,207 @@ function LegalSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────── */
-export const SettingsPage = (): JSX.Element => {
-  const [section, setSection] = useState<Section>("profile");
-  const { toast } = useToast();
-
-  const CONTENT: Record<Section, React.ReactNode> = {
-    profile: <ProfileSection toast={toast} />,
-    security: <SecuritySection toast={toast} />,
-    notifications: <NotificationsSection toast={toast} />,
-    payments: <PaymentsSection toast={toast} />,
-    agents: <AgentsSection toast={toast} />,
-    legal: <LegalSection toast={toast} />,
-  };
-
-  const TITLES: Record<Section, string> = {
-    profile: "Profile",
-    security: "Security",
-    notifications: "Notifications",
-    payments: "Payment Preferences",
-    agents: "Agent Permissions",
-    legal: "Legal & Privacy",
-  };
+/* ─── Account section ────────────────────────────────────── */
+function AccountSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
-    <div className="flex h-full bg-[#11141b] rounded-[16px] border border-solid border-[#1d2132] overflow-hidden">
-
-      {/* ── Sidebar ── */}
-      <div
-        className="flex flex-col w-[220px] flex-shrink-0 h-full overflow-hidden"
-        style={{ borderRight: "1px solid #1d2132" }}
-      >
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
-          <h2
-            className="text-base"
-            style={{ color: "#f1f5f9", fontFamily: "'Gilroy', sans-serif" }}
-          >
-            Settings
-          </h2>
-        </div>
-
-        {/* Nav */}
-        <ScrollArea className="flex-1">
-          <div className="flex flex-col gap-1 p-3">
-            {NAV_ITEMS.map((item) => {
-              const active = section === item.id;
-              return (
-                <button
-                  key={item.id}
-                  data-testid={`settings-nav-${item.id}`}
-                  onClick={() => setSection(item.id)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left transition-colors"
-                  style={{
-                    background: active ? "#1a1033" : "transparent",
-                    border: active ? "1px solid #4a1a9e" : "1px solid transparent",
-                  }}
-                >
-                  <span style={{ color: active ? "#9d5cf5" : "#414965" }}>
-                    {item.icon}
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{
-                      color: active ? "#c8d4f0" : "#6c779d",
-                      fontFamily: "'Gilroy', sans-serif",
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </ScrollArea>
-
-        {/* App version */}
-        <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: "1px solid #1d2132" }}>
-          <p
-            className="text-[11px]"
-            style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
-          >
-            Brain Finance v1.0.0
-          </p>
-        </div>
+    <div className="flex flex-col gap-5">
+      <div>
+        <SectionLabel>Account Info</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a3.5 3.5 0 110 7A3.5 3.5 0 019 2Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M3 16a6 6 0 0112 0" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Member since"
+            sublabel="January 2025"
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a7 7 0 100 14A7 7 0 009 2Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M6 9l2 2 4-4" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Plan"
+            sublabel="Brain Pro"
+            right={
+              <span
+                className="px-2.5 py-1 rounded-full text-[11px]"
+                style={{ background: "#1a0d3d", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, border: "1px solid rgba(168,185,244,0.2)" }}
+              >
+                Active
+              </span>
+            }
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9h14M9 2l5 7-5 7-5-7 5-7Z" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            label="Referral Code"
+            sublabel="BRAIN-K3V1N"
+            right={
+              <button
+                data-testid="button-copy-referral"
+                onClick={() => { navigator.clipboard.writeText("BRAIN-K3V1N"); toast({ title: "Copied", description: "Referral code copied to clipboard." }); }}
+                className="px-2.5 py-1 rounded-lg text-[11px] transition-colors hover:opacity-80"
+                style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, border: "1px solid #1d2132" }}
+              >
+                Copy
+              </button>
+            }
+          />
+        </Card>
       </div>
 
-      {/* ── Content area ── */}
-      <div className="flex flex-col flex-1 min-w-0 h-full">
-        {/* Top bar */}
-        <div
-          className="flex items-center px-6 py-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid #1d2132" }}
-        >
-          <h3
-            className="text-base"
-            style={{ color: "#f1f5f9", fontFamily: "'Gilroy', sans-serif" }}
-          >
-            {TITLES[section]}
-          </h3>
-        </div>
+      <div>
+        <SectionLabel>Preferences</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#6c779d" strokeWidth="1.3"/><path d="M9 5v4l3 2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Timezone"
+            sublabel="UTC−8 (Pacific Time)"
+            onClick={() => toast({ title: "Timezone", description: "Timezone settings coming soon." })}
+          />
+          <Divider />
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a7 7 0 100 14A7 7 0 009 2Z" stroke="#6c779d" strokeWidth="1.3"/><path d="M6 9c0-1.66 1.34-3 3-3s3 1.34 3 3-1.34 3-3 3-3-1.34-3-3Z" stroke="#6c779d" strokeWidth="1.3"/></svg>}
+            label="Language"
+            sublabel="English (US)"
+            onClick={() => toast({ title: "Language", description: "Language settings coming soon." })}
+          />
+        </Card>
+      </div>
 
-        {/* Scrollable content */}
-        <ScrollArea className="flex-1">
-          <div className="flex flex-col gap-6 p-6">
-            {CONTENT[section]}
-          </div>
-        </ScrollArea>
+      <div>
+        <SectionLabel>Danger Zone</SectionLabel>
+        <Card>
+          <SettingRow
+            icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a7 7 0 100 14A7 7 0 009 2Z" stroke="#d20344" strokeWidth="1.3"/><path d="M9 6v4M9 12v.5" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round"/></svg>}
+            label="Deactivate Account"
+            sublabel="Temporarily disable your account"
+            danger
+            onClick={() => toast({ title: "Deactivate account", description: "Please contact support to deactivate your account." })}
+          />
+          <Divider />
+          {showDeleteConfirm ? (
+            <div className="flex flex-col gap-3 px-4 py-4">
+              <p className="text-[13px]" style={{ color: "#d20344", fontFamily: "'Gilroy', sans-serif" }}>
+                Are you sure? This action is permanent and cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  data-testid="button-confirm-delete"
+                  onClick={() => { toast({ title: "Account deletion requested", description: "We'll process your request within 30 days." }); setShowDeleteConfirm(false); }}
+                  className="flex-1 py-2 rounded-[100px] text-[13px] transition-opacity hover:opacity-80"
+                  style={{ background: "#350011", color: "#d20344", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, border: "1px solid rgba(210,3,68,0.3)" }}
+                >
+                  Yes, delete my account
+                </button>
+                <button
+                  data-testid="button-cancel-delete"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2 rounded-[100px] text-[13px] transition-opacity hover:opacity-80"
+                  style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, border: "1px solid #1d2132" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <SettingRow
+              icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M7 5V3.5h4V5M5 5l.7 10h6.6L13 5" stroke="#d20344" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              label="Delete Account"
+              sublabel="Permanently delete all data and close account"
+              danger
+              onClick={() => setShowDeleteConfirm(true)}
+              testId="button-delete-account"
+            />
+          )}
+        </Card>
       </div>
     </div>
   );
-};
+}
+
+/* ─── Main SettingsPage ──────────────────────────────────── */
+export function SettingsPage() {
+  const [section, setSection] = useState<Section>("profile");
+  const { toast } = useToast();
+
+  const SectionContent = {
+    profile:       <ProfileSection toast={toast} />,
+    security:      <SecuritySection toast={toast} />,
+    notifications: <NotificationsSection toast={toast} />,
+    payments:      <PaymentsSection toast={toast} />,
+    agents:        <AgentsSection toast={toast} />,
+    legal:         <LegalSection toast={toast} />,
+    account:       <AccountSection toast={toast} />,
+  }[section];
+
+  const SECTION_TITLES: Record<Section, string> = {
+    profile:       "Profile",
+    security:      "Security",
+    notifications: "Notifications",
+    payments:      "Payments",
+    agents:        "Agent Permissions",
+    legal:         "Legal",
+    account:       "Account",
+  };
+
+  return (
+    <div
+      className="flex h-full rounded-[16px] border border-[#1d2132] overflow-hidden"
+      style={{ background: "#11141b" }}
+    >
+      {/* ── Settings sidebar ── */}
+      <nav
+        className="flex-shrink-0 flex flex-col overflow-y-auto"
+        style={{ width: 240, borderRight: "1px solid #1d2132", background: "#11141b" }}
+      >
+        <div className="flex flex-col gap-1 p-2 pt-2">
+          {NAV_ITEMS.map(({ id, label, Icon }) => {
+            const active = section === id;
+            return (
+              <button
+                key={id}
+                data-testid={`settings-nav-${id}`}
+                onClick={() => setSection(id)}
+                className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left"
+                style={{ background: active ? "#0a0c10" : "transparent" }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}
+                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <div className="size-[24px] flex-shrink-0 flex items-center justify-center">
+                  <Icon active={active} />
+                </div>
+                <span
+                  className="flex-1 text-[16px] leading-5 whitespace-nowrap"
+                  style={{
+                    fontFamily: "'Gilroy', sans-serif",
+                    fontWeight: 500,
+                    color: active ? "#ffffff" : "#6c779d",
+                  }}
+                >
+                  {label}
+                </span>
+                {active && <ChevronRight color="#414965" />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── Content area ── */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="px-6 py-5">
+          {/* Section header */}
+          <div className="mb-5">
+            <h1
+              className="text-[20px] leading-7"
+              style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 700, color: "#ffffff" }}
+            >
+              {SECTION_TITLES[section]}
+            </h1>
+          </div>
+
+          {SectionContent}
+        </div>
+      </div>
+    </div>
+  );
+}
