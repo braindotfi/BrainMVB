@@ -746,9 +746,9 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     </div>
                   </div>
 
-                  {/* Exchange Amount card */}
+                  {/* Exchange Details card */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchange Amount</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchange Details</p>
                     <div className="bg-[#06070a] border border-[#1d2132] flex flex-col gap-[16px] items-start justify-center p-[16px] rounded-[16px] w-full">
 
                       {/* Conversion row: from → estimated to */}
@@ -763,11 +763,13 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                             </p>
                           </div>
                         </div>
-                        {/* Swap arrows icon */}
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-                          <path d="M3 2.5V13.5M3 13.5L1 11.5M3 13.5L5 11.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M13 13.5V2.5M13 2.5L11 4.5M13 2.5L15 4.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        {/* Equals icon */}
+                        <div className="bg-[#1d2132] rounded-[100px] size-[24px] flex items-center justify-center shrink-0">
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+                            <path d="M0 1H10" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
+                            <path d="M0 5H10" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
+                          </svg>
+                        </div>
                         <div className="flex flex-1 gap-[4px] items-center justify-end min-w-0">
                           <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                             {fmt(estimatedAmount, 4)}
@@ -875,7 +877,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
                     data-testid="btn-exchange-confirm"
                   >
-                    {confirming ? "Confirming…" : "Confirm Exchange"}
+                    {confirming ? "Confirming…" : "Confirm"}
                   </button>
                 </div>
               )}
