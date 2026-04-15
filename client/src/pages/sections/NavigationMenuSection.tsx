@@ -22,7 +22,6 @@ interface DailyInsight {
 const mainMenuItems = [
   { id: "agents", label: "Agents", path: "/agents" },
   { id: "marketplace", label: "Marketplace", path: "/marketplace" },
-  { id: "settings", label: "Settings", path: "/settings" },
 ];
 
 
@@ -115,24 +114,24 @@ const MarketplaceIcon = ({ active }: { active: boolean }) => active ? (
   </div>
 );
 
-const SettingsIcon = ({ active }: { active: boolean }) => (
-  <div className="relative size-[24px] flex items-center justify-center">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M10 12.5C11.3807 12.5 12.5 11.3807 12.5 10C12.5 8.61929 11.3807 7.5 10 7.5C8.61929 7.5 7.5 8.61929 7.5 10C7.5 11.3807 8.61929 12.5 10 12.5Z"
-        stroke={active ? "#a8b9f4" : "#6c779d"}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M16.1667 10C16.1667 10.3583 16.1333 10.7083 16.075 11.05L17.9 12.4583C18.075 12.5917 18.125 12.8333 18.0083 13.025L16.2167 16.1333C16.1 16.325 15.8667 16.4 15.6667 16.325L13.5333 15.4833C13.0583 15.8333 12.55 16.125 12 16.3417L11.675 18.6167C11.6417 18.8333 11.45 19 11.225 19H7.775C7.55 19 7.35833 18.8333 7.325 18.6167L7 16.3417C6.45 16.125 5.94167 15.825 5.46667 15.4833L3.33333 16.325C3.125 16.4083 2.9 16.325 2.78333 16.1333L0.991667 13.025C0.875 12.8333 0.925 12.5917 1.1 12.4583L2.925 11.05C2.86667 10.7083 2.83333 10.35 2.83333 10C2.83333 9.65 2.86667 9.29167 2.925 8.95L1.1 7.54167C0.925 7.40833 0.866667 7.16667 0.991667 6.975L2.78333 3.86667C2.9 3.675 3.13333 3.6 3.33333 3.675L5.46667 4.51667C5.94167 4.16667 6.45 3.875 7 3.65833L7.325 1.38333C7.35833 1.16667 7.55 1 7.775 1H11.225C11.45 1 11.6417 1.16667 11.675 1.38333L12 3.65833C12.55 3.875 13.0583 4.175 13.5333 4.51667L15.6667 3.675C15.875 3.59167 16.1 3.675 16.2167 3.86667L18.0083 6.975C18.125 7.16667 18.075 7.40833 17.9 7.54167L16.075 8.95C16.1333 9.29167 16.1667 9.64167 16.1667 10Z"
-        stroke={active ? "#a8b9f4" : "#6c779d"}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+const SETTINGS_ICON_INACTIVE = "https://www.figma.com/api/mcp/asset/e7232713-98e6-4dfc-8b22-73a287505abe";
+const SETTINGS_ICON_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/0e7f88b7-0a92-43fa-8b99-edce5ed753c0";
+const SETTINGS_ICON_ACTIVE_INNER = "https://www.figma.com/api/mcp/asset/96eb6ada-0266-4f34-8b37-795a072b2d53";
+
+const SettingsIcon = ({ active }: { active: boolean }) => active ? (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SETTINGS_ICON_ACTIVE_OUTER} />
+    </div>
+    <div className="absolute inset-[33.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SETTINGS_ICON_ACTIVE_INNER} />
+    </div>
+  </div>
+) : (
+  <div className="relative size-[24px]">
+    <div className="absolute inset-[4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SETTINGS_ICON_INACTIVE} />
+    </div>
   </div>
 );
 
@@ -950,13 +949,17 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               </button>
             </Link>
 
+            {/* Insights — moved under Dashboard */}
+            <button title="Insights" onClick={() => setInsightsOpen((v) => !v)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+              <InsightsIcon active={insightsOpen} />
+            </button>
+
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
                 <Link href={item.path} className="outline-none focus:outline-none">
                   <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
                     {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
                     {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                    {item.id === "settings" && <SettingsIcon active={isActive(item.path)} />}
                   </button>
                 </Link>
               </div>
@@ -973,9 +976,12 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               )}
             </button>
 
-            <button title="Insights" onClick={() => setInsightsOpen((v) => !v)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${insightsOpen ? "bg-brain-v1baby-blue-30" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-              <InsightsIcon active={insightsOpen} />
-            </button>
+            {/* Settings — in Other section, after Notifications */}
+            <Link href="/settings" className="outline-none focus:outline-none">
+              <button title="Settings" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                <SettingsIcon active={isActive("/settings")} />
+              </button>
+            </Link>
 
           </div>
 
@@ -1044,6 +1050,22 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                 </button>
               </Link>
 
+              {/* Insights — moved under Dashboard */}
+              <button
+                onClick={() => setInsightsOpen((v) => !v)}
+                className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+              >
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  <InsightsIcon active={insightsOpen} />
+                </div>
+                <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Insights</span>
+                {insightsOpen && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                    <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
                   <Link href={item.path} className="w-full outline-none focus:outline-none">
@@ -1051,7 +1073,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
                       <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
                         {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
                         {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                        {item.id === "settings" && <SettingsIcon active={isActive(item.path)} />}
                       </div>
                       <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
                         {item.label}
@@ -1094,20 +1115,20 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
               )}
             </button>
 
-            <button
-              onClick={() => setInsightsOpen((v) => !v)}
-              className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${insightsOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
-            >
-              <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                <InsightsIcon active={insightsOpen} />
-              </div>
-              <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${insightsOpen ? "text-white" : "text-brain-v1baby-blue-60"}`}>Insights</span>
-              {insightsOpen && (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                  <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </button>
+            {/* Settings — in Other section, after Notifications */}
+            <Link href="/settings" className="w-full outline-none focus:outline-none">
+              <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  <SettingsIcon active={isActive("/settings")} />
+                </div>
+                <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/settings") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>Settings</span>
+                {isActive("/settings") && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                    <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            </Link>
 
           </div>
         </div>
