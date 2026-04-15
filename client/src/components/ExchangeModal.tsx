@@ -3,6 +3,25 @@ import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 
+const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/da02ba0e-5dd9-4730-bde1-1b269856019f";
+
+const MOCK_USD_PRICE: Record<string, number> = {
+  btc: 60000, bitcoin: 60000,
+  eth: 2000, ethereum: 2000,
+  matic: 0.57, polygon: 0.57,
+  bnb: 300, binance: 300,
+  sol: 150, solana: 150,
+  usdc: 1, usd: 1, dollar: 1, dirham: 0.27, eur: 1.08, euro: 1.08,
+};
+
+function mockEstimate(amount: number, fromTicker: string, toTicker: string): number {
+  const fKey = fromTicker.toLowerCase();
+  const tKey = toTicker.toLowerCase();
+  const fromUsd = MOCK_USD_PRICE[fKey] ?? 1;
+  const toUsd = MOCK_USD_PRICE[tKey] ?? 1;
+  return (amount * fromUsd) / toUsd;
+}
+
 type Step = 1 | 2 | 3 | 4;
 
 interface Asset {
@@ -294,7 +313,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   const [confirmedFromAsset, setConfirmedFromAsset] = useState<Asset | null>(null);
   const [confirmedToAsset, setConfirmedToAsset] = useState<Asset | null>(null);
   const [confirmedAmount, setConfirmedAmount] = useState("");
-  const { wirexAccounts } = useAuth();
+  const { wirexAccounts, user } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
   const { addTransaction } = useTransactions();
   const liveAllAssets = useMemo(() =>
@@ -343,6 +362,9 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   const fromBalanceNum = fromAsset ? parseAmt(fromAsset.balance.split(" ")[0]) : 0;
   const amountNum = parseAmt(amount);
   const amountExceedsBalance = fromAsset !== null && amountNum > 0 && amountNum > fromBalanceNum;
+  const estimatedAmount = fromAsset && toAsset
+    ? mockEstimate(amountNum, fromAsset.ticker, toAsset.ticker)
+    : 0;
 
   const canContinue = (() => {
     if (step === 1) return fromAsset !== null;
@@ -383,8 +405,10 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   // ── Exchange success confirmation ──────────────────────────────────────────
   if (confirmedTxHash) {
     const basescanTx = `https://basescan.org/tx/${confirmedTxHash}`;
-    const truncHash = (h: string) => h.slice(0, 10) + "…" + h.slice(-6);
+    const truncTx   = (h: string) => h.slice(0, 6) + "..." + h.slice(-4);
+    const truncAddr = (a: string) => a.slice(0, 6) + "..." + a.slice(-4);
     const amtNum = parseAmt(confirmedAmount);
+    const walletAddr = user?.walletAddress ?? "";
 
     const handleDone = () => {
       onConfirmed?.();
@@ -398,87 +422,77 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
           className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden"
           style={{ boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39),0px 0px 0px 0px rgba(0,0,0,0.40)" }}
         >
-          {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Exchange Complete</p>
-          </div>
+          <div className="flex flex-col items-center gap-[24px] px-[39px] py-[39px]">
 
-          {/* Body */}
-          <div className="flex flex-col items-center gap-[20px] px-[24px] pt-[24px] pb-[24px]">
-            {/* Check icon */}
-            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center flex-shrink-0">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            {/* Receipt check icon */}
+            <div className="bg-[#123509] rounded-[150px] p-[24px] flex items-center justify-center shrink-0">
+              <img src={RECEIPT_CHECK_ICON} alt="" className="size-[48px]" />
             </div>
 
-            {/* Summary */}
-            <div className="flex flex-col items-center gap-[4px] text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
-                {fmt(amtNum)} {confirmedFromAsset?.ticker ?? ""} Exchanged!
+            {/* Title + subtitle */}
+            <div className="flex flex-col items-center w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px] text-center w-full">
+                Transfer Complete!
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
-                {confirmedFromAsset?.ticker ?? ""} → {confirmedToAsset?.ticker ?? ""} was successful.
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[22px] leading-[28px] text-center w-full">
+                Your transaction has successfully completed!
               </p>
             </div>
 
             {/* Details card */}
-            <div className="w-full flex flex-col bg-[#11141b] rounded-[16px] overflow-hidden">
-              {/* From asset */}
-              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">From</p>
-                <div className="flex items-center gap-[6px]">
-                  {confirmedFromAsset && <AssetIcon asset={confirmedFromAsset} size={18} />}
-                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[13px] leading-[20px]">
-                    {fmt(amtNum)} {confirmedFromAsset?.ticker ?? ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* To asset */}
-              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">To</p>
-                <div className="flex items-center gap-[6px]">
-                  {confirmedToAsset && <AssetIcon asset={confirmedToAsset} size={18} />}
-                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[13px] leading-[20px]">
-                    {confirmedToAsset?.name ?? ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* Transaction hash */}
-              <div className="flex items-center justify-between px-[16px] py-[12px]">
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Transaction</p>
+            <div className="bg-[#06070a] border border-[#1d2132] flex flex-col gap-[16px] items-start justify-center p-[16px] rounded-[16px] w-full">
+              {/* Transaction */}
+              <div className="flex items-center justify-between w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Transaction</p>
                 <a
                   href={basescanTx}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors"
+                  className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#7631EE] transition-colors"
                   data-testid="link-exchange-tx-hash"
                 >
-                  {truncHash(confirmedTxHash)}
+                  {truncTx(confirmedTxHash)}
                 </a>
+              </div>
+              <div className="h-px bg-[#1d2132] w-full" />
+              {/* Address */}
+              <div className="flex items-center justify-between w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Address</p>
+                <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                  {walletAddr ? truncAddr(walletAddr) : "—"}
+                </p>
+              </div>
+              <div className="h-px bg-[#1d2132] w-full" />
+              {/* Amount */}
+              <div className="flex items-center justify-between w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                <div className="flex gap-[4px] items-center">
+                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                    {fmt(amtNum)}
+                  </p>
+                  <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">
+                      {confirmedFromAsset?.ticker ?? ""}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-[12px] w-full">
+            <div className="flex gap-[16px] w-full">
               <a
                 href={basescanTx}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-[48px] bg-[#11141b] border border-[#1d2132] rounded-[100px] flex items-center justify-center gap-[6px] hover:opacity-80 transition-opacity"
+                className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] flex items-center justify-center [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                 data-testid="btn-view-exchange-basescan"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M6 2H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M9 1h4m0 0v4m0-4L6 8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] tracking-[-0.5px]">View</span>
+                View
               </a>
               <button
                 onClick={handleDone}
-                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[16px] tracking-[-0.64px] hover:opacity-80 transition-opacity"
+                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                 data-testid="btn-exchange-done"
               >
                 Done
@@ -521,17 +535,21 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   </svg>
                 </button>
               )}
-              <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
-                <div className="flex items-center gap-[8px]">
-                  {[1, 2, 3, 4].map((n) => (
-                    <div
-                      key={n}
-                      className="rounded-full shrink-0 transition-colors duration-300"
-                      style={{ width: 8, height: 8, background: n <= step ? "#7631EE" : "#240757" }}
-                    />
-                  ))}
+              {step === 4 ? (
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Review Details</p>
+              ) : (
+                <div className="flex items-center justify-center h-[24px] px-[12px] py-[8px] rounded-[100px]" style={{ background: "#12032D" }}>
+                  <div className="flex items-center gap-[8px]">
+                    {[1, 2, 3, 4].map((n) => (
+                      <div
+                        key={n}
+                        className="rounded-full shrink-0 transition-colors duration-300"
+                        style={{ width: 8, height: 8, background: n <= step ? "#7631EE" : "#240757" }}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <button
                 onClick={handleClose}
                 className="absolute right-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
@@ -673,83 +691,150 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 </div>
               )}
 
-              {/* STEP 4 — Review */}
+              {/* STEP 4 — Review Details */}
               {step === 4 && (
                 <div className="flex flex-col gap-[12px]">
-                  {/* From account (wallet/bank) */}
+
+                  {/* Exchanging From (no Edit) */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
-                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
+                    <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                       <AccountIcon accountType={accountType} />
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 truncate">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 truncate">
                         {accountLabel(accountType)}
                       </p>
                     </div>
                   </div>
 
-                  {/* From asset */}
+                  {/* Current Asset */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
-                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
+                    <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         {fromAsset && <AssetIcon asset={fromAsset} size={32} />}
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap truncate">
                           {fromAsset?.name} ({fromAsset?.ticker})
                         </p>
                       </div>
                       <button
-                        onClick={() => openSearch("from")}
-                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
+                        onClick={() => setStep(1)}
+                        className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-from"
                       >
-                        Edit
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
                       </button>
                     </div>
                   </div>
 
-                  {/* To asset */}
+                  {/* Target Asset */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
-                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
+                    <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         {toAsset && <AssetIcon asset={toAsset} size={32} />}
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap truncate">
                           {toAsset?.name} ({toAsset?.ticker})
                         </p>
                       </div>
                       <button
-                        onClick={() => openSearch("to")}
-                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
+                        onClick={() => setStep(3)}
+                        className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
                         data-testid="btn-edit-to"
                       >
-                        Edit
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
                       </button>
                     </div>
                   </div>
 
-                  {/* Amount */}
+                  {/* Exchange Amount card */}
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchange Amount</p>
-                    <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
-                      <div className="flex flex-1 gap-[8px] items-center min-w-0">
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">
-                          {fmt(amountNum)}
-                        </p>
-                        <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px]">
-                          <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">
-                            {fromAsset?.ticker}
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchange Amount</p>
+                    <div className="bg-[#06070a] border border-[#1d2132] flex flex-col gap-[16px] items-start justify-center p-[16px] rounded-[16px] w-full">
+
+                      {/* Conversion row: from → estimated to */}
+                      <div className="flex items-center gap-[8px] w-full">
+                        <div className="flex flex-1 gap-[4px] items-center min-w-0">
+                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                            {fmt(amountNum)}
                           </p>
+                          <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">
+                              {fromAsset?.ticker}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Swap arrows icon */}
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                          <path d="M3 2.5V13.5M3 13.5L1 11.5M3 13.5L5 11.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M13 13.5V2.5M13 2.5L11 4.5M13 2.5L15 4.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <div className="flex flex-1 gap-[4px] items-center justify-end min-w-0">
+                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                            {fmt(estimatedAmount, 4)}
+                          </p>
+                          <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">
+                              {toAsset?.ticker}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setStep(2)}
+                          className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity"
+                          data-testid="btn-edit-amount"
+                        >
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                        </button>
+                      </div>
+
+                      <div className="h-px bg-[#1d2132] w-full" />
+
+                      {/* Amount row */}
+                      <div className="flex items-center justify-between w-full">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                        <div className="flex gap-[4px] items-center">
+                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                            {fmt(amountNum)}
+                          </p>
+                          <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">
+                              {fromAsset?.ticker}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setStep(2)}
-                        className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
-                        data-testid="btn-edit-amount"
-                      >
-                        Edit
-                      </button>
+
+                      {/* Network Fee row */}
+                      <div className="flex items-center justify-between w-full">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
+                        <div className="flex gap-[4px] items-center">
+                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">0.50</p>
+                          <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">USD</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-[#1d2132] w-full" />
+
+                      {/* You Receive row */}
+                      <div className="flex items-center justify-between w-full">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">You Receive</p>
+                        <div className="flex gap-[4px] items-center">
+                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#42bf23] text-[20px] leading-[24px] whitespace-nowrap">
+                            {fmt(estimatedAmount, 4)}
+                          </p>
+                          <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">
+                              {toAsset?.ticker}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
+
                 </div>
               )}
 
@@ -790,7 +875,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
                     data-testid="btn-exchange-confirm"
                   >
-                    {confirming ? "Confirming…" : "Confirm"}
+                    {confirming ? "Confirming…" : "Confirm Exchange"}
                   </button>
                 </div>
               )}
