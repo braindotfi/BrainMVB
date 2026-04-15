@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 
-const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/da02ba0e-5dd9-4730-bde1-1b269856019f";
+const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/945a723f-4fdc-44b6-84dd-96e8c16d0f88";
 
 const MOCK_USD_PRICE: Record<string, number> = {
   btc: 60000, bitcoin: 60000,
@@ -405,10 +405,8 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   // ── Exchange success confirmation ──────────────────────────────────────────
   if (confirmedTxHash) {
     const basescanTx = `https://basescan.org/tx/${confirmedTxHash}`;
-    const truncTx   = (h: string) => h.slice(0, 6) + "..." + h.slice(-4);
-    const truncAddr = (a: string) => a.slice(0, 6) + "..." + a.slice(-4);
+    const truncTx = (h: string) => h.slice(0, 6) + "..." + h.slice(-4);
     const amtNum = parseAmt(confirmedAmount);
-    const walletAddr = user?.walletAddress ?? "";
 
     const handleDone = () => {
       onConfirmed?.();
@@ -432,7 +430,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
             {/* Title + subtitle */}
             <div className="flex flex-col items-center w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px] text-center w-full">
-                Transfer Complete!
+                Exchange Complete!
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[22px] leading-[28px] text-center w-full">
                 Your transaction has successfully completed!
@@ -453,14 +451,6 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 >
                   {truncTx(confirmedTxHash)}
                 </a>
-              </div>
-              <div className="h-px bg-[#1d2132] w-full" />
-              {/* Address */}
-              <div className="flex items-center justify-between w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Address</p>
-                <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
-                  {walletAddr ? truncAddr(walletAddr) : "—"}
-                </p>
               </div>
               <div className="h-px bg-[#1d2132] w-full" />
               {/* Amount */}
