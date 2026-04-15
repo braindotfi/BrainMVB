@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
+import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -287,6 +288,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   const [fromAsset, setFromAsset] = useState<Asset | null>(null);
   const [toAsset, setToAsset] = useState<Asset | null>(null);
   const [amount, setAmount] = useState("");
+  const [amountDisplay, setAmountDisplay] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [confirmedTxHash, setConfirmedTxHash] = useState<string | null>(null);
   const [confirmedFromAsset, setConfirmedFromAsset] = useState<Asset | null>(null);
@@ -309,6 +311,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
       setFromAsset(null);
       setToAsset(null);
       setAmount("");
+      setAmountDisplay("");
       setSearchOpen(false);
       setConfirming(false);
       setConfirmedTxHash(null);
@@ -337,8 +340,8 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
 
   const currentSelected = searchTarget === "from" ? fromAsset : toAsset;
 
-  const fromBalanceNum = fromAsset ? parseFloat(fromAsset.balance.split(" ")[0].replace(/,/g, "")) : 0;
-  const amountNum = parseFloat(amount || "0");
+  const fromBalanceNum = fromAsset ? parseAmt(fromAsset.balance.split(" ")[0]) : 0;
+  const amountNum = parseAmt(amount);
   const amountExceedsBalance = fromAsset !== null && amountNum > 0 && amountNum > fromBalanceNum;
 
   const canContinue = (() => {
@@ -358,13 +361,13 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
       const now = new Date();
       const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
       const dateStr = `${now.getDate()} ${now.toLocaleString("en-US", { weekday: "short" })}`;
-      const amtNum = parseFloat(snapAmt || "0");
+      const amtNum = parseAmt(snapAmt);
       addTransaction({
         type: "exchange",
-        label: `Exchanged ${amtNum} ${snapFrom?.ticker ?? ""} → ${snapTo?.ticker ?? ""}`,
+        label: `Exchanged ${fmt(amtNum)} ${snapFrom?.ticker ?? ""} → ${snapTo?.ticker ?? ""}`,
         time: timeStr,
         date: dateStr,
-        amount: `-${amtNum} ${snapFrom?.ticker ?? ""}`,
+        amount: `-${fmt(amtNum)} ${snapFrom?.ticker ?? ""}`,
         positive: false,
         txHash: newTxHash,
         accountId: null,
@@ -381,7 +384,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   if (confirmedTxHash) {
     const basescanTx = `https://basescan.org/tx/${confirmedTxHash}`;
     const truncHash = (h: string) => h.slice(0, 10) + "…" + h.slice(-6);
-    const amtNum = parseFloat(confirmedAmount || "0");
+    const amtNum = parseAmt(confirmedAmount);
 
     const handleDone = () => {
       onConfirmed?.();
@@ -412,7 +415,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
             {/* Summary */}
             <div className="flex flex-col items-center gap-[4px] text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
-                {amtNum} {confirmedFromAsset?.ticker ?? ""} Exchanged!
+                {fmt(amtNum)} {confirmedFromAsset?.ticker ?? ""} Exchanged!
               </p>
               <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
                 {confirmedFromAsset?.ticker ?? ""} → {confirmedToAsset?.ticker ?? ""} was successful.
@@ -427,7 +430,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 <div className="flex items-center gap-[6px]">
                   {confirmedFromAsset && <AssetIcon asset={confirmedFromAsset} size={18} />}
                   <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[13px] leading-[20px]">
-                    {amtNum} {confirmedFromAsset?.ticker ?? ""}
+                    {fmt(amtNum)} {confirmedFromAsset?.ticker ?? ""}
                   </p>
                 </div>
               </div>
@@ -581,9 +584,16 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   <div className="flex flex-col gap-[8px]">
                     <div className="flex items-center gap-[2px] bg-[#222737] border border-[#6c779d] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <input
-                        type="number"
-                        value={amount}
-                        onChange={e => setAmount(e.target.value)}
+                        type="text"
+                        inputMode="decimal"
+                        value={amountDisplay}
+                        onChange={e => {
+                          const raw = sanitiseNumInput(e.target.value);
+                          setAmount(raw);
+                          setAmountDisplay(e.target.value.replace(/[^0-9.,]/g, ""));
+                        }}
+                        onBlur={() => setAmountDisplay(fmtInputBlur(amount))}
+                        onFocus={() => setAmountDisplay(stripCommas(amountDisplay))}
                         placeholder="0.00"
                         className="flex-1 bg-transparent outline-none text-white text-[20px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold placeholder:text-[#414965] min-w-0"
                         data-testid="input-exchange-amount"
@@ -597,12 +607,12 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     </div>
                     {fromAsset && (
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px]">
-                        Available: {fromAsset.balance}
+                        Available: {fmt(fromBalanceNum)} {fromAsset.ticker}
                       </p>
                     )}
                     {amountExceedsBalance && (
                       <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-red-400 text-[12px]">
-                        Amount exceeds your available balance of {fromAsset?.balance}
+                        Amount exceeds your available balance of {fmt(fromBalanceNum)} {fromAsset?.ticker}
                       </p>
                     )}
                   </div>
@@ -723,7 +733,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px]">
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
                         <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">
-                          {parseFloat(amount || "0").toLocaleString()}
+                          {fmt(amountNum)}
                         </p>
                         <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px]">
                           <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">

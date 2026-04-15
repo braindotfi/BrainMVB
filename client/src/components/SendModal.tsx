@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
+import { fmt, fmtUsd, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
@@ -411,6 +412,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
   const [confirmedTxHash, setConfirmedTxHash] = useState<string | null>(null);
+  const [amountDisplay, setAmountDisplay] = useState("");
 
   if (!open) return null;
 
@@ -425,10 +427,10 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
     : CRYPTO_ASSETS.map((a) => a.id === "usdc" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a);
 
   const selectedAsset = availableAssets.find((a) => a.id === state.selectedAssetId) ?? null;
-  const availableBalance = selectedAsset ? parseFloat(selectedAsset.balance.replace(/,/g, "")) : 0;
-  const enteredAmount    = parseFloat(state.amount || "0");
+  const availableBalance = selectedAsset ? parseAmt(selectedAsset.balance) : 0;
+  const enteredAmount    = parseAmt(state.amount);
   const amountError = state.amount && enteredAmount > 0 && enteredAmount > availableBalance
-    ? `Exceeds available balance of ${selectedAsset?.balance} ${selectedAsset?.ticker}`
+    ? `Exceeds available balance of ${fmt(availableBalance)} ${selectedAsset?.ticker}`
     : null;
 
   const handleClose = () => {
@@ -441,6 +443,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
       setSent(false);
       setSending(false);
       setConfirmedTxHash(null);
+      setAmountDisplay("");
     }, 300);
   };
 
@@ -504,7 +507,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
     return "";
   };
 
-  const total = (enteredAmount + parseFloat(FEE)).toFixed(2);
+  const total = fmt(enteredAmount + parseFloat(FEE), 2);
 
   // ── Success ────────────────────────────────────────────────────────────────
   if (sent) {
@@ -572,7 +575,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -607,7 +610,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -643,7 +646,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -888,11 +891,16 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <InputBox highlighted>
                   <div className="flex flex-1 items-center gap-[2px] min-w-0">
                     <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={state.amount}
-                      onChange={(e) => set({ amount: e.target.value })}
+                      type="text"
+                      inputMode="decimal"
+                      value={amountDisplay}
+                      onChange={(e) => {
+                        const raw = sanitiseNumInput(e.target.value);
+                        set({ amount: raw });
+                        setAmountDisplay(e.target.value.replace(/[^0-9.,]/g, ""));
+                      }}
+                      onBlur={() => setAmountDisplay(fmtInputBlur(state.amount))}
+                      onFocus={() => setAmountDisplay(stripCommas(amountDisplay))}
                       placeholder="0.00"
                       autoFocus
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
@@ -910,7 +918,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">
                   Available:{" "}
                   <span className="text-[#6c779d]">
-                    {selectedAsset ? `${selectedAsset.balance} ${selectedAsset.ticker}` : "—"}
+                    {selectedAsset ? `${fmt(parseAmt(selectedAsset.balance))} ${selectedAsset.ticker}` : "—"}
                   </span>
                 </p>
 
@@ -1027,7 +1035,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
                       <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
-                        {state.amount || "0"}
+                        {fmt(enteredAmount)}
                       </p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
@@ -1039,12 +1047,12 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">${FEE}</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">{fmtUsd(parseFloat(FEE))}</p>
                   </div>
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Total</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">${total}</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmtUsd(enteredAmount + parseFloat(FEE))}</p>
                   </div>
                 </div>
               </div>
