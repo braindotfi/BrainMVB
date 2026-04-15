@@ -4,6 +4,8 @@ import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
+const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/33cddef8-4407-4120-9640-19fd26cfca42";
+
 const BACK_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
 const BACK_VEC = "https://www.figma.com/api/mcp/asset/4356db82-74dc-481d-9b7b-397796b1864b";
 
@@ -496,15 +498,16 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   // ── Success ────────────────────────────────────────────────────────────────
   if (sent) {
     const txHash = confirmedTxHash ?? "";
-    const basescanTx   = `https://basescan.org/tx/${txHash}`;
+    const basescanTx = `https://basescan.org/tx/${txHash}`;
+    const truncTx   = (h: string) => h.slice(0, 8) + "..." + h.slice(-4);
+    const truncIban = (i: string) => i.slice(0, 6) + "..." + i.slice(-6);
+    const truncAddr6 = (a: string) => a.slice(0, 6) + "..." + a.slice(-4);
     const recipientAddr = state.recipientType === "wallet"
       ? state.walletAddress
       : state.recipientType === "agent"
       ? selectedAgent?.address ?? ""
       : null;
     const basescanAddr = recipientAddr ? `https://basescan.org/address/${recipientAddr}` : null;
-    const truncAddr6 = (addr: string) => addr.slice(0, 6) + "…" + addr.slice(-4);
-    const truncHash = (h: string) => h.slice(0, 10) + "…" + h.slice(-6);
 
     const handleDone = () => {
       onConfirmed?.(sourceAccountType);
@@ -518,92 +521,147 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
           className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden"
           style={{ boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39),0px 0px 0px 0px rgba(0,0,0,0.40)" }}
         >
-          {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Transfer Complete</p>
-          </div>
+          <div className="flex flex-col gap-[24px] items-center px-[39px] py-[39px]">
 
-          {/* Body */}
-          <div className="flex flex-col items-center gap-[20px] px-[24px] pt-[24px] pb-[24px]">
-            {/* Check icon */}
-            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center flex-shrink-0">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            {/* Receipt icon */}
+            <div className="bg-[#123509] flex items-center justify-center p-[24px] rounded-full shrink-0">
+              <div className="relative size-[48px]">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={RECEIPT_CHECK_ICON} />
+              </div>
             </div>
 
-            {/* Amount */}
-            <div className="flex flex-col items-center gap-[4px] text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
-                {state.amount ? `${state.amount} ${selectedAsset?.ticker ?? ""} Sent!` : "Sent!"}
+            {/* Title + subtitle */}
+            <div className="flex flex-col items-start w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px] text-center w-full">
+                Send Complete!
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
-                Transfer to {recipientLabel()} was successful.
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[22px] leading-[28px] text-center w-full">
+                Your transaction has successfully completed!
               </p>
             </div>
 
             {/* Details card */}
-            <div className="w-full flex flex-col gap-[0px] bg-[#11141b] rounded-[16px] overflow-hidden">
-              {/* Tx hash row */}
-              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Transaction</p>
-                <a
-                  href={basescanTx}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors truncate max-w-[160px]"
-                  data-testid="link-tx-hash"
-                >
-                  {truncHash(txHash)}
-                </a>
-              </div>
+            <div className="bg-[#06070a] border border-[#1d2132] flex flex-col gap-[16px] items-start justify-center p-[16px] rounded-[16px] w-full">
 
-              {/* Recipient address row (wallet or agent only) */}
-              {basescanAddr && recipientAddr && (
-                <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
-                  <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Address</p>
-                  <a
-                    href={basescanAddr}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors"
-                    data-testid="link-recipient-address"
-                  >
-                    {truncAddr6(recipientAddr)}
-                  </a>
-                </div>
+              {/* ── Bank variant ── */}
+              {state.recipientType === "bank" && (
+                <>
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Recipient</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">{state.recipientName || "—"}</p>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">IBAN</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                      {state.iban ? truncIban(state.iban) : "—"}
+                    </p>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                    <div className="flex gap-[4px] items-center">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      {selectedAsset && (
+                        <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Amount row */}
-              <div className="flex items-center justify-between px-[16px] py-[12px]">
-                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Amount</p>
-                <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[14px] leading-[20px]">
-                  {state.amount} {selectedAsset?.ticker ?? ""}
-                </p>
-              </div>
+              {/* ── Wallet variant ── */}
+              {state.recipientType === "wallet" && (
+                <>
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Transaction ID</p>
+                    <a href={basescanTx} target="_blank" rel="noopener noreferrer"
+                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      data-testid="link-tx-hash">
+                      {truncTx(txHash)}
+                    </a>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Recipient</p>
+                    <a href={basescanAddr!} target="_blank" rel="noopener noreferrer"
+                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      data-testid="link-recipient-address">
+                      {truncAddr6(state.walletAddress)}
+                    </a>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                    <div className="flex gap-[4px] items-center">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      {selectedAsset && (
+                        <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ── Agent variant ── */}
+              {state.recipientType === "agent" && (
+                <>
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Transaction ID</p>
+                    <a href={basescanTx} target="_blank" rel="noopener noreferrer"
+                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      data-testid="link-tx-hash-agent">
+                      {truncTx(txHash)}
+                    </a>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Recipient</p>
+                    <div className="flex gap-[8px] items-center">
+                      <RecipientIcon type="agent" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                        {selectedAgent?.name ?? "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                    <div className="flex gap-[4px] items-center">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{state.amount || "0"}</p>
+                      {selectedAsset && (
+                        <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-[12px] w-full">
+            <div className="flex gap-[16px] items-center w-full">
               <a
                 href={basescanTx}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-[48px] bg-[#11141b] border border-[#1d2132] rounded-[100px] flex items-center justify-center gap-[6px] hover:opacity-80 transition-opacity"
+                className="bg-[#11141b] flex-1 h-[48px] flex items-center justify-center rounded-[100px] hover:opacity-80 transition-opacity"
                 data-testid="btn-view-basescan"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M6 2H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M9 1h4m0 0v4m0-4L6 8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] tracking-[-0.5px]">View</span>
+                <p className="[font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] tracking-[-0.72px]">View</p>
               </a>
               <button
                 onClick={handleDone}
-                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[16px] tracking-[-0.64px] hover:opacity-80 transition-opacity"
+                className="bg-[#4a2300] flex-1 h-[48px] flex items-center justify-center rounded-[100px] hover:opacity-80 transition-opacity"
                 data-testid="btn-send-done"
               >
-                Done
+                <p className="[font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] leading-[24px] tracking-[-0.72px]">Done</p>
               </button>
             </div>
           </div>
@@ -853,38 +911,132 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             </>
           )}
 
-          {/* ── STEP 5: Review ───────────────────────────────────────────── */}
+          {/* ── STEP 5: Review Details ───────────────────────────────────── */}
           {state.step === 5 && (
-            <>
-              <FieldRow label="Sending From">
-                <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
-                  <RecipientIcon type={sourceAccountType === "bank" ? "bank" : "wallet"} />
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate flex-1">
-                    {sourceAccountType === "bank"
-                      ? bankAcc?.nameOnAccount ?? "Bank Account"
-                      : walletAcc?.address ? truncAddr(walletAcc.address) : "Your Wallet"}
-                  </p>
-                </div>
-              </FieldRow>
+            <div className="flex flex-col gap-[12px]">
 
-              <FieldRow label="Sending To">
-                <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full">
-                  <RecipientIcon type={state.recipientType!} />
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] truncate flex-1">
-                    {recipientLabel()}
-                  </p>
+              {/* Sending From */}
+              <div className="flex flex-col gap-[4px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Sending From</p>
+                <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                  <div className="flex flex-1 gap-[8px] items-center min-w-0">
+                    <RecipientIcon type={sourceAccountType === "bank" ? "bank" : "wallet"} />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                      {sourceAccountType === "bank" ? "Bank Account" : "Wallet Account"}
+                    </p>
+                  </div>
+                  <button onClick={() => set({ step: 1 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                  </button>
                 </div>
-              </FieldRow>
-
-              <div className="flex flex-col gap-[12px] bg-[#06070a] border border-[#1d2132] rounded-[16px] px-[16px] py-[16px]">
-                <ReviewRow label="Asset" value={selectedAsset ? `${selectedAsset.name} (${selectedAsset.ticker})` : "—"} />
-                <div className="h-px bg-[#1d2132]" />
-                <ReviewRow label="Amount" value={`${state.amount} ${selectedAsset?.ticker ?? ""}`} />
-                <ReviewRow label="Network Fee" value={`$${FEE}`} />
-                <div className="h-px bg-[#1d2132]" />
-                <ReviewRow label="Total" value={`$${total}`} highlight />
               </div>
-            </>
+
+              {/* Bank: Recipient Name */}
+              {state.recipientType === "bank" && (
+                <div className="flex flex-col gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Recipient Name</p>
+                  <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap">{state.recipientName || "—"}</p>
+                    <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Bank: IBAN */}
+              {state.recipientType === "bank" && (
+                <div className="flex flex-col gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">IBAN Bank Number</p>
+                  <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap">
+                      {state.iban ? state.iban.slice(0, 6) + "..." + state.iban.slice(-6) : "—"}
+                    </p>
+                    <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet: Send Recipient */}
+              {state.recipientType === "wallet" && (
+                <div className="flex flex-col gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Send Recipient</p>
+                  <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap truncate">
+                      {state.walletAddress ? truncAddr(state.walletAddress) : "—"}
+                    </p>
+                    <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Agent: Send Recipient */}
+              {state.recipientType === "agent" && (
+                <div className="flex flex-col gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Send Recipient</p>
+                  <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                    <div className="flex flex-1 gap-[8px] items-center min-w-0">
+                      <RecipientIcon type="agent" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                        {selectedAgent?.name ?? "—"}
+                      </p>
+                    </div>
+                    <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Send Details */}
+              <div className="flex flex-col gap-[4px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Send Details</p>
+                <div className="bg-[#06070a] border border-[#1d2132] flex flex-col gap-[16px] items-start justify-center p-[16px] rounded-[16px] w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Asset</p>
+                    <div className="flex gap-[4px] items-center">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                        {selectedAsset?.name ?? "—"}
+                      </p>
+                      {selectedAsset && (
+                        <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
+                    <div className="flex gap-[4px] items-center">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                        {state.amount || "0"}
+                      </p>
+                      {selectedAsset && (
+                        <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">${FEE}</p>
+                  </div>
+                  <div className="h-px bg-[#1d2132] w-full" />
+                  <div className="flex items-center justify-between w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Total</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">${total}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           )}
         </div>
 
