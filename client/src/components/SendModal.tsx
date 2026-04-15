@@ -403,6 +403,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
+  const [confirmedTxHash, setConfirmedTxHash] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -432,6 +433,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
       setAgentPopupOpen(false);
       setSent(false);
       setSending(false);
+      setConfirmedTxHash(null);
     }, 300);
   };
 
@@ -448,9 +450,11 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
   const handleConfirm = () => {
     setSending(true);
+    const newTxHash = generateTxHash();
     setTimeout(() => {
       setSending(false);
       setSent(true);
+      setConfirmedTxHash(newTxHash);
       const now = new Date();
       addTransaction({
         type: "withdrawal",
@@ -459,10 +463,9 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
         date: now.toLocaleDateString("en-US", { day: "numeric", month: "short" }),
         amount: `-${state.amount} ${selectedAsset?.ticker ?? ""}`,
         positive: false,
-        txHash: generateTxHash(),
+        txHash: newTxHash,
         accountId: sourceAccountType === "bank" ? "bank" : null,
       });
-      onConfirmed?.(sourceAccountType);
     }, 1800);
   };
 
@@ -492,20 +495,45 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
   // ── Success ────────────────────────────────────────────────────────────────
   if (sent) {
+    const txHash = confirmedTxHash ?? "";
+    const basescanTx   = `https://basescan.org/tx/${txHash}`;
+    const recipientAddr = state.recipientType === "wallet"
+      ? state.walletAddress
+      : state.recipientType === "agent"
+      ? selectedAgent?.address ?? ""
+      : null;
+    const basescanAddr = recipientAddr ? `https://basescan.org/address/${recipientAddr}` : null;
+    const truncAddr6 = (addr: string) => addr.slice(0, 6) + "…" + addr.slice(-4);
+    const truncHash = (h: string) => h.slice(0, 10) + "…" + h.slice(-6);
+
+    const handleDone = () => {
+      onConfirmed?.(sourceAccountType);
+      handleClose();
+    };
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleDone} />
+        <div
+          className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden"
+          style={{ boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39),0px 0px 0px 0px rgba(0,0,0,0.40)" }}
+        >
+          {/* Header */}
           <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Transfer Complete</p>
           </div>
-          <div className="flex flex-col items-center gap-[24px] px-[39px] pt-[24px] pb-[32px] text-center">
-            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center">
+
+          {/* Body */}
+          <div className="flex flex-col items-center gap-[20px] px-[24px] pt-[24px] pb-[24px]">
+            {/* Check icon */}
+            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center flex-shrink-0">
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                 <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <div className="flex flex-col gap-[4px]">
+
+            {/* Amount */}
+            <div className="flex flex-col items-center gap-[4px] text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
                 {state.amount ? `${state.amount} ${selectedAsset?.ticker ?? ""} Sent!` : "Sent!"}
               </p>
@@ -513,12 +541,71 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 Transfer to {recipientLabel()} was successful.
               </p>
             </div>
-            <button
-              onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
-            >
-              Done
-            </button>
+
+            {/* Details card */}
+            <div className="w-full flex flex-col gap-[0px] bg-[#11141b] rounded-[16px] overflow-hidden">
+              {/* Tx hash row */}
+              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Transaction</p>
+                <a
+                  href={basescanTx}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors truncate max-w-[160px]"
+                  data-testid="link-tx-hash"
+                >
+                  {truncHash(txHash)}
+                </a>
+              </div>
+
+              {/* Recipient address row (wallet or agent only) */}
+              {basescanAddr && recipientAddr && (
+                <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Address</p>
+                  <a
+                    href={basescanAddr}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors"
+                    data-testid="link-recipient-address"
+                  >
+                    {truncAddr6(recipientAddr)}
+                  </a>
+                </div>
+              )}
+
+              {/* Amount row */}
+              <div className="flex items-center justify-between px-[16px] py-[12px]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Amount</p>
+                <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[14px] leading-[20px]">
+                  {state.amount} {selectedAsset?.ticker ?? ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-[12px] w-full">
+              <a
+                href={basescanTx}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 h-[48px] bg-[#11141b] border border-[#1d2132] rounded-[100px] flex items-center justify-center gap-[6px] hover:opacity-80 transition-opacity"
+                data-testid="btn-view-basescan"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M6 2H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 1h4m0 0v4m0-4L6 8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] tracking-[-0.5px]">View</span>
+              </a>
+              <button
+                onClick={handleDone}
+                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[16px] tracking-[-0.64px] hover:opacity-80 transition-opacity"
+                data-testid="btn-send-done"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       </div>

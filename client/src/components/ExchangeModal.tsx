@@ -288,6 +288,10 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   const [toAsset, setToAsset] = useState<Asset | null>(null);
   const [amount, setAmount] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [confirmedTxHash, setConfirmedTxHash] = useState<string | null>(null);
+  const [confirmedFromAsset, setConfirmedFromAsset] = useState<Asset | null>(null);
+  const [confirmedToAsset, setConfirmedToAsset] = useState<Asset | null>(null);
+  const [confirmedAmount, setConfirmedAmount] = useState("");
   const { wirexAccounts } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
   const { addTransaction } = useTransactions();
@@ -307,6 +311,10 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
       setAmount("");
       setSearchOpen(false);
       setConfirming(false);
+      setConfirmedTxHash(null);
+      setConfirmedFromAsset(null);
+      setConfirmedToAsset(null);
+      setConfirmedAmount("");
     }, 300);
   };
 
@@ -345,6 +353,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
     const snapFrom  = fromAsset;
     const snapTo    = toAsset;
     const snapAmt   = amount;
+    const newTxHash = generateTxHash();
     setTimeout(() => {
       const now = new Date();
       const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
@@ -357,23 +366,126 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
         date: dateStr,
         amount: `-${amtNum} ${snapFrom?.ticker ?? ""}`,
         positive: false,
-        txHash: generateTxHash(),
+        txHash: newTxHash,
         accountId: null,
       });
-      // Auto-close and signal parent to show the Exchanges tab
-      onClose();
-      onConfirmed?.();
-      // Reset internal state after close animation
-      setTimeout(() => {
-        setStep(1);
-        setFromAsset(null);
-        setToAsset(null);
-        setAmount("");
-        setSearchOpen(false);
-        setConfirming(false);
-      }, 300);
+      setConfirming(false);
+      setConfirmedTxHash(newTxHash);
+      setConfirmedFromAsset(snapFrom);
+      setConfirmedToAsset(snapTo);
+      setConfirmedAmount(snapAmt);
     }, 1200);
   };
+
+  // ── Exchange success confirmation ──────────────────────────────────────────
+  if (confirmedTxHash) {
+    const basescanTx = `https://basescan.org/tx/${confirmedTxHash}`;
+    const truncHash = (h: string) => h.slice(0, 10) + "…" + h.slice(-6);
+    const amtNum = parseFloat(confirmedAmount || "0");
+
+    const handleDone = () => {
+      onConfirmed?.();
+      handleClose();
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleDone} />
+        <div
+          className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden"
+          style={{ boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2),0px 17px 17px 0px rgba(0,0,0,0.34),0px 4px 9px 0px rgba(0,0,0,0.39),0px 0px 0px 0px rgba(0,0,0,0.40)" }}
+        >
+          {/* Header */}
+          <div className="bg-[#0a0c10] h-[56px] flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">Exchange Complete</p>
+          </div>
+
+          {/* Body */}
+          <div className="flex flex-col items-center gap-[20px] px-[24px] pt-[24px] pb-[24px]">
+            {/* Check icon */}
+            <div className="w-[72px] h-[72px] rounded-full bg-[#0c2a09] flex items-center justify-center flex-shrink-0">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M6 16L13 23L26 9" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* Summary */}
+            <div className="flex flex-col items-center gap-[4px] text-center">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[28px] leading-[36px]">
+                {amtNum} {confirmedFromAsset?.ticker ?? ""} Exchanged!
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px]">
+                {confirmedFromAsset?.ticker ?? ""} → {confirmedToAsset?.ticker ?? ""} was successful.
+              </p>
+            </div>
+
+            {/* Details card */}
+            <div className="w-full flex flex-col bg-[#11141b] rounded-[16px] overflow-hidden">
+              {/* From asset */}
+              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">From</p>
+                <div className="flex items-center gap-[6px]">
+                  {confirmedFromAsset && <AssetIcon asset={confirmedFromAsset} size={18} />}
+                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[13px] leading-[20px]">
+                    {amtNum} {confirmedFromAsset?.ticker ?? ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* To asset */}
+              <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">To</p>
+                <div className="flex items-center gap-[6px]">
+                  {confirmedToAsset && <AssetIcon asset={confirmedToAsset} size={18} />}
+                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[13px] leading-[20px]">
+                    {confirmedToAsset?.name ?? ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Transaction hash */}
+              <div className="flex items-center justify-between px-[16px] py-[12px]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px] leading-[20px]">Transaction</p>
+                <a
+                  href={basescanTx}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="[font-family:'JetBrains_Mono',sans-serif] text-[#7631EE] text-[13px] leading-[20px] hover:text-[#9b6cf3] transition-colors"
+                  data-testid="link-exchange-tx-hash"
+                >
+                  {truncHash(confirmedTxHash)}
+                </a>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-[12px] w-full">
+              <a
+                href={basescanTx}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 h-[48px] bg-[#11141b] border border-[#1d2132] rounded-[100px] flex items-center justify-center gap-[6px] hover:opacity-80 transition-opacity"
+                data-testid="btn-view-exchange-basescan"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M6 2H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 1h4m0 0v4m0-4L6 8" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] tracking-[-0.5px]">View</span>
+              </a>
+              <button
+                onClick={handleDone}
+                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[16px] tracking-[-0.64px] hover:opacity-80 transition-opacity"
+                data-testid="btn-exchange-done"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
