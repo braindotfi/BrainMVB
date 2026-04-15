@@ -57,7 +57,7 @@ const AssetSearchPopup = ({ selected, onToggle, onClose }: {
   return (
     <div className="absolute inset-0 bg-[#11141b] rounded-[24px] z-50 flex flex-col overflow-hidden">
       <div className="flex-shrink-0 h-[56px] relative flex items-center justify-center border-b border-[#1d2132]">
-        <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[24px]">Select Asset</p>
+        <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[24px]">Select Asset</p>
         <button
           type="button"
           onClick={onClose}
@@ -74,7 +74,7 @@ const AssetSearchPopup = ({ selected, onToggle, onClose }: {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search assets..."
-            className="flex-1 bg-transparent text-[#a8b9f4] text-[14px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none"
+            className="flex-1 bg-transparent text-[#a8b9f4] text-[14px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none"
           />
           {query && (
             <button type="button" onClick={() => setQuery("")} className="flex items-center">
@@ -82,7 +82,7 @@ const AssetSearchPopup = ({ selected, onToggle, onClose }: {
             </button>
           )}
         </div>
-        <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px] leading-[24px] px-[8px] flex-shrink-0">
+        <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px] leading-[24px] px-[8px] flex-shrink-0">
           Search Results Assets
         </p>
         <div className="overflow-y-auto flex-1 flex flex-col pb-[8px]">
@@ -96,12 +96,12 @@ const AssetSearchPopup = ({ selected, onToggle, onClose }: {
                 className="flex items-center gap-[8px] w-full h-[48px] px-[8px] hover:bg-[#1d2132] rounded-[8px] transition-colors flex-shrink-0"
               >
                 <div
-                  className="size-[32px] rounded-full flex items-center justify-center shrink-0 text-white font-['Plus Jakarta Sans',sans-serif] text-[10px] leading-none"
+                  className="size-[32px] rounded-full flex items-center justify-center shrink-0 text-white [font-family:'Gilroy',sans-serif] text-[10px] leading-none"
                   style={{ background: asset.color }}
                 >
                   {asset.ticker.slice(0, 3)}
                 </div>
-                <p className="flex-1 text-left font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[14px] leading-[32px] min-w-0 truncate">
+                <p className="flex-1 text-left [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[32px] min-w-0 truncate">
                   {asset.name} ({asset.ticker})
                 </p>
                 <div className={`size-[20px] rounded-full flex items-center justify-center shrink-0 transition-colors ${isSel ? "bg-[#42bf23]" : "border border-[#222737] bg-[#06070a]"}`}>
@@ -115,7 +115,7 @@ const AssetSearchPopup = ({ selected, onToggle, onClose }: {
             );
           })}
           {filtered.length === 0 && (
-            <p className="text-center font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] py-[24px]">No assets found</p>
+            <p className="text-center [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] py-[24px]">No assets found</p>
           )}
         </div>
       </div>
@@ -159,14 +159,14 @@ const RadioCard = ({
     className="bg-[#0a0c10] p-[16px] rounded-[16px] flex flex-col gap-[4px] cursor-pointer"
   >
     <div className="flex items-start justify-between">
-      <p className={`font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] whitespace-nowrap ${small ? "text-[14px]" : "text-[16px]"} leading-[20px]`}>
+      <p className={`[font-family:'Gilroy',sans-serif] text-[#6c779d] whitespace-nowrap ${small ? "text-[14px]" : "text-[16px]"} leading-[20px]`}>
         {label}
       </p>
       <div className={`relative overflow-hidden size-[20px] rounded-full border flex-shrink-0 ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
         {checked && <div className="absolute inset-[20%] rounded-full bg-[#7631ee]" />}
       </div>
     </div>
-    {desc && <p className="font-['Plus Jakarta Sans',sans-serif] text-[#414965] text-[12px] leading-[12px]">{desc}</p>}
+    {desc && <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[12px] leading-[12px]">{desc}</p>}
   </div>
 );
 
@@ -174,23 +174,23 @@ const PolicyInfoCard = ({
   label, value, valueColor = "#a8b9f4", valueNode
 }: { label: string; value: string; valueColor?: string; valueNode?: React.ReactNode }) => (
   <div className="bg-[#0a0c10] flex flex-col min-h-[62px] items-start p-[12px] rounded-[16px]">
-    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px] leading-[14px]">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px] leading-[14px]">{label}</p>
     {valueNode
       ? <div className="mt-auto">{valueNode}</div>
-      : <p className="font-['Plus Jakarta Sans',sans-serif] text-[14px] leading-[20px] mt-auto" style={{ color: valueColor }}>{value}</p>
+      : <p className="[font-family:'Gilroy',sans-serif] text-[14px] leading-[20px] mt-auto" style={{ color: valueColor }}>{value}</p>
     }
   </div>
 );
 
 const SectionDivider = ({ title }: { title: string }) => (
   <div className="flex gap-[8px] items-center w-full">
-    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap">{title}</p>
+    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap">{title}</p>
     <div className="flex-1 h-px bg-[#1d2132]" />
   </div>
 );
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
+  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
 );
 
 const ACheckbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
@@ -218,7 +218,7 @@ const ADropdown = ({ label, value, onChange, options }: {
         onClick={() => setOpen(o => !o)}
         className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left"
       >
-        <span className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] truncate min-w-0">
+        <span className="flex-1 [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] truncate min-w-0">
           {currentLabel}
         </span>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 pointer-events-none">
@@ -232,7 +232,7 @@ const ADropdown = ({ label, value, onChange, options }: {
               key={opt.value}
               type="button"
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full text-left p-[8px] rounded-[8px] font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] transition-colors ${opt.value === value ? "text-white bg-[#1d2132]" : "text-[#a8b9f4] hover:bg-[#1d2132]"}`}
+              className={`w-full text-left p-[8px] rounded-[8px] [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] transition-colors ${opt.value === value ? "text-white bg-[#1d2132]" : "text-[#a8b9f4] hover:bg-[#1d2132]"}`}
             >
               {opt.label}
             </button>
@@ -257,7 +257,7 @@ const TextInput = ({
     onChange={(e) => onChange(e.target.value)}
     type={type}
     placeholder={placeholder}
-    className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none w-full"
+    className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none w-full"
   />
 );
 
@@ -269,7 +269,7 @@ const LargeInput = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="bg-transparent text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none w-full"
+      className="bg-transparent text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none w-full"
     />
   </div>
 );
@@ -284,7 +284,7 @@ const ChipGroup = ({
         <button
           key={opt}
           onClick={() => onToggle(opt)}
-          className={`px-[12px] py-[6px] rounded-[8px] text-[12px] font-['Plus Jakarta Sans',sans-serif] border transition-all ${sel ? "border-[#7631ee] bg-[#240757] text-[#a8b9f4]" : "border-[#222737] bg-[#0a0c10] text-[#6c779d] hover:border-[#414965]"}`}
+          className={`px-[12px] py-[6px] rounded-[8px] text-[12px] [font-family:'Gilroy',sans-serif] border transition-all ${sel ? "border-[#7631ee] bg-[#240757] text-[#a8b9f4]" : "border-[#222737] bg-[#0a0c10] text-[#6c779d] hover:border-[#414965]"}`}
         >
           {opt}
         </button>
@@ -295,7 +295,7 @@ const ChipGroup = ({
 
 const TypeBadge = ({ type }: { type: string }) => (
   <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-[22px]">
-    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px] text-center capitalize whitespace-nowrap">{type}</p>
+    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px] text-center capitalize whitespace-nowrap">{type}</p>
   </div>
 );
 
@@ -307,10 +307,10 @@ const ConfigSlider = ({
   return (
     <div className="w-full flex flex-col gap-0">
       <div className="relative h-[12px] w-full mb-[8px]">
-        <span className="absolute left-0 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{min}{unit}</span>
-        <span className="absolute right-0 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{max}{unit}</span>
+        <span className="absolute left-0 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{min}{unit}</span>
+        <span className="absolute right-0 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[12px]">{max}{unit}</span>
         <span
-          className="absolute -translate-x-1/2 font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[11px] leading-[12px]"
+          className="absolute -translate-x-1/2 [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[11px] leading-[12px]"
           style={{ left: `${pct}%` }}
         >{n}{unit}</span>
       </div>
@@ -336,7 +336,7 @@ const SmallDropdown = ({
   label, value, options, open, onOpen, onChange
 }: { label: string; value: string; options: { label: string; value: string }[]; open: boolean; onOpen: () => void; onChange: (v: string) => void }) => (
   <div className="flex flex-col gap-[4px]">
-    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">{label}</p>
     <div className="relative">
       <button
         type="button"
@@ -344,7 +344,7 @@ const SmallDropdown = ({
         data-testid={`dropdown-${label.toLowerCase().replace(/\s+/g, "-")}`}
         className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px] cursor-pointer"
       >
-        <span className="flex-1 text-left font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px]">
+        <span className="flex-1 text-left [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px]">
           {options.find(o => o.value === value)?.label ?? value}
         </span>
         <ChevronDown size={24} className="text-[#6c779d] shrink-0" />
@@ -356,7 +356,7 @@ const SmallDropdown = ({
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className="w-full text-left px-[8px] h-[36px] flex items-center font-['Plus Jakarta Sans',sans-serif] text-[16px] text-[#a8b9f4] hover:bg-[#1d2132] transition-colors"
+              className="w-full text-left px-[8px] h-[36px] flex items-center [font-family:'Gilroy',sans-serif] text-[16px] text-[#a8b9f4] hover:bg-[#1d2132] transition-colors"
             >{opt.label}</button>
           ))}
         </div>
@@ -375,14 +375,14 @@ const PD = ({ label, value, options, ddId, openDd, setOpenDd, onChange }: {
     <div className="flex flex-col gap-[4px]">
       {label && (
         <div className="flex gap-[4px] items-start">
-          <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{label}</p>
+          <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{label}</p>
           <InfoSquareIcon className="text-[#6c779d] shrink-0" />
         </div>
       )}
       <div className="relative">
         <button type="button" onClick={() => setOpenDd(isOpen ? null : ddId)}
           className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px] cursor-pointer">
-          <span className="flex-1 text-left font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px]">{value}</span>
+          <span className="flex-1 text-left [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px]">{value}</span>
           <ChevronDown size={24} className="text-[#6c779d] shrink-0" />
         </button>
         {isOpen && (
@@ -391,7 +391,7 @@ const PD = ({ label, value, options, ddId, openDd, setOpenDd, onChange }: {
             {options.map((opt) => (
               <button key={opt} type="button"
                 onClick={() => { onChange(opt); setOpenDd(null); }}
-                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] hover:bg-[#1d2132] transition-colors ${value === opt ? "text-white" : "text-[#a8b9f4]"}`}>
+                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] hover:bg-[#1d2132] transition-colors ${value === opt ? "text-white" : "text-[#a8b9f4]"}`}>
                 {opt}
               </button>
             ))}
@@ -806,7 +806,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           {items.map((item, i) => (
             <span key={item} className="flex items-center gap-[4px]">
               {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
-              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
             </span>
           ))}
         </div>
@@ -828,11 +828,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               {t_allowed_markets.slice(0, 3).map((m, i) => (
                 <span key={m} className="flex items-center gap-[4px]">
                   {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d]" />}
-                  <span className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
+                  <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{m}</span>
                 </span>
               ))}
               {t_allowed_markets.length > 3 && (
-                <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px]">+{t_allowed_markets.length - 3}</span>
+                <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px]">+{t_allowed_markets.length - 3}</span>
               )}
             </div>
           )
@@ -848,7 +848,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           {items.map((item, i) => (
             <span key={item} className="flex items-center gap-[4px]">
               {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
-              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
             </span>
           ))}
         </div>
@@ -907,7 +907,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           {items.map((item, i) => (
             <span key={item} className="flex items-center gap-[4px]">
               {i > 0 && <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />}
-              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
+              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[20px]">{item}</span>
             </span>
           ))}
         </div>
@@ -966,7 +966,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           <div className="absolute inset-0 z-20 bg-[#11141b] flex flex-col rounded-[24px] overflow-hidden">
             {/* Title bar */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] flex items-center justify-center relative shrink-0">
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">Add Recipient</p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">Add Recipient</p>
               <button
                 type="button"
                 data-testid="button-close-add-recipient"
@@ -978,7 +978,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             </div>
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-[24px] flex flex-col gap-[24px]">
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
                 Add a recipient this agent can pay. Each recipient has it's own cap and recurrence.
               </p>
               <div className="flex flex-col gap-[24px]">
@@ -1007,7 +1007,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       onChange={(e) => setPr_name(e.target.value)}
                       placeholder="Maya R. Contractor"
                       data-testid="input-recipient-name"
-                      className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                      className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                     />
                   </div>
                 </div>
@@ -1023,16 +1023,16 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       onChange={(e) => setPr_address(e.target.value)}
                       placeholder="0x91de4f2a8b1c33d2e9a7c5e3d2b1a9f8e7c63a40"
                       data-testid="input-recipient-address"
-                      className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                      className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                     />
                   </div>
                   {pr_address && !isEvmAddress(pr_address) && (
-                    <p className="font-['Plus Jakarta Sans',sans-serif] text-red-400 text-[13px] leading-[18px]">
+                    <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[13px] leading-[18px]">
                       Must be a valid 0x EVM address (42 characters starting with 0x)
                     </p>
                   )}
                 </div>
-                <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">
                   Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.
                 </p>
                 {/* PAYMENT CAPS */}
@@ -1050,7 +1050,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           onChange={(e) => setPr_per_payment(e.target.value)}
                           placeholder="$500"
                           data-testid="input-per-payment-cap"
-                          className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                          className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                         />
                       </div>
                     </div>
@@ -1065,7 +1065,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           onChange={(e) => setPr_monthly_cap(e.target.value)}
                           placeholder="$5,000"
                           data-testid="input-monthly-cap"
-                          className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                          className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                         />
                       </div>
                     </div>
@@ -1091,7 +1091,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="relative">
                         <button type="button" onClick={() => setP_open_dd(p_open_dd === "pr_freq" ? null : "pr_freq")}
                           className="bg-[#222737] flex gap-[8px] items-center p-[8px] rounded-[8px] w-full h-[40px]">
-                          <span className="flex-1 text-left font-['Plus Jakarta Sans',sans-serif] text-white text-[16px]">{pr_frequency}</span>
+                          <span className="flex-1 text-left [font-family:'Gilroy',sans-serif] text-white text-[16px]">{pr_frequency}</span>
                           <ChevronDown size={24} className="text-[#6c779d]" />
                         </button>
                         {p_open_dd === "pr_freq" && (
@@ -1100,7 +1100,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                             {["Daily","Weekly","Monthly","Per Call"].map((opt) => (
                               <button key={opt} type="button"
                                 onClick={() => { setPr_frequency(opt); setP_open_dd(null); }}
-                                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] font-['Plus Jakarta Sans',sans-serif] text-[16px] hover:bg-[#1d2132] transition-colors ${pr_frequency === opt ? "text-white" : "text-[#a8b9f4]"}`}>
+                                className={`w-full text-left px-[8px] py-[8px] rounded-[8px] [font-family:'Gilroy',sans-serif] text-[16px] hover:bg-[#1d2132] transition-colors ${pr_frequency === opt ? "text-white" : "text-[#a8b9f4]"}`}>
                                 {opt}
                               </button>
                             ))}
@@ -1115,11 +1115,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       </div>
                       <div className="flex gap-[4px]">
                         <input value={pr_dd} onChange={(e) => setPr_dd(e.target.value)} placeholder="DD"
-                          className="flex-1 bg-[#222737] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                          className="flex-1 bg-[#222737] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
                         <input value={pr_mm} onChange={(e) => setPr_mm(e.target.value)} placeholder="MM"
-                          className="flex-1 bg-[#222737] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                          className="flex-1 bg-[#222737] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
                         <input value={pr_yyyy} onChange={(e) => setPr_yyyy(e.target.value)} placeholder="YYYY"
-                          className="flex-1 bg-[#222737] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
+                          className="flex-1 bg-[#222737] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] px-[8px] py-[10px] rounded-[8px] outline-none min-w-0 placeholder:text-[#414965]" />
                       </div>
                     </div>
                   </div>
@@ -1139,7 +1139,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         </svg>
                       )}
                     </button>
-                    <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
                       Because this is a new counterparty, require my explicit approval before the first payment. Subsequent payments up to the cap will execute automatically.
                     </p>
                   </div>
@@ -1148,7 +1148,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             </div>
             {/* Bottom buttons */}
             <div className="border-t border-[#1d2132] p-[24px] flex gap-[16px] items-center shrink-0">
-              <button type="button" className="flex-1 bg-[#222737] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity">
+              <button type="button" className="flex-1 bg-[#222737] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity">
                 Import CSV
               </button>
               <button
@@ -1170,7 +1170,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   setPr_dd(""); setPr_mm(""); setPr_yyyy(""); setPr_rail("usdc");
                   setPr_recurrence("scheduled"); setPr_frequency("Monthly"); setPr_first_approval(true);
                 }}
-                className={`flex-1 font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-opacity ${isEvmAddress(pr_address) ? "bg-[#123509] text-[#42bf23] hover:opacity-80 cursor-pointer" : "bg-[#1d2132] text-[#414965] cursor-not-allowed opacity-60"}`}
+                className={`flex-1 [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-opacity ${isEvmAddress(pr_address) ? "bg-[#123509] text-[#42bf23] hover:opacity-80 cursor-pointer" : "bg-[#1d2132] text-[#414965] cursor-not-allowed opacity-60"}`}
               >
                 Save Recipient
               </button>
@@ -1183,7 +1183,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
           <div className="absolute inset-0 z-20 bg-[#11141b] flex flex-col rounded-[24px] overflow-hidden">
             {/* Title bar */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] flex items-center justify-center relative shrink-0">
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">New Alert Rule</p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px]">New Alert Rule</p>
               <button
                 type="button"
                 onClick={() => setShowAddRuleModal(false)}
@@ -1194,7 +1194,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             </div>
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-[24px] flex flex-col gap-[24px]">
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
+              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">
                 Define when this scout should flag something or take action.
               </p>
               {/* Rule Name */}
@@ -1205,7 +1205,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     value={ar_name}
                     onChange={(e) => setAr_name(e.target.value)}
                     placeholder="e.g. Trader Drawdown"
-                    className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                    className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                   />
                 </div>
               </div>
@@ -1255,7 +1255,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         onChange={(e) => setAr_figure(e.target.value)}
                         placeholder="-10"
                         type="number"
-                        className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
+                        className="flex-1 bg-transparent [font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                       />
                     </div>
                   </div>
@@ -1293,12 +1293,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   >
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex items-start justify-between w-full">
-                        <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Notify Only</span>
+                        <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Notify Only</span>
                         <div className={`relative shrink-0 size-[20px] rounded-full border ${ar_action === "notify" ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
                           {ar_action === "notify" && <div className="absolute bg-[#7631ee] inset-[20%] rounded-full" />}
                         </div>
                       </div>
-                      <p className="font-['Plus Jakarta Sans',sans-serif] text-[#414965] text-[12px] leading-[12px]">Surface the signal in the feed</p>
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[12px] leading-[12px]">Surface the signal in the feed</p>
                     </div>
                   </button>
                   {/* Pause Agent */}
@@ -1309,19 +1309,19 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   >
                     <div className="flex flex-1 flex-col gap-[4px] min-w-0">
                       <div className="flex items-start justify-between w-full">
-                        <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Pause Agent</span>
+                        <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Pause Agent</span>
                         <div className={`relative shrink-0 size-[20px] rounded-full border ${ar_action === "pause" ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}>
                           {ar_action === "pause" && <div className="absolute bg-[#7631ee] inset-[20%] rounded-full" />}
                         </div>
                       </div>
-                      <p className="font-['Plus Jakarta Sans',sans-serif] text-[#414965] text-[12px] leading-[12px]">Requires auto-execute</p>
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[12px] leading-[12px]">Requires auto-execute</p>
                     </div>
                   </button>
                 </div>
                 {/* Info box */}
                 <div className="border border-[#1d2132] flex items-start gap-[8px] p-[8px] rounded-[12px] w-full">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-[1px]"><circle cx="8" cy="8" r="7" stroke="#414965" strokeWidth="1.2"/><path d="M8 7v4M8 5.5v.5" stroke="#414965" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">
                     Pause is available because this scout has auto-execute with pause_agent in its whitelist. To allow other actions, expand the whitelist in the previous step.
                   </p>
                 </div>
@@ -1333,8 +1333,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 <div className="flex gap-[16px] items-center w-full">
                   <ACheckbox checked={true} onChange={() => {}} />
                   <div className="flex flex-1 items-center gap-[16px] min-w-0">
-                    <span className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Dashboard Feed</span>
-                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Always On</span>
+                    <span className="flex-1 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">Dashboard Feed</span>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Always On</span>
                   </div>
                 </div>
                 {/* Slack */}
@@ -1342,11 +1342,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   <ACheckbox checked={ar_route_slack} onChange={() => setAr_route_slack(v => !v)} />
                   <div className="flex flex-1 items-center gap-[16px] min-w-0">
                     <div className="flex flex-1 items-center gap-[4px] min-w-0">
-                      <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">Slack</span>
+                      <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">Slack</span>
                       <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
-                      <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">#brain-alerts</span>
+                      <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">#brain-alerts</span>
                     </div>
-                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
                   </div>
                 </div>
                 {/* SMS */}
@@ -1354,11 +1354,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   <ACheckbox checked={ar_route_sms} onChange={() => setAr_route_sms(v => !v)} />
                   <div className="flex flex-1 items-center gap-[16px] min-w-0">
                     <div className="flex flex-1 items-center gap-[4px] min-w-0">
-                      <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">SMS</span>
+                      <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">SMS</span>
                       <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
-                      <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">+971...4821</span>
+                      <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] whitespace-nowrap">+971...4821</span>
                     </div>
-                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
+                    <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px] shrink-0">Connected</span>
                   </div>
                 </div>
               </div>
@@ -1368,7 +1368,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <button
                 type="button"
                 onClick={() => setShowAddRuleModal(false)}
-                className="flex-1 bg-[#222737] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+                className="flex-1 bg-[#222737] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
               >
                 Cancel
               </button>
@@ -1393,7 +1393,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   setAr_sustained("Trigger Immediately"); setAr_action("pause");
                   setAr_route_slack(true); setAr_route_sms(true);
                 }}
-                className="flex-1 bg-[#123509] font-['Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+                className="flex-1 bg-[#123509] [font-family:'Gilroy',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
               >
                 Save Rule
               </button>
@@ -1414,7 +1414,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   }
                 </div>
                 <div className="flex flex-col gap-[4px] items-center w-full">
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] text-center w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] text-center w-full">
                     {agentName || "Agent"} is live!
                   </p>
                   <TypeBadge type={selectedType} />
@@ -1435,8 +1435,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {/* Base network info row */}
             <div className="border border-[#1d2132] flex items-center gap-[8px] p-[8px] rounded-[12px] w-full">
               <img src="/figmaAssets/base.png" alt="Base" className="size-[16px] object-contain" />
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[13px] flex-1">Deployed on Base network</p>
-              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px]">✓ Confirmed</p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[13px] flex-1">Deployed on Base network</p>
+              <p className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px]">✓ Confirmed</p>
             </div>
 
             {/* Action buttons */}
@@ -1444,14 +1444,14 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <button
                 onClick={handleClose}
                 data-testid="button-home"
-                className="flex-1 border border-[#1d2132] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:border-[#414965] hover:text-white transition-all"
+                className="flex-1 border border-[#1d2132] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:border-[#414965] hover:text-white transition-all"
               >
                 Home
               </button>
               <button
                 onClick={() => { onViewMyAgents ? onViewMyAgents() : handleClose(); }}
                 data-testid="button-view-agent"
-                className="flex-1 bg-[#4a2300] font-['Plus Jakarta Sans',sans-serif] text-[#ff9500] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+                className="flex-1 bg-[#4a2300] [font-family:'Gilroy',sans-serif] text-[#ff9500] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
               >
                 View Agent →
               </button>
@@ -1506,10 +1506,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {step === 0 && (
               <div className="flex flex-col gap-[24px] items-start w-full">
                 <div className="flex flex-col items-start w-full">
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
                     Create an Agent
                   </p>
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
                     Select the primary function. Each type has a distinct enforcement schema and policy hash composition.
                   </p>
                 </div>
@@ -1531,10 +1531,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {step === 1 && (
               <div className="flex flex-col gap-[24px] items-start w-full">
                 <div className="flex flex-col items-start w-full">
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
                     Agents Identity
                   </p>
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
                     Give your agent a name and avatar so you can identify it on your dashboard.
                   </p>
                 </div>
@@ -1552,7 +1552,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <img src={selectedAvatar} alt="" className="absolute inset-0 size-full object-cover" />
                       </div>
                       {/* Filename */}
-                      <p className="flex-1 mx-[8px] font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] truncate min-w-0">
+                      <p className="flex-1 mx-[8px] [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] truncate min-w-0">
                         {avatarFileName || selectedAvatar.split("/").pop() || "avatar"}
                       </p>
                       {/* Red trash button */}
@@ -1577,7 +1577,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <ImageIcon size={20} className="text-[#6c779d]" />
                         </div>
                       </div>
-                      <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[20px] leading-[24px] min-w-0 truncate">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[20px] leading-[24px] min-w-0 truncate">
                         Add Avatar
                       </p>
                       <button
@@ -1623,7 +1623,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         value={agentDesc}
                         onChange={(e) => setAgentDesc(e.target.value.slice(0, 1000))}
                         placeholder="Descibe what your agent does..."
-                        className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none w-full h-full resize-none"
+                        className="bg-[#222737] rounded-[8px] px-[8px] py-[10px] text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none w-full h-full resize-none"
                       />
                       {/* Pill-style character counter */}
                       <div className="absolute bottom-[8px] right-[8px] flex items-center justify-end px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
@@ -1641,10 +1641,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {step === 2 && (
               <div className="flex flex-col gap-[24px] items-start w-full">
                 <div className="flex flex-col items-start w-full">
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
                     Capital
                   </p>
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
                     Set the initial capital allocation.
                   </p>
                 </div>
@@ -1664,13 +1664,13 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex gap-[8px] items-start w-full">
                         {/* Amount field — h-[48px] = py-[14px] + 20px line */}
                         <div className="bg-[#222737] flex flex-1 items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] min-w-0">
-                          <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
                           <input
                             value={capital}
                             onChange={(e) => setCapital(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
                             placeholder="10,000"
                             data-testid="input-capital"
-                            className="flex-1 bg-transparent text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none min-w-0"
+                            className="flex-1 bg-transparent text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none min-w-0"
                           />
                         </div>
                         {/* Currency dropdown — w-[120px] h-[48px] */}
@@ -1680,7 +1680,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                             data-testid="button-asset-dropdown"
                             className="bg-[#222737] flex items-center justify-between gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full cursor-pointer"
                           >
-                            <span className="font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px]">
+                            <span className="[font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px]">
                               {capitalAsset}
                             </span>
                             <ChevronDown size={16} className="text-[#6c779d] shrink-0" />
@@ -1692,7 +1692,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                                   key={asset}
                                   onClick={() => { setCapitalAsset(asset); setShowAssetDrop(false); }}
                                   data-testid={`option-asset-${asset}`}
-                                  className={`w-full px-[16px] py-[10px] text-left font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] transition-colors ${capitalAsset === asset ? "text-white bg-[#2d3347]" : "text-[#6c779d] hover:bg-[#1d2132] hover:text-white"}`}
+                                  className={`w-full px-[16px] py-[10px] text-left [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] transition-colors ${capitalAsset === asset ? "text-white bg-[#2d3347]" : "text-[#6c779d] hover:bg-[#1d2132] hover:text-white"}`}
                                 >
                                   {asset}
                                 </button>
@@ -1718,7 +1718,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         ))}
                       </div>
                       {capitalExceedsBalance && (
-                        <p className="font-['Plus Jakarta Sans',sans-serif] text-red-400 text-[12px] leading-[16px] mt-[2px]">
+                        <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[12px] leading-[16px] mt-[2px]">
                           Amount exceeds your available balance of {availableBalanceDisplay}
                         </p>
                       )}
@@ -1730,7 +1730,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     {/* Left: wallet icon + label */}
                     <div className="flex flex-1 gap-[4px] items-center min-w-0">
                       <Wallet size={24} className="text-[#6c779d] shrink-0" />
-                      <span className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[24px] min-w-0">
+                      <span className="flex-1 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[24px] min-w-0">
                         Available Balance
                       </span>
                     </div>
@@ -1740,7 +1740,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         {availableBalanceDisplay}
                       </span>
                       <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center px-[4px] py-[1px] rounded-[20px] shrink-0">
-                        <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">
+                        <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">
                           {capitalAsset}
                         </span>
                       </div>
@@ -1754,10 +1754,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
             {step === 3 && (
               <div className="flex flex-col gap-[24px] items-start w-full">
                 <div className="flex flex-col items-start w-full">
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[28px] w-full">
                     Configuration
                   </p>
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full">
                     {selectedType === "trading"   && "Position controls, trading parameters, and market constraints for autonomous trading execution."}
                     {selectedType === "lending"   && "Protocols, lending parameters, and LTV constraints for autonomous lending execution."}
                     {selectedType === "yield"     && "Yield targets, slippage constraints, and circuit breakers for capital optimization."}
@@ -1804,12 +1804,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
-                          <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
                           <input
                             value={t_max_position_size_usdc}
                             onChange={(e) => setT_max_position_size_usdc(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
                             data-testid="input-max-position-size"
-                            className="bg-transparent text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            className="bg-transparent text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
                             placeholder="10,000"
                           />
                         </div>
@@ -1822,12 +1822,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
-                          <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
                           <input
                             value={t_cumulative_exposure_limit}
                             onChange={(e) => setT_cumulative_exposure_limit(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
                             data-testid="input-cumulative-exposure"
-                            className="bg-transparent text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            className="bg-transparent text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
                             placeholder="50,000"
                           />
                         </div>
@@ -1840,12 +1840,12 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <InfoSquareIcon className="text-[#6c779d]" />
                         </div>
                         <div className="bg-[#222737] flex items-center gap-[8px] px-[16px] h-[48px] rounded-[16px] w-full">
-                          <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
+                          <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] shrink-0">$</span>
                           <input
                             value={t_daily_spend_cap}
                             onChange={(e) => setT_daily_spend_cap(formatUsd(e.target.value.replace(/[^0-9.]/g, "")))}
                             data-testid="input-daily-spend-cap"
-                            className="bg-transparent text-white text-[16px] font-['Plus Jakarta Sans',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
+                            className="bg-transparent text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] outline-none flex-1 min-w-0 leading-[20px]"
                             placeholder="10,000"
                           />
                         </div>
@@ -1906,7 +1906,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                                 data-testid={`chip-market-${mkt}`}
                                 className="flex items-center gap-[8px] px-[12px] rounded-[12px] h-[40px] bg-[#0a0c10] transition-colors"
                               >
-                                <span className={`font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] whitespace-nowrap ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{mkt}</span>
+                                <span className={`[font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] whitespace-nowrap ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{mkt}</span>
                                 <div className={`size-[20px] rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${sel ? "bg-[#42bf23]" : "border border-[#222737] bg-[#06070a]"}`}>
                                   {sel && (
                                     <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
@@ -2027,7 +2027,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <div className="flex flex-wrap gap-[8px] items-center w-full mt-[4px]">
                           {l_allowed_collateral_assets.map(ticker => (
                             <div key={ticker} className="h-[40px] flex items-center gap-[8px] px-[12px] bg-[#0a0c10] rounded-[100px]">
-                              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px]">{ticker}</span>
+                              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px]">{ticker}</span>
                               <button
                                 type="button"
                                 onClick={() => setL_allowed_collateral_assets(l_allowed_collateral_assets.filter(a => a !== ticker))}
@@ -2210,7 +2210,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                               onClick={() => setY_protocols(tog(y_protocols, protocol))}
                               className="bg-[#0a0c10] flex gap-[8px] items-center px-[12px] py-[10px] rounded-[12px] transition-colors hover:bg-[#111520]"
                             >
-                              <span className={`font-['Plus Jakarta Sans',sans-serif] text-[14px] leading-[20px] ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{protocol}</span>
+                              <span className={`[font-family:'Gilroy',sans-serif] text-[14px] leading-[20px] ${sel ? "text-[#a8b9f4]" : "text-[#6c779d]"}`}>{protocol}</span>
                               <div className={`size-[20px] rounded-full shrink-0 flex items-center justify-center transition-colors ${sel ? "bg-[#123509] border border-[rgba(66,191,35,0.2)]" : "bg-[#06070a] border border-[#222737]"}`}>
                                 {sel && (
                                   <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -2344,7 +2344,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                             <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                           </div>
                           <div className="border border-[#1d2132] flex gap-[16px] items-center p-[16px] rounded-[12px]">
-                            <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">
+                            <p className="flex-1 [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">
                               Add recipients individually or import a CSV. Each gets its own per-payment cap.
                             </p>
                             <button
@@ -2354,7 +2354,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                               className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0"
                             >
                               <Plus size={16} className="text-[#6c779d] shrink-0" />
-                              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
+                              <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
                             </button>
                           </div>
                         </div>
@@ -2364,18 +2364,18 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                             <div key={idx} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px]">
                               <div className="flex flex-1 items-center justify-between min-w-0">
                                 <div className="flex flex-col gap-[4px] items-start justify-center">
-                                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{r.name}</p>
+                                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{r.name}</p>
                                   <div className="flex gap-[4px] items-center">
-                                    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.address}</p>
+                                    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.address}</p>
                                     <div className="size-[4px] rounded-full bg-[#6c779d] shrink-0" />
                                     <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center px-[8px] py-[3px] rounded-[22px] shrink-0">
-                                      <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">{r.tag}</span>
+                                      <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">{r.tag}</span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="flex flex-col gap-[4px] items-end justify-center ml-[8px]">
                                   <p className="font-['JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] text-right whitespace-nowrap">{r.amount}</p>
-                                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.freq}</p>
+                                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{r.freq}</p>
                                 </div>
                               </div>
                               <button
@@ -2394,8 +2394,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       {/* x402 Toggle */}
                       <div className="border border-[#1d2132] flex gap-[16px] items-center p-[16px] rounded-[12px]">
                         <div className="flex flex-1 flex-col gap-[4px] items-start min-w-0">
-                          <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] w-full">Accept x402 Micropayments</p>
-                          <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">Pay-per-call API access for AI workloads</p>
+                          <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] w-full">Accept x402 Micropayments</p>
+                          <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">Pay-per-call API access for AI workloads</p>
                         </div>
                         <PaySwitch on={p_x402_on} onToggle={() => setP_x402_on(!p_x402_on)} />
                       </div>
@@ -2458,14 +2458,14 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           <div className="flex gap-[16px] items-start">
                             <ACheckbox checked={allChecked} onChange={toggleAll} />
                             <div className="flex items-center gap-[4px]">
-                              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">All Agents</span>
-                              <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[4px] py-px rounded-[20px] font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">5 Active</span>
+                              <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">All Agents</span>
+                              <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[4px] py-px rounded-[20px] [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px]">5 Active</span>
                             </div>
                           </div>
                           {AGENT_LIST.map((ag) => (
                             <div key={ag.id} className="flex gap-[16px] items-start">
                               <ACheckbox checked={a_selected_agent_ids.includes(ag.id)} onChange={() => toggleAgent(ag.id)} />
-                              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">{ag.label}</span>
+                              <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px]">{ag.label}</span>
                             </div>
                           ))}
                         </div>
@@ -2475,10 +2475,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       <div className="flex flex-col gap-[16px] w-full">
                         <SectionDivider title="ALERT RULES" />
                         <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
-                          <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] flex-1">Each rule has a condition and an action.</p>
+                          <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] flex-1">Each rule has a condition and an action.</p>
                           <button type="button" onClick={() => setShowAddRuleModal(true)} className="bg-[#222737] flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.33V12.67M3.33 8H12.67" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                            <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
+                            <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px] leading-[16px]">Add</span>
                           </button>
                         </div>
                         <div className="flex flex-col gap-[8px] w-full">
@@ -2486,16 +2486,16 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                             <div key={`${rule.name}-${idx}`} className="bg-[#0a0c10] flex gap-[16px] items-center p-[16px] rounded-[12px] w-full">
                               <div className="flex flex-1 items-center justify-between min-w-0">
                                 <div className="flex flex-col gap-[4px] items-start justify-center shrink-0">
-                                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{rule.name}</p>
+                                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{rule.name}</p>
                                   <div className="flex gap-[4px] items-center">
-                                    <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.condition}</span>
+                                    <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.condition}</span>
                                     <span className="inline-block size-[4px] rounded-full bg-[#6c779d] shrink-0" />
-                                    <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.agent}</span>
+                                    <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">{rule.agent}</span>
                                   </div>
                                 </div>
                                 <div className="flex flex-col gap-[4px] items-end justify-center shrink-0">
-                                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] text-right whitespace-nowrap">{rule.channel}</p>
-                                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[14px] leading-[20px] whitespace-nowrap" style={{ color: rule.actionColor }}>{rule.action}</p>
+                                  <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px] text-right whitespace-nowrap">{rule.channel}</p>
+                                  <p className="[font-family:'Gilroy',sans-serif] text-[14px] leading-[20px] whitespace-nowrap" style={{ color: rule.actionColor }}>{rule.action}</p>
                                 </div>
                               </div>
                               <button type="button" onClick={() => setA_alert_rules(prev => prev.filter((_, i) => i !== idx))} className="relative size-[24px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0 hover:bg-[#222737] transition-colors">
@@ -2536,8 +2536,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         </div>
                         <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
                           <div className="flex flex-1 flex-col gap-[4px] items-start leading-[20px] min-w-0">
-                            <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] w-full">Include recommendations in reports</p>
-                            <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] w-full">Suggest rebalances and policy tweaks based on observed activity</p>
+                            <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] w-full">Include recommendations in reports</p>
+                            <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] w-full">Suggest rebalances and policy tweaks based on observed activity</p>
                           </div>
                           <AToggleSwitch on={a_recommendations === "included"} onToggle={() => setA_recommendations(a_recommendations === "included" ? "excluded" : "included")} />
                         </div>
@@ -2548,8 +2548,8 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <SectionDivider title="ACTION PERMISSIONS" />
                         <div className="border border-[#1d2132] rounded-[12px] p-[16px] flex items-center gap-[16px] w-full">
                           <div className="flex flex-1 flex-col gap-[4px] items-start leading-[20px] min-w-0">
-                            <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] w-full">Allow auto-execute</p>
-                            <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] w-full">Enables actions defined in alert rules</p>
+                            <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] w-full">Allow auto-execute</p>
+                            <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] w-full">Enables actions defined in alert rules</p>
                           </div>
                           <AToggleSwitch on={a_auto_execute} onToggle={() => setA_auto_execute(!a_auto_execute)} />
                         </div>
@@ -2675,10 +2675,10 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   </div>
                   <div className="flex flex-1 flex-col gap-[4px] items-start min-w-0">
                     <div className="flex items-center justify-between w-full">
-                      <p className="font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px] truncate">{agentName || "Unnamed Agent"}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[20px] leading-[24px] truncate">{agentName || "Unnamed Agent"}</p>
                       <TypeBadge type={selectedType} />
                     </div>
-                    <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-4">
+                    <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] w-full line-clamp-4">
                       {agentDesc || ({
                         trading:   "An AI-powered trading agent that analyzes market trends and executes trades automatically, optimizing portfolios for maximum returns with minimal risk.",
                         lending:   "A smart lending agent that helps users borrow, lend, and manage credit with clear rules and automated execution.",
@@ -2720,9 +2720,9 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                         <div key={n} className="flex flex-col w-full">
                           <div className="flex gap-[16px] items-center w-full">
                             <div className="bg-[#0a0c10] flex items-center justify-center h-[32px] w-[48px] rounded-[100px] shrink-0">
-                              <span className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[16px]">{n}</span>
+                              <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[16px]">{n}</span>
                             </div>
-                            <p className="flex-1 font-['Plus Jakarta Sans',sans-serif] text-[#a8b9f4] text-[16px] leading-[32px] min-w-0">{title}</p>
+                            <p className="flex-1 [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[32px] min-w-0">{title}</p>
                             <button
                               type="button"
                               onClick={toggle}
@@ -2736,7 +2736,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           </div>
                           {isExpanded && (
                             <div className="pl-[64px] w-full">
-                              <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">{desc}</p>
+                              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[16px]">{desc}</p>
                             </div>
                           )}
                         </div>
@@ -2748,7 +2748,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 {/* Authorization */}
                 <div className="flex flex-col gap-[16px] w-full">
                   <SectionDivider title="AUTHORIZATION" />
-                  <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px] leading-[20px] w-full">
                     Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.
                   </p>
                   <div className="flex flex-col gap-[16px]">
@@ -2763,7 +2763,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           </svg>
                         )}
                       </div>
-                      <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setAuthSig(!authSig)}>
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setAuthSig(!authSig)}>
                         I authorize this agent to act on my behalf
                       </p>
                     </div>
@@ -2778,7 +2778,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                           </svg>
                         )}
                       </div>
-                      <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setTerms(!terms)}>
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[16px] leading-[20px] flex-1 cursor-pointer" onClick={() => setTerms(!terms)}>
                         I agree to the{" "}
                         <span className="text-[#a8b9f4] underline">Brain Finance Agent Terms</span>
                       </p>
@@ -2799,7 +2799,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 onClick={() => canProceed() && setStep((s) => s + 1)}
                 disabled={!canProceed()}
                 data-testid="button-continue"
-                className={`w-full font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
+                className={`w-full [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#4a2300] text-[#ff9500] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
                 Continue
               </button>
@@ -2808,7 +2808,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                 onClick={() => canProceed() && handleLaunch()}
                 disabled={!canProceed() || launching}
                 data-testid="button-create-agent"
-                className={`w-full font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
+                className={`w-full [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-all ${canProceed() ? "bg-[#123509] text-[#42bf23] hover:opacity-80" : "bg-[#1d2132] text-[#414965] cursor-not-allowed"}`}
               >
                 {launching ? "Creating Agent…" : "Create Agent"}
               </button>

@@ -213,14 +213,14 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
         <div className="flex items-center gap-[8px] flex-shrink-0">
           <div className="flex flex-col gap-[2px]">
             <div className="flex items-baseline gap-[4px]">
-              <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica,sans-serif", fontSize: "22px", lineHeight: "26px", color: "#a8b9f4" }}>
+              <span style={{ fontFamily: "'Gilroy',sans-serif", fontSize: "22px", lineHeight: "26px", color: "#a8b9f4" }}>
                 {total.toLocaleString()}
               </span>
-              <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica,sans-serif", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>
+              <span style={{ fontFamily: "'Gilroy',sans-serif", fontSize: "13px", lineHeight: "16px", color: "#6c779d" }}>
                 actions
               </span>
             </div>
-            <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica,sans-serif", fontSize: "11px", color: "#414965" }}>
+            <span style={{ fontFamily: "'Gilroy',sans-serif", fontSize: "11px", color: "#414965" }}>
               {PERIOD_LABEL[period]}
             </span>
           </div>
@@ -229,7 +229,7 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
             className="flex items-center justify-center px-[8px] py-[4px] rounded-[40px] flex-shrink-0"
             style={{ background: positive ? "#123509" : "#350011" }}
           >
-            <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica,sans-serif", fontSize: "13px", lineHeight: "16px", color: positive ? GREEN : "#d20344", whiteSpace: "nowrap" }}>
+            <span style={{ fontFamily: "'Gilroy',sans-serif", fontSize: "13px", lineHeight: "16px", color: positive ? GREEN : "#d20344", whiteSpace: "nowrap" }}>
               {deltaStr}
             </span>
           </div>
@@ -245,7 +245,7 @@ export const AgentPerfChart = ({ agent }: Props): JSX.Element => {
               className="flex items-center justify-center px-[12px] py-[4px] rounded-[100px] transition-all flex-shrink-0"
               style={period === p ? { background: "#4a2300" } : { background: "#06070a" }}
             >
-              <span style={{ fontFamily: "'Plus Jakarta Sans',Helvetica,sans-serif", fontSize: "12px", lineHeight: "16px", color: period === p ? "#ff9500" : "#414965", whiteSpace: "nowrap" }}>
+              <span style={{ fontFamily: "'Gilroy',sans-serif", fontSize: "12px", lineHeight: "16px", color: period === p ? "#ff9500" : "#414965", whiteSpace: "nowrap" }}>
                 {p}
               </span>
             </button>

@@ -31,7 +31,7 @@ export function SignupPage() {
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <span className="[font-family:'Outfit',Helvetica] text-[#3a4060] text-sm">
+        <span className="[font-family:'Gilroy',sans-serif] text-[#3a4060] text-sm">
           Copyright © 2025 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
@@ -68,7 +68,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
     return (
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[#a8b9f4] text-base [font-family:'Plus Jakarta Sans',Helvetica]">
+        <span className="text-[#a8b9f4] text-base [font-family:'Gilroy',sans-serif]">
           Setting up your wallet &amp; accounts…
         </span>
       </div>
@@ -85,14 +85,14 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
 
       <div className="flex items-center gap-3 w-full">
         <div className="flex-1 h-px bg-[#1d2132]" />
-        <span className="text-[#414965] text-xs [font-family:'Outfit',Helvetica]">or continue with demo</span>
+        <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
         <div className="flex-1 h-px bg-[#1d2132]" />
       </div>
 
       <button
         onClick={handleDemoLogin}
         data-testid="button-demo-login"
-        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
+        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
         <img src="/figmaAssets/brain2x.png" alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo
@@ -122,7 +122,7 @@ class CrossmintErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
-          <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
+          <p className="text-[#6c779d] text-sm [font-family:'Gilroy',sans-serif]">
             Sign-in form unavailable — use Demo below
           </p>
           <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">
@@ -167,7 +167,7 @@ function LazyEmbeddedAuth({
   if (sdkError !== null) {
     return (
       <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
-        <p className="text-[#6c779d] text-sm [font-family:'Plus_Jakarta_Sans',Helvetica]">
+        <p className="text-[#6c779d] text-sm [font-family:'Gilroy',sans-serif]">
           Sign-in form unavailable — use Demo below
         </p>
         <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">

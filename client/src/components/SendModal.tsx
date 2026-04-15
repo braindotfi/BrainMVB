@@ -275,7 +275,7 @@ function AssetPopup({
         <SearchBar value={search} onChange={setSearch} />
         <div className="flex flex-col">
           <div className="flex items-center px-[8px] py-[4px]">
-            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">Current Assets</p>
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">Current Assets</p>
           </div>
           {filtered.map((a) => (
             <button
@@ -326,7 +326,7 @@ function RecipientPopup({
         <SearchBar value={search} onChange={setSearch} />
         <div className="flex flex-col">
           <div className="flex items-center px-[8px] py-[4px]">
-            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Accounts</p>
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Accounts</p>
           </div>
           {filtered.map((r) => (
             <button
@@ -669,14 +669,14 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 className="bg-[#11141b] flex-1 h-[48px] flex items-center justify-center rounded-[100px] hover:opacity-80 transition-opacity"
                 data-testid="btn-view-basescan"
               >
-                <p className="[font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] tracking-[-0.72px]">View</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] tracking-[-0.72px]">View</p>
               </a>
               <button
                 onClick={handleDone}
                 className="bg-[#4a2300] flex-1 h-[48px] flex items-center justify-center rounded-[100px] hover:opacity-80 transition-opacity"
                 data-testid="btn-send-done"
               >
-                <p className="[font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] leading-[24px] tracking-[-0.72px]">Done</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] leading-[24px] tracking-[-0.72px]">Done</p>
               </button>
             </div>
           </div>
@@ -802,7 +802,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <FieldRow label="Recipient Name">
                   <InputBox>
                     <input type="text" value={state.recipientName} onChange={(e) => set({ recipientName: e.target.value })} placeholder="John Smith"
-                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Gilroy',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                       data-testid="input-send-recipient-name" />
                   </InputBox>
                 </FieldRow>
@@ -904,7 +904,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                       onFocus={() => setAmountDisplay(stripCommas(amountDisplay))}
                       placeholder="0.00"
                       autoFocus
-                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Mont',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'Gilroy',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                       data-testid="input-send-amount"
                     />
                   </div>
@@ -1066,7 +1066,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
         <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
           <button
             onClick={handleClose}
-            className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+            className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
             data-testid="btn-send-cancel"
           >
             Cancel
@@ -1075,7 +1075,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             <button
               onClick={handleNext}
               disabled={!canNext}
-              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${canNext ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${canNext ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               data-testid="btn-send-next"
             >
               Next
@@ -1084,7 +1084,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
             <button
               onClick={handleConfirm}
               disabled={sending}
-              className="bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+              className="bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
               data-testid="btn-send-confirm"
             >
               {sending ? "Confirming…" : "Confirm"}

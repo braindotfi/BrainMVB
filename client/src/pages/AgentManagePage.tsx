@@ -116,10 +116,10 @@ export const AgentManagePage = (): JSX.Element => {
   if (!agent) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-[#6c779d]">
-        <span className="text-xl [font-family:'Plus Jakarta Sans',Helvetica]">Agent not found</span>
+        <span className="text-xl [font-family:'Gilroy',sans-serif]">Agent not found</span>
         <button
           onClick={() => navigate("/agents")}
-          className="mt-4 px-4 py-2 bg-[#4a2300] rounded-full text-[#ff9500] text-sm [font-family:'Plus Jakarta Sans',Helvetica]"
+          className="mt-4 px-4 py-2 bg-[#4a2300] rounded-full text-[#ff9500] text-sm [font-family:'Gilroy',sans-serif]"
         >
           Back to Agents
         </button>
@@ -150,20 +150,20 @@ export const AgentManagePage = (): JSX.Element => {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-base">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-base">
               {agent.name}
             </span>
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold border ${sc.badge}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] [font-family:'Gilroy',sans-serif] font-semibold border ${sc.badge}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
               {sc.label}
             </span>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="bg-[#123509] border border-[rgba(66,191,35,0.2)] px-[7px] py-[2px] rounded-[22px] text-[#42bf23] text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] whitespace-nowrap">
+            <span className="bg-[#123509] border border-[rgba(66,191,35,0.2)] px-[7px] py-[2px] rounded-[22px] text-[#42bf23] text-[10px] [font-family:'Gilroy',sans-serif] whitespace-nowrap">
               {agent.type}
             </span>
             <span className="text-[#2d3450]">·</span>
-            <span className="text-xs text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica]">
+            <span className="text-xs text-[#6c779d] [font-family:'Gilroy',sans-serif]">
               Deployed {agent.deployedAt}
             </span>
           </div>
@@ -193,10 +193,10 @@ export const AgentManagePage = (): JSX.Element => {
               { label: "Success Rate", value: agent.successRate, green: false },
             ].map((s) => (
               <div key={s.label} className="bg-[#0a0c10] rounded-[12px] p-4 border border-[#1d2132] flex flex-col gap-1">
-                <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[12px] leading-[14px]">
+                <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px] leading-[14px]">
                   {s.label}
                 </span>
-                <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px] ${s.green ? "text-[#42bf23]" : "text-white"}`}>
+                <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[22px] ${s.green ? "text-[#42bf23]" : "text-white"}`}>
                   {s.value}
                 </span>
               </div>
@@ -230,37 +230,37 @@ export const AgentManagePage = (): JSX.Element => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px] ${tc.text}`}>
+                    <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[22px] ${tc.text}`}>
                       {tier}
                     </span>
                     {reputation.rankLabel !== "—" && tier !== "New" && tier !== "Unranked" && tier !== "Caution" && (
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
+                      <span className="[font-family:'Gilroy',sans-serif] text-[13px] text-[#6c779d]">
                         Rank {reputation.rankLabel}
                       </span>
                     )}
                     {tier === "Caution" && (
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] px-2 py-0.5 rounded-full"
+                      <span className="[font-family:'Gilroy',sans-serif] text-[11px] px-2 py-0.5 rounded-full"
                         style={{ background: "rgba(210,3,68,0.15)", color: "#d20344" }}>
                         Under review
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
+                    <span className="[font-family:'Gilroy',sans-serif] text-[11px] text-[#6c779d]">
                       {subtitle}
                     </span>
                     {tier !== "New" && tier !== "Unranked" && reputation.totalVolumeUsd > 0 && (
-                      <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
+                      <span className="[font-family:'Gilroy',sans-serif] text-[11px] text-[#414965]">
                         ${reputation.totalVolumeUsd.toLocaleString()} lifetime volume
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <div className={`[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px] ${tc.text}`}>
+                  <div className={`[font-family:'Gilroy',sans-serif] font-semibold text-[15px] ${tc.text}`}>
                     {scoreLabel}
                   </div>
-                  <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-0.5">
+                  <div className="[font-family:'Gilroy',sans-serif] text-[10px] text-[#414965] uppercase tracking-wide mt-0.5">
                     Rep Score
                   </div>
                 </div>
@@ -270,24 +270,24 @@ export const AgentManagePage = (): JSX.Element => {
 
           {/* ── Description ── */}
           <div className="bg-[#0a0c10] rounded-[12px] p-4 border border-[#1d2132]">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-sm block mb-2">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-sm block mb-2">
               About this agent
             </span>
-            <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[13px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[13px] leading-[20px]">
               {agent.description}
             </p>
             <div className="mt-3 pt-3 border-t border-[#1d2132] grid grid-cols-3 gap-3">
               <div>
-                <span className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] block">Wallet</span>
-                <span className="text-xs text-[#a8b9f4] [font-family:'Plus Jakarta Sans',Helvetica]">{agent.walletAddress}</span>
+                <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] block">Wallet</span>
+                <span className="text-xs text-[#a8b9f4] [font-family:'Gilroy',sans-serif]">{agent.walletAddress}</span>
               </div>
               <div>
-                <span className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] block">Category</span>
-                <span className="text-xs text-[#a8b9f4] [font-family:'Plus Jakarta Sans',Helvetica]">{agent.category}</span>
+                <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] block">Category</span>
+                <span className="text-xs text-[#a8b9f4] [font-family:'Gilroy',sans-serif]">{agent.category}</span>
               </div>
               <div>
-                <span className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] block">Last Active</span>
-                <span className="text-xs text-[#a8b9f4] [font-family:'Plus Jakarta Sans',Helvetica]">{agent.lastActive}</span>
+                <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] block">Last Active</span>
+                <span className="text-xs text-[#a8b9f4] [font-family:'Gilroy',sans-serif]">{agent.lastActive}</span>
               </div>
             </div>
           </div>
@@ -295,10 +295,10 @@ export const AgentManagePage = (): JSX.Element => {
           {/* ── Rules ── */}
           <div className="bg-[#0a0c10] rounded-[12px] border border-[#1d2132] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2132]">
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-sm">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-sm">
                 Agent Rules
               </span>
-              <span className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica]">
+              <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif]">
                 Click a rule to edit
               </span>
             </div>
@@ -307,11 +307,11 @@ export const AgentManagePage = (): JSX.Element => {
               {rules.map((rule, idx) => (
                 <div key={rule.id} className="px-4 py-3">
                   <div className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#1d2132] flex items-center justify-center text-[10px] [font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] mt-0.5">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#1d2132] flex items-center justify-center text-[10px] [font-family:'Gilroy',sans-serif] text-[#6c779d] mt-0.5">
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] block mb-1 uppercase tracking-wide">
+                      <span className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] block mb-1 uppercase tracking-wide">
                         {rule.label}
                       </span>
                       {editingRuleId === rule.id ? (
@@ -321,20 +321,20 @@ export const AgentManagePage = (): JSX.Element => {
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
                             rows={2}
-                            className="w-full bg-[#11141b] border border-[#42bf23]/30 rounded-[8px] px-3 py-2 text-[13px] text-white [font-family:'Plus Jakarta Sans',Helvetica] outline-none resize-none focus:border-[#42bf23]/60 transition-colors"
+                            className="w-full bg-[#11141b] border border-[#42bf23]/30 rounded-[8px] px-3 py-2 text-[13px] text-white [font-family:'Gilroy',sans-serif] outline-none resize-none focus:border-[#42bf23]/60 transition-colors"
                             autoFocus
                           />
                           <div className="flex gap-2">
                             <button
                               data-testid={`button-save-rule-${rule.id}`}
                               onClick={() => commitEdit(rule.id)}
-                              className="px-3 py-1 bg-[#123509] border border-[rgba(66,191,35,0.2)] rounded-full text-[#42bf23] text-[11px] [font-family:'Plus Jakarta Sans',Helvetica] hover:bg-[#1a4a0d] transition-colors"
+                              className="px-3 py-1 bg-[#123509] border border-[rgba(66,191,35,0.2)] rounded-full text-[#42bf23] text-[11px] [font-family:'Gilroy',sans-serif] hover:bg-[#1a4a0d] transition-colors"
                             >
                               Save rule
                             </button>
                             <button
                               onClick={() => setEditingRuleId(null)}
-                              className="px-3 py-1 bg-[#1d2132] rounded-full text-[#6c779d] text-[11px] [font-family:'Plus Jakarta Sans',Helvetica] hover:text-white transition-colors"
+                              className="px-3 py-1 bg-[#1d2132] rounded-full text-[#6c779d] text-[11px] [font-family:'Gilroy',sans-serif] hover:text-white transition-colors"
                             >
                               Cancel
                             </button>
@@ -344,7 +344,7 @@ export const AgentManagePage = (): JSX.Element => {
                         <button
                           data-testid={`button-edit-rule-${rule.id}`}
                           onClick={() => startEdit(rule)}
-                          className="text-left w-full text-[13px] text-[#a8b9f4] [font-family:'Plus Jakarta Sans',Helvetica] leading-[18px] hover:text-white transition-colors group"
+                          className="text-left w-full text-[13px] text-[#a8b9f4] [font-family:'Gilroy',sans-serif] leading-[18px] hover:text-white transition-colors group"
                         >
                           {rule.value}
                           <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-[#6c779d]">
@@ -362,7 +362,7 @@ export const AgentManagePage = (): JSX.Element => {
           {/* ── Configuration ── */}
           <div className="bg-[#0a0c10] rounded-[12px] border border-[#1d2132] overflow-hidden">
             <div className="px-4 py-3 border-b border-[#1d2132]">
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-sm">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-sm">
                 Configuration
               </span>
             </div>
@@ -370,33 +370,33 @@ export const AgentManagePage = (): JSX.Element => {
 
               {/* Budget */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-wide">
+                <label className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] uppercase tracking-wide">
                   Budget / Spend Limit
                 </label>
                 <input
                   data-testid="input-budget"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
-                  className="w-full bg-[#11141b] border border-[#1d2132] focus:border-[#42bf23]/40 rounded-[8px] px-3 py-2.5 text-[13px] text-white [font-family:'Plus Jakarta Sans',Helvetica] outline-none transition-colors"
+                  className="w-full bg-[#11141b] border border-[#1d2132] focus:border-[#42bf23]/40 rounded-[8px] px-3 py-2.5 text-[13px] text-white [font-family:'Gilroy',sans-serif] outline-none transition-colors"
                 />
               </div>
 
               {/* Schedule */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-wide">
+                <label className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] uppercase tracking-wide">
                   Execution Schedule
                 </label>
                 <input
                   data-testid="input-schedule"
                   value={schedule}
                   onChange={(e) => setSchedule(e.target.value)}
-                  className="w-full bg-[#11141b] border border-[#1d2132] focus:border-[#42bf23]/40 rounded-[8px] px-3 py-2.5 text-[13px] text-white [font-family:'Plus Jakarta Sans',Helvetica] outline-none transition-colors"
+                  className="w-full bg-[#11141b] border border-[#1d2132] focus:border-[#42bf23]/40 rounded-[8px] px-3 py-2.5 text-[13px] text-white [font-family:'Gilroy',sans-serif] outline-none transition-colors"
                 />
               </div>
 
               {/* Risk level */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] uppercase tracking-wide">
+                <label className="text-[11px] text-[#6c779d] [font-family:'Gilroy',sans-serif] uppercase tracking-wide">
                   Risk Level
                 </label>
                 <div className="flex gap-2">
@@ -408,7 +408,7 @@ export const AgentManagePage = (): JSX.Element => {
                         key={level}
                         data-testid={`button-risk-${level}`}
                         onClick={() => setRiskLevel(level)}
-                        className={`flex-1 py-2 rounded-[8px] text-[12px] [font-family:'Plus Jakarta Sans',Helvetica] border capitalize transition-all ${
+                        className={`flex-1 py-2 rounded-[8px] text-[12px] [font-family:'Gilroy',sans-serif] border capitalize transition-all ${
                           active
                             ? `${c.bg} ${c.border} ${c.text}`
                             : "bg-[#11141b] border-[#1d2132] text-[#6c779d] hover:text-white"
@@ -425,7 +425,7 @@ export const AgentManagePage = (): JSX.Element => {
               <button
                 data-testid="button-save-config"
                 onClick={handleSave}
-                className={`w-full py-3 rounded-[10px] text-sm [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-all ${
+                className={`w-full py-3 rounded-[10px] text-sm [font-family:'Gilroy',sans-serif] font-semibold transition-all ${
                   saved
                     ? "bg-[#123509] text-[#42bf23]"
                     : "bg-[#4a2300] text-[#ff9500] hover:bg-[#5a2d00]"
@@ -439,7 +439,7 @@ export const AgentManagePage = (): JSX.Element => {
           {/* ── Activity log ── */}
           <div className="bg-[#0a0c10] rounded-[12px] border border-[#1d2132] overflow-hidden">
             <div className="px-4 py-3 border-b border-[#1d2132]">
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-sm">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-sm">
                 Activity Log
               </span>
             </div>
@@ -451,14 +451,14 @@ export const AgentManagePage = (): JSX.Element => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className={`text-[12px] [font-family:'Plus Jakarta Sans',Helvetica] font-semibold ${logColors[entry.kind]}`}>
+                      <span className={`text-[12px] [font-family:'Gilroy',sans-serif] font-semibold ${logColors[entry.kind]}`}>
                         {entry.event}
                       </span>
-                      <span className="text-[10px] text-[#6c779d] [font-family:'Plus Jakarta Sans',Helvetica] flex-shrink-0">
+                      <span className="text-[10px] text-[#6c779d] [font-family:'Gilroy',sans-serif] flex-shrink-0">
                         {entry.time}
                       </span>
                     </div>
-                    <p className="text-[12px] text-[#a8b9f4] [font-family:'Plus Jakarta Sans',Helvetica] leading-[16px] mt-0.5">
+                    <p className="text-[12px] text-[#a8b9f4] [font-family:'Gilroy',sans-serif] leading-[16px] mt-0.5">
                       {entry.detail}
                     </p>
                   </div>

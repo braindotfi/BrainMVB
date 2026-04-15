@@ -132,7 +132,7 @@ const DateSeparator = ({ label }: { label: string }) => (
       <circle cx="6" cy="6" r="5" stroke="#6c779d" strokeWidth="1"/>
       <path d="M6 3.5V6L7.5 7.5" stroke="#6c779d" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
-    <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[12px] tracking-[-0.48px]">
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] tracking-[-0.48px]">
       {label}
     </span>
   </div>
@@ -293,10 +293,10 @@ export const AssistantPage = (): JSX.Element => {
             <div className="flex items-center gap-2">
               <BrainAvatar />
               <div className="min-w-0">
-                <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white text-sm truncate">{session.title}</div>
+                <div className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-sm truncate">{session.title}</div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                  <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px]">Online</span>
+                  <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px]">Online</span>
                 </div>
               </div>
             </div>
@@ -309,7 +309,7 @@ export const AssistantPage = (): JSX.Element => {
           className="flex items-center justify-center px-3 py-1.5 rounded-full flex-shrink-0 transition-colors hover:opacity-80"
           style={{ background: "#240757" }}
         >
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#7631ee] text-xs whitespace-nowrap">New Chat</span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-xs whitespace-nowrap">New Chat</span>
         </button>
       </div>
 
@@ -318,8 +318,8 @@ export const AssistantPage = (): JSX.Element => {
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col flex-1 items-center justify-center gap-10 px-16">
             <div className="w-full max-w-[560px]">
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-white leading-[40px] text-[32px]">Hi. I'm Brain.</p>
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#7631ee] leading-[40px] text-[32px]">What can I help you with today?</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white leading-[40px] text-[32px]">Hi. I'm Brain.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] leading-[40px] text-[32px]">What can I help you with today?</p>
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[560px]">
@@ -341,7 +341,7 @@ export const AssistantPage = (): JSX.Element => {
                     onClick={() => handleSend(chip)}
                     className="bg-[#1a1f2e] flex items-center justify-center px-[10px] py-1.5 rounded-full hover:bg-[#222840] transition-colors"
                   >
-                    <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#a8b9f4] text-xs whitespace-nowrap">{chip}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-xs whitespace-nowrap">{chip}</span>
                   </button>
                 ))}
               </div>
@@ -366,7 +366,7 @@ export const AssistantPage = (): JSX.Element => {
                     <div
                       className="max-w-[70%] bg-[#7631ee] rounded-xl rounded-tr-sm px-3 py-2"
                     >
-                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[14px] leading-[20px] text-right">
+                      <p className="[font-family:'Gilroy',sans-serif] text-white text-[14px] leading-[20px] text-right">
                         {message.content}
                       </p>
                     </div>
@@ -377,7 +377,7 @@ export const AssistantPage = (): JSX.Element => {
                     <BrainAvatar />
                     <div className="flex-1 min-w-0">
                       <div
-                        className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[14px] leading-[24px] tracking-[-0.64px]"
+                        className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[14px] leading-[24px] tracking-[-0.64px]"
                         style={{ wordBreak: "break-word" }}
                       >
                         {message.content}
@@ -406,7 +406,7 @@ export const AssistantPage = (): JSX.Element => {
 
             {chatMutation.isError && (
               <div className="flex justify-center">
-                <span className="px-3 py-1 bg-[#3a1020] rounded-full text-[#f87171] text-xs [font-family:'Plus Jakarta Sans',Helvetica]">
+                <span className="px-3 py-1 bg-[#3a1020] rounded-full text-[#f87171] text-xs [font-family:'Gilroy',sans-serif]">
                   Failed to get response. Please try again.
                 </span>
               </div>
@@ -460,7 +460,7 @@ const ChatInputBox = ({
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       rows={large ? 2 : 1}
-      className={`w-full bg-transparent text-white text-[14px] [font-family:'Plus Jakarta Sans',Helvetica] placeholder-[#6c779d] outline-none resize-none leading-6 px-4 pt-3 ${large ? "pb-12" : "pb-12"}`}
+      className={`w-full bg-transparent text-white text-[14px] [font-family:'Gilroy',sans-serif] placeholder-[#6c779d] outline-none resize-none leading-6 px-4 pt-3 ${large ? "pb-12" : "pb-12"}`}
       style={{ fieldSizing: "content" } as React.CSSProperties}
     />
     {/* Bottom action row */}

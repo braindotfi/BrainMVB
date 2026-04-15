@@ -99,7 +99,7 @@ const stepLabels = ["From Asset", "Amount", "To Asset", "Review"];
 const StepDot = ({ n, current }: { n: number; current: number }) => (
   <div className="flex items-center">
     <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Plus Jakarta Sans',Helvetica] font-semibold transition-colors ${
+      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs [font-family:'Gilroy',sans-serif] font-semibold transition-colors ${
         n < current
           ? "bg-brain-v1green text-white"
           : n === current
@@ -137,14 +137,14 @@ function AssetSelectCard({
       <div className="flex items-center gap-[8px] bg-[#06070a] border border-[#1d2132] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full shrink-0">
         <div className="flex flex-1 gap-[8px] items-center min-w-0">
           <AssetIcon asset={asset} size={32} />
-          <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px] truncate">
             {asset.name} <span className="text-[#6c779d]">({asset.ticker})</span>
           </p>
         </div>
         {(onEdit || readOnly) && (
           <button
             onClick={onEdit}
-            className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
+            className="bg-[#4a2300] px-[12px] py-[8px] rounded-[100px] text-[#ff9500] text-[12px] [font-family:'Gilroy',sans-serif] font-semibold shrink-0 hover:opacity-80 transition-opacity"
             data-testid="btn-edit-asset"
           >
             Edit
@@ -159,7 +159,7 @@ function AssetSelectCard({
       className="flex items-center gap-[8px] bg-[#222737] h-[56px] rounded-[16px] px-[16px] py-[10px] w-full text-left hover:bg-[#2a2f45] transition-colors"
       data-testid="btn-select-asset"
     >
-      <span className="flex-1 [font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">{placeholder}</span>
+      <span className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px]">{placeholder}</span>
       <div className="size-[32px] rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M7 2V12M2 7H12" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
@@ -188,7 +188,7 @@ function SearchPanel({
     <>
       {/* Header */}
       <div className="backdrop-blur-[10px] flex items-center justify-between p-[16px] flex-shrink-0 w-full">
-        <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[20px] leading-[24px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">
           Select Asset
         </p>
         <button
@@ -216,7 +216,7 @@ function SearchPanel({
               placeholder="Search by name or ticker…"
               value={query}
               onChange={e => onQueryChange(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-white text-[16px] [font-family:'Plus Jakarta Sans',Helvetica] placeholder:text-[#6c779d] min-w-0"
+              className="flex-1 bg-transparent outline-none text-white text-[16px] [font-family:'Gilroy',sans-serif] placeholder:text-[#6c779d] min-w-0"
               autoFocus
               data-testid="input-asset-search"
             />
@@ -236,7 +236,7 @@ function SearchPanel({
           {/* Section label + asset list */}
           <div className="flex flex-col items-start w-full">
             <div className="flex items-center px-[8px] w-full">
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[#6c779d] text-[15px] tracking-[-0.6px] leading-[24px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] tracking-[-0.6px] leading-[24px]">
                 {query ? "Search Results" : "All Assets"}
               </p>
             </div>
@@ -253,10 +253,10 @@ function SearchPanel({
                   <div className="flex gap-[8px] items-center flex-shrink-0">
                     <AssetIcon asset={asset} size={32} />
                     <div className="flex flex-col gap-0.5">
-                      <p className="[font-family:'Plus Jakarta Sans',Helvetica] font-medium text-[#a8b9f4] text-[16px] leading-[24px] whitespace-nowrap">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px] whitespace-nowrap">
                         {asset.name} ({asset.ticker})
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',Helvetica] text-[#6c779d] text-xs">
+                      <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#6c779d] text-xs">
                         {asset.balance}
                       </p>
                     </div>
@@ -282,7 +282,7 @@ function SearchPanel({
                 </button>
               ))}
               {assets.length === 0 && (
-                <p className="text-[#6c779d] text-sm text-center py-6 [font-family:'Plus Jakarta Sans',Helvetica]">No assets found</p>
+                <p className="text-[#6c779d] text-sm text-center py-6 [font-family:'Gilroy',sans-serif]">No assets found</p>
               )}
             </div>
           </div>
@@ -475,14 +475,14 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 href={basescanTx}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] flex items-center justify-center [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                 data-testid="btn-view-exchange-basescan"
               >
                 View
               </a>
               <button
                 onClick={handleDone}
-                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                 data-testid="btn-exchange-done"
               >
                 Done
@@ -558,20 +558,20 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step === 1 && (
                 <div className="flex flex-col gap-[24px]">
                   <div className="flex flex-col">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging from?</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
+                    <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging from?</p>
                   </div>
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                     <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
                       <AccountIcon accountType={accountType} />
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
                         {accountLabel(accountType)}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col gap-[4px]">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Assets</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Assets</p>
                     <AssetSelectCard
                       asset={fromAsset}
                       placeholder="Select Asset"
@@ -586,8 +586,8 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step === 2 && (
                 <div className="flex flex-col gap-[24px]">
                   <div className="flex flex-col">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Amount</p>
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">How much to exchange?</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Amount</p>
+                    <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">How much to exchange?</p>
                   </div>
                   <div className="flex flex-col gap-[8px]">
                     <div className="flex items-center gap-[2px] bg-[#222737] border border-[#6c779d] h-[56px] rounded-[16px] px-[16px] py-[10px]">
@@ -603,23 +603,23 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                         onBlur={() => setAmountDisplay(fmtInputBlur(amount))}
                         onFocus={() => setAmountDisplay(stripCommas(amountDisplay))}
                         placeholder="0.00"
-                        className="flex-1 bg-transparent outline-none text-white text-[20px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold placeholder:text-[#414965] min-w-0"
+                        className="flex-1 bg-transparent outline-none text-white text-[20px] [font-family:'Gilroy',sans-serif] font-semibold placeholder:text-[#414965] min-w-0"
                         data-testid="input-exchange-amount"
                         autoFocus
                       />
                       <div className="bg-[#11141b] px-[6px] py-[2px] rounded-[100px] shrink-0 ml-2">
-                        <span className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px]">
                           {fromAsset?.ticker ?? "USD"}
                         </span>
                       </div>
                     </div>
                     {fromAsset && (
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[12px]">
+                      <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[12px]">
                         Available: {fmt(fromBalanceNum)} {fromAsset.ticker}
                       </p>
                     )}
                     {amountExceedsBalance && (
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-red-400 text-[12px]">
+                      <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[12px]">
                         Amount exceeds your available balance of {fmt(fromBalanceNum)} {fromAsset?.ticker}
                       </p>
                     )}
@@ -631,22 +631,22 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step === 3 && (
                 <div className="flex flex-col gap-[24px]">
                   <div className="flex flex-col">
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging to?</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">Exchange Money</p>
+                    <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">What are we exchanging to?</p>
                   </div>
 
                   <div className="flex flex-col gap-[24px] items-center">
                     <div className="flex flex-col gap-[4px] w-full">
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Exchanging From</p>
                       <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full shrink-0">
                         <AccountIcon accountType={accountType} />
-                        <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] shrink-0">
                           {accountLabel(accountType)}
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-col gap-[4px] w-full">
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Current Asset</p>
                       <AssetSelectCard
                         asset={fromAsset}
                         placeholder=""
@@ -663,7 +663,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     </div>
 
                     <div className="flex flex-col gap-[4px] w-full">
-                      <p className="[font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Target Asset</p>
                       <AssetSelectCard
                         asset={toAsset}
                         placeholder="Select asset"
@@ -674,7 +674,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   </div>
 
                   {toAsset && fromAsset && toAsset.id === fromAsset.id && (
-                    <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-red-400 text-[12px]">
+                    <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[12px]">
                       Target asset must be different from source asset.
                     </p>
                   )}
@@ -838,7 +838,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 <div className="flex gap-[16px]">
                   <button
                     onClick={handleClose}
-                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                     data-testid="btn-exchange-cancel"
                   >
                     Cancel
@@ -846,7 +846,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   <button
                     onClick={() => setStep((s) => (s + 1) as Step)}
                     disabled={!canContinue}
-                    className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-40"
+                    className="flex-1 h-[48px] bg-[#4a2300] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-40"
                     data-testid="btn-exchange-next"
                   >
                     Next
@@ -856,7 +856,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                 <div className="flex gap-[16px]">
                   <button
                     onClick={handleClose}
-                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+                    className="flex-1 h-[48px] bg-[#11141b] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
                     data-testid="btn-exchange-cancel"
                   >
                     Cancel
@@ -864,7 +864,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   <button
                     onClick={handleConfirm}
                     disabled={confirming}
-                    className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Plus Jakarta Sans',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
+                    className="flex-1 h-[48px] bg-[#123509] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#42bf23] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity disabled:opacity-50"
                     data-testid="btn-exchange-confirm"
                   >
                     {confirming ? "Confirming…" : "Confirm"}

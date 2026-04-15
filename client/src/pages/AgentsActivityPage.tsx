@@ -116,13 +116,13 @@ const AgentCard = ({
 
         {/* Name + type tag */}
         <div className="flex flex-1 min-w-0 flex-col gap-[4px]">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-white text-[16px] leading-[20px] truncate">
+          <span className="[font-family:'Gilroy',sans-serif] text-white text-[16px] leading-[20px] truncate">
             {agent.name}
           </span>
           <div className="flex items-center gap-[4px] flex-shrink-0">
             <div className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
               style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
+              <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">
                 {agent.type}
               </span>
             </div>
@@ -140,7 +140,7 @@ const AgentCard = ({
             style={{ background: "#350011" }}
           >
             <div className="w-[12px] h-[12px] rounded-[2px] flex-shrink-0" style={{ background: "#d20344" }} />
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
               Stop
             </span>
           </button>
@@ -155,7 +155,7 @@ const AgentCard = ({
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
               <path d="M3 2L10 6L3 10V2Z" fill="#42bf23" />
             </svg>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px] leading-[16px] whitespace-nowrap">
               Start
             </span>
           </button>
@@ -168,14 +168,14 @@ const AgentCard = ({
         <div className="flex gap-[16px]">
           {/* Cap (left) */}
           <div className="flex flex-1 flex-col items-start min-w-0">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">
+            <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[13px] leading-[16px]">
               Cap
             </span>
             <p style={{ fontSize: 0, lineHeight: 0 }}>
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[16px] leading-[20px]">
+              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[16px] leading-[20px]">
                 {spend.cap}
               </span>
-              <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#a8b9f4] text-[12px] leading-[20px]">
+              <span className="[font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-[12px] leading-[20px]">
                 {spend.unit}
               </span>
             </p>
@@ -183,10 +183,10 @@ const AgentCard = ({
 
           {/* Used (right, right-aligned) */}
           <div className="flex flex-1 flex-col items-end min-w-0">
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#6c779d] text-[13px] leading-[16px]">
+            <span className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[13px] leading-[16px]">
               Used
             </span>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[16px] leading-[20px]"
+            <span className="[font-family:'Gilroy',sans-serif] text-[16px] leading-[20px]"
               style={{ color: barColor }}>
               {spend.pct}%
             </span>
@@ -393,7 +393,7 @@ export const AgentsActivityPage = (): JSX.Element => {
             <div className="relative flex-shrink-0 size-[16px] flex items-center justify-center">
               <div className="w-[12px] h-[12px] rounded-[2px]" style={{ background: "#d20344" }} />
             </div>
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">
               Stop All
             </span>
           </button>
@@ -416,7 +416,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search agents..."
                   data-testid="input-search-agents"
-                  className="bg-transparent text-white text-[14px] [font-family:'Plus Jakarta Sans',Helvetica] placeholder-[#414965] outline-none flex-1"
+                  className="bg-transparent text-white text-[14px] [font-family:'Gilroy',sans-serif] placeholder-[#414965] outline-none flex-1"
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} className="text-[#414965] hover:text-white transition-colors flex-shrink-0">
@@ -438,7 +438,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                         setActiveTab(key);
                         navigate(key === "all" ? "/agents" : `/agents?tab=${key}`, { replace: true });
                       }}
-                      className="flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Plus Jakarta Sans',Helvetica] transition-all whitespace-nowrap"
+                      className="flex items-center gap-[4px] px-[16px] py-[6px] rounded-[100px] text-[14px] [font-family:'Gilroy',sans-serif] transition-all whitespace-nowrap"
                       style={{
                         background: isSel ? "#350011" : "transparent",
                         color: isSel ? "#d20344" : "#414965",
@@ -447,7 +447,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                       {label}
                       <div className="flex items-center justify-center p-[2px] rounded-[4px]"
                         style={{ background: isSel ? "#d20344" : "#222737" }}>
-                        <span className="text-[12px] [font-family:'Plus Jakarta Sans',Helvetica] leading-[12px]"
+                        <span className="text-[12px] [font-family:'Gilroy',sans-serif] leading-[12px]"
                           style={{ color: isSel ? "#350011" : "#6c779d" }}>
                           {count}
                         </span>
@@ -489,7 +489,7 @@ export const AgentsActivityPage = (): JSX.Element => {
                 <rect x="8" y="8" width="24" height="24" rx="4" stroke="#1d2132" strokeWidth="2" />
                 <path d="M16 20h8M20 16v8" stroke="#1d2132" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              <p className="[font-family:'Plus Jakarta Sans',Helvetica] text-[#414965] text-[14px]">
+              <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[14px]">
                 No agents found
               </p>
             </div>

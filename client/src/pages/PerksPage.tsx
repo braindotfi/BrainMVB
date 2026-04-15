@@ -227,14 +227,14 @@ function PerkCard({
             <div>
               <p
                 className="text-[11px] leading-none"
-                style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+                style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
               >
                 {perk.partner}
               </p>
               {perk.new && (
                 <span
                   className="inline-block mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full"
-                  style={{ background: "rgba(118,49,238,0.2)", color: "#9d5cf5", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+                  style={{ background: "rgba(118,49,238,0.2)", color: "#9d5cf5", fontFamily: "'Gilroy', sans-serif" }}
                 >
                   NEW
                 </span>
@@ -249,7 +249,7 @@ function PerkCard({
               background: perk.badgeBg,
               color: perk.badgeColor,
               border: `1px solid ${perk.badgeColor}22`,
-              fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+              fontFamily: "'Gilroy', sans-serif",
             }}
           >
             {perk.badge}
@@ -260,13 +260,13 @@ function PerkCard({
         <div>
           <p
             className="text-sm leading-snug mb-1"
-            style={{ color: "#c8d4f0", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}
           >
             {perk.title}
           </p>
           <p
             className="text-[12px] leading-relaxed"
-            style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
           >
             {perk.description}
           </p>
@@ -280,7 +280,7 @@ function PerkCard({
       >
         <span
           className="text-[11px]"
-          style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+          style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
         >
           {perk.expiry}
         </span>
@@ -295,13 +295,13 @@ function PerkCard({
                   background: "rgba(66,191,35,0.1)",
                   color: "#42bf23",
                   border: "1px solid rgba(66,191,35,0.25)",
-                  fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+                  fontFamily: "'Gilroy', sans-serif",
                 }
               : {
                   background: "#4a2300",
                   color: "#ff9500",
                   border: "1px solid rgba(255,149,0,0.15)",
-                  fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+                  fontFamily: "'Gilroy', sans-serif",
                 }
           }
         >
@@ -336,24 +336,24 @@ function StatsStrip({ perks }: { perks: Perk[] }) {
       style={{ borderBottom: "1px solid #1d2132" }}
     >
       <div className="flex flex-col">
-        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>Active perks</span>
-        <span className="text-base" style={{ color: "#42bf23", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>{activated} / {total}</span>
+        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>Active perks</span>
+        <span className="text-base" style={{ color: "#42bf23", fontFamily: "'Gilroy', sans-serif" }}>{activated} / {total}</span>
       </div>
       <div className="w-px h-8 bg-[#1d2132] flex-shrink-0" />
       <div className="flex flex-col">
-        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>Est. monthly value</span>
-        <span className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>$186</span>
+        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>Est. monthly value</span>
+        <span className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}>$186</span>
       </div>
       <div className="w-px h-8 bg-[#1d2132] flex-shrink-0" />
       <div className="flex flex-col">
-        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>Partners</span>
-        <span className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>12</span>
+        <span className="text-[11px]" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>Partners</span>
+        <span className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}>12</span>
       </div>
       <div className="flex-1" />
       {/* New tag */}
       <span
         className="px-2.5 py-1 rounded-full text-[11px]"
-        style={{ background: "rgba(118,49,238,0.15)", color: "#9d5cf5", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", border: "1px solid rgba(118,49,238,0.25)" }}
+        style={{ background: "rgba(118,49,238,0.15)", color: "#9d5cf5", fontFamily: "'Gilroy', sans-serif", border: "1px solid rgba(118,49,238,0.25)" }}
       >
         3 new this month
       </span>
@@ -409,13 +409,13 @@ export const PerksPage = (): JSX.Element => {
           <div>
             <h2
               className="text-base leading-tight"
-              style={{ color: "#f1f5f9", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+              style={{ color: "#f1f5f9", fontFamily: "'Gilroy', sans-serif" }}
             >
               Perks & Benefits
             </h2>
             <p
               className="text-[11px]"
-              style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+              style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
             >
               Exclusive deals for Brain cardholders
             </p>
@@ -432,7 +432,7 @@ export const PerksPage = (): JSX.Element => {
           </svg>
           <span
             className="text-[11px]"
-            style={{ color: "#9d5cf5", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#9d5cf5", fontFamily: "'Gilroy', sans-serif" }}
           >
             Premium Cardholder
           </span>
@@ -459,7 +459,7 @@ export const PerksPage = (): JSX.Element => {
                 background: active ? "#240757" : "transparent",
                 color: active ? "#9d5cf5" : "#414965",
                 border: active ? "1px solid #4a1a9e" : "1px solid transparent",
-                fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+                fontFamily: "'Gilroy', sans-serif",
               }}
             >
               <span>{cat.emoji}</span>
@@ -488,7 +488,7 @@ export const PerksPage = (): JSX.Element => {
               <span className="text-4xl">🎁</span>
               <p
                 className="text-sm"
-                style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+                style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
               >
                 No perks in this category yet
               </p>
@@ -506,7 +506,7 @@ export const PerksPage = (): JSX.Element => {
         <div className="px-5 pb-5">
           <p
             className="text-[11px] text-center"
-            style={{ color: "#2a2f46", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#2a2f46", fontFamily: "'Gilroy', sans-serif" }}
           >
             Perks are available exclusively to Brain cardholders. Terms and conditions apply for each partner offer.
           </p>

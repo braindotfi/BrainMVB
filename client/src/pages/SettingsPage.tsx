@@ -45,7 +45,7 @@ const Toggle = ({
 const SectionLabel = ({ children }: { children: string }) => (
   <span
     className="text-[11px] uppercase tracking-widest"
-    style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+    style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
   >
     {children}
   </span>
@@ -82,7 +82,7 @@ const SettingRow = ({
         className="text-sm leading-snug"
         style={{
           color: danger ? "#d20344" : "#c8d4f0",
-          fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+          fontFamily: "'Gilroy', sans-serif",
         }}
       >
         {label}
@@ -90,7 +90,7 @@ const SettingRow = ({
       {sublabel && (
         <p
           className="text-[12px] mt-0.5 leading-snug"
-          style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+          style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
         >
           {sublabel}
         </p>
@@ -138,7 +138,7 @@ const SelectInput = ({
       background: "#161b28",
       border: "1px solid #1d2132",
       color: "#a8b9f4",
-      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+      fontFamily: "'Gilroy', sans-serif",
       minWidth: "120px",
     }}
   >
@@ -164,7 +164,7 @@ const AmountInput = ({
     style={{ background: "#161b28", border: "1px solid #1d2132" }}
   >
     {prefix && (
-      <span className="text-sm" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>
+      <span className="text-sm" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>
         {prefix}
       </span>
     )}
@@ -174,7 +174,7 @@ const AmountInput = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="bg-transparent outline-none w-20 text-sm text-right"
-      style={{ color: "#a8b9f4", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+      style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif" }}
     />
   </div>
 );
@@ -260,7 +260,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
         <div className="flex items-center gap-4 p-5">
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #7631ee, #4a1a9e)", color: "white", fontFamily: "'Plus Jakarta Sans', Helvetica" }}
+            style={{ background: "linear-gradient(135deg, #7631ee, #4a1a9e)", color: "white", fontFamily: "'Gilroy', sans-serif" }}
           >
             {name.split(" ").map(n => n[0]).join("").slice(0, 2)}
           </div>
@@ -271,13 +271,13 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="bg-transparent outline-none border-b text-base w-full"
-                style={{ borderColor: "#7631ee", color: "#c8d4f0", fontFamily: "'Plus Jakarta Sans', Helvetica" }}
+                style={{ borderColor: "#7631ee", color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}
                 autoFocus
               />
             ) : (
-              <p className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>{name}</p>
+              <p className="text-base" style={{ color: "#c8d4f0", fontFamily: "'Gilroy', sans-serif" }}>{name}</p>
             )}
-            <p className="text-[12px] mt-0.5" style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}>{email}</p>
+            <p className="text-[12px] mt-0.5" style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}>{email}</p>
           </div>
           <button
             data-testid="button-edit-profile"
@@ -289,7 +289,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             style={{
               background: editing ? "#7631ee" : "#161b28",
               color: editing ? "white" : "#6c779d",
-              fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+              fontFamily: "'Gilroy', sans-serif",
               border: "1px solid #1d2132",
             }}
           >
@@ -312,7 +312,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 style={{
                   background: kycStatus === "Verified" ? "#0d2e0d" : "#2e1a0d",
                   color: kycStatus === "Verified" ? "#42bf23" : "#ff9500",
-                  fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+                  fontFamily: "'Gilroy', sans-serif",
                   border: `1px solid ${kycStatus === "Verified" ? "rgba(66,191,35,0.2)" : "rgba(255,149,0,0.2)"}`,
                 }}
               >
@@ -330,7 +330,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 data-testid="button-copy-wallet"
                 onClick={() => { navigator.clipboard.writeText("0x00d03cB5a84f9E2d100d0486A8"); toast({ title: "Copied", description: "Wallet address copied to clipboard." }); }}
                 className="px-2.5 py-1 rounded-lg text-xs transition-colors hover:opacity-80"
-                style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif", border: "1px solid #1d2132" }}
+                style={{ background: "#161b28", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", border: "1px solid #1d2132" }}
               >
                 Copy
               </button>
@@ -758,7 +758,7 @@ export const SettingsPage = (): JSX.Element => {
         <div className="px-5 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: "1px solid #1d2132" }}>
           <h2
             className="text-base"
-            style={{ color: "#f1f5f9", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#f1f5f9", fontFamily: "'Gilroy', sans-serif" }}
           >
             Settings
           </h2>
@@ -787,7 +787,7 @@ export const SettingsPage = (): JSX.Element => {
                     className="text-sm"
                     style={{
                       color: active ? "#c8d4f0" : "#6c779d",
-                      fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif",
+                      fontFamily: "'Gilroy', sans-serif",
                     }}
                   >
                     {item.label}
@@ -802,7 +802,7 @@ export const SettingsPage = (): JSX.Element => {
         <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: "1px solid #1d2132" }}>
           <p
             className="text-[11px]"
-            style={{ color: "#414965", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif" }}
           >
             Brain Finance v1.0.0
           </p>
@@ -818,7 +818,7 @@ export const SettingsPage = (): JSX.Element => {
         >
           <h3
             className="text-base"
-            style={{ color: "#f1f5f9", fontFamily: "'Plus Jakarta Sans', Helvetica, sans-serif" }}
+            style={{ color: "#f1f5f9", fontFamily: "'Gilroy', sans-serif" }}
           >
             {TITLES[section]}
           </h3>

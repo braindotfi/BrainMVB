@@ -124,20 +124,20 @@ export const FeaturedCarousel = ({ onSlideClick, autoPlay = true }: FeaturedCaro
         >
           <p
             className="text-[#7631ee] text-[14px] leading-[16px] w-full shrink-0 relative"
-            style={{ fontFamily: "'Gilroy', 'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 600 }}
+            style={{ fontFamily: "'Gilroy', 'Gilroy', sans-serif", fontWeight: 600 }}
           >
             {slide.label}
           </p>
           <div className="flex flex-col items-start w-full shrink-0">
             <p
               className="text-white text-[32px] leading-[40px] w-full shrink-0"
-              style={{ fontFamily: "'Gilroy', 'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 700 }}
+              style={{ fontFamily: "'Gilroy', 'Gilroy', sans-serif", fontWeight: 700 }}
             >
               {slide.title}
             </p>
             <p
               className="text-[#7631ee] text-[16px] leading-[20px] w-full shrink-0"
-              style={{ fontFamily: "'Gilroy', 'Plus Jakarta Sans', Helvetica, sans-serif", fontWeight: 500 }}
+              style={{ fontFamily: "'Gilroy', 'Gilroy', sans-serif", fontWeight: 500 }}
             >
               {slide.description}
             </p>

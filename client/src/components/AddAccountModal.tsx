@@ -346,7 +346,7 @@ function AccountPopup({
         {/* List */}
         <div className="flex flex-col">
           <div className="flex items-center justify-center px-[8px] py-[4px]">
-            <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">
               All Assets
             </p>
           </div>
@@ -513,7 +513,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
               data-testid="btn-add-cancel"
             >
               Cancel
@@ -521,7 +521,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
             <button
               onClick={() => selected && setStep(selected.type)}
               disabled={!selected}
-              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] transition-opacity ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               data-testid="btn-add-next"
             >
               Next
@@ -617,7 +617,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                 </div>
               </div>
               {copied && (
-                <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+                <p className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
                   Address copied!
                 </p>
               )}
@@ -628,7 +628,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
               data-testid="btn-wallet-close"
             >
               Close
@@ -699,7 +699,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
                   Recipient Name
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                  <p className="flex-1 [font-family:'Mont',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
                     {recipientName || "—"}
                   </p>
                   <button
@@ -755,7 +755,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
               data-testid="btn-bank-close"
             >
               Close
@@ -850,7 +850,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               </div>
             </div>
             {copied && (
-              <p className="[font-family:'Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
                 Address copied!
               </p>
             )}
@@ -861,7 +861,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
         <div className="px-[39px] pt-[24px] pb-[32px]">
           <button
             onClick={handleClose}
-            className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Mont',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
+            className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] tracking-[-0.72px] hover:opacity-80 transition-opacity"
             data-testid="btn-agent-close"
           >
             Close
