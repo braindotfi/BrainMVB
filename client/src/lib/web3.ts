@@ -31,6 +31,11 @@ export const wagmiConfig = createConfig({
 export const BASE_CHAIN_ID = base.id;
 export const BASE_SEPOLIA_CHAIN_ID = baseSepolia.id;
 
+/** Returns true for valid 0x EVM/Ethereum addresses (42 hex chars) */
+export function isEvmAddress(address: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(address.trim());
+}
+
 /** Truncate a wallet address for display: 0x1234...abcd */
 export function truncateAddress(address: string, chars = 4): string {
   if (!address) return "";

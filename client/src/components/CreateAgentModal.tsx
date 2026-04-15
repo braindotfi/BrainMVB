@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { AgentPrefillData } from "@/lib/navContext";
 import { useAuth } from "@/lib/authContext";
 import { ChevronLeft, X, Plus, ChevronDown, ChevronUp, Image as ImageIcon, Wallet, Trash2, Search } from "lucide-react";
+import { isEvmAddress } from "@/lib/web3";
 
 const InfoSquareIcon = ({ className = "" }: { className?: string }) => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className} style={{ flexShrink: 0 }}>
@@ -1016,7 +1017,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                     <FieldLabel>Wallet Address</FieldLabel>
                     <InfoSquareIcon className="text-[#6c779d] shrink-0" />
                   </div>
-                  <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px]">
+                  <div className={`flex items-center px-[8px] py-[10px] rounded-[8px] ${pr_address && !isEvmAddress(pr_address) ? "bg-[#222737] border border-red-500/60" : "bg-[#222737]"}`}>
                     <input
                       value={pr_address}
                       onChange={(e) => setPr_address(e.target.value)}
@@ -1025,6 +1026,11 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                       className="flex-1 bg-transparent font-['Plus Jakarta Sans',sans-serif] text-white text-[16px] leading-[20px] outline-none placeholder:text-[#414965]"
                     />
                   </div>
+                  {pr_address && !isEvmAddress(pr_address) && (
+                    <p className="font-['Plus Jakarta Sans',sans-serif] text-red-400 text-[13px] leading-[18px]">
+                      Must be a valid 0x EVM address (42 characters starting with 0x)
+                    </p>
+                  )}
                 </div>
                 <p className="font-['Plus Jakarta Sans',sans-serif] text-[#6c779d] text-[14px] leading-[20px]">
                   Authorize the agent to operate within the defined policy. This commits the policy hash on-chain.
@@ -1148,11 +1154,13 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
               <button
                 type="button"
                 data-testid="button-save-recipient"
+                disabled={!isEvmAddress(pr_address)}
                 onClick={() => {
+                  if (!isEvmAddress(pr_address)) return;
                   const tagMap: Record<string, string> = { usdc: "USDC", x402: "x402", wirex: "WireX" };
                   setP_recipient_list([...p_recipient_list, {
                     name: pr_name.trim() || "New Recipient",
-                    address: pr_address.trim() || "0x...",
+                    address: pr_address.trim(),
                     tag: tagMap[pr_rail] || "USDC",
                     amount: pr_per_payment.trim() || "$0",
                     freq: pr_frequency,
@@ -1162,7 +1170,7 @@ export const CreateAgentModal = ({ open, onClose, onViewMyAgents, initialStep = 
                   setPr_dd(""); setPr_mm(""); setPr_yyyy(""); setPr_rail("usdc");
                   setPr_recurrence("scheduled"); setPr_frequency("Monthly"); setPr_first_approval(true);
                 }}
-                className="flex-1 bg-[#123509] font-['Plus Jakarta Sans',sans-serif] text-[#42bf23] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity"
+                className={`flex-1 font-['Plus Jakarta Sans',sans-serif] text-[16px] leading-[20px] px-[20px] py-[10px] rounded-[100px] transition-opacity ${isEvmAddress(pr_address) ? "bg-[#123509] text-[#42bf23] hover:opacity-80 cursor-pointer" : "bg-[#1d2132] text-[#414965] cursor-not-allowed opacity-60"}`}
               >
                 Save Recipient
               </button>

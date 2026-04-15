@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtUsd, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
+import { isEvmAddress } from "@/lib/web3";
 
 // ── Figma asset URLs ──────────────────────────────────────────────────────────
 
@@ -490,7 +491,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
     if (state.step === 2) return state.recipientType !== null;
     if (state.step === 3) {
       if (state.recipientType === "bank")   return state.recipientName.length > 0 && state.iban.length > 6;
-      if (state.recipientType === "wallet") return state.walletAddress.length > 10;
+      if (state.recipientType === "wallet") return isEvmAddress(state.walletAddress);
       if (state.recipientType === "agent")  return state.selectedAgentId !== null;
     }
     if (state.step === 4) return enteredAmount > 0 && !amountError;
@@ -839,8 +840,8 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                     Paste
                   </button>
                 </InputBox>
-                {state.walletAddress && state.walletAddress.length < 10 && (
-                  <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[13px] mt-[4px]">Please enter a valid wallet address</p>
+                {state.walletAddress && !isEvmAddress(state.walletAddress) && (
+                  <p className="[font-family:'Gilroy',sans-serif] text-red-400 text-[13px] mt-[4px]">Must be a valid 0x EVM address (42 characters starting with 0x)</p>
                 )}
               </FieldRow>
             </>
