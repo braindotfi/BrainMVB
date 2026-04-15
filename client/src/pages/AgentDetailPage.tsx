@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AreaChart, Area, Tooltip, ResponsiveContainer, Customized } from "recharts";
 import { agents, AgentData, AgentStatus } from "@/lib/agentsData";
@@ -102,16 +102,43 @@ const Skeleton = ({ className }: { className?: string }) => (
 /* ── Reputation Banner ── */
 type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; ageLabel?: string; }
-const REP_TC: Record<RepTier, { bg: string; border: string; text: string; shield: string }> = {
-  Legendary: { bg: "#1a0840", border: "rgba(157,92,245,0.25)",  text: "#9d5cf5", shield: "#9d5cf5" },
-  Diamond:   { bg: "#0a1a2e", border: "rgba(56,189,248,0.25)",  text: "#38bdf8", shield: "#38bdf8" },
-  Gold:      { bg: "#1a0e00", border: "rgba(255,149,0,0.25)",   text: "#ff9500", shield: "#ff9500" },
-  Silver:    { bg: "#10131a", border: "rgba(168,185,244,0.25)", text: "#a8b9f4", shield: "#a8b9f4" },
-  Bronze:    { bg: "#140c00", border: "rgba(205,124,47,0.25)",  text: "#cd7c2f", shield: "#cd7c2f" },
-  New:       { bg: "#001a16", border: "rgba(0,212,170,0.25)",   text: "#00d4aa", shield: "#00d4aa" },
-  Unranked:  { bg: "#0d0f14", border: "rgba(65,73,101,0.25)",   text: "#6c779d", shield: "#414965" },
-  Caution:   { bg: "#1a0009", border: "rgba(210,3,68,0.3)",     text: "#d20344", shield: "#d20344" },
+
+/* Card-level border + base bg per tier */
+const REP_TC: Record<RepTier, { bg: string; border: string }> = {
+  Legendary: { bg: "#0d0617",  border: "rgba(157,92,245,0.2)"  },
+  Diamond:   { bg: "#080e1c",  border: "rgba(127,113,255,0.22)" },
+  Gold:      { bg: "#0f0800",  border: "rgba(255,180,0,0.2)"   },
+  Silver:    { bg: "#0c0f14",  border: "rgba(168,185,200,0.2)" },
+  Bronze:    { bg: "#0d0800",  border: "rgba(192,140,80,0.2)"  },
+  New:       { bg: "#000f0c",  border: "rgba(0,212,170,0.2)"   },
+  Unranked:  { bg: "#0b0d12",  border: "rgba(65,73,101,0.2)"   },
+  Caution:   { bg: "#110006",  border: "rgba(210,3,68,0.22)"   },
 };
+
+/* Figma badge icon assets — same as RepPill in the marketplace */
+const REP_ICON: Record<RepTier, { url: string; flip?: boolean }> = {
+  Legendary: { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Diamond:   { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
+  Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
+  Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
+  Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
+  New:       { url: "https://www.figma.com/api/mcp/asset/149a8d54-d2ee-4c0f-91b6-fad1c96cc23e" },
+  Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
+  Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
+};
+
+/* Pill gradient backgrounds + gradient/solid text colours per tier */
+const REP_STYLE: Record<RepTier, { pillBg: string; textGrad?: string; textSolid?: string }> = {
+  Legendary: { pillBg: "linear-gradient(107deg,rgb(80,30,180) 0%,rgb(110,55,195) 100%)",   textGrad: "linear-gradient(105deg,#d4b4ff 0%,#9d5cf5 100%)" },
+  Diamond:   { pillBg: "linear-gradient(107deg,rgb(46,31,113) 0%,rgb(67,50,118) 100%)",    textGrad: "linear-gradient(105deg,rgb(176,150,255) 0%,rgb(127,113,255) 100%)" },
+  Gold:      { pillBg: "linear-gradient(to right,#352502,#614b12)",                        textGrad: "linear-gradient(100deg,rgb(255,221,134) 0%,rgb(174,126,23) 100%)" },
+  Silver:    { pillBg: "linear-gradient(to right,#2b363b,#3f4e55)",                        textGrad: "linear-gradient(101deg,rgb(220,229,232) 0%,rgb(141,158,166) 100%)" },
+  Bronze:    { pillBg: "linear-gradient(to right,#2d220e,#42321a)",                        textGrad: "linear-gradient(101deg,rgb(192,159,107) 0%,rgb(104,78,38) 100%)" },
+  New:       { pillBg: "linear-gradient(102deg,rgb(0,55,44) 0%,rgb(11,75,62) 100%)",       textGrad: "linear-gradient(98deg,rgb(137,255,232) 0%,rgb(0,212,170) 100%)" },
+  Unranked:  { pillBg: "linear-gradient(to right,#21283b,#363d56)",                        textGrad: "linear-gradient(41deg,rgb(151,163,204) 23%,rgb(108,119,157) 76%)" },
+  Caution:   { pillBg: "#350011",                                                           textSolid: "#d20344" },
+};
+
 const ReputationBanner = ({ agentId }: { agentId: string }) => {
   const { data: rep } = useQuery<AgentRep>({
     queryKey: ["/api/agents", agentId, "reputation"],
@@ -120,62 +147,108 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
     enabled: !!agentId,
   });
   if (!rep) return null;
-  const tc = REP_TC[rep.tier];
 
-  const subtitle = rep.tier === "New"
-    ? rep.ageLabel ? `${rep.ageLabel} · building reputation` : "Newly registered · building reputation"
-    : rep.tier === "Unranked"
-    ? `${rep.validationCount} on-chain validations · not enough activity to rank`
-    : rep.tier === "Caution"
-    ? `${Math.abs(rep.score)} negative score · ${rep.validationCount} failed or disputed validations`
-    : `Top ${100 - rep.percentile}% · ${rep.validationCount.toLocaleString()} on-chain validations`;
+  const tc    = REP_TC[rep.tier];
+  const icon  = REP_ICON[rep.tier];
+  const style = REP_STYLE[rep.tier];
 
-  const scoreLabel = rep.tier === "Caution" ? `−${Math.abs(rep.score)}` : rep.tier === "New" || rep.tier === "Unranked" ? "—" : rep.score.toLocaleString();
+  const textStyle: React.CSSProperties = style.textGrad
+    ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+    : { color: style.textSolid };
+
+  const scoreLabel =
+    rep.tier === "Caution"                          ? `−${Math.abs(rep.score)}`
+    : rep.tier === "New" || rep.tier === "Unranked" ? "—"
+    : rep.score.toLocaleString();
+
+  const rankDisplay =
+    rep.tier === "New" || rep.tier === "Unranked" || rep.tier === "Caution" || rep.rankLabel === "—"
+      ? "—" : rep.rankLabel;
+
+  const subtitle =
+    rep.tier === "New"     ? (rep.ageLabel ? `${rep.ageLabel} · building reputation` : "Newly registered · building reputation")
+    : rep.tier === "Unranked" ? "Not enough activity to rank yet"
+    : rep.tier === "Caution"  ? `${rep.validationCount} failed or disputed validations`
+    : `Top ${100 - rep.percentile}% of all agents`;
 
   return (
     <div
-      className="rounded-[16px] p-[16px] flex items-center gap-[16px]"
+      className="rounded-[16px] overflow-hidden flex flex-col w-full"
       style={{ background: tc.bg, border: `1px solid ${tc.border}` }}
       data-testid="card-reputation"
     >
-      <div className="flex-shrink-0 w-[40px] h-[40px] rounded-full flex items-center justify-center"
-        style={{ background: `${tc.shield}18` }}>
-        <Shield size={20} color={tc.shield} strokeWidth={2} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-[8px] flex-wrap">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[18px] leading-[22px]" style={{ color: tc.text }}>
+      {/* ── Header: badge pill + score ── */}
+      <div className="flex items-center justify-between px-[16px] pt-[16px] pb-[14px]">
+        {/* Tier badge pill */}
+        <span
+          className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[40px] flex-shrink-0"
+          style={{ background: style.pillBg }}
+        >
+          <span className={`w-[20px] h-[20px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
+            <img src={icon.url} alt={rep.tier} className="w-full h-full object-contain" />
+          </span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[17px]" style={textStyle}>
             {rep.tier}
           </span>
-          {rep.rankLabel !== "—" && rep.rankLabel !== "Unranked" && rep.tier !== "New" && rep.tier !== "Caution" && (
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[13px] text-[#6c779d]">
-              Rank {rep.rankLabel}
-            </span>
-          )}
           {rep.tier === "Caution" && (
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] px-[8px] py-[2px] rounded-full" style={{ background: "rgba(210,3,68,0.15)", color: "#d20344" }}>
+            <span
+              className="[font-family:'Gilroy',sans-serif] text-[10px] font-medium px-[6px] py-[1px] rounded-full leading-[14px]"
+              style={{ background: "rgba(210,3,68,0.22)", color: "#d20344" }}
+            >
               Under review
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-[12px] mt-[4px] flex-wrap">
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#6c779d]">
-            {subtitle}
+        </span>
+
+        {/* Score */}
+        <div className="flex-shrink-0 flex flex-col items-end gap-[2px]">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[22px] leading-[26px]" style={textStyle}>
+            {scoreLabel}
           </span>
-          {rep.tier !== "New" && rep.tier !== "Unranked" && rep.totalVolumeUsd > 0 && (
-            <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">
-              ${rep.totalVolumeUsd.toLocaleString()} lifetime volume
-            </span>
-          )}
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wider">
+            Rep Score
+          </span>
         </div>
       </div>
-      <div className="flex-shrink-0 text-right">
-        <div className="[font-family:'Plus Jakarta Sans',Helvetica] font-semibold text-[15px]" style={{ color: tc.text }}>
-          {scoreLabel}
+
+      {/* ── Divider ── */}
+      <div style={{ height: 1, background: tc.border, marginLeft: 16, marginRight: 16 }} />
+
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-3 px-[16px] py-[14px]">
+        {/* Ranking */}
+        <div className="flex flex-col gap-[4px]">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
+            {rankDisplay}
+          </span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Ranking</span>
         </div>
-        <div className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wide mt-[2px]">
-          Rep Score
+
+        {/* Validations — centred with dividers */}
+        <div
+          className="flex flex-col gap-[4px] items-center"
+          style={{ borderLeft: `1px solid ${tc.border}`, borderRight: `1px solid ${tc.border}` }}
+        >
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
+            {rep.validationCount.toLocaleString()}
+          </span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Validations</span>
         </div>
+
+        {/* Volume */}
+        <div className="flex flex-col gap-[4px] items-end">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
+            {rep.totalVolumeUsd > 0 ? `$${rep.totalVolumeUsd.toLocaleString()}` : "—"}
+          </span>
+          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Volume</span>
+        </div>
+      </div>
+
+      {/* ── Subtitle ── */}
+      <div className="px-[16px] pb-[14px] -mt-[4px]">
+        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[12px] text-[#6c779d]">
+          {subtitle}
+        </span>
       </div>
     </div>
   );
