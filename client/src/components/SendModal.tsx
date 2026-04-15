@@ -135,14 +135,15 @@ function ChevronBtn() {
   );
 }
 
-function StepDots({ current }: { current: number }) {
+function StepDots({ current, total = 5, start = 1 }: { current: number; total?: number; start?: number }) {
+  const displayStep = current - start + 1;
   return (
     <div className="flex items-center gap-[8px] px-[12px] py-[6px] rounded-[100px]" style={{ background: "#12032D" }}>
-      {[1, 2, 3, 4, 5].map((n) => (
+      {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
         <div
           key={n}
           className="rounded-full shrink-0 transition-colors duration-300"
-          style={{ width: 8, height: 8, background: n <= current ? "#7631EE" : "#240757" }}
+          style={{ width: 8, height: 8, background: n <= displayStep ? "#7631EE" : "#240757" }}
         />
       ))}
     </div>
@@ -399,7 +400,11 @@ function ReviewRow({ label, value, highlight }: { label: string; value: string; 
 export const SendModal = ({ open, onClose, sourceAccountType = "wallet", excludeTypes = [], onConfirmed }: Props): JSX.Element | null => {
   const { wirexAccounts } = useAuth();
   const { addTransaction } = useTransactions();
-  const [state, setState]               = useState<SendState>(INITIAL);
+
+  const bankMode = sourceAccountType === "bank";
+  const bankInitial: SendState = { ...INITIAL, step: 2, selectedAssetId: "usd" };
+
+  const [state, setState]               = useState<SendState>(() => bankMode ? bankInitial : INITIAL);
   const [assetPopupOpen, setAssetPopupOpen] = useState(false);
   const [popupOpen, setPopupOpen]           = useState(false);
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
@@ -429,7 +434,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const handleClose = () => {
     onClose();
     setTimeout(() => {
-      setState(INITIAL);
+      setState(bankMode ? bankInitial : INITIAL);
       setAssetPopupOpen(false);
       setPopupOpen(false);
       setAgentPopupOpen(false);
@@ -439,8 +444,14 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
     }, 300);
   };
 
+  const minStep = bankMode ? 2 : 1;
+
   const handleBack = () => {
-    if (state.step > 1) set({ step: (state.step - 1) as Step });
+    if (state.step > minStep) {
+      set({ step: (state.step - 1) as Step });
+    } else {
+      handleClose();
+    }
     setAssetPopupOpen(false);
     setPopupOpen(false);
     setAgentPopupOpen(false);
@@ -677,9 +688,9 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="bg-[#0a0c10] h-[56px] relative flex items-center justify-center flex-shrink-0 border-b border-[#1d2132]">
-          <BackBtn onClick={state.step === 1 ? handleClose : handleBack} />
+          <BackBtn onClick={handleBack} />
           {state.step < 5
-            ? <StepDots current={state.step} />
+            ? <StepDots current={state.step} total={bankMode ? 4 : 5} start={bankMode ? 2 : 1} />
             : <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">Review Details</p>
           }
         </div>
@@ -925,9 +936,11 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                       {sourceAccountType === "bank" ? "Bank Account" : "Wallet Account"}
                     </p>
                   </div>
-                  <button onClick={() => set({ step: 1 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
-                  </button>
+                  {!bankMode && (
+                    <button onClick={() => set({ step: 1 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] leading-[16px]">Edit</p>
+                    </button>
+                  )}
                 </div>
               </div>
 
