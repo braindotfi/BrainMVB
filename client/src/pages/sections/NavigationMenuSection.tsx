@@ -20,6 +20,7 @@ interface DailyInsight {
 }
 
 const mainMenuItems = [
+  { id: "assistant", label: "Assistant", path: "/assistant" },
   { id: "agents", label: "Agents", path: "/agents" },
   { id: "marketplace", label: "Marketplace", path: "/marketplace" },
 ];
@@ -112,6 +113,22 @@ const MarketplaceIcon = ({ active }: { active: boolean }) => active ? (
       <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3b5d2a25-eaa9-45cc-b255-0c85fd1fb455" />
     </div>
   </div>
+);
+
+const AssistantIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+      stroke={active ? "#a8b9f4" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill={active ? "rgba(168,185,244,0.08)" : "none"}
+    />
+    <circle cx="9" cy="10" r="1" fill={active ? "#7631ee" : "#6c779d"} />
+    <circle cx="12" cy="10" r="1" fill={active ? "#7631ee" : "#6c779d"} />
+    <circle cx="15" cy="10" r="1" fill={active ? "#7631ee" : "#6c779d"} />
+  </svg>
 );
 
 const SETTINGS_ICON_INACTIVE = "https://www.figma.com/api/mcp/asset/e7232713-98e6-4dfc-8b22-73a287505abe";
@@ -956,12 +973,32 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
             {mainMenuItems.map((item) => (
               <div key={item.id} className="w-full flex flex-col items-center">
-                <Link href={item.path} className="outline-none focus:outline-none">
-                  <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                    {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
-                    {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                  </button>
-                </Link>
+                {item.id === "assistant" ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Link href="/assistant" className="outline-none focus:outline-none">
+                      <button title="Assistant" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/assistant") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <AssistantIcon active={isActive("/assistant")} />
+                      </button>
+                    </Link>
+                    <button
+                      title="Chat History"
+                      onClick={() => setChatHistoryOpen((v) => !v)}
+                      className={`flex items-center justify-center w-9 h-6 rounded-lg transition-colors ${chatHistoryOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                        <path d="M7.5 2a5.5 5.5 0 1 0 5.5 5.5H7.5V2z" stroke={chatHistoryOpen ? "#a8b9f4" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M7.5 5v2.5L9.5 9" stroke={chatHistoryOpen ? "#7631ee" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <Link href={item.path} className="outline-none focus:outline-none">
+                    <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                      {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
+                      {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
+                    </button>
+                  </Link>
+                )}
               </div>
             ))}
 
@@ -1068,22 +1105,51 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
               {mainMenuItems.map((item) => (
                 <div key={item.id} className="w-full">
-                  <Link href={item.path} className="w-full outline-none focus:outline-none">
-                    <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                        {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
-                        {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                      </div>
-                      <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                        {item.label}
-                      </span>
-                      {isActive(item.path) && (
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                          <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  {item.id === "assistant" ? (
+                    <div className="flex items-center gap-1 w-full">
+                      <Link href="/assistant" className="flex-1 outline-none focus:outline-none">
+                        <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive("/assistant") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                          <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                            <AssistantIcon active={isActive("/assistant")} />
+                          </div>
+                          <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive("/assistant") ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                            Assistant
+                          </span>
+                          {chatSessions.length > 0 && (
+                            <CountBadge count={chatSessions.length} />
+                          )}
+                        </button>
+                      </Link>
+                      <button
+                        title="Chat History"
+                        onClick={() => setChatHistoryOpen((v) => !v)}
+                        className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-colors ${chatHistoryOpen ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                          <path d="M7.5 2a5.5 5.5 0 1 0 5.5 5.5H7.5V2z" stroke={chatHistoryOpen ? "#a8b9f4" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M7.5 2v5.5H13A5.5 5.5 0 0 0 7.5 2z" fill={chatHistoryOpen ? "rgba(168,185,244,0.15)" : "none"} stroke={chatHistoryOpen ? "#a8b9f4" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M7.5 5v2.5L9.5 9" stroke={chatHistoryOpen ? "#7631ee" : "#6c779d"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                      )}
-                    </button>
-                  </Link>
+                      </button>
+                    </div>
+                  ) : (
+                    <Link href={item.path} className="w-full outline-none focus:outline-none">
+                      <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
+                        <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                          {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
+                          {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
+                        </div>
+                        <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
+                          {item.label}
+                        </span>
+                        {isActive(item.path) && (
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
+                            <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>
