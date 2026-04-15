@@ -103,40 +103,75 @@ const Skeleton = ({ className }: { className?: string }) => (
 type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; ageLabel?: string; }
 
-/* Card-level border + base bg per tier */
-const REP_TC: Record<RepTier, { bg: string; border: string }> = {
-  Legendary: { bg: "#0d0617",  border: "rgba(157,92,245,0.2)"  },
-  Diamond:   { bg: "#080e1c",  border: "rgba(127,113,255,0.22)" },
-  Gold:      { bg: "#0f0800",  border: "rgba(255,180,0,0.2)"   },
-  Silver:    { bg: "#0c0f14",  border: "rgba(168,185,200,0.2)" },
-  Bronze:    { bg: "#0d0800",  border: "rgba(192,140,80,0.2)"  },
-  New:       { bg: "#000f0c",  border: "rgba(0,212,170,0.2)"   },
-  Unranked:  { bg: "#0b0d12",  border: "rgba(65,73,101,0.2)"   },
-  Caution:   { bg: "#110006",  border: "rgba(210,3,68,0.22)"   },
-};
+const _FA = "https://www.figma.com/api/mcp/asset/";
 
-/* Figma badge icon assets — same as RepPill in the marketplace */
-const REP_ICON: Record<RepTier, { url: string; flip?: boolean }> = {
-  Legendary: { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
-  Diamond:   { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
-  Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
-  Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
-  Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
-  New:       { url: "https://www.figma.com/api/mcp/asset/149a8d54-d2ee-4c0f-91b6-fad1c96cc23e" },
-  Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
-  Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
-};
+interface RepCardSpec {
+  cardBg:     string;
+  iconUrl:    string;
+  dotUrl:     string;
+  nameGrad?:  string;
+  nameSolid?: string;
+  scoreGrad?: string;
+  scoreSolid?: string;
+}
 
-/* Pill gradient backgrounds + gradient/solid text colours per tier */
-const REP_STYLE: Record<RepTier, { pillBg: string; textGrad?: string; textSolid?: string }> = {
-  Legendary: { pillBg: "linear-gradient(107deg,rgb(80,30,180) 0%,rgb(110,55,195) 100%)",   textGrad: "linear-gradient(105deg,#d4b4ff 0%,#9d5cf5 100%)" },
-  Diamond:   { pillBg: "linear-gradient(107deg,rgb(46,31,113) 0%,rgb(67,50,118) 100%)",    textGrad: "linear-gradient(105deg,rgb(176,150,255) 0%,rgb(127,113,255) 100%)" },
-  Gold:      { pillBg: "linear-gradient(to right,#352502,#614b12)",                        textGrad: "linear-gradient(100deg,rgb(255,221,134) 0%,rgb(174,126,23) 100%)" },
-  Silver:    { pillBg: "linear-gradient(to right,#2b363b,#3f4e55)",                        textGrad: "linear-gradient(101deg,rgb(220,229,232) 0%,rgb(141,158,166) 100%)" },
-  Bronze:    { pillBg: "linear-gradient(to right,#2d220e,#42321a)",                        textGrad: "linear-gradient(101deg,rgb(192,159,107) 0%,rgb(104,78,38) 100%)" },
-  New:       { pillBg: "linear-gradient(102deg,rgb(0,55,44) 0%,rgb(11,75,62) 100%)",       textGrad: "linear-gradient(98deg,rgb(137,255,232) 0%,rgb(0,212,170) 100%)" },
-  Unranked:  { pillBg: "linear-gradient(to right,#21283b,#363d56)",                        textGrad: "linear-gradient(41deg,rgb(151,163,204) 23%,rgb(108,119,157) 76%)" },
-  Caution:   { pillBg: "#350011",                                                           textSolid: "#d20344" },
+const REP_CARD: Record<RepTier, RepCardSpec> = {
+  Diamond: {
+    cardBg:     "linear-gradient(126.52deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",
+    iconUrl:    `${_FA}fb0290f9-a753-443b-9521-3b4e1482522f`,
+    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    nameGrad:   "linear-gradient(105.74deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)",
+    scoreGrad:  "linear-gradient(99.23deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)",
+  },
+  Silver: {
+    cardBg:     "linear-gradient(to right, #2b363b, #3f4e55)",
+    iconUrl:    `${_FA}81c2bfa9-47ab-4f6a-8fb8-5a320b0b7c02`,
+    dotUrl:     `${_FA}97380aaf-812a-4290-ad2a-03df1f296650`,
+    nameGrad:   "linear-gradient(101.96deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)",
+    scoreGrad:  "linear-gradient(101.73deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)",
+  },
+  Bronze: {
+    cardBg:     "linear-gradient(to right, #2d220e, #42321a)",
+    iconUrl:    `${_FA}d5c42087-c214-41d3-933f-f39b0ad24935`,
+    dotUrl:     `${_FA}b35c48cd-2a51-42bf-ba69-fe80ad09f5f1`,
+    nameGrad:   "linear-gradient(101.80deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)",
+    scoreGrad:  "linear-gradient(99.23deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)",
+  },
+  Unranked: {
+    cardBg:     "linear-gradient(to right, #21283b, #363d56)",
+    iconUrl:    `${_FA}fdc3e867-8c7f-4c44-a7e0-18716b8f1464`,
+    dotUrl:     `${_FA}baa4e3c7-5d29-4c92-b8f2-075665174e83`,
+    nameGrad:   "linear-gradient(38.98deg, rgb(151,163,204) 23.21%, rgb(108,119,157) 76.25%)",
+    scoreGrad:  "linear-gradient(55.77deg, rgb(151,163,204) 23.21%, rgb(108,119,157) 76.25%)",
+  },
+  New: {
+    cardBg:     "linear-gradient(126.52deg, rgb(0,55,44) 0%, rgb(11,75,62) 100%)",
+    iconUrl:    `${_FA}779d53fb-4651-4ed8-87fb-bb2e1d5450e6`,
+    dotUrl:     `${_FA}987348d2-48c7-43a5-8ffb-0ea5eb64fda2`,
+    nameGrad:   "linear-gradient(97.74deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)",
+    scoreGrad:  "linear-gradient(99.23deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)",
+  },
+  Caution: {
+    cardBg:      "#350011",
+    iconUrl:     `${_FA}6a7ac255-a7d1-4076-89d3-f36349e66c42`,
+    dotUrl:      `${_FA}41525fa9-76f3-4b6b-bcdc-d238f97b9160`,
+    nameSolid:   "#d20344",
+    scoreSolid:  "#d20344",
+  },
+  Legendary: {
+    cardBg:     "linear-gradient(126.52deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",
+    iconUrl:    `${_FA}0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c`,
+    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    nameGrad:   "linear-gradient(105.74deg, #d4b4ff 0%, #9d5cf5 100%)",
+    scoreGrad:  "linear-gradient(99.23deg, #d4b4ff 0%, #9d5cf5 100%)",
+  },
+  Gold: {
+    cardBg:     "linear-gradient(to right, #352502, #614b12)",
+    iconUrl:    `${_FA}7b86d198-9ed1-4d56-8634-b20ec3cd0617`,
+    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    nameGrad:   "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)",
+    scoreGrad:  "linear-gradient(99.23deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)",
+  },
 };
 
 const ReputationBanner = ({ agentId }: { agentId: string }) => {
@@ -148,107 +183,106 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
   });
   if (!rep) return null;
 
-  const tc    = REP_TC[rep.tier];
-  const icon  = REP_ICON[rep.tier];
-  const style = REP_STYLE[rep.tier];
+  const card = REP_CARD[rep.tier];
 
-  const textStyle: React.CSSProperties = style.textGrad
-    ? { backgroundImage: style.textGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
-    : { color: style.textSolid };
+  const nameStyle: React.CSSProperties = card.nameGrad
+    ? { backgroundImage: card.nameGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+    : { color: card.nameSolid };
+
+  const scoreStyle: React.CSSProperties = card.scoreGrad
+    ? { backgroundImage: card.scoreGrad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+    : { color: card.scoreSolid ?? card.nameSolid };
 
   const scoreLabel =
     rep.tier === "Caution"                          ? `−${Math.abs(rep.score)}`
-    : rep.tier === "New" || rep.tier === "Unranked" ? "—"
+    : rep.tier === "New" || rep.tier === "Unranked" ? (rep.score > 0 ? rep.score.toLocaleString() : "—")
     : rep.score.toLocaleString();
 
-  const rankDisplay =
-    rep.tier === "New" || rep.tier === "Unranked" || rep.tier === "Caution" || rep.rankLabel === "—"
-      ? "—" : rep.rankLabel;
+  const showRankBadge = !!(rep.rankLabel && rep.rankLabel !== "—");
 
-  const subtitle =
-    rep.tier === "New"     ? (rep.ageLabel ? `${rep.ageLabel} · building reputation` : "Newly registered · building reputation")
-    : rep.tier === "Unranked" ? "Not enough activity to rank yet"
-    : rep.tier === "Caution"  ? `${rep.validationCount} failed or disputed validations`
-    : `Top ${100 - rep.percentile}% of all agents`;
+  const statPercentile = rep.percentile > 0
+    ? `Top ${100 - rep.percentile}%`
+    : rep.tier === "New" ? "New Agent" : "—";
+  const statValidations = `${rep.validationCount.toLocaleString()} on-chain validations`;
+  const statVolume = rep.totalVolumeUsd > 0
+    ? `$${rep.totalVolumeUsd.toLocaleString()} Lifetime Volume`
+    : "$0 Lifetime Volume";
 
   return (
     <div
-      className="rounded-[16px] overflow-hidden flex flex-col w-full"
-      style={{ background: tc.bg, border: `1px solid ${tc.border}` }}
+      className="flex gap-[16px] items-start p-[16px] rounded-[16px] w-full"
+      style={{ background: card.cardBg }}
       data-testid="card-reputation"
     >
-      {/* ── Header: badge pill + score ── */}
-      <div className="flex items-center justify-between px-[16px] pt-[16px] pb-[14px]">
-        {/* Tier badge pill */}
-        <span
-          className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[40px] flex-shrink-0"
-          style={{ background: style.pillBg }}
-        >
-          <span className={`w-[20px] h-[20px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
-            <img src={icon.url} alt={rep.tier} className="w-full h-full object-contain" />
-          </span>
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[17px]" style={textStyle}>
-            {rep.tier}
-          </span>
-          {rep.tier === "Caution" && (
-            <span
-              className="[font-family:'Gilroy',sans-serif] text-[10px] font-medium px-[6px] py-[1px] rounded-full leading-[14px]"
-              style={{ background: "rgba(210,3,68,0.22)", color: "#d20344" }}
+      {/* Icon 48×48 */}
+      <div className="relative shrink-0 size-[48px]">
+        <img alt={rep.tier} className="absolute block inset-0 max-w-none size-full object-contain" src={card.iconUrl} />
+      </div>
+
+      {/* Middle + Right */}
+      <div className="flex flex-[1_0_0] gap-[16px] items-center min-w-0">
+
+        {/* Left info column */}
+        <div className="flex flex-[1_0_0] flex-col gap-[8px] items-start min-w-0">
+
+          {/* Tier name + rank badge */}
+          <div className="flex gap-[8px] items-center flex-wrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] whitespace-nowrap"
+              style={nameStyle}
             >
-              Under review
-            </span>
-          )}
-        </span>
+              {rep.tier}
+            </p>
+            {showRankBadge && (
+              <div
+                className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0"
+                style={{
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  background: "rgba(255,255,255,0.3)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                }}
+              >
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-white whitespace-nowrap text-center">
+                  {rep.rankLabel}
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Score */}
-        <div className="flex-shrink-0 flex flex-col items-end gap-[2px]">
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[22px] leading-[26px]" style={textStyle}>
+          {/* Stats row with bullet dots */}
+          <div className="flex gap-[6px] items-center flex-wrap">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
+              {statPercentile}
+            </p>
+            <div className="relative shrink-0 size-[4px]">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={card.dotUrl} />
+            </div>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
+              {statValidations}
+            </p>
+            <div className="relative shrink-0 size-[4px]">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={card.dotUrl} />
+            </div>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
+              {statVolume}
+            </p>
+          </div>
+        </div>
+
+        {/* Right: score + label */}
+        <div className="flex flex-col gap-[8px] items-end justify-center shrink-0">
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] whitespace-nowrap"
+            style={scoreStyle}
+          >
             {scoreLabel}
-          </span>
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[10px] text-[#414965] uppercase tracking-wider">
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
             Rep Score
-          </span>
-        </div>
-      </div>
-
-      {/* ── Divider ── */}
-      <div style={{ height: 1, background: tc.border, marginLeft: 16, marginRight: 16 }} />
-
-      {/* ── Stats row ── */}
-      <div className="grid grid-cols-3 px-[16px] py-[14px]">
-        {/* Ranking */}
-        <div className="flex flex-col gap-[4px]">
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
-            {rankDisplay}
-          </span>
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Ranking</span>
+          </p>
         </div>
 
-        {/* Validations — centred with dividers */}
-        <div
-          className="flex flex-col gap-[4px] items-center"
-          style={{ borderLeft: `1px solid ${tc.border}`, borderRight: `1px solid ${tc.border}` }}
-        >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
-            {rep.validationCount.toLocaleString()}
-          </span>
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Validations</span>
-        </div>
-
-        {/* Volume */}
-        <div className="flex flex-col gap-[4px] items-end">
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] text-white">
-            {rep.totalVolumeUsd > 0 ? `$${rep.totalVolumeUsd.toLocaleString()}` : "—"}
-          </span>
-          <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[11px] text-[#414965]">Volume</span>
-        </div>
-      </div>
-
-      {/* ── Subtitle ── */}
-      <div className="px-[16px] pb-[14px] -mt-[4px]">
-        <span className="[font-family:'Plus Jakarta Sans',Helvetica] text-[12px] text-[#6c779d]">
-          {subtitle}
-        </span>
       </div>
     </div>
   );
