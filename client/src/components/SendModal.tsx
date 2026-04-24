@@ -4,25 +4,14 @@ import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtUsd, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 import { isEvmAddress } from "@/lib/web3";
 
-// ── Figma asset URLs ──────────────────────────────────────────────────────────
+// ── Inline SVG icon helpers ────────────────────────────────────────────────────
 
-const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/33cddef8-4407-4120-9640-19fd26cfca42";
-
-const BACK_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
-const BACK_VEC = "https://www.figma.com/api/mcp/asset/4356db82-74dc-481d-9b7b-397796b1864b";
-
-const CHEVRON_BG  = "https://www.figma.com/api/mcp/asset/28c1cb48-d755-43b3-a408-0303879150d0";
-const CHEVRON_VEC = "https://www.figma.com/api/mcp/asset/d0cdfad5-4308-445c-a111-b558f85127c9";
-
-const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/14bf435a-a003-4588-9029-5ce6973c3a94";
-const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/783e8c47-1571-4b96-9c63-cd875fc7a1e4";
-const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/b3dc8e97-fef3-4cff-8f76-054a05e520bf";
-const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/2a4569bd-623f-43e8-90d3-a53e41c7e325";
-const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/9e6a186b-9934-4809-b3f0-64b27f9fec60";
-const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/e857828a-6482-4b80-80af-4e56cecf3cf7";
-const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/66211182-8dde-42ab-a29d-ce2c7a43948c";
-const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/76c74d2e-e77a-4dd9-887d-333365e41eea";
-const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/f39dbbe8-075b-4e3f-aaf9-bdfac59b7309";
+const CheckReceiptIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <circle cx="24" cy="24" r="20" fill="rgba(66,191,35,0.15)" stroke="rgba(66,191,35,0.5)" strokeWidth="1.5" />
+    <path d="M14 24l7 7 13-14" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

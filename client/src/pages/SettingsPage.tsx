@@ -11,138 +11,59 @@ type Section =
   | "legal"
   | "account";
 
-/* ─── Figma nav icon assets ───────────────────────────────── */
-/* Profile */
-const PROFILE_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/40bf94f9-02c5-4124-bbbe-194b53bc9d44";
-const PROFILE_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/a95ea493-a48b-4875-a1fd-4d38efce4772";
-const PROFILE_INACTIVE     = "https://www.figma.com/api/mcp/asset/280ec1db-5e7b-4d9a-8207-cf3e11257495";
-/* Security */
-const SECURITY_ACTIVE_OUTER  = "https://www.figma.com/api/mcp/asset/f6d5683e-439e-447d-be4a-d27e9129f063";
-const SECURITY_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/d446b882-8a19-4b47-91c5-f36bcabbb9e7";
-const SECURITY_INACTIVE      = "https://www.figma.com/api/mcp/asset/f5e08fcc-58d6-4554-b275-240fa35fa96a";
-/* Notifications */
-const NOTIF_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/7737596b-f439-4715-8154-8154fed0367e";
-const NOTIF_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/75b60027-c079-4aa3-8014-790a07a816d6";
-const NOTIF_INACTIVE     = "https://www.figma.com/api/mcp/asset/47de99a7-6419-42b2-9f2e-ca8a50625bbb";
-/* Payments */
-const PAYMENTS_ACTIVE   = "https://www.figma.com/api/mcp/asset/7aeb33cc-a5dc-4e64-8427-4886db8a0da2";
-const PAYMENTS_INACTIVE = "https://www.figma.com/api/mcp/asset/f4e169a0-347b-459d-b104-5eff95c39f6d";
-/* Agent Permissions */
-const AGENTS_ACTIVE   = "https://www.figma.com/api/mcp/asset/a89d7dcb-974b-4dca-822e-b57abc5326f2";
-const AGENTS_INACTIVE = "https://www.figma.com/api/mcp/asset/b17c0e4b-b8de-41fb-a3fe-ce6f5b2a213d";
-/* Legal */
-const LEGAL_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/5bc7660c-a56b-44a8-b43f-7b105831fa26";
-const LEGAL_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/8244ff00-397a-48ad-b496-f12b22ea8573";
-const LEGAL_INACTIVE     = "https://www.figma.com/api/mcp/asset/e2f1f8b2-d544-4a4c-afa6-88580edff410";
-/* Account */
-const ACCOUNT_ACTIVE_OUTER = "https://www.figma.com/api/mcp/asset/651b66da-8fd0-463d-bacd-ae0b5892bf33";
-const ACCOUNT_ACTIVE_DOT   = "https://www.figma.com/api/mcp/asset/65cee35c-54a1-4573-8847-881120b71bf2";
-const ACCOUNT_INACTIVE     = "https://www.figma.com/api/mcp/asset/0c61e3f2-991f-4671-bce8-dc018f7e14da";
-
 /* ─── Nav icon components ─────────────────────────────────── */
-const ProfileNavIcon = ({ active }: { active: boolean }) => active ? (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_12.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={PROFILE_ACTIVE_OUTER} />
-    </div>
-    <div className="absolute inset-[33.33%_29.17%_16.67%_29.17%]">
-      <div className="absolute inset-[-9.38%_-22.5%_-28.13%_-22.5%]">
-        <img alt="" className="block max-w-none size-full" src={PROFILE_ACTIVE_DOT} />
-      </div>
-    </div>
-  </div>
-) : (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_12.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={PROFILE_INACTIVE} />
-    </div>
-  </div>
+const ProfileNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="8" r="4" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
 );
 
-const SecurityNavIcon = ({ active }: { active: boolean }) => active ? (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SECURITY_ACTIVE_OUTER} />
-    </div>
-    <div className="absolute inset-[17.5%_19.58%_21.67%_19.59%]">
-      <div className="absolute inset-[-7.71%_-15.41%_-23.12%_-15.41%]">
-        <img alt="" className="block max-w-none size-full" src={SECURITY_ACTIVE_STROKE} />
-      </div>
-    </div>
-  </div>
-) : (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={SECURITY_INACTIVE} />
-    </div>
-  </div>
+const SecurityNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M9 12l2 2 4-4" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
 );
 
-const NotifNavIcon = ({ active }: { active: boolean }) => active ? (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_ACTIVE_OUTER} />
-    </div>
-    <div className="absolute inset-[33.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_ACTIVE_DOT} />
-    </div>
-  </div>
-) : (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={NOTIF_INACTIVE} />
-    </div>
-  </div>
+const NotifNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M13.73 21a2 2 0 01-3.46 0" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+    {active && <circle cx="18" cy="5" r="2.5" fill="#7631ee" />}
+  </svg>
 );
 
 const PaymentsNavIcon = ({ active }: { active: boolean }) => (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[16.67%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={active ? PAYMENTS_ACTIVE : PAYMENTS_INACTIVE} />
-    </div>
-  </div>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="5" width="20" height="14" rx="2" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M2 10h20" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" />
+    <path d="M6 15h4M16 15h2" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
 );
 
 const AgentsNavIcon = ({ active }: { active: boolean }) => (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={active ? AGENTS_ACTIVE : AGENTS_INACTIVE} />
-    </div>
-  </div>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="8" width="18" height="12" rx="2" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M12 2v6M9.5 5h5" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="9" cy="14" r="1.5" fill={active ? "#7631ee" : "#6c779d"} />
+    <circle cx="15" cy="14" r="1.5" fill={active ? "#7631ee" : "#6c779d"} />
+  </svg>
 );
 
-const LegalNavIcon = ({ active }: { active: boolean }) => active ? (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_ACTIVE_OUTER} />
-    </div>
-    <div className="absolute inset-[33.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_ACTIVE_DOT} />
-    </div>
-  </div>
-) : (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={LEGAL_INACTIVE} />
-    </div>
-  </div>
+const LegalNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <path d="M14 2v6h6M8 13h8M8 17h5" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
 );
 
-const AccountNavIcon = ({ active }: { active: boolean }) => active ? (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_ACTIVE_OUTER} />
-    </div>
-    <div className="absolute inset-[33.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_ACTIVE_DOT} />
-    </div>
-  </div>
-) : (
-  <div className="relative size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ACCOUNT_INACTIVE} />
-    </div>
-  </div>
+const AccountNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="5" width="18" height="14" rx="2" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
+    <circle cx="12" cy="11" r="3" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.2)" : "none"} />
+    <path d="M6 19c0-2.5 2.7-4 6-4s6 1.5 6 4" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
 );
 
 /* ─── Nav items definition ───────────────────────────────── */

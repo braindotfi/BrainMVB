@@ -3,7 +3,12 @@ import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 
-const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/945a723f-4fdc-44b6-84dd-96e8c16d0f88";
+const CheckReceiptIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <circle cx="24" cy="24" r="20" fill="rgba(66,191,35,0.15)" stroke="rgba(66,191,35,0.5)" strokeWidth="1.5" />
+    <path d="M14 24l7 7 13-14" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const MOCK_USD_PRICE: Record<string, number> = {
   btc: 60000, bitcoin: 60000,
@@ -48,24 +53,21 @@ const allAssets: Asset[] = [
 
 function FigmaWalletIcon() {
   return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5dd99a70-d49a-4d54-9b65-92532cbc409b" />
-      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
-        <div className="absolute inset-[12.5%]">
-          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0594f386-bc3e-455e-99a8-7a612679898e" />
-        </div>
-      </div>
+    <div className="rounded-[16px] shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#1a1032" }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M20 12V8H4a2 2 0 01-2-2V6a2 2 0 012-2h16a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2v-1a2 2 0 012-2h16z" stroke="#7631ee" strokeWidth="1.5" fill="rgba(118,49,238,0.15)" />
+        <circle cx="17" cy="12" r="1.5" fill="#7631ee" />
+      </svg>
     </div>
   );
 }
 
 function FigmaBankIcon() {
   return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
-      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
-      </div>
+    <div className="rounded-[16px] shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#0c1a2e" }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M3 10h18M3 14h18M5 6l7-3 7 3M5 18h14a1 1 0 001-1V10a1 1 0 00-1-1H5a1 1 0 00-1 1v7a1 1 0 001 1z" stroke="#4a9af5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </div>
   );
 }
@@ -424,7 +426,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
 
             {/* Receipt check icon */}
             <div className="bg-[#123509] rounded-[150px] p-[24px] flex items-center justify-center shrink-0">
-              <img src={RECEIPT_CHECK_ICON} alt="" className="size-[48px]" />
+              <CheckReceiptIcon />
             </div>
 
             {/* Title + subtitle */}

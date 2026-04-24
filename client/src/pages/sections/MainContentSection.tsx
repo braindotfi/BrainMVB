@@ -6,21 +6,71 @@ import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
 type ReputationTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 
-/* Figma 3647:35624 — rank pill: purple gradient + diamond icon */
-const DIAMOND_ICON = "https://www.figma.com/api/mcp/asset/12c6de88-6da2-44e8-9521-4864062c59a5";
+/* Rank pill: purple gradient */
 const RANK_BG = "linear-gradient(100deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)";
 const RANK_TEXT_GRAD = "linear-gradient(106deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)";
 
-/* Figma 3374:34168 — rep tier pill icon + gradient lookup */
-const REP_BADGE_ICON: Record<ReputationTier, { url: string; flip?: boolean }> = {
-  Legendary: { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
-  Diamond:   { url: "https://www.figma.com/api/mcp/asset/0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c" },
-  Gold:      { url: "https://www.figma.com/api/mcp/asset/7b86d198-9ed1-4d56-8634-b20ec3cd0617" },
-  Silver:    { url: "https://www.figma.com/api/mcp/asset/d23d250b-3830-4de9-a673-69f89e77eb24" },
-  Bronze:    { url: "https://www.figma.com/api/mcp/asset/c8f31b86-e328-4fb3-b89d-43cdb0f98c89" },
-  New:       { url: "https://www.figma.com/api/mcp/asset/149a8d54-d2ee-4c0f-91b6-fad1c96cc23e" },
-  Unranked:  { url: "https://www.figma.com/api/mcp/asset/5d3b18d5-4967-4d8a-901a-40306401f848", flip: true },
-  Caution:   { url: "https://www.figma.com/api/mcp/asset/bc612cfb-4c95-4e26-862e-60685e6c3695" },
+/* Inline SVG icon for Diamond/rank pill */
+const DiamondIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M8 1L3 5.5L8 15L13 5.5L8 1Z" fill="rgba(176,150,255,0.9)" stroke="rgba(176,150,255,0.5)" strokeWidth="0.5" />
+    <path d="M3 5.5h10" stroke="rgba(127,113,255,0.6)" strokeWidth="0.5" />
+  </svg>
+);
+
+/* Inline SVG icons for reputation tiers */
+const TierIcon = ({ tier }: { tier: ReputationTier }) => {
+  switch (tier) {
+    case "Legendary":
+    case "Diamond":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1L3 5.5L8 15L13 5.5L8 1Z" fill="rgba(176,150,255,0.9)" stroke="rgba(176,150,255,0.5)" strokeWidth="0.5" />
+          <path d="M3 5.5h10" stroke="rgba(127,113,255,0.6)" strokeWidth="0.5" />
+        </svg>
+      );
+    case "Gold":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2l1.5 4.5H14l-3.75 2.75L11.75 14 8 11.25 4.25 14l1.5-4.75L2 6.5h4.5L8 2Z" fill="rgba(255,221,134,0.9)" stroke="rgba(174,126,23,0.5)" strokeWidth="0.3" />
+        </svg>
+      );
+    case "Silver":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2l1.5 4.5H14l-3.75 2.75L11.75 14 8 11.25 4.25 14l1.5-4.75L2 6.5h4.5L8 2Z" fill="rgba(220,229,232,0.8)" stroke="rgba(141,158,166,0.5)" strokeWidth="0.3" />
+        </svg>
+      );
+    case "Bronze":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2l1.5 4.5H14l-3.75 2.75L11.75 14 8 11.25 4.25 14l1.5-4.75L2 6.5h4.5L8 2Z" fill="rgba(192,159,107,0.8)" stroke="rgba(104,78,38,0.5)" strokeWidth="0.3" />
+        </svg>
+      );
+    case "New":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="5.5" fill="rgba(0,212,170,0.2)" stroke="rgba(0,212,170,0.8)" strokeWidth="1" />
+          <path d="M8 5v6M5 8h6" stroke="rgba(137,255,232,0.9)" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case "Unranked":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="5.5" fill="rgba(108,119,157,0.2)" stroke="rgba(108,119,157,0.6)" strokeWidth="1" />
+          <path d="M6 6.5c0-1.1.9-2 2-2s2 .9 2 2c0 1-1 1.5-2 2V10M8 12v.5" stroke="rgba(151,163,204,0.9)" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      );
+    case "Caution":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L1.5 13h13L8 2Z" fill="rgba(210,3,68,0.2)" stroke="rgba(210,3,68,0.7)" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M8 6.5v3M8 11v.5" stroke="#d20344" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
 };
 const REP_BADGE_STYLE: Record<ReputationTier, { bg: string; textGrad?: string; textSolid?: string }> = {
   Legendary: { bg: "linear-gradient(107deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",    textGrad: "linear-gradient(105deg, #d4b4ff 0%, #9d5cf5 100%)" },
@@ -34,7 +84,6 @@ const REP_BADGE_STYLE: Record<ReputationTier, { bg: string; textGrad?: string; t
 };
 
 const RepPill = ({ tier, rankLabel, id }: { tier: ReputationTier; rankLabel?: string; id: string }) => {
-  const icon = REP_BADGE_ICON[tier];
   const style = REP_BADGE_STYLE[tier];
   const showRank = rankLabel && rankLabel !== "—" && rankLabel !== "Unranked";
   return (
@@ -43,8 +92,8 @@ const RepPill = ({ tier, rankLabel, id }: { tier: ReputationTier; rankLabel?: st
       style={{ background: style.bg }}
       data-testid={`badge-reputation-${id}`}
     >
-      <span className={`w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center${icon.flip ? " -scale-y-100" : ""}`}>
-        <img src={icon.url} alt="" className="w-full h-full object-contain" />
+      <span className="w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center">
+        <TierIcon tier={tier} />
       </span>
       {showRank && (
         <span
@@ -67,7 +116,7 @@ const RankPill = ({ rankLabel, id }: { rankLabel: string; id: string }) => (
     data-testid={`badge-rank-${id}`}
   >
     <span className="w-[16px] h-[16px] flex-shrink-0 flex items-center justify-center">
-      <img src={DIAMOND_ICON} alt="" className="w-full h-full object-contain" />
+      <DiamondIcon />
     </span>
     <span
       className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap"

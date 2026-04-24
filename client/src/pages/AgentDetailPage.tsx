@@ -103,12 +103,9 @@ const Skeleton = ({ className }: { className?: string }) => (
 type RepTier = "Legendary" | "Diamond" | "Gold" | "Silver" | "Bronze" | "New" | "Unranked" | "Caution";
 interface AgentRep { score: number; tier: RepTier; rankLabel: string; percentile: number; validationCount: number; totalVolumeUsd: number; ageLabel?: string; }
 
-const _FA = "https://www.figma.com/api/mcp/asset/";
-
 interface RepCardSpec {
   cardBg:     string;
-  iconUrl:    string;
-  dotUrl:     string;
+  dotColor:   string;
   nameGrad?:  string;
   nameSolid?: string;
   scoreGrad?: string;
@@ -118,60 +115,106 @@ interface RepCardSpec {
 const REP_CARD: Record<RepTier, RepCardSpec> = {
   Diamond: {
     cardBg:     "linear-gradient(126.52deg, rgb(46,31,113) 0%, rgb(67,50,118) 100%)",
-    iconUrl:    `${_FA}fb0290f9-a753-443b-9521-3b4e1482522f`,
-    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    dotColor:   "rgba(176,150,255,0.8)",
     nameGrad:   "linear-gradient(105.74deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)",
     scoreGrad:  "linear-gradient(99.23deg, rgb(176,150,255) 0%, rgb(127,113,255) 100%)",
   },
   Silver: {
     cardBg:     "linear-gradient(to right, #2b363b, #3f4e55)",
-    iconUrl:    `${_FA}81c2bfa9-47ab-4f6a-8fb8-5a320b0b7c02`,
-    dotUrl:     `${_FA}97380aaf-812a-4290-ad2a-03df1f296650`,
+    dotColor:   "rgba(220,229,232,0.7)",
     nameGrad:   "linear-gradient(101.96deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)",
     scoreGrad:  "linear-gradient(101.73deg, rgb(220,229,232) 0%, rgb(141,158,166) 100%)",
   },
   Bronze: {
     cardBg:     "linear-gradient(to right, #2d220e, #42321a)",
-    iconUrl:    `${_FA}d5c42087-c214-41d3-933f-f39b0ad24935`,
-    dotUrl:     `${_FA}b35c48cd-2a51-42bf-ba69-fe80ad09f5f1`,
+    dotColor:   "rgba(192,159,107,0.7)",
     nameGrad:   "linear-gradient(101.80deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)",
     scoreGrad:  "linear-gradient(99.23deg, rgb(192,159,107) 0%, rgb(104,78,38) 100%)",
   },
   Unranked: {
     cardBg:     "linear-gradient(to right, #21283b, #363d56)",
-    iconUrl:    `${_FA}fdc3e867-8c7f-4c44-a7e0-18716b8f1464`,
-    dotUrl:     `${_FA}baa4e3c7-5d29-4c92-b8f2-075665174e83`,
+    dotColor:   "rgba(151,163,204,0.7)",
     nameGrad:   "linear-gradient(38.98deg, rgb(151,163,204) 23.21%, rgb(108,119,157) 76.25%)",
     scoreGrad:  "linear-gradient(55.77deg, rgb(151,163,204) 23.21%, rgb(108,119,157) 76.25%)",
   },
   New: {
     cardBg:     "linear-gradient(126.52deg, rgb(0,55,44) 0%, rgb(11,75,62) 100%)",
-    iconUrl:    `${_FA}779d53fb-4651-4ed8-87fb-bb2e1d5450e6`,
-    dotUrl:     `${_FA}987348d2-48c7-43a5-8ffb-0ea5eb64fda2`,
+    dotColor:   "rgba(0,212,170,0.8)",
     nameGrad:   "linear-gradient(97.74deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)",
     scoreGrad:  "linear-gradient(99.23deg, rgb(137,255,232) 0%, rgb(0,212,170) 100%)",
   },
   Caution: {
     cardBg:      "#350011",
-    iconUrl:     `${_FA}6a7ac255-a7d1-4076-89d3-f36349e66c42`,
-    dotUrl:      `${_FA}41525fa9-76f3-4b6b-bcdc-d238f97b9160`,
+    dotColor:    "rgba(210,3,68,0.7)",
     nameSolid:   "#d20344",
     scoreSolid:  "#d20344",
   },
   Legendary: {
     cardBg:     "linear-gradient(126.52deg, rgb(80,30,180) 0%, rgb(110,55,195) 100%)",
-    iconUrl:    `${_FA}0cd3ea99-ddcb-48a6-bfc9-8f6063ed006c`,
-    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    dotColor:   "rgba(212,180,255,0.8)",
     nameGrad:   "linear-gradient(105.74deg, #d4b4ff 0%, #9d5cf5 100%)",
     scoreGrad:  "linear-gradient(99.23deg, #d4b4ff 0%, #9d5cf5 100%)",
   },
   Gold: {
     cardBg:     "linear-gradient(to right, #352502, #614b12)",
-    iconUrl:    `${_FA}7b86d198-9ed1-4d56-8634-b20ec3cd0617`,
-    dotUrl:     `${_FA}78a62ec9-a65b-4e6b-a6d9-bd53dc74059c`,
+    dotColor:   "rgba(255,221,134,0.8)",
     nameGrad:   "linear-gradient(100deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)",
     scoreGrad:  "linear-gradient(99.23deg, rgb(255,221,134) 0%, rgb(174,126,23) 100%)",
   },
+};
+
+const RepTierIcon = ({ tier }: { tier: RepTier }) => {
+  switch (tier) {
+    case "Legendary":
+    case "Diamond":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 4L9 17L24 44L39 17L24 4Z" fill="rgba(176,150,255,0.85)" stroke="rgba(176,150,255,0.4)" strokeWidth="1" />
+          <path d="M9 17h30" stroke="rgba(127,113,255,0.5)" strokeWidth="1" />
+        </svg>
+      );
+    case "Gold":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 6l4.5 13.5H42L31.25 27.75 35.25 42 24 33.75 12.75 42l4-14.25L6 19.5h13.5L24 6Z" fill="rgba(255,221,134,0.9)" stroke="rgba(174,126,23,0.4)" strokeWidth="0.5" />
+        </svg>
+      );
+    case "Silver":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 6l4.5 13.5H42L31.25 27.75 35.25 42 24 33.75 12.75 42l4-14.25L6 19.5h13.5L24 6Z" fill="rgba(220,229,232,0.8)" stroke="rgba(141,158,166,0.4)" strokeWidth="0.5" />
+        </svg>
+      );
+    case "Bronze":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 6l4.5 13.5H42L31.25 27.75 35.25 42 24 33.75 12.75 42l4-14.25L6 19.5h13.5L24 6Z" fill="rgba(192,159,107,0.8)" stroke="rgba(104,78,38,0.4)" strokeWidth="0.5" />
+        </svg>
+      );
+    case "New":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="18" fill="rgba(0,212,170,0.15)" stroke="rgba(0,212,170,0.7)" strokeWidth="2" />
+          <path d="M24 14v20M14 24h20" stroke="rgba(137,255,232,0.9)" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      );
+    case "Unranked":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="18" fill="rgba(108,119,157,0.15)" stroke="rgba(108,119,157,0.5)" strokeWidth="2" />
+          <path d="M18 19c0-3.3 2.7-6 6-6s6 2.7 6 6c0 3-3 4.5-6 6V31M24 36v1.5" stroke="rgba(151,163,204,0.9)" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      );
+    case "Caution":
+      return (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 6L4.5 40h39L24 6Z" fill="rgba(210,3,68,0.15)" stroke="rgba(210,3,68,0.6)" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M24 19v10M24 34v2" stroke="#d20344" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
 };
 
 const ReputationBanner = ({ agentId }: { agentId: string }) => {
@@ -215,8 +258,8 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
       data-testid="card-reputation"
     >
       {/* Icon 48×48 */}
-      <div className="relative shrink-0 size-[48px]">
-        <img alt={rep.tier} className="absolute block inset-0 max-w-none size-full object-contain" src={card.iconUrl} />
+      <div className="relative shrink-0 size-[48px] flex items-center justify-center">
+        <RepTierIcon tier={rep.tier} />
       </div>
 
       {/* Middle + Right */}
@@ -255,15 +298,11 @@ const ReputationBanner = ({ agentId }: { agentId: string }) => {
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
               {statPercentile}
             </p>
-            <div className="relative shrink-0 size-[4px]">
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={card.dotUrl} />
-            </div>
+            <div className="shrink-0 size-[4px] rounded-full" style={{ background: card.dotColor }} />
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
               {statValidations}
             </p>
-            <div className="relative shrink-0 size-[4px]">
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={card.dotUrl} />
-            </div>
+            <div className="shrink-0 size-[4px] rounded-full" style={{ background: card.dotColor }} />
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[14px] text-white whitespace-nowrap">
               {statVolume}
             </p>
