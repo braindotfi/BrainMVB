@@ -78,3 +78,19 @@ export const sanitiseNumInput = (raw: string): string =>
   raw
     .replace(/[^0-9.]/g, "")
     .replace(/(\..*)\./g, "$1");
+
+/**
+ * Format a numeric input value with thousands separators while typing.
+ * Strips disallowed characters, then inserts commas in the integer part,
+ * preserving an in-progress decimal portion (e.g. "1234.5" → "1,234.5",
+ * "1234." → "1,234.", "" → "").
+ */
+export const formatThousandsInput = (raw: string): string => {
+  const sanitized = sanitiseNumInput(raw);
+  if (sanitized === "" || sanitized === ".") return sanitized;
+  const [intPart, decPart] = sanitized.split(".");
+  // Regex-based grouping preserves leading zeros and avoids Number() precision
+  // loss on very large strings (e.g. "100000000000000000").
+  const intFormatted = intPart === "" ? "" : intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return decPart !== undefined ? `${intFormatted}.${decPart}` : intFormatted;
+};

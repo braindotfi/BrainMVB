@@ -6,6 +6,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { wagmiConfig } from "./web3";
 import { queryClient } from "./queryClient";
 import { AuthProvider } from "./authContext";
+import { CurrencyProvider } from "./currencyContext";
 
 interface Web3ProviderProps {
   children: ReactNode;
@@ -28,7 +29,9 @@ export function Web3Provider({ children }: Web3ProviderProps) {
           }}
         >
           <AuthProvider>
-            {children}
+            <CurrencyProvider>
+              {children}
+            </CurrencyProvider>
           </AuthProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

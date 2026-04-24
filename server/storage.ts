@@ -42,6 +42,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserWallet(id: string, walletAddress: string): Promise<User | undefined>;
   deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
+  deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
 
   // Agents
   getAgent(id: string): Promise<Agent | undefined>;
@@ -182,6 +183,51 @@ export class MemStorage implements IStorage {
     // Finally remove the user row.
     if (user) this.users.delete(user.id);
 
+    return { user, agentsDeleted, memoriesDeleted, transactionsDeleted, notificationsDeleted, noncesDeleted: 0 };
+  }
+
+  async deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
+    // Locate the user (kept; only their owned data is removed).
+    const allUsers = Array.from(this.users.values());
+    const user = allUsers.find(u =>
+      (ids.walletAddress && u.walletAddress === ids.walletAddress) ||
+      (ids.userId && u.id === ids.userId) ||
+      (ids.email && u.username === ids.email),
+    ) ?? null;
+
+    const ownerKeys = new Set<string>();
+    if (user?.id)            ownerKeys.add(user.id);
+    if (user?.walletAddress) ownerKeys.add(user.walletAddress);
+    if (ids.userId)          ownerKeys.add(ids.userId);
+    if (ids.walletAddress)   ownerKeys.add(ids.walletAddress);
+    if (ids.email)           ownerKeys.add(ids.email);
+
+    const ownedAgents = Array.from(this.agents.values()).filter(a => ownerKeys.has(a.ownerId));
+    const ownedAgentIds = new Set(ownedAgents.map(a => a.id));
+
+    const memoriesBefore = this.memories.length;
+    this.memories = this.memories.filter(m => !ownedAgentIds.has(m.agentId));
+    const memoriesDeleted = memoriesBefore - this.memories.length;
+
+    const txnsBefore = this.txLog.length;
+    this.txLog = this.txLog.filter(t => !ownedAgentIds.has(t.agentId));
+    const transactionsDeleted = txnsBefore - this.txLog.length;
+
+    for (const id of ownedAgentIds) {
+      this.agents.delete(id);
+      this.agentStatuses.delete(id);
+    }
+    const agentsDeleted = ownedAgentIds.size;
+
+    let notificationsDeleted = 0;
+    for (const [nid, n] of Array.from(this.notifs.entries())) {
+      if (ownerKeys.has(n.userId)) {
+        this.notifs.delete(nid);
+        notificationsDeleted++;
+      }
+    }
+
+    // NB: the user row is intentionally preserved so the session survives.
     return { user, agentsDeleted, memoriesDeleted, transactionsDeleted, notificationsDeleted, noncesDeleted: 0 };
   }
 
@@ -451,6 +497,78 @@ export class DatabaseStorage implements IStorage {
       transactionsDeleted,
       notificationsDeleted,
       noncesDeleted,
+    };
+  }
+
+  async deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
+    // Same cascade as deleteUserAccount, but the user row + SIWE nonces are kept
+    // so the active session stays valid and the user can rebuild their data.
+    const userConditions = [];
+    if (ids.walletAddress) userConditions.push(eq(usersTable.walletAddress, ids.walletAddress));
+    if (ids.userId)        userConditions.push(eq(usersTable.id, ids.userId));
+    if (ids.email)         userConditions.push(eq(usersTable.username, ids.email));
+
+    const [user] = userConditions.length
+      ? await db.select().from(usersTable).where(or(...userConditions)).limit(1)
+      : [undefined as User | undefined];
+
+    const ownerKeys = new Set<string>();
+    if (user?.id)             ownerKeys.add(user.id);
+    if (user?.walletAddress)  ownerKeys.add(user.walletAddress);
+    if (ids.userId)           ownerKeys.add(ids.userId);
+    if (ids.walletAddress)    ownerKeys.add(ids.walletAddress);
+    if (ids.email)            ownerKeys.add(ids.email);
+    const ownerKeyList = Array.from(ownerKeys);
+
+    let agentsDeleted = 0;
+    let memoriesDeleted = 0;
+    let transactionsDeleted = 0;
+    let notificationsDeleted = 0;
+
+    await db.transaction(async (tx) => {
+      if (ownerKeyList.length > 0) {
+        const ownedAgents = await tx
+          .select({ id: agentsTable.id })
+          .from(agentsTable)
+          .where(inArray(agentsTable.ownerId, ownerKeyList));
+        const ownedAgentIds = ownedAgents.map(a => a.id);
+
+        if (ownedAgentIds.length > 0) {
+          const memDel = await tx
+            .delete(agentMemoryTable)
+            .where(inArray(agentMemoryTable.agentId, ownedAgentIds))
+            .returning({ id: agentMemoryTable.id });
+          memoriesDeleted = memDel.length;
+
+          const txDel = await tx
+            .delete(agentTransactionsTable)
+            .where(inArray(agentTransactionsTable.agentId, ownedAgentIds))
+            .returning({ id: agentTransactionsTable.id });
+          transactionsDeleted = txDel.length;
+
+          const agentDel = await tx
+            .delete(agentsTable)
+            .where(inArray(agentsTable.id, ownedAgentIds))
+            .returning({ id: agentsTable.id });
+          agentsDeleted = agentDel.length;
+        }
+
+        const notifDel = await tx
+          .delete(notificationsTable)
+          .where(inArray(notificationsTable.userId, ownerKeyList))
+          .returning({ id: notificationsTable.id });
+        notificationsDeleted = notifDel.length;
+      }
+      // The user row and SIWE nonces are intentionally NOT deleted here.
+    });
+
+    return {
+      user: user ?? null,
+      agentsDeleted,
+      memoriesDeleted,
+      transactionsDeleted,
+      notificationsDeleted,
+      noncesDeleted: 0,
     };
   }
 

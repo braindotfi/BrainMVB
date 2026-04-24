@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { queryClient } from "./queryClient";
 
 export interface CrossmintUser {
   id: string;
@@ -28,6 +29,7 @@ interface AuthContextType {
   login: () => void;
   logout: () => void;
   deleteAccount: () => Promise<void>;
+  deleteAccountData: () => Promise<void>;
   setUserAndAccounts: (user: CrossmintUser, accounts: WirexAccount[]) => void;
   refreshWirexAccounts: () => Promise<void>;
 }
@@ -133,6 +135,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginRequested(false);
   }, [user]);
 
+  const deleteAccountData = useCallback(async () => {
+    const current = user;
+    if (!current) return;
+    const res = await fetch("/api/account/data", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: current.id,
+        email: current.email,
+        walletAddress: current.walletAddress,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || `Data deletion failed (${res.status})`);
+    }
+    // Data is wiped, but the user account remains so the session stays valid.
+    // Clear all React Query caches so stale agent / notification / transaction
+    // data doesn't linger in the UI after deletion.
+    queryClient.clear();
+    setWirexAccounts([]);
+  }, [user]);
+
   const setUserAndAccounts = useCallback((u: CrossmintUser, accounts: WirexAccount[]) => {
     sessionStorage.setItem(USER_KEY, JSON.stringify(u));
     setUser(u);
@@ -150,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       deleteAccount,
+      deleteAccountData,
       setUserAndAccounts,
       refreshWirexAccounts,
     }}>

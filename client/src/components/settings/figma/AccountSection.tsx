@@ -9,7 +9,7 @@ function parseBalance(raw?: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type ModalKind = null | "confirm" | "blocked";
+type ModalKind = null | "confirm" | "blocked" | "deleteData";
 
 function Backdrop({ onClick }: { onClick: () => void }) {
   return (
@@ -63,6 +63,48 @@ function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () =
   );
 }
 
+function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-data-title"
+      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      data-testid="modal-delete-data-confirm"
+    >
+      <div className="flex flex-col items-center gap-[4px] w-full">
+        <p
+          id="delete-data-title"
+          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
+        >
+          Delete My Data
+        </p>
+        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
+          Are you sure you want to permanently delete all your Brain data? This is irreversible.
+        </p>
+      </div>
+      <div className="flex gap-[8px] items-center w-full">
+        <button
+          onClick={onCancel}
+          disabled={isDeleting}
+          data-testid="button-delete-data-cancel"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isDeleting}
+          data-testid="button-delete-data-confirm"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
+        >
+          {isDeleting ? "Deleting…" : "Confirm"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
   return (
     <div
@@ -95,7 +137,7 @@ function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
 }
 
 export default function AccountSection() {
-  const { wirexAccounts, deleteAccount } = useAuth();
+  const { wirexAccounts, deleteAccount, deleteAccountData } = useAuth();
   const { toast } = useToast();
   const [modal, setModal] = useState<ModalKind>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -144,6 +186,27 @@ export default function AccountSection() {
     } catch (err: any) {
       toast({
         title: "Couldn't delete account",
+        description: err?.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleConfirmDeleteData = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteAccountData();
+      setModal(null);
+      toast({
+        title: "Data deleted",
+        description: "All your Brain data has been permanently deleted. Your account remains active.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Couldn't delete data",
         description: err?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
@@ -208,7 +271,13 @@ export default function AccountSection() {
               <img alt="" className="block max-w-none size-full" src={SUB["7bddb712"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <button
+            type="button"
+            onClick={() => setModal("deleteData")}
+            data-testid="button-delete-data"
+            aria-label="Delete My Data"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+          >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -249,7 +318,7 @@ export default function AccountSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
@@ -313,6 +382,7 @@ export default function AccountSection() {
       {modal && <Backdrop onClick={() => { if (!isDeleting) setModal(null); }} />}
       {modal === "confirm" && <ConfirmCloseModal onCancel={() => setModal(null)} onConfirm={handleConfirm} isDeleting={isDeleting} />}
       {modal === "blocked" && <BlockedCloseModal onCancel={() => setModal(null)} />}
+      {modal === "deleteData" && <ConfirmDeleteDataModal onCancel={() => setModal(null)} onConfirm={handleConfirmDeleteData} isDeleting={isDeleting} />}
     </div>
   );
 }

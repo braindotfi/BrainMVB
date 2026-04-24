@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch } from "./FigmaPrimitives";
+import { useCurrency } from "@/lib/currencyContext";
+import { formatThousandsInput } from "@/lib/formatters";
 
   export default function AgentsSection() {
-    const [autoApprove, setAutoApprove] = useState<string>("1000");
-    const [maxDailySpend, setMaxDailySpend] = useState<string>("2000");
+    const { currency } = useCurrency();
+    const [autoApprove, setAutoApprove] = useState<string>("");
+    const [maxDailySpend, setMaxDailySpend] = useState<string>("");
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
@@ -120,16 +123,17 @@ import { Switch } from "./FigmaPrimitives";
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={autoApprove}
-                  onChange={(e) => setAutoApprove(e.target.value)}
+                  onChange={(e) => setAutoApprove(formatThousandsInput(e.target.value))}
                   placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-max-auto-approve"
                 />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
-                  USD
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap" data-testid="text-auto-approve-currency">
+                  {currency}
                 </p>
               </div>
             </div>
@@ -171,16 +175,17 @@ import { Switch } from "./FigmaPrimitives";
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={maxDailySpend}
-                  onChange={(e) => setMaxDailySpend(e.target.value)}
+                  onChange={(e) => setMaxDailySpend(formatThousandsInput(e.target.value))}
                   placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-max-daily-agent-spend"
                 />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
-                  USD
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap" data-testid="text-daily-spend-currency">
+                  {currency}
                 </p>
               </div>
             </div>

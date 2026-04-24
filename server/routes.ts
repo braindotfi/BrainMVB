@@ -243,6 +243,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // DELETE /api/account/data — purge all user-owned records (agents, memories,
+  // transactions, notifications) but KEEP the user account itself so the user
+  // remains logged in and can rebuild their data from scratch.
+  // Body: { userId?, email?, walletAddress? } — at least one is required.
+  app.delete("/api/account/data", async (req, res) => {
+    try {
+      const { userId, email, walletAddress } = (req.body ?? {}) as {
+        userId?: string; email?: string; walletAddress?: string;
+      };
+      if (!userId && !email && !walletAddress) {
+        return res.status(400).json({ error: "userId, email, or walletAddress required" });
+      }
+      const result = await storage.deleteUserData({ userId, email, walletAddress });
+      return res.json({ success: true, deleted: result });
+    } catch (error: any) {
+      console.error("Delete data error:", error);
+      return res.status(500).json({ error: error?.message || "Failed to delete data" });
+    }
+  });
+
   app.post("/api/account/allocate", async (req, res) => {
     try {
       const { agentId, amount, asset } = req.body;

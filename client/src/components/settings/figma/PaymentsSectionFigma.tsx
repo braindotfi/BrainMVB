@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch, Icons } from "./FigmaPrimitives";
+import { useCurrency } from "@/lib/currencyContext";
+import { formatThousandsInput } from "@/lib/formatters";
 
 const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
 
   export default function PaymentsSectionFigma() {
-    const [currency, setCurrency] = useState<string>("USD");
+    const { currency, setCurrency } = useCurrency();
     const [currencyOpen, setCurrencyOpen] = useState(false);
     const currencyRef = useRef<HTMLDivElement>(null);
-    const [dailyLimit, setDailyLimit] = useState<string>("10,000");
+    const [dailyLimit, setDailyLimit] = useState<string>("");
     const [singleTxLimit, setSingleTxLimit] = useState<string>("");
     const [saveRate, setSaveRate] = useState<string>("");
 
@@ -132,8 +134,9 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={dailyLimit}
-                  onChange={(e) => setDailyLimit(e.target.value)}
+                  onChange={(e) => setDailyLimit(formatThousandsInput(e.target.value))}
                   placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-daily-spend-limit"
@@ -180,9 +183,10 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={singleTxLimit}
-                  onChange={(e) => setSingleTxLimit(e.target.value)}
-                  placeholder="e.g. 1000"
+                  onChange={(e) => setSingleTxLimit(formatThousandsInput(e.target.value))}
+                  placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-single-tx-limit"
                 />
@@ -277,9 +281,10 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={saveRate}
-                  onChange={(e) => setSaveRate(e.target.value)}
-                  placeholder="e.g. 10"
+                  onChange={(e) => setSaveRate(formatThousandsInput(e.target.value))}
+                  placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-save-rate"
                 />

@@ -1,5 +1,12 @@
 import { SUB } from "@/assets/sub-icons";
 
+const TERMS_URL = "https://docs.brain.fi/legal/terms-of-service";
+const PRIVACY_URL = "https://docs.brain.fi/legal/privacy-policy";
+
+const openExternal = (url: string) => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+
   export default function LegalSection() {
     return (
       <div className="flex flex-col gap-6 w-full">
@@ -10,7 +17,13 @@ import { SUB } from "@/assets/sub-icons";
           </p>
         </div>
         <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <button
+            type="button"
+            onClick={() => openExternal(TERMS_URL)}
+            data-testid="button-terms-of-service"
+            aria-label="Open Terms of Service"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+          >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -51,13 +64,19 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
             </div>
-          </div>
+          </button>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
               <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <button
+            type="button"
+            onClick={() => openExternal(PRIVACY_URL)}
+            data-testid="button-privacy-policy"
+            aria-label="Open Privacy Policy"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+          >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -98,7 +117,7 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
             </div>
-          </div>
+          </button>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
               <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
