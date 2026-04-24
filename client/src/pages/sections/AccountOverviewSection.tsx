@@ -1116,29 +1116,30 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               </svg>
             </button>
             {/* Header pill input field */}
-            <div className="flex-1 flex items-center gap-2 h-[40px] px-2 bg-brain-v1baby-blue-15 rounded-[8px]">
+            <div className="flex-1 flex items-center gap-3 h-[40px] pl-2 pr-1.5 bg-brain-v1baby-blue-15 rounded-[14px]">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
               <CardDotLabel type={CARDS[activeCard].type} />
             </div>
 
-            {/* Dropdown trigger */}
-            <div className="relative flex-shrink-0" ref={dropdownRef}>
+            {/* Active-state checkmark + dropdown trigger */}
+            <div className="relative flex-shrink-0 flex items-center gap-2" ref={dropdownRef}>
               {dropdownOpen && (
                 <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300" onClick={() => setDropdownOpen(false)} />
               )}
+              <GreenCheckmark />
               <button
+                data-testid="button-account-dropdown"
                 onClick={() => setDropdownOpen((v) => !v)}
-                title="Account options"
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-colors ${
+                title="Switch account"
+                className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
                   dropdownOpen
-                    ? "bg-brain-v1baby-blue-30 border-[#414965]"
-                    : "bg-brain-v1baby-blue-15 border-[#1d2131] hover:border-[#414965] hover:bg-brain-v1baby-blue-30"
+                    ? "bg-brain-v1baby-blue-30"
+                    : "bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30"
                 }`}
               >
-                <img className="w-4 h-4" alt="Options" src="/figmaAssets/icons-15.svg" />
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
-                  <path d="M2 3.5L5 6.5L8 3.5" stroke="#8899bb" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
+                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="#8899bb" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
 
