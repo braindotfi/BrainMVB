@@ -94,11 +94,12 @@ function AddAgentRow({ onClick }: { onClick: () => void }) {
       className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-opacity hover:opacity-90"
       style={{ background: "#7631ee" }}
     >
-      {/* Avatar: 32px dark-purple circle with a centred white plus.
-         Background matches the Dark Purple Figma variable (#240757). */}
+      {/* Avatar: 32px dark-purple circle with a centred purple plus.
+         Background = Dark Purple (#240757), stroke = Purple (#7631EE) —
+         matches Figma button instance 2762:25927. */}
       <div className="relative rounded-[100px] flex-shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#240757" }}>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M6 1V11M1 6H11" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M6 1V11M1 6H11" stroke="#7631EE" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </div>
       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#240757] text-[16px] leading-[20px] whitespace-nowrap">
