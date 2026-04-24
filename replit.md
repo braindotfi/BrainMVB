@@ -127,3 +127,16 @@ Replaced across all `client/src/components/settings/figma/*.tsx`:
 - `font-['Gilroy:SemiBold',sans-serif]` → `font-['Gilroy',sans-serif] font-semibold`
 The "Gilroy" family is loaded via bunny.net at top of `client/src/index.css`
 with weights 400/500/600/700/800.
+
+## Rules Suggestion Counter Badge (April 2026)
+Sidebar "Rules" nav now shows a notification counter badge (Figma 3876:70929)
+when Brain has new rule suggestions:
+- Shared store: `client/src/lib/rule-suggestions.ts` (useSyncExternalStore-backed,
+  exports `useRuleSuggestions`, `toggleSuggestion`, `dismissSuggestion`,
+  `acceptSuggestion`). Initial seed: 1 suggestion ("Run payroll on payday").
+- `RulesPage.tsx` reads suggestions from this store instead of local useState.
+- `NavigationMenuSection.tsx` adds a `NotificationBadge` component:
+  bg #7631ee, text #240757, rounded-[4px], min-w-[16px], p-[2px],
+  font Gilroy SemiBold 12/12. Renders between label and ChevronRight when
+  count > 0. Collapsed sidebar uses an 8px purple dot ring-2 ring-[#11141b]
+  in the icon's top-right corner.

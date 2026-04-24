@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
+import { useRuleSuggestions } from "@/lib/rule-suggestions";
 
 interface Props {
   collapsed: boolean;
@@ -190,6 +191,21 @@ const SettingsIconInactive = () => (
   </div>
 );
 
+/* Notification counter badge — Figma 3876:70929 (Counter)
+   bg #7631ee, text #240757 (dark purple), rounded-[4px], min-w-[16px], p-[2px] */
+const NotificationBadge = ({ count, testId }: { count: number; testId?: string }) => (
+  <div
+    data-testid={testId}
+    className="bg-[#7631ee] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0"
+  >
+    <p
+      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#240757] text-[12px] text-center whitespace-nowrap"
+    >
+      {count > 99 ? "99+" : count}
+    </p>
+  </div>
+);
+
 const ChevronRight = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[33.33%_43.39%_33.33%_41.67%]">
@@ -227,11 +243,15 @@ const OTHER_NAV: NavItem[] = [
 export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const ruleSuggestionsCount = useRuleSuggestions().length;
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";
     return location.startsWith(path);
   };
+
+  /** Returns the badge count for a nav item by path, or 0 if no badge applies. */
+  const getNavCount = (path: string) => (path === "/rules" ? ruleSuggestionsCount : 0);
 
   if (collapsed) {
     return (
@@ -245,13 +265,26 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
               <img className="w-[40px] h-[40px] object-contain flex-shrink-0" alt="Brain" src={ICONS.brain_logo_3d} />
             </div>
-            {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => (
-              <Link key={path} href={path} className="outline-none focus:outline-none">
-                <button title={label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}>
-                  {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
-                </button>
-              </Link>
-            ))}
+            {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
+              const count = getNavCount(path);
+              return (
+                <Link key={path} href={path} className="outline-none focus:outline-none">
+                  <button
+                    title={count > 0 ? `${label} (${count} new)` : label}
+                    data-testid={`nav-collapsed-${label.toLowerCase()}`}
+                    className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                  >
+                    {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                    {count > 0 && (
+                      <span
+                        data-testid={`badge-collapsed-${label.toLowerCase()}`}
+                        className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                      />
+                    )}
+                  </button>
+                </Link>
+              );
+            })}
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
             <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
@@ -283,6 +316,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
               {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
                 const active = isActive(path);
+                const count = getNavCount(path);
                 return (
                   <Link key={path} href={path} className="w-full outline-none focus:outline-none">
                     <button
@@ -296,6 +330,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                           {label}
                         </p>
                       </div>
+                      {count > 0 && <NotificationBadge count={count} testId={`badge-${label.toLowerCase()}`} />}
                       {active && <ChevronRight />}
                     </button>
                   </Link>

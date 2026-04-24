@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRuleSuggestions, toggleSuggestion as toggleSuggestionStore } from "@/lib/rule-suggestions";
 
 const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/14dad455-e827-4a72-8984-b1f08218c3f5";
 
@@ -74,21 +75,12 @@ const INITIAL_RULES: Rule[] = [
   },
 ];
 
-const SUGGESTIONS: Rule[] = [
-  {
-    id: 6,
-    title: "Run payroll on payday",
-    description: "Every other Friday, I'll check the amounts look normal and ask you first if anything changed.",
-    active: true,
-  },
-];
-
 export function RulesPage() {
   const [rules, setRules] = useState(INITIAL_RULES);
-  const [suggestions, setSuggestions] = useState(SUGGESTIONS);
+  const suggestions = useRuleSuggestions();
 
   const toggleRule = (id: number) => setRules(r => r.map(rule => rule.id === id ? { ...rule, active: !rule.active } : rule));
-  const toggleSuggestion = (id: number) => setSuggestions(s => s.map(rule => rule.id === id ? { ...rule, active: !rule.active } : rule));
+  const toggleSuggestion = (id: number) => toggleSuggestionStore(id);
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
