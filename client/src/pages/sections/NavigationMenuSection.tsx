@@ -81,7 +81,14 @@ const CollapseButton = ({ onClick }: { onClick: () => void }) => (
 
 const HomeIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
+    <div
+      className="absolute inset-[4.17%_12.5%] rounded-[4px]"
+      style={{
+        background:
+          "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%) padding-box, linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(168, 137, 250, 0.55) 50%, rgba(118, 49, 238, 0.4) 100%) border-box",
+        border: "1.4px solid transparent",
+      }}
+    />
     <div className="absolute inset-[24.54%_32.5%_24.53%_32.5%]">
       <div className="absolute inset-[-9.2%_-26.79%_-27.61%_-26.79%]">
         <img alt="" className="block max-w-none size-full" src={ICONS.home_active_vec} />

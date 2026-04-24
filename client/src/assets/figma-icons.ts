@@ -38,6 +38,26 @@ import noticed_vec from "@assets/figma_icons/noticed_vec.svg";
 import approved_bg from "@assets/figma_icons/approved_bg.svg";
 import approved_vec from "@assets/figma_icons/approved_vec.svg";
 import approved_vec2 from "@assets/figma_icons/approved_vec2.svg";
+import settings_profile_active_head from "@assets/figma_icons/settings_profile_active_head.svg";
+import settings_profile_active_body from "@assets/figma_icons/settings_profile_active_body.svg";
+import settings_security_inactive from "@assets/figma_icons/settings_security_inactive.svg";
+import settings_notif_inactive from "@assets/figma_icons/settings_notif_inactive.svg";
+import settings_payments_inactive from "@assets/figma_icons/settings_payments_inactive.svg";
+import settings_agents_inactive from "@assets/figma_icons/settings_agents_inactive.svg";
+import settings_legal_inactive from "@assets/figma_icons/settings_legal_inactive.svg";
+import settings_account_inactive from "@assets/figma_icons/settings_account_inactive.svg";
+import settings_avatar_miles from "@assets/figma_icons/settings_avatar_miles.png";
+import settings_row_circle_bg from "@assets/figma_icons/settings_row_circle_bg.svg";
+import settings_action_circle_bg from "@assets/figma_icons/settings_action_circle_bg.svg";
+import settings_kyc_icon from "@assets/figma_icons/settings_kyc_icon.svg";
+import settings_wallet_icon1 from "@assets/figma_icons/settings_wallet_icon1.svg";
+import settings_wallet_icon2 from "@assets/figma_icons/settings_wallet_icon2.svg";
+import settings_copy_icon from "@assets/figma_icons/settings_copy_icon.svg";
+import settings_phone_icon from "@assets/figma_icons/settings_phone_icon.svg";
+import settings_chevron_right from "@assets/figma_icons/settings_chevron_right.svg";
+import settings_row_divider from "@assets/figma_icons/settings_row_divider.svg";
+import settings_edit_pencil1 from "@assets/figma_icons/settings_edit_pencil1.svg";
+import settings_edit_pencil2 from "@assets/figma_icons/settings_edit_pencil2.svg";
 
 export const ICONS = {
   brain_union,
@@ -80,4 +100,24 @@ export const ICONS = {
   approved_bg,
   approved_vec,
   approved_vec2,
+  settings_profile_active_head,
+  settings_profile_active_body,
+  settings_security_inactive,
+  settings_notif_inactive,
+  settings_payments_inactive,
+  settings_agents_inactive,
+  settings_legal_inactive,
+  settings_account_inactive,
+  settings_avatar_miles,
+  settings_row_circle_bg,
+  settings_action_circle_bg,
+  settings_kyc_icon,
+  settings_wallet_icon1,
+  settings_wallet_icon2,
+  settings_copy_icon,
+  settings_phone_icon,
+  settings_chevron_right,
+  settings_row_divider,
+  settings_edit_pencil1,
+  settings_edit_pencil2,
 } as const;

@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Subtract">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M14 0C16.2091 0 18 1.79086 18 4V18C18 20.2091 16.2091 22 14 22H4C1.79086 22 6.44266e-08 20.2091 0 18V4C6.44266e-08 1.79086 1.79086 1.61064e-08 4 0H14ZM7 2C6.44772 2 6 2.44772 6 3C6 3.55228 6.44772 4 7 4H11C11.5523 4 12 3.55228 12 3C12 2.44772 11.5523 2 11 2H7Z" fill="url(#paint0_linear_0_209)"/>
+<path d="M4 0.700195H14C15.8225 0.700195 17.2998 2.17746 17.2998 4V18L17.2959 18.1699C17.2075 19.9135 15.7656 21.2998 14 21.2998H4C2.17746 21.2998 0.700195 19.8225 0.700195 18V4C0.700195 2.17746 2.17746 0.700195 4 0.700195ZM7 1.2998C6.06112 1.2998 5.2998 2.06112 5.2998 3C5.2998 3.93888 6.06112 4.7002 7 4.7002H11C11.9389 4.7002 12.7002 3.93887 12.7002 3C12.7002 2.06113 11.9389 1.2998 11 1.2998H7Z" stroke="url(#paint1_linear_0_209)" stroke-opacity="0.6" stroke-width="1.4"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_209" x1="6.05515" y1="-1.23026" x2="18.7393" y2="6.57428" gradientUnits="userSpaceOnUse">
+<stop stop-color="#965AFF"/>
+<stop offset="1" stop-color="#7631EE"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_209" x1="-2.25" y1="6.5" x2="6.85" y2="11.05" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="0.68337" stop-color="white" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>
