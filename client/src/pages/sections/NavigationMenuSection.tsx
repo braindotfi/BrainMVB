@@ -12,8 +12,9 @@ const IMG_BRAIN_MASK = "https://www.figma.com/api/mcp/asset/7d61d4ac-fc09-4f3f-b
 const IMG_BRAIN_OVERLAY = "https://www.figma.com/api/mcp/asset/23e38371-03b4-4fc7-9266-0d6c348afe88";
 const IMG_BELL_BG = "https://www.figma.com/api/mcp/asset/4cc422e3-86d1-4530-88d0-771b72dfbce3";
 const IMG_BELL_ICON = "https://www.figma.com/api/mcp/asset/92fab1b3-f9d8-491f-ba35-276c1c9c0aa0";
-const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/0f5c73d5-dbab-491e-aef5-661e7f3c9026";
-const IMG_CHEVRON_RIGHT = "https://www.figma.com/api/mcp/asset/660f66ac-32fe-4859-b9fa-ef270ad04919";
+const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/6891ff17-aa0d-482c-ad57-cb62fab7b151";
+const IMG_HOME_INACTIVE = "https://www.figma.com/api/mcp/asset/32d5f76b-d500-4264-ab5c-8f35598a50a2";
+const IMG_CHEVRON_RIGHT = "https://www.figma.com/api/mcp/asset/95b793c7-2dee-47d7-884c-c8427165f818";
 const IMG_FINANCES_ICON = "https://www.figma.com/api/mcp/asset/b059b897-4679-4963-af6e-ce2c3e300768";
 const IMG_RULES_ICON = "https://www.figma.com/api/mcp/asset/4327bb4b-9cd5-4d1f-b244-755e7b19271e";
 const IMG_ACTIVITY_ICON = "https://www.figma.com/api/mcp/asset/ecf60034-d903-4c85-9dc7-6e6bf1d8c270";
@@ -100,10 +101,8 @@ const HomeIconActive = () => (
 
 const HomeIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[24.54%_32.5%_24.53%_32.5%]" style={{ opacity: 0.6 }}>
-      <div className="absolute inset-[-9.2%_-26.79%_-27.61%_-26.79%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_HOME_ICON} style={{ filter: "brightness(0.6)" }} />
-      </div>
+    <div className="absolute inset-[4.17%_12.5%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_HOME_INACTIVE} />
     </div>
   </div>
 );

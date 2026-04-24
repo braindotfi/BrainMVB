@@ -817,60 +817,49 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
           />
         )}
 
-        {/* Strip: 56px wide, 8px side padding → 40px inner elements */}
-        <div className="flex flex-col items-center w-[56px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] py-2 gap-[8px]">
+        {/* Strip: 56px wide, 7px inner padding → 40px inner elements (Figma 3759:50843) */}
+        {/* Use overflow-visible so hover popups can extend outside the strip */}
+        <div className="relative w-[56px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b]">
+          <div className="absolute left-[7px] top-[7px] w-[40px] flex flex-col gap-[16px] items-start">
 
-          {/* ── Toggle expand button: full-pill, #222737 background ── */}
+          {/* ── Toggle expand button: full-pill background ── */}
           <button
             onClick={onToggle}
             title="Expand account panel"
             data-testid="button-expand-account"
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] flex items-center justify-center transition-colors"
-            style={{ background: "#222737" }}
+            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity hover:opacity-90"
           >
-            <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 6L6 9L9 12M7 9H14M17 17H3C1.89543 17 1 16.1046 1 15V3C1 1.89543 1.89543 1 3 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ceda6e42-45e4-4df3-85e6-c9cf92f9c869" />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+              <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 6L6 9L9 12M7 9H14M17 17H3C1.89543 17 1 16.1046 1 15V3C1 1.89543 1.89543 1 3 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </button>
 
           {/* ── Horizontal divider ── */}
           <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
 
-          {/* ── "Wallet" label ── */}
-          <span className="text-[#414965] text-[9px] [font-family:'Gilroy',sans-serif] uppercase tracking-[0.06em] select-none leading-[16px]">Wallet</span>
+          {/* ── Wallet section (label + buttons) ── */}
+          <div className="flex flex-col gap-[4px] items-start">
+            {/* Wallet label */}
+            <div className="flex items-center justify-center px-[8px] w-[40px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px] whitespace-nowrap select-none">Wallet</span>
+            </div>
 
-          {/* ── Bank icon: hover-to-open popup ── */}
-          <div
-            className="relative flex-shrink-0"
-            ref={bankPopupRef}
-            onMouseEnter={() => {
-              if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
-              bankPopupPendingCloseRef.current = false;
-              setBankPopupOpen(true);
-              setCollapsedDropdownOpen(false);
-            }}
-            onMouseLeave={() => {
-              if (bankPopupLockedRef.current) {
-                bankPopupPendingCloseRef.current = true;
-              } else {
-                bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
-              }
-            }}
-          >
-            <button
-              data-testid="button-collapsed-bank"
-              className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
-            >
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/1734631d-84a1-45bd-98f1-2f2d8c1b152f"} />
-              <div className="absolute left-[8px] size-[24px] top-[8px]">
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/5b1a6f26-a8c2-47ab-b4fc-e85aa0796935"} />
-              </div>
-            </button>
-            {bankPopupOpen && (
+            {/* Buttons stack */}
+            <div className="flex flex-col gap-[8px] items-start">
+
+              {/* ── Bank icon: hover-to-open popup ── */}
               <div
-                className="absolute z-50"
-                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); bankPopupPendingCloseRef.current = false; }}
+                className="relative flex-shrink-0"
+                ref={bankPopupRef}
+                onMouseEnter={() => {
+                  if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+                  bankPopupPendingCloseRef.current = false;
+                  setBankPopupOpen(true);
+                  setCollapsedDropdownOpen(false);
+                }}
                 onMouseLeave={() => {
                   if (bankPopupLockedRef.current) {
                     bankPopupPendingCloseRef.current = true;
@@ -878,133 +867,154 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                     bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
                   }
                 }}
-                onClick={() => {
-                  bankPopupLockedRef.current = true;
-                  bankPopupPendingCloseRef.current = false;
-                  if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
-                  setTimeout(() => {
-                    bankPopupLockedRef.current = false;
-                    if (bankPopupPendingCloseRef.current) {
-                      bankPopupPendingCloseRef.current = false;
-                      setBankPopupOpen(false);
-                    }
-                  }, 500);
-                }}
               >
-                <BankPopup />
+                <button
+                  data-testid="button-collapsed-bank"
+                  className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
+                >
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/9dec962b-ba90-4e08-b347-ef669db88490"} />
+                  <div className="absolute left-[8px] size-[24px] top-[8px]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/fa525d64-90e7-4092-9a2e-bf6dd7e564c5"} />
+                  </div>
+                </button>
+                {bankPopupOpen && (
+                  <div
+                    className="absolute z-50"
+                    style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                    onMouseEnter={() => { if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current); bankPopupPendingCloseRef.current = false; }}
+                    onMouseLeave={() => {
+                      if (bankPopupLockedRef.current) {
+                        bankPopupPendingCloseRef.current = true;
+                      } else {
+                        bankHoverTimer.current = setTimeout(() => setBankPopupOpen(false), 150);
+                      }
+                    }}
+                    onClick={() => {
+                      bankPopupLockedRef.current = true;
+                      bankPopupPendingCloseRef.current = false;
+                      if (bankHoverTimer.current) clearTimeout(bankHoverTimer.current);
+                      setTimeout(() => {
+                        bankPopupLockedRef.current = false;
+                        if (bankPopupPendingCloseRef.current) {
+                          bankPopupPendingCloseRef.current = false;
+                          setBankPopupOpen(false);
+                        }
+                      }, 500);
+                    }}
+                  >
+                    <BankPopup />
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* ── Add icon: full circle ── */}
+              <button
+                data-testid="button-collapsed-add"
+                onClick={() => setAddOpen(true)}
+                className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
+              >
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+                  <div className="absolute inset-[16.67%]">
+                    <div className="absolute inset-[-6.25%]">
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f50e1a4a-ad47-48fc-a6a0-3d058a2f60a1" />
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* ── Send icon: full circle ── */}
+              <button
+                data-testid="button-collapsed-send"
+                onClick={() => onSend?.("wallet")}
+                className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
+              >
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+                  <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
+                    <div className="absolute inset-[-8.51%]">
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/dc86f114-38ed-4fe5-81ec-6348ecf30b38" />
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* ── Exchange icon: full circle ── */}
+              <button
+                data-testid="button-collapsed-exchange"
+                onClick={() => onExchange?.(collapsedCardIndex === 2 ? "bank" : "wallet")}
+                className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
+              >
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+                  <div className="absolute inset-[17.94%_16.48%_17.96%_16.47%]">
+                    <div className="absolute inset-[-6.5%_-6.21%]">
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/7719f7d4-0c36-4e8c-97f2-d4ecd58e9f10" />
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+            </div>
           </div>
-
-          {/* ── Add icon: full circle ── */}
-          <button
-            data-testid="button-collapsed-add"
-            onClick={() => setAddOpen(true)}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
-          >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4851320b-a0c5-40fd-8118-2c173dfd25f1" />
-            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-              <div className="absolute inset-[16.67%]">
-                <div className="absolute inset-[-6.25%]">
-                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c903837d-5e64-41ed-8a00-101d641016ee" />
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {/* ── Send icon: full circle ── */}
-          <button
-            data-testid="button-collapsed-send"
-            onClick={() => onSend?.("wallet")}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
-          >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bde98f2c-378d-4f45-ac22-10f078756f73" />
-            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-              <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
-                <div className="absolute inset-[-8.51%]">
-                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/1e70a882-3832-44fc-8a11-dbfe44d2f995" />
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {/* ── Exchange icon: full circle ── */}
-          <button
-            data-testid="button-collapsed-exchange"
-            onClick={() => onExchange?.(collapsedCardIndex === 2 ? "bank" : "wallet")}
-            className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-80 hover:opacity-100"
-          >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/edf0684e-1ba3-4bf5-811f-a38442ad4e9a" />
-            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-              <div className="absolute inset-[17.94%_16.48%_17.96%_16.47%]">
-                <div className="absolute inset-[-6.5%_-6.21%]">
-                  <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/96ab50bb-4215-4885-9dd4-3200d3eb521f" />
-                </div>
-              </div>
-            </div>
-          </button>
 
           {/* ── Horizontal divider ── */}
           <div className="w-[40px] h-px bg-[#1d2132] flex-shrink-0" />
 
-          {/* ── Assets: Rounded-full circle button — matching Figma 3265:26778 ── */}
-          <div
-            className="relative flex-shrink-0"
-            onMouseEnter={() => openHover("assets")}
-            onMouseLeave={closeHover}
-          >
-            <button
-              data-testid="button-collapsed-assets"
-              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center p-[8px] transition-colors bg-[#11141b]"
-            >
-              <svg width="22" height="20" viewBox="0 0 22 20" fill="none">
-                <path d="M14.3 4.44444C18.5526 4.44444 22 7.92667 22 12.2222C22 16.5178 18.5526 20 14.3 20C10.0474 20 6.6 16.5178 6.6 12.2222C6.6 7.92667 10.0474 4.44444 14.3 4.44444Z" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
-                <path d="M7.7 0C9.83147 0 11.7607 0.874835 13.1549 2.28841C8.2267 2.86175 4.4 7.09058 4.4 12.2222C4.4 13.1777 4.53253 14.1021 4.78027 14.9772C1.97542 13.8153 0 11.0295 0 7.77778C0 3.48223 3.44741 0 7.7 0Z" fill={hoveredIcon === "assets" ? "#9d5cf5" : "#6c779d"}/>
-              </svg>
-            </button>
-            {hoveredIcon === "assets" && (
-              <div
-                className="absolute z-50"
-                style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
-                onMouseEnter={cancelClose}
-                onMouseLeave={closeHover}
-              >
-                <AssetsPopup />
-              </div>
-            )}
-          </div>
+          {/* ── Bottom sidebar menus (Assets + Transactions) ── */}
+          <div className="flex flex-col gap-[4px] items-start w-full">
 
-          {/* ── Transactions: Rounded-full circle button — matching Figma 3265:26778 ── */}
-          <div
-            className="relative flex-shrink-0"
-            onMouseEnter={() => openHover("transactions")}
-            onMouseLeave={closeHover}
-          >
-            <button
-              data-testid="button-collapsed-transactions"
-              className="w-[40px] h-[40px] rounded-[12px] flex items-center justify-center transition-colors bg-[#11141b] overflow-clip relative"
+            {/* ── Assets: Sidebar Menu (Union icon) ── */}
+            <div
+              className="relative flex-shrink-0"
+              onMouseEnter={() => openHover("assets")}
+              onMouseLeave={closeHover}
             >
-              {hoveredIcon === "transactions" ? (
+              <button
+                data-testid="button-collapsed-assets"
+                className="bg-[#11141b] flex items-center p-[8px] rounded-[12px] transition-colors hover:bg-[#1d2132]"
+              >
                 <div className="overflow-clip relative size-[24px]">
-                  <div className="absolute inset-[12.08%_3.35%_12.09%_3.4%]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f4b3667-896e-4f8e-84f3-ff3db0f1bbdf" />
+                  <div className="absolute inset-[8.33%_4.17%]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3d123fed-becc-425c-8c9f-5d8fc42d736b" />
                   </div>
                 </div>
-              ) : (
+              </button>
+              {hoveredIcon === "assets" && (
+                <div
+                  className="absolute z-50"
+                  style={{ right: "calc(100% + 12px)", top: "50%", transform: "translateY(-50%)" }}
+                  onMouseEnter={cancelClose}
+                  onMouseLeave={closeHover}
+                >
+                  <AssetsPopup />
+                </div>
+              )}
+            </div>
+
+            {/* ── Transactions: Sidebar Menu (two-vector icon) ── */}
+            <div
+              className="relative flex-shrink-0"
+              onMouseEnter={() => openHover("transactions")}
+              onMouseLeave={closeHover}
+            >
+              <button
+                data-testid="button-collapsed-transactions"
+                className="bg-[#11141b] flex items-center p-[8px] rounded-[12px] transition-colors hover:bg-[#1d2132]"
+              >
                 <div className="overflow-clip relative size-[24px]">
                   <div className="absolute inset-[29.17%_41.67%]">
                     <div className="absolute inset-[-10%_-25%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bbbbe5df-e21b-4e9f-8507-7555e90f6a33" />
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/25b90353-cfc5-4e1b-acba-6c565adb77bc" />
                     </div>
                   </div>
-                  <div className="absolute inset-[16.25%_7.52%_16.25%_7.56%]">
+                  <div className="absolute inset-[16.24%_7.51%_16.26%_7.57%]">
                     <div className="absolute inset-[-6.17%_-4.91%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a81167fa-846b-456b-a37f-c387ca6add52" />
+                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eff98633-9f88-446f-bead-178ce69e2e78" />
                     </div>
                   </div>
                 </div>
-              )}
-            </button>
+              </button>
             {hoveredIcon === "transactions" && (
               <div
                 className="absolute z-50"
@@ -1016,6 +1026,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               </div>
             )}
           </div>
+
+          </div>
+          {/* ── End bottom sidebar menus ── */}
+
+          </div>
+          {/* ── End inner content (left-[7px] top-[7px]) ── */}
 
         </div>
       </div>
