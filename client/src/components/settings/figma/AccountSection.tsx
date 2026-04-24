@@ -21,7 +21,7 @@ function Backdrop({ onClick }: { onClick: () => void }) {
   );
 }
 
-function ConfirmCloseModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
   return (
     <div
       role="dialog"
@@ -44,17 +44,19 @@ function ConfirmCloseModal({ onCancel, onConfirm }: { onCancel: () => void; onCo
       <div className="flex gap-[8px] items-center w-full">
         <button
           onClick={onCancel}
+          disabled={isDeleting}
           data-testid="button-close-account-cancel"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
         >
           Cancel
         </button>
         <button
           onClick={onConfirm}
+          disabled={isDeleting}
           data-testid="button-close-account-confirm"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
         >
-          Confirm
+          {isDeleting ? "Deleting…" : "Confirm"}
         </button>
       </div>
     </div>
@@ -93,9 +95,10 @@ function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
 }
 
 export default function AccountSection() {
-  const { wirexAccounts, logout } = useAuth();
+  const { wirexAccounts, deleteAccount } = useAuth();
   const { toast } = useToast();
   const [modal, setModal] = useState<ModalKind>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Lock body scroll while a modal is open
   useEffect(() => {
@@ -106,13 +109,15 @@ export default function AccountSection() {
     }
   }, [modal]);
 
-  // Close on Escape
+  // Close on Escape (disabled while a destructive delete is in flight)
   useEffect(() => {
     if (!modal) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setModal(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isDeleting) setModal(null);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [modal]);
+  }, [modal, isDeleting]);
 
   const handleCloseAccountClick = () => {
     const wallet = wirexAccounts.find(a => a.type === "wallet");
@@ -126,13 +131,25 @@ export default function AccountSection() {
     }
   };
 
-  const handleConfirm = () => {
-    setModal(null);
-    toast({
-      title: "Account closed",
-      description: "Your Brain account has been permanently deleted.",
-    });
-    logout();
+  const handleConfirm = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      setModal(null);
+      toast({
+        title: "Account closed",
+        description: "Your Brain account and all associated records have been permanently deleted.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Couldn't delete account",
+        description: err?.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -293,8 +310,8 @@ export default function AccountSection() {
         </div>
       </div>
 
-      {modal && <Backdrop onClick={() => setModal(null)} />}
-      {modal === "confirm" && <ConfirmCloseModal onCancel={() => setModal(null)} onConfirm={handleConfirm} />}
+      {modal && <Backdrop onClick={() => { if (!isDeleting) setModal(null); }} />}
+      {modal === "confirm" && <ConfirmCloseModal onCancel={() => setModal(null)} onConfirm={handleConfirm} isDeleting={isDeleting} />}
       {modal === "blocked" && <BlockedCloseModal onCancel={() => setModal(null)} />}
     </div>
   );

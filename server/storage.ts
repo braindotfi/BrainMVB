@@ -12,9 +12,25 @@ import {
   agentMemory as agentMemoryTable,
   agentTransactions as agentTransactionsTable,
   notifications as notificationsTable,
+  siweNonces as siweNoncesTable,
 } from "@shared/schema";
-import { eq, and, desc, count, ne } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
+
+export interface DeleteAccountIdentifiers {
+  userId?: string;          // Crossmint id (free-form) — also used as agents.ownerId
+  email?: string;           // mapped to users.username when SIWE created the row
+  walletAddress?: string;   // canonical link to users.wallet_address
+}
+
+export interface DeleteAccountResult {
+  user: User | null;
+  agentsDeleted: number;
+  memoriesDeleted: number;
+  transactionsDeleted: number;
+  notificationsDeleted: number;
+  noncesDeleted: number;
+}
 
 export type AgentStatus = "active" | "inactive" | "paused";
 
@@ -25,6 +41,7 @@ export interface IStorage {
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserWallet(id: string, walletAddress: string): Promise<User | undefined>;
+  deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
 
   // Agents
   getAgent(id: string): Promise<Agent | undefined>;
@@ -115,6 +132,57 @@ export class MemStorage implements IStorage {
     const updated = { ...user, walletAddress };
     this.users.set(id, updated);
     return updated;
+  }
+
+  async deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
+    // Resolve the matching user row (if any) by wallet, id, or username/email.
+    const allUsers = Array.from(this.users.values());
+    const user = allUsers.find(u =>
+      (ids.walletAddress && u.walletAddress === ids.walletAddress) ||
+      (ids.userId && u.id === ids.userId) ||
+      (ids.email && u.username === ids.email),
+    ) ?? null;
+
+    // Build the set of owner identifiers used as agents.ownerId across the app.
+    const ownerKeys = new Set<string>();
+    if (user?.id)                ownerKeys.add(user.id);
+    if (user?.walletAddress)     ownerKeys.add(user.walletAddress);
+    if (ids.userId)              ownerKeys.add(ids.userId);
+    if (ids.walletAddress)       ownerKeys.add(ids.walletAddress);
+    if (ids.email)               ownerKeys.add(ids.email);
+
+    const ownedAgents = Array.from(this.agents.values()).filter(a => ownerKeys.has(a.ownerId));
+    const ownedAgentIds = new Set(ownedAgents.map(a => a.id));
+
+    // Delete agent transactions + memories that belong to those agents.
+    const memoriesBefore = this.memories.length;
+    this.memories = this.memories.filter(m => !ownedAgentIds.has(m.agentId));
+    const memoriesDeleted = memoriesBefore - this.memories.length;
+
+    const txnsBefore = this.txLog.length;
+    this.txLog = this.txLog.filter(t => !ownedAgentIds.has(t.agentId));
+    const transactionsDeleted = txnsBefore - this.txLog.length;
+
+    // Delete the agents themselves.
+    for (const id of ownedAgentIds) {
+      this.agents.delete(id);
+      this.agentStatuses.delete(id);
+    }
+    const agentsDeleted = ownedAgentIds.size;
+
+    // Delete notifications for any of the user's identifiers.
+    let notificationsDeleted = 0;
+    for (const [nid, n] of Array.from(this.notifs.entries())) {
+      if (ownerKeys.has(n.userId)) {
+        this.notifs.delete(nid);
+        notificationsDeleted++;
+      }
+    }
+
+    // Finally remove the user row.
+    if (user) this.users.delete(user.id);
+
+    return { user, agentsDeleted, memoriesDeleted, transactionsDeleted, notificationsDeleted, noncesDeleted: 0 };
   }
 
   // ─── Agents ───
@@ -296,6 +364,94 @@ export class DatabaseStorage implements IStorage {
   async updateUserWallet(id: string, walletAddress: string): Promise<User | undefined> {
     const [row] = await db.update(usersTable).set({ walletAddress }).where(eq(usersTable.id, id)).returning();
     return row ?? undefined;
+  }
+
+  async deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
+    // Locate the matching user row by wallet/id/email (username).
+    const userConditions = [];
+    if (ids.walletAddress) userConditions.push(eq(usersTable.walletAddress, ids.walletAddress));
+    if (ids.userId)        userConditions.push(eq(usersTable.id, ids.userId));
+    if (ids.email)         userConditions.push(eq(usersTable.username, ids.email));
+
+    const [user] = userConditions.length
+      ? await db.select().from(usersTable).where(or(...userConditions)).limit(1)
+      : [undefined as User | undefined];
+
+    // Build the set of owner identifiers used by agents.ownerId across the app.
+    const ownerKeys = new Set<string>();
+    if (user?.id)             ownerKeys.add(user.id);
+    if (user?.walletAddress)  ownerKeys.add(user.walletAddress);
+    if (ids.userId)           ownerKeys.add(ids.userId);
+    if (ids.walletAddress)    ownerKeys.add(ids.walletAddress);
+    if (ids.email)            ownerKeys.add(ids.email);
+    const ownerKeyList = Array.from(ownerKeys);
+
+    let agentsDeleted = 0;
+    let memoriesDeleted = 0;
+    let transactionsDeleted = 0;
+    let notificationsDeleted = 0;
+    let noncesDeleted = 0;
+
+    // SIWE nonces are keyed by wallet — use the request wallet OR the resolved user's wallet.
+    const walletForNonces = ids.walletAddress ?? user?.walletAddress;
+
+    // Run the cascade atomically so a partial failure leaves no orphaned rows.
+    await db.transaction(async (tx) => {
+      if (ownerKeyList.length > 0) {
+        const ownedAgents = await tx
+          .select({ id: agentsTable.id })
+          .from(agentsTable)
+          .where(inArray(agentsTable.ownerId, ownerKeyList));
+        const ownedAgentIds = ownedAgents.map(a => a.id);
+
+        if (ownedAgentIds.length > 0) {
+          const memDel = await tx
+            .delete(agentMemoryTable)
+            .where(inArray(agentMemoryTable.agentId, ownedAgentIds))
+            .returning({ id: agentMemoryTable.id });
+          memoriesDeleted = memDel.length;
+
+          const txDel = await tx
+            .delete(agentTransactionsTable)
+            .where(inArray(agentTransactionsTable.agentId, ownedAgentIds))
+            .returning({ id: agentTransactionsTable.id });
+          transactionsDeleted = txDel.length;
+
+          const agentDel = await tx
+            .delete(agentsTable)
+            .where(inArray(agentsTable.id, ownedAgentIds))
+            .returning({ id: agentsTable.id });
+          agentsDeleted = agentDel.length;
+        }
+
+        const notifDel = await tx
+          .delete(notificationsTable)
+          .where(inArray(notificationsTable.userId, ownerKeyList))
+          .returning({ id: notificationsTable.id });
+        notificationsDeleted = notifDel.length;
+      }
+
+      if (walletForNonces) {
+        const nonceDel = await tx
+          .delete(siweNoncesTable)
+          .where(eq(siweNoncesTable.walletAddress, walletForNonces))
+          .returning({ nonce: siweNoncesTable.nonce });
+        noncesDeleted = nonceDel.length;
+      }
+
+      if (user) {
+        await tx.delete(usersTable).where(eq(usersTable.id, user.id));
+      }
+    });
+
+    return {
+      user: user ?? null,
+      agentsDeleted,
+      memoriesDeleted,
+      transactionsDeleted,
+      notificationsDeleted,
+      noncesDeleted,
+    };
   }
 
   // ─── Agents ───

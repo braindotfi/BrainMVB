@@ -225,6 +225,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     ]);
   });
 
+  // DELETE /api/account — permanently delete the user account and all associated records.
+  // Body: { userId?, email?, walletAddress? } — at least one is required.
+  app.delete("/api/account", async (req, res) => {
+    try {
+      const { userId, email, walletAddress } = (req.body ?? {}) as {
+        userId?: string; email?: string; walletAddress?: string;
+      };
+      if (!userId && !email && !walletAddress) {
+        return res.status(400).json({ error: "userId, email, or walletAddress required" });
+      }
+      const result = await storage.deleteUserAccount({ userId, email, walletAddress });
+      return res.json({ success: true, deleted: result });
+    } catch (error: any) {
+      console.error("Delete account error:", error);
+      return res.status(500).json({ error: error?.message || "Failed to delete account" });
+    }
+  });
+
   app.post("/api/account/allocate", async (req, res) => {
     try {
       const { agentId, amount, asset } = req.body;

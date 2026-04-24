@@ -27,6 +27,7 @@ interface AuthContextType {
   wirexLoading: boolean;
   login: () => void;
   logout: () => void;
+  deleteAccount: () => Promise<void>;
   setUserAndAccounts: (user: CrossmintUser, accounts: WirexAccount[]) => void;
   refreshWirexAccounts: () => Promise<void>;
 }
@@ -109,6 +110,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginRequested(false);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const current = user;
+    if (!current) return;
+    const res = await fetch("/api/account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: current.id,
+        email: current.email,
+        walletAddress: current.walletAddress,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || `Account deletion failed (${res.status})`);
+    }
+    // Account is gone — clear local session.
+    sessionStorage.removeItem(USER_KEY);
+    setUser(null);
+    setWirexAccounts([]);
+    setLoginRequested(false);
+  }, [user]);
+
   const setUserAndAccounts = useCallback((u: CrossmintUser, accounts: WirexAccount[]) => {
     sessionStorage.setItem(USER_KEY, JSON.stringify(u));
     setUser(u);
@@ -125,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       wirexLoading,
       login,
       logout,
+      deleteAccount,
       setUserAndAccounts,
       refreshWirexAccounts,
     }}>
