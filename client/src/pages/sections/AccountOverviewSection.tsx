@@ -1115,9 +1115,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 <path d="M6 6L9 9L6 12M8 9H1M17 17H15C13.8954 17 13 16.1046 13 15V3C13 1.89543 13.8954 1 15 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-            {/* Header pill input field */}
-            <div className="flex-1 flex items-center gap-3 h-[40px] pl-2 pr-1.5 bg-brain-v1baby-blue-15 rounded-[14px]">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Header pill input field — Figma: bg #222737, p-1, rounded-[40px] */}
+            <div className="flex-1 flex items-center gap-2 h-[40px] p-1 bg-brain-v1baby-blue-15 rounded-[40px]">
+            <div className="flex items-center gap-2 flex-1 min-w-0 pl-1">
               <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
               <CardDotLabel type={CARDS[activeCard].type} />
             </div>
@@ -1132,14 +1132,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 data-testid="button-account-dropdown"
                 onClick={() => setDropdownOpen((v) => !v)}
                 title="Switch account"
-                className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
-                  dropdownOpen
-                    ? "bg-brain-v1baby-blue-30"
-                    : "bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-30"
-                }`}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-[#11141b]"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
-                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="#8899bb" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
+                  <path d="M4 6L8 10L12 6" stroke="#8899bb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
 
