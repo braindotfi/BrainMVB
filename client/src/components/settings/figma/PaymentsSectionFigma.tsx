@@ -130,7 +130,7 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
                 </div>
               </div>
             </div>
-            <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
+            <div className={`bg-[#222737] border border-solid ${dailyLimit ? "border-[#414965]" : "border-transparent"} content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]`}>
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
@@ -179,7 +179,7 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
                 </div>
               </div>
             </div>
-            <div className="bg-[#222737] content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
+            <div className={`bg-[#222737] border border-solid ${singleTxLimit ? "border-[#414965]" : "border-transparent"} content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]`}>
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
@@ -277,7 +277,7 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
                 </div>
               </div>
             </div>
-            <div className="bg-[#222737] content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[120px]">
+            <div className={`bg-[#222737] border border-solid ${saveRate ? "border-[#414965]" : "border-transparent"} content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[120px]`}>
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                 <input
                   type="text"
