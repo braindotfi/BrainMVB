@@ -58,7 +58,7 @@ const FIAT_ASSETS: AssetItem[] = [
 const RECIPIENT_TYPES: { id: RecipientType; name: string }[] = [
   { id: "wallet", name: "Wallet Address" },
   { id: "bank",   name: "Bank Account" },
-  { id: "agent",  name: "AI Agent Account" },
+  { id: "agent",  name: "Agent Account" },
 ];
 
 const AGENT_ACCOUNTS = [
@@ -478,7 +478,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const recipientLabel = () => {
     if (state.recipientType === "bank")   return state.recipientName;
     if (state.recipientType === "wallet") return truncAddr(state.walletAddress);
-    if (state.recipientType === "agent")  return selectedAgent?.name ?? "AI Agent";
+    if (state.recipientType === "agent")  return selectedAgent?.name ?? "Agent";
     return "";
   };
 
@@ -832,7 +832,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
               </div>
               <button onClick={handleBack} className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors">
                 <RecipientIcon type="agent" />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">AI Agent Account</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">Agent Account</p>
                 <ChevronBtn />
               </button>
               <FieldRow label="Select Agent">

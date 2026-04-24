@@ -193,3 +193,10 @@ SendModal's `RecipientPopup` now mirrors AddAccountModal's `AccountPopup`:
   to $74,493 across bank, crypto and agents.
 - Home page first stat widget label updated: "Cash in the bank" →
   "Money in all accounts".
+
+## "AI Agent Account" → "Agent Account" (April 2026)
+Generic recipient/account-type label "AI Agent Account" renamed to "Agent
+Account" in `SendModal.tsx` (RECIPIENT_TYPES + step-2 review row + agent
+fallback) and `AddAccountModal.tsx` (Step-2 comment). Proper agent names like
+"Treasury AI Agent" and the platform tagline "AI Agent Marketplace on Base"
+are intentionally unchanged.

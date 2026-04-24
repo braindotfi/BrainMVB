@@ -610,7 +610,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
     );
   }
 
-  // ── STEP 2: AI Agent Account ───────────────────────────────────────────────
+  // ── STEP 2: Agent Account ──────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
