@@ -233,78 +233,18 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
   );
 };
 
-/* ── AI Agent cards (green theme) ── */
-
-const AgentWalletCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(66,191,35,0.42)_0%,rgba(66,191,35,0)_36%,rgba(66,191,35,0.06)_67%,rgba(66,191,35,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
-    <GreenGlow />
-    <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
-    <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Crypto Wallet Address</span>
-      <div className="flex items-center gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-xl leading-6 whitespace-nowrap">0x7cB5.....486A8</span>
-        <CopyIcon />
-      </div>
-    </div>
-    <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start gap-[84px]">
-      <div className="inline-flex flex-col items-start gap-1">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3">Name</span>
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{agentName}</span>
-      </div>
-      <div className="inline-flex flex-col items-start gap-1">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3">Status</span>
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">Active</span>
-      </div>
-    </div>
-  </div>
-);
-
-const AgentDebitCard = ({ agentName }: { agentName: string }) => (
-  <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-[#123509] rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(66,191,35,0.42)_0%,rgba(66,191,35,0)_36%,rgba(66,191,35,0.06)_67%,rgba(66,191,35,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
-    <GreenGlow />
-    <CardHeader balance="$2,040.30" currency="USD" icon="agent" />
-    <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-      <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3 whitespace-nowrap">Debit Card</span>
-      <div className="flex items-center gap-2 self-stretch">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-xl leading-6 whitespace-nowrap">1652 0400 3201 6995</span>
-        <CopyIcon />
-      </div>
-    </div>
-    <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start gap-[84px]">
-      <div className="inline-flex flex-col items-start gap-1">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3">Name</span>
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{agentName}</span>
-      </div>
-      <div className="inline-flex flex-col items-start gap-1">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-[#42bf23] text-xs leading-3">Status</span>
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">Active</span>
-      </div>
-    </div>
-  </div>
-);
-
 /* ─── Main component ─── */
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
-  onCreateAgent: () => void;
   onSend?: (cardType: "wallet" | "bank") => void;
   onExchange?: (cardType: "wallet" | "bank") => void;
   focusExchangesTrigger?: number;
   focusSendWithdrawalTrigger?: { seq: number; sourceAccountType: "wallet" | "bank" } | null;
 }
 
-export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onSend, onExchange, focusExchangesTrigger, focusSendWithdrawalTrigger }: Props): JSX.Element => {
+export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange, focusExchangesTrigger, focusSendWithdrawalTrigger }: Props): JSX.Element => {
   const { wirexAccounts, user } = useAuth();
-
-  const { data: agentsRaw = [] } = useQuery<any[]>({ queryKey: ["/api/agents"] });
-  const agentAccounts = agentsRaw.map((a: any) => ({
-    id: String(a.id),
-    name: a.name ?? "Agent",
-    ticker: a.policy?.uiTicker ? `$${a.policy.uiTicker}` : `$${(a.name ?? "AGT").slice(0, 4).toUpperCase()}`,
-    type: a.type ?? "AI",
-    avatar: a.avatarUrl ?? "/figmaAssets/avatars-3.svg",
-  }));
 
   // Find live WireX accounts by type
   const liveWallet = wirexAccounts.find(a => a.type === "wallet");
@@ -323,14 +263,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [transactionFilter, setTransactionFilter] = useState("All");
   const [addOpen, setAddOpen]                   = useState(false);
   const [dropdownOpen, setDropdownOpen]         = useState(false);
-  const [activeAccount, setActiveAccount]       = useState<string | null>(null);
-  // Card carousel — 0=wallet, 1=debit, 2=bank; only for "Your Account"
+  // Card carousel — 0=wallet, 1=debit, 2=bank
   const [activeCard, setActiveCard]             = useState(0);
 
   // Switch to Transactions/Exchanges tab when an exchange is confirmed
   useEffect(() => {
     if (!focusExchangesTrigger) return;
-    setActiveAccount(null);
     setActiveCard(0);
     setActiveTab("Transactions");
     setTransactionFilter("Exchanges");
@@ -340,13 +278,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   useEffect(() => {
     if (!focusSendWithdrawalTrigger?.seq) return;
     const cardIdx = focusSendWithdrawalTrigger.sourceAccountType === "bank" ? 2 : 0;
-    setActiveAccount(null);
     setActiveCard(cardIdx);
     setActiveTab("Transactions");
     setTransactionFilter("Withdrawals");
     setCollapsedCardIndex(cardIdx);
     setCollapsedTxFilter("Withdrawals");
-    setCollapsedAccount(null);
   }, [focusSendWithdrawalTrigger]);
   // Collapsed icon strip hover state
   const [hoveredIcon, setHoveredIcon]           = useState<string | null>(null);
@@ -354,7 +290,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
   const [collapsedAssetFilter, setCollapsedAssetFilter] = useState("All");
   const [collapsedTxFilter, setCollapsedTxFilter]       = useState("All");
   const [collapsedCardIndex, setCollapsedCardIndex]     = useState(0);
-  const [collapsedAccount, setCollapsedAccount]         = useState<string | null>(null);
   const [collapsedDropdownOpen, setCollapsedDropdownOpen] = useState(false);
   const [assetsDropdownOpen, setAssetsDropdownOpen]       = useState(false);
   const [txDropdownOpen, setTxDropdownOpen]               = useState(false);
@@ -401,18 +336,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
 
 
   // Unified account selection — syncs all 4 dropdowns
-  const handleSelectAccount = (cardIdx: number, agentId: string | null) => {
-    if (agentId) {
-      setActiveAccount(agentId);
-      setCollapsedAccount(agentId);
-      setActiveCard(0);
-      setCollapsedCardIndex(0);
-    } else {
-      setActiveAccount(null);
-      setCollapsedAccount(null);
-      setActiveCard(cardIdx);
-      setCollapsedCardIndex(cardIdx);
-    }
+  const handleSelectAccount = (cardIdx: number) => {
+    setActiveCard(cardIdx);
+    setCollapsedCardIndex(cardIdx);
     setCollapsedAssetFilter("All");
     setCollapsedTxFilter("All");
     setDropdownOpen(false);
@@ -421,16 +347,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     setTxDropdownOpen(false);
   };
 
-  // Reset card to wallet whenever switching account (personal or any agent)
-  const handleSwitchAccount = (id: string | null) => {
-    setActiveAccount(id);
-    setActiveCard(0);
-    setDropdownOpen(false);
-  };
-
-  /* Contextual data: if "Your Account" use card-specific data, else fixed agent data */
-  const isYourAccount = activeAccount === null;
-  const currentCardData = isYourAccount ? CARDS[activeCard].data : null;
+  const currentCardData = CARDS[activeCard].data;
 
   // Both personal and agent wallet (card index 0) support the Crypto filter tab
   const filterTabs = activeCard === 0
@@ -463,20 +380,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     [ctxTransactions]
   );
 
-  // For agent accounts: wallet card (0) uses crypto data, debit card (1) uses cash data
-  const agentCardData = !isYourAccount
-    ? (activeCard === 1 ? agentDebitData : walletData)
-    : null;
-  const assetsData = isYourAccount ? (currentCardData?.assets ?? walletData.assets) : agentCardData!.assets;
+  const assetsData = currentCardData?.assets ?? walletData.assets;
   const baseWalletTxs = walletData.transactions as Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }>;
   const baseBankTxs   = bankData.transactions  as Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }>;
-  const txData: Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }> = isYourAccount
-    ? (activeCard === 0
-        ? [...walletCtxTxs, ...baseWalletTxs]
-        : activeCard === 2
-          ? [...bankCtxTxs, ...baseBankTxs]
-          : (currentCardData?.transactions ?? walletData.transactions))
-    : agentCardData!.transactions;
+  const txData: Array<{ id: string; type: string; label: string; time: string; date: string; amount: string; positive: boolean; txHash?: string }> =
+    activeCard === 0
+      ? [...walletCtxTxs, ...baseWalletTxs]
+      : activeCard === 2
+        ? [...bankCtxTxs, ...baseBankTxs]
+        : (currentCardData?.transactions ?? walletData.transactions);
 
   /* ── collapsed state ── */
   if (collapsed) {
@@ -510,16 +422,10 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     };
 
     const BankPopup = () => {
-      const isYourCollapsedAccount = collapsedAccount === null;
-      const selectedAgent = !isYourCollapsedAccount ? agentAccounts.find(a => a.id === collapsedAccount) : null;
-
       const cardNode = (() => {
-        if (isYourCollapsedAccount) {
-          if (collapsedCardIndex === 0) return <WalletAddressCard account={resolvedWalletAccount as any} />;
-          if (collapsedCardIndex === 1) return <DebitCardView account={liveDebit} />;
-          return <BankAccountCard account={liveBank} />;
-        }
-        return <AgentDebitCard agentName={selectedAgent?.name || "Agent"} />;
+        if (collapsedCardIndex === 0) return <WalletAddressCard account={resolvedWalletAccount as any} />;
+        if (collapsedCardIndex === 1) return <DebitCardView account={liveDebit} />;
+        return <BankAccountCard account={liveBank} />;
       })();
 
       return (
@@ -552,23 +458,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 className="w-full h-[48px] px-[8px] flex items-center gap-[8px] transition-colors rounded-[8px]"
                 style={{ background: "#222737" }}
               >
-                {/* Icon — grey WalletIcons for Your Account, avatar for agent */}
-                {isYourCollapsedAccount ? (
-                  <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
-                    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
-                    </div>
+                {/* Icon — grey WalletIcons */}
+                <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
                   </div>
-                ) : (
-                  <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                )}
-                {/* Label: card-specific name or agent name */}
+                </div>
+                {/* Label: card-specific name */}
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  {isYourCollapsedAccount
-                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
-                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
-                  }
+                  <CardDotLabel type={CARDS[collapsedCardIndex].type} />
                 </div>
                 {/* Green checkmark + chevron */}
                 <div className="flex items-center gap-[8px] flex-shrink-0">
@@ -589,43 +488,18 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
                   style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
                 >
-                  {/* Add Agent Account — purple CTA */}
-                  <button
-                    data-testid="button-add-agent-account"
-                    onClick={() => { setCollapsedDropdownOpen(false); onCreateAgent(); }}
-                    className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
-                    style={{ background: "#7631ee" }}
-                  >
-                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
-                      <div className="absolute left-0 size-[32px] top-0">
-                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" />
-                      </div>
-                      <div className="absolute left-0 size-[32px] top-0">
-                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" />
-                      </div>
-                      <div className="absolute left-[8px] size-[16px] top-[8px]">
-                        <div className="absolute inset-[-7.03%]">
-                          <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" />
-                        </div>
-                      </div>
-                    </div>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
-                      Add Agent Account
-                    </span>
-                  </button>
-
-                  {/* WireX account rows */}
+                  {/* Account rows */}
                   {[
                     { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
                     { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
                     { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
-                    const isSel = isYourCollapsedAccount && collapsedCardIndex === cardIdx;
+                    const isSel = collapsedCardIndex === cardIdx;
                     return (
                       <button
                         key={cardIdx}
                         data-testid={`button-account-${CARDS[cardIdx].id}`}
-                        onClick={() => handleSelectAccount(cardIdx, null)}
+                        onClick={() => handleSelectAccount(cardIdx)}
                         className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <div className="flex items-center gap-[8px]">
@@ -650,36 +524,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                       </button>
                     );
                   })}
-
-                  {/* Agent account rows */}
-                  {agentAccounts.map((agent) => {
-                    const isSel = collapsedAccount === agent.id;
-                    return (
-                      <button
-                        key={agent.id}
-                        data-testid={`button-account-agent-${agent.id}`}
-                        onClick={() => handleSelectAccount(0, agent.id)}
-                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
-                      >
-                        <div className="flex items-center gap-[8px]">
-                          <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-                            {agent.name}
-                          </span>
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
-                          </div>
-                        </div>
-                        {isSel && (
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
                 </div>
               )}
             </div>
@@ -687,9 +531,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {/* Card preview — full 200px height, no scaling — Figma 3272:29922 */}
             <div className="relative rounded-[8px] overflow-hidden h-[200px]">
               <div className="relative h-[200px]">{cardNode}</div>
-              {/* Pagination dots overlaid at bottom-centre (Your Account only) */}
-              {isYourCollapsedAccount && (
-                <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[4px] z-10">
+              {/* Pagination dots overlaid at bottom-centre */}
+              <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[4px] z-10">
                   {CARDS.map((_, i) => (
                     <button
                       key={i}
@@ -698,7 +541,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     />
                   ))}
                 </div>
-              )}
             </div>
 
           </div>
@@ -707,8 +549,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     };
 
     const AssetsPopup = () => {
-      const isYourCollapsedAccount = collapsedAccount === null;
-      const selectedAgent = !isYourCollapsedAccount ? agentAccounts.find(a => a.id === collapsedAccount) : null;
       const safeFilter = collapsedAssetTabs.includes(collapsedAssetFilter) ? collapsedAssetFilter : "All";
       const filteredAssets = activeCollapsedData.assets.filter(a =>
         safeFilter === "Cash"   ? a.category === "cash" :
@@ -728,21 +568,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 className="w-full h-[48px] px-[8px] flex items-center gap-[8px] transition-colors rounded-[8px]"
                 style={{ background: "#222737" }}
               >
-                {isYourCollapsedAccount ? (
-                  <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
-                    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
-                    </div>
+                <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
                   </div>
-                ) : (
-                  <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                )}
+                </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  {isYourCollapsedAccount
-                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
-                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
-                  }
+                  <CardDotLabel type={CARDS[collapsedCardIndex].type} />
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -761,27 +594,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
                   style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
                 >
-                  <button
-                    data-testid="button-assets-add-agent"
-                    onClick={() => { setAssetsDropdownOpen(false); onCreateAgent(); }}
-                    className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
-                    style={{ background: "#7631ee" }}
-                  >
-                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
-                      <div className="absolute left-0 size-[32px] top-0"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" /></div>
-                      <div className="absolute left-0 size-[32px] top-0"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" /></div>
-                      <div className="absolute left-[8px] size-[16px] top-[8px]"><div className="absolute inset-[-7.03%]"><img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" /></div></div>
-                    </div>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>Add Agent Account</span>
-                  </button>
                   {[
                     { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
                     { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
                     { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
-                    const isSel = isYourCollapsedAccount && collapsedCardIndex === cardIdx;
+                    const isSel = collapsedCardIndex === cardIdx;
                     return (
-                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx, null)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
+                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
@@ -790,21 +610,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </button>
-                    );
-                  })}
-                  {agentAccounts.map((agent) => {
-                    const isSel = collapsedAccount === agent.id;
-                    return (
-                      <button key={agent.id} onClick={() => handleSelectAccount(0, agent.id)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
-                        <div className="flex items-center gap-[8px]">
-                          <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
                           </div>
                         </div>
                         {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -858,8 +663,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
     };
 
     const TransactionsPopup = () => {
-      const isYourCollapsedAccount = collapsedAccount === null;
-      const selectedAgent = !isYourCollapsedAccount ? agentAccounts.find(a => a.id === collapsedAccount) : null;
       const safeFilter = collapsedTxTabs.includes(collapsedTxFilter) ? collapsedTxFilter : "All";
       const collapsedBaseTxs = collapsedCardIndex === 0
         ? [...walletCtxTxs, ...activeCollapsedData.transactions]
@@ -885,21 +688,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                 className="w-full h-[48px] px-[8px] flex items-center gap-[8px] transition-colors rounded-[8px]"
                 style={{ background: "#222737" }}
               >
-                {isYourCollapsedAccount ? (
-                  <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
-                    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                      <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
-                    </div>
+                <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
                   </div>
-                ) : (
-                  <img alt={selectedAgent?.name} src={selectedAgent?.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                )}
+                </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-                  {isYourCollapsedAccount
-                    ? <CardDotLabel type={CARDS[collapsedCardIndex].type} />
-                    : <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">{selectedAgent?.name ?? "Account"}</span>
-                  }
+                  <CardDotLabel type={CARDS[collapsedCardIndex].type} />
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -918,27 +714,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
                   style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
                 >
-                  <button
-                    data-testid="button-tx-add-agent"
-                    onClick={() => { setTxDropdownOpen(false); onCreateAgent(); }}
-                    className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
-                    style={{ background: "#7631ee" }}
-                  >
-                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
-                      <div className="absolute left-0 size-[32px] top-0"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" /></div>
-                      <div className="absolute left-0 size-[32px] top-0"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" /></div>
-                      <div className="absolute left-[8px] size-[16px] top-[8px]"><div className="absolute inset-[-7.03%]"><img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" /></div></div>
-                    </div>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>Add Agent Account</span>
-                  </button>
                   {[
                     { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
                     { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
                     { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
-                    const isSel = isYourCollapsedAccount && collapsedCardIndex === cardIdx;
+                    const isSel = collapsedCardIndex === cardIdx;
                     return (
-                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx, null)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
+                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
@@ -947,21 +730,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                           <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </button>
-                    );
-                  })}
-                  {agentAccounts.map((agent) => {
-                    const isSel = collapsedAccount === agent.id;
-                    return (
-                      <button key={agent.id} onClick={() => handleSelectAccount(0, agent.id)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
-                        <div className="flex items-center gap-[8px]">
-                          <img alt={agent.name} src={agent.avatar} className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{agent.name}</span>
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
                           </div>
                         </div>
                         {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -1283,21 +1051,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             {/* Header pill input field */}
             <div className="flex-1 flex items-center gap-2 h-[40px] px-2 bg-brain-v1baby-blue-15 rounded-[8px]">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {activeAccount ? (
-                <img
-                  className="w-8 h-8 flex-shrink-0 rounded-xl object-cover"
-                  alt="Agent"
-                  src={agentAccounts.find((a) => a.id === activeAccount)?.avatar ?? "/figmaAssets/wallet-icons-1.svg"}
-                />
-              ) : (
-                <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
-              )}
-              {activeAccount
-                ? <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap truncate">
-                    {agentAccounts.find((a) => a.id === activeAccount)?.name ?? CARDS[activeCard].type}
-                  </span>
-                : <CardDotLabel type={CARDS[activeCard].type} />
-              }
+              <img className="w-8 h-8 flex-shrink-0" alt="Wallet icons" src="/figmaAssets/wallet-icons-1.svg" />
+              <CardDotLabel type={CARDS[activeCard].type} />
             </div>
 
             {/* Dropdown trigger */}
@@ -1325,41 +1080,17 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   className="absolute right-0 top-[calc(100%+6px)] w-[358px] z-[51] flex flex-col p-[8px] rounded-[12px]"
                   style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
                 >
-                  {/* Add Agent Account — purple CTA */}
-                  <button
-                    onClick={() => { setDropdownOpen(false); onCreateAgent(); }}
-                    className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] mb-[2px] transition-opacity hover:opacity-90"
-                    style={{ background: "#7631ee" }}
-                  >
-                    <div className="relative rounded-[100px] flex-shrink-0 size-[32px]">
-                      <div className="absolute left-0 size-[32px] top-0">
-                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eb2ca186-716d-4140-8512-e6310165a194" />
-                      </div>
-                      <div className="absolute left-0 size-[32px] top-0">
-                        <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/5ce65549-d182-416b-b8db-00ab75c927f4" />
-                      </div>
-                      <div className="absolute left-[8px] size-[16px] top-[8px]">
-                        <div className="absolute inset-[-7.03%]">
-                          <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3a118be6-88b9-432b-b959-ce744d391877" />
-                        </div>
-                      </div>
-                    </div>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap" style={{ color: "#240757" }}>
-                      Add Agent Account
-                    </span>
-                  </button>
-
-                  {/* WireX account rows */}
+                  {/* Account rows */}
                   {[
                     { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
                     { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
                     { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
                   ].map(({ cardIdx, label, tag }) => {
-                    const isSel = activeAccount === null && activeCard === cardIdx;
+                    const isSel = activeCard === cardIdx;
                     return (
                       <button
                         key={cardIdx}
-                        onClick={() => { handleSwitchAccount(null); setActiveCard(cardIdx); setCollapsedAccount(null); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); setAssetsDropdownOpen(false); setTxDropdownOpen(false); }}
+                        onClick={() => { setActiveCard(cardIdx); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); setAssetsDropdownOpen(false); setTxDropdownOpen(false); }}
                         className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
                       >
                         <div className="flex items-center gap-[8px]">
@@ -1385,34 +1116,6 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                     );
                   })}
 
-                  {/* Agent account rows */}
-                  {agentAccounts.map((agent) => {
-                    const isSel = activeAccount === agent.id;
-                    return (
-                      <button
-                        key={agent.id}
-                        onClick={() => { handleSwitchAccount(agent.id); setCollapsedAccount(agent.id); setDropdownOpen(false); setAssetsDropdownOpen(false); setTxDropdownOpen(false); }}
-                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
-                      >
-                        <div className="flex items-center gap-[8px]">
-                          <img className="w-[32px] h-[32px] rounded-[16px] object-cover flex-shrink-0" alt={agent.name} src={agent.avatar} />
-                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-                            {agent.name}
-                          </span>
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{agent.type}</span>
-                          </div>
-                        </div>
-                        {isSel && (
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
                 </div>
               )}
             </div>
@@ -1452,9 +1155,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
             </div>
 
             {/* ── Card carousel ── */}
-            {isYourAccount ? (
-              <>
-                {/* Personal account: 3 cards, orange pagination */}
+            <>
                 {activeCard === 0 && <WalletAddressCard account={resolvedWalletAccount} />}
                 {activeCard === 1 && <DebitCardView account={liveDebit} />}
                 {activeCard === 2 && <BankAccountCard account={liveBank} />}
@@ -1475,34 +1176,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onCreateAgent, onS
                   ))}
                 </div>
               </>
-            ) : (
-              <>
-                {/* Agent account: 2 cards (Wallet + Debit), green pagination */}
-                {activeCard === 0 && (
-                  <AgentWalletCard agentName={agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Agent"} />
-                )}
-                {activeCard === 1 && (
-                  <AgentDebitCard agentName={agentAccounts.find((a) => a.id === activeAccount)?.name ?? "Agent"} />
-                )}
-                <div className="absolute top-[182px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-1">
-                  {[0, 1].map((i) => (
-                    <button
-                      key={i}
-                      data-testid={`agent-card-dot-${i}`}
-                      onClick={() => setActiveCard(i)}
-                      className="transition-all"
-                      style={{
-                        width:        i === activeCard ? "18px" : "6px",
-                        height:       "6px",
-                        borderRadius: "40px",
-                        background:   i === activeCard ? "rgba(66,191,35,0.9)" : "rgba(66,191,35,0.35)",
-                      }}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+            </div>
 
           {/* ── Assets / Transactions ── */}
           <ScrollArea className="flex-1 mt-4">

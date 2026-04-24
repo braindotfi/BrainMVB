@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Separator } from "@/components/ui/separator";
-import { ShareModal } from "@/components/ShareModal";
 
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
-  onCreateAgent: () => void;
   onLogout?: () => void;
 }
 
@@ -71,25 +69,6 @@ const ExpandIcon = () => (
   </svg>
 );
 
-const AgentsIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="8" width="18" height="12" rx="2" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
-    <path d="M12 2v6M9.5 5h5" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="9" cy="14" r="1.5" fill={active ? "#7631ee" : "#6c779d"} />
-    <circle cx="15" cy="14" r="1.5" fill={active ? "#7631ee" : "#6c779d"} />
-    <path d="M9 18h6" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-const MarketplaceIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M4 3h16l-2 6H6L4 3z" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" fill={active ? "rgba(118,49,238,0.15)" : "none"} />
-    <path d="M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M10 21v-6h4v6" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    {active && <circle cx="12" cy="6" r="1" fill="#7631ee" />}
-  </svg>
-);
-
 const SettingsIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="3" stroke={active ? "#a8b9f4" : "#6c779d"} strokeWidth="1.5" fill={active ? "rgba(118,49,238,0.3)" : "none"} />
@@ -97,57 +76,30 @@ const SettingsIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
-const mainMenuItems = [
-  { id: "agents", label: "Agents", path: "/agents" },
-  { id: "marketplace", label: "Marketplace", path: "/marketplace" },
-];
-
-export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLogout }: Props): JSX.Element => {
+export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
 
-  const isActive = (path: string) => {
-    if (path === "/agents") return location === "/" || location === "" || location.startsWith("/agents") || location.startsWith("/manage") || location.startsWith("/agent/");
-    return location.startsWith(path);
-  };
+  const isActive = (path: string) => location.startsWith(path);
 
   if (collapsed) {
     return (
       <>
-        <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
         <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
           <div className="flex flex-col flex-1 items-center mt-2 gap-1 w-full px-[7px]">
-            {/* Expand button */}
             <button
               onClick={onToggle}
               title="Expand menu"
-              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] mb-0"
+              className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]"
               style={{ background: "#222737" }}
             >
               <ExpandIcon />
             </button>
 
-            {/* Brain logo icon */}
             <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
-              <img
-                className="w-[32px] h-[32px] object-contain"
-                alt="Brain"
-                src="/figmaAssets/brain2x.png"
-              />
+              <img className="w-[32px] h-[32px] object-contain" alt="Brain" src="/figmaAssets/brain2x.png" />
             </div>
-
-            {mainMenuItems.map((item) => (
-              <Link key={item.id} href={item.path} className="outline-none focus:outline-none">
-                <button title={item.label} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                  {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
-                  {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                </button>
-              </Link>
-            ))}
-
-            <div className="w-8 h-px bg-[#1d2132] my-1" />
 
             <Link href="/settings" className="outline-none focus:outline-none">
               <button title="Settings" className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive("/settings") ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
@@ -157,9 +109,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button title="Create Agent" onClick={onCreateAgent} className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity">
-              <img className="w-5 h-5" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
-            </button>
             <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Logout" src="/figmaAssets/logout-icon.svg" />
             </button>
@@ -171,17 +120,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
 
   return (
     <>
-      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
-        {/* Brain logo row */}
         <div className="flex items-center px-3 pt-3 pb-0 flex-shrink-0 h-[40px]">
           <div className="flex items-center flex-1 min-w-0">
-            <img
-              className="h-[32px] object-contain flex-shrink-0"
-              alt="Brain"
-              src="/figmaAssets/brainfull2x.png"
-            />
+            <img className="h-[32px] object-contain flex-shrink-0" alt="Brain" src="/figmaAssets/brainfull2x.png" />
           </div>
           <button
             onClick={onToggle}
@@ -194,40 +137,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
         </div>
 
         <div className="flex flex-col flex-1 mx-2 mt-4 gap-4 pb-0 overflow-y-auto min-h-0">
-          {/* Main Menu */}
           <div className="flex flex-col items-start gap-1 w-full">
             <div className="flex items-center px-2 py-0 w-full">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Main Menu</span>
-            </div>
-
-            <div className="flex flex-col items-start gap-1 w-full">
-              {mainMenuItems.map((item) => (
-                <Link key={item.id} href={item.path} className="w-full outline-none focus:outline-none">
-                  <button className={`flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-colors ${isActive(item.path) ? "bg-brain-v1highlight-dropdown-bg" : "bg-brain-v1baby-blue-5 hover:bg-brain-v1baby-blue-15"}`}>
-                    <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
-                      {item.id === "agents" && <AgentsIcon active={isActive(item.path)} />}
-                      {item.id === "marketplace" && <MarketplaceIcon active={isActive(item.path)} />}
-                    </div>
-                    <span className={`[font-family:'Gilroy',sans-serif] font-medium text-base tracking-[0] leading-5 whitespace-nowrap text-left flex-1 ${isActive(item.path) ? "text-brain-v1white" : "text-brain-v1baby-blue-60"}`}>
-                      {item.label}
-                    </span>
-                    {isActive(item.path) && (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 text-[#414965]">
-                        <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </button>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <Separator className="w-full bg-[#1d2132]" />
-
-          {/* Other section */}
-          <div className="flex flex-col items-start gap-1 w-full">
-            <div className="flex items-center justify-center gap-2 px-2 py-0 w-full">
-              <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Other</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-xs tracking-[0] leading-4">Other</span>
             </div>
 
             <Link href="/settings" className="w-full outline-none focus:outline-none">
@@ -246,12 +158,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onCreateAgent, onLo
           </div>
         </div>
 
-        {/* Bottom buttons */}
         <div className="flex flex-col items-start gap-2 mx-2 mb-4 mt-auto pt-4">
-          <button onClick={onCreateAgent} className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#4a2300] rounded-[100px] hover:opacity-80 transition-opacity">
-            <img className="w-6 h-6 flex-shrink-0" alt="Create" src="/figmaAssets/create-agent-icon.svg" />
-            <span className="[font-family:'Gilroy',sans-serif] text-[#ff9500] text-base font-semibold leading-5 whitespace-nowrap">Create Agent</span>
-          </button>
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center justify-center gap-2 px-5 py-2 w-full bg-[#350011] rounded-[100px] hover:opacity-80 transition-opacity"

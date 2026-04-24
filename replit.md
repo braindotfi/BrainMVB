@@ -1,34 +1,34 @@
 # Brain Finance
 
-AI agent marketplace + programmable neobank on Base L2.
+Programmable neobank on Base L2.
 
 ## Stack
 - **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Express.js (same server via Vite proxy)
 - **Web3**: wagmi v2, viem, RainbowKit (wallet connection + SIWE auth)
-- **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`)
+- **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`) — retained for future use
 - **DB**: Drizzle ORM + PostgreSQL (DatabaseStorage, falls back to MemStorage if no DATABASE_URL)
 - **Smart Contracts**: Hardhat + Base Sepolia (in `contracts/`)
 
 ## Key Files
-- `shared/schema.ts` — Drizzle schema (agents, marketplace, notifications, etc.)
-- `server/routes.ts` — All API routes + Claude ReAct agent loop
+- `shared/schema.ts` — Drizzle schema (notifications, etc.)
+- `server/routes.ts` — All API routes (agents + marketplace sections removed)
 - `server/storage.ts` — MemStorage + DatabaseStorage (Drizzle/PG) + IStorage interface; `server/db.ts` — Drizzle pool
 - `server/policyEngine.ts` — Off-chain policy evaluation + ECDSA proof signing (viem)
 - `server/contractService.ts` — viem reads/writes to deployed contracts (demo fallback)
 - `client/src/lib/web3.ts` — wagmi config (Base + BaseSepolia)
 - `client/src/lib/web3Provider.tsx` — WagmiProvider > QueryClientProvider > RainbowKitProvider
-- `client/src/App.tsx` — Root app, routing, NavContext
+- `client/src/App.tsx` — Root app, routing, NavContext (only /settings route)
 - `client/src/components/WalletButton.tsx` — Wallet connect + SIWE auth
-- `client/src/components/CreateAgentModal.tsx` — 7-step agent creation (wired to POST /api/agents)
-- `client/src/pages/AgentsActivityPage.tsx` — Agent list with Edit nav to /manage/:id
-- `client/src/pages/AgentManagePage.tsx` — Full agent detail + edit (rules, config, activity log)
-- `client/src/lib/agentsData.ts` — Shared agent data (rules, budget, schedule, activity log)
+- `client/src/pages/SettingsPage.tsx` — Only remaining page
+
+## Removed Features
+- Agents pages (AgentsActivityPage, AgentManagePage, CreateAgentModal, AgentPerfChart)
+- Marketplace (Marketplace.tsx, FeaturedCarousel, MainContentSection, PerksPage)
+- Agent wallet/debit cards from AccountOverviewSection
+- `/api/agents` and `/api/marketplace` server routes
 
 ## API Endpoints
-- `GET/POST /api/agents` — List/create agents
-- `POST /api/agents/:id/run` — Run ReAct agent loop (Claude)
-- `GET /api/marketplace` — Marketplace listings
 - `POST /api/auth/siwe/nonce` / `/verify` / `/logout` — SIWE auth
 - `GET /api/wirex/accounts` — WireX neobank accounts (demo fallback active)
 - `GET /api/crossmint/wallet` — Crossmint embedded wallet

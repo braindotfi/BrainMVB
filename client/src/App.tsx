@@ -7,28 +7,19 @@ import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
-import { AgentManagePage } from "@/pages/AgentManagePage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { AgentDetailPage } from "@/pages/AgentDetailPage";
-import { Marketplace } from "@/pages/Marketplace";
 import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
-import { CreateAgentModal } from "@/components/CreateAgentModal";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
-import { NavContext, AgentPrefillData } from "@/lib/navContext";
+import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 
 function AppLayout() {
   const { isLoggedIn, logout } = useAuth();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
-  const [createAgentOpen, setCreateAgentOpen] = useState(false);
-  const [agentEditStep, setAgentEditStep] = useState<number>(0);
-  const [agentEditPrefill, setAgentEditPrefill] = useState<AgentPrefillData | undefined>(undefined);
-  const [agentEditId, setAgentEditId] = useState<string | undefined>(undefined);
   const [sendOpen, setSendOpen] = useState(false);
   const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
@@ -46,18 +37,10 @@ function AppLayout() {
     navigate("/");
   };
 
-  const openCreateAgentAtStep = (step: number, prefill?: AgentPrefillData, agentId?: string) => {
-    setAgentEditStep(step);
-    setAgentEditPrefill(prefill);
-    setAgentEditId(agentId);
-    setCreateAgentOpen(true);
-  };
-
   return (
     <NavContext.Provider value={{
       navCollapsed,
       toggleNav: () => setNavCollapsed((v) => !v),
-      openCreateAgentAtStep,
     }}>
     <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex flex-col overflow-hidden">
 
@@ -66,18 +49,13 @@ function AppLayout() {
         <NavigationMenuSection
           collapsed={navCollapsed}
           onToggle={() => setNavCollapsed((v) => !v)}
-          onCreateAgent={() => setCreateAgentOpen(true)}
           onLogout={handleLogout}
         />
 
         <div className="flex-1 min-w-0 min-h-0">
           <Switch>
-            <Route path="/">{() => <Redirect to="/agents" />}</Route>
-            <Route path="/agents" component={AgentsActivityPage} />
-            <Route path="/manage/:id" component={AgentManagePage} />
-            <Route path="/marketplace" component={Marketplace} />
+            <Route path="/">{() => <Redirect to="/settings" />}</Route>
             <Route path="/settings" component={SettingsPage} />
-            <Route path="/agent/:id" component={AgentDetailPage} />
             <Route component={NotFound} />
           </Switch>
         </div>
@@ -85,7 +63,6 @@ function AppLayout() {
         <AccountOverviewSection
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
-          onCreateAgent={() => setCreateAgentOpen(true)}
           onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
           onExchange={(cardType) => { setExchangeCardType(cardType); setExchangeOpen(true); }}
           focusExchangesTrigger={focusExchangesTrigger}
@@ -101,25 +78,6 @@ function AppLayout() {
         <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
 
-      <CreateAgentModal
-        open={createAgentOpen}
-        onClose={() => {
-          setCreateAgentOpen(false);
-          setAgentEditStep(0);
-          setAgentEditPrefill(undefined);
-          setAgentEditId(undefined);
-        }}
-        onViewMyAgents={() => {
-          setCreateAgentOpen(false);
-          setAgentEditStep(0);
-          setAgentEditPrefill(undefined);
-          setAgentEditId(undefined);
-          navigate("/agents?tab=my-agents");
-        }}
-        initialStep={agentEditStep}
-        prefill={agentEditPrefill}
-        agentId={agentEditId}
-      />
       <SendModal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
