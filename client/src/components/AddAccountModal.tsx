@@ -259,12 +259,37 @@ interface Props {
   open: boolean;
   onClose: () => void;
   excludeTypes?: AccountType[];
+  initialStep?: Step;
 }
 
-export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JSX.Element | null => {
+export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep = "select" }: Props): JSX.Element | null => {
   const { wirexAccounts } = useAuth();
-  const [step, setStep]               = useState<Step>("select");
+  const [step, setStep]               = useState<Step>(initialStep);
   const [selected, setSelected]       = useState<Account | null>(null);
+
+  // Sync step with initialStep when modal opens (e.g. opening directly into the
+  // agent flow from the account dropdown's "Add Agent Account" button). When
+  // jumping straight into a typed step, pre-select the first matching account
+  // so address/QR/copy controls render valid data instead of empty strings.
+  useEffect(() => {
+    if (!open) return;
+    setStep(initialStep);
+    if (initialStep !== "select") {
+      const matchType: AccountType | null =
+        initialStep === "wallet" ? "wallet" :
+        initialStep === "bank"   ? "bank"   :
+        initialStep === "agent"  ? "agent"  : null;
+      if (matchType) {
+        const first = ALL_ACCOUNTS.find(
+          (a) => a.type === matchType && !excludeTypes.includes(a.type),
+        );
+        if (first) setSelected(first);
+      }
+    }
+    // excludeTypes is a stable prop array per call site; we intentionally omit
+    // it from deps to avoid resetting selection on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialStep]);
   const [popupOpen, setPopupOpen]     = useState(false);
   const [qrOpen, setQrOpen]           = useState(false);
   const [copied, setCopied]           = useState(false);

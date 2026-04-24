@@ -72,15 +72,119 @@ const GreenCheckmark = () => (
   </div>
 );
 
-/* Reusable wallet badge icon (32px, used in account dropdown rows) */
+/* Reusable wallet badge icon (32px, used in account dropdown rows).
+   Uses a local SVG (32px circle + bank glyph) so the dropdown does not
+   depend on Figma asset URLs. */
 const WalletBadge = () => (
   <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_BG} />
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_ICON} />
-    </div>
+    <img alt="" className="absolute block inset-0 max-w-none size-full" src="/figmaAssets/wallet-icons-1.svg" />
   </div>
 );
+
+/* "Add Agent Account" row — Figma 3759:50252.
+   Purple (#7631ee) full-width button that opens AddAccountModal directly
+   into the agent flow. Avatar is a slightly lighter purple ring with a
+   centred plus icon, drawn inline (no external assets). */
+function AddAgentRow({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="button-add-agent-account"
+      className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-opacity hover:opacity-90"
+      style={{ background: "#7631ee" }}
+    >
+      {/* Avatar: 32px purple circle with a darker outer ring + white plus */}
+      <div className="relative rounded-[100px] flex-shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#9558ff", border: "1.5px solid rgba(36,7,87,0.35)" }}>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1V11M1 6H11" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </div>
+      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#240757] text-[16px] leading-[20px] whitespace-nowrap">
+        Add Agent Account
+      </span>
+    </button>
+  );
+}
+
+/* Short-form label used inside dropdown rows (matches Figma 3759:50259/64/69:
+   "Crypto Account" / "Debit Card" / "Bank Account"). */
+function dropdownRowLabel(cardId: string): string {
+  switch (cardId) {
+    case "wallet": return "Crypto Account";
+    case "debit":  return "Debit Card";
+    case "bank":   return "Bank Account";
+    default:       return cardId;
+  }
+}
+
+/* ─── Reusable account-selector dropdown panel — Figma 3759:50251 ───
+   Renders the "Add Agent Account" CTA followed by one row per account.
+   Sizing/positioning is delegated to the caller via `className`/`style`,
+   keeping the panel a pure presentational component. */
+type DropdownRow = { cardId: string; tag: string };
+
+function AccountDropdownPanel({
+  rows,
+  selectedCardId,
+  onSelectCardId,
+  onAddAgent,
+  className = "",
+  style,
+}: {
+  rows: DropdownRow[];
+  selectedCardId: string;
+  onSelectCardId: (cardId: string) => void;
+  onAddAgent: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-stretch p-[8px] rounded-[12px] ${className}`}
+      style={{
+        background: "#0a0c10",
+        border: "1px solid #1d2132",
+        boxShadow:
+          "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)",
+        ...style,
+      }}
+    >
+      {/* "Add Agent Account" CTA — first row, Figma 3759:50252 */}
+      <AddAgentRow onClick={onAddAgent} />
+
+      {/* Account rows — Figma 3759:50256 / 50261 / 50266 */}
+      {rows.map(({ cardId, tag }) => {
+        const isSel = selectedCardId === cardId;
+        return (
+          <button
+            key={cardId}
+            type="button"
+            data-testid={`button-account-${cardId}`}
+            onClick={() => onSelectCardId(cardId)}
+            className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
+          >
+            <div className="flex items-center gap-[8px] min-w-0">
+              <WalletBadge />
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                {dropdownRowLabel(cardId)}
+              </span>
+              <div
+                className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0"
+                style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}
+              >
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap">
+                  {tag}
+                </span>
+              </div>
+            </div>
+            {isSel && <GreenCheckmark />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /* ─── Contextual data per card ─── */
 const walletData = {
@@ -340,7 +444,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
   const [activeTab, setActiveTab]               = useState("Assets");
   const [transactionFilter, setTransactionFilter] = useState("All");
   const [addOpen, setAddOpen]                   = useState(false);
+  const [addInitialStep, setAddInitialStep]     = useState<"select" | "agent">("select");
   const [dropdownOpen, setDropdownOpen]         = useState(false);
+
+  // Open AddAccountModal jumping straight into the agent flow.
+  const openAddAgent = useCallback(() => {
+    setAddInitialStep("agent");
+    setAddOpen(true);
+  }, []);
   // Card carousel — 0=wallet, 1=debit, 2=bank
   const [activeCard, setActiveCard]             = useState(0);
 
@@ -424,6 +535,32 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
     setAssetsDropdownOpen(false);
     setTxDropdownOpen(false);
   };
+
+  const handleSelectAccountById = useCallback((cardId: string) => {
+    const idx = CARDS.findIndex(c => c.id === cardId);
+    if (idx === -1) return;
+    handleSelectAccount(idx);
+  }, []);
+
+  // Tag values for the dropdown rows — short, masked identifier per account.
+  const dropdownRows: DropdownRow[] = [
+    {
+      cardId: "wallet",
+      tag: resolvedWalletAccount?.address
+        ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}`
+        : "——",
+    },
+    {
+      cardId: "debit",
+      tag: liveDebit?.cardNumber ?? "——",
+    },
+    {
+      cardId: "bank",
+      tag: liveBank?.iban
+        ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}`
+        : "——",
+    },
+  ];
 
   const currentCardData = CARDS[activeCard].data;
 
@@ -556,45 +693,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 </div>
               </button>
 
-              {/* Dropdown panel */}
+              {/* Dropdown panel — Figma 3759:50251 */}
               {collapsedDropdownOpen && (
-                <div
-                  className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
-                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
-                >
-                  {/* Account rows */}
-                  {[
-                    { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
-                    { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
-                    { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
-                  ].map(({ cardIdx, label, tag }) => {
-                    const isSel = collapsedCardIndex === cardIdx;
-                    return (
-                      <button
-                        key={cardIdx}
-                        data-testid={`button-account-${CARDS[cardIdx].id}`}
-                        onClick={() => handleSelectAccount(cardIdx)}
-                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
-                      >
-                        <div className="flex items-center gap-[8px]">
-                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
-                            </div>
-                          </div>
-                          <CardDotLabel type={CARDS[cardIdx].type} />
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && (
-                          <GreenCheckmark />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <AccountDropdownPanel
+                  rows={dropdownRows}
+                  selectedCardId={CARDS[collapsedCardIndex].id}
+                  onSelectCardId={handleSelectAccountById}
+                  onAddAgent={() => { setCollapsedDropdownOpen(false); openAddAgent(); }}
+                  className="absolute top-full left-0 right-0 mt-[4px] z-20"
+                />
               )}
             </div>
 
@@ -656,33 +763,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               </button>
 
               {assetsDropdownOpen && (
-                <div
-                  className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
-                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
-                >
-                  {[
-                    { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
-                    { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
-                    { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
-                  ].map(({ cardIdx, label, tag }) => {
-                    const isSel = collapsedCardIndex === cardIdx;
-                    return (
-                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
-                        <div className="flex items-center gap-[8px]">
-                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" /></div>
-                          </div>
-                          <CardDotLabel type={CARDS[cardIdx].type} />
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && <GreenCheckmark />}
-                      </button>
-                    );
-                  })}
-                </div>
+                <AccountDropdownPanel
+                  rows={dropdownRows}
+                  selectedCardId={CARDS[collapsedCardIndex].id}
+                  onSelectCardId={handleSelectAccountById}
+                  onAddAgent={() => { setAssetsDropdownOpen(false); openAddAgent(); }}
+                  className="absolute top-full left-0 right-0 mt-[4px] z-20"
+                />
               )}
             </div>
 
@@ -772,33 +859,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               </button>
 
               {txDropdownOpen && (
-                <div
-                  className="absolute top-full left-0 right-0 mt-[4px] z-20 flex flex-col p-[8px] rounded-[12px]"
-                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
-                >
-                  {[
-                    { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
-                    { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
-                    { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
-                  ].map(({ cardIdx, label, tag }) => {
-                    const isSel = collapsedCardIndex === cardIdx;
-                    return (
-                      <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
-                        <div className="flex items-center gap-[8px]">
-                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" /></div>
-                          </div>
-                          <CardDotLabel type={CARDS[cardIdx].type} />
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && <GreenCheckmark />}
-                      </button>
-                    );
-                  })}
-                </div>
+                <AccountDropdownPanel
+                  rows={dropdownRows}
+                  selectedCardId={CARDS[collapsedCardIndex].id}
+                  onSelectCardId={handleSelectAccountById}
+                  onAddAgent={() => { setTxDropdownOpen(false); openAddAgent(); }}
+                  className="absolute top-full left-0 right-0 mt-[4px] z-20"
+                />
               )}
             </div>
 
@@ -850,7 +917,12 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
 
     return (
       <div className="flex-shrink-0 self-stretch" style={{ overflow: "visible" }}>
-        <AddAccountModal open={addOpen} onClose={() => setAddOpen(false)} excludeTypes={[]} />
+        <AddAccountModal
+          open={addOpen}
+          onClose={() => { setAddOpen(false); setAddInitialStep("select"); }}
+          excludeTypes={[]}
+          initialStep={addInitialStep}
+        />
 
         {/* Backdrop shade — appears behind popup, on top of main content */}
         {(hoveredIcon || bankPopupOpen) && (
@@ -1093,8 +1165,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
     <>
       <AddAccountModal
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={() => { setAddOpen(false); setAddInitialStep("select"); }}
         excludeTypes={[]}
+        initialStep={addInitialStep}
       />
       <div className="flex-shrink-0 self-stretch">
 
@@ -1140,43 +1213,13 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               </button>
 
               {dropdownOpen && (
-                <div
-                  className="absolute right-0 top-[calc(100%+6px)] w-[358px] z-[51] flex flex-col p-[8px] rounded-[12px]"
-                  style={{ background: "#0a0c10", border: "1px solid #1d2132", boxShadow: "0px 68px 27px 0px rgba(0,0,0,0.06), 0px 38px 23px 0px rgba(0,0,0,0.2), 0px 17px 17px 0px rgba(0,0,0,0.34), 0px 4px 9px 0px rgba(0,0,0,0.39)" }}
-                >
-                  {/* Account rows */}
-                  {[
-                    { cardIdx: 0, label: CARDS[0].label, tag: resolvedWalletAccount?.address ? `${resolvedWalletAccount.address.slice(0,6)}....${resolvedWalletAccount.address.slice(-4)}` : "——" },
-                    { cardIdx: 1, label: CARDS[1].label, tag: liveDebit?.cardNumber ?? "——" },
-                    { cardIdx: 2, label: CARDS[2].label, tag: liveBank?.iban ? `${liveBank.iban.slice(0,6)}...${liveBank.iban.slice(-4)}` : "——" },
-                  ].map(({ cardIdx, label, tag }) => {
-                    const isSel = activeCard === cardIdx;
-                    return (
-                      <button
-                        key={cardIdx}
-                        onClick={() => { setActiveCard(cardIdx); setCollapsedCardIndex(cardIdx); setDropdownOpen(false); setAssetsDropdownOpen(false); setTxDropdownOpen(false); }}
-                        className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]"
-                      >
-                        <div className="flex items-center gap-[8px]">
-                          <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
-                            </div>
-                          </div>
-                          <CardDotLabel type={CARDS[cardIdx].type} />
-                          <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
-                            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
-                          </div>
-                        </div>
-                        {isSel && (
-                          <GreenCheckmark />
-                        )}
-                      </button>
-                    );
-                  })}
-
-                </div>
+                <AccountDropdownPanel
+                  rows={dropdownRows}
+                  selectedCardId={CARDS[activeCard].id}
+                  onSelectCardId={handleSelectAccountById}
+                  onAddAgent={() => { setDropdownOpen(false); openAddAgent(); }}
+                  className="absolute right-0 top-[calc(100%+6px)] w-[358px] z-[51]"
+                />
               )}
             </div>
             </div>
