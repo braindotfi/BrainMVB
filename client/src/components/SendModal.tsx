@@ -13,6 +13,20 @@ const CheckReceiptIcon = () => (
   </svg>
 );
 
+// ── Figma asset URLs ──────────────────────────────────────────────────────────
+
+const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/33cddef8-4407-4120-9640-19fd26cfca42";
+
+const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/14bf435a-a003-4588-9029-5ce6973c3a94";
+const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/783e8c47-1571-4b96-9c63-cd875fc7a1e4";
+const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/b3dc8e97-fef3-4cff-8f76-054a05e520bf";
+const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/2a4569bd-623f-43e8-90d3-a53e41c7e325";
+const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/9e6a186b-9934-4809-b3f0-64b27f9fec60";
+const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/e857828a-6482-4b80-80af-4e56cecf3cf7";
+const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/66211182-8dde-42ab-a29d-ce2c7a43948c";
+const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/76c74d2e-e77a-4dd9-887d-333365e41eea";
+const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/f39dbbe8-075b-4e3f-aaf9-bdfac59b7309";
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type RecipientType = "bank" | "wallet" | "agent";
@@ -92,36 +106,26 @@ function BackBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] hover:opacity-80 transition-opacity"
+      className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] flex items-center justify-center hover:opacity-80 transition-opacity"
+      style={{ background: "#1d2132" }}
       data-testid="btn-send-back"
     >
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={BACK_BG} />
-      <div className="absolute left-[8px] size-[16px] top-[8px]">
-        <div className="absolute bottom-1/4 flex items-center justify-center left-[37.5%] right-[40.09%] top-1/4" style={{ containerType: "size" }}>
-          <div className="flex-none h-[100cqw] rotate-90 w-[100cqh]">
-            <div className="relative size-full">
-              <div className="absolute inset-[-20.92%_-9.38%]">
-                <img alt="" className="block max-w-none size-full" src={BACK_VEC} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M10 3L5 8L10 13" stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
   );
 }
 
 function ChevronBtn() {
   return (
-    <div className="relative rounded-[100px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={CHEVRON_BG} />
-      <div className="absolute left-[8px] size-[16px] top-[8px]">
-        <div className="absolute inset-[16.65%_16.66%_16.68%_16.67%]">
-          <div className="absolute inset-[-7.03%]">
-            <img alt="" className="block max-w-none size-full" src={CHEVRON_VEC} />
-          </div>
-        </div>
-      </div>
+    <div
+      className="relative rounded-[100px] shrink-0 size-[32px] flex items-center justify-center"
+      style={{ background: "#1d2132" }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M6 3L11 8L6 13" stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </div>
   );
 }
