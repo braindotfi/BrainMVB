@@ -1,9 +1,143 @@
+import { useEffect, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
+import { useAuth } from "@/lib/authContext";
+import { useToast } from "@/hooks/use-toast";
 
-  export default function AccountSection() {
-    return (
-      <div className="flex flex-col gap-6 w-full">
-        <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
+function parseBalance(raw?: string): number {
+  if (!raw) return 0;
+  const n = parseFloat(String(raw).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+type ModalKind = null | "confirm" | "blocked";
+
+function Backdrop({ onClick }: { onClick: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] transition-opacity duration-200"
+      onClick={onClick}
+      data-testid="modal-backdrop"
+    />
+  );
+}
+
+function ConfirmCloseModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="close-account-title"
+      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      data-testid="modal-close-account-confirm"
+    >
+      <div className="flex flex-col items-center gap-[4px] w-full">
+        <p
+          id="close-account-title"
+          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
+        >
+          Close Account
+        </p>
+        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
+          Are you sure you want to permanently delete your Brain account?
+        </p>
+      </div>
+      <div className="flex gap-[8px] items-center w-full">
+        <button
+          onClick={onCancel}
+          data-testid="button-close-account-cancel"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          data-testid="button-close-account-confirm"
+          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="close-account-blocked-title"
+      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      data-testid="modal-close-account-blocked"
+    >
+      <div className="flex flex-col items-center gap-[4px] w-full">
+        <p
+          id="close-account-blocked-title"
+          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
+        >
+          Close Account
+        </p>
+        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
+          You can only delete your account once your crypto and bank balances are below $1.
+        </p>
+      </div>
+      <button
+        onClick={onCancel}
+        data-testid="button-close-account-blocked-cancel"
+        className="w-full h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+export default function AccountSection() {
+  const { wirexAccounts, logout } = useAuth();
+  const { toast } = useToast();
+  const [modal, setModal] = useState<ModalKind>(null);
+
+  // Lock body scroll while a modal is open
+  useEffect(() => {
+    if (modal) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [modal]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!modal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setModal(null); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [modal]);
+
+  const handleCloseAccountClick = () => {
+    const wallet = wirexAccounts.find(a => a.type === "wallet");
+    const bank   = wirexAccounts.find(a => a.type === "bank");
+    const cryptoBal = parseBalance(wallet?.balance);
+    const bankBal   = parseBalance(bank?.balance);
+    if (cryptoBal < 1 && bankBal < 1) {
+      setModal("confirm");
+    } else {
+      setModal("blocked");
+    }
+  };
+
+  const handleConfirm = () => {
+    setModal(null);
+    toast({
+      title: "Account closed",
+      description: "Your Brain account has been permanently deleted.",
+    });
+    logout();
+  };
+
+  return (
+    <div className="flex flex-col gap-6 w-full">
+      <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
           <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Your Data
@@ -108,7 +242,13 @@ import { SUB } from "@/assets/sub-icons";
           </p>
         </div>
         <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <button
+            type="button"
+            onClick={handleCloseAccountClick}
+            data-testid="button-close-account"
+            aria-label="Close Account"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+          >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -149,10 +289,13 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
-      </div>
-    );
-  }
-  
+
+      {modal && <Backdrop onClick={() => setModal(null)} />}
+      {modal === "confirm" && <ConfirmCloseModal onCancel={() => setModal(null)} onConfirm={handleConfirm} />}
+      {modal === "blocked" && <BlockedCloseModal onCancel={() => setModal(null)} />}
+    </div>
+  );
+}
