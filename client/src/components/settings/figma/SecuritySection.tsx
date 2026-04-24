@@ -1,7 +1,25 @@
+import { useEffect, useRef, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch, Icons } from "./FigmaPrimitives";
 
+const SESSION_TIMEOUT_OPTIONS = ["5 min", "15 min"] as const;
+
   export default function SecuritySection() {
+    const [sessionTimeout, setSessionTimeout] = useState<string>("5 min");
+    const [open, setOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (!open) return;
+      const handler = (e: MouseEvent) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+          setOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
@@ -10,7 +28,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
             Authentication
           </p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-[16px] shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -60,38 +78,6 @@ import { Switch, Icons } from "./FigmaPrimitives";
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
                 <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
-                  <div className="absolute inset-[12.5%_16.66%_13.42%_14.68%]">
-                    <div className="absolute inset-[-5.62%_-6.07%_-5.63%_-6.07%]">
-                      <img alt="" className="block max-w-none size-full" src={SUB["bf4c1801"]} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                  Biometric Login
-                </p>
-                <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    Use Face-ID or fingerprint
-                  </p>
-                </div>
-              </div>
-            </div>
-            <Switch className="h-[24px] relative rounded-[12px] shrink-0 w-[40px]" />
-          </div>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
-            </div>
-          </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
-                <div className="absolute left-0 size-[40px] top-0">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
-                </div>
-                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
                   <div className="absolute inset-[12.5%]">
                     <div className="absolute inset-[-5.56%]">
                       <img alt="" className="block max-w-none size-full" src={SUB["63c37f2c"]} />
@@ -120,13 +106,40 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
             </div>
-            <div className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[8px] shrink-0 w-[120px]">
-              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                  30 min
-                </p>
-              </div>
-              <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
+            <div ref={dropdownRef} className="relative shrink-0 w-[120px]">
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
+                data-testid="button-session-timeout"
+              >
+                <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                    {sessionTimeout}
+                  </p>
+                </div>
+                <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
+              </button>
+              {open && (
+                <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
+                  {SESSION_TIMEOUT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        setSessionTimeout(opt);
+                        setOpen(false);
+                      }}
+                      className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
+                        sessionTimeout === opt ? "text-white" : "text-[#a8b9f4]"
+                      }`}
+                      data-testid={`option-session-timeout-${opt.replace(/\s+/g, "-")}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

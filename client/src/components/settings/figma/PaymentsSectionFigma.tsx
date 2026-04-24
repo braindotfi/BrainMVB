@@ -1,14 +1,35 @@
+import { useEffect, useRef, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch, Icons } from "./FigmaPrimitives";
 
+const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
+
   export default function PaymentsSectionFigma() {
+    const [currency, setCurrency] = useState<string>("USD");
+    const [currencyOpen, setCurrencyOpen] = useState(false);
+    const currencyRef = useRef<HTMLDivElement>(null);
+    const [dailyLimit, setDailyLimit] = useState<string>("10,000");
+    const [singleTxLimit, setSingleTxLimit] = useState<string>("");
+    const [saveRate, setSaveRate] = useState<string>("");
+
+    useEffect(() => {
+      if (!currencyOpen) return;
+      const handler = (e: MouseEvent) => {
+        if (currencyRef.current && !currencyRef.current.contains(e.target as Node)) {
+          setCurrencyOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, [currencyOpen]);
+
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">{`Currency & Display`}</p>
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">Currency and Display</p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-[#0a0c10] content-stretch flex flex-col items-start p-[16px] relative rounded-[16px] shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -34,13 +55,40 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
             </div>
-            <div className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[8px] shrink-0 w-[120px]">
-              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                  USD
-                </p>
-              </div>
-              <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
+            <div ref={currencyRef} className="relative shrink-0 w-[120px]">
+              <button
+                type="button"
+                onClick={() => setCurrencyOpen((v) => !v)}
+                className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
+                data-testid="button-default-currency"
+              >
+                <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                    {currency}
+                  </p>
+                </div>
+                <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
+              </button>
+              {currencyOpen && (
+                <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
+                  {CURRENCY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        setCurrency(opt);
+                        setCurrencyOpen(false);
+                      }}
+                      className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
+                        currency === opt ? "text-white" : "text-[#a8b9f4]"
+                      }`}
+                      data-testid={`option-default-currency-${opt}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -81,19 +129,19 @@ import { Switch, Icons } from "./FigmaPrimitives";
               </div>
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
-              <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                  10,000
-                </p>
-                <div className="h-[16px] relative shrink-0 w-0">
-                  <div className="absolute inset-[-4.69%_-0.75px]">
-                    <img alt="" className="block max-w-none size-full" src={SUB["261bc0c2"]} />
-                  </div>
-                </div>
+              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                <input
+                  type="text"
+                  value={dailyLimit}
+                  onChange={(e) => setDailyLimit(e.target.value)}
+                  placeholder="0"
+                  className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
+                  data-testid="input-daily-spend-limit"
+                />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
                 <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
-                  USD
+                  {currency}
                 </p>
               </div>
             </div>
@@ -129,19 +177,19 @@ import { Switch, Icons } from "./FigmaPrimitives";
               </div>
             </div>
             <div className="bg-[#222737] content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
-              <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <div className="h-[16px] relative shrink-0 w-0">
-                  <div className="absolute inset-[-4.69%_-0.75px]">
-                    <img alt="" className="block max-w-none size-full" src={SUB["261bc0c2"]} />
-                  </div>
-                </div>
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
-                  e.g. 1000
-                </p>
+              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                <input
+                  type="text"
+                  value={singleTxLimit}
+                  onChange={(e) => setSingleTxLimit(e.target.value)}
+                  placeholder="e.g. 1000"
+                  className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
+                  data-testid="input-single-tx-limit"
+                />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
                 <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
-                  USD
+                  {currency}
                 </p>
               </div>
             </div>
@@ -226,15 +274,15 @@ import { Switch, Icons } from "./FigmaPrimitives";
               </div>
             </div>
             <div className="bg-[#222737] content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[120px]">
-              <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <div className="h-[16px] relative shrink-0 w-0">
-                  <div className="absolute inset-[-4.69%_-0.75px]">
-                    <img alt="" className="block max-w-none size-full" src={SUB["261bc0c2"]} />
-                  </div>
-                </div>
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
-                  e.g. 10
-                </p>
+              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                <input
+                  type="text"
+                  value={saveRate}
+                  onChange={(e) => setSaveRate(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
+                  data-testid="input-save-rate"
+                />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
                 <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">

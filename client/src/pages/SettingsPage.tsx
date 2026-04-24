@@ -468,14 +468,6 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => toast({ title: "Billing", description: "Billing & invoices would open here." })} />}
             useCircleIcon
           />
-          <Divider />
-          <SettingRow
-            icon={<BriefcaseRowCircle />}
-            label="Add Business Account"
-            onClick={() => toast({ title: "Add Business Account", description: "Business account onboarding would start here." })}
-            right={<ChevronActionButton label="Add business account" testId="button-add-business-account" onClick={() => toast({ title: "Add Business Account", description: "Business account onboarding would start here." })} />}
-            useCircleIcon
-          />
         </Card>
       </div>
     </div>

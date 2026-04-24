@@ -1,7 +1,9 @@
 import { SUB } from "@/assets/sub-icons";
 import { Switch } from "./FigmaPrimitives";
+import { useUserContact } from "@/lib/userContact";
 
   export default function NotificationsSection() {
+    const { email, phone } = useUserContact();
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
@@ -188,7 +190,7 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">{`Marketing & Updates`}</p>
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">Marketing and Updates</p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Product news and special offers
@@ -234,8 +236,8 @@ import { Switch } from "./FigmaPrimitives";
                   Email
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    milesand@mail.com
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap" data-testid="text-notification-email">
+                    {email}
                   </p>
                 </div>
               </div>
@@ -303,8 +305,8 @@ import { Switch } from "./FigmaPrimitives";
                   SMS
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    +1 (415) 555-0192
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap" data-testid="text-notification-phone">
+                    {phone}
                   </p>
                 </div>
               </div>

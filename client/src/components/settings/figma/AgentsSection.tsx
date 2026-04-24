@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch } from "./FigmaPrimitives";
 
   export default function AgentsSection() {
+    const [autoApprove, setAutoApprove] = useState<string>("1000");
+    const [maxDailySpend, setMaxDailySpend] = useState<string>("2000");
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
@@ -114,15 +117,15 @@ import { Switch } from "./FigmaPrimitives";
               </div>
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
-              <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                  1000
-                </p>
-                <div className="h-[16px] relative shrink-0 w-0">
-                  <div className="absolute inset-[-4.69%_-0.75px]">
-                    <img alt="" className="block max-w-none size-full" src={SUB["936e1e44"]} />
-                  </div>
-                </div>
+              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                <input
+                  type="text"
+                  value={autoApprove}
+                  onChange={(e) => setAutoApprove(e.target.value)}
+                  placeholder="0"
+                  className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
+                  data-testid="input-max-auto-approve"
+                />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
                 <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
@@ -165,15 +168,15 @@ import { Switch } from "./FigmaPrimitives";
               </div>
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
-              <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                  2000
-                </p>
-                <div className="h-[16px] relative shrink-0 w-0">
-                  <div className="absolute inset-[-4.69%_-0.75px]">
-                    <img alt="" className="block max-w-none size-full" src={SUB["936e1e44"]} />
-                  </div>
-                </div>
+              <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                <input
+                  type="text"
+                  value={maxDailySpend}
+                  onChange={(e) => setMaxDailySpend(e.target.value)}
+                  placeholder="0"
+                  className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
+                  data-testid="input-max-daily-agent-spend"
+                />
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
                 <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
