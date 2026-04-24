@@ -218,3 +218,21 @@ are intentionally unchanged.
   states show the same updated logo. The legacy `brain_union`, `brain_mask`,
   and `brain_overlay` SVG entries remain in `figma-icons.ts` for now in case
   we need them again.
+
+## Needs Review Popup (April 2026)
+HomePage "Needs Review" widget rows are now interactive: tapping any row
+opens a centered "Review Needed" popup with a dimmed/blurred backdrop
+(Figma node 3846:44649; centering matches 3844:44172). Implementation lives
+inline in `client/src/pages/HomePage.tsx`:
+- `NEEDS_REVIEW` items typed via `ReviewItemType` and enriched with detail
+  fields (`question`, `description`, `who`, `amountFull`, `dueBy`, `from`,
+  `autoLabel`).
+- `ReviewItem` accepts `onClick` and is keyboard-accessible (`role=button`,
+  Enter/Space activation).
+- `ReviewModal` is built on `@radix-ui/react-dialog` primitives directly
+  (Root/Portal/Overlay/Content/Title/Description/Close) so it gets focus
+  trap, focus restore, Escape handling, body scroll lock, and proper
+  `role=dialog` / `aria-modal` semantics for free, while keeping the
+  custom Figma styling. The "Always …" toggle uses the shadcn `Checkbox`
+  (Radix primitive) for accessible checkbox semantics.
+- Confirm/Reject currently just close the modal (no backend wiring).
