@@ -12,12 +12,19 @@ const IMG_BRAIN_MASK = "https://www.figma.com/api/mcp/asset/7d61d4ac-fc09-4f3f-b
 const IMG_BRAIN_OVERLAY = "https://www.figma.com/api/mcp/asset/23e38371-03b4-4fc7-9266-0d6c348afe88";
 const IMG_BELL_BG = "https://www.figma.com/api/mcp/asset/4cc422e3-86d1-4530-88d0-771b72dfbce3";
 const IMG_BELL_ICON = "https://www.figma.com/api/mcp/asset/92fab1b3-f9d8-491f-ba35-276c1c9c0aa0";
-const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/6891ff17-aa0d-482c-ad57-cb62fab7b151";
+const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/645bea26-301f-454d-ad33-63d6ddb46744";
 const IMG_HOME_INACTIVE = "https://www.figma.com/api/mcp/asset/32d5f76b-d500-4264-ab5c-8f35598a50a2";
-const IMG_CHEVRON_RIGHT = "https://www.figma.com/api/mcp/asset/95b793c7-2dee-47d7-884c-c8427165f818";
+const IMG_CHEVRON_RIGHT = "https://www.figma.com/api/mcp/asset/c6536496-5daa-476c-a038-e9ba46f5ea69";
 const IMG_FINANCES_ICON = "https://www.figma.com/api/mcp/asset/b059b897-4679-4963-af6e-ce2c3e300768";
+const IMG_FINANCES_ACTIVE_BASE = "https://www.figma.com/api/mcp/asset/bfbc86bf-4cec-4928-a007-4bac1266338b";
+const IMG_FINANCES_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/b525eadc-42de-4f8c-a22a-2e1130b97fa1";
 const IMG_RULES_ICON = "https://www.figma.com/api/mcp/asset/4327bb4b-9cd5-4d1f-b244-755e7b19271e";
+const IMG_RULES_ACTIVE_BODY = "https://www.figma.com/api/mcp/asset/f259812b-bf43-40ee-9634-f53a0e4c0209";
+const IMG_RULES_ACTIVE_TAB = "https://www.figma.com/api/mcp/asset/ff94a57e-040a-45b0-ade4-785be12fe937";
+const IMG_RULES_ACTIVE_SUBTRACT = "https://www.figma.com/api/mcp/asset/b151db9f-06f4-448e-b03b-d653cd598272";
 const IMG_ACTIVITY_ICON = "https://www.figma.com/api/mcp/asset/ecf60034-d903-4c85-9dc7-6e6bf1d8c270";
+const IMG_ACTIVITY_ACTIVE_BASE = "https://www.figma.com/api/mcp/asset/5da497bb-725d-482c-8c34-644e0623f286";
+const IMG_ACTIVITY_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/2fd54d64-2957-48dc-9e9e-3c3f9a029aac";
 const IMG_SETTINGS_ICON = "https://www.figma.com/api/mcp/asset/36bc6654-ff0e-488c-aa4a-294f17fd0744";
 const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/184f6e9f-73fa-4a77-9d5d-73cf5023dc2e";
 const IMG_LOGOUT_ICON = "https://www.figma.com/api/mcp/asset/873465a4-c85e-4d1f-9126-0634793d55ed";
@@ -117,10 +124,14 @@ const ActiveGradientBox = ({ children }: { children: React.ReactNode }) => (
 );
 
 const FinancesIconActive = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
-    <div className="absolute inset-0 overflow-clip flex items-center justify-center">
-      <img alt="" className="w-[14px] h-[14px] object-contain brightness-[10]" src={IMG_FINANCES_ICON} />
+  <div className="overflow-clip relative shrink-0 size-[24px]">
+    <div className="absolute left-0 size-[24px] top-0">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_FINANCES_ACTIVE_BASE} />
+    </div>
+    <div className="absolute inset-[14.58%_33.33%]">
+      <div className="absolute inset-[-6.62%_-28.13%_-19.85%_-28.13%]">
+        <img alt="" className="block max-w-none size-full" src={IMG_FINANCES_ACTIVE_STROKE} />
+      </div>
     </div>
   </div>
 );
@@ -135,9 +146,16 @@ const FinancesIconInactive = () => (
 
 const RulesIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
-    <div className="absolute inset-0 flex items-center justify-center">
-      <img alt="" className="w-[12px] h-[12px] object-contain brightness-[10]" src={IMG_RULES_ICON} />
+    <div className="absolute inset-[4.17%_16.67%_4.17%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_RULES_ACTIVE_BODY} />
+    </div>
+    <div className="absolute bottom-1/2 left-[37.5%] right-[33.33%] top-1/4">
+      <div className="absolute inset-[-18.75%_-32.14%_-56.25%_-32.14%]">
+        <img alt="" className="block max-w-none size-full" src={IMG_RULES_ACTIVE_TAB} />
+      </div>
+    </div>
+    <div className="absolute inset-[66.67%_4.17%_4.17%_37.5%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_RULES_ACTIVE_SUBTRACT} />
     </div>
   </div>
 );
@@ -152,9 +170,13 @@ const RulesIconInactive = () => (
 
 const ActivityIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
-    <div className="absolute inset-0 flex items-center justify-center">
-      <img alt="" className="w-[14px] h-[14px] object-contain brightness-[10]" src={IMG_ACTIVITY_ICON} />
+    <div className="absolute inset-[12.5%_4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_ACTIVITY_ACTIVE_BASE} />
+    </div>
+    <div className="absolute inset-[20.83%_12.5%]">
+      <div className="absolute inset-[-8.04%_-12.5%_-24.11%_-12.5%]">
+        <img alt="" className="block max-w-none size-full" src={IMG_ACTIVITY_ACTIVE_STROKE} />
+      </div>
     </div>
   </div>
 );
@@ -339,18 +361,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
               })}
             </div>
           </div>
-        </div>
-
-        {/* Collapse toggle + bottom spacing */}
-        <div className="flex items-center justify-end mx-[7px] py-[4px] shrink-0">
-          <button
-            onClick={onToggle}
-            title="Collapse menu"
-            className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px] hover:opacity-80 transition-opacity"
-            style={{ background: "rgba(168,185,244,0.15)" }}
-          >
-            <CollapseIcon />
-          </button>
         </div>
 
         {/* Logout */}

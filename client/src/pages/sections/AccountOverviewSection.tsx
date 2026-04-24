@@ -5,6 +5,41 @@ import { AddAccountModal } from "@/components/AddAccountModal";
 import { useAuth, type WirexAccount } from "@/lib/authContext";
 import { useTransactions } from "@/lib/transactionContext";
 
+/* ─── Figma asset URLs (refreshed) ─── */
+const IMG_WALLET_BADGE_BG     = "https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b";
+const IMG_WALLET_BADGE_ICON   = "https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489";
+const IMG_TX_INACTIVE_VEC1    = "https://www.figma.com/api/mcp/asset/e7a03e7f-ebdb-4e1d-92ee-792b46e2dd70";
+const IMG_TX_INACTIVE_VEC2    = "https://www.figma.com/api/mcp/asset/0580441e-5c9c-4aee-88ee-3e5399de84ff";
+const IMG_TX_ACTIVE_UNION     = "https://www.figma.com/api/mcp/asset/f7d3bfd5-64be-4bfd-b08b-e6fd33fde332";
+const IMG_CHECK_ELLIPSE       = "https://www.figma.com/api/mcp/asset/7403a63b-ec11-431c-8b5b-d55b6da086df";
+const IMG_CHECK_MARK          = "https://www.figma.com/api/mcp/asset/218718f3-8944-40ca-8ad0-3b1f5c9bc679";
+
+/* Reusable green checkmark badge (Figma 3759:50276) */
+const GreenCheckmark = () => (
+  <div className="relative size-[20px] flex-shrink-0">
+    <div className="absolute flex items-center justify-center left-0 size-[20px] top-0">
+      <div className="-rotate-90 flex-none">
+        <div className="relative size-[20px]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_CHECK_ELLIPSE} />
+        </div>
+      </div>
+    </div>
+    <div className="absolute left-[3px] size-[14px] top-[3px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_CHECK_MARK} />
+    </div>
+  </div>
+);
+
+/* Reusable wallet badge icon (32px, used in account dropdown rows) */
+const WalletBadge = () => (
+  <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
+    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_BG} />
+    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_ICON} />
+    </div>
+  </div>
+);
+
 /* ─── Contextual data per card ─── */
 const walletData = {
   assets: [
@@ -460,9 +495,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               >
                 {/* Icon — grey WalletIcons */}
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
                   </div>
                 </div>
                 {/* Label: card-specific name */}
@@ -471,11 +506,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 </div>
                 {/* Green checkmark + chevron */}
                 <div className="flex items-center gap-[8px] flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                    <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                    <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <GreenCheckmark />
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={`transition-transform duration-200 ${collapsedDropdownOpen ? "rotate-180" : ""}`}>
                     <path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -504,9 +535,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                       >
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
                             <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
                             </div>
                           </div>
                           <CardDotLabel type={CARDS[cardIdx].type} />
@@ -515,11 +546,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                           </div>
                         </div>
                         {isSel && (
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                          <GreenCheckmark />
                         )}
                       </button>
                     );
@@ -569,20 +596,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 style={{ background: "#222737" }}
               >
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
                   </div>
                 </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
                   <CardDotLabel type={CARDS[collapsedCardIndex].type} />
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                    <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                    <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <GreenCheckmark />
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={`transition-transform duration-200 ${assetsDropdownOpen ? "rotate-180" : ""}`}>
                     <path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -604,15 +627,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                       <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" /></div>
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
+                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" /></div>
                           </div>
                           <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
                         </div>
-                        {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        {isSel && <GreenCheckmark />}
                       </button>
                     );
                   })}
@@ -689,20 +712,16 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 style={{ background: "#222737" }}
               >
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/4d294e06-5ab8-43ac-adc5-8045c1749ead" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/2a6f2ee3-c539-45fe-b90e-f40419ef1ae0" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
                   </div>
                 </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
                   <CardDotLabel type={CARDS[collapsedCardIndex].type} />
                 </div>
                 <div className="flex items-center gap-[8px] flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                    <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                    <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <GreenCheckmark />
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={`transition-transform duration-200 ${txDropdownOpen ? "rotate-180" : ""}`}>
                     <path d="M6 9L12 15L18 9" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -724,15 +743,15 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                       <button key={cardIdx} onClick={() => handleSelectAccount(cardIdx)} className="w-full flex items-center justify-between p-[8px] rounded-[8px] transition-colors hover:bg-[#1d2132]">
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
-                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" /></div>
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
+                            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2"><img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" /></div>
                           </div>
                           <CardDotLabel type={CARDS[cardIdx].type} />
                           <div className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] flex-shrink-0" style={{ background: "#222737", border: "1px solid rgba(108,119,157,0.2)" }}>
                             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[11px] leading-[14px] whitespace-nowrap">{tag}</span>
                           </div>
                         </div>
-                        {isSel && <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0"><circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/><circle cx="10" cy="10" r="7" fill="#42BF23"/><path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        {isSel && <GreenCheckmark />}
                       </button>
                     );
                   })}
@@ -1002,18 +1021,26 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 data-testid="button-collapsed-transactions"
                 className="bg-[#11141b] flex items-center p-[8px] rounded-[12px] transition-colors hover:bg-[#1d2132]"
               >
-                <div className="overflow-clip relative size-[24px]">
-                  <div className="absolute inset-[29.17%_41.67%]">
-                    <div className="absolute inset-[-10%_-25%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/25b90353-cfc5-4e1b-acba-6c565adb77bc" />
+                {hoveredIcon === "transactions" ? (
+                  <div className="overflow-clip relative size-[24px]">
+                    <div className="absolute inset-[12.08%_3.34%_12.1%_3.4%]">
+                      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_TX_ACTIVE_UNION} />
                     </div>
                   </div>
-                  <div className="absolute inset-[16.24%_7.51%_16.26%_7.57%]">
-                    <div className="absolute inset-[-6.17%_-4.91%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/eff98633-9f88-446f-bead-178ce69e2e78" />
+                ) : (
+                  <div className="overflow-clip relative size-[24px]">
+                    <div className="absolute inset-[29.17%_41.67%]">
+                      <div className="absolute inset-[-10%_-25%]">
+                        <img alt="" className="block max-w-none size-full" src={IMG_TX_INACTIVE_VEC1} />
+                      </div>
+                    </div>
+                    <div className="absolute inset-[16.24%_7.51%_16.26%_7.57%]">
+                      <div className="absolute inset-[-6.17%_-4.91%]">
+                        <img alt="" className="block max-w-none size-full" src={IMG_TX_INACTIVE_VEC2} />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </button>
             {hoveredIcon === "transactions" && (
               <div
@@ -1111,9 +1138,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                       >
                         <div className="flex items-center gap-[8px]">
                           <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/0fc453d5-9ce9-4497-800c-22b77f8743b4" />
+                            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
                             <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/c47ef456-eaf4-482b-8378-0a71ff0e6df2" />
+                              <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
                             </div>
                           </div>
                           <CardDotLabel type={CARDS[cardIdx].type} />
@@ -1122,11 +1149,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                           </div>
                         </div>
                         {isSel && (
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                            <circle cx="10" cy="10" r="10" fill="#42BF23" opacity="0.25"/>
-                            <circle cx="10" cy="10" r="7" fill="#42BF23"/>
-                            <path d="M6.5 10l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                          <GreenCheckmark />
                         )}
                       </button>
                     );
