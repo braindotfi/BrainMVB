@@ -399,13 +399,16 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const bankAcc   = wirexAccounts.find((a) => a.type === "bank");
   const walletAcc = wirexAccounts.find((a) => a.type === "wallet");
 
-  // Asset popup should only surface assets the source account actually holds.
-  // Bank account holds USD; crypto (wallet) account holds USDC. Other fiat
-  // currencies / crypto tickers are intentionally excluded — they're not in
-  // the underlying account, so they shouldn't be selectable to send.
+  // Asset popup surfaces every asset the source account holds.
+  //   • Bank Account: USD only (live balance from the linked bank). The
+  //     bank flow auto-skips the asset picker (see `bankInitial`), so the
+  //     list intentionally stays single-entry to keep that flow consistent.
+  //   • Crypto Account: full crypto basket (USDC + ETH/MATIC/BNB) so the
+  //     user can pick any asset shown in the wallet card. USDC's balance
+  //     is patched from the live wallet; other tickers keep their mocks.
   const availableAssets: AssetItem[] = sourceAccountType === "bank"
     ? FIAT_ASSETS.filter((a) => a.id === "usd").map((a) => ({ ...a, balance: bankAcc?.balance ?? a.balance }))
-    : CRYPTO_ASSETS.filter((a) => a.id === "usdc").map((a) => ({ ...a, balance: walletAcc?.balance ?? a.balance }));
+    : CRYPTO_ASSETS.map((a) => a.id === "usdc" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a);
 
   const selectedAsset = availableAssets.find((a) => a.id === state.selectedAssetId) ?? null;
   const availableBalance = selectedAsset ? parseAmt(selectedAsset.balance) : 0;
@@ -1030,12 +1033,20 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">{fmtUsd(parseFloat(FEE))}</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                      {selectedAsset && selectedAsset.id !== "usd" && selectedAsset.id !== "usdc"
+                        ? `${fmt(parseFloat(FEE))} ${selectedAsset.ticker}`
+                        : fmtUsd(parseFloat(FEE))}
+                    </p>
                   </div>
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Total</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmtUsd(enteredAmount + parseFloat(FEE))}</p>
+                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                      {selectedAsset && selectedAsset.id !== "usd" && selectedAsset.id !== "usdc"
+                        ? `${fmt(enteredAmount + parseFloat(FEE))} ${selectedAsset.ticker}`
+                        : fmtUsd(enteredAmount + parseFloat(FEE))}
+                    </p>
                   </div>
                 </div>
               </div>

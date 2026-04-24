@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
@@ -330,17 +330,36 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
     [walletAcc?.balance]
   );
 
-  // The "From" asset popup should only list assets the source account
-  // actually holds. Both bank and crypto accounts hold a USD-denominated
-  // balance in this app, so we surface a single USD entry with the live
-  // balance from the appropriate account. The "To" popup keeps the full
-  // catalog so users can exchange into any supported asset.
+  // The "From" asset popup lists every asset the source account actually
+  // holds. The Bank Account holds USD only (live balance from the linked
+  // account). The Crypto Account holds the full crypto basket (ETH, MATIC,
+  // BNB) plus a USD balance derived from the live wallet. The "To" popup
+  // keeps the full catalog so users can exchange into any supported asset.
   const heldFromAssets: Asset[] = useMemo(() => {
-    const acc = accountType === "bank" ? bankAcc : walletAcc;
-    const usdAsset = allAssets.find(a => a.id === "usd");
-    if (!usdAsset) return [];
-    return [{ ...usdAsset, balance: `${acc?.balance ?? "0"} USD` }];
+    if (accountType === "bank") {
+      const usdAsset = allAssets.find(a => a.id === "usd");
+      return usdAsset ? [{ ...usdAsset, balance: `${bankAcc?.balance ?? "0"} USD` }] : [];
+    }
+    const heldIds = new Set(["usd", "eth", "matic", "bnb"]);
+    return allAssets
+      .filter(a => heldIds.has(a.id))
+      .map(a => a.id === "usd" ? { ...a, balance: `${walletAcc?.balance ?? "0"} USD` } : a);
   }, [accountType, walletAcc?.balance, bankAcc?.balance]);
+
+  // If the source account changes while the modal is open, the previously
+  // selected From asset may no longer be in the held set (e.g. ETH selected
+  // for wallet, then accountType flips to bank). Reset selection + amount
+  // and bounce back to step 1 so the user re-picks a valid asset.
+  useEffect(() => {
+    if (!fromAsset) return;
+    const stillHeld = heldFromAssets.some(a => a.id === fromAsset.id);
+    if (!stillHeld) {
+      setFromAsset(null);
+      setAmount("");
+      setAmountDisplay("");
+      setStep(1);
+    }
+  }, [accountType, heldFromAssets, fromAsset]);
 
   if (!open) return null;
 
