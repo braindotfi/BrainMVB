@@ -158,7 +158,7 @@ export function RulesPage() {
               <div className="flex flex-1 items-start min-w-px relative">
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
-                    Plain English, not code. Brain turns these answers into the actual rules it follows. Want to see exactly how, or add a rule we haven't thought of? Switch to advanced mode at the top.
+                    Rules written in plain English, not code. Brain turns your answers into enforceable policies for every agent you use, then keeps learning, monitoring, and suggesting new rules to personalize your financial journey.
                   </p>
                 </div>
               </div>

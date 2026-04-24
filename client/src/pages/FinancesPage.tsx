@@ -12,15 +12,15 @@ const ACCOUNTS = [
   { name: "Crypto Account",          sub: "0x7cB5...86A8",                 sub2: "On-chain USDC balance",                balance: "$2,040"  },
   { name: "Yield Agent",             sub: "Auto-deploys idle USDC",        sub2: "Earning ~5.1% APY",                    balance: "$8,250"  },
   { name: "TraderPro",               sub: "Active swing strategy",         sub2: "Up 3.4% this month",                   balance: "$4,180"  },
-  { name: "Treasury AI Agent",       sub: "Cash reserves & T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
+  { name: "Treasury AI Agent",       sub: "Cash reserves and T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
   { name: "Account Totals",          sub: "Across bank, crypto and agents",sub2: "",                                     balance: "$86,993" },
 ];
 
 const EXPENSES = [
   { category: "Payroll (8 people, twice a month)", amount: "$4,800" },
-  { category: "Software & Subscriptions", amount: "$1,250" },
+  { category: "Software and Subscriptions", amount: "$1,250" },
   { category: "Rent", amount: "$1,100" },
-  { category: "Utilities & Phone", amount: "$380" },
+  { category: "Utilities and Phone", amount: "$380" },
   { category: "Miscellaneous", amount: "$280" },
 ];
 
@@ -175,7 +175,7 @@ export function FinancesPage() {
               <div className="flex flex-1 items-start min-w-px relative">
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
-                    Want to see the exact transactions, invoices or how Brain came up with any of those numbers? Tap any line above or switch to advanced mode at the top right.
+                    Would you like to view the transactions, invoices, or details behind any of the information above? Tap any line above for more information.
                   </p>
                 </div>
               </div>
