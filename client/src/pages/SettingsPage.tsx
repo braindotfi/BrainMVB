@@ -124,8 +124,15 @@ const LegalNavIcon = ({ active }: { active: boolean }) =>
   active ? (
     <div className="relative shrink-0 size-[24px]">
       <div
-        className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]"
-        style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }}
+        className="absolute border-[1.4px] border-solid border-transparent inset-[4.17%_12.5%] rounded-[4px]"
+        style={{
+          // Two stacked backgrounds: the brand-purple gradient fills the
+          // padding-box (the icon body), while the second gradient is clipped
+          // to the border-box, painting the 1.4px ring as a linear gradient.
+          background:
+            "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%) padding-box, " +
+            "linear-gradient(121.6deg, #ffffff 0%, #9f70ff 100%) border-box",
+        }}
       />
       <div className="absolute inset-[20.83%_32.5%_68.98%_32.5%]">
         <div className="absolute inset-[-46.02%_-26.79%_-138.07%_-26.79%]">
