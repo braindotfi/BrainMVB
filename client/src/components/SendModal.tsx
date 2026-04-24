@@ -3,29 +3,9 @@ import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtUsd, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
 import { isEvmAddress } from "@/lib/web3";
+import { ADD_MONEY_ICONS as ICON } from "@/assets/add-money-icons";
 
-// ── Inline SVG icon helpers ────────────────────────────────────────────────────
-
-const CheckReceiptIcon = () => (
-  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-    <circle cx="24" cy="24" r="20" fill="rgba(66,191,35,0.15)" stroke="rgba(66,191,35,0.5)" strokeWidth="1.5" />
-    <path d="M14 24l7 7 13-14" stroke="#42bf23" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-// ── Figma asset URLs ──────────────────────────────────────────────────────────
-
-const RECEIPT_CHECK_ICON = "https://www.figma.com/api/mcp/asset/33cddef8-4407-4120-9640-19fd26cfca42";
-
-const POP_WALLET_BG  = "https://www.figma.com/api/mcp/asset/14bf435a-a003-4588-9029-5ce6973c3a94";
-const POP_WALLET_VEC = "https://www.figma.com/api/mcp/asset/783e8c47-1571-4b96-9c63-cd875fc7a1e4";
-const POP_BANK_BG    = "https://www.figma.com/api/mcp/asset/b3dc8e97-fef3-4cff-8f76-054a05e520bf";
-const POP_BANK_VEC   = "https://www.figma.com/api/mcp/asset/2a4569bd-623f-43e8-90d3-a53e41c7e325";
-const POP_AGENT_BG   = "https://www.figma.com/api/mcp/asset/9e6a186b-9934-4809-b3f0-64b27f9fec60";
-const POP_AGENT_VEC  = "https://www.figma.com/api/mcp/asset/e857828a-6482-4b80-80af-4e56cecf3cf7";
-const POP_SEARCH_VEC = "https://www.figma.com/api/mcp/asset/66211182-8dde-42ab-a29d-ce2c7a43948c";
-const POP_CLOSE_BG   = "https://www.figma.com/api/mcp/asset/76c74d2e-e77a-4dd9-887d-333365e41eea";
-const POP_CLOSE_VEC  = "https://www.figma.com/api/mcp/asset/f39dbbe8-075b-4e3f-aaf9-bdfac59b7309";
+// All icons sourced from local assets (ADD_MONEY_ICONS) or inline SVG — no Figma URLs.
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -145,6 +125,8 @@ function StepDots({ current, total = 5, start = 1 }: { current: number; total?: 
   );
 }
 
+// Popup shell — header now matches AddAccountModal's AccountPopup
+// (border-b separator + backdrop-blur header) and uses local assets.
 function PopupShell({
   title,
   onClose,
@@ -157,19 +139,19 @@ function PopupShell({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
       <div
-        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
+        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-[16px] py-[16px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px]">{title}</p>
-          <button onClick={onClose} className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity">
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_CLOSE_BG} />
-            <div className="absolute left-[4px] size-[16px] top-[4px]">
-              <div className="absolute inset-[20.85%_20.84%_20.82%_20.83%]">
-                <div className="absolute inset-[-8.04%]">
-                  <img alt="" className="block max-w-none size-full" src={POP_CLOSE_VEC} />
-                </div>
-              </div>
+        <div className="flex items-center justify-between px-[16px] py-[16px] border-b border-[#1d2132] backdrop-blur-[10px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">{title}</p>
+          <button
+            onClick={onClose}
+            className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
+            data-testid="btn-popup-close"
+          >
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.popupCloseBg} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img alt="" src={ICON.popupCloseVec} className="block" style={{ width: 10, height: 10 }} />
             </div>
           </button>
         </div>
@@ -182,13 +164,7 @@ function PopupShell({
 function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
-      <div className="relative shrink-0 size-[24px]">
-        <div className="absolute inset-[16.67%]">
-          <div className="absolute inset-[-6.25%]">
-            <img alt="" className="block max-w-none size-full" src={POP_SEARCH_VEC} />
-          </div>
-        </div>
-      </div>
+      <img alt="" src={ICON.searchIcon} className="block shrink-0" style={{ width: 16, height: 16 }} />
       <input
         type="text"
         value={value}
@@ -200,13 +176,14 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
+// Recipient icon — uses local assets (mirrors AddAccountModal's AccountIcon).
 function RecipientIcon({ type }: { type: RecipientType }) {
   if (type === "bank") {
     return (
       <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_BG} />
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.bankBg} />
         <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
-          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_BANK_VEC} />
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.bankVec} />
         </div>
       </div>
     );
@@ -214,19 +191,19 @@ function RecipientIcon({ type }: { type: RecipientType }) {
   if (type === "agent") {
     return (
       <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_BG} />
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.agentBg} />
         <div className="absolute inset-[20%]">
-          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_AGENT_VEC} />
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.agentVec} />
         </div>
       </div>
     );
   }
   return (
     <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_BG} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.walletBg} />
       <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
         <div className="absolute inset-[12.5%]">
-          <img alt="" className="absolute block inset-0 max-w-none size-full" src={POP_WALLET_VEC} />
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.walletVec} />
         </div>
       </div>
     </div>
@@ -300,6 +277,8 @@ function AssetPopup({
   );
 }
 
+// Mirrors AddAccountModal's AccountPopup: same shell, same row styling,
+// first-item highlight (bg-[#11141b]), and identical search + list layout.
 function RecipientPopup({
   excludeTypes = [],
   onSelect,
@@ -318,14 +297,16 @@ function RecipientPopup({
       <div className="flex flex-col gap-[8px] p-[8px]">
         <SearchBar value={search} onChange={setSearch} />
         <div className="flex flex-col">
-          <div className="flex items-center px-[8px] py-[4px]">
+          <div className="flex items-center justify-center px-[8px] py-[4px]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px] tracking-[-0.6px]">All Accounts</p>
           </div>
-          {filtered.map((r) => (
+          {filtered.map((r, i) => (
             <button
               key={r.id}
               onClick={() => onSelect(r.id)}
-              className="flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132]"
+              className={`flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132] ${
+                i === 0 ? "bg-[#11141b]" : ""
+              }`}
               data-testid={`btn-recipient-${r.id}`}
             >
               <RecipientIcon type={r.id} />
@@ -533,8 +514,10 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
 
             {/* Receipt icon */}
             <div className="bg-[#123509] flex items-center justify-center p-[24px] rounded-full shrink-0">
-              <div className="relative size-[48px]">
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src={RECEIPT_CHECK_ICON} />
+              <div className="relative size-[48px] flex items-center justify-center">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                  <path d="M10 24l10 10 18-20" stroke="#42bf23" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
             </div>
 

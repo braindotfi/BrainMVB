@@ -171,3 +171,14 @@ Figma exports per the design file:
 The right-side icon on Add Money's account selector now matches Exchange's
 "Select Asset" pill: a 32px circle bg #1d2132 wrapping the plus (empty) or
 chevron-down (filled) icon. Previously the icon floated bare in a 24px box.
+
+## SendModal "Select Account" Popup Sync (April 2026)
+SendModal's `RecipientPopup` now mirrors AddAccountModal's `AccountPopup`:
+- Same shell: 320px width, bg #0a0c10, border #1d2132, rounded-16, multi-shadow.
+- Header: border-b #1d2132 + backdrop-blur-10, title left-aligned, close on right.
+- First list item highlighted with bg #11141b (matches AccountPopup pattern).
+- All popup icons (`PopupShell`, `SearchBar`, `RecipientIcon`) migrated from
+  Figma asset URLs to local `ADD_MONEY_ICONS` (close, search, wallet, bank,
+  agent backgrounds + vectors).
+- Receipt success checkmark replaced with inline SVG (Figma URL had expired).
+- Result: zero `figma.com` references remaining in `client/src/components/SendModal.tsx`.
