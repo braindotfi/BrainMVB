@@ -354,9 +354,12 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function InputBox({ children, highlighted }: { children: React.ReactNode; highlighted?: boolean }) {
+function InputBox({ children, hasValue }: { children: React.ReactNode; hasValue?: boolean }) {
+  // Stroke is only visible once a value has been entered, matching the
+  // Figma "filled vs empty" input states. Border is always present (just
+  // transparent when empty) so the box doesn't shift by 1px on first keystroke.
   return (
-    <div className={`bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full border ${highlighted ? "border-[#6c779d]" : "border-transparent"}`}>
+    <div className={`bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full border border-solid ${hasValue ? "border-[#414965]" : "border-transparent"}`}>
       {children}
     </div>
   );
@@ -396,10 +399,13 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
   const bankAcc   = wirexAccounts.find((a) => a.type === "bank");
   const walletAcc = wirexAccounts.find((a) => a.type === "wallet");
 
-  // Build contextual asset list with live balance for primary asset
+  // Asset popup should only surface assets the source account actually holds.
+  // Bank account holds USD; crypto (wallet) account holds USDC. Other fiat
+  // currencies / crypto tickers are intentionally excluded — they're not in
+  // the underlying account, so they shouldn't be selectable to send.
   const availableAssets: AssetItem[] = sourceAccountType === "bank"
-    ? FIAT_ASSETS.map((a) => a.id === "usd" ? { ...a, balance: bankAcc?.balance ?? a.balance } : a)
-    : CRYPTO_ASSETS.map((a) => a.id === "usdc" ? { ...a, balance: walletAcc?.balance ?? a.balance } : a);
+    ? FIAT_ASSETS.filter((a) => a.id === "usd").map((a) => ({ ...a, balance: bankAcc?.balance ?? a.balance }))
+    : CRYPTO_ASSETS.filter((a) => a.id === "usdc").map((a) => ({ ...a, balance: walletAcc?.balance ?? a.balance }));
 
   const selectedAsset = availableAssets.find((a) => a.id === state.selectedAssetId) ?? null;
   const availableBalance = selectedAsset ? parseAmt(selectedAsset.balance) : 0;
@@ -776,14 +782,14 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
               </button>
               <div className="flex flex-col gap-[24px]">
                 <FieldRow label="Recipient Name">
-                  <InputBox>
+                  <InputBox hasValue={!!state.recipientName}>
                     <input type="text" value={state.recipientName} onChange={(e) => set({ recipientName: e.target.value })} placeholder="John Smith"
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'Gilroy',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                       data-testid="input-send-recipient-name" />
                   </InputBox>
                 </FieldRow>
                 <FieldRow label="IBAN Bank Number">
-                  <InputBox>
+                  <InputBox hasValue={!!state.iban}>
                     <input type="text" value={state.iban} onChange={(e) => set({ iban: e.target.value })} placeholder="AE0703...123456"
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
                       data-testid="input-send-iban" />
@@ -806,7 +812,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <ChevronBtn />
               </button>
               <FieldRow label="Wallet Address">
-                <InputBox>
+                <InputBox hasValue={!!state.walletAddress}>
                   <input type="text" value={state.walletAddress} onChange={(e) => set({ walletAddress: e.target.value })} placeholder="0x..."
                     className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                     data-testid="input-send-wallet-addr" />
@@ -865,7 +871,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
               </div>
 
               <div className="flex flex-col gap-[8px]">
-                <InputBox highlighted>
+                <InputBox hasValue={!!state.amount}>
                   <div className="flex flex-1 items-center gap-[2px] min-w-0">
                     <input
                       type="text"

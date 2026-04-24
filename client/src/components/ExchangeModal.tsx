@@ -323,11 +323,24 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
   const [confirmedAmount, setConfirmedAmount] = useState("");
   const { wirexAccounts, user } = useAuth();
   const walletAcc = wirexAccounts.find(a => a.type === "wallet");
+  const bankAcc = wirexAccounts.find(a => a.type === "bank");
   const { addTransaction } = useTransactions();
   const liveAllAssets = useMemo(() =>
     allAssets.map(a => a.id === "usd" ? { ...a, balance: walletAcc?.balance ? `${walletAcc.balance} USD` : a.balance } : a),
     [walletAcc?.balance]
   );
+
+  // The "From" asset popup should only list assets the source account
+  // actually holds. Both bank and crypto accounts hold a USD-denominated
+  // balance in this app, so we surface a single USD entry with the live
+  // balance from the appropriate account. The "To" popup keeps the full
+  // catalog so users can exchange into any supported asset.
+  const heldFromAssets: Asset[] = useMemo(() => {
+    const acc = accountType === "bank" ? bankAcc : walletAcc;
+    const usdAsset = allAssets.find(a => a.id === "usd");
+    if (!usdAsset) return [];
+    return [{ ...usdAsset, balance: `${acc?.balance ?? "0"} USD` }];
+  }, [accountType, walletAcc?.balance, bankAcc?.balance]);
 
   if (!open) return null;
 
@@ -360,7 +373,8 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
     setSearchOpen(false);
   };
 
-  const filteredAssets = liveAllAssets.filter(a =>
+  const sourcePool = searchTarget === "from" ? heldFromAssets : liveAllAssets;
+  const filteredAssets = sourcePool.filter(a =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.ticker.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -598,7 +612,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                     <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[22px] leading-[28px]">How much to exchange?</p>
                   </div>
                   <div className="flex flex-col gap-[8px]">
-                    <div className="flex items-center gap-[2px] bg-[#222737] border border-[#6c779d] h-[56px] rounded-[16px] px-[16px] py-[10px]">
+                    <div className={`flex items-center gap-[2px] bg-[#222737] border border-solid ${amount ? "border-[#414965]" : "border-transparent"} h-[56px] rounded-[16px] px-[16px] py-[10px]`}>
                       <input
                         type="text"
                         inputMode="decimal"
