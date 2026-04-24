@@ -22,7 +22,7 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(TERMS_URL)}
             data-testid="button-terms-of-service"
             aria-label="Open Terms of Service"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -75,7 +75,7 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(PRIVACY_URL)}
             data-testid="button-privacy-policy"
             aria-label="Open Privacy Policy"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">

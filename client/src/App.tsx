@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { useSessionTimeout } from "@/lib/sessionTimeoutContext";
+import { useToast } from "@/hooks/use-toast";
 
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
@@ -22,6 +24,8 @@ import { TransactionProvider } from "@/lib/transactionContext";
 
 function AppLayout() {
   const { isLoggedIn, logout } = useAuth();
+  const { timeoutMin } = useSessionTimeout();
+  const { toast } = useToast();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -31,6 +35,50 @@ function AppLayout() {
   const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
   const [focusSendWithdrawalTrigger, setFocusSendWithdrawalTrigger] = useState<{ seq: number; sourceAccountType: "wallet" | "bank" } | null>(null);
   const [, navigate] = useLocation();
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs hold the latest function/value references so the listener-binding
+  // effect below depends only on `isLoggedIn` + `timeoutMin` and does not
+  // re-bind window listeners every render.
+  const logoutRef = useRef(logout);
+  const navigateRef = useRef(navigate);
+  const toastRef = useRef(toast);
+  useEffect(() => { logoutRef.current = logout; }, [logout]);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+
+  // Inactivity-based auto-logout. Resets on any user interaction.
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const timeoutMs = timeoutMin * 60 * 1000;
+
+    const triggerLogout = () => {
+      logoutRef.current();
+      navigateRef.current("/");
+      toastRef.current({
+        title: "Session expired",
+        description: `You have been logged out after ${timeoutMin} minute${timeoutMin === 1 ? "" : "s"} of inactivity.`,
+      });
+    };
+
+    const reset = () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = setTimeout(triggerLogout, timeoutMs);
+    };
+
+    const events: (keyof WindowEventMap)[] = [
+      "mousedown", "mousemove", "keydown", "touchstart", "touchmove", "scroll", "wheel",
+    ];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [isLoggedIn, timeoutMin]);
 
   if (!isLoggedIn) {
     return <SignupPage />;

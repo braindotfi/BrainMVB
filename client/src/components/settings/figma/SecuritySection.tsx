@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { Switch, Icons } from "./FigmaPrimitives";
-
-const SESSION_TIMEOUT_OPTIONS = ["5 min", "15 min"] as const;
+import {
+  SESSION_TIMEOUT_OPTIONS_MIN,
+  formatTimeoutLabel,
+  useSessionTimeout,
+} from "@/lib/sessionTimeoutContext";
 
   export default function SecuritySection() {
-    const [sessionTimeout, setSessionTimeout] = useState<string>("5 min");
+    const { timeoutMin, setTimeoutMin } = useSessionTimeout();
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -115,27 +118,27 @@ const SESSION_TIMEOUT_OPTIONS = ["5 min", "15 min"] as const;
               >
                 <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                    {sessionTimeout}
+                    {formatTimeoutLabel(timeoutMin)}
                   </p>
                 </div>
                 <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
               </button>
               {open && (
                 <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
-                  {SESSION_TIMEOUT_OPTIONS.map((opt) => (
+                  {SESSION_TIMEOUT_OPTIONS_MIN.map((opt) => (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => {
-                        setSessionTimeout(opt);
+                        setTimeoutMin(opt);
                         setOpen(false);
                       }}
                       className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
-                        sessionTimeout === opt ? "text-white" : "text-[#a8b9f4]"
+                        timeoutMin === opt ? "text-white" : "text-[#a8b9f4]"
                       }`}
-                      data-testid={`option-session-timeout-${opt.replace(/\s+/g, "-")}`}
+                      data-testid={`option-session-timeout-${opt}`}
                     >
-                      {opt}
+                      {formatTimeoutLabel(opt)}
                     </button>
                   ))}
                 </div>

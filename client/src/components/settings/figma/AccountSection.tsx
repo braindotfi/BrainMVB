@@ -21,32 +21,57 @@ function Backdrop({ onClick }: { onClick: () => void }) {
   );
 }
 
+// Container styling shared across all three popups, matching Figma
+// (file cC2lQwC3g9hv96o5Wgy8Ek, nodes 3970:45780, 3969:45754, 3969:45740).
+const POPUP_CONTAINER =
+  "fixed left-1/2 top-1/2 z-[101] w-[320px] -translate-x-1/2 -translate-y-1/2 " +
+  "flex flex-col rounded-[16px] bg-[#11141b] border border-[#1d2132] overflow-clip " +
+  "shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]";
+
+const POPUP_HEADER =
+  "flex flex-col items-center gap-[8px] px-[8px] py-[24px] w-full text-center";
+
+const POPUP_TITLE =
+  "font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full";
+
+const POPUP_BODY =
+  "font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full";
+
+const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
+
+const POPUP_BUTTON_NEUTRAL =
+  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
+  "bg-[#222737] disabled:opacity-50 disabled:cursor-not-allowed " +
+  "font-['Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap";
+
+const POPUP_BUTTON_DESTRUCTIVE =
+  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
+  "bg-[#350011] disabled:opacity-60 disabled:cursor-not-allowed " +
+  "font-['Gilroy',sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap";
+
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="close-account-title"
-      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      className={POPUP_CONTAINER}
       data-testid="modal-close-account-confirm"
     >
-      <div className="flex flex-col items-center gap-[4px] w-full">
-        <p
-          id="close-account-title"
-          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
-        >
+      <div className={POPUP_HEADER}>
+        <p id="close-account-title" className={POPUP_TITLE}>
           Close Account
         </p>
-        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
+        <p className={POPUP_BODY}>
           Are you sure you want to permanently delete your Brain account? This is irreversible.
         </p>
       </div>
-      <div className="flex gap-[8px] items-center w-full">
+      <div className={POPUP_BUTTON_ROW}>
         <button
           onClick={onCancel}
           disabled={isDeleting}
           data-testid="button-close-account-cancel"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+          className={POPUP_BUTTON_NEUTRAL}
         >
           Cancel
         </button>
@@ -54,7 +79,7 @@ function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () =
           onClick={onConfirm}
           disabled={isDeleting}
           data-testid="button-close-account-confirm"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
+          className={POPUP_BUTTON_DESTRUCTIVE}
         >
           {isDeleting ? "Deleting…" : "Confirm"}
         </button>
@@ -69,26 +94,23 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-data-title"
-      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      className={POPUP_CONTAINER}
       data-testid="modal-delete-data-confirm"
     >
-      <div className="flex flex-col items-center gap-[4px] w-full">
-        <p
-          id="delete-data-title"
-          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
-        >
-          Delete My Data
+      <div className={POPUP_HEADER}>
+        <p id="delete-data-title" className={POPUP_TITLE}>
+          Delete Data
         </p>
-        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
-          Are you sure you want to permanently delete all your Brain data? This is irreversible.
+        <p className={POPUP_BODY}>
+          Are you sure you want to permanently delete your Brain data? This is irreversible.
         </p>
       </div>
-      <div className="flex gap-[8px] items-center w-full">
+      <div className={POPUP_BUTTON_ROW}>
         <button
           onClick={onCancel}
           disabled={isDeleting}
           data-testid="button-delete-data-cancel"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
+          className={POPUP_BUTTON_NEUTRAL}
         >
           Cancel
         </button>
@@ -96,7 +118,7 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
           onClick={onConfirm}
           disabled={isDeleting}
           data-testid="button-delete-data-confirm"
-          className="flex-1 h-[40px] rounded-[100px] bg-[#d20344] hover:bg-[#b80239] disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-['Gilroy',sans-serif] font-semibold text-white text-[14px] leading-[16px]"
+          className={POPUP_BUTTON_DESTRUCTIVE}
         >
           {isDeleting ? "Deleting…" : "Confirm"}
         </button>
@@ -111,27 +133,26 @@ function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="close-account-blocked-title"
-      className="fixed left-1/2 top-1/2 z-[101] w-[340px] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-[16px] bg-[#0a0c10] border border-[#1d2132] p-[16px] gap-[16px]"
+      className={POPUP_CONTAINER}
       data-testid="modal-close-account-blocked"
     >
-      <div className="flex flex-col items-center gap-[4px] w-full">
-        <p
-          id="close-account-blocked-title"
-          className="font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] text-center w-full"
-        >
+      <div className={POPUP_HEADER}>
+        <p id="close-account-blocked-title" className={POPUP_TITLE}>
           Close Account
         </p>
-        <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
+        <p className={POPUP_BODY}>
           You can only delete your account once your crypto and bank balances are below $1.
         </p>
       </div>
-      <button
-        onClick={onCancel}
-        data-testid="button-close-account-blocked-cancel"
-        className="w-full h-[40px] rounded-[100px] bg-[#222737] hover:bg-[#2a3043] transition-colors font-['Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[16px]"
-      >
-        Cancel
-      </button>
+      <div className={POPUP_BUTTON_ROW}>
+        <button
+          onClick={onCancel}
+          data-testid="button-close-account-blocked-cancel"
+          className={POPUP_BUTTON_NEUTRAL}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
@@ -276,7 +297,7 @@ export default function AccountSection() {
             onClick={() => setModal("deleteData")}
             data-testid="button-delete-data"
             aria-label="Delete My Data"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -333,7 +354,7 @@ export default function AccountSection() {
             onClick={handleCloseAccountClick}
             data-testid="button-close-account"
             aria-label="Close Account"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer rounded-[8px] hover:bg-[#11141b] transition-colors -mx-[8px] px-[8px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-[100px] shrink-0 size-[40px]">

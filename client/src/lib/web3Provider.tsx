@@ -7,6 +7,7 @@ import { wagmiConfig } from "./web3";
 import { queryClient } from "./queryClient";
 import { AuthProvider } from "./authContext";
 import { CurrencyProvider } from "./currencyContext";
+import { SessionTimeoutProvider } from "./sessionTimeoutContext";
 
 interface Web3ProviderProps {
   children: ReactNode;
@@ -29,9 +30,11 @@ export function Web3Provider({ children }: Web3ProviderProps) {
           }}
         >
           <AuthProvider>
-            <CurrencyProvider>
-              {children}
-            </CurrencyProvider>
+            <SessionTimeoutProvider>
+              <CurrencyProvider>
+                {children}
+              </CurrencyProvider>
+            </SessionTimeoutProvider>
           </AuthProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

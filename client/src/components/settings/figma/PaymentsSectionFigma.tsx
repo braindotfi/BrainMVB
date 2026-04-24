@@ -283,7 +283,20 @@ const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
                   type="text"
                   inputMode="decimal"
                   value={saveRate}
-                  onChange={(e) => setSaveRate(formatThousandsInput(e.target.value))}
+                  onChange={(e) => {
+                    const formatted = formatThousandsInput(e.target.value);
+                    if (formatted === "" || formatted === ".") {
+                      setSaveRate(formatted);
+                      return;
+                    }
+                    // Cap at 100% — savings rate is a percentage.
+                    const numeric = parseFloat(formatted.replace(/,/g, ""));
+                    if (Number.isFinite(numeric) && numeric > 100) {
+                      setSaveRate("100");
+                    } else {
+                      setSaveRate(formatted);
+                    }
+                  }}
                   placeholder="0"
                   className="bg-transparent border-none outline-none w-full font-['Gilroy',sans-serif] font-medium leading-[20px] text-[16px] text-white placeholder:text-[#6c779d] caret-white"
                   data-testid="input-save-rate"
