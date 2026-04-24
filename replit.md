@@ -91,3 +91,19 @@ The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` in
 - NEVER use derived arrays as `useEffect` dependency arrays — use primitive values
 - WireX credentials broken (`access_denied`) — demo fallback active in `/api/wirex/accounts`
 - viem already installed in root project — backend services use it directly
+
+## Settings Subpages (Figma rebuild — April 2026)
+Five subpages (Security, Notifications, Payments, Agent Permissions, Legal, Account) are
+pixel-perfect Figma rebuilds living in `client/src/components/settings/figma/`:
+- `SecuritySection.tsx`, `NotificationsSection.tsx`, `PaymentsSectionFigma.tsx`,
+  `AgentsSection.tsx`, `LegalSection.tsx`, `AccountSection.tsx`
+- Shared primitives: `FigmaPrimitives.tsx` (Switch, Icons/ChevronDown)
+- Icons stored locally in `attached_assets/figma_icons/sub/<8charhash>.svg` (89 files)
+- Registry: `client/src/assets/sub-icons.ts` (`SUB[hash]` map)
+- Cards have NO border (`bg-[#0a0c10] rounded-[16px]`)
+- Each subpage starts with the Figma section group label (Authentication, Channels, Your Data, etc.)
+  — the global `<h1>` SECTION_TITLES header was removed.
+- `ProfileSection` remains inline in `SettingsPage.tsx` using shared helpers (Card, SettingRow, Divider).
+
+To re-export new Figma icons: download URL hash → `attached_assets/figma_icons/sub/<hash>.svg`
+and add the import + map entry to `client/src/assets/sub-icons.ts`.
