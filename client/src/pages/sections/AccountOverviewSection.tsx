@@ -4,6 +4,48 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
 import { useAuth, type WirexAccount } from "@/lib/authContext";
 import { useTransactions } from "@/lib/transactionContext";
+import { ICONS } from "@/assets/figma-icons";
+
+/* ─── Transaction-row icons (Figma 3183:28662 / 3183:28718 / 3759:50382) ─── */
+const TxIcon = ({ type }: { type: "deposit" | "withdrawal" | string }) => {
+  if (type === "deposit") {
+    return (
+      <div className="overflow-clip relative rounded-[160px] flex-shrink-0 size-[40px] bg-[#123509]">
+        <div className="absolute left-[10px] size-[20px] top-[10px]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.add_arrow} />
+        </div>
+      </div>
+    );
+  }
+  if (type === "withdrawal") {
+    return (
+      <div className="overflow-clip relative rounded-[160px] flex-shrink-0 size-[40px] bg-[#350011]">
+        <div className="-translate-x-1/2 -translate-y-1/2 absolute flex items-center justify-center left-1/2 size-[20px] top-1/2">
+          <div className="-scale-y-100 flex-none">
+            <div className="relative size-[20px]">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.send_arrow} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  /* exchange / trade */
+  return (
+    <div className="relative rounded-[100px] flex-shrink-0 size-[40px]">
+      <div className="absolute left-0 size-[40px] top-0">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.exchange_bg} />
+      </div>
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
+        <div className="absolute inset-[17.94%_16.48%_17.96%_16.47%]">
+          <div className="absolute inset-[-6.5%_-6.21%]">
+            <img alt="" className="block max-w-none size-full" src={ICONS.exchange_vec} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ─── Figma asset URLs (refreshed) ─── */
 const IMG_WALLET_BADGE_BG     = "https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b";
@@ -780,26 +822,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               ) : filteredTx.map((tx, idx) => (
                 <div key={tx.id} className="flex flex-col gap-[16px]">
                   <div className="flex gap-[8px] items-center">
-                    <div
-                      className="overflow-hidden relative rounded-[160px] flex-shrink-0 size-[40px] flex items-center justify-center"
-                      style={{ background: tx.type === "deposit" ? "#123509" : tx.type === "withdrawal" ? "#350011" : "#1d2132" }}
-                    >
-                      {tx.type === "deposit" ? (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <path d="M15 5L5 15M5 15H13M5 15V7" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      ) : tx.type === "withdrawal" ? (
-                        <div style={{ transform: "scale(1,-1)" }}>
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M15 5L5 15M5 15H13M5 15V7" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
+                    <TxIcon type={tx.type} />
                     <div className="flex flex-1 gap-[8px] items-center justify-center min-w-0">
                       <div className="flex flex-col gap-[4px] items-start flex-shrink-0">
                         <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{tx.label}</span>
@@ -1352,21 +1375,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                     ) : filtered.map((tx, index) => (
                       <div key={tx.id} className="flex flex-col self-stretch w-full">
                         <div className="flex items-center gap-2 self-stretch w-full py-4">
-                          <div className="w-10 h-10 bg-[#0a0c10] rounded-full flex items-center justify-center flex-shrink-0">
-                            {tx.type === "deposit" ? (
-                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M15 5L5 15M5 15H13M5 15V7" stroke="#42bf23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            ) : tx.type === "withdrawal" ? (
-                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M5 15L15 5M15 5H7M15 5V13" stroke="#d20344" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            ) : (
-                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M4 8H16M4 8L7 5M4 8L7 11M16 12H4M16 12L13 9M16 12L13 15" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
-                          </div>
+                          <TxIcon type={tx.type} />
                           <div className="flex-1 min-w-0 flex items-center gap-2">
                             <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                               <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-base leading-5 truncate">{tx.label}</span>

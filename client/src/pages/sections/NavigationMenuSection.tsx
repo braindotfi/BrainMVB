@@ -1,33 +1,12 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { ICONS } from "@/assets/figma-icons";
 
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onLogout?: () => void;
 }
-
-const IMG_BRAIN_UNION = "https://www.figma.com/api/mcp/asset/cf77c7c7-3289-4ba7-9fa9-bd9d0e21179a";
-const IMG_BRAIN_MASK = "https://www.figma.com/api/mcp/asset/458719c5-7980-4088-a235-ed2d5f87a2e9";
-const IMG_BRAIN_OVERLAY = "https://www.figma.com/api/mcp/asset/bb7bbc17-e255-48c0-afb0-703327de916a";
-const IMG_BELL_BG = "https://www.figma.com/api/mcp/asset/4cc422e3-86d1-4530-88d0-771b72dfbce3";
-const IMG_BELL_ICON = "https://www.figma.com/api/mcp/asset/92fab1b3-f9d8-491f-ba35-276c1c9c0aa0";
-const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/e673c34d-0bb0-4947-a228-855a9bebd950";
-const IMG_HOME_INACTIVE = "https://www.figma.com/api/mcp/asset/32d5f76b-d500-4264-ab5c-8f35598a50a2";
-const IMG_CHEVRON_RIGHT = "https://www.figma.com/api/mcp/asset/c6536496-5daa-476c-a038-e9ba46f5ea69";
-const IMG_FINANCES_ICON = "https://www.figma.com/api/mcp/asset/b059b897-4679-4963-af6e-ce2c3e300768";
-const IMG_FINANCES_ACTIVE_BASE = "https://www.figma.com/api/mcp/asset/bfbc86bf-4cec-4928-a007-4bac1266338b";
-const IMG_FINANCES_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/b525eadc-42de-4f8c-a22a-2e1130b97fa1";
-const IMG_RULES_ICON = "https://www.figma.com/api/mcp/asset/4327bb4b-9cd5-4d1f-b244-755e7b19271e";
-const IMG_RULES_ACTIVE_BODY = "https://www.figma.com/api/mcp/asset/f259812b-bf43-40ee-9634-f53a0e4c0209";
-const IMG_RULES_ACTIVE_TAB = "https://www.figma.com/api/mcp/asset/ff94a57e-040a-45b0-ade4-785be12fe937";
-const IMG_RULES_ACTIVE_SUBTRACT = "https://www.figma.com/api/mcp/asset/b151db9f-06f4-448e-b03b-d653cd598272";
-const IMG_ACTIVITY_ICON = "https://www.figma.com/api/mcp/asset/ecf60034-d903-4c85-9dc7-6e6bf1d8c270";
-const IMG_ACTIVITY_ACTIVE_BASE = "https://www.figma.com/api/mcp/asset/5da497bb-725d-482c-8c34-644e0623f286";
-const IMG_ACTIVITY_ACTIVE_STROKE = "https://www.figma.com/api/mcp/asset/2fd54d64-2957-48dc-9e9e-3c3f9a029aac";
-const IMG_SETTINGS_ICON = "https://www.figma.com/api/mcp/asset/36bc6654-ff0e-488c-aa4a-294f17fd0744";
-const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/184f6e9f-73fa-4a77-9d5d-73cf5023dc2e";
-const IMG_LOGOUT_ICON = "https://www.figma.com/api/mcp/asset/873465a4-c85e-4d1f-9126-0634793d55ed";
 
 const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCancel: () => void; onConfirm: () => void }) => {
   if (!show) return null;
@@ -66,10 +45,10 @@ const BrainLogo = () => (
   <div className="h-[40px] relative shrink-0 w-[130px]">
     <div className="absolute left-0 size-[40px] top-0">
       <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[32px] top-1/2">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_BRAIN_UNION} />
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_union} />
       </div>
-      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[0px_0px] mask-size-[32px_32px] size-[32px] top-1/2" style={{ maskImage: `url('${IMG_BRAIN_MASK}')` }}>
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_BRAIN_OVERLAY} />
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[0px_0px] mask-size-[32px_32px] size-[32px] top-1/2" style={{ maskImage: `url('${ICONS.brain_mask}')` }}>
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_overlay} />
       </div>
     </div>
     <p className="absolute leading-[0] left-[44px] not-italic text-[0px] text-white top-[8px] whitespace-nowrap" style={{ fontFamily: "'Gridular', sans-serif" }}>
@@ -80,19 +59,24 @@ const BrainLogo = () => (
   </div>
 );
 
-const BellButton = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+const CollapseButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    data-testid="button-collapse-sidebar"
+    onClick={onClick}
+    title="Collapse menu"
+    className="relative rounded-[100px] shrink-0 size-[40px] hover:opacity-80 transition-opacity"
+  >
     <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_BELL_BG} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.collapse_bg} />
     </div>
     <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
       <div className="absolute inset-[16.67%_12.5%]">
         <div className="absolute inset-[-6.25%_-5.56%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_BELL_ICON} />
+          <img alt="" className="block max-w-none size-full" src={ICONS.collapse_icon} />
         </div>
       </div>
     </div>
-  </div>
+  </button>
 );
 
 const HomeIconActive = () => (
@@ -100,7 +84,7 @@ const HomeIconActive = () => (
     <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
     <div className="absolute inset-[24.54%_32.5%_24.53%_32.5%]">
       <div className="absolute inset-[-9.2%_-26.79%_-27.61%_-26.79%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_HOME_ICON} />
+        <img alt="" className="block max-w-none size-full" src={ICONS.home_active_vec} />
       </div>
     </div>
   </div>
@@ -109,16 +93,7 @@ const HomeIconActive = () => (
 const HomeIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%_12.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_HOME_INACTIVE} />
-    </div>
-  </div>
-);
-
-const ActiveGradientBox = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
-    <div className="absolute inset-0 flex items-center justify-center">
-      {children}
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.home_inactive} />
     </div>
   </div>
 );
@@ -126,11 +101,11 @@ const ActiveGradientBox = ({ children }: { children: React.ReactNode }) => (
 const FinancesIconActive = () => (
   <div className="overflow-clip relative shrink-0 size-[24px]">
     <div className="absolute left-0 size-[24px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_FINANCES_ACTIVE_BASE} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.finances_active_base} />
     </div>
     <div className="absolute inset-[14.58%_33.33%]">
       <div className="absolute inset-[-6.62%_-28.13%_-19.85%_-28.13%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_FINANCES_ACTIVE_STROKE} />
+        <img alt="" className="block max-w-none size-full" src={ICONS.finances_active_stroke} />
       </div>
     </div>
   </div>
@@ -139,7 +114,7 @@ const FinancesIconActive = () => (
 const FinancesIconInactive = () => (
   <div className="overflow-clip relative shrink-0 size-[24px]">
     <div className="absolute left-0 size-[24px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_FINANCES_ICON} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.finances_inactive} />
     </div>
   </div>
 );
@@ -147,15 +122,15 @@ const FinancesIconInactive = () => (
 const RulesIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%_16.67%_4.17%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_RULES_ACTIVE_BODY} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_body} />
     </div>
     <div className="absolute bottom-1/2 left-[37.5%] right-[33.33%] top-1/4">
       <div className="absolute inset-[-18.75%_-32.14%_-56.25%_-32.14%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_RULES_ACTIVE_TAB} />
+        <img alt="" className="block max-w-none size-full" src={ICONS.rules_active_tab} />
       </div>
     </div>
     <div className="absolute inset-[66.67%_4.17%_4.17%_37.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_RULES_ACTIVE_SUBTRACT} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_subtract} />
     </div>
   </div>
 );
@@ -163,7 +138,7 @@ const RulesIconActive = () => (
 const RulesIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute left-px size-[22px] top-px">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_RULES_ICON} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_inactive} />
     </div>
   </div>
 );
@@ -171,11 +146,11 @@ const RulesIconInactive = () => (
 const ActivityIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[12.5%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_ACTIVITY_ACTIVE_BASE} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_active_base} />
     </div>
     <div className="absolute inset-[20.83%_12.5%]">
       <div className="absolute inset-[-8.04%_-12.5%_-24.11%_-12.5%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_ACTIVITY_ACTIVE_STROKE} />
+        <img alt="" className="block max-w-none size-full" src={ICONS.activity_active_stroke} />
       </div>
     </div>
   </div>
@@ -184,16 +159,18 @@ const ActivityIconActive = () => (
 const ActivityIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[12.5%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_ACTIVITY_ICON} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_inactive} />
     </div>
   </div>
 );
 
 const SettingsIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]" style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }} />
-    <div className="absolute inset-0 flex items-center justify-center">
-      <img alt="" className="w-[12px] h-[12px] object-contain brightness-[10]" src={IMG_SETTINGS_ICON} />
+    <div className="absolute inset-[4.17%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_active_vec} />
+    </div>
+    <div className="absolute inset-[33.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_active_vec1} />
     </div>
   </div>
 );
@@ -201,7 +178,7 @@ const SettingsIconActive = () => (
 const SettingsIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_SETTINGS_ICON} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_inactive} />
     </div>
   </div>
 );
@@ -210,16 +187,10 @@ const ChevronRight = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[33.33%_43.39%_33.33%_41.67%]">
       <div className="absolute inset-[-12.5%_-27.89%]">
-        <img alt="" className="block max-w-none size-full" src={IMG_CHEVRON_RIGHT} />
+        <img alt="" className="block max-w-none size-full" src={ICONS.chevron_right} />
       </div>
     </div>
   </div>
-);
-
-const CollapseIcon = () => (
-  <svg width="18" height="16" viewBox="0 0 20 18" fill="none">
-    <path d="M14 6L11 9L14 12M12 9H19M3 17H5C6.10457 17 7 16.1046 7 15V3C7 1.89543 6.10457 1 5 1H3C1.89543 1 1 1.89543 1 3V15C1 16.1046 1.89543 17 3 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
 );
 
 const ExpandIcon = () => (
@@ -265,7 +236,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
               <ExpandIcon />
             </button>
             <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
-              <img className="w-[32px] h-[32px] object-contain flex-shrink-0" alt="Brain" src={IMG_BRAIN_UNION} />
+              <img className="w-[32px] h-[32px] object-contain flex-shrink-0" alt="Brain" src={ICONS.brain_union} />
             </div>
             {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => (
               <Link key={path} href={path} className="outline-none focus:outline-none">
@@ -277,7 +248,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
             <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
-              <img className="w-5 h-5" alt="Logout" src={IMG_LOGOUT_ICON} />
+              <img className="w-5 h-5" alt="Logout" src={ICONS.logout} />
             </button>
           </div>
         </nav>
@@ -291,20 +262,10 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0 overflow-hidden">
         <div className="flex flex-col flex-1 mx-[7px] mt-[7px] gap-[16px] pb-0 overflow-y-auto min-h-0">
 
-          {/* Header: Logo + Collapse + Bell */}
+          {/* Header: Logo + Collapse button */}
           <div className="flex items-center justify-between relative shrink-0 w-full">
             <BrainLogo />
-            <div className="flex items-center gap-[4px]">
-              <button
-                data-testid="button-collapse-sidebar"
-                onClick={onToggle}
-                title="Collapse menu"
-                className="size-[40px] flex items-center justify-center rounded-[100px] hover:bg-[#1d2132] transition-colors"
-              >
-                <CollapseIcon />
-              </button>
-              <BellButton />
-            </div>
+            <CollapseButton onClick={onToggle} />
           </div>
 
           {/* Main Menu section */}
@@ -339,7 +300,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
           {/* Divider */}
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={IMG_DIVIDER} />
+              <img alt="" className="block max-w-none size-full" src={ICONS.divider} />
             </div>
           </div>
 
@@ -384,7 +345,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             <div className="relative shrink-0 size-[24px]">
               <div className="absolute inset-[16.67%]">
                 <div className="absolute inset-[-6.25%]">
-                  <img alt="" className="block max-w-none size-full" src={IMG_LOGOUT_ICON} />
+                  <img alt="" className="block max-w-none size-full" src={ICONS.logout} />
                 </div>
               </div>
             </div>
