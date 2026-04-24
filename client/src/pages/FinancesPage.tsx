@@ -6,9 +6,13 @@ const IMG_INVOICE_BG = "https://www.figma.com/api/mcp/asset/bd90288b-1ee1-46f9-8
 const IMG_INVOICE_ICON = "https://www.figma.com/api/mcp/asset/8ff85552-336d-4aff-9288-adc36e952200";
 
 const ACCOUNTS = [
-  { name: "Chase Business Checking", sub: "Your main account", sub2: "Pays most bills from here", balance: "$32,523" },
-  { name: "Chase Savings", sub: "Earnings 4.2%", sub2: "Brains tops this up from checking", balance: "$15,000" },
-  { name: "Account Totals", sub: "Enough for about 6 months at your current spending", sub2: "", balance: "$47,523" },
+  { name: "Chase Business Checking", sub: "Your main account",            sub2: "Pays most bills from here",            balance: "$32,523" },
+  { name: "Chase Savings",           sub: "Earnings 4.2%",                 sub2: "Brains tops this up from checking",    balance: "$15,000" },
+  { name: "Crypto Account",          sub: "0x7cB5...86A8",                 sub2: "On-chain USDC balance",                balance: "$2,040"  },
+  { name: "Yield Agent",             sub: "Auto-deploys idle USDC",        sub2: "Earning ~5.1% APY",                    balance: "$8,250"  },
+  { name: "TraderPro",               sub: "Active swing strategy",         sub2: "Up 3.4% this month",                   balance: "$4,180"  },
+  { name: "Treasury AI Agent",       sub: "Cash reserves & T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
+  { name: "Account Totals",          sub: "Across bank, crypto and agents",sub2: "",                                     balance: "$74,493" },
 ];
 
 const EXPENSES = [

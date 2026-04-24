@@ -182,3 +182,14 @@ SendModal's `RecipientPopup` now mirrors AddAccountModal's `AccountPopup`:
   agent backgrounds + vectors).
 - Receipt success checkmark replaced with inline SVG (Figma URL had expired).
 - Result: zero `figma.com` references remaining in `client/src/components/SendModal.tsx`.
+
+## Crypto Account Naming + Finances Accounts Expansion (April 2026)
+- Renamed "Your Wallet" → "Crypto Account" platform-wide. Touched files:
+  `AddAccountModal.tsx` (ALL_ACCOUNTS row + Step-2 title), `SendModal.tsx`
+  (review-step source label), `SignupPage.tsx` (loading copy).
+- Finances → Accounts widget now lists, in addition to the existing Chase
+  Business Checking and Chase Savings, the user's: Crypto Account, Yield
+  Agent, TraderPro, Treasury AI Agent. The Account Totals row is recalculated
+  to $74,493 across bank, crypto and agents.
+- Home page first stat widget label updated: "Cash in the bank" →
+  "Money in all accounts".

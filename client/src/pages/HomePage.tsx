@@ -153,14 +153,14 @@ export function HomePage() {
             <div className="flex gap-[16px] items-stretch relative shrink-0 w-full">
               <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px]">
                 <div className="flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Cash in the bank</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Money in all accounts</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">$47,232</span>
+                      <span className="font-medium leading-[36px] text-[32px]">$74,493</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#414965] text-[20px] w-full">
-                      Enough to cover the bills for about 6 months.
+                      Across bank, crypto and agent accounts.
                     </p>
                   </div>
                 </div>

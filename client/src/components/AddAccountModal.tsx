@@ -15,7 +15,7 @@ interface Account {
 
 const ALL_ACCOUNTS: Account[] = [
   { id: "bank",    type: "bank",   name: "Bank Account",       address: null },
-  { id: "wallet",  type: "wallet", name: "Your Wallet",        address: "0x7cB57B5A97eAbe94205C07890BE4c1aD31E486A8" },
+  { id: "wallet",  type: "wallet", name: "Crypto Account",     address: "0x7cB57B5A97eAbe94205C07890BE4c1aD31E486A8" },
   { id: "yield",   type: "agent",  name: "Yield Agent",        address: "0xA1B2C3D4E5f12345678901234567890aAbBcCdD" },
   { id: "trader",  type: "agent",  name: "TraderPro",          address: "0xB2C3D4E5F67890123456789012345678901AbcD" },
   { id: "treasury",type: "agent",  name: "Treasury AI Agent",  address: "0xC3D4e5F678901234567890ABCDEF0123456789A" },
@@ -414,7 +414,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
     );
   }
 
-  // ── STEP 2: Your Wallet ────────────────────────────────────────────────────
+  // ── STEP 2: Crypto Account ─────────────────────────────────────────────────
   if (step === "wallet") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -457,7 +457,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [] }: Props): JS
               >
                 <AccountIcon type="wallet" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                  Your Wallet
+                  Crypto Account
                 </p>
                 <RowEndIcon icon="chevron-down" />
               </button>

@@ -918,7 +918,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex flex-1 gap-[8px] items-center min-w-0">
                     <RecipientIcon type={sourceAccountType === "bank" ? "bank" : "wallet"} />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
-                      {sourceAccountType === "bank" ? "Bank Account" : "Wallet Account"}
+                      {sourceAccountType === "bank" ? "Bank Account" : "Crypto Account"}
                     </p>
                   </div>
                   {!bankMode && (
