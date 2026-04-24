@@ -128,7 +128,7 @@ import { SUB } from "@/assets/sub-icons";
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    Permanently delete your Brain Finance account
+                    Permanently delete your Brain account
                   </p>
                 </div>
               </div>

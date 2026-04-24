@@ -325,11 +325,20 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
     className="relative rounded-[100px] shrink-0 size-[40px] hover:opacity-80 transition-opacity"
   >
     <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_action_circle_bg} />
-    <img
-      alt=""
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block size-[24px]"
-      src={ICONS.settings_chevron_right}
-    />
+    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
+      <div
+        className="absolute bottom-1/4 flex items-center justify-center left-[40.09%] right-[37.5%] top-1/4"
+        style={{ containerType: "size" }}
+      >
+        <div className="-rotate-90 -scale-x-100 flex-none h-[100cqw] w-[100cqh]">
+          <div className="relative size-full">
+            <div className="absolute inset-[-18.59%_-8.33%]">
+              <img alt="" className="block max-w-none size-full" src={ICONS.settings_chevron_right} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </button>
 );
 
