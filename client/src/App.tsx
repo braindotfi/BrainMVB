@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
@@ -9,6 +9,10 @@ import { useLocation } from "wouter";
 
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
+import { HomePage } from "@/pages/HomePage";
+import { FinancesPage } from "@/pages/FinancesPage";
+import { RulesPage } from "@/pages/RulesPage";
+import { ActivityPage } from "@/pages/ActivityPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 import { SendModal } from "@/components/SendModal";
@@ -54,7 +58,10 @@ function AppLayout() {
 
         <div className="flex-1 min-w-0 min-h-0">
           <Switch>
-            <Route path="/">{() => <Redirect to="/settings" />}</Route>
+            <Route path="/" component={HomePage} />
+            <Route path="/finances" component={FinancesPage} />
+            <Route path="/rules" component={RulesPage} />
+            <Route path="/activity" component={ActivityPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>
