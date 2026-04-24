@@ -330,24 +330,21 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
               if (editing) toast({ title: "Profile saved", description: "Your display name has been updated." });
               setEditing(v => !v);
             }}
-            className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
-            style={{ background: "#4a2300" }}
+            className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
           >
             <div className="overflow-clip relative shrink-0 size-[24px]">
-              <div className="absolute" style={{ inset: "13.87% 13.87% 12.5% 12.5%" }}>
-                <div className="absolute" style={{ inset: "-5.66%" }}>
+              <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
+                <div className="absolute inset-[-5.66%]">
                   <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil1} />
                 </div>
               </div>
-              <div className="absolute" style={{ bottom: "56.25%", left: "56.25%", right: "25%", top: "25%" }}>
-                <div className="absolute" style={{ inset: "-22.22%" }}>
+              <div className="absolute bottom-[56.25%] left-[56.25%] right-1/4 top-1/4">
+                <div className="absolute inset-[-22.22%]">
                   <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil2} />
                 </div>
               </div>
             </div>
-            <span
-              style={{ color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}
-            >
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[16px] leading-[20px] whitespace-nowrap">
               {editing ? "Save" : "Edit"}
             </span>
           </button>

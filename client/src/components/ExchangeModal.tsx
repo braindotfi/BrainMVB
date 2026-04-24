@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useTransactions, generateTxHash } from "@/lib/transactionContext";
 import { fmt, fmtInputBlur, sanitiseNumInput, parseAmt, stripCommas } from "@/lib/formatters";
+import { EXCHANGE_ICONS } from "@/assets/exchange-icons";
 
 const CheckReceiptIcon = () => (
   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
@@ -51,23 +52,28 @@ const allAssets: Asset[] = [
   { id: "matic",name: "Polygon",       ticker: "MATIC",color: "#8247e5", letter: "◆",  balance: "295.23 MATIC", icon: "/figmaAssets/crypto-icons-1.svg" },
 ];
 
+// Wallet (Crypto Account) icon — Figma 2979:45360
 function FigmaWalletIcon() {
   return (
-    <div className="rounded-[16px] shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#1a1032" }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M20 12V8H4a2 2 0 01-2-2V6a2 2 0 012-2h16a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2v-1a2 2 0 012-2h16z" stroke="#7631ee" strokeWidth="1.5" fill="rgba(118,49,238,0.15)" />
-        <circle cx="17" cy="12" r="1.5" fill="#7631ee" />
-      </svg>
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={EXCHANGE_ICONS.cryptoCircleBg} />
+      <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
+        <div className="absolute inset-[12.5%]">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={EXCHANGE_ICONS.cryptoGlyph} />
+        </div>
+      </div>
     </div>
   );
 }
 
+// Bank Account icon — Figma 3949:42641
 function FigmaBankIcon() {
   return (
-    <div className="rounded-[16px] shrink-0 size-[32px] flex items-center justify-center" style={{ background: "#0c1a2e" }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M3 10h18M3 14h18M5 6l7-3 7 3M5 18h14a1 1 0 001-1V10a1 1 0 00-1-1H5a1 1 0 00-1 1v7a1 1 0 001 1z" stroke="#4a9af5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={EXCHANGE_ICONS.bankCircleBg} />
+      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={EXCHANGE_ICONS.bankGlyph} />
+      </div>
     </div>
   );
 }
@@ -77,7 +83,7 @@ function AccountIcon({ accountType }: { accountType: "wallet" | "bank" }) {
 }
 
 function accountLabel(accountType: "wallet" | "bank"): string {
-  return accountType === "bank" ? "Bank Account" : "Stablecoin Account";
+  return accountType === "bank" ? "Bank Account" : "Crypto Account";
 }
 
 function AssetIcon({ asset, size = 32 }: { asset: Asset; size?: number }) {

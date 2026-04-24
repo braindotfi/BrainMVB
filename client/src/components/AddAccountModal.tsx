@@ -81,19 +81,19 @@ function BackBtn({ onClick }: { onClick: () => void }) {
   );
 }
 
-// ── Right-side button on the account-row (Figma 3608:34376 = "+" / 47:7146 = chevron-down) ──
+// ── Right-side button on the account-row ──
+// Matches the "select asset" pill in ExchangeModal step 1: 32px circle bg #1d2132
+// containing either a "+" (empty) or chevron-down (filled).
 function RowEndIcon({ icon }: { icon: "plus" | "chevron-down" }) {
-  // The container is rendered inside a button, so do NOT make this a button itself.
+  // Rendered inside an outer button, so do NOT make this a button itself.
   return (
-    <div className="relative shrink-0 size-[24px]">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <img
-          alt=""
-          src={icon === "plus" ? ICON.plusIcon : ICON.chevronDown}
-          className="block"
-          style={icon === "plus" ? { width: 12, height: 12 } : { width: 14, height: 8 }}
-        />
-      </div>
+    <div className="size-[32px] rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0">
+      <img
+        alt=""
+        src={icon === "plus" ? ICON.plusIcon : ICON.chevronDown}
+        className="block"
+        style={icon === "plus" ? { width: 14, height: 14 } : { width: 14, height: 8 }}
+      />
     </div>
   );
 }

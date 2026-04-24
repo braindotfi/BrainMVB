@@ -157,3 +157,17 @@ use locally-stored Figma assets per Brain Finance design file `cC2lQwC3g9hv96o5W
 
 To re-export updated Add Money icons: download URL hash → `attached_assets/figma_icons/add-money/<name>.svg`,
 then add the import + map entry to `client/src/assets/add-money-icons.ts`.
+
+## Exchange Modal Account Icons + Crypto Rename (April 2026)
+"Stablecoin Account" → "Crypto Account" platform-wide. Wallet (Crypto Account)
+and Bank Account icons in the Exchange Money "From" select use locally-stored
+Figma exports per the design file:
+- Crypto: bg circle #240757 + glyph #7631ee (Figma 2979:45360)
+- Bank: bg circle #4A2300 + glyph #FF9500 (Figma 3949:42641)
+- Local SVGs: `attached_assets/figma_icons/exchange/{bank,crypto}_{circle_bg,glyph}.svg`
+- Typed registry: `client/src/assets/exchange-icons.ts` (`EXCHANGE_ICONS`).
+
+## AddAccountModal "Select Account" Button Visual Sync (April 2026)
+The right-side icon on Add Money's account selector now matches Exchange's
+"Select Asset" pill: a 32px circle bg #1d2132 wrapping the plus (empty) or
+chevron-down (filled) icon. Previously the icon floated bare in a 24px box.
