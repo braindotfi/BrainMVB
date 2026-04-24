@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 22 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Subtract">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M18 0C20.2091 0 22 1.79086 22 4V12C22 14.2091 20.2091 16 18 16H4C1.79086 16 6.4425e-08 14.2091 0 12V4C6.4425e-08 1.79086 1.79086 1.6109e-08 4 0H18Z" fill="url(#paint0_linear_0_28)"/>
+<path d="M4 0.700195H18C19.8225 0.700195 21.2998 2.17746 21.2998 4V12L21.2959 12.1699C21.2075 13.9135 19.7656 15.2998 18 15.2998H4C2.17746 15.2998 0.700195 13.8225 0.700195 12V4C0.700195 2.17746 2.17746 0.700195 4 0.700195Z" stroke="url(#paint1_linear_0_28)" stroke-opacity="0.6" stroke-width="1.4"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_28" x1="7.40073" y1="-0.894736" x2="17.7291" y2="9.78532" gradientUnits="userSpaceOnUse">
+<stop stop-color="#965AFF"/>
+<stop offset="1" stop-color="#7631EE"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_28" x1="5.49995" y1="1.09121" x2="12.0717" y2="9.80464" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="0.694152" stop-color="white" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

@@ -6,7 +6,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Authentication
           </p>
         </div>
@@ -36,11 +36,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Two-Factor Authentication
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Enabled via authentication app
                   </p>
                 </div>
@@ -68,11 +68,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Biometric Login
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Use Face-ID or fingerprint
                   </p>
                 </div>
@@ -110,11 +110,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Session Timeout
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Auto-lock after inactivity
                   </p>
                 </div>
@@ -122,7 +122,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
             </div>
             <div className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[8px] shrink-0 w-[120px]">
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                   30 min
                 </p>
               </div>
@@ -133,7 +133,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Account Activity
           </p>
         </div>
@@ -161,11 +161,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Login Alerts
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Email me on new sign-ins
                   </p>
                 </div>
@@ -203,11 +203,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Login History
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     View recent sign-in activity
                   </p>
                 </div>
@@ -261,11 +261,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Change PIN
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Update your 6-digit transaction PIN
                   </p>
                 </div>

@@ -5,7 +5,7 @@ import { SUB } from "@/assets/sub-icons";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Account Activity
           </p>
         </div>
@@ -25,11 +25,11 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Terms of Service
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Last updated January 1, 2025
                   </p>
                 </div>
@@ -72,11 +72,11 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Privacy Policy
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     How we handle your data
                   </p>
                 </div>
@@ -134,11 +134,11 @@ import { SUB } from "@/assets/sub-icons";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Cookie Policy
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Manage Cookie Perferences
                   </p>
                 </div>

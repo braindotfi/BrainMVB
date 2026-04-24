@@ -6,7 +6,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">{`Currency & Display`}</p>
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">{`Currency & Display`}</p>
         </div>
         <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
@@ -24,11 +24,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Default Currency
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Used for balance display
                   </p>
                 </div>
@@ -36,7 +36,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
             </div>
             <div className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[8px] shrink-0 w-[120px]">
               <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                   USD
                 </p>
               </div>
@@ -47,7 +47,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Spending Limits
           </p>
         </div>
@@ -70,11 +70,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Daily Spend Limit
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Maximum per calendar day
                   </p>
                 </div>
@@ -82,7 +82,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
               <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                   10,000
                 </p>
                 <div className="h-[16px] relative shrink-0 w-0">
@@ -92,7 +92,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy:SemiBold',sans-serif] leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
                   USD
                 </p>
               </div>
@@ -118,11 +118,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Single Transaction Limit
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Maximum per transaction
                   </p>
                 </div>
@@ -135,12 +135,12 @@ import { Switch, Icons } from "./FigmaPrimitives";
                     <img alt="" className="block max-w-none size-full" src={SUB["261bc0c2"]} />
                   </div>
                 </div>
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
                   e.g. 1000
                 </p>
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy:SemiBold',sans-serif] leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
                   USD
                 </p>
               </div>
@@ -150,7 +150,7 @@ import { Switch, Icons } from "./FigmaPrimitives";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Savings
           </p>
         </div>
@@ -173,11 +173,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Auto-Save
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Automatically save a % of each deposit
                   </p>
                 </div>
@@ -215,11 +215,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Save Rate
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Percentage of each inbound transfer
                   </p>
                 </div>
@@ -232,12 +232,12 @@ import { Switch, Icons } from "./FigmaPrimitives";
                     <img alt="" className="block max-w-none size-full" src={SUB["261bc0c2"]} />
                   </div>
                 </div>
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
                   e.g. 10
                 </p>
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy:SemiBold',sans-serif] leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
                   %
                 </p>
               </div>
@@ -263,11 +263,11 @@ import { Switch, Icons } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Round-Up Investments
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Round up spend to nearest dollar, invest the change
                   </p>
                 </div>

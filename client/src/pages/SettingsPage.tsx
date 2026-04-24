@@ -1,6 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ICONS } from "@/assets/figma-icons";
+import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import PaymentsFigma from "@/components/settings/figma/PaymentsSectionFigma";
@@ -43,18 +44,116 @@ const FigmaNavIcon = ({ src, inset = "4.17%_8.33%" }: { src: string; inset?: str
   </div>
 );
 
-const SecurityNavIcon  = () => <FigmaNavIcon src={ICONS.settings_security_inactive} />;
-const NotifNavIcon     = () => <FigmaNavIcon src={ICONS.settings_notif_inactive} />;
-const PaymentsNavIcon  = () => <FigmaNavIcon src={ICONS.settings_payments_inactive} inset="16.67%_4.17%" />;
-const AgentsNavIcon    = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute h-[22px] left-[2px] top-px w-[20px]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_agents_inactive} />
+/* Active nav icons (from Figma 3697:40137, 3704:37874, 3706:38466,
+   3709:39289, 3709:39914, 3716:40613). Inactive icons are simpler
+   single-vector exports; active versions stack multiple sub-vectors
+   from the local nav-active-icons registry. */
+const SecurityNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[4.17%_8.33%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.security_vector} />
+      </div>
+      <div className="absolute inset-[17.5%_19.58%_21.67%_19.59%]">
+        <div className="absolute inset-[-7.71%_-15.41%_-23.12%_-15.41%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.security_stroke} />
+        </div>
+      </div>
     </div>
-  </div>
-);
-const LegalNavIcon     = () => <FigmaNavIcon src={ICONS.settings_legal_inactive} inset="4.17%_8.33%_0_12.5%" />;
-const AccountNavIcon   = () => <FigmaNavIcon src={ICONS.settings_account_inactive} />;
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_security_inactive} />
+  );
+
+const NotifNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <FigmaNavIcon src={NAV_ACTIVE.notifications_union} />
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_notif_inactive} />
+  );
+
+const PaymentsNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[16.67%_4.17%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.payments_subtract} />
+      </div>
+      <div className="absolute bottom-[33.33%] left-[41.67%] right-1/4 top-[33.33%]">
+        <div className="absolute inset-[-14.06%_-28.13%_-42.19%_-28.13%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.payments_arrow} />
+        </div>
+      </div>
+      <div className="absolute bottom-[33.33%] left-1/4 right-[41.67%] top-[33.33%]">
+        <div className="absolute inset-[-14.06%_-28.13%_-42.19%_-28.13%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.payments_arrow} />
+        </div>
+      </div>
+    </div>
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_payments_inactive} inset="16.67%_4.17%" />
+  );
+
+const AgentsNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[4.17%_8.33%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.agents_vector} />
+      </div>
+      <div className="absolute bottom-1/4 left-1/4 right-[23.78%] top-1/4">
+        <div className="absolute inset-[-9.38%_-18.3%_-28.13%_-18.3%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.agents_union} />
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute h-[22px] left-[2px] top-px w-[20px]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_agents_inactive} />
+      </div>
+    </div>
+  );
+
+const LegalNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div
+        className="absolute border-[1.4px] border-solid border-white inset-[4.17%_12.5%] rounded-[4px]"
+        style={{ backgroundImage: "linear-gradient(121.6deg, rgb(150, 90, 255) 16.8%, rgb(118, 49, 238) 72.248%)" }}
+      />
+      <div className="absolute inset-[20.83%_32.5%_68.98%_32.5%]">
+        <div className="absolute inset-[-46.02%_-26.79%_-138.07%_-26.79%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.legal_vector} />
+        </div>
+      </div>
+      <div className="absolute inset-[37.5%_32.5%_52.31%_32.5%]">
+        <div className="absolute inset-[-46.02%_-26.79%_-138.07%_-26.79%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.legal_vector} />
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-1/2 right-[8.33%] top-[58.33%]">
+        <div className="absolute inset-[-11.25%_-22.5%_-33.75%_-22.5%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.legal_pencil} />
+        </div>
+      </div>
+    </div>
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_legal_inactive} inset="4.17%_8.33%_0_12.5%" />
+  );
+
+const AccountNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[4.17%_8.33%_4.17%_53.16%]">
+        <div className="absolute inset-[-5.11%_-24.35%_-15.34%_-24.35%]">
+          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.account_union_right} />
+        </div>
+      </div>
+      <div className="absolute inset-[4.17%_53.16%_4.17%_8.33%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.account_union_left} />
+      </div>
+    </div>
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_account_inactive} />
+  );
 
 /* ─── Nav items definition ───────────────────────────────── */
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [

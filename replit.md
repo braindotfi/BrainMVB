@@ -107,3 +107,23 @@ pixel-perfect Figma rebuilds living in `client/src/components/settings/figma/`:
 
 To re-export new Figma icons: download URL hash → `attached_assets/figma_icons/sub/<hash>.svg`
 and add the import + map entry to `client/src/assets/sub-icons.ts`.
+
+## Settings Nav Icon Active States (April 2026)
+Each settings nav item has an "active" variant pulled from Figma:
+- Security 3697:40137, Notifications 3704:37874, Payments 3706:38466,
+  Agents 3709:39289, Legal 3709:39914, Account 3716:40613
+- Active SVG layers stored in `attached_assets/figma_icons/nav/` (11 files)
+- Typed registry: `client/src/assets/nav-active-icons.ts` (`NAV_ACTIVE`)
+- Each `XxxNavIcon` in `SettingsPage.tsx` accepts `active: boolean` and renders
+  the multi-vector active treatment when true, otherwise the inactive single-vector.
+- Legal's active base is a CSS-drawn rounded rect with the purple linear-gradient
+  (this matches the Figma export, which uses a styled div not an SVG).
+
+## Font Fix (April 2026)
+Figma-exported components used `font-['Gilroy:Medium',sans-serif]` syntax
+where the colon makes the font name invalid → browsers fall back to plain sans-serif.
+Replaced across all `client/src/components/settings/figma/*.tsx`:
+- `font-['Gilroy:Medium',sans-serif]` → `font-['Gilroy',sans-serif] font-medium`
+- `font-['Gilroy:SemiBold',sans-serif]` → `font-['Gilroy',sans-serif] font-semibold`
+The "Gilroy" family is loaded via bunny.net at top of `client/src/index.css`
+with weights 400/500/600/700/800.

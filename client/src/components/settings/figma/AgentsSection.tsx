@@ -6,7 +6,7 @@ import { Switch } from "./FigmaPrimitives";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Permissions
           </p>
         </div>
@@ -29,11 +29,11 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Allow Agent Transactions
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Let AI agents execute payments on your behalf
                   </p>
                 </div>
@@ -71,11 +71,11 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Require 2FA for Agent Payments
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Confirm agent spends via authenticator
                   </p>
                 </div>
@@ -103,11 +103,11 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] w-full">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] w-full">
                   Max Auto-Approve Amount
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0 w-full">
-                  <p className="flex-[1_0_0] font-['Gilroy:Medium',sans-serif] leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
+                  <p className="flex-[1_0_0] font-['Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
                     Amounts below this execute without confirmation
                   </p>
                 </div>
@@ -115,7 +115,7 @@ import { Switch } from "./FigmaPrimitives";
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
               <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                   1000
                 </p>
                 <div className="h-[16px] relative shrink-0 w-0">
@@ -125,7 +125,7 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy:SemiBold',sans-serif] leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
                   USD
                 </p>
               </div>
@@ -154,11 +154,11 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] w-full">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] w-full">
                   Max Daily Agent Spend
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0 w-full">
-                  <p className="flex-[1_0_0] font-['Gilroy:Medium',sans-serif] leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
+                  <p className="flex-[1_0_0] font-['Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
                     Aggregate cap across all agents per day
                   </p>
                 </div>
@@ -166,7 +166,7 @@ import { Switch } from "./FigmaPrimitives";
             </div>
             <div className="bg-[#222737] border border-[#414965] border-solid content-stretch flex gap-[8px] items-center px-[8px] py-[10px] relative rounded-[8px] shrink-0 w-[160px]">
               <div className="content-stretch flex flex-[1_0_0] gap-[2px] items-center min-w-px relative">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                   2000
                 </p>
                 <div className="h-[16px] relative shrink-0 w-0">
@@ -176,7 +176,7 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                <p className="font-['Gilroy:SemiBold',sans-serif] leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[12px] text-center whitespace-nowrap">
                   USD
                 </p>
               </div>
@@ -186,7 +186,7 @@ import { Switch } from "./FigmaPrimitives";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy:SemiBold',sans-serif] leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Confirmation Rules
           </p>
         </div>
@@ -211,11 +211,11 @@ import { Switch } from "./FigmaPrimitives";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Manual Approval Required
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy:Medium',sans-serif] leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Ask me before every agent transaction
                   </p>
                 </div>
