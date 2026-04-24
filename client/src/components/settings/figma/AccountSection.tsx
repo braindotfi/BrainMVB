@@ -38,7 +38,7 @@ function ConfirmCloseModal({ onCancel, onConfirm }: { onCancel: () => void; onCo
           Close Account
         </p>
         <p className="font-['Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px] text-center w-full">
-          Are you sure you want to permanently delete your Brain account?
+          Are you sure you want to permanently delete your Brain account? This is irreversible.
         </p>
       </div>
       <div className="flex gap-[8px] items-center w-full">
