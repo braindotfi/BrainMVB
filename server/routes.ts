@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { keccak256, toBytes } from "viem";
 import { storage } from "./storage";
-import { startDailyInsightsScheduler, getInsightsState, generateInsights } from "./insightsService";
 import { z } from "zod";
 import {
   computeBrainAccountAddress,
@@ -51,17 +50,6 @@ function safeBigInt(val: unknown, field: string): bigint {
     throw new Error(`Invalid integer value for "${field}": ${str}`);
   }
   return BigInt(str);
-}
-
-// SSE connections map: userId → Response[]
-const sseClients = new Map<string, Response[]>();
-
-function broadcastNotification(userId: string, payload: object) {
-  const clients = sseClients.get(userId) ?? [];
-  const data = `data: ${JSON.stringify(payload)}\n\n`;
-  clients.forEach(res => {
-    try { res.write(data); } catch { /* client disconnected */ }
-  });
 }
 
 // ─── Agent Runtime (ReAct Loop) ────────────────────────────────────────────────
@@ -206,44 +194,6 @@ Execute the objective within your policy constraints. Use tools to act. When com
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-
-  // ─────────────────────────────────────────────────────────────
-  // AI ASSISTANT
-  // ─────────────────────────────────────────────────────────────
-  app.post("/api/assistant/chat", async (req, res) => {
-    try {
-      const { messages } = req.body;
-      if (!messages || !Array.isArray(messages)) {
-        return res.status(400).json({ error: "Messages array required" });
-      }
-      if (messages.length > 50) {
-        return res.status(400).json({ error: "Too many messages (max 50)" });
-      }
-      for (const m of messages as Array<{ role: string; content: string }>) {
-        if (!["user", "assistant"].includes(m?.role)) {
-          return res.status(400).json({ error: "Invalid message role" });
-        }
-        if (typeof m?.content !== "string" || m.content.length > 8000) {
-          return res.status(400).json({ error: "Message content too long (max 8000 chars)" });
-        }
-      }
-      const response = await anthropic.messages.create({
-        model: "claude-opus-4-5",
-        max_tokens: 1024,
-        system: "You are Brain AI, an intelligent assistant specialized in DeFi, crypto trading, AI agents, and blockchain technology on Base L2. You help users understand AI agents, analyze market trends, and make informed decisions. Be concise, knowledgeable, and helpful.",
-        messages: messages.map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-      });
-      const content = response.content[0];
-      if (content.type === "text") return res.json({ message: content.text });
-      return res.status(500).json({ error: "Unexpected response type" });
-    } catch (error) {
-      console.error("Claude API error:", error);
-      return res.status(500).json({ error: "Failed to get AI response" });
-    }
-  });
 
   // ─────────────────────────────────────────────────────────────
   // MARKETPLACE
@@ -542,19 +492,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await storage.addMemory({ agentId: req.params.id, content: `Objective: ${objective}. Result: ${summary}`, actionType: "objective_complete", metadata: { objective } });
       await storage.updateAgent(req.params.id, { lastActiveAt: new Date() } as any);
 
-      // Broadcast notification to agent owner
-      if (agent.ownerId) {
-        const notif = await storage.createNotification({
-          userId: agent.ownerId,
-          type: "AGENT_OBJECTIVE_COMPLETE",
-          title: `${agent.name} completed its objective`,
-          body: summary.slice(0, 120) + (summary.length > 120 ? "…" : ""),
-          data: { agentId: agent.id, objective },
-          read: false,
-        });
-        broadcastNotification(agent.ownerId, { type: "notification", payload: notif });
-      }
-
       return res.json({ agentId: req.params.id, objective, summary, status: "complete" });
     } catch (error) {
       console.error("Agent run error:", error);
@@ -646,96 +583,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.json({ success: true, agentId, amount, asset: asset ?? "USDC", message: "Capital allocated to agent sub-account." });
     } catch (error) {
       return res.status(500).json({ error: "Failed to allocate capital" });
-    }
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // NOTIFICATIONS
-  // ─────────────────────────────────────────────────────────────
-  app.get("/api/notifications", async (req, res) => {
-    try {
-      const userId = (req.query.userId as string) ?? "demo-user";
-      const notifications = await storage.getNotifications(userId);
-      return res.json(notifications.filter((n: { type: string }) => n.type !== "insights"));
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch notifications" });
-    }
-  });
-
-  app.get("/api/notifications/count", async (req, res) => {
-    try {
-      const userId = (req.query.userId as string) ?? "demo-user";
-      const count = await storage.getUnreadCount(userId);
-      return res.json({ count });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to get count" });
-    }
-  });
-
-  app.post("/api/notifications/:id/read", async (req, res) => {
-    try {
-      await storage.markAsRead(req.params.id);
-      return res.json({ success: true });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to mark as read" });
-    }
-  });
-
-  app.delete("/api/notifications/:id", async (req, res) => {
-    try {
-      await storage.deleteNotification(req.params.id);
-      return res.json({ success: true });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to delete notification" });
-    }
-  });
-
-  // SSE stream for real-time notifications
-  app.get("/api/notifications/stream", (req, res) => {
-    const userId = (req.query.userId as string) ?? "demo-user";
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.flushHeaders();
-
-    // Send initial ping
-    res.write(`data: ${JSON.stringify({ type: "connected", userId })}\n\n`);
-
-    // Register this client
-    const existing = sseClients.get(userId) ?? [];
-    existing.push(res);
-    sseClients.set(userId, existing);
-
-    // Heartbeat every 30s to keep connection alive
-    const heartbeat = setInterval(() => {
-      try { res.write(": heartbeat\n\n"); } catch { clearInterval(heartbeat); }
-    }, 30000);
-
-    req.on("close", () => {
-      clearInterval(heartbeat);
-      const clients = sseClients.get(userId) ?? [];
-      sseClients.set(userId, clients.filter(c => c !== res));
-    });
-  });
-
-  // Demo endpoint: trigger a test notification
-  app.post("/api/notifications/demo", async (req, res) => {
-    try {
-      const { userId = "demo-user", type = "AGENT_OBJECTIVE_COMPLETE" } = req.body;
-      const notif = await storage.createNotification({
-        userId,
-        type,
-        title: "Demo Notification",
-        body: "This is a live demo notification via SSE stream.",
-        data: { demo: true },
-        read: false,
-      });
-      broadcastNotification(userId, { type: "notification", payload: notif });
-      return res.json({ success: true, notification: notif });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to create demo notification" });
     }
   });
 
@@ -1079,40 +926,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // DAILY INSIGHTS
-  // ─────────────────────────────────────────────────────────────
-
-  // GET /api/insights — return the latest generated insights
-  app.get("/api/insights", (_req, res) => {
-    try {
-      const state = getInsightsState();
-      return res.json(state);
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to fetch insights" });
-    }
-  });
-
-  // POST /api/insights/trigger — manually regenerate insights (dev/test)
-  app.post("/api/insights/trigger", async (_req, res) => {
-    try {
-      const insights = await generateInsights();
-      const notif = await storage.createNotification({
-        userId: "demo-user",
-        type: "insights",
-        title: "Daily Insights Ready",
-        body: `Brain AI has analysed your accounts and found ${insights.length} personalised recommendations for you today.`,
-        data: { insightCount: insights.length, generatedAt: new Date().toISOString() },
-        read: false,
-      });
-      broadcastNotification("demo-user", { type: "notification", notification: notif });
-      broadcastNotification("anonymous", { type: "notification", notification: notif });
-      return res.json({ success: true, count: insights.length });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to trigger insights" });
-    }
-  });
-
   // ── Contract / Protocol Routes ─────────────────────────────────────────────
 
   /**
@@ -1376,41 +1189,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     }
   });
-
-  // ── Seed demo notifications if none exist ──
-  (async () => {
-    try {
-      const existing = await storage.getNotifications("demo-user", 1);
-      if (existing.length === 0) {
-        const notifSeeds: Array<{ type: string; title: string; body: string; read: boolean }> = [
-          { type: "trade",   read: false, title: "AlphaFlow executed a trade",        body: "Bought 0.42 ETH at $2,487.30 — momentum signal triggered." },
-          { type: "launch",  read: false, title: "SwarmAlpha just launched 🚀",        body: "A new AI agent token is live on Launchpad. Bonding curve at 8%." },
-          { type: "risk",    read: true,  title: "Risk Sentinel: Anomaly detected",   body: "Unusual volume spike on MATIC position. Risk threshold at 78%." },
-          { type: "yield",   read: true,  title: "Yield Pilot rebalanced portfolio",  body: "Moved 15% from AAVE to Compound to chase higher yield (8.2% APY)." },
-          { type: "trade",   read: true,  title: "TrendRadar bonding curve at 22%",   body: "The agent you're watching has gained 45.2% in 24h." },
-          { type: "payment", read: true,  title: "Pay Stream payment executed",       body: "Processed $324.50 payment via x402 protocol — confirmed." },
-          { type: "risk",    read: true,  title: "Signal Seer paused",               body: "The agent paused due to low confidence signals. Review required." },
-          { type: "payment", read: true,  title: "Deposit confirmed: $2,500 USDC",   body: "Your USDC deposit has been confirmed on Base. Funds are now available." },
-          { type: "trade",   read: true,  title: "AlphaFlow reached profit target",  body: "Portfolio up 12.4% this week. AlphaFlow closed all BTC positions." },
-          { type: "payment", read: true,  title: "Withdrawal completed: $500 USDC",  body: "Your withdrawal of $500 USDC to your bank account was processed." },
-          { type: "launch",  read: true,  title: "InboxZero reaches 1,000 installs", body: "The agent you created has crossed 1,000 installs on Brain Launchpad." },
-        ];
-        for (const s of notifSeeds) {
-          await storage.createNotification({
-            userId: "demo-user",
-            type: s.type,
-            title: s.title,
-            body: s.body,
-            read: s.read,
-            data: null,
-          });
-        }
-      }
-    } catch { /* non-fatal — notifications are optional */ }
-  })();
-
-  // Start the 24-hour scheduler
-  startDailyInsightsScheduler(broadcastNotification);
 
   return httpServer;
 }

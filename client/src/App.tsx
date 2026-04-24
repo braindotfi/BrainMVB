@@ -1,18 +1,16 @@
-import { useState } from "react";
-import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Web3Provider } from "@/lib/web3Provider";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
+import { useState } from "react";
+import { useLocation } from "wouter";
 
 import { AgentsActivityPage } from "@/pages/AgentsActivityPage";
 import { AgentManagePage } from "@/pages/AgentManagePage";
-import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { AssistantPage } from "@/pages/AssistantPage";
 import { Marketplace } from "@/pages/Marketplace";
 import { SignupPage } from "@/pages/SignupPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
@@ -74,14 +72,10 @@ function AppLayout() {
 
         <div className="flex-1 min-w-0 min-h-0">
           <Switch>
-            <Route path="/" component={DashboardPage} />
-            <Route path="/dashboard" component={DashboardPage} />
-            <Route path="/assistant" component={AssistantPage} />
-            <Route path="/marketplace" component={Marketplace} />
-            <Route path="/perks">{() => <Redirect to="/dashboard" />}</Route>
+            <Route path="/">{() => <Redirect to="/agents" />}</Route>
             <Route path="/agents" component={AgentsActivityPage} />
             <Route path="/manage/:id" component={AgentManagePage} />
-            <Route path="/notifications" component={NotificationsPage} />
+            <Route path="/marketplace" component={Marketplace} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/agent/:id" component={AgentDetailPage} />
             <Route component={NotFound} />
