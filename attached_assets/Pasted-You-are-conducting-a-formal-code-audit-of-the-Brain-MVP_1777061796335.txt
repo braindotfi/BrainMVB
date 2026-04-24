@@ -1,0 +1,128 @@
+You are conducting a formal code audit of the Brain MVP codebase. Brain is a SaaS/API protocol for financial intelligence, with five architectural layers (Raw, Wiki, Policy, Execution, Audit) exposed as HTTP APIs plus one MCP surface and four Solidity smart contracts on Base L2. This audit is NOT a refactor. You will identify issues, not fix them, except where a fix is trivial and obviously correct.
+
+You are taking on seven roles in sequence. Complete each phase before moving to the next. Produce a written report for each phase, then a consolidated report at the end. Do not skip phases. Do not combine phases.
+
+AUTHORITATIVE REFERENCE DOCUMENTS (these exist in the repo at /docs):
+- docs/architecture.md (Brain_MVP_Architecture.md)
+- docs/standards.md (Brain_Engineering_Standards.md)  
+- docs/api.yaml (Brain_API_Specification.yaml)
+
+Read all three documents in full before starting Phase 1. If any document is missing, stop and report that before proceeding.
+
+==============================================================================
+PHASE 1: SPEC COMPLIANCE AUDIT (Role: API Architect)
+==============================================================================
+
+Your job: verify that the implementation matches the OpenAPI 3.1 specification.
+
+For every endpoint in api.yaml, check:
+- Path and HTTP verb are implemented
+- Request body schema matches spec exactly (required fields, types, enums)
+- Response body schema matches spec exactly for every status code documented
+- All error codes in the spec are returned by the right code paths
+- Pagination uses cursor-based approach per spec, never offset-based
+- Idempotency-Key handling is present on endpoints that create resources
+- Content-Type handling matches (multipart/form-data for uploads, JSON elsewhere)
+
+Produce a table with columns: Endpoint | Status (MATCH / MISMATCH / MISSING) | Specific deviations | Severity (P0/P1/P2/P3).
+
+Flag every case where the implementation has drifted from the spec. Do not assume implementation is correct. If the spec says "returns 201 on create, 200 on idempotent repeat," and the code always returns 201, that is a MISMATCH.
+
+==============================================================================
+PHASE 2: SECURITY AUDIT (Role: Application Security Engineer)
+==============================================================================
+
+Your job: identify security vulnerabilities and policy violations against standards.md section 2 (Auth) and section 14 (Data retention and privacy).
+
+Check for:
+- Every SQL query filters by tenant_id. Flag any that don't. This is a P0.
+- Row-level security policies exist on every tenant-scoped table and are enabled.
+- No raw SQL concatenation anywhere. All queries use parameterized statements.
+- JWT validation uses RS256 against the correct issuer and audience. Expiry is checked on every request.
+- Scope checks are enforced at the endpoint level, not just documented.
+- External agent authentication verifies EIP-712 signatures against the on-chain BrainMCPAgentRegistry record.
+- Secrets are never logged. PII is never logged. Financial values in cents/atomic units can be logged; raw financial record bodies cannot.
+- The tenant-isolation SQL scanner from CI is present and enforced.
+- No hardcoded secrets, API keys, or credentials in source.
+- No use of localStorage/sessionStorage for sensitive data in any frontend code.
+- Blob storage paths prefix by tenant_id and access uses per-tenant RBAC.
+- Rate limiting is implemented on auth endpoints and on the /wiki/question endpoint (LLM cost exposure).
+- CORS is explicitly configured, not using wildcards in production.
+
+Produce a findings report with: Finding | Location (file:line) | Severity | Remediation.
+
+Use CVSS-style severity: Critical (P0), High (P1), Medium (P2), Low (P3). Anything that risks tenant data crossing boundaries is automatically P0.
+
+==============================================================================
+PHASE 3: SMART CONTRACT AUDIT (Role: Solidity Security Auditor)
+==============================================================================
+
+Your job: review the four Solidity contracts in /contracts/src/ against industry-standard security practices.
+
+Audit BrainAuditAnchor.sol, BrainPolicyRegistry.sol, BrainSmartAccount.sol, and BrainMCPAgentRegistry.sol for:
+
+- Reentrancy risks. Any external call followed by state change is a finding.
+- Integer overflow/underflow. Solidity 0.8+ has built-in checks but unchecked blocks need review.
+- Access control. Who can call each external function, and is that check correct.
+- Signature replay attacks. Every signed operation includes a nonce or equivalent.
+- Front-running risks on public functions.
+- Gas limits on unbounded loops or array operations.
+- Missing events on state-changing operations.
+- Upgrade safety. MVP contracts are non-upgradeable per standards 10.5 — verify no proxy patterns were introduced.
+- Dependency versions. Solidity 0.8.25 or later. No outdated OpenZeppelin.
+- Test coverage per standards 10.2: every external function has unit tests, at least 3 invariants per contract with 10,000+ fuzz runs, fork tests against Base Sepolia exist.
+
+For BrainSmartAccount specifically:
+- Session key validation: validAfter, validUntil, allowedTargets, allowedSelectors, maxPerTx, maxPerPeriod all enforced on every execution.
+- The session key's policyVersion matches the active policy in BrainPolicyRegistry before execution.
+- Revocation is instantaneous.
+- The root owner can always override the session key holder.
+
+For BrainMCPAgentRegistry specifically:
+- Third-party agents cannot self-register.
+- Tenant EIP-712 signature is verified against the tenant's root key.
+- Revocation is instantaneous and visible on-chain.
+
+Produce a findings report with: Finding | Contract | Function | Severity | Recommended fix | Requires re-audit (yes/no).
+
+==============================================================================
+PHASE 4: DATABASE AND DATA INTEGRITY AUDIT (Role: Principal Database Engineer)
+==============================================================================
+
+Your job: review the Postgres schema and migrations against standards.md section 5.
+
+Check for:
+- Every table has id UUID PK with gen_random_uuid() default.
+- Every tenant-scoped table has tenant_id as the first column of the leading index.
+- All timestamps are TIMESTAMPTZ, never TIMESTAMP.
+- All foreign keys specify ON DELETE behavior explicitly.
+- Row-level security is enabled on every tenant-scoped table and the policies reference the session variable app.tenant_id correctly.
+- JSONB columns have NOT NULL with appropriate DEFAULT unless nullability is intentional.
+- No ad-hoc indexes exist without a documented query pattern.
+- Migrations are named correctly (YYYYMMDD_HHMM_description.sql).
+- Every migration has deploy, revert, and verify scripts.
+- No migration has been edited after deployment. Check git history.
+- Migration round-trip (deploy → revert → re-deploy) succeeds for every migration.
+- The Merkle audit chain is serialized per tenant via advisory lock.
+- The raw_artifacts unique constraint on (tenant_id, sha256) is present and enforced.
+- The wiki_entities provenance enum includes all five values: extracted, inferred, ambiguous, human_confirmed, agent_contributed.
+- The raw_artifacts source_type enum includes agent_contributed.
+
+Produce a findings report with: Finding | Table/Migration | Severity | Fix.
+
+==============================================================================
+PHASE 5: CODE QUALITY AND STANDARDS AUDIT (Role: Staff Engineer)
+==============================================================================
+
+Your job: review implementation quality against standards.md sections 4 (logging), 6 (API conventions), 7 (state machines), and 11 (testing).
+
+Check:
+- Structured JSON logging with every required field present. No console.log or print statements anywhere.
+- Every log record includes tenant_id when in a request context.
+- No secrets in logs. No PII in logs. Grep for known PII patterns and verify.
+- OpenTelemetry traces are present on every HTTP request and every outbound HTTP call.
+- The four state machines (Proposal, Execution, Policy, AuditEvent) are implemented as typed enums with explicit transition functions. Illegal transitions throw.
+- Feature flags follow kebab-case naming. No orphaned flags >90 days at 100%.
+- Error codes are centralized in api/src/shared/errors/codes.ts. No ad-hoc strings elsewhere.
+- Test coverage meets the 80% bar for unit tests on pure functions.
+- Integration tests
