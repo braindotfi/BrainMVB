@@ -44,13 +44,8 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
 
 const BrainLogo = () => (
   <div className="h-[40px] relative shrink-0 w-[130px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[32px] top-1/2">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_union} />
-      </div>
-      <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[0px_0px] mask-size-[32px_32px] size-[32px] top-1/2" style={{ maskImage: `url('${ICONS.brain_mask}')` }}>
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_overlay} />
-      </div>
+    <div className="absolute left-0 size-[40px] top-0 flex items-center justify-center">
+      <img alt="Brain" className="size-[40px] object-contain" src={ICONS.brain_logo_3d} />
     </div>
     <p className="absolute leading-[0] left-[44px] not-italic text-[0px] text-white top-[8px] whitespace-nowrap" style={{ fontFamily: "'Gridular', sans-serif" }}>
       <span className="leading-[24px] text-[#7631ee] text-[28px]">br</span>

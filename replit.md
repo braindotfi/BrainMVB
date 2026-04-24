@@ -200,3 +200,21 @@ Account" in `SendModal.tsx` (RECIPIENT_TYPES + step-2 review row + agent
 fallback) and `AddAccountModal.tsx` (Step-2 comment). Proper agent names like
 "Treasury AI Agent" and the platform tagline "AI Agent Marketplace on Base"
 are intentionally unchanged.
+
+## Brain Icon Refresh (April 2026)
+- Activity page "Brain Did" icon (Figma 3943:42552): refreshed
+  `attached_assets/figma_icons/brain_did_bg.svg` and `brain_did_vec.svg`. The
+  surrounding `BrainDidIcon` component in `ActivityPage.tsx` already uses the
+  same circle+vector composition that Figma exports for this node, so no
+  component code change was needed — only assets.
+- Main-menu top-left brain logo (Figma 3879:42001): replaced
+  `attached_assets/figma_icons/brain_logo_3d.png` with the user-attached PNG
+  (`Frame_1000002163_1777050618125.png`). The Figma node uses 19+ ellipses +
+  Union shapes which would not be pixel-perfect to recompose, so per the
+  user's instructions we used the attached file as the canonical render.
+- `BrainLogo` in `NavigationMenuSection.tsx` now renders the new PNG directly
+  (single `<img src={ICONS.brain_logo_3d}>`) instead of the old
+  union+mask+overlay composition, so both the expanded and collapsed nav
+  states show the same updated logo. The legacy `brain_union`, `brain_mask`,
+  and `brain_overlay` SVG entries remain in `figma-icons.ts` for now in case
+  we need them again.
