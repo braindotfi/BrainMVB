@@ -179,9 +179,9 @@ const GreenGlow = () => (
 
 /* Card header — swappable icon */
 const CardHeader = ({
-  balance, currency, icon,
-}: { balance: string; currency: string; icon: "wallet" | "agent" }) => (
-  <div className="flex w-[338px] items-center justify-center gap-4 absolute top-4 left-4">
+  balance, currency, icon, hideBalance = false,
+}: { balance: string; currency: string; icon: "wallet" | "agent"; hideBalance?: boolean }) => (
+  <div className="flex w-[338px] items-center justify-start gap-4 absolute top-4 left-4">
     {icon === "agent" ? (
       /* Figma WalletIcons — green circle bg + dark-green robot at inset-[20%] */
       <div className="overflow-clip relative rounded-[24px] w-12 h-12 flex-shrink-0">
@@ -193,16 +193,18 @@ const CardHeader = ({
     ) : (
       <img className="w-12 h-12" alt="Wallet" src="/figmaAssets/wallet-icons.svg" />
     )}
-    <div className="flex items-center gap-2 flex-1">
-      <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1white text-[32px] text-center leading-8 whitespace-nowrap">
-        {balance}
-      </span>
-      <div className="inline-flex items-start px-1.5 py-0.5 bg-brain-v1white-30 rounded-[100px]">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-xs leading-3 whitespace-nowrap">
-          {currency}
+    {!hideBalance && (
+      <div className="flex items-center gap-2 flex-1">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1white text-[32px] text-center leading-8 whitespace-nowrap">
+          {balance}
         </span>
+        <div className="inline-flex items-start px-1.5 py-0.5 bg-brain-v1white-30 rounded-[100px]">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-xs leading-3 whitespace-nowrap">
+            {currency}
+          </span>
+        </div>
       </div>
-    </div>
+    )}
   </div>
 );
 
@@ -249,12 +251,11 @@ const DebitCardView = ({ account }: { account?: WirexAccount }) => {
   const expiry = account?.cardExpiry || "—";
   const cvv = account?.cardCvv || "—";
   const name = account?.nameOnAccount || "—";
-  const balance = account?.balance ? `$${account.balance}` : "$0.00";
   const currency = account?.currency || "USD";
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
-      <CardHeader balance={balance} currency={currency} icon="wallet" />
+      <CardHeader balance="" currency={currency} icon="wallet" hideBalance />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
         <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Debit Card</span>
         <div className="flex items-start gap-2 self-stretch">

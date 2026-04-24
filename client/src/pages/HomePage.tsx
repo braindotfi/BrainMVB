@@ -156,7 +156,7 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Money in all accounts</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">$74,493</span>
+                      <span className="font-medium leading-[36px] text-[32px]">$86,993</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#414965] text-[20px] w-full">
