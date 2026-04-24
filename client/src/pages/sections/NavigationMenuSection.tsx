@@ -236,7 +236,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
               <ExpandIcon />
             </button>
             <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
-              <img className="w-[32px] h-[32px] object-contain flex-shrink-0" alt="Brain" src={ICONS.brain_union} />
+              <img className="w-[40px] h-[40px] object-contain flex-shrink-0" alt="Brain" src={ICONS.brain_logo_3d} />
             </div>
             {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => (
               <Link key={path} href={path} className="outline-none focus:outline-none">

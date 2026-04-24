@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const IMG_DOT = "https://www.figma.com/api/mcp/asset/a01773a1-31c0-4017-8d1a-60bc12ffa8cb";
+import { ICONS } from "@/assets/figma-icons";
+const IMG_DOT = ICONS.activity_dot;
 const IMG_INVOICE_BG = "https://www.figma.com/api/mcp/asset/bd90288b-1ee1-46f9-8d1a-e4c7ecd5e617";
 const IMG_INVOICE_ICON = "https://www.figma.com/api/mcp/asset/8ff85552-336d-4aff-9288-adc36e952200";
 

@@ -1,47 +1,19 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-const IMG_DOT = "https://www.figma.com/api/mcp/asset/a01773a1-31c0-4017-8d1a-60bc12ffa8cb";
-
-const IMG_PAID_BG = "https://www.figma.com/api/mcp/asset/4a21ae3f-c946-415c-9dcf-8da32ae1e553";
-const IMG_PAID_VEC = "https://www.figma.com/api/mcp/asset/ddd6aff6-dc13-4525-b570-5d664761433c";
-
-const IMG_MOVED_BG = "https://www.figma.com/api/mcp/asset/a2a3401f-002c-4082-9469-668eb8ac4e64";
-const IMG_MOVED_VEC = "https://www.figma.com/api/mcp/asset/10cd81a4-26e1-4a14-a03b-91c1d270961c";
-
-const IMG_NOTICED_BG = "https://www.figma.com/api/mcp/asset/05af9150-0767-4803-ba5b-074d070d3ab1";
-const IMG_NOTICED_VEC = "https://www.figma.com/api/mcp/asset/a28b70b6-393a-49d0-9ab6-6035875bc4fd";
-
-const IMG_APPROVED_BG = "https://www.figma.com/api/mcp/asset/087a9b7b-19ac-443d-b071-3c834656dba8";
-const IMG_APPROVED_VEC = "https://www.figma.com/api/mcp/asset/d5b32c07-c2d6-453a-b226-6f188a12cbd0";
-const IMG_APPROVED_VEC2 = "https://www.figma.com/api/mcp/asset/1ed82ec6-0f9a-4f71-a408-b362b9bfee9d";
+import { ICONS } from "@/assets/figma-icons";
 
 type ActivityType = "paid" | "moved" | "noticed" | "approved";
 
-const PaidIcon = () => (
+/* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
+const BrainDidIcon = () => (
   <div className="relative rounded-[100px] shrink-0 size-[40px]">
     <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_PAID_BG} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_did_bg} />
     </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-      <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
-        <div className="absolute inset-[-8.51%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_PAID_VEC} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const MovedIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_MOVED_BG} />
-    </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-      <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
-        <div className="absolute inset-[-8.51%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_MOVED_VEC} />
+    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
+      <div className="absolute inset-[12.5%]">
+        <div className="absolute inset-[-5.56%]">
+          <img alt="" className="block max-w-none size-full" src={ICONS.brain_did_vec} />
         </div>
       </div>
     </div>
@@ -51,12 +23,12 @@ const MovedIcon = () => (
 const NoticedIcon = () => (
   <div className="relative rounded-[100px] shrink-0 size-[40px]">
     <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_NOTICED_BG} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.noticed_bg} />
     </div>
     <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
       <div className="absolute inset-[12.5%_12.5%_20.83%_12.5%]">
         <div className="absolute inset-[-6.25%_-5.56%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_NOTICED_VEC} />
+          <img alt="" className="block max-w-none size-full" src={ICONS.noticed_vec} />
         </div>
       </div>
     </div>
@@ -66,17 +38,17 @@ const NoticedIcon = () => (
 const ApprovedIcon = () => (
   <div className="relative rounded-[100px] shrink-0 size-[40px]">
     <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_APPROVED_BG} />
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.approved_bg} />
     </div>
     <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
       <div className="absolute inset-[12.5%_12.49%_14.82%_33.33%]">
         <div className="absolute inset-[-5.73%_-7.69%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_APPROVED_VEC} />
+          <img alt="" className="block max-w-none size-full" src={ICONS.approved_vec} />
         </div>
       </div>
       <div className="absolute inset-[41.67%_66.67%_16.67%_12.5%]">
         <div className="absolute inset-[-10%_-20%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_APPROVED_VEC2} />
+          <img alt="" className="block max-w-none size-full" src={ICONS.approved_vec2} />
         </div>
       </div>
     </div>
@@ -87,8 +59,8 @@ type Tab = "All" | "Brain Did" | "You Approved" | "Brain Noticed";
 const TABS: Tab[] = ["All", "Brain Did", "You Approved", "Brain Noticed"];
 
 const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
-  paid: PaidIcon,
-  moved: MovedIcon,
+  paid: BrainDidIcon,
+  moved: BrainDidIcon,
   noticed: NoticedIcon,
   approved: ApprovedIcon,
 };
@@ -138,13 +110,13 @@ const ActivityItem = ({ item }: { item: ActivityItemData }) => {
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px]">{item.meta1}</p>
             {item.meta2 && (
               <>
-                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
+                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} /></div>
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.meta2}</p>
               </>
             )}
             {item.meta3 && (
               <>
-                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
+                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} /></div>
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.meta3}</p>
               </>
             )}
