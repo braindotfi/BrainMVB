@@ -21,20 +21,28 @@ type Section =
 
 /* ─── Nav icon components (from Figma 3695:38606) ──────────── */
 /* Profile is the only menu item with a custom "active" treatment
-   in the Figma design (purple gradient + filled icon). All other
-   inactive items render their Figma vector at default gray. */
-const ProfileNavIcon = ({ active }: { active: boolean }) => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[4.17%_12.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_profile_active_head} />
-    </div>
-    <div className="absolute inset-[33.33%_29.17%_16.67%_29.17%]">
-      <div className="absolute inset-[-9.38%_-22.5%_-28.13%_-22.5%]">
-        <img alt="" className="block max-w-none size-full" src={ICONS.settings_profile_active_body} style={{ filter: active ? "none" : "grayscale(1) brightness(0.85)" }} />
+   in the Figma design (purple gradient + filled icon). The inactive
+   variant uses the dedicated Figma "Subtract" mark (node 3957:44016).
+   Other inactive nav items render their Figma vector at default gray. */
+const ProfileNavIcon = ({ active }: { active: boolean }) =>
+  active ? (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[4.17%_12.5%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_profile_active_head} />
+      </div>
+      <div className="absolute inset-[33.33%_29.17%_16.67%_29.17%]">
+        <div className="absolute inset-[-9.38%_-22.5%_-28.13%_-22.5%]">
+          <img alt="" className="block max-w-none size-full" src={ICONS.settings_profile_active_body} />
+        </div>
       </div>
     </div>
-  </div>
-);
+  ) : (
+    <div className="relative shrink-0 size-[24px]">
+      <div className="absolute inset-[4.17%_12.5%]">
+        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_profile_inactive} />
+      </div>
+    </div>
+  );
 
 const FigmaNavIcon = ({ src, inset = "4.17%_8.33%" }: { src: string; inset?: string }) => (
   <div className="relative shrink-0 size-[24px]">
@@ -256,7 +264,7 @@ const SectionLabel = ({ children }: { children: string }) => (
   </p>
 );
 
-/* ─── Profile section (Figma 3695:38606 / 3695:39859 / 3695:40062) ─── */
+/* ─── Profile section (Figma 3695:38606 / 3957:43974) ─── */
 const RowCircleIcon = ({ src, inset, innerInset, overflowClip }: { src: string; inset: string; innerInset: string; overflowClip?: boolean }) => (
   <div className="relative rounded-[100px] shrink-0 size-[40px]">
     <div className="absolute left-0 size-[40px] top-0">
@@ -270,6 +278,59 @@ const RowCircleIcon = ({ src, inset, innerInset, overflowClip }: { src: string; 
       </div>
     </div>
   </div>
+);
+
+/* Single-image circle icon: SVG centered in 40px circle at explicit
+   width/height to preserve its aspect ratio (the Figma exports use
+   preserveAspectRatio="none", so we size the wrapper exactly). */
+const ProfileRowCircle = ({ src, w, h }: { src: string; w: number; h: number }) => (
+  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+    <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
+    <img
+      alt=""
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block"
+      src={src}
+      style={{ width: `${w}px`, height: `${h}px` }}
+    />
+  </div>
+);
+
+/* Briefcase icon — 4-layer composite for the "Add Business Account" row
+   (Figma node within 3957:43975 misc section). */
+const BriefcaseRowCircle = () => (
+  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+    <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
+    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
+      {/* body 20×15 */}
+      <img alt="" className="absolute block" src={ICONS.settings_briefcase_body} style={{ width: 20, height: 15, left: 2, top: 7 }} />
+      {/* handle 10×6 */}
+      <img alt="" className="absolute block" src={ICONS.settings_briefcase_handle} style={{ width: 10, height: 6, left: 7, top: 2 }} />
+      {/* divider 20×4 */}
+      <img alt="" className="absolute block" src={ICONS.settings_briefcase_div} style={{ width: 20, height: 4, left: 2, top: 11 }} />
+      {/* plus 2×4 */}
+      <img alt="" className="absolute block" src={ICONS.settings_briefcase_plus} style={{ width: 2, height: 4, left: 11, top: 13 }} />
+    </div>
+  </div>
+);
+
+/* Right-side action button: 40px circle with chevron-right glyph.
+   Stops click propagation so the parent SettingRow's onClick doesn't
+   also fire (preventing duplicate toast notifications). */
+const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void; label: string; testId?: string }) => (
+  <button
+    type="button"
+    onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+    aria-label={label}
+    data-testid={testId}
+    className="relative rounded-[100px] shrink-0 size-[40px] hover:opacity-80 transition-opacity"
+  >
+    <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_action_circle_bg} />
+    <img
+      alt=""
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block size-[24px]"
+      src={ICONS.settings_chevron_right}
+    />
+  </button>
 );
 
 function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
@@ -351,14 +412,21 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
         </div>
       </Card>
 
-      {/* Identity card — borderless per Figma */}
+      {/* Identity card — borderless per Figma 3957:43974 */}
       <div>
         <SectionLabel>Identity</SectionLabel>
         <Card noBorder>
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
+            label="Account"
+            onClick={() => toast({ title: "Account details", description: "Account settings would open here." })}
+            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => toast({ title: "Account details", description: "Account settings would open here." })} />}
+            useCircleIcon
+          />
+          <Divider />
+          <SettingRow
+            icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="KYC Verification"
-            sublabel="Identity Fully Verified"
             right={
               <span
                 className="px-2 py-[3px] rounded-[22px]"
@@ -379,64 +447,33 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           />
           <Divider />
           <SettingRow
-            icon={
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
-                <div className="absolute left-0 size-[40px] top-0">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_row_circle_bg} />
-                </div>
-                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-                  <div className="absolute" style={{ inset: "16.67%" }}>
-                    <div className="absolute" style={{ inset: "-6.25%" }}>
-                      <img alt="" className="block max-w-none size-full" src={ICONS.settings_wallet_icon1} />
-                    </div>
-                  </div>
-                  <div className="absolute" style={{ inset: "56.77% 31.77% 35.94% 60.94%" }}>
-                    <div className="absolute" style={{ inset: "-28.57%" }}>
-                      <img alt="" className="block max-w-none size-full" src={ICONS.settings_wallet_icon2} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
-            label="Wallet Address"
-            sublabel="0x48f9...9daf"
-            right={
-              <button
-                data-testid="button-copy-wallet"
-                onClick={() => { navigator.clipboard.writeText("0x48f9c2a17b9c1d9e7c0fd4b9c7e3f5a8b29c9daf"); toast({ title: "Copied", description: "Wallet address copied to clipboard." }); }}
-                className="relative rounded-[100px] shrink-0 size-[40px] hover:opacity-80 transition-opacity"
-                title="Copy wallet address"
-              >
-                <div className="absolute left-0 size-[40px] top-0">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_action_circle_bg} />
-                </div>
-                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-                  <div className="absolute" style={{ inset: "16.67%" }}>
-                    <div className="absolute" style={{ inset: "-6.25%" }}>
-                      <img alt="" className="block max-w-none size-full" src={ICONS.settings_copy_icon} />
-                    </div>
-                  </div>
-                </div>
-              </button>
-            }
-            useCircleIcon
-          />
-          <Divider />
-          <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
             sublabel={phone}
             onClick={() => toast({ title: "Phone update", description: "An OTP has been sent to your current number." })}
-            right={
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
-                <div className="absolute left-0 size-[40px] top-0">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_action_circle_bg} />
-                </div>
-                <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-                  <img alt="" className="block size-full" src={ICONS.settings_chevron_right} />
-                </div>
-              </div>
-            }
+            right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" />}
+            useCircleIcon
+          />
+        </Card>
+      </div>
+
+      {/* Misc card — borderless per Figma 3957:43975 */}
+      <div>
+        <SectionLabel>Misc</SectionLabel>
+        <Card noBorder>
+          <SettingRow
+            icon={<ProfileRowCircle src={ICONS.settings_billing_icon} w={20} h={14.5} />}
+            label="Billing"
+            onClick={() => toast({ title: "Billing", description: "Billing & invoices would open here." })}
+            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => toast({ title: "Billing", description: "Billing & invoices would open here." })} />}
+            useCircleIcon
+          />
+          <Divider />
+          <SettingRow
+            icon={<BriefcaseRowCircle />}
+            label="Add Business Account"
+            onClick={() => toast({ title: "Add Business Account", description: "Business account onboarding would start here." })}
+            right={<ChevronActionButton label="Add business account" testId="button-add-business-account" onClick={() => toast({ title: "Add Business Account", description: "Business account onboarding would start here." })} />}
             useCircleIcon
           />
         </Card>

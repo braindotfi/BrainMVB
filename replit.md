@@ -104,6 +104,15 @@ pixel-perfect Figma rebuilds living in `client/src/components/settings/figma/`:
 - Each subpage starts with the Figma section group label (Authentication, Channels, Your Data, etc.)
   — the global `<h1>` SECTION_TITLES header was removed.
 - `ProfileSection` remains inline in `SettingsPage.tsx` using shared helpers (Card, SettingRow, Divider).
+  - Layout matches Figma node 3957:43974: header card (Avatar + name + email + amber Edit pill),
+    Identity card (Account, KYC Verification, Phone Number), Misc card (Billing, Add Business Account).
+  - Wallet Address row was removed (no longer in design).
+  - Helpers `ProfileRowCircle` (single-svg circle icon at explicit w/h), `BriefcaseRowCircle`
+    (4-layer briefcase composite), and `ChevronActionButton` (40px circle + chevron-right) live
+    alongside the older `RowCircleIcon`.
+- Inactive `ProfileNavIcon` uses dedicated Figma "Subtract" mark (node 3957:44016) →
+  `attached_assets/figma_icons/settings_profile_inactive.svg`. Active branch keeps the
+  layered head + body composition.
 
 To re-export new Figma icons: download URL hash → `attached_assets/figma_icons/sub/<hash>.svg`
 and add the import + map entry to `client/src/assets/sub-icons.ts`.

@@ -58,6 +58,12 @@ import settings_chevron_right from "@assets/figma_icons/settings_chevron_right.s
 import settings_row_divider from "@assets/figma_icons/settings_row_divider.svg";
 import settings_edit_pencil1 from "@assets/figma_icons/settings_edit_pencil1.svg";
 import settings_edit_pencil2 from "@assets/figma_icons/settings_edit_pencil2.svg";
+import settings_profile_inactive from "@assets/figma_icons/settings_profile_inactive.svg";
+import settings_billing_icon from "@assets/figma_icons/settings_billing_icon.svg";
+import settings_briefcase_body from "@assets/figma_icons/settings_briefcase_body.svg";
+import settings_briefcase_handle from "@assets/figma_icons/settings_briefcase_handle.svg";
+import settings_briefcase_div from "@assets/figma_icons/settings_briefcase_div.svg";
+import settings_briefcase_plus from "@assets/figma_icons/settings_briefcase_plus.svg";
 
 export const ICONS = {
   brain_union,
@@ -120,4 +126,10 @@ export const ICONS = {
   settings_row_divider,
   settings_edit_pencil1,
   settings_edit_pencil2,
+  settings_profile_inactive,
+  settings_billing_icon,
+  settings_briefcase_body,
+  settings_briefcase_handle,
+  settings_briefcase_div,
+  settings_briefcase_plus,
 } as const;
