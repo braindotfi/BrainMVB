@@ -519,11 +519,11 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               {step > 1 && (
                 <button
                   onClick={() => setStep((s) => (s - 1) as Step)}
-                  className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:bg-[#222737] transition-colors"
+                  className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] bg-[#1d2132] flex items-center justify-center hover:opacity-80 transition-opacity"
                   data-testid="btn-modal-back"
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M8 2L4 6L8 10" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M10 3L5 8L10 13" stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
               )}

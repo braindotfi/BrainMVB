@@ -140,3 +140,20 @@ when Brain has new rule suggestions:
   font Gilroy SemiBold 12/12. Renders between label and ChevronRight when
   count > 0. Collapsed sidebar uses an 8px purple dot ring-2 ring-[#11141b]
   in the icon's top-right corner.
+
+## Add Money & Exchange Modals — Figma Refresh (April 2026)
+AddAccountModal and ExchangeModal now share SendModal's back-button style and
+use locally-stored Figma assets per Brain Finance design file `cC2lQwC3g9hv96o5Wgy8Ek`:
+- All 3 modals (Send, AddAccount, Exchange) use the same inline-SVG `BackBtn`:
+  32px circle bg #1d2132, chevron path `M10 3L5 8L10 13` stroke #a8b9f4 width 1.6,
+  viewBox `0 0 16 16`. Matches Figma frame 3608:34364.
+- AddAccountModal step-1 select-account row icon switches by selection state:
+  `+` icon (Figma 3608:34376) when no account selected, chevron-down once selected.
+- All Add Money icons (account icons, popup, step-2 bank/wallet/agent, QR popup)
+  use 16 SVGs in `attached_assets/figma_icons/add-money/`.
+- Typed registry: `client/src/assets/add-money-icons.ts` exports `ADD_MONEY_ICONS`.
+- Source frames: select-popup 3608:34242, step-2 bank 3005:34247, step-2 crypto
+  2979:41718, QR popup 2979:42687, step-2 agent 2979:42127.
+
+To re-export updated Add Money icons: download URL hash → `attached_assets/figma_icons/add-money/<name>.svg`,
+then add the import + map entry to `client/src/assets/add-money-icons.ts`.
