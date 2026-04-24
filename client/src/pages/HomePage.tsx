@@ -1,10 +1,16 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const IMG_DOT = "https://www.figma.com/api/mcp/asset/5bdaa2a7-9ef5-472c-8736-e7eaf63ede35";
-const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/bcb0d389-ab27-4633-b2e4-b0e02bc51a9e";
-const IMG_ICON_BG = "https://www.figma.com/api/mcp/asset/16ce30f8-5b65-45b9-9f49-434c443bcceb";
-const IMG_ICON_ARROW = "https://www.figma.com/api/mcp/asset/a70b94ec-b33c-42ae-9646-ce831ef01ae8";
-const IMG_ICON_FLAG = "https://www.figma.com/api/mcp/asset/5ffd2545-786c-44b1-bcda-8012df286c92";
+const IMG_DOT = "https://www.figma.com/api/mcp/asset/c4669f17-d98e-4165-bb29-b4f5f32a9a72";
+const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/0064ca07-f987-4b4b-8242-4f91fb3acb69";
+
+/* Actions widget icons (Figma 3839:43693) — green circle with checkmark */
+const IMG_CHECK_ELLIPSE = "https://www.figma.com/api/mcp/asset/7da39f3e-8121-4716-b6f0-091a09769662";
+const IMG_CHECK_VECTOR  = "https://www.figma.com/api/mcp/asset/f03a6f8a-d64d-4d18-a93d-0e92a25228a1";
+
+/* Recommendations widget icons (Figma 3839:43709) — orange circle with "i" */
+const IMG_INFO_ELLIPSE = "https://www.figma.com/api/mcp/asset/214f0423-8dd5-4e8a-ba46-5dc6be1df22b";
+const IMG_INFO_VEC1    = "https://www.figma.com/api/mcp/asset/97d44e25-22ed-4288-81e6-95ebcea055cc";
+const IMG_INFO_VEC2    = "https://www.figma.com/api/mcp/asset/204b7048-85f9-45a8-aacc-1a7629b7ce43";
 
 const NEEDS_REVIEW = [
   { id: 1, title: "Pay your phone bill?", vendor: "Verizon", amount: "$189", due: "Due Friday" },
@@ -13,10 +19,20 @@ const NEEDS_REVIEW = [
   { id: 4, title: "Approve payroll for 8 people?", amount: "$12,800", due: "runs tomorrow morning" },
 ];
 
-const ReviewItem = ({ item, highlighted }: { item: typeof NEEDS_REVIEW[0]; highlighted?: boolean }) => (
+const ACTIONS = [
+  { id: 1, label: "Paid 3 small bills this morning." },
+  { id: 2, label: "Paid car payment for the month of March, due tomorrow." },
+];
+
+const RECOMMENDATIONS = [
+  { id: 1, label: "I found a payments agent that can help you manage recurring payments. Would you like to review it?" },
+  { id: 2, label: "Savings rate went up. Want me to move idle cash there?" },
+];
+
+const ReviewItem = ({ item }: { item: typeof NEEDS_REVIEW[0] }) => (
   <div
-    className="content-stretch flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full"
-    style={{ background: highlighted ? "#11141b" : "#0a0c10", border: highlighted ? "1px solid #1d2132" : "none" }}
+    className="content-stretch flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+    data-testid={`review-item-${item.id}`}
   >
     <div className="flex flex-1 flex-col items-start min-w-px relative">
       <div className="flex items-center justify-center relative shrink-0 w-full">
@@ -37,16 +53,71 @@ const ReviewItem = ({ item, highlighted }: { item: typeof NEEDS_REVIEW[0]; highl
   </div>
 );
 
-const ActionIconButton = ({ src }: { src: string }) => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_ICON_BG} />
+const GreenCheckIcon = () => (
+  <div className="relative rounded-[100px] shrink-0 size-[24px]">
+    <div className="absolute left-0 size-[24px] top-0">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_CHECK_ELLIPSE} />
     </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-      <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
-        <div className="absolute inset-[-8.51%]">
-          <img alt="" className="block max-w-none size-full" src={src} />
+    <div className="absolute left-[4px] size-[16px] top-[4px]">
+      <div className="absolute inset-[16.65%_12.5%_16.68%_12.5%]">
+        <div className="absolute inset-[-7.03%_-6.25%]">
+          <img alt="" className="block max-w-none size-full" src={IMG_CHECK_VECTOR} />
         </div>
+      </div>
+    </div>
+  </div>
+);
+
+const OrangeInfoIcon = () => (
+  <div className="relative rounded-[100px] shrink-0 size-[24px]">
+    <div className="absolute left-0 size-[24px] top-0">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INFO_ELLIPSE} />
+    </div>
+    <div className="absolute left-[4px] size-[16px] top-[4px]">
+      <div className="absolute inset-[12.5%]">
+        <div className="absolute inset-[-6.25%]">
+          <img alt="" className="block max-w-none size-full" src={IMG_INFO_VEC1} />
+        </div>
+      </div>
+      <div className="absolute inset-[30.18%_46.88%_63.57%_46.88%]">
+        <div className="absolute inset-[-25%]">
+          <img alt="" className="block max-w-none size-full" src={IMG_INFO_VEC2} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+type WidgetItem = { id: number; label: string };
+const ListItem = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  <div className="bg-[#0a0c10] flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full">
+    {icon}
+    <div className="flex flex-1 flex-col items-start min-w-px relative">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">{label}</p>
+    </div>
+  </div>
+);
+
+const SectionWidget = ({ title, count, items, icon }: { title: string; count: number; items: WidgetItem[]; icon: React.ReactNode }) => (
+  <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+    <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+      <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
+        <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+        </div>
+      </div>
+    </div>
+    <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+      <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+        {items.map((item, idx) => (
+          <div key={item.id} className="flex flex-col gap-[8px] w-full">
+            <ListItem icon={icon} label={item.label} />
+            {idx < items.length - 1 && (
+              <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   </div>
@@ -113,7 +184,7 @@ export function HomePage() {
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Bottom row */}
+            {/* Bottom row: Needs Review (left) + Actions/Recommendations stacked (right) */}
             <div className="flex gap-[16px] items-start relative shrink-0 w-full">
               {/* Needs Review */}
               <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px overflow-clip relative rounded-[16px]">
@@ -128,10 +199,10 @@ export function HomePage() {
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                   <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                     {NEEDS_REVIEW.map((item, idx) => (
-                      <div key={item.id} className="w-full">
-                        <ReviewItem item={item} highlighted={idx === 1} />
+                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                        <ReviewItem item={item} />
                         {idx < NEEDS_REVIEW.length - 1 && (
-                          <div className="h-px my-[4px] relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+                          <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
                         )}
                       </div>
                     ))}
@@ -139,35 +210,10 @@ export function HomePage() {
                 </div>
               </div>
 
-              {/* Recent Activity */}
-              <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px overflow-clip relative rounded-[16px]">
-                <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">Recent Activity</p>
-                </div>
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {[
-                      { label: "Paid Adobe subscription", meta: "Automatic · 15th of every month", amount: "$54", time: "9:14 AM" },
-                      { label: "Moved $5,000 to savings", meta: "Rule: savings sweep · Chase checking", amount: "$5,000", time: "8:01 AM" },
-                      { label: "Paid Adobe subscription", meta: "Automatic · 15th of every month", amount: "$54", time: "Yesterday" },
-                    ].map((act, idx) => (
-                      <div key={idx} className="w-full">
-                        <div className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                          <ActionIconButton src={IMG_ICON_ARROW} />
-                          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">{act.label}</p>
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full">{act.meta}</p>
-                          </div>
-                          <div className="flex flex-col items-end justify-center leading-[20px] not-italic relative shrink-0 text-right w-[100px]">
-                            <p className="[font-family:'JetBrains_Mono',sans-serif] font-semibold relative shrink-0 text-[#a8b9f4] text-[18px] w-full">{act.amount}</p>
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold relative shrink-0 text-[#414965] text-[16px] w-full">{act.time}</p>
-                          </div>
-                        </div>
-                        {idx < 2 && <div className="h-px my-[4px] relative shrink-0 w-full" style={{ background: "#1d2132" }} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {/* Right column: Actions + Recommendations */}
+              <div className="flex flex-1 flex-col gap-[16px] items-start relative">
+                <SectionWidget title="Actions"          count={ACTIONS.length}          items={ACTIONS}          icon={<GreenCheckIcon />} />
+                <SectionWidget title="Recommendations"  count={RECOMMENDATIONS.length}  items={RECOMMENDATIONS}  icon={<OrangeInfoIcon />} />
               </div>
             </div>
           </div>

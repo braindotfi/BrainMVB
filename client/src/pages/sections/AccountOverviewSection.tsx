@@ -8,9 +8,9 @@ import { useTransactions } from "@/lib/transactionContext";
 /* ─── Figma asset URLs (refreshed) ─── */
 const IMG_WALLET_BADGE_BG     = "https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b";
 const IMG_WALLET_BADGE_ICON   = "https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489";
-const IMG_TX_INACTIVE_VEC1    = "https://www.figma.com/api/mcp/asset/e7a03e7f-ebdb-4e1d-92ee-792b46e2dd70";
-const IMG_TX_INACTIVE_VEC2    = "https://www.figma.com/api/mcp/asset/0580441e-5c9c-4aee-88ee-3e5399de84ff";
-const IMG_TX_ACTIVE_UNION     = "https://www.figma.com/api/mcp/asset/f7d3bfd5-64be-4bfd-b08b-e6fd33fde332";
+const IMG_TX_INACTIVE_VEC1    = "https://www.figma.com/api/mcp/asset/deb22183-a969-480e-8439-447da4ec55b1";
+const IMG_TX_INACTIVE_VEC2    = "https://www.figma.com/api/mcp/asset/98157499-307a-48fb-a5f7-60a5795cf534";
+const IMG_TX_ACTIVE_UNION     = "https://www.figma.com/api/mcp/asset/bed89e4a-43a7-4328-a5d3-f71035da97aa";
 const IMG_CHECK_ELLIPSE       = "https://www.figma.com/api/mcp/asset/7403a63b-ec11-431c-8b5b-d55b6da086df";
 const IMG_CHECK_MARK          = "https://www.figma.com/api/mcp/asset/218718f3-8944-40ca-8ad0-3b1f5c9bc679";
 
@@ -1242,20 +1242,20 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                   >
                     {activeTab === "Transactions" ? (
                       <div className="overflow-clip relative size-[24px] flex-shrink-0">
-                        <div className="absolute inset-[12.08%_3.35%_12.09%_3.4%]">
-                          <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/9f4b3667-896e-4f8e-84f3-ff3db0f1bbdf" />
+                        <div className="absolute inset-[12.08%_3.34%_12.1%_3.4%]">
+                          <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_TX_ACTIVE_UNION} />
                         </div>
                       </div>
                     ) : (
                       <div className="overflow-clip relative size-[24px] flex-shrink-0">
                         <div className="absolute inset-[29.17%_41.67%]">
                           <div className="absolute inset-[-10%_-25%]">
-                            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/bbbbe5df-e21b-4e9f-8507-7555e90f6a33" />
+                            <img alt="" className="block max-w-none size-full" src={IMG_TX_INACTIVE_VEC1} />
                           </div>
                         </div>
-                        <div className="absolute inset-[16.25%_7.52%_16.25%_7.56%]">
+                        <div className="absolute inset-[16.24%_7.51%_16.26%_7.57%]">
                           <div className="absolute inset-[-6.17%_-4.91%]">
-                            <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a81167fa-846b-456b-a37f-c387ca6add52" />
+                            <img alt="" className="block max-w-none size-full" src={IMG_TX_INACTIVE_VEC2} />
                           </div>
                         </div>
                       </div>
