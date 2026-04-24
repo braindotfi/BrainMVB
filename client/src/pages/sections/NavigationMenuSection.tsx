@@ -7,9 +7,9 @@ interface Props {
   onLogout?: () => void;
 }
 
-const IMG_BRAIN_UNION = "https://www.figma.com/api/mcp/asset/b9810158-b96d-47f9-b883-6599bd9d9d15";
-const IMG_BRAIN_MASK = "https://www.figma.com/api/mcp/asset/7d61d4ac-fc09-4f3f-b9f8-126fcc6e0c00";
-const IMG_BRAIN_OVERLAY = "https://www.figma.com/api/mcp/asset/23e38371-03b4-4fc7-9266-0d6c348afe88";
+const IMG_BRAIN_UNION = "https://www.figma.com/api/mcp/asset/cf77c7c7-3289-4ba7-9fa9-bd9d0e21179a";
+const IMG_BRAIN_MASK = "https://www.figma.com/api/mcp/asset/458719c5-7980-4088-a235-ed2d5f87a2e9";
+const IMG_BRAIN_OVERLAY = "https://www.figma.com/api/mcp/asset/bb7bbc17-e255-48c0-afb0-703327de916a";
 const IMG_BELL_BG = "https://www.figma.com/api/mcp/asset/4cc422e3-86d1-4530-88d0-771b72dfbce3";
 const IMG_BELL_ICON = "https://www.figma.com/api/mcp/asset/92fab1b3-f9d8-491f-ba35-276c1c9c0aa0";
 const IMG_HOME_ICON = "https://www.figma.com/api/mcp/asset/e673c34d-0bb0-4947-a228-855a9bebd950";
@@ -291,10 +291,20 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
       <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0 overflow-hidden">
         <div className="flex flex-col flex-1 mx-[7px] mt-[7px] gap-[16px] pb-0 overflow-y-auto min-h-0">
 
-          {/* Header: Logo + Bell */}
+          {/* Header: Logo + Collapse + Bell */}
           <div className="flex items-center justify-between relative shrink-0 w-full">
             <BrainLogo />
-            <BellButton />
+            <div className="flex items-center gap-[4px]">
+              <button
+                data-testid="button-collapse-sidebar"
+                onClick={onToggle}
+                title="Collapse menu"
+                className="size-[40px] flex items-center justify-center rounded-[100px] hover:bg-[#1d2132] transition-colors"
+              >
+                <CollapseIcon />
+              </button>
+              <BellButton />
+            </div>
           </div>
 
           {/* Main Menu section */}
