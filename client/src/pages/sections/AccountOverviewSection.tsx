@@ -48,13 +48,24 @@ const TxIcon = ({ type }: { type: "deposit" | "withdrawal" | string }) => {
 };
 
 /* ─── Figma asset URLs (refreshed) ─── */
-const IMG_WALLET_BADGE_BG     = "https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b";
-const IMG_WALLET_BADGE_ICON   = "https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489";
-const IMG_TX_INACTIVE_VEC1    = "https://www.figma.com/api/mcp/asset/deb22183-a969-480e-8439-447da4ec55b1";
-const IMG_TX_INACTIVE_VEC2    = "https://www.figma.com/api/mcp/asset/98157499-307a-48fb-a5f7-60a5795cf534";
-const IMG_TX_ACTIVE_UNION     = "https://www.figma.com/api/mcp/asset/bed89e4a-43a7-4328-a5d3-f71035da97aa";
-const IMG_CHECK_ELLIPSE       = "https://www.figma.com/api/mcp/asset/7403a63b-ec11-431c-8b5b-d55b6da086df";
-const IMG_CHECK_MARK          = "https://www.figma.com/api/mcp/asset/218718f3-8944-40ca-8ad0-3b1f5c9bc679";
+import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
+const IMG_WALLET_BADGE_BG     = INLINE_FIGMA.walletBadgeBg;
+const IMG_WALLET_BADGE_ICON   = INLINE_FIGMA.walletBadgeIcon;
+const IMG_TX_INACTIVE_VEC1    = INLINE_FIGMA.txInactiveVec1;
+const IMG_TX_INACTIVE_VEC2    = INLINE_FIGMA.txInactiveVec2;
+const IMG_TX_ACTIVE_UNION     = INLINE_FIGMA.txActiveUnion;
+const IMG_CHECK_ELLIPSE       = INLINE_FIGMA.checkEllipse;
+const IMG_CHECK_MARK          = INLINE_FIGMA.checkMark;
+const IMG_MISC_A              = INLINE_FIGMA.miscA;
+const IMG_MISC_B              = INLINE_FIGMA.miscB;
+const IMG_BANK_POPUP_OPEN_A   = INLINE_FIGMA.bankPopupOpenA;
+const IMG_BANK_POPUP_CLOSED_A = INLINE_FIGMA.bankPopupClosedA;
+const IMG_BANK_POPUP_OPEN_B   = INLINE_FIGMA.bankPopupOpenB;
+const IMG_BANK_POPUP_CLOSED_B = INLINE_FIGMA.bankPopupClosedB;
+const IMG_TX_ACCOUNT_BG       = INLINE_FIGMA.txAccountBg;
+const IMG_TX_ACCOUNT_GLYPH_A  = INLINE_FIGMA.txAccountGlyphA;
+const IMG_TX_ACCOUNT_GLYPH_B  = INLINE_FIGMA.txAccountGlyphB;
+const IMG_TX_ACCOUNT_GLYPH_C  = INLINE_FIGMA.txAccountGlyphC;
 
 /* Reusable green checkmark badge (Figma 3759:50276) */
 const GreenCheckmark = () => (
@@ -677,9 +688,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               >
                 {/* Icon — grey WalletIcons */}
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_BG} />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_ICON} />
                   </div>
                 </div>
                 {/* Label: card-specific name */}
@@ -748,9 +759,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 style={{ background: "#222737" }}
               >
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_BG} />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_ICON} />
                   </div>
                 </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
@@ -844,9 +855,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 style={{ background: "#222737" }}
               >
                 <div className="overflow-clip relative rounded-[16px] flex-shrink-0 size-[32px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/a3158d37-97a9-46ba-bce9-84b8fca8f83b" />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_BG} />
                   <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 top-1/2 size-[20px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f835d547-43e1-4061-b816-810719fa6489" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_WALLET_BADGE_ICON} />
                   </div>
                 </div>
                 <div className="flex items-center flex-1 min-w-0 overflow-hidden">
@@ -946,7 +957,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
             data-testid="button-expand-account"
             className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity hover:opacity-90"
           >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ceda6e42-45e4-4df3-85e6-c9cf92f9c869" />
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_MISC_A} />
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
               <svg width="18" height="16" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 6L6 9L9 12M7 9H14M17 17H3C1.89543 17 1 16.1046 1 15V3C1 1.89543 1.89543 1 3 1H17C18.1046 1 19 1.89543 19 3V15C19 16.1046 18.1046 17 17 17Z" stroke="#6C779D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -989,9 +1000,9 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                   data-testid="button-collapsed-bank"
                   className="w-[40px] h-[40px] rounded-[20px] overflow-clip relative transition-opacity"
                 >
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/e6bd9a4b-4a60-48b6-b928-10df6b0c8fd4" : "https://www.figma.com/api/mcp/asset/9dec962b-ba90-4e08-b347-ef669db88490"} />
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? IMG_BANK_POPUP_OPEN_A : IMG_BANK_POPUP_CLOSED_A} />
                   <div className="absolute left-[8px] size-[24px] top-[8px]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? "https://www.figma.com/api/mcp/asset/a043cb65-5d92-4b12-b652-990f6365f14b" : "https://www.figma.com/api/mcp/asset/fa525d64-90e7-4092-9a2e-bf6dd7e564c5"} />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={bankPopupOpen ? IMG_BANK_POPUP_OPEN_B : IMG_BANK_POPUP_CLOSED_B} />
                   </div>
                 </button>
                 {bankPopupOpen && (
@@ -1030,11 +1041,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 onClick={() => setAddOpen(true)}
                 className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
               >
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_TX_ACCOUNT_BG} />
                 <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
                   <div className="absolute inset-[16.67%]">
                     <div className="absolute inset-[-6.25%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/f50e1a4a-ad47-48fc-a6a0-3d058a2f60a1" />
+                      <img alt="" className="block max-w-none size-full" src={IMG_TX_ACCOUNT_GLYPH_A} />
                     </div>
                   </div>
                 </div>
@@ -1046,11 +1057,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 onClick={() => onSend?.("wallet")}
                 className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
               >
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_TX_ACCOUNT_BG} />
                 <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
                   <div className="absolute bottom-[26.04%] left-[26.04%] right-1/4 top-1/4">
                     <div className="absolute inset-[-8.51%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/dc86f114-38ed-4fe5-81ec-6348ecf30b38" />
+                      <img alt="" className="block max-w-none size-full" src={IMG_TX_ACCOUNT_GLYPH_B} />
                     </div>
                   </div>
                 </div>
@@ -1062,11 +1073,11 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                 onClick={() => onExchange?.(collapsedCardIndex === 2 ? "bank" : "wallet")}
                 className="w-[40px] h-[40px] flex-shrink-0 rounded-[100px] relative overflow-hidden transition-opacity opacity-90 hover:opacity-100"
               >
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/ae4762b8-110d-4036-9fa6-de1280f779c2" />
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_TX_ACCOUNT_BG} />
                 <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
                   <div className="absolute inset-[17.94%_16.48%_17.96%_16.47%]">
                     <div className="absolute inset-[-6.5%_-6.21%]">
-                      <img alt="" className="block max-w-none size-full" src="https://www.figma.com/api/mcp/asset/7719f7d4-0c36-4e8c-97f2-d4ecd58e9f10" />
+                      <img alt="" className="block max-w-none size-full" src={IMG_TX_ACCOUNT_GLYPH_C} />
                     </div>
                   </div>
                 </div>
@@ -1093,7 +1104,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
               >
                 <div className="overflow-clip relative size-[24px]">
                   <div className="absolute inset-[8.33%_4.17%]">
-                    <img alt="" className="absolute block inset-0 max-w-none size-full" src="https://www.figma.com/api/mcp/asset/3d123fed-becc-425c-8c9f-5d8fc42d736b" />
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_MISC_B} />
                   </div>
                 </div>
               </button>

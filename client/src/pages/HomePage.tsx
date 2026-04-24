@@ -2,18 +2,19 @@ import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 
-const IMG_DOT = "https://www.figma.com/api/mcp/asset/c4669f17-d98e-4165-bb29-b4f5f32a9a72";
-const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/0064ca07-f987-4b4b-8242-4f91fb3acb69";
+const IMG_DOT     = INLINE_FIGMA.homeDot;
+const IMG_DIVIDER = INLINE_FIGMA.homeDivider;
 
 /* Actions widget icons (Figma 3839:43693) — green circle with checkmark */
-const IMG_CHECK_ELLIPSE = "https://www.figma.com/api/mcp/asset/7da39f3e-8121-4716-b6f0-091a09769662";
-const IMG_CHECK_VECTOR  = "https://www.figma.com/api/mcp/asset/f03a6f8a-d64d-4d18-a93d-0e92a25228a1";
+const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
+const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
 
 /* Recommendations widget icons (Figma 3839:43709) — orange circle with "i" */
-const IMG_INFO_ELLIPSE = "https://www.figma.com/api/mcp/asset/214f0423-8dd5-4e8a-ba46-5dc6be1df22b";
-const IMG_INFO_VEC1    = "https://www.figma.com/api/mcp/asset/97d44e25-22ed-4288-81e6-95ebcea055cc";
-const IMG_INFO_VEC2    = "https://www.figma.com/api/mcp/asset/204b7048-85f9-45a8-aacc-1a7629b7ce43";
+const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
+const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
+const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
 type ReviewItemType = {
   id: number;

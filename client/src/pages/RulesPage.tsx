@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRuleSuggestions, toggleSuggestion as toggleSuggestionStore } from "@/lib/rule-suggestions";
 
-const IMG_DIVIDER = "https://www.figma.com/api/mcp/asset/14dad455-e827-4a72-8984-b1f08218c3f5";
+import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
+const IMG_DIVIDER = INLINE_FIGMA.rulesDivider;
 
 type SwitchProps = { active?: boolean; onChange?: () => void };
 

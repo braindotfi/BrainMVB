@@ -2,8 +2,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
-const IMG_INVOICE_BG = "https://www.figma.com/api/mcp/asset/bd90288b-1ee1-46f9-8d1a-e4c7ecd5e617";
-const IMG_INVOICE_ICON = "https://www.figma.com/api/mcp/asset/8ff85552-336d-4aff-9288-adc36e952200";
+import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
+const IMG_INVOICE_BG = INLINE_FIGMA.invoiceBg;
+const IMG_INVOICE_ICON = INLINE_FIGMA.invoiceIcon;
 
 const ACCOUNTS = [
   { name: "Chase Business Checking", sub: "Your main account",            sub2: "Pays most bills from here",            balance: "$32,523" },
