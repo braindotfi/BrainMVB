@@ -388,7 +388,7 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#42bf23] text-[20px] w-full">
-                      $432 less than last month. Nice
+$432 less than last month. Nice.
                     </p>
                   </div>
                 </div>
