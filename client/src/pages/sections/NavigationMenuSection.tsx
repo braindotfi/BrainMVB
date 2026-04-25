@@ -47,7 +47,7 @@ const BrainLogo = () => (
     <div className="absolute left-0 size-[40px] top-0 flex items-center justify-center">
       <img alt="Brain" className="size-[40px] object-contain" src={ICONS.brain_logo_3d} />
     </div>
-    <p className="absolute leading-[0] left-[44px] not-italic text-[0px] text-white top-[8px] whitespace-nowrap" style={{ fontFamily: "'Gridular', 'Silkscreen', monospace" }}>
+    <p className="absolute leading-[0] left-[44px] not-italic text-[0px] text-white top-[8px] whitespace-nowrap" style={{ fontFamily: "'Gridular', monospace" }}>
       <span className="leading-[24px] text-[#7631ee] text-[28px]">br</span>
       <span className="leading-[24px] text-[28px]">ai</span>
       <span className="leading-[24px] text-[#7631ee] text-[28px]">n</span>

@@ -1,7 +1,34 @@
-/* All web fonts are loaded from <link> tags in client/index.html for
-   reliability. We previously had broken @import URLs here (a bunny.net
-   Gilroy URL that returns an error stylesheet, plus a duplicate
-   JetBrains Mono import missing weight 600). They've been removed. */
+/* ─── Self-hosted fonts ─── */
+/* JetBrains Mono and Gridular are served from /fonts/. Plus Jakarta Sans,
+   Outfit, Space Grotesk, and Inter are loaded from Google Fonts via the
+   <link> tag in client/index.html. */
+
+/* Gridular — used for the "brain" wordmark */
+@font-face {
+  font-family: 'Gridular';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Gridular-Regular.ttf') format('truetype');
+}
+
+/* JetBrains Mono — full weight range, regular + italic */
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 100; font-display: swap; src: url('/fonts/JetBrainsMono-Thin.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 100; font-display: swap; src: url('/fonts/JetBrainsMono-ThinItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 200; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraLight.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 200; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraLightItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 300; font-display: swap; src: url('/fonts/JetBrainsMono-Light.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 300; font-display: swap; src: url('/fonts/JetBrainsMono-LightItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 400; font-display: swap; src: url('/fonts/JetBrainsMono-Italic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 500; font-display: swap; src: url('/fonts/JetBrainsMono-MediumItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/JetBrainsMono-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 600; font-display: swap; src: url('/fonts/JetBrainsMono-SemiBoldItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 700; font-display: swap; src: url('/fonts/JetBrainsMono-BoldItalic.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 800; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraBold.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 800; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraBoldItalic.woff2') format('woff2'); }
 
 @tailwind components;
 @tailwind utilities;
