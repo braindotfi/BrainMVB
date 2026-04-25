@@ -104,7 +104,7 @@ export function WalletButton() {
           style={{
             background: "linear-gradient(135deg, #7631ee 0%, #9d5cf5 100%)",
             color: "white",
-            fontFamily: "'Gilroy', sans-serif",
+            fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

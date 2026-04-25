@@ -240,8 +240,8 @@ const SettingRow = ({
         className={useCircleIcon ? "leading-5" : "text-[15px] leading-5"}
         style={
           useCircleIcon
-            ? { color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px" }
-            : { color: danger ? "#d20344" : "#c8d4f0", fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }
+            ? { color: "#a8b9f4", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "16px" }
+            : { color: danger ? "#d20344" : "#c8d4f0", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500 }
         }
       >
         {label}
@@ -251,8 +251,8 @@ const SettingRow = ({
           className={useCircleIcon ? "mt-1 leading-[16px]" : "text-[12px] mt-0.5 leading-[16px]"}
           style={
             useCircleIcon
-              ? { color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px" }
-              : { color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 400 }
+              ? { color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "14px" }
+              : { color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 400 }
           }
         >
           {sublabel}
@@ -267,7 +267,7 @@ const SettingRow = ({
 const SectionLabel = ({ children }: { children: string }) => (
   <p
     className="text-[11px] uppercase tracking-[0.08em] px-1 mb-2"
-    style={{ color: "#414965", fontFamily: "'Gilroy', sans-serif", fontWeight: 600 }}
+    style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600 }}
   >
     {children}
   </p>
@@ -378,7 +378,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 style={{
                   borderColor: "#7631ee",
                   color: "#fff",
-                  fontFamily: "'Gilroy', sans-serif",
+                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
                   fontWeight: 600,
                   fontSize: "20px",
                   lineHeight: "24px",
@@ -388,7 +388,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             ) : (
               <p
                 data-testid="text-profile-name"
-                style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
+                style={{ color: "#fff", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
               >
                 {name}
               </p>
@@ -396,7 +396,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             <p
               data-testid="text-profile-email"
               className="mt-1"
-              style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}
+              style={{ color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}
             >
               {email}
             </p>
@@ -451,7 +451,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 style={{
                   background: "#123509",
                   color: "#42bf23",
-                  fontFamily: "'Gilroy', sans-serif",
+                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
                   fontWeight: 600,
                   fontSize: "12px",
                   lineHeight: "14px",
@@ -536,7 +536,7 @@ export function SettingsPage() {
                 <span
                   className="flex-1 text-[16px] leading-5 whitespace-nowrap"
                   style={{
-                    fontFamily: "'Gilroy', sans-serif",
+                    fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
                     fontWeight: 500,
                     color: active ? "#ffffff" : "#6c779d",
                   }}
