@@ -109,7 +109,7 @@ export function FinancesPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end justify-center relative shrink-0">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{acc.balance}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{acc.balance}</p>
                     </div>
                   </div>
                   {idx < ACCOUNTS.length - 1 && <Divider />}
@@ -143,7 +143,7 @@ export function FinancesPage() {
                       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.category}</p>
                     </div>
                     <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{item.amount}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{item.amount}</p>
                     </div>
                   </div>
                   <Divider />
@@ -154,7 +154,7 @@ export function FinancesPage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Total</p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-$7,810</p>
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-$7,810</p>
                 </div>
               </div>
             </WidgetCard>

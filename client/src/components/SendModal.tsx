@@ -257,7 +257,7 @@ function AssetPopup({
               <AssetIcon asset={a} />
               <div className="flex flex-col flex-1 min-w-0">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
-                <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.balance} {a.ticker}</p>
+                <p className="[font-family:'JetBrains_Mono',monospace] text-[#414965] text-[12px] leading-[16px]">{a.balance} {a.ticker}</p>
               </div>
               {selectedId === a.id && (
                 <div className="shrink-0 w-[16px] h-[16px] rounded-full bg-[#7631EE] flex items-center justify-center">
@@ -336,7 +336,7 @@ function AgentPopup({ onSelect, onClose }: { onSelect: (id: string) => void; onC
             <RecipientIcon type="agent" />
             <div className="flex flex-col min-w-0">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">{a.name}</p>
-              <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#414965] text-[12px] leading-[16px]">{a.address}</p>
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[#414965] text-[12px] leading-[16px]">{a.address}</p>
             </div>
           </button>
         ))}
@@ -369,7 +369,7 @@ function ReviewRow({ label, value, highlight }: { label: string; value: string; 
   return (
     <div className="flex items-center justify-between gap-[8px]">
       <p className="[font-family:'Gilroy',sans-serif] text-[#414965] text-[16px] leading-[24px]">{label}</p>
-      <p className={`[font-family:'JetBrains_Mono',sans-serif] font-semibold text-[16px] leading-[24px] ${highlight ? "text-[#ff9500]" : "text-white"}`}>{value}</p>
+      <p className={`[font-family:'JetBrains_Mono',monospace] font-semibold text-[16px] leading-[24px] ${highlight ? "text-[#ff9500]" : "text-white"}`}>{value}</p>
     </div>
   );
 }
@@ -553,7 +553,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">IBAN</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                       {state.iban ? truncIban(state.iban) : "—"}
                     </p>
                   </div>
@@ -561,7 +561,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -578,7 +578,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Transaction ID</p>
                     <a href={basescanTx} target="_blank" rel="noopener noreferrer"
-                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
                       data-testid="link-tx-hash">
                       {truncTx(txHash)}
                     </a>
@@ -587,7 +587,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Recipient</p>
                     <a href={basescanAddr!} target="_blank" rel="noopener noreferrer"
-                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
                       data-testid="link-recipient-address">
                       {truncAddr6(state.walletAddress)}
                     </a>
@@ -596,7 +596,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -613,7 +613,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Transaction ID</p>
                     <a href={basescanTx} target="_blank" rel="noopener noreferrer"
-                      className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
+                      className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#7631EE] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#9b6cf3] transition-colors"
                       data-testid="link-tx-hash-agent">
                       {truncTx(txHash)}
                     </a>
@@ -632,7 +632,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">{fmt(enteredAmount)}</p>
                       {selectedAsset && (
                         <div className="bg-[#11141b] flex items-center px-[6px] py-[2px] rounded-[100px] shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">{selectedAsset.ticker}</p>
@@ -794,7 +794,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <FieldRow label="IBAN Bank Number">
                   <InputBox hasValue={!!state.iban}>
                     <input type="text" value={state.iban} onChange={(e) => set({ iban: e.target.value })} placeholder="AE0703...123456"
-                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
+                      className="flex-1 bg-transparent text-white text-[20px] [font-family:'JetBrains_Mono',monospace] font-semibold placeholder:text-[#414965] outline-none min-w-0 tracking-wider"
                       data-testid="input-send-iban" />
                   </InputBox>
                 </FieldRow>
@@ -817,7 +817,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
               <FieldRow label="Wallet Address">
                 <InputBox hasValue={!!state.walletAddress}>
                   <input type="text" value={state.walletAddress} onChange={(e) => set({ walletAddress: e.target.value })} placeholder="0x..."
-                    className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white text-[18px] [font-family:'JetBrains_Mono',monospace] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                     data-testid="input-send-wallet-addr" />
                   <button onClick={async () => { try { const t = await navigator.clipboard.readText(); set({ walletAddress: t }); } catch {} }}
                     className="bg-[#4a2300] px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px] shrink-0 hover:opacity-80 transition-opacity"
@@ -956,7 +956,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <div className="flex flex-col gap-[4px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">IBAN Bank Number</p>
                   <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap">
                       {state.iban ? state.iban.slice(0, 6) + "..." + state.iban.slice(-6) : "—"}
                     </p>
                     <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
@@ -971,7 +971,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                 <div className="flex flex-col gap-[4px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Send Recipient</p>
                   <div className="bg-[#06070a] border border-[#1d2132] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap truncate">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 whitespace-nowrap truncate">
                       {state.walletAddress ? truncAddr(state.walletAddress) : "—"}
                     </p>
                     <button onClick={() => set({ step: 3 })} className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0">
@@ -1006,7 +1006,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Asset</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                         {selectedAsset?.name ?? "—"}
                       </p>
                       {selectedAsset && (
@@ -1020,7 +1020,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                     <div className="flex gap-[4px] items-center">
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
                         {fmt(enteredAmount)}
                       </p>
                       {selectedAsset && (
@@ -1033,7 +1033,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                       {selectedAsset && selectedAsset.id !== "usd" && selectedAsset.id !== "usdc"
                         ? `${fmt(parseFloat(FEE))} ${selectedAsset.ticker}`
                         : fmtUsd(parseFloat(FEE))}
@@ -1042,7 +1042,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
                   <div className="h-px bg-[#1d2132] w-full" />
                   <div className="flex items-center justify-between w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Total</p>
-                    <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
                       {selectedAsset && selectedAsset.id !== "usd" && selectedAsset.id !== "usdc"
                         ? `${fmt(enteredAmount + parseFloat(FEE))} ${selectedAsset.ticker}`
                         : fmtUsd(enteredAmount + parseFloat(FEE))}

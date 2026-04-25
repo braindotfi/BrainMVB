@@ -264,7 +264,7 @@ function SearchPanel({
                       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px] whitespace-nowrap">
                         {asset.name} ({asset.ticker})
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',sans-serif] text-[#6c779d] text-xs">
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[#6c779d] text-xs">
                         {asset.balance}
                       </p>
                     </div>
@@ -487,7 +487,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                   href={basescanTx}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#7631EE] transition-colors"
+                  className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap hover:text-[#7631EE] transition-colors"
                   data-testid="link-exchange-tx-hash"
                 >
                   {truncTx(confirmedTxHash)}
@@ -498,7 +498,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
               <div className="flex items-center justify-between w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                 <div className="flex gap-[4px] items-center">
-                  <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#ff9500] text-[20px] leading-[24px] whitespace-nowrap">
                     {fmt(amtNum)}
                   </p>
                   <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
@@ -785,7 +785,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                       {/* Conversion row: from → estimated to */}
                       <div className="flex items-center gap-[8px] w-full">
                         <div className="flex flex-1 gap-[4px] items-center min-w-0">
-                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                             {fmt(amountNum)}
                           </p>
                           <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
@@ -802,7 +802,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                           </svg>
                         </div>
                         <div className="flex flex-1 gap-[4px] items-center justify-end min-w-0">
-                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                             {fmt(estimatedAmount, 4)}
                           </p>
                           <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
@@ -826,7 +826,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                       <div className="flex items-center justify-between w-full">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Amount</p>
                         <div className="flex gap-[4px] items-center">
-                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">
                             {fmt(amountNum)}
                           </p>
                           <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
@@ -841,7 +841,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                       <div className="flex items-center justify-between w-full">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">Network Fee</p>
                         <div className="flex gap-[4px] items-center">
-                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">0.50</p>
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap">0.50</p>
                           <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">
                             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[12px] whitespace-nowrap">USD</p>
                           </div>
@@ -854,7 +854,7 @@ export function ExchangeModal({ open, onClose, onConfirmed, accountType = "walle
                       <div className="flex items-center justify-between w-full">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px] whitespace-nowrap">You Receive</p>
                         <div className="flex gap-[4px] items-center">
-                          <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#42bf23] text-[20px] leading-[24px] whitespace-nowrap">
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#42bf23] text-[20px] leading-[24px] whitespace-nowrap">
                             {fmt(estimatedAmount, 4)}
                           </p>
                           <div className="bg-[#11141b] flex items-start px-[6px] py-[2px] rounded-[100px] shrink-0">

@@ -1,5 +1,7 @@
-@import url("https://fonts.bunny.net/css?family=gilroy:400,500,600,700,800&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
+/* All web fonts are loaded from <link> tags in client/index.html for
+   reliability. We previously had broken @import URLs here (a bunny.net
+   Gilroy URL that returns an error stylesheet, plus a duplicate
+   JetBrains Mono import missing weight 600). They've been removed. */
 
 @tailwind components;
 @tailwind utilities;

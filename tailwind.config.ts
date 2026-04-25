@@ -72,7 +72,7 @@ module.exports = {
         "plus-jakarta": ['"Plus Jakarta Sans"', "sans-serif"],
         outfit: ['"Outfit"', "sans-serif"],
         "space-grotesk": ['"Space Grotesk"', "sans-serif"],
-        mono: ['"JetBrains Mono"', "monospace"],
+        mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
         sans: [
           '"Plus Jakarta Sans"',
           "ui-sans-serif",

@@ -347,16 +347,16 @@ const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Crypto Wallet Address</span>
+        <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Crypto Wallet Address</span>
         <div className="flex items-center gap-2 self-stretch">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-xl leading-6 whitespace-nowrap">{truncated}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-xl leading-6 whitespace-nowrap">{truncated}</span>
           <CopyIcon value={addr} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
         <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{name}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-sm leading-4">{name}</span>
         </div>
       </div>
     </div>
@@ -374,24 +374,24 @@ const DebitCardView = ({ account }: { account?: WirexAccount }) => {
       <OrangeGlow />
       <CardHeader balance="" currency={currency} icon="wallet" hideBalance />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Debit Card</span>
+        <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Debit Card</span>
         <div className="flex items-start gap-2 self-stretch">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-xl leading-6 whitespace-nowrap">{cardNum}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-xl leading-6 whitespace-nowrap">{cardNum}</span>
           <CopyIcon value={cardNum} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex">
         <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{name}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-sm leading-4">{name}</span>
         </div>
         <div className="inline-flex w-11 h-8 ml-[50px] flex-col items-start gap-1">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3">Expiry</span>
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{expiry}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3">Expiry</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-sm leading-4">{expiry}</span>
         </div>
         <div className="inline-flex w-[26px] h-8 ml-10 flex-col items-start gap-1">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3">CVC</span>
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{cvv}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3">CVC</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-sm leading-4">{cvv}</span>
         </div>
         <div className="h-[26px] w-[42px] self-center relative ml-[52px]">
           <div className="absolute top-0 left-4 w-[26px] h-[26px] bg-brain-v1light-orange rounded-[13px] opacity-40" />
@@ -412,16 +412,16 @@ const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
       <OrangeGlow />
       <CardHeader balance={balance} currency={currency} icon="wallet" />
       <div className="flex flex-col w-[338px] items-start gap-1 absolute top-20 left-4">
-        <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Bank Account Number</span>
+        <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3 whitespace-nowrap">Bank Account Number</span>
         <div className="flex items-center gap-2 self-stretch">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">{iban}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">{iban}</span>
           <CopyIcon value={iban} />
         </div>
       </div>
       <div className="absolute top-[136px] left-4 w-[338px] h-8 flex items-start">
         <div className="inline-flex w-[84px] h-8 flex-col items-start gap-1">
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
-          <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-sm leading-4">{name}</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1light-orange text-xs leading-3">Name</span>
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-sm leading-4">{name}</span>
         </div>
       </div>
     </div>
@@ -814,8 +814,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                         <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[16px] whitespace-nowrap">{asset.ticker}</span>
                       </div>
                       <div className="flex flex-1 flex-col gap-[4px] items-end justify-center min-w-0">
-                        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#42bf23] text-[16px] leading-[20px] text-right w-full">{asset.value}</span>
-                        <span className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-[#414965] text-[14px] leading-[16px] text-right w-full">{asset.amount}</span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#42bf23] text-[16px] leading-[20px] text-right w-full">{asset.value}</span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#414965] text-[14px] leading-[16px] text-right w-full">{asset.amount}</span>
                       </div>
                     </div>
                   </div>
@@ -914,7 +914,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                         </div>
                       </div>
                       <span
-                        className="flex-1 [font-family:'JetBrains_Mono',sans-serif] font-medium text-[20px] leading-[20px] text-right min-w-0"
+                        className="flex-1 [font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[20px] text-right min-w-0"
                         style={{ color: tx.positive ? "#42bf23" : "#d20344" }}
                       >{tx.amount}</span>
                     </div>
@@ -1398,8 +1398,8 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                               <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap">{asset.ticker}</span>
                             </div>
                             <div className="flex flex-col items-start justify-center gap-1 flex-1">
-                              <span className="self-stretch [font-family:'JetBrains_Mono',sans-serif] font-medium text-brain-v1green text-base text-right leading-5">{asset.value}</span>
-                              <span className="self-stretch [font-family:'JetBrains_Mono',sans-serif] font-medium text-brain-v1baby-blue-30 text-sm text-right leading-4">{asset.amount}</span>
+                              <span className="self-stretch [font-family:'JetBrains_Mono',monospace] font-medium text-brain-v1green text-base text-right leading-5">{asset.value}</span>
+                              <span className="self-stretch [font-family:'JetBrains_Mono',monospace] font-medium text-brain-v1baby-blue-30 text-sm text-right leading-4">{asset.amount}</span>
                             </div>
                           </div>
                         </div>
@@ -1443,14 +1443,14 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                                   href={`https://basescan.org/tx/${tx.txHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="[font-family:'JetBrains_Mono',sans-serif] text-[10px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors truncate"
+                                  className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors truncate"
                                   data-testid={`link-txhash-${tx.id}`}
                                 >
                                   {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)}
                                 </a>
                               )}
                             </div>
-                            <span className={`flex-shrink-0 [font-family:'JetBrains_Mono',sans-serif] font-medium text-base text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
+                            <span className={`flex-shrink-0 [font-family:'JetBrains_Mono',monospace] font-medium text-base text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
                               {tx.amount}
                             </span>
                           </div>

@@ -148,7 +148,7 @@ function QRPopup({
         <div className="relative shrink-0 size-[274px]">
           <img alt="QR Code" className="absolute block inset-0 max-w-none size-full" src={ICON.qrCode} />
         </div>
-        <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">
+        <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">
           {truncAddr(address)}
         </p>
         <button
@@ -501,7 +501,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                 Wallet Address
               </p>
               <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
                   {truncAddr(activeAddr)}
                 </p>
                 <div className="flex gap-[8px] items-center shrink-0">
@@ -605,7 +605,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                   IBAN Bank Number
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-                  <p className="flex-1 [font-family:'JetBrains_Mono',sans-serif] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
+                  <p className="flex-1 [font-family:'JetBrains_Mono',monospace] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
                     {iban ? truncIban(iban) : "—"}
                   </p>
                   <ActionBtn
@@ -696,7 +696,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
               Wallet Address
             </p>
             <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
-              <p className="[font-family:'JetBrains_Mono',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
                 {truncAddr(activeAddr)}
               </p>
               <div className="flex gap-[8px] items-center shrink-0">
