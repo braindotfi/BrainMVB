@@ -65,7 +65,7 @@ export function WalletButton() {
           />
           <span
             className="text-xs font-mono"
-            style={{ color: "#a8b9f4", fontFamily: "'JetBrains_Mono', sans-serif" }}
+            style={{ color: "#a8b9f4", fontFamily: "'JetBrains Mono', monospace" }}
           >
             {truncateAddress(address)}
           </span>
