@@ -69,7 +69,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
         <span className="text-[#a8b9f4] text-base [font-family:'Gilroy',sans-serif]">
-          Setting up your Crypto Account…
+          Setting up your account…
         </span>
       </div>
     );
