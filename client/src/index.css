@@ -1,7 +1,20 @@
 /* ─── Self-hosted fonts ─── */
-/* JetBrains Mono and Gridular are served from /fonts/. Plus Jakarta Sans,
-   Outfit, Space Grotesk, and Inter are loaded from Google Fonts via the
-   <link> tag in client/index.html. */
+/* Gilroy, Gridular, and JetBrains Mono are served from /fonts/. Plus Jakarta
+   Sans, Outfit, Space Grotesk, and Inter are loaded from Google Fonts via
+   the <link> tag in client/index.html. */
+
+/* Gilroy — primary UI font */
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 100; font-display: swap; src: url('/fonts/Gilroy-Thin.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 200; font-display: swap; src: url('/fonts/Gilroy-UltraLight.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 300; font-display: swap; src: url('/fonts/Gilroy-Light.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/Gilroy-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/Gilroy-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/Gilroy-Semibold.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/Gilroy-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 800; font-display: swap; src: url('/fonts/Gilroy-Extrabold.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 850; font-display: swap; src: url('/fonts/Gilroy-Heavy.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 900; font-display: swap; src: url('/fonts/Gilroy-Black.woff2') format('woff2'); }
+@font-face { font-family: 'Gilroy'; font-style: italic; font-weight: 900; font-display: swap; src: url('/fonts/Gilroy-BlackItalic.woff2') format('woff2'); }
 
 /* Gridular — used for the "brain" wordmark */
 @font-face {
