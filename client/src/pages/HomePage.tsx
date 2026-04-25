@@ -35,87 +35,87 @@ type ReviewItemType = {
 const NEEDS_REVIEW: ReviewItemType[] = [
   {
     id: 1,
-    title: "Pay your phone bill?",
-    vendor: "Verizon",
-    amount: "$189",
+    title: "Pay the electric bill?",
+    vendor: "Con Edison",
+    amount: "$124",
     due: "Due Friday",
-    question: "Should I pay Verizon $189 for your phone bill?",
+    question: "Should I pay Con Edison $124 for your electric bill?",
     description:
-      "Due this Friday. You've paid Verizon every month for 2 years. The amount is normal. You'll have $47,934 left after.",
-    who: "Verizon Wireless",
-    amountFull: "$189.00",
+      "Due this Friday. This is your usual monthly home utility payment. You'll have plenty left in checking after.",
+    who: "Con Edison",
+    amountFull: "$124.18",
     dueBy: "Friday, April 25",
-    from: "Chase Business Checking",
-    autoLabel: "Always pay Verizon automatically",
+    from: "Chase Consumer Checking",
+    autoLabel: "Always pay Con Edison automatically",
   },
   {
     id: 2,
-    title: "Approve payroll for 8 people?",
-    amount: "$12,800",
+    title: "Pay rent for next month?",
+    amount: "$2,450",
     due: "runs tomorrow morning",
-    question: "Should I run payroll for 8 people for $12,800?",
+    question: "Should I pay next month's rent for $2,450?",
     description:
-      "Runs tomorrow morning. Same total as last month. You'll have $35,134 left in checking after.",
-    who: "8 employees",
-    amountFull: "$12,800.00",
+      "Runs tomorrow morning. Same amount as last month. It's your primary monthly housing payment.",
+    who: "Brookside Apartments",
+    amountFull: "$2,450.00",
     dueBy: "Tomorrow, 9:00 AM",
-    from: "Chase Business Checking",
-    autoLabel: "Always run payroll automatically",
+    from: "Chase Consumer Checking",
+    autoLabel: "Always pay rent automatically",
   },
   {
     id: 3,
-    title: "Pay invoice from Acme Design?",
-    vendor: "Acme Design Co",
-    amount: "$3,450",
+    title: "Pay daycare invoice?",
+    vendor: "Bright Futures Daycare",
+    amount: "$980",
     due: "Due Monday",
-    question: "Should I pay Acme Design Co $3,450 for the brand refresh?",
+    question: "Should I pay Bright Futures Daycare $980 for this month's tuition?",
     description:
-      "Net-15 invoice received Apr 10, matches the SOW you approved. New vendor — first payment, so I'll need your confirmation.",
-    who: "Acme Design Co",
-    amountFull: "$3,450.00",
+      "Net-15 invoice received Apr 10. This matches your monthly childcare payment and is due soon.",
+    who: "Bright Futures Daycare",
+    amountFull: "$980.00",
     dueBy: "Monday, April 28",
-    from: "Chase Business Checking",
-    autoLabel: "Always trust invoices from Acme Design",
+    from: "Chase Consumer Checking",
+    autoLabel: "Always pay daycare automatically",
   },
   {
     id: 4,
-    title: "Renew AWS subscription?",
-    vendor: "Amazon Web Services",
-    amount: "$842",
+    title: "Renew the streaming subscription?",
+    vendor: "Netflix",
+    amount: "$24",
     due: "Renews Sunday",
-    question: "Should I renew AWS for $842 this month?",
+    question: "Should I renew Netflix for $24 this month?",
     description:
-      "Up $36 from last month from higher S3 usage. Card on file is your Wirex Debit. You've renewed AWS every month for 18 months.",
-    who: "Amazon Web Services",
-    amountFull: "$842.17",
+      "Up a little from last month after adding an extra profile. Your card on file will be charged automatically.",
+    who: "Netflix",
+    amountFull: "$23.99",
     dueBy: "Sunday, April 27",
-    from: "Wirex Debit ••6903",
-    autoLabel: "Always renew AWS automatically",
+    from: "Visa Debit ••6903",
+    autoLabel: "Always renew streaming automatically",
   },
   {
     id: 5,
-    title: "Move $50,000 to high-yield savings?",
-    amount: "$50,000",
-    due: "earn ~$202/mo",
-    question: "Should I sweep $50,000 into your high-yield savings?",
+    title: "Move extra cash to savings?",
+    amount: "$5,000",
+    due: "earn ~$20/mo",
+    question: "Should I move $5,000 into your high-yield savings?",
     description:
-      "Checking is well above your $25,000 target. Moving $50,000 to Marcus at 4.85% APY would earn about $202 a month and still leave a comfortable buffer.",
+      "Your checking balance is above your usual target. Moving this amount to savings would earn interest while leaving a comfortable cushion.",
     who: "Marcus High-Yield Savings",
-    amountFull: "$50,000.00",
+    amountFull: "$5,000.00",
     dueBy: "When you confirm",
-    from: "Chase Business Checking",
-    autoLabel: "Always sweep idle cash to savings",
+    from: "Chase Consumer Checking",
+    autoLabel: "Always sweep spare cash to savings",
   },
 ];
 
 const ACTIONS = [
-  { id: 1, label: "Paid 3 small bills this morning." },
-  { id: 2, label: "Paid car payment for the month of March, due tomorrow." },
+  { id: 1, label: "Paid your electric bill this morning." },
+  { id: 2, label: "Scheduled your rent payment for tomorrow." },
 ];
 
 const RECOMMENDATIONS = [
-  { id: 1, label: "I found a payments agent that can help you manage recurring payments. Would you like to review it?" },
-  { id: 2, label: "Savings rate went up. Want me to move idle cash there?" },
+  { id: 1, label: "I found a bill-pay agent that can help you manage household payments. Would you like to review it?" },
+  { id: 2, label: "Your savings rate went up. Want me to move extra cash there?" },
 ];
 
 const ReviewItem = ({ item, onClick }: { item: ReviewItemType; onClick: () => void }) => (
@@ -358,7 +358,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative shrink-0 text-[#a8b9f4] text-[32px] whitespace-nowrap">
-                Here's where your business stands today.
+                Here's where your money stands today.
               </p>
             </div>
           </div>
