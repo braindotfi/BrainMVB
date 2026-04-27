@@ -13,6 +13,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
+import { ReviewPage } from "@/pages/ReviewPage";
 import { RulesPage } from "@/pages/RulesPage";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
@@ -108,6 +109,7 @@ function AppLayout() {
           <Switch>
             <Route path="/" component={HomePage} />
             <Route path="/finances" component={FinancesPage} />
+            <Route path="/review" component={ReviewPage} />
             <Route path="/rules" component={RulesPage} />
             <Route path="/activity" component={ActivityPage} />
             <Route path="/settings" component={SettingsPage} />

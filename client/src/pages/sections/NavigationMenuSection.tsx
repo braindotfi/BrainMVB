@@ -122,6 +122,42 @@ const FinancesIconInactive = () => (
   </div>
 );
 
+/* Review icon — inline SVG (clipboard with checkmark) */
+const ReviewIconActive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M9 4h6a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2V5a1 1 0 0 1 1-1Zm0 2v1h6V6H9Z"
+      fill="#a8b9f4"
+    />
+    <path
+      d="m9.5 13.5 2 2 4-4"
+      stroke="#0a0c10"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ReviewIconInactive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M9 4.75h6a1.25 1.25 0 0 1 1.25 1.25v.75H17.5A1.75 1.75 0 0 1 19.25 8.5V19a1.75 1.75 0 0 1-1.75 1.75h-11A1.75 1.75 0 0 1 4.75 19V8.5A1.75 1.75 0 0 1 6.5 6.75H7.75V6A1.25 1.25 0 0 1 9 4.75Zm-.25 1.5V7.5h6.5V6.25h-6.5Z"
+      stroke="#6c779d"
+      strokeWidth="1.25"
+      fill="none"
+    />
+    <path
+      d="m9.75 13.75 1.75 1.75 3.75-3.75"
+      stroke="#6c779d"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  </svg>
+);
+
 const RulesIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%_16.67%_4.17%_4.17%]">
@@ -227,6 +263,7 @@ type NavItem = {
 const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Home", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
   { path: "/finances", label: "Finances", ActiveIcon: FinancesIconActive, InactiveIcon: FinancesIconInactive },
+  { path: "/review", label: "Review", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
   { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
   { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
