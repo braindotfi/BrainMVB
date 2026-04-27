@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { useAuth } from "@/lib/authContext";
 
 const IMG_DOT     = INLINE_FIGMA.homeDot;
 const IMG_DIVIDER = INLINE_FIGMA.homeDivider;
@@ -341,6 +343,30 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const [activeReview, setActiveReview] = useState<ReviewItemType | null>(null);
+  const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Show onboarding once per signed-in user, on first visit to the home screen.
+  const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
+  useEffect(() => {
+    if (!onboardingKey) {
+      setShowOnboarding(false);
+      return;
+    }
+    try {
+      const done = localStorage.getItem(onboardingKey);
+      setShowOnboarding(!done);
+    } catch {
+      setShowOnboarding(true);
+    }
+  }, [onboardingKey]);
+
+  const finishOnboarding = () => {
+    if (onboardingKey) {
+      try { localStorage.setItem(onboardingKey, "1"); } catch {}
+    }
+    setShowOnboarding(false);
+  };
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -441,6 +467,12 @@ $432 less than last month. Nice.
         onOpenChange={(o) => { if (!o) setActiveReview(null); }}
         onConfirm={() => setActiveReview(null)}
         onReject={() => setActiveReview(null)}
+      />
+
+      <OnboardingFlow
+        open={showOnboarding}
+        onClose={finishOnboarding}
+        onComplete={finishOnboarding}
       />
     </div>
   );
