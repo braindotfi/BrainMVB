@@ -382,8 +382,19 @@ function StepUpload({
         <div className="flex flex-col gap-[6px]">
           {files.map((f) => (
             <div key={f.id} className="flex items-center justify-between gap-[12px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px] border border-[#1d2132]">
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate">{f.name}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate flex-1 min-w-0">{f.name}</span>
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] shrink-0">{formatSize(f.size)}</span>
+              <button
+                type="button"
+                onClick={() => setFiles((prev) => prev.filter((p) => p.id !== f.id))}
+                aria-label={`Remove ${f.name}`}
+                data-testid={`button-remove-file-${f.id}`}
+                className="shrink-0 size-[24px] rounded-[6px] flex items-center justify-center text-[#6c779d] hover:text-[#a8b9f4] hover:bg-[#1d2132] transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
           ))}
         </div>
