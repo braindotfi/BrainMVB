@@ -440,8 +440,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Account"
-            onClick={() => alert.info("Information", "Savings rate increased. Should I transfer idle cash to it?")}
-            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => alert.info("Information", "Savings rate increased. Should I transfer idle cash to it?")} />}
+            onClick={() => alert.info("Account details", "You're signed in as ACME Inc. on the Pro plan. Tap the chevron to manage your profile.")}
+            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => alert.info("Account details", "You're signed in as ACME Inc. on the Pro plan. Tap the chevron to manage your profile.")} />}
             useCircleIcon
           />
           <Divider />
@@ -473,13 +473,17 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             sublabel={phone}
             onClick={() =>
               alert.error(
-                "Error",
+                "Verification failed",
                 <>
-                  Incorrect password. Visit this{" "}
-                  <AppAlertLink onClick={() => alert.info("Recover password", "Password reset flow would open here.")}>
-                    page
+                  We couldn't verify {phone}. Tap{" "}
+                  <AppAlertLink
+                    onClick={() =>
+                      alert.info("Code resent", `A new 6-digit code is on its way to ${phone}. It expires in 10 minutes.`)
+                    }
+                  >
+                    here
                   </AppAlertLink>{" "}
-                  to recover your password.
+                  to resend the verification code.
                 </>,
               )
             }
@@ -496,8 +500,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           <SettingRow
             icon={<ProfileRowCircle src={ICONS.settings_billing_icon} w={20} h={14.5} />}
             label="Billing"
-            onClick={() => alert.success("Success", "Your savings rate has increased! Consider moving your idle cash.")}
-            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => alert.success("Success", "Your savings rate has increased! Consider moving your idle cash.")} />}
+            onClick={() => alert.success("Invoice paid", "Your April invoice of $24.00 has been paid in full. A receipt is on its way to treasury@acme.com.")}
+            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => alert.success("Invoice paid", "Your April invoice of $24.00 has been paid in full. A receipt is on its way to treasury@acme.com.")} />}
             useCircleIcon
           />
         </Card>
