@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const TOTAL_STEPS = 7;
 
@@ -233,7 +232,10 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
           </div>
 
           {/* Body */}
-          <ScrollArea className="w-full flex-1 min-h-0">
+          <div
+            className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+            data-testid="onboarding-scroll"
+          >
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
               {step === 0 && <StepWelcome />}
               {step === 1 && (
@@ -328,7 +330,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                 </button>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
