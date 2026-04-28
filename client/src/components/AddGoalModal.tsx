@@ -1,0 +1,319 @@
+import { useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+
+/* AddGoalModal — Figma 4074:65865 ("New Goal").
+   Same modal chrome as the Review popup (440px, rounded-24,
+   #11141b BG, blurred 56px title bar, #1d2132 stroke). The body
+   scrolls when content exceeds viewport height. */
+
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: (goal: {
+    category: string;
+    name: string;
+    amount: string;
+    timeline: string;
+    priority: number;
+  }) => void;
+};
+
+const CATEGORIES = [
+  "Pay Off Debt",
+  "Build Reserve",
+  "Hit Milestone",
+  "Cut Spend",
+  "Capital Deploy",
+  "Other",
+];
+
+const TIMELINES = ["6 months", "12 months", "18 months", "Custom"];
+
+/* Static demo ranked list shown in the priority card. The user's new
+   goal slot is the disabled fourth row, mirroring the Figma mockup. */
+const PRIORITY_LIST = [
+  { name: "Hi $5M ARR", rank: "Ranked 1", muted: false },
+  { name: "Reach 18-month runway", rank: "Ranked 2", muted: false },
+  { name: "Reach 18-month runway", rank: "Ranked 3", muted: false },
+  { name: "Your new goal will go here", rank: "--", muted: true },
+];
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex gap-[8px] items-center w-full">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">
+      {children}
+    </p>
+    <div className="flex-1 h-px bg-[#1d2132]" />
+  </div>
+);
+
+const Chip = ({
+  children,
+  selected,
+  onClick,
+  testId,
+}: {
+  children: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+  testId?: string;
+}) => (
+  <button
+    type="button"
+    data-testid={testId}
+    onClick={onClick}
+    className={
+      "flex items-center justify-center px-[8px] py-[6px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] " +
+      (selected ? "bg-[#4a2300] hover:bg-[#5a2c00]" : "bg-[#06070a] hover:bg-[#101218]")
+    }
+  >
+    <span
+      className={
+        "[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap " +
+        (selected ? "text-[#ff9500]" : "text-[#414965]")
+      }
+    >
+      {children}
+    </span>
+  </button>
+);
+
+const HintIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="block shrink-0"
+  >
+    <circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.2" />
+    <path d="M8 7v3.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
+    <circle cx="8" cy="5.4" r="0.6" fill="#6c779d" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 12 12"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M1 1L11 11M11 1L1 11"
+      stroke="#a8b9f4"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+export const AddGoalModal = ({ open, onOpenChange, onCreate }: Props) => {
+  const [category, setCategory] = useState("Pay Off Debt");
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [timeline, setTimeline] = useState("12 months");
+  const [priority, setPriority] = useState(29);
+
+  const inputClass =
+    "bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px] w-full " +
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] " +
+    "placeholder:text-[#6c779d] outline-none focus:ring-2 focus:ring-[#7631EE]";
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          data-testid="add-goal-modal-backdrop"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
+        <DialogPrimitive.Content
+          aria-describedby="add-goal-modal-description"
+          data-testid="add-goal-modal"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+        >
+          {/* Title bar — Figma 4074:65866. */}
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+              New Goal
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Close
+              data-testid="button-add-goal-close"
+              aria-label="Close"
+              className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              <CloseIcon />
+            </DialogPrimitive.Close>
+          </div>
+
+          {/* Scrollable body — gap-24, p-24 per Figma. */}
+          <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+            <DialogPrimitive.Description
+              id="add-goal-modal-description"
+              className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
+            >
+              Tell Brain what your business is working toward. Agents will run it under signed policy.
+            </DialogPrimitive.Description>
+
+            {/* Brain hint card */}
+            <div className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full">
+              <div className="flex flex-1 gap-[8px] items-start min-w-0">
+                <span className="relative shrink-0 size-[16px] mt-[1px]">
+                  <HintIcon />
+                </span>
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                  Brain knows your monthly burn is $612K against $4.8M operating cash. Set the target at $11M to clear the 18-month bar based on current trajectory.
+                </p>
+              </div>
+            </div>
+
+            {/* What's it for? */}
+            <div className="flex flex-col gap-[8px] items-start w-full">
+              <SectionLabel>What&rsquo;s it for?</SectionLabel>
+              <div className="flex flex-wrap gap-[8px] items-center w-full">
+                {CATEGORIES.map((c) => (
+                  <Chip
+                    key={c}
+                    selected={category === c}
+                    onClick={() => setCategory(c)}
+                    testId={`chip-category-${c.replace(/\s+/g, "-").toLowerCase()}`}
+                  >
+                    {c}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+
+            {/* Goal name */}
+            <div className="flex flex-col gap-[8px] items-start w-full">
+              <SectionLabel>What do you want to call it?</SectionLabel>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Reach 18-month runway, Hit $5M ARR etc"
+                data-testid="input-goal-name"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Target amount */}
+            <div className="flex flex-col gap-[8px] items-start w-full">
+              <SectionLabel>Target Amount</SectionLabel>
+              <input
+                type="text"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="e.g. $20000"
+                data-testid="input-goal-amount"
+                className={inputClass}
+              />
+            </div>
+
+            {/* By when */}
+            <div className="flex flex-col gap-[8px] items-start w-full">
+              <SectionLabel>By When?</SectionLabel>
+              <div className="flex flex-wrap gap-[8px] items-center w-full">
+                {TIMELINES.map((t) => (
+                  <Chip
+                    key={t}
+                    selected={timeline === t}
+                    onClick={() => setTimeline(t)}
+                    testId={`chip-timeline-${t.replace(/\s+/g, "-").toLowerCase()}`}
+                  >
+                    {t}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+
+            {/* Priority */}
+            <div className="flex flex-col gap-[8px] items-start w-full">
+              <SectionLabel>How important is this goal compared to others?</SectionLabel>
+              <div className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+                <div className="flex flex-col items-start w-full">
+                  <div className="flex justify-between w-full">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-[#6c779d] text-[12px]">
+                      Lower Priority
+                    </p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-[#6c779d] text-[12px] text-right">
+                      Higher Priority
+                    </p>
+                  </div>
+                  {/* Slider — native range hidden over a styled track + knob. */}
+                  <div className="relative h-[32px] w-full mt-[8px]">
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[6px] bg-[#222737] rounded-[3px]" />
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 left-0 h-[6px] bg-[#ff9500] rounded-[3px]"
+                      style={{ width: `${priority}%` }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={priority}
+                      onChange={(e) => setPriority(Number(e.target.value))}
+                      data-testid="input-goal-priority"
+                      aria-label="Goal priority"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[24px] bg-white rounded-full shadow-[0_0.5px_4px_0_rgba(0,0,0,0.12),0_6px_13px_0_rgba(0,0,0,0.12)] pointer-events-none"
+                      style={{ left: `${priority}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-[8px] items-start w-full">
+                  {PRIORITY_LIST.map((p, i) => (
+                    <div key={i} className="flex gap-[8px] items-center w-full">
+                      <span
+                        className="size-[6px] rounded-full shrink-0"
+                        style={{ backgroundColor: p.muted ? "#414965" : "#42bf23" }}
+                      />
+                      <p
+                        className={
+                          "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] truncate " +
+                          (p.muted ? "text-[#414965]" : "text-[#6c779d]")
+                        }
+                      >
+                        {p.name}
+                      </p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[13px] whitespace-nowrap">
+                        {p.rank}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Policy banner */}
+            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] rounded-[8px] w-full">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-[#7631ee] text-[14px]">
+                <span className="font-medium">You can change any of this later. P</span>
+                <span className="font-semibold">olicy v3 will apply.</span>
+              </p>
+            </div>
+
+            {/* Create button */}
+            <button
+              type="button"
+              data-testid="button-add-goal-create"
+              onClick={() =>
+                onCreate({ category, name, amount, timeline, priority })
+              }
+              className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] w-full"
+            >
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">
+                Create
+              </span>
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+};

@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { AddGoalModal } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,47 +79,62 @@ const GoalProgress = ({ goal }: { goal: GoalRow }) => {
 
 /* Add Goal pill — Figma 4074:65844. Amber pill (#4a2300 / #ff9500),
    matches the same treatment as the Settings "Edit" button. */
-const AddGoalButton = () => {
+const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    data-testid="button-add-goal"
+    onClick={onClick}
+    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+  >
+    <span className="relative shrink-0 size-[16px]">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="block"
+      >
+        <path d="M8 3.33V12.67M3.33 8H12.67" stroke="#ff9500" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap">
+      Add Goal
+    </span>
+  </button>
+);
+
+const GoalsSection = () => {
   const { toast } = useToast();
+  const [addOpen, setAddOpen] = useState(false);
+
   return (
-    <button
-      type="button"
-      data-testid="button-add-goal"
-      onClick={() => toast({ title: "Add Goal", description: "Goal creation coming soon." })}
-      className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
-    >
-      <span className="relative shrink-0 size-[16px]">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="block"
-        >
-          <path d="M8 3.33V12.67M3.33 8H12.67" stroke="#ff9500" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap">
-        Add Goal
-      </span>
-    </button>
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden rounded-[16px] w-full">
+      <div className="border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+          Your Goals
+        </p>
+        <AddGoalButton onClick={() => setAddOpen(true)} />
+      </div>
+      <div className="flex flex-col gap-[16px] items-start p-[16px] w-full">
+        {GOALS.map((g) => <GoalProgress key={g.id} goal={g} />)}
+      </div>
+      <AddGoalModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreate={(g) => {
+          setAddOpen(false);
+          toast({
+            title: "Goal created",
+            description: g.name
+              ? `"${g.name}" added to your goals.`
+              : `New ${g.category.toLowerCase()} goal added.`,
+          });
+        }}
+      />
+    </div>
   );
 };
-
-const GoalsSection = () => (
-  <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden rounded-[16px] w-full">
-    <div className="border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
-        Your Goals
-      </p>
-      <AddGoalButton />
-    </div>
-    <div className="flex flex-col gap-[16px] items-start p-[16px] w-full">
-      {GOALS.map((g) => <GoalProgress key={g.id} goal={g} />)}
-    </div>
-  </div>
-);
 
 const GreenCheckIcon = () => (
   <div className="relative rounded-[100px] shrink-0 size-[24px]">
