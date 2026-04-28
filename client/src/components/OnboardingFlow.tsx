@@ -292,7 +292,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               )}
 
               {/* Footer buttons */}
-              {step < 4 ? (
+              {step < TOTAL_STEPS - 1 ? (
                 <div className="flex gap-[16px] items-stretch w-full">
                   <button
                     type="button"
@@ -315,17 +315,6 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                     </span>
                   </button>
                 </div>
-              ) : step < TOTAL_STEPS - 1 ? (
-                <button
-                  type="button"
-                  onClick={goNext}
-                  data-testid="button-onboarding-continue"
-                  className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
-                >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
-                    Continue
-                  </span>
-                </button>
               ) : (
                 <button
                   type="button"
@@ -955,14 +944,19 @@ function StepAutonomy({
             aria-label="Copy your bookkeeper or accountant"
             onClick={() => onShareChange(!shareWithBookkeeper)}
             data-testid="switch-bookkeeper-share"
-            className={`shrink-0 relative w-[40px] h-[24px] rounded-full transition-colors ${
-              shareWithBookkeeper ? "bg-[#42bf23]" : "bg-[#1d2132]"
-            }`}
+            className="relative shrink-0 h-[24px] w-[40px] flex-shrink-0 transition-all"
+            style={{ borderRadius: shareWithBookkeeper ? "100px" : "12px" }}
           >
             <span
-              className={`absolute top-[2px] size-[20px] rounded-full bg-white transition-transform ${
-                shareWithBookkeeper ? "translate-x-[18px]" : "translate-x-[2px]"
-              }`}
+              className="absolute h-[20px] left-[2px] rounded-[100px] top-[2px] w-[36px] transition-colors"
+              style={{ background: shareWithBookkeeper ? "#123509" : "#222737" }}
+            />
+            <span
+              className="absolute rounded-[100px] size-[16px] top-[4px] transition-all"
+              style={{
+                background: shareWithBookkeeper ? "#42bf23" : "#06070a",
+                left: shareWithBookkeeper ? "20px" : "4px",
+              }}
             />
           </button>
         </div>
@@ -1157,10 +1151,14 @@ function StepPeople({
         })}
       </div>
 
-      <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
-          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
-        </p>
+      <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+        <div className="flex flex-1 items-start min-w-px relative">
+          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
+              You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
