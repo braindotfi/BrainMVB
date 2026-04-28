@@ -6,7 +6,6 @@ import {
   type AgentTransaction, type InsertAgentTransaction,
   type Notification, type InsertNotification,
   type MarketplaceListing,
-  type Goal, type InsertGoal,
   users as usersTable,
   agents as agentsTable,
   marketplaceListings as marketplaceListingsTable,
@@ -14,7 +13,6 @@ import {
   agentTransactions as agentTransactionsTable,
   notifications as notificationsTable,
   siweNonces as siweNoncesTable,
-  goals as goalsTable,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -73,20 +71,7 @@ export interface IStorage {
   markAsRead(id: string): Promise<void>;
   deleteNotification(id: string): Promise<void>;
 
-  // Goals
-  listGoals(userId?: string): Promise<Goal[]>;
-  createGoal(goal: InsertGoal): Promise<Goal>;
 }
-
-/* Default goals seeded into both MemStorage and the DB on first run.
-   Mirrors the original hard-coded GOALS list that lived on the home page
-   so the UI looks identical the very first time the app boots. */
-const GOALS_SEED: Omit<Goal, "id" | "createdAt">[] = [
-  { userId: "default", category: "Build Reserve", name: "Q2 tax reserve",      vault: "USDC Vault", targetAmount: "100000", savedAmount: "60000", timeline: "12 months", priority: 75, color: "#42bf23" },
-  { userId: "default", category: "Build Reserve", name: "Operating runway",    vault: "USDC",       targetAmount: "10000",  savedAmount: "4000",  timeline: "12 months", priority: 60, color: "#ff9500" },
-  { userId: "default", category: "Cut Spend",     name: "Q4 marketing budget", vault: "USDC Vault", targetAmount: "2000",   savedAmount: "400",   timeline: "6 months",  priority: 35, color: "#7631EE" },
-  { userId: "default", category: "Capital Deploy", name: "New equipment fund", vault: "sUSDS",      targetAmount: "8000",   savedAmount: "4295",  timeline: "12 months", priority: 50, color: "#d20344" },
-];
 
 // ─── In-memory implementation (replace with Drizzle+PostgreSQL when DB is provisioned) ───
 
@@ -98,17 +83,9 @@ export class MemStorage implements IStorage {
   private memories: AgentMemory[] = [];
   private txLog: AgentTransaction[] = [];
   private notifs = new Map<string, Notification>();
-  private goalsList: Goal[] = [];
 
   constructor() {
     this._seed();
-    this._seedGoals();
-  }
-
-  private _seedGoals() {
-    for (const g of GOALS_SEED) {
-      this.goalsList.push({ id: randomUUID(), ...g, createdAt: new Date() });
-    }
   }
 
   // ─── Seed marketplace + demo launches ───
@@ -386,33 +363,6 @@ export class MemStorage implements IStorage {
   }
   async deleteNotification(id: string): Promise<void> {
     this.notifs.delete(id);
-  }
-
-  // ─── Goals ───
-  async listGoals(userId?: string): Promise<Goal[]> {
-    const filtered = userId
-      ? this.goalsList.filter(g => g.userId === userId)
-      : this.goalsList;
-    return [...filtered].sort(
-      (a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
-    );
-  }
-  async createGoal(goal: InsertGoal): Promise<Goal> {
-    const full: Goal = {
-      id: randomUUID(),
-      userId: goal.userId ?? "default",
-      category: goal.category,
-      name: goal.name,
-      vault: goal.vault ?? "USDC Vault",
-      targetAmount: goal.targetAmount,
-      savedAmount: goal.savedAmount ?? "0",
-      timeline: goal.timeline ?? "12 months",
-      priority: goal.priority ?? 50,
-      color: goal.color ?? "#42bf23",
-      createdAt: new Date(),
-    };
-    this.goalsList.push(full);
-    return full;
   }
 }
 
@@ -720,35 +670,12 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: string): Promise<void> {
     await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
   }
-
-  // ─── Goals ───
-  async listGoals(userId?: string): Promise<Goal[]> {
-    const query = userId
-      ? db.select().from(goalsTable).where(eq(goalsTable.userId, userId))
-      : db.select().from(goalsTable);
-    const rows = await query;
-    return rows.sort(
-      (a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
-    );
-  }
-  async createGoal(goal: InsertGoal): Promise<Goal> {
-    const [row] = await db.insert(goalsTable).values(goal).returning();
-    return row;
-  }
 }
 
 async function createStorage(): Promise<IStorage> {
   if (process.env.DATABASE_URL) {
     const dbStorage = new DatabaseStorage();
     await dbStorage.init();
-    // Seed default goals only when the table is empty so the home page has
-    // something to show on a fresh install.
-    const existing = await dbStorage.listGoals();
-    if (existing.length === 0) {
-      for (const g of GOALS_SEED) {
-        await dbStorage.createGoal(g);
-      }
-    }
     return dbStorage;
   }
   return new MemStorage();

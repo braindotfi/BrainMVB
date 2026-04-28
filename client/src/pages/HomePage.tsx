@@ -6,9 +6,6 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Goal, InsertGoal } from "@shared/schema";
 
 /* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
@@ -33,10 +30,28 @@ const BRAIN_DETECTED = [
 ];
 
 /* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
-const fmt = (n: number) => `$${n.toLocaleString("en-US")}`;
+type GoalRow = {
+  id: string;
+  name: string;
+  vault: string;
+  saved: number;
+  target: number;
+  /** Tailwind/CSS color for the progress bar fill. */
+  color: string;
+};
 
-/* Cycle through the same accent palette used in the original mock-up so
-   newly created goals never appear with a default colour every time. */
+/* Initial four goals matching the original Figma mock-up. New goals
+   created via the modal are appended to local state; nothing is
+   persisted yet — the wiring will land when brain-core is integrated. */
+const SEED_GOALS: GoalRow[] = [
+  { id: "tax",       name: "Q2 tax reserve",       vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
+  { id: "runway",    name: "Operating runway",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
+  { id: "marketing", name: "Q4 marketing budget",  vault: "USDC Vault", saved:    400, target:   2_000, color: "#7631EE" },
+  { id: "equipment", name: "New equipment fund",   vault: "sUSDS",      saved:  4_295, target:   8_000, color: "#d20344" },
+];
+
+/* Palette for newly created goals so each new entry gets a fresh accent
+   colour rather than always defaulting to the same one. */
 const GOAL_COLORS = ["#42bf23", "#ff9500", "#7631EE", "#d20344", "#22d3ee"];
 
 /* Map the modal's category enum onto a sensible vault label for the
@@ -62,10 +77,10 @@ const parseAmount = (raw: string): number => {
   return Math.max(0, Math.round(n * mult));
 };
 
-const GoalProgress = ({ goal }: { goal: Goal }) => {
-  const saved  = Number(goal.savedAmount  ?? "0");
-  const target = Math.max(1, Number(goal.targetAmount ?? "1"));
-  const pct = Math.max(0, Math.min(100, Math.round((saved / target) * 100)));
+const fmt = (n: number) => `$${n.toLocaleString("en-US")}`;
+
+const GoalProgress = ({ goal }: { goal: GoalRow }) => {
+  const pct = Math.max(0, Math.min(100, Math.round((goal.saved / goal.target) * 100)));
   return (
     <div className="flex flex-col gap-[8px] w-full" data-testid={`goal-${goal.id}`}>
       <div className="flex items-center justify-between gap-[12px] w-full">
@@ -75,9 +90,9 @@ const GoalProgress = ({ goal }: { goal: Goal }) => {
         </p>
         <div className="flex items-center gap-[12px] shrink-0 [font-family:'JetBrains_Mono',monospace] tabular-nums">
           <p className="text-[#a8b9f4] text-[14px]">
-            <span className="font-medium">{fmt(saved)}</span>
+            <span className="font-medium">{fmt(goal.saved)}</span>
             <span className="text-[#6c779d]"> of </span>
-            <span className="font-medium">{fmt(target)}</span>
+            <span className="font-medium">{fmt(goal.target)}</span>
           </p>
           <p className="text-[#6c779d] text-[14px] w-[36px] text-right">{pct}%</p>
         </div>
@@ -122,46 +137,29 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
 const GoalsSection = () => {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
+  /* Local-only state: new goals live in memory until the brain-core
+     wiring lands. They reset on refresh by design. */
+  const [goals, setGoals] = useState<GoalRow[]>(SEED_GOALS);
 
-  const { data: goals = [], isLoading } = useQuery<Goal[]>({
-    queryKey: ["/api/goals"],
-  });
-
-  const createGoal = useMutation({
-    mutationFn: async (payload: AddGoalPayload) => {
-      const target = parseAmount(payload.amount);
-      const fallbackName =
-        payload.name.trim() || `${payload.category} goal`;
-      const insert: InsertGoal = {
-        userId: "default",
-        category: payload.category,
-        name: fallbackName,
-        vault: CATEGORY_VAULT[payload.category] ?? "USDC Vault",
-        targetAmount: String(target || 0),
-        savedAmount: "0",
-        timeline: payload.timeline,
-        priority: Math.round(payload.priority),
-        color: GOAL_COLORS[goals.length % GOAL_COLORS.length],
-      };
-      const res = await apiRequest("POST", "/api/goals", insert);
-      return (await res.json()) as Goal;
-    },
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
-      setAddOpen(false);
-      toast({
-        title: "Goal created",
-        description: `"${created.name}" added to your goals.`,
-      });
-    },
-    onError: (err: any) => {
-      toast({
-        title: "Couldn't create goal",
-        description: err?.message ?? "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const handleCreate = (payload: AddGoalPayload) => {
+    const target = parseAmount(payload.amount);
+    const fallbackName =
+      payload.name.trim() || `${payload.category} goal`;
+    const newGoal: GoalRow = {
+      id: `goal-${Date.now()}`,
+      name: fallbackName,
+      vault: CATEGORY_VAULT[payload.category] ?? "USDC Vault",
+      saved: 0,
+      target: target || 0,
+      color: GOAL_COLORS[goals.length % GOAL_COLORS.length],
+    };
+    setGoals((prev) => [...prev, newGoal]);
+    setAddOpen(false);
+    toast({
+      title: "Goal created",
+      description: `"${fallbackName}" added to your goals.`,
+    });
+  };
 
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden rounded-[16px] w-full">
@@ -172,29 +170,12 @@ const GoalsSection = () => {
         <AddGoalButton onClick={() => setAddOpen(true)} />
       </div>
       <div className="flex flex-col gap-[16px] items-start p-[16px] w-full">
-        {isLoading && goals.length === 0 ? (
-          <p
-            data-testid="text-goals-loading"
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
-          >
-            Loading goals…
-          </p>
-        ) : goals.length === 0 ? (
-          <p
-            data-testid="text-goals-empty"
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
-          >
-            No goals yet — tap Add Goal to create your first one.
-          </p>
-        ) : (
-          goals.map((g) => <GoalProgress key={g.id} goal={g} />)
-        )}
+        {goals.map((g) => <GoalProgress key={g.id} goal={g} />)}
       </div>
       <AddGoalModal
         open={addOpen}
         onOpenChange={setAddOpen}
-        isSubmitting={createGoal.isPending}
-        onCreate={(g) => createGoal.mutate(g)}
+        onCreate={handleCreate}
       />
     </div>
   );

@@ -136,27 +136,6 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 
-/* ─── Goals ─── */
-export const goals = pgTable("goals", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: text("user_id").notNull().default("default"),
-  category: text("category").notNull(),         // Pay Off Debt|Build Reserve|Hit Milestone|Cut Spend|Capital Deploy|Other
-  name: text("name").notNull(),
-  vault: text("vault").notNull().default("USDC Vault"),
-  targetAmount: numeric("target_amount", { precision: 18, scale: 2 }).notNull(),
-  savedAmount: numeric("saved_amount", { precision: 18, scale: 2 }).notNull().default("0"),
-  timeline: text("timeline").notNull().default("12 months"),
-  priority: integer("priority").notNull().default(50),
-  color: text("color").notNull().default("#42bf23"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => [
-  index("goals_user_id_idx").on(t.userId),
-]);
-
-export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, createdAt: true });
-export type InsertGoal = z.infer<typeof insertGoalSchema>;
-export type Goal = typeof goals.$inferSelect;
-
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),
