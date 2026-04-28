@@ -67,6 +67,7 @@ import settings_briefcase_body from "@assets/figma_icons/settings_briefcase_body
 import settings_briefcase_handle from "@assets/figma_icons/settings_briefcase_handle.svg";
 import settings_briefcase_div from "@assets/figma_icons/settings_briefcase_div.svg";
 import settings_briefcase_plus from "@assets/figma_icons/settings_briefcase_plus.svg";
+import checkbox_checkmark from "@assets/figma_icons/checkbox_checkmark.svg";
 
 export const ICONS = {
   brain_union,
@@ -138,4 +139,5 @@ export const ICONS = {
   settings_briefcase_handle,
   settings_briefcase_div,
   settings_briefcase_plus,
+  checkbox_checkmark,
 } as const;
