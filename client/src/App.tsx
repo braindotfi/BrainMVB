@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppAlertProvider } from "@/components/AppAlert";
 import { Web3Provider } from "@/lib/web3Provider";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
@@ -159,8 +160,10 @@ function App() {
     <Web3Provider>
       <TransactionProvider>
         <TooltipProvider>
-          <Toaster />
-          <AppLayout />
+          <AppAlertProvider>
+            <Toaster />
+            <AppLayout />
+          </AppAlertProvider>
         </TooltipProvider>
       </TransactionProvider>
     </Web3Provider>

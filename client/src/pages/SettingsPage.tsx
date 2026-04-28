@@ -1,5 +1,6 @@
 import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
@@ -353,6 +354,7 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
 );
 
 function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
+  const alert = useAppAlert();
   const [name, setName] = useState("ACME Inc.");
   const [email] = useState("treasury@acme.com");
   const [phone] = useState("+1 (415) 555-0192");
@@ -438,8 +440,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Account"
-            onClick={() => toast({ title: "Account details", description: "Account settings would open here." })}
-            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => toast({ title: "Account details", description: "Account settings would open here." })} />}
+            onClick={() => alert.info("Information", "Savings rate increased. Should I transfer idle cash to it?")}
+            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => alert.info("Information", "Savings rate increased. Should I transfer idle cash to it?")} />}
             useCircleIcon
           />
           <Divider />
@@ -469,7 +471,18 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
             sublabel={phone}
-            onClick={() => toast({ title: "Phone update", description: "An OTP has been sent to your current number." })}
+            onClick={() =>
+              alert.error(
+                "Error",
+                <>
+                  Incorrect password. Visit this{" "}
+                  <AppAlertLink onClick={() => alert.info("Recover password", "Password reset flow would open here.")}>
+                    page
+                  </AppAlertLink>{" "}
+                  to recover your password.
+                </>,
+              )
+            }
             right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" />}
             useCircleIcon
           />
@@ -483,8 +496,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           <SettingRow
             icon={<ProfileRowCircle src={ICONS.settings_billing_icon} w={20} h={14.5} />}
             label="Billing"
-            onClick={() => toast({ title: "Billing", description: "Billing & invoices would open here." })}
-            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => toast({ title: "Billing", description: "Billing & invoices would open here." })} />}
+            onClick={() => alert.success("Success", "Your savings rate has increased! Consider moving your idle cash.")}
+            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => alert.success("Success", "Your savings rate has increased! Consider moving your idle cash.")} />}
             useCircleIcon
           />
         </Card>
