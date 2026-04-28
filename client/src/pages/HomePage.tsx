@@ -14,13 +14,13 @@ const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
 const ACTIONS = [
-  { id: 1, label: "Paid your electric bill this morning." },
-  { id: 2, label: "Scheduled your rent payment for tomorrow." },
+  { id: 1, label: "Paid your AWS bill this morning." },
+  { id: 2, label: "Scheduled the office lease payment for tomorrow." },
 ];
 
 const RECOMMENDATIONS = [
-  { id: 1, label: "I found a bill-pay agent that can help you manage household payments. Would you like to review it?" },
-  { id: 2, label: "Your savings rate went up. Want me to move extra cash there?" },
+  { id: 1, label: "I found a bill-pay agent that can help you manage vendor payments. Would you like to review it?" },
+  { id: 2, label: "Your operating runway extended. Want me to move extra cash to a yield vault?" },
 ];
 
 /* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
@@ -35,10 +35,10 @@ type GoalRow = {
 };
 
 const GOALS: GoalRow[] = [
-  { id: "home",      name: "House down payment", vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
-  { id: "emergency", name: "Emergency fund",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
-  { id: "vacation",  name: "Japan trip",         vault: "USDC Vault", saved:    400, target:   2_000, color: "#7631EE" },
-  { id: "car",       name: "New car",            vault: "sUSDS",      saved:  4_295, target:   8_000, color: "#d20344" },
+  { id: "tax",       name: "Q2 tax reserve",       vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
+  { id: "runway",    name: "Operating runway",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
+  { id: "marketing", name: "Q4 marketing budget",  vault: "USDC Vault", saved:    400, target:   2_000, color: "#7631EE" },
+  { id: "equipment", name: "New equipment fund",   vault: "sUSDS",      saved:  4_295, target:   8_000, color: "#d20344" },
 ];
 
 const fmt = (n: number) => `$${n.toLocaleString("en-US")}`;
@@ -192,7 +192,7 @@ export function HomePage() {
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
                 <span className="leading-[24px] text-[20px]">{greeting}, </span>
-                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">Maria</span>
+                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">ACME Inc.</span>
                 <span className="leading-[24px] text-[20px]">.</span>
               </p>
             </div>

@@ -84,15 +84,15 @@ type ActivityItemData = {
 };
 
 const TODAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 1, type: "paid", title: "Paid Adobe subscription", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase checking", amount: "$54", time: "9:14 AM" },
-  { id: 2, type: "paid", title: "Paid Comcast Fiber Internet", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase checking", amount: "$240", time: "6:46 AM" },
-  { id: 3, type: "noticed", title: "Noticed a new charge from a new company", meta1: "Meridian LLC", meta2: "I emailed your bookeeper and cc'ed you", amount: "$1,515", time: "3:11 AM" },
+  { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM" },
+  { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM" },
+  { id: 3, type: "noticed", title: "Noticed a new charge from a new vendor", meta1: "Meridian LLC", meta2: "I emailed your bookkeeper and cc'ed you", amount: "$1,515", time: "3:11 AM" },
 ];
 
 const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 4, type: "moved", title: "Moved idle USDC from savings to AAVE yield protocol", meta1: "Savings exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM" },
+  { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM" },
   { id: 5, type: "noticed", title: "Got paid by Northstar Design", meta1: "Invoice #INV-2024-041", meta2: "Paid 3 days early", amount: "$6,200", time: "2:20 PM" },
-  { id: 6, type: "approved", title: "You approved payroll payment for John Smith", meta1: "Payment was sent to John's IBAN bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
+  { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
 ];
 
 const ActivityItem = ({ item }: { item: ActivityItemData }) => {

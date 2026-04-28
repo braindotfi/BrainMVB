@@ -18,11 +18,11 @@ type Goal = {
 };
 
 const GOALS: Goal[] = [
-  { id: "home",      label: "Buying a home" },
-  { id: "emergency", label: "Emergency Fund" },
-  { id: "vacation",  label: "A trip or Vacation" },
-  { id: "debt",      label: "Paying Off Debt" },
-  { id: "retire",    label: "Retirement" },
+  { id: "runway",    label: "Build operating runway" },
+  { id: "tax",       label: "Tax reserves" },
+  { id: "equipment", label: "Equipment financing" },
+  { id: "hiring",    label: "Hiring & payroll" },
+  { id: "expansion", label: "New office or expansion" },
   { id: "other",     label: "Something Else" },
 ];
 
@@ -48,7 +48,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [bankSearch, setBankSearch] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(["home", "emergency"]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(["runway", "tax"]);
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("small");
 
   const goNext = useCallback(() => {
@@ -70,7 +70,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
       setSelectedBank(null);
       setBankSearch("");
       setFiles([]);
-      setSelectedGoals(["home", "emergency"]);
+      setSelectedGoals(["runway", "tax"]);
       setAutonomy("small");
     }
   }, [open]);

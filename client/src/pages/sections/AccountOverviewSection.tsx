@@ -221,11 +221,11 @@ const debitData = {
     { icon: "/figmaAssets/crypto-icons-3.svg", name: "Dirham",  ticker: "AED", value: "AED 865,040.30",amount: "865,040", category: "cash"   },
   ],
   transactions: [
-    { id: "d1", type: "withdrawal", label: "POS Purchase – Noon",    time: "3:20pm",  date: "20 Sat", amount: "-$149.00", positive: false },
-    { id: "d2", type: "deposit",    label: "Salary Credit",          time: "9:00am",  date: "18 Thur",amount: "+$4,200",  positive: true  },
-    { id: "d3", type: "withdrawal", label: "Grocery – Carrefour",    time: "6:45pm",  date: "17 Wed", amount: "-$86.30",  positive: false },
-    { id: "d4", type: "withdrawal", label: "Uber Ride",              time: "2:12pm",  date: "15 Mon", amount: "-$12.50",  positive: false },
-    { id: "d5", type: "deposit",    label: "ATM Top-Up",             time: "11:00am", date: "12 Fri", amount: "+$500.00", positive: true  },
+    { id: "d1", type: "withdrawal", label: "Office supplies – Staples",    time: "3:20pm",  date: "20 Sat", amount: "-$149.00", positive: false },
+    { id: "d2", type: "deposit",    label: "Customer payment – Acme Co.",  time: "9:00am",  date: "18 Thur",amount: "+$4,200",  positive: true  },
+    { id: "d3", type: "withdrawal", label: "Team lunch – Sweetgreen",      time: "6:45pm",  date: "17 Wed", amount: "-$86.30",  positive: false },
+    { id: "d4", type: "withdrawal", label: "Uber for client meeting",      time: "2:12pm",  date: "15 Mon", amount: "-$12.50",  positive: false },
+    { id: "d5", type: "deposit",    label: "Card top-up from operating",   time: "11:00am", date: "12 Fri", amount: "+$500.00", positive: true  },
   ],
 };
 
@@ -235,11 +235,11 @@ const bankData = {
     { icon: "/figmaAssets/crypto-icons-3.svg", name: "Euro",    ticker: "EUR", value: "€1,850.00",     amount: "1,850",   category: "cash" },
   ],
   transactions: [
-    { id: "b1", type: "deposit",    label: "Wire Transfer In",       time: "8:49pm",  date: "20 Sat", amount: "+$5,000",  positive: true  },
-    { id: "b2", type: "withdrawal", label: "SEPA Transfer Out",      time: "3:51pm",  date: "18 Thur",amount: "-$1,200",  positive: false },
-    { id: "b3", type: "deposit",    label: "Dividend Payment",       time: "10:00am", date: "16 Tue", amount: "+$320.00", positive: true  },
-    { id: "b4", type: "withdrawal", label: "Rent Transfer",          time: "9:00am",  date: "14 Sun", amount: "-$2,400",  positive: false },
-    { id: "b5", type: "deposit",    label: "Freelance Payment",      time: "4:30pm",  date: "10 Wed", amount: "+$800.00", positive: true  },
+    { id: "b1", type: "deposit",    label: "Customer wire – Northstar Design", time: "8:49pm",  date: "20 Sat", amount: "+$5,000",  positive: true  },
+    { id: "b2", type: "withdrawal", label: "Vendor payment – AWS",             time: "3:51pm",  date: "18 Thur",amount: "-$1,200",  positive: false },
+    { id: "b3", type: "deposit",    label: "Treasury bill yield",              time: "10:00am", date: "16 Tue", amount: "+$320.00", positive: true  },
+    { id: "b4", type: "withdrawal", label: "Office lease payment",             time: "9:00am",  date: "14 Sun", amount: "-$2,400",  positive: false },
+    { id: "b5", type: "deposit",    label: "Contractor invoice paid – Acme Co.", time: "4:30pm",  date: "10 Wed", amount: "+$800.00", positive: true  },
   ],
 };
 
@@ -577,7 +577,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
 
   const currentCardData = CARDS[activeCard].data;
 
-  // Both personal and agent wallet (card index 0) support the Crypto filter tab
+  // Both business and agent wallet (card index 0) support the Crypto filter tab
   const filterTabs = activeCard === 0
     ? ["All", "Cash", "Crypto"]
     : ["All", "Cash"];

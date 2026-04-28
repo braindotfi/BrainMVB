@@ -352,8 +352,8 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
 );
 
 function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
-  const [name, setName] = useState("Miles Anderson");
-  const [email] = useState("milesand@mail.com");
+  const [name, setName] = useState("ACME Inc.");
+  const [email] = useState("treasury@acme.com");
   const [phone] = useState("+1 (415) 555-0192");
   const [editing, setEditing] = useState(false);
 

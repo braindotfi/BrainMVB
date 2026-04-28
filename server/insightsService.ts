@@ -24,21 +24,21 @@ const state: InsightsState = {
 
 /* ── Mock account snapshot passed to Claude ── */
 const ACCOUNT_CONTEXT = `
-User account summary (as of today):
-- Neobank balance: $47,832.10 USD
-- AI Wallet (ETH/crypto): $21,333.00 (ETH 1.245, MATIC 295, BNB 1.245)
-- Debit card spending this month: $9,214.40
+ACME Inc. business account summary (as of today):
+- Operating balance: $147,832.10 USD
+- AI Wallet (ETH/crypto treasury): $21,333.00 (ETH 1.245, MATIC 295, BNB 1.245)
+- Business card spending this month: $19,214.40
 - Active AI agents: AlphaFlow, Yield Pilot, Risk Sentinel, SwarmAlpha
-- Monthly subscriptions: $662/mo total across 20 services (Netflix, Spotify, Amazon Prime, Brain Premium, etc.)
-- Inactive subscriptions still billing: Signal Seer ($29/mo), Disney+ ($13.99/mo)
-- Yield earned this month: $548.30 (1.16% APY)
+- Monthly SaaS subscriptions: $4,620/mo total across 20 services (AWS, Notion Team, Linear, Adobe Creative Cloud, GitHub Enterprise, etc.)
+- Inactive seats still billing: Signal Seer ($290/mo, 0 active users), Loom Business ($139.99/mo, 0 active users)
+- Treasury yield earned this month: $548.30 (1.16% APY)
 - AlphaFlow trading volume this week: 47 trades (18% above 30-day avg)
-- Idle cash in neobank: $4,200 not allocated to yield
+- Idle cash in operating account: $42,000 not allocated to yield
 - ETH price change: -12% in last 24h, volatility elevated
-- Savings progress: $2,400 saved this month vs $1,920 last month
-- Brain Premium renewal: in 3 days at $89/mo (annual = $890/yr, saves $178)
-- Largest expense categories: AI Agents (48%), Subscriptions (29%), Transfers (16%)
-- TaskForge Pro subscription: $96/mo, last used 9 days ago
+- Cash reserve progress: $24,000 added this month vs $19,200 last month
+- Brain Business renewal: in 3 days at $890/mo (annual = $8,900/yr, saves $1,780)
+- Largest expense categories: AI Agents (48%), SaaS (29%), Vendor payments (16%)
+- TaskForge Pro subscription: $960/mo, last used 9 days ago
 `;
 
 const SYSTEM_PROMPT = `You are Brain AI, a proactive financial assistant embedded in a neobank and AI agent marketplace called Brain Finance. 
@@ -92,12 +92,12 @@ export async function generateInsights(): Promise<DailyInsight[]> {
 }
 
 const FALLBACK_INSIGHTS: DailyInsight[] = [
-  { kind: "alert",       tag: "SPENDING ALERT",  text: "Subscriptions up 38% vs last month. Signal Seer and Disney+ are inactive but still billing $42.99/mo combined.", action: "Review subscriptions →" },
-  { kind: "opportunity", tag: "OPPORTUNITY",      text: "$4,200 is sitting idle in your Neobank. Moving it to the USDC yield vault earns ~$18/mo at current APY.", action: "Move to vault →" },
+  { kind: "alert",       tag: "SPENDING ALERT",  text: "SaaS subscriptions up 38% vs last month. Signal Seer and Loom Business have zero active seats but still bill $429.99/mo combined.", action: "Review subscriptions →" },
+  { kind: "opportunity", tag: "OPPORTUNITY",      text: "$42,000 is sitting idle in your operating account. Moving it to the USDC yield vault earns ~$180/mo at current APY.", action: "Move to vault →" },
   { kind: "pattern",     tag: "PATTERN",          text: "AlphaFlow executed 47 trades this week — 18% above its 30-day average. Consider tightening its budget cap.", action: "Adjust budget →" },
   { kind: "warning",     tag: "MARKET ALERT",     text: "ETH is down 12% in the last 24h. Risk Sentinel recommends pausing momentum strategies until volatility drops.", action: "Review agents →" },
-  { kind: "opportunity", tag: "SAVINGS",          text: "You saved $480 more than last month and are 60% toward your $3,000 Q2 savings goal — ahead of schedule.", action: "View savings goal →" },
-  { kind: "info",        tag: "REMINDER",         text: "Brain Premium renews in 3 days at $89/mo. Switching to annual saves $178/yr and unlocks priority agent execution.", action: "Upgrade plan →" },
+  { kind: "opportunity", tag: "RESERVES",         text: "You added $4,800 more to cash reserves than last month and are 60% toward your $40,000 Q2 reserve goal — ahead of schedule.", action: "View reserve goal →" },
+  { kind: "info",        tag: "REMINDER",         text: "Brain Business renews in 3 days at $890/mo. Switching to annual saves $1,780/yr and unlocks priority agent execution.", action: "Upgrade plan →" },
 ];
 
 export function getInsightsState() {

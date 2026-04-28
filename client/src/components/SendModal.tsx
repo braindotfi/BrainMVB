@@ -786,7 +786,7 @@ export const SendModal = ({ open, onClose, sourceAccountType = "wallet", exclude
               <div className="flex flex-col gap-[24px]">
                 <FieldRow label="Recipient Name">
                   <InputBox hasValue={!!state.recipientName}>
-                    <input type="text" value={state.recipientName} onChange={(e) => set({ recipientName: e.target.value })} placeholder="John Smith"
+                    <input type="text" value={state.recipientName} onChange={(e) => set({ recipientName: e.target.value })} placeholder="Acme Vendor Co."
                       className="flex-1 bg-transparent text-white text-[20px] [font-family:'Gilroy',sans-serif] font-semibold placeholder:text-[#414965] outline-none min-w-0"
                       data-testid="input-send-recipient-name" />
                   </InputBox>
