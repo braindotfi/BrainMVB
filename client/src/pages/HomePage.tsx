@@ -14,16 +14,17 @@ const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
 const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
-/* Each entry links to a specific row on the Activity page. activityId
-   matches the ActivityItemData.id values declared in ActivityPage. */
+/* Each entry mirrors a row on the Activity page. activityId matches
+   the ActivityItemData.id values declared in ActivityPage. */
 const BRAIN_DID = [
-  { id: 1, label: "Paid your AWS bill this morning.", activityId: 1 },
-  { id: 2, label: "Scheduled the office lease payment for tomorrow.", activityId: 2 },
+  { id: 1, label: "Paid Adobe Creative Cloud (team plan)", activityId: 1 },
+  { id: 2, label: "Paid Comcast Business Fiber", activityId: 2 },
+  { id: 3, label: "Moved idle USDC from operating to AAVE yield protocol", activityId: 4 },
 ];
 
 const BRAIN_DETECTED = [
-  { id: 1, label: "I found a bill-pay agent that can help you manage vendor payments. Would you like to review it?", activityId: 3 },
-  { id: 2, label: "Your operating runway extended. Want me to move extra cash to a yield vault?", activityId: 5 },
+  { id: 1, label: "Noticed a new charge from a new vendor", activityId: 3 },
+  { id: 2, label: "Got paid by Northstar Design", activityId: 5 },
 ];
 
 /* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
