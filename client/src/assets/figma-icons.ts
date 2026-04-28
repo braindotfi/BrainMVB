@@ -13,6 +13,10 @@ import rules_inactive from "@assets/figma_icons/rules_inactive.svg";
 import rules_active_body from "@assets/figma_icons/rules_active_body.svg";
 import rules_active_tab from "@assets/figma_icons/rules_active_tab.svg";
 import rules_active_subtract from "@assets/figma_icons/rules_active_subtract.svg";
+import review_inactive_subtract from "@assets/figma_icons/review_inactive_subtract.svg";
+import review_active_body from "@assets/figma_icons/review_active_body.svg";
+import review_active_tab from "@assets/figma_icons/review_active_tab.svg";
+import review_active_check from "@assets/figma_icons/review_active_check.svg";
 import activity_inactive from "@assets/figma_icons/activity_inactive.svg";
 import activity_active_base from "@assets/figma_icons/activity_active_base.svg";
 import activity_active_stroke from "@assets/figma_icons/activity_active_stroke.svg";
@@ -81,6 +85,10 @@ export const ICONS = {
   rules_active_body,
   rules_active_tab,
   rules_active_subtract,
+  review_inactive_subtract,
+  review_active_body,
+  review_active_tab,
+  review_active_check,
   activity_inactive,
   activity_active_base,
   activity_active_stroke,

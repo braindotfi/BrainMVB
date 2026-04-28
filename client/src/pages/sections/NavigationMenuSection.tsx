@@ -123,40 +123,31 @@ const FinancesIconInactive = () => (
   </div>
 );
 
-/* Review icon — inline SVG (clipboard with checkmark) */
+/* Review icon — Figma 4062:44310 (inactive) / 4062:44311 (active) */
 const ReviewIconActive = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M9 4h6a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2V5a1 1 0 0 1 1-1Zm0 2v1h6V6H9Z"
-      fill="#a8b9f4"
-    />
-    <path
-      d="m9.5 13.5 2 2 4-4"
-      stroke="#0a0c10"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <div className="relative shrink-0 size-[24px]">
+    <div className="absolute h-[20px] left-[3px] top-[3px] w-[18px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.review_active_body} />
+    </div>
+    <div className="absolute h-[5px] left-[7px] top-px w-[10px]">
+      <div className="absolute inset-[-22.5%_-22.5%_-67.5%_-22.5%]">
+        <img alt="" className="block max-w-none size-full" src={ICONS.review_active_tab} />
+      </div>
+    </div>
+    <div className="absolute h-[8px] left-1/2 top-[calc(50%+2px)] w-[9px] -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute inset-[-14.06%_-25%_-42.19%_-25%]">
+        <img alt="" className="block max-w-none size-full" src={ICONS.review_active_check} />
+      </div>
+    </div>
+  </div>
 );
 
 const ReviewIconInactive = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M9 4.75h6a1.25 1.25 0 0 1 1.25 1.25v.75H17.5A1.75 1.75 0 0 1 19.25 8.5V19a1.75 1.75 0 0 1-1.75 1.75h-11A1.75 1.75 0 0 1 4.75 19V8.5A1.75 1.75 0 0 1 6.5 6.75H7.75V6A1.25 1.25 0 0 1 9 4.75Zm-.25 1.5V7.5h6.5V6.25h-6.5Z"
-      stroke="#6c779d"
-      strokeWidth="1.25"
-      fill="none"
-    />
-    <path
-      d="m9.75 13.75 1.75 1.75 3.75-3.75"
-      stroke="#6c779d"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-  </svg>
+  <div className="relative shrink-0 size-[24px]">
+    <div className="absolute h-[22px] left-[3px] top-px w-[18px]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.review_inactive_subtract} />
+    </div>
+  </div>
 );
 
 const RulesIconActive = () => (
