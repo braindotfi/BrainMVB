@@ -1,6 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ICONS } from "@/assets/figma-icons";
+import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
@@ -364,7 +365,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
         <div className="flex items-center gap-4 p-4">
           <img
             data-testid="img-avatar"
-            src={ICONS.settings_avatar_miles}
+            src={acmeAvatar}
             alt={name}
             className="size-[64px] rounded-full object-cover flex-shrink-0"
           />
