@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 type UploadedFile = {
   id: string;
@@ -18,6 +18,55 @@ const BANKS: { id: string; name: string; logo: string; bg: string }[] = [
   { id: "citi",       name: "Citibank",        logo: "citi",bg: "#FFFFFF" },
   { id: "ally",       name: "Ally",            logo: "a",   bg: "#7B1FA2" },
   { id: "capitalone", name: "Capital One",     logo: "C1",  bg: "#FFFFFF" },
+];
+
+/* ─── Step 3: Connect tools — third-party data sources ─── */
+type ToolCategory = "Accounting" | "Productivity" | "CRM & Sales" | "Payments" | "Communication" | "Crypto";
+
+type Tool = {
+  id: string;
+  name: string;
+  category: ToolCategory;
+  /** Short text logo shown inside the colored disc (1–4 chars). */
+  logo: string;
+  /** Disc background color. */
+  bg: string;
+  /** When true, treat bg as light and use a dark glyph + thin border. */
+  light?: boolean;
+};
+
+const TOOLS: Tool[] = [
+  // Accounting
+  { id: "quickbooks", name: "QuickBooks", category: "Accounting",     logo: "qb", bg: "#2CA01C" },
+  { id: "xero",       name: "Xero",       category: "Accounting",     logo: "X",  bg: "#13B5EA" },
+  { id: "wave",       name: "Wave",       category: "Accounting",     logo: "~",  bg: "#1F46FA" },
+  // Productivity & docs
+  { id: "notion",     name: "Notion",     category: "Productivity",   logo: "N",  bg: "#FFFFFF", light: true },
+  { id: "gdrive",     name: "Google Drive", category: "Productivity", logo: "G",  bg: "#FFFFFF", light: true },
+  { id: "dropbox",    name: "Dropbox",    category: "Productivity",   logo: "D",  bg: "#0061FF" },
+  { id: "onedrive",   name: "OneDrive",   category: "Productivity",   logo: "OD", bg: "#0364B8" },
+  // CRM & sales
+  { id: "attio",      name: "Attio",      category: "CRM & Sales",    logo: "A",  bg: "#1d1d1f" },
+  { id: "hubspot",    name: "HubSpot",    category: "CRM & Sales",    logo: "H",  bg: "#FF7A59" },
+  { id: "salesforce", name: "Salesforce", category: "CRM & Sales",    logo: "SF", bg: "#00A1E0" },
+  // Payments
+  { id: "stripe",     name: "Stripe",     category: "Payments",       logo: "S",  bg: "#635BFF" },
+  { id: "paypal",     name: "PayPal",     category: "Payments",       logo: "P",  bg: "#003087" },
+  { id: "square",     name: "Square",     category: "Payments",       logo: "□",  bg: "#000000" },
+  // Communication
+  { id: "slack",      name: "Slack",      category: "Communication",  logo: "#",  bg: "#4A154B" },
+  { id: "gmail",      name: "Gmail",      category: "Communication",  logo: "M",  bg: "#FFFFFF", light: true },
+  // Crypto
+  { id: "coinbase",   name: "Coinbase",   category: "Crypto",         logo: "C",  bg: "#0052FF" },
+];
+
+const TOOL_CATEGORY_ORDER: ToolCategory[] = [
+  "Accounting",
+  "Productivity",
+  "CRM & Sales",
+  "Payments",
+  "Communication",
+  "Crypto",
 ];
 
 /* ─── Step 5: Business profile constants ─── */
@@ -135,6 +184,8 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   const [step, setStep] = useState(0);
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [bankSearch, setBankSearch] = useState("");
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+  const [toolSearch, setToolSearch] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [businessKind, setBusinessKind] = useState<string>("services");
   const [teamSize, setTeamSize] = useState<string>("just-me");
@@ -169,6 +220,8 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
       setStep(0);
       setSelectedBank(null);
       setBankSearch("");
+      setSelectedTools(new Set());
+      setToolSearch("");
       setFiles([]);
       setBusinessKind("services");
       setTeamSize("just-me");
@@ -246,9 +299,23 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   onSearchChange={setBankSearch}
                 />
               )}
-              {step === 2 && <StepUpload files={files} setFiles={setFiles} />}
-              {step === 3 && <StepReading files={files} setFiles={setFiles} />}
-              {step === 4 && (
+              {step === 2 && (
+                <StepConnectTools
+                  selected={selectedTools}
+                  onToggle={(id) => {
+                    setSelectedTools((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id); else next.add(id);
+                      return next;
+                    });
+                  }}
+                  search={toolSearch}
+                  onSearchChange={setToolSearch}
+                />
+              )}
+              {step === 3 && <StepUpload files={files} setFiles={setFiles} />}
+              {step === 4 && <StepReading files={files} setFiles={setFiles} />}
+              {step === 5 && (
                 <StepBusinessProfile
                   businessKind={businessKind}
                   onBusinessKindChange={setBusinessKind}
@@ -258,7 +325,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   onHelpAreasChange={setHelpAreas}
                 />
               )}
-              {step === 5 && (
+              {step === 6 && (
                 <StepAutonomy
                   value={autonomy}
                   onChange={setAutonomy}
@@ -270,7 +337,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   onBookkeeperRoleChange={setBookkeeperRole}
                 />
               )}
-              {step === 6 && (
+              {step === 7 && (
                 <StepPeople
                   activeTab={peopleTab}
                   onTabChange={setPeopleTab}
@@ -456,6 +523,135 @@ function BankLogo({ bank }: { bank: { id: string; name: string; logo: string; bg
         style={{ color: isLight ? "#11141b" : "#FFFFFF" }}
       >
         {bank.logo}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Step 3: Connect tools ─── */
+function StepConnectTools({
+  selected, onToggle, search, onSearchChange,
+}: {
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  search: string;
+  onSearchChange: (v: string) => void;
+}) {
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? TOOLS.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+    : TOOLS;
+  const grouped = TOOL_CATEGORY_ORDER.map((cat) => ({
+    cat,
+    items: filtered.filter((t) => t.category === cat),
+  })).filter((g) => g.items.length > 0);
+
+  return (
+    <div className="flex flex-col gap-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+          What else should Brain plug into?
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          Connect your accounting, CRM, docs, and other tools so Brain has the full picture from day one. You can pick more than one — or skip and add them later.
+        </p>
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] px-[16px] h-[44px] border border-[#1d2132]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="11" cy="11" r="7" stroke="#6c779d" strokeWidth="2" />
+          <path d="M20 20L17 17" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search tools or categories..."
+          data-testid="input-tool-search"
+          className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px]"
+        />
+        {selected.size > 0 && (
+          <span
+            data-testid="badge-tools-selected"
+            className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+            style={{ background: "#240757", color: "#7631EE", border: "1px solid rgba(118,49,238,0.2)" }}
+          >
+            {selected.size} selected
+          </span>
+        )}
+      </div>
+
+      {/* Grouped grid */}
+      {grouped.length === 0 ? (
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] text-center py-[16px]">
+          No tools match &ldquo;{search}&rdquo;.
+        </p>
+      ) : (
+        grouped.map(({ cat, items }) => (
+          <div key={cat} className="flex flex-col gap-[8px]">
+            <div className="flex items-center gap-[8px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase tracking-[0.04em] whitespace-nowrap">
+                {cat}
+              </p>
+              <div className="flex-1 h-px bg-[#1d2132]" />
+            </div>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {items.map((t) => {
+                const isSelected = selected.has(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    onClick={() => onToggle(t.id)}
+                    data-testid={`button-tool-${t.id}`}
+                    className={`flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left ${
+                      isSelected ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
+                    }`}
+                  >
+                    <ToolLogo tool={t} />
+                    <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
+                      {t.name}
+                    </span>
+                    {isSelected && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                        <circle cx="8" cy="8" r="8" fill="#7631EE" />
+                        <path d="M4.5 8L7 10.5L11.5 6" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+
+      <InfoNotice
+        title="Read-only by Default"
+        body={
+          <>
+            Brain only reads from each tool you connect — never writes back without your explicit approval. Disconnect any source any time from Settings.
+          </>
+        }
+      />
+    </div>
+  );
+}
+
+function ToolLogo({ tool }: { tool: Tool }) {
+  return (
+    <div
+      className="size-[32px] rounded-full flex items-center justify-center shrink-0"
+      style={{ background: tool.bg, border: tool.light ? "1px solid #1d2132" : undefined }}
+    >
+      <span
+        className="[font-family:'Gilroy',sans-serif] font-bold text-[12px] leading-none"
+        style={{ color: tool.light ? "#11141b" : "#FFFFFF" }}
+      >
+        {tool.logo}
       </span>
     </div>
   );
