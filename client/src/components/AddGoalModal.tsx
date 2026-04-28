@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
 
 /* AddGoalModal — Figma 4074:65865 ("New Goal").
    Same modal chrome as the Review popup (440px, rounded-24,
@@ -127,8 +128,19 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
   const [category, setCategory] = useState("Pay Off Debt");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [amountFocused, setAmountFocused] = useState(false);
+  const [amountTouched, setAmountTouched] = useState(false);
   const [timeline, setTimeline] = useState("12 months");
   const [priority, setPriority] = useState(29);
+
+  /* Validate the typed amount. Empty is "not yet entered"; anything that
+     parses to <= 0 is invalid. Only surface the error after the field has
+     lost focus once so we don't yell at users mid-keystroke. */
+  const amountNumber = parseAmt(amount);
+  const amountEmpty = stripCommas(amount).trim() === "";
+  const amountInvalid = !amountEmpty && amountNumber <= 0;
+  const amountError =
+    amountTouched && (amountEmpty ? "Enter a target amount." : amountInvalid ? "Amount must be greater than zero." : "");
 
   /* Build the live ranked list. The new goal joins the anchors and is
      re-sorted by priority on every slider tick — higher priority bubbles
@@ -239,14 +251,61 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
             {/* Target amount */}
             <div className="flex flex-col gap-[8px] items-start w-full">
               <SectionLabel>Target Amount</SectionLabel>
-              <input
-                type="text"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. $20000"
-                data-testid="input-goal-amount"
-                className={inputClass}
-              />
+              <div
+                className={
+                  "bg-[#222737] flex items-center gap-[4px] px-[8px] py-[10px] rounded-[8px] w-full transition-shadow " +
+                  (amountError
+                    ? "ring-2 ring-[#d20344]"
+                    : amountFocused
+                      ? "ring-2 ring-[#7631EE]"
+                      : "")
+                }
+              >
+                <span
+                  aria-hidden
+                  className={
+                    "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] " +
+                    (amountEmpty ? "text-[#6c779d]" : "text-[#a8b9f4]")
+                  }
+                >
+                  $
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={amount}
+                  onChange={(e) => setAmount(formatThousandsInput(e.target.value))}
+                  onFocus={() => setAmountFocused(true)}
+                  onBlur={() => {
+                    setAmountFocused(false);
+                    setAmountTouched(true);
+                  }}
+                  onKeyDown={(e) => {
+                    // Block obviously invalid keys early so the field stays clean.
+                    const allowed =
+                      e.ctrlKey ||
+                      e.metaKey ||
+                      e.key.length > 1 || // Backspace, Tab, Arrow*, etc.
+                      /[0-9.]/.test(e.key);
+                    if (!allowed) e.preventDefault();
+                  }}
+                  placeholder="20,000"
+                  aria-invalid={amountError ? true : undefined}
+                  aria-describedby={amountError ? "input-goal-amount-error" : undefined}
+                  data-testid="input-goal-amount"
+                  className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] placeholder:text-[#6c779d]"
+                />
+              </div>
+              {amountError && (
+                <p
+                  id="input-goal-amount-error"
+                  data-testid="text-goal-amount-error"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[13px]"
+                >
+                  {amountError}
+                </p>
+              )}
             </div>
 
             {/* By when */}
@@ -354,9 +413,13 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               type="button"
               data-testid="button-add-goal-create"
               disabled={isSubmitting}
-              onClick={() =>
-                onCreate({ category, name, amount, timeline, priority })
-              }
+              onClick={() => {
+                if (amountEmpty || amountInvalid) {
+                  setAmountTouched(true);
+                  return;
+                }
+                onCreate({ category, name, amount: stripCommas(amount), timeline, priority });
+              }}
               className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">
