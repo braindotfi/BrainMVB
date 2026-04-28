@@ -441,10 +441,10 @@ function StepConnectBank({
       </div>
 
       <InfoNotice
-        title="Secure by default"
+        title="Secure by Default"
         body={
           <>
-            Brain never sees or stores your bank password. We connect through Plaid, the same company trusted by Venmo, Robinhood, and American Express. <span className="text-[#a8b9f4] font-semibold">Brain only reads your account</span> — it can't move money unless you later tell it to, per account.
+            Brain never sees or stores your bank password. We connect through Plaid, the same company trusted by Venmo, Robinhood, and American Express. Brain only reads your account with your permission. It can not move money unless you grant permission to.
           </>
         }
       />
