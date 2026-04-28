@@ -877,5 +877,71 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  /* ──────────────────────────────────────────────────────────────────────
+   *  Tool integrations  (Stripe wired; others coming soon)
+   * ────────────────────────────────────────────────────────────────────── */
+
+  // For this prototype every browser session is treated as the same demo
+  // user.  When a real auth model is added, swap this for the session uid.
+  const DEMO_USER = "demo-user";
+
+  app.get("/api/integrations/connections", async (_req, res) => {
+    try {
+      const list = await storage.listToolConnections(DEMO_USER);
+      res.json(list);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/integrations/stripe/connect", async (_req, res) => {
+    try {
+      // Dynamic + untyped: server/stripe.ts is generated after the user
+      // authorizes Stripe via the integrations flow.
+      const stripeModulePath = "./stripe";
+      const mod = await import(stripeModulePath).catch(() => null) as
+        | { getUncachableStripeClient: () => Promise<unknown> }
+        | null;
+      const getUncachableStripeClient = mod?.getUncachableStripeClient;
+
+      if (!getUncachableStripeClient) {
+        return res.status(503).json({
+          error: "Stripe integration is not configured yet on this Repl.",
+          code: "not_configured",
+        });
+      }
+
+      const stripe = (await getUncachableStripeClient()) as {
+        accounts: { retrieve: () => Promise<{ id: string; business_profile?: { name?: string }; settings?: { dashboard?: { display_name?: string } }; email?: string }> };
+      };
+      const account = await stripe.accounts.retrieve();
+      const label =
+        account.business_profile?.name ||
+        account.settings?.dashboard?.display_name ||
+        account.email ||
+        account.id;
+
+      const conn = await storage.upsertToolConnection({
+        userId: DEMO_USER,
+        toolId: "stripe",
+        status: "connected",
+        accountLabel: label,
+        connectedAt: new Date().toISOString(),
+      });
+      res.json(conn);
+    } catch (err) {
+      res.status(502).json({ error: (err as Error).message || "Stripe connection failed" });
+    }
+  });
+
+  app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
+    try {
+      const ok = await storage.removeToolConnection(DEMO_USER, req.params.toolId);
+      res.json({ success: ok });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   return httpServer;
 }

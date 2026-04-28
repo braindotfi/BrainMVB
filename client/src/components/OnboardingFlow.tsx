@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+type ToolConnection = {
+  userId: string;
+  toolId: string;
+  status: "connected" | "error";
+  accountLabel?: string;
+  connectedAt: string;
+};
 
 const TOTAL_STEPS = 8;
 
@@ -186,6 +196,63 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   const [bankSearch, setBankSearch] = useState("");
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [toolSearch, setToolSearch] = useState("");
+  const [connectingTool, setConnectingTool] = useState<string | null>(null);
+  const [toolError, setToolError] = useState<{ id: string; msg: string } | null>(null);
+
+  /* Real third-party connections fetched from the backend */
+  const connectionsQuery = useQuery<ToolConnection[]>({
+    queryKey: ["/api/integrations/connections"],
+    enabled: open,
+  });
+  const connections = connectionsQuery.data ?? [];
+  const connectionsByTool = new Map(connections.map(c => [c.toolId, c]));
+
+  const stripeConnect = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/integrations/stripe/connect");
+      return (await res.json()) as ToolConnection;
+    },
+    onSuccess: () => {
+      setToolError(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
+    },
+    onError: (err: Error) => {
+      setToolError({ id: "stripe", msg: err.message.replace(/^\d+:\s*/, "") });
+    },
+    onSettled: () => setConnectingTool(null),
+  });
+
+  const disconnectTool = useMutation({
+    mutationFn: async (toolId: string) => {
+      const res = await apiRequest("POST", `/api/integrations/${toolId}/disconnect`);
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] }),
+  });
+
+  const handleToolClick = useCallback((toolId: string) => {
+    setToolError(null);
+    // If already connected → disconnect
+    if (connectionsByTool.has(toolId)) {
+      disconnectTool.mutate(toolId);
+      setSelectedTools(prev => {
+        const next = new Set(prev); next.delete(toolId); return next;
+      });
+      return;
+    }
+    // Stripe → trigger real OAuth-backed connect
+    if (toolId === "stripe") {
+      setConnectingTool("stripe");
+      stripeConnect.mutate();
+      return;
+    }
+    // Other tools → just record interest locally (coming soon)
+    setSelectedTools(prev => {
+      const next = new Set(prev);
+      if (next.has(toolId)) next.delete(toolId); else next.add(toolId);
+      return next;
+    });
+  }, [connectionsByTool, disconnectTool, stripeConnect]);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [businessKind, setBusinessKind] = useState<string>("services");
   const [teamSize, setTeamSize] = useState<string>("just-me");
@@ -302,13 +369,10 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               {step === 2 && (
                 <StepConnectTools
                   selected={selectedTools}
-                  onToggle={(id) => {
-                    setSelectedTools((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(id)) next.delete(id); else next.add(id);
-                      return next;
-                    });
-                  }}
+                  connectionsByTool={connectionsByTool}
+                  connectingTool={connectingTool}
+                  toolError={toolError}
+                  onToolClick={handleToolClick}
                   search={toolSearch}
                   onSearchChange={setToolSearch}
                 />
@@ -530,13 +594,24 @@ function BankLogo({ bank }: { bank: { id: string; name: string; logo: string; bg
 
 /* ─── Step 3: Connect tools ─── */
 function StepConnectTools({
-  selected, onToggle, search, onSearchChange,
+  selected,
+  connectionsByTool,
+  connectingTool,
+  toolError,
+  onToolClick,
+  search,
+  onSearchChange,
 }: {
   selected: Set<string>;
-  onToggle: (id: string) => void;
+  connectionsByTool: Map<string, ToolConnection>;
+  connectingTool: string | null;
+  toolError: { id: string; msg: string } | null;
+  onToolClick: (id: string) => void;
   search: string;
   onSearchChange: (v: string) => void;
 }) {
+  const connectedCount = connectionsByTool.size;
+  const totalSelectedish = connectedCount + selected.size;
   const q = search.trim().toLowerCase();
   const filtered = q
     ? TOOLS.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
@@ -571,16 +646,26 @@ function StepConnectTools({
           data-testid="input-tool-search"
           className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px]"
         />
-        {selected.size > 0 && (
+        {totalSelectedish > 0 && (
           <span
             data-testid="badge-tools-selected"
             className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
             style={{ background: "#240757", color: "#7631EE", border: "1px solid rgba(118,49,238,0.2)" }}
           >
-            {selected.size} selected
+            {connectedCount > 0 ? `${connectedCount} connected` : `${selected.size} selected`}
           </span>
         )}
       </div>
+
+      {toolError && (
+        <div
+          data-testid="alert-tool-error"
+          className="rounded-[12px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
+          style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)" }}
+        >
+          <span className="font-semibold capitalize">{toolError.id}:</span> {toolError.msg}
+        </div>
+      )}
 
       {/* Grouped grid */}
       {grouped.length === 0 ? (
@@ -598,29 +683,72 @@ function StepConnectTools({
             </div>
             <div className="grid grid-cols-2 gap-[12px]">
               {items.map((t) => {
+                const conn = connectionsByTool.get(t.id);
+                const isConnected = !!conn;
                 const isSelected = selected.has(t.id);
+                const isConnecting = connectingTool === t.id;
+                const isLive = t.id === "stripe"; // tools that have real OAuth wired
+
+                const borderColor = isConnected
+                  ? "#22c55e"
+                  : isSelected
+                  ? "#7631EE"
+                  : "#1d2132";
+
                 return (
                   <button
                     key={t.id}
                     type="button"
                     role="checkbox"
-                    aria-checked={isSelected}
-                    onClick={() => onToggle(t.id)}
+                    aria-checked={isConnected || isSelected}
+                    disabled={isConnecting}
+                    onClick={() => onToolClick(t.id)}
                     data-testid={`button-tool-${t.id}`}
-                    className={`flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left ${
-                      isSelected ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
-                    }`}
+                    title={
+                      isConnected
+                        ? `Connected as ${conn?.accountLabel ?? t.name} — click to disconnect`
+                        : isLive
+                        ? `Connect your ${t.name} account`
+                        : `${t.name} integration coming soon`
+                    }
+                    className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left disabled:opacity-70"
+                    style={{ borderColor }}
                   >
                     <ToolLogo tool={t} />
-                    <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
-                      {t.name}
-                    </span>
-                    {isSelected && (
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
+                        {t.name}
+                      </span>
+                      {isConnected ? (
+                        <span
+                          data-testid={`text-connected-${t.id}`}
+                          className="[font-family:'Gilroy',sans-serif] font-medium text-[#22c55e] text-[11px] leading-[14px] truncate"
+                        >
+                          {conn?.accountLabel ? `Connected · ${conn.accountLabel}` : "Connected"}
+                        </span>
+                      ) : isConnecting ? (
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px]">
+                          Connecting…
+                        </span>
+                      ) : !isLive ? (
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px]">
+                          Coming soon
+                        </span>
+                      ) : null}
+                    </div>
+                    {isConnected ? (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                        <circle cx="8" cy="8" r="8" fill="#22c55e" />
+                        <path d="M4.5 8L7 10.5L11.5 6" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : isConnecting ? (
+                      <span className="size-[14px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin" aria-hidden />
+                    ) : isSelected ? (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                         <circle cx="8" cy="8" r="8" fill="#7631EE" />
                         <path d="M4.5 8L7 10.5L11.5 6" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                    )}
+                    ) : null}
                   </button>
                 );
               })}

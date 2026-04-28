@@ -71,7 +71,19 @@ export interface IStorage {
   markAsRead(id: string): Promise<void>;
   deleteNotification(id: string): Promise<void>;
 
+  // Tool connections (third-party integrations linked from onboarding)
+  listToolConnections(userId: string): Promise<ToolConnection[]>;
+  upsertToolConnection(conn: ToolConnection): Promise<ToolConnection>;
+  removeToolConnection(userId: string, toolId: string): Promise<boolean>;
 }
+
+export type ToolConnection = {
+  userId: string;
+  toolId: string;       // e.g. "stripe", "notion"
+  status: "connected" | "error";
+  accountLabel?: string; // e.g. Stripe business name
+  connectedAt: string;   // ISO
+};
 
 // ─── In-memory implementation (replace with Drizzle+PostgreSQL when DB is provisioned) ───
 
@@ -363,6 +375,19 @@ export class MemStorage implements IStorage {
   }
   async deleteNotification(id: string): Promise<void> {
     this.notifs.delete(id);
+  }
+
+  // ─── Tool connections ───
+  private toolConns = new Map<string, ToolConnection>(); // key = `${userId}::${toolId}`
+  async listToolConnections(userId: string): Promise<ToolConnection[]> {
+    return Array.from(this.toolConns.values()).filter(c => c.userId === userId);
+  }
+  async upsertToolConnection(conn: ToolConnection): Promise<ToolConnection> {
+    this.toolConns.set(`${conn.userId}::${conn.toolId}`, conn);
+    return conn;
+  }
+  async removeToolConnection(userId: string, toolId: string): Promise<boolean> {
+    return this.toolConns.delete(`${userId}::${toolId}`);
   }
 }
 
@@ -669,6 +694,19 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteNotification(id: string): Promise<void> {
     await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
+  }
+
+  // ─── Tool connections (kept in-memory; no DB schema yet) ───
+  private toolConns = new Map<string, ToolConnection>();
+  async listToolConnections(userId: string): Promise<ToolConnection[]> {
+    return Array.from(this.toolConns.values()).filter(c => c.userId === userId);
+  }
+  async upsertToolConnection(conn: ToolConnection): Promise<ToolConnection> {
+    this.toolConns.set(`${conn.userId}::${conn.toolId}`, conn);
+    return conn;
+  }
+  async removeToolConnection(userId: string, toolId: string): Promise<boolean> {
+    return this.toolConns.delete(`${userId}::${toolId}`);
   }
 }
 
