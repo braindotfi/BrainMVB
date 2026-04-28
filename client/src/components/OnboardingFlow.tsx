@@ -233,7 +233,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
           </div>
 
           {/* Body */}
-          <ScrollArea className="w-full max-h-[calc(100vh-32px-56px)]">
+          <ScrollArea className="w-full flex-1 min-h-0">
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
               {step === 0 && <StepWelcome />}
               {step === 1 && (
@@ -563,7 +563,7 @@ function StepUpload({
       )}
 
       <InfoNotice
-        title="Brain reads, doesn't share."
+        title="Brain Reads but Doesn't Share"
         body="Files are encrypted, used only to understand your business, and never shown to anyone else. You can delete any file at any time."
       />
     </div>
@@ -703,7 +703,7 @@ function StepReading({
       )}
 
       <InfoNotice
-        title="Brain reads, doesn't share."
+        title="Brain Reads but Doesn't Share"
         body="Files are encrypted, used only to understand your business, and never shown to anyone else. You can delete any file at any time."
       />
     </div>
@@ -810,7 +810,7 @@ function StepBusinessProfile({
                 onClick={() => toggleHelp(h.id)}
                 data-testid={`button-help-${h.id}`}
                 className={`flex items-start gap-[12px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px] border transition-colors text-left ${
-                  isSel ? "border-[#7631EE]/50" : "border-[#1d2132] hover:border-[#2c3247]"
+                  isSel ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
                 }`}
               >
                 <GreenCheckCircle selected={isSel} />
@@ -828,10 +828,14 @@ function StepBusinessProfile({
         </div>
       </div>
 
-      <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
-          Based on your answers, Brain will set up vendor payment rules, overdue invoice reminders, and a cash runway view ready to go on your Home screen. You can change everything later.
-        </p>
+      <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+        <div className="flex flex-1 items-start min-w-px relative">
+          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
+              Based on your answers, Brain will set up vendor payment rules, overdue invoice reminders, and a cash runway view ready to go on your Home screen. You can change everything later.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -987,10 +991,14 @@ function StepAutonomy({
         )}
       </div>
 
-      <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
-          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
-        </p>
+      <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+        <div className="flex flex-1 items-start min-w-px relative">
+          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
+              You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
