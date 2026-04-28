@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 type UploadedFile = {
   id: string;
@@ -11,20 +11,6 @@ type UploadedFile = {
   status: "processing" | "done" | "warning";
   detail: string;
 };
-
-type Goal = {
-  id: string;
-  label: string;
-};
-
-const GOALS: Goal[] = [
-  { id: "runway",    label: "Build operating runway" },
-  { id: "tax",       label: "Tax reserves" },
-  { id: "equipment", label: "Equipment financing" },
-  { id: "hiring",    label: "Hiring & payroll" },
-  { id: "expansion", label: "New office or expansion" },
-  { id: "other",     label: "Something Else" },
-];
 
 const BANKS: { id: string; name: string; logo: string; bg: string }[] = [
   { id: "chase",      name: "Chase Bank",      logo: "C",   bg: "#117ACA" },
@@ -35,7 +21,110 @@ const BANKS: { id: string; name: string; logo: string; bg: string }[] = [
   { id: "capitalone", name: "Capital One",     logo: "C1",  bg: "#FFFFFF" },
 ];
 
-type AutonomyLevel = "watch" | "small" | "most";
+/* ─── Step 5: Business profile constants ─── */
+const BUSINESS_KINDS: { id: string; label: string }[] = [
+  { id: "services",   label: "Services/Agency" },
+  { id: "trades",     label: "Trades/Construction" },
+  { id: "retail",     label: "Retail/eCom" },
+  { id: "restaurant", label: "Restaurant/Food" },
+  { id: "saas",       label: "SaaS/Tech Startup" },
+  { id: "other",      label: "Something Else" },
+];
+
+const TEAM_SIZES: { id: string; label: string }[] = [
+  { id: "just-me", label: "Just Me" },
+  { id: "2-5",     label: "2-5" },
+  { id: "6-15",    label: "6-15" },
+  { id: "16-50",   label: "16-50" },
+  { id: "50+",     label: "50+" },
+];
+
+const HELP_AREAS: { id: string; label: string; sub: string }[] = [
+  { id: "bills-vendors",     label: "Paying bills and vendors on time",     sub: "Recurring bills, vendor invoices, utilities." },
+  { id: "overdue-invoices",  label: "Chasing overdue invoices from customers", sub: "Email reminders when an invoice is past due" },
+  { id: "payroll",           label: "Running payroll smoothly",              sub: "Checking amounts look right before each pay run" },
+  { id: "books-close",       label: "Month-end close and books",             sub: "Matching transactions, tax categorization, close prep" },
+  { id: "cash-flow",         label: "Cash flow and runway tracking",         sub: "Knowing how long your cash will last" },
+  { id: "crypto-treasury",   label: "Crypto treasury",                       sub: "Stablecoins, wallets, on-chain positions" },
+];
+
+type AutonomyLevel = "watch" | "routine" | "books";
+
+type BookkeeperRole = "approver" | "viewer" | "editor";
+
+/* ─── Step 7: People Brain found ─── */
+type ContactGroupId = "you-pay" | "pays-you" | "on-chain" | "team";
+
+type Contact = {
+  id: string;
+  name: string;
+  meta: string;
+  badge?: { label: string; tone: "muted" | "orange" };
+  defaultSelected?: boolean;
+  /** When true, this contact is hidden behind the "X more" expand affordance. */
+  extra?: boolean;
+};
+
+type ContactGroup = {
+  id: ContactGroupId;
+  label: string;
+  /** Total count Brain found (displayed as "X more" indicator). Includes hidden extras. */
+  totalHidden: number;
+  contacts: Contact[];
+};
+
+const CONTACT_GROUPS: ContactGroup[] = [
+  {
+    id: "you-pay",
+    label: "You Pay These Vendors",
+    totalHidden: 12,
+    contacts: [
+      { id: "aws",       name: "Amazon Web Services", meta: "Recurring · Hosting · ~$8K/mo", defaultSelected: true },
+      { id: "anthropic", name: "Anthropic",           meta: "Recurring · API · ~$1.8K/mo",   defaultSelected: true },
+      { id: "stripe-fees",  name: "Stripe",         meta: "Recurring · Payment fees · ~$2.4K/mo", extra: true },
+      { id: "linear",       name: "Linear",         meta: "Recurring · SaaS · $480/mo",          extra: true },
+    ],
+  },
+  {
+    id: "pays-you",
+    label: "Your Customers",
+    totalHidden: 36,
+    contacts: [
+      { id: "peterson", name: "Peterson Legal Group", meta: "Top Customer · ~$240K/yr · Stripe",            defaultSelected: true },
+      { id: "northstar", name: "Northstar Design Co",  meta: "$72K/yr · Pays from Base 0x8c3a...1f9e",       defaultSelected: true },
+      { id: "willow",    name: "Willow Creek Dental", meta: "$54K/yr · ACH · 2 invoices outstanding",       extra: true },
+      { id: "brookside", name: "Brookside Consulting",meta: "$48K/yr · Stripe · Pays Net-30",                extra: true },
+    ],
+  },
+  {
+    id: "on-chain",
+    label: "On-Chain",
+    totalHidden: 36,
+    contacts: [
+      { id: "aave",      name: "Aave",            meta: "Lending · $1M USDC Position · Earning 4.2% APY", badge: { label: "Protocol", tone: "muted" }, defaultSelected: true },
+      { id: "aerodrome", name: "Aerodrome DEX",   meta: "Swapping · 8 Swaps in 90d · USDC – DAI",         badge: { label: "Protocol", tone: "muted" }, defaultSelected: true },
+      { id: "0x4a7e",    name: "0x4a7e...c812",   meta: "Frequent Recipient · $4,880 Total",              badge: { label: "Unknown",  tone: "orange" } },
+      { id: "morpho",    name: "Morpho Blue",     meta: "Lending · $250K USDC · Earning 5.1% APY",        badge: { label: "Protocol", tone: "muted" }, extra: true },
+    ],
+  },
+  {
+    id: "team",
+    label: "Your Team (Payroll)",
+    totalHidden: 7,
+    contacts: [
+      { id: "jane-doe", name: "Jane Doe", meta: "Salary · Equity · Joined Jan 2024", badge: { label: "Founding Engineer", tone: "muted" }, defaultSelected: true },
+      { id: "j-smith",  name: "J. Smith", meta: "Salary · Joined Feb 2024",          badge: { label: "Engineering",       tone: "muted" }, extra: true },
+    ],
+  },
+];
+
+const PEOPLE_TABS: { id: "all" | ContactGroupId; label: string; count: number }[] = [
+  { id: "all",      label: "All",      count: 67 },
+  { id: "you-pay",  label: "You Pay",  count: 14 },
+  { id: "pays-you", label: "Pays You", count: 38 },
+  { id: "on-chain", label: "On-Chain", count: 7  },
+  { id: "team",     label: "Team",     count: 8  },
+];
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -48,8 +137,20 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [bankSearch, setBankSearch] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(["runway", "tax"]);
-  const [autonomy, setAutonomy] = useState<AutonomyLevel>("small");
+  const [businessKind, setBusinessKind] = useState<string>("services");
+  const [teamSize, setTeamSize] = useState<string>("just-me");
+  const [helpAreas, setHelpAreas] = useState<string[]>(["bills-vendors", "overdue-invoices"]);
+  const [autonomy, setAutonomy] = useState<AutonomyLevel>("routine");
+  const [shareWithBookkeeper, setShareWithBookkeeper] = useState<boolean>(true);
+  const [bookkeeperEmail, setBookkeeperEmail] = useState<string>("");
+  const [bookkeeperRole, setBookkeeperRole] = useState<BookkeeperRole>("approver");
+  const [peopleTab, setPeopleTab] = useState<"all" | ContactGroupId>("all");
+  const [selectedPeople, setSelectedPeople] = useState<Set<string>>(() => {
+    const init = new Set<string>();
+    CONTACT_GROUPS.forEach((g) => g.contacts.forEach((c) => { if (c.defaultSelected) init.add(c.id); }));
+    return init;
+  });
+  const [expandedGroups, setExpandedGroups] = useState<Set<ContactGroupId>>(new Set());
 
   const goNext = useCallback(() => {
     setStep((s) => {
@@ -70,8 +171,18 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
       setSelectedBank(null);
       setBankSearch("");
       setFiles([]);
-      setSelectedGoals(["runway", "tax"]);
-      setAutonomy("small");
+      setBusinessKind("services");
+      setTeamSize("just-me");
+      setHelpAreas(["bills-vendors", "overdue-invoices"]);
+      setAutonomy("routine");
+      setShareWithBookkeeper(true);
+      setBookkeeperEmail("");
+      setBookkeeperRole("approver");
+      setPeopleTab("all");
+      const init = new Set<string>();
+      CONTACT_GROUPS.forEach((g) => g.contacts.forEach((c) => { if (c.defaultSelected) init.add(c.id); }));
+      setSelectedPeople(init);
+      setExpandedGroups(new Set());
     }
   }, [open]);
 
@@ -136,12 +247,52 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               {step === 2 && <StepUpload files={files} setFiles={setFiles} />}
               {step === 3 && <StepReading files={files} setFiles={setFiles} />}
               {step === 4 && (
-                <StepGoals selected={selectedGoals} onChange={setSelectedGoals} />
+                <StepBusinessProfile
+                  businessKind={businessKind}
+                  onBusinessKindChange={setBusinessKind}
+                  teamSize={teamSize}
+                  onTeamSizeChange={setTeamSize}
+                  helpAreas={helpAreas}
+                  onHelpAreasChange={setHelpAreas}
+                />
               )}
-              {step === 5 && <StepAutonomy value={autonomy} onChange={setAutonomy} />}
+              {step === 5 && (
+                <StepAutonomy
+                  value={autonomy}
+                  onChange={setAutonomy}
+                  shareWithBookkeeper={shareWithBookkeeper}
+                  onShareChange={setShareWithBookkeeper}
+                  bookkeeperEmail={bookkeeperEmail}
+                  onBookkeeperEmailChange={setBookkeeperEmail}
+                  bookkeeperRole={bookkeeperRole}
+                  onBookkeeperRoleChange={setBookkeeperRole}
+                />
+              )}
+              {step === 6 && (
+                <StepPeople
+                  activeTab={peopleTab}
+                  onTabChange={setPeopleTab}
+                  selected={selectedPeople}
+                  onToggle={(id) => {
+                    setSelectedPeople((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id); else next.add(id);
+                      return next;
+                    });
+                  }}
+                  expandedGroups={expandedGroups}
+                  onToggleExpand={(gid) => {
+                    setExpandedGroups((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(gid)) next.delete(gid); else next.add(gid);
+                      return next;
+                    });
+                  }}
+                />
+              )}
 
               {/* Footer buttons */}
-              {step < TOTAL_STEPS - 1 ? (
+              {step < 4 ? (
                 <div className="flex gap-[16px] items-stretch w-full">
                   <button
                     type="button"
@@ -164,6 +315,17 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                     </span>
                   </button>
                 </div>
+              ) : step < TOTAL_STEPS - 1 ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  data-testid="button-onboarding-continue"
+                  className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
+                    Continue
+                  </span>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -548,61 +710,127 @@ function StepReading({
   );
 }
 
-/* ─── Step 5: Goals ─── */
-function StepGoals({
-  selected, onChange,
+/* ─── Step 5: Tell me about your business ─── */
+function StepBusinessProfile({
+  businessKind,
+  onBusinessKindChange,
+  teamSize,
+  onTeamSizeChange,
+  helpAreas,
+  onHelpAreasChange,
 }: {
-  selected: string[];
-  onChange: (ids: string[]) => void;
+  businessKind: string;
+  onBusinessKindChange: (id: string) => void;
+  teamSize: string;
+  onTeamSizeChange: (id: string) => void;
+  helpAreas: string[];
+  onHelpAreasChange: (ids: string[]) => void;
 }) {
-  const toggle = (id: string) =>
-    onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]);
+  const toggleHelp = (id: string) =>
+    onHelpAreasChange(helpAreas.includes(id) ? helpAreas.filter(s => s !== id) : [...helpAreas, id]);
 
   return (
-    <div className="flex flex-col gap-[16px]">
+    <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Who are you setting this up for?
+          Tell me about your business
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          This changes a few things about how Brain talks to you and what it focuses on. You can change your mind any time.
+          This helps Brain set the right defaults so you don't have to configure everything yourself.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-[12px]" role="group" aria-label="Goals">
-        {GOALS.map((g) => {
-          const isSel = selected.includes(g.id);
-          return (
-            <button
-              key={g.id}
-              type="button"
-              aria-pressed={isSel}
-              onClick={() => toggle(g.id)}
-              data-testid={`button-goal-${g.id}`}
-              className={`flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left ${
-                isSel ? "border-[#7631EE]/50" : "border-[#1d2132] hover:border-[#2c3247]"
-              }`}
-            >
-              <span className={`size-[24px] rounded-full flex items-center justify-center shrink-0 ${
-                isSel ? "bg-[#123509]" : "border-2 border-[#2c3247]"
-              }`}>
-                {isSel && (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6.5L4.8 9L10 3" stroke="#42bf23" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </span>
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px]">
-                {g.label}
-              </span>
-            </button>
-          );
-        })}
+      {/* What kind of business? */}
+      <div className="flex flex-col gap-[10px]">
+        <SectionLabel>What kind of business?</SectionLabel>
+        <div className="grid grid-cols-2 gap-[12px]" role="radiogroup" aria-label="Business kind">
+          {BUSINESS_KINDS.map((k) => {
+            const isSel = businessKind === k.id;
+            return (
+              <button
+                key={k.id}
+                type="button"
+                role="radio"
+                aria-checked={isSel}
+                onClick={() => onBusinessKindChange(k.id)}
+                data-testid={`button-business-kind-${k.id}`}
+                className={`flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[14px] border transition-colors text-left ${
+                  isSel ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
+                }`}
+              >
+                <PurpleRadio selected={isSel} />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+                  {k.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* How many people */}
+      <div className="flex flex-col gap-[10px]">
+        <SectionLabel>How many people, including you?</SectionLabel>
+        <div className="grid grid-cols-3 gap-[12px]" role="radiogroup" aria-label="Team size">
+          {TEAM_SIZES.map((s) => {
+            const isSel = teamSize === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="radio"
+                aria-checked={isSel}
+                onClick={() => onTeamSizeChange(s.id)}
+                data-testid={`button-team-size-${s.id}`}
+                className={`flex items-center gap-[10px] bg-[#0a0c10] rounded-[12px] px-[12px] py-[12px] border transition-colors text-left ${
+                  isSel ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
+                }`}
+              >
+                <PurpleRadio selected={isSel} />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+                  {s.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* What would you most want Brain to help with first? */}
+      <div className="flex flex-col gap-[10px]">
+        <SectionLabel>What would you most want Brain to help with first?</SectionLabel>
+        <div className="flex flex-col gap-[10px]" role="group" aria-label="Help areas">
+          {HELP_AREAS.map((h) => {
+            const isSel = helpAreas.includes(h.id);
+            return (
+              <button
+                key={h.id}
+                type="button"
+                aria-pressed={isSel}
+                onClick={() => toggleHelp(h.id)}
+                data-testid={`button-help-${h.id}`}
+                className={`flex items-start gap-[12px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px] border transition-colors text-left ${
+                  isSel ? "border-[#7631EE]/50" : "border-[#1d2132] hover:border-[#2c3247]"
+                }`}
+              >
+                <GreenCheckCircle selected={isSel} />
+                <div className="flex-1 min-w-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+                    {h.label}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px] mt-[2px]">
+                    {h.sub}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
-          You picked <span className="font-semibold underline">{selected.length} goal{selected.length === 1 ? "" : "s"}</span>. After you finish setup, Brain will suggest starter amounts and timelines based on your income and spending. You can adjust everything.
+          Based on your answers, Brain will set up vendor payment rules, overdue invoice reminders, and a cash runway view ready to go on your Home screen. You can change everything later.
         </p>
       </div>
     </div>
@@ -611,28 +839,41 @@ function StepGoals({
 
 /* ─── Step 6: Autonomy ─── */
 function StepAutonomy({
-  value, onChange,
+  value,
+  onChange,
+  shareWithBookkeeper,
+  onShareChange,
+  bookkeeperEmail,
+  onBookkeeperEmailChange,
+  bookkeeperRole,
+  onBookkeeperRoleChange,
 }: {
   value: AutonomyLevel;
   onChange: (v: AutonomyLevel) => void;
+  shareWithBookkeeper: boolean;
+  onShareChange: (v: boolean) => void;
+  bookkeeperEmail: string;
+  onBookkeeperEmailChange: (v: string) => void;
+  bookkeeperRole: BookkeeperRole;
+  onBookkeeperRoleChange: (v: BookkeeperRole) => void;
 }) {
   const options: { id: AutonomyLevel; title: string; badge?: { label: string; tone: "muted" | "orange" }; body: string }[] = [
     {
       id: "watch",
       title: "Just watch",
       badge: { label: "Most Cautious", tone: "muted" },
-      body: "Brain tracks everything and tells me what's happening, but never moves money or pays anything unless I tap yes.",
+      body: "Brain tracks everything and flags what needs attention, but I approve every payment and transfer myself.",
     },
     {
-      id: "small",
-      title: "Handle the small stuff",
+      id: "routine",
+      title: "Handle the routine stuff",
       badge: { label: "Recommended", tone: "orange" },
-      body: "Brain pays recurring bills I've paid before, moves money toward my goals, and asks me before anything big or new.",
+      body: "Brain pays recurring bills under $500, sends invoice reminders, reconciles transactions, and asks me for anything new or unusual.",
     },
     {
-      id: "most",
-      title: "Handle most things",
-      body: "Brain also moves larger amounts, cancels subscriptions I don't use, and negotiates bills when it can. Only asks about unusual or high-stakes stuff.",
+      id: "books",
+      title: "Run my books for me",
+      body: "Brain also approves vendor payments up to my set limits, runs payroll on payday, handles month-end close, and only escalates the exceptions.",
     },
   ];
 
@@ -662,10 +903,8 @@ function StepAutonomy({
                 isSel ? "border-[#7631EE]" : "border-[#1d2132] hover:border-[#2c3247]"
               }`}
             >
-              <span className={`size-[20px] rounded-full flex items-center justify-center shrink-0 mt-[2px] border-2 ${
-                isSel ? "border-[#7631EE]" : "border-[#2c3247]"
-              }`}>
-                {isSel && <span className="size-[10px] rounded-full bg-[#7631EE]" />}
+              <span className="mt-[2px]">
+                <PurpleRadio selected={isSel} />
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-[8px] flex-wrap">
@@ -693,7 +932,279 @@ function StepAutonomy({
           );
         })}
       </div>
+
+      {/* Bookkeeper card */}
+      <div className="bg-[#0a0c10] rounded-[14px] border border-[#1d2132] p-[16px] flex flex-col gap-[12px]">
+        <div className="flex items-start gap-[12px]">
+          <div className="flex-1 min-w-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px] leading-[20px]">
+              Copy your bookkeeper or accountant?
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">
+              They'll get an email when Brain does something important. They can also approve things for you.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={shareWithBookkeeper}
+            aria-label="Copy your bookkeeper or accountant"
+            onClick={() => onShareChange(!shareWithBookkeeper)}
+            data-testid="switch-bookkeeper-share"
+            className={`shrink-0 relative w-[40px] h-[24px] rounded-full transition-colors ${
+              shareWithBookkeeper ? "bg-[#42bf23]" : "bg-[#1d2132]"
+            }`}
+          >
+            <span
+              className={`absolute top-[2px] size-[20px] rounded-full bg-white transition-transform ${
+                shareWithBookkeeper ? "translate-x-[18px]" : "translate-x-[2px]"
+              }`}
+            />
+          </button>
+        </div>
+
+        {shareWithBookkeeper && (
+          <div className="flex gap-[10px]">
+            <input
+              type="email"
+              value={bookkeeperEmail}
+              onChange={(e) => onBookkeeperEmailChange(e.target.value)}
+              placeholder="e.g. janet@mail.com"
+              data-testid="input-bookkeeper-email"
+              className="flex-1 min-w-0 bg-[#06070a] border border-[#1d2132] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] placeholder:text-[#414965] focus:outline-none focus:border-[#7631EE]"
+            />
+            <select
+              value={bookkeeperRole}
+              onChange={(e) => onBookkeeperRoleChange(e.target.value as BookkeeperRole)}
+              data-testid="select-bookkeeper-role"
+              className="bg-[#06070a] border border-[#1d2132] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] focus:outline-none focus:border-[#7631EE]"
+            >
+              <option value="approver">Approver</option>
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
+          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
+        </p>
+      </div>
     </div>
+  );
+}
+
+/* ─── Step 7: Here's everyone Brain found ─── */
+function StepPeople({
+  activeTab,
+  onTabChange,
+  selected,
+  onToggle,
+  expandedGroups,
+  onToggleExpand,
+}: {
+  activeTab: "all" | ContactGroupId;
+  onTabChange: (id: "all" | ContactGroupId) => void;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  expandedGroups: Set<ContactGroupId>;
+  onToggleExpand: (id: ContactGroupId) => void;
+}) {
+  const visibleGroups = activeTab === "all"
+    ? CONTACT_GROUPS
+    : CONTACT_GROUPS.filter((g) => g.id === activeTab);
+
+  return (
+    <div className="flex flex-col gap-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+          Here's everyone Brain found.
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          Pulled from your bank, QuickBooks, Gusto, Ramp, Coinbase Prime and your Base wallet. Brain matched the same people across sources so you see one entry per contact.
+        </p>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex items-center gap-[8px] flex-wrap" role="tablist" aria-label="People filters">
+        {PEOPLE_TABS.map((t) => {
+          const isActive = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onTabChange(t.id)}
+              data-testid={`tab-people-${t.id}`}
+              className={`flex items-center gap-[6px] px-[12px] py-[6px] rounded-full border transition-colors ${
+                isActive
+                  ? "bg-[#4a2300] border-[#ff9500]"
+                  : "bg-[#0a0c10] border-[#1d2132] hover:border-[#2c3247]"
+              }`}
+            >
+              <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] ${
+                isActive ? "text-[#ff9500]" : "text-[#a8b9f4]"
+              }`}>
+                {t.label}
+              </span>
+              <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-none px-[6px] py-[2px] rounded-full ${
+                isActive ? "bg-[#06070a] text-[#ff9500]" : "bg-[#1d2132] text-[#6c779d]"
+              }`}>
+                {t.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col gap-[16px]">
+        {visibleGroups.map((g) => {
+          const isExpanded = expandedGroups.has(g.id);
+          const visibleContacts = isExpanded
+            ? g.contacts
+            : g.contacts.filter((c) => !c.extra);
+          const extraCount = g.contacts.filter((c) => c.extra).length;
+          const moreCount = isExpanded
+            ? Math.max(0, g.totalHidden - extraCount)
+            : g.totalHidden;
+          return (
+            <div key={g.id} className="flex flex-col gap-[10px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase tracking-[0.08em] text-[#6c779d] text-[11px]">
+                {g.label}
+              </p>
+              <div className="flex flex-col gap-[8px]">
+                {visibleContacts.map((c) => {
+                  const isSel = selected.has(c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-start gap-[12px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px] border border-[#1d2132]"
+                    >
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={isSel}
+                        aria-label={`Select ${c.name}`}
+                        onClick={() => onToggle(c.id)}
+                        data-testid={`checkbox-contact-${c.id}`}
+                        className="shrink-0 mt-[2px]"
+                      >
+                        <PurpleCheckSquare selected={isSel} />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-[8px] flex-wrap">
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+                            {c.name}
+                          </span>
+                          {c.badge && (
+                            <span
+                              className="[font-family:'Gilroy',sans-serif] font-semibold text-[10px] px-[6px] py-[1px] rounded-[6px]"
+                              style={
+                                c.badge.tone === "orange"
+                                  ? { background: "#4a2300", color: "#ff9500" }
+                                  : { background: "#1d2132", color: "#6c779d" }
+                              }
+                            >
+                              {c.badge.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px] mt-[2px]">
+                          {c.meta}
+                        </p>
+                      </div>
+                      {c.badge?.tone === "orange" && c.badge.label === "Unknown" && (
+                        <button
+                          type="button"
+                          data-testid={`button-add-label-${c.id}`}
+                          className="shrink-0 px-[10px] py-[6px] rounded-full bg-[#1d2132] hover:bg-[#2c3247] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#a8b9f4]"
+                        >
+                          Add Label
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {moreCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleExpand(g.id)}
+                    data-testid={`button-expand-${g.id}`}
+                    className="flex items-center justify-center gap-[6px] bg-[#0a0c10] rounded-[10px] py-[8px] border border-[#1d2132] hover:border-[#2c3247] transition-colors"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px]">
+                      {moreCount} more
+                    </span>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={isExpanded ? "rotate-180 transition-transform" : "transition-transform"}>
+                      <path d="M2 4L5 7L8 4" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-[12px] bg-[rgba(118,49,238,0.15)] border border-[rgba(118,49,238,0.4)] p-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px]">
+          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Small shared bits for the new steps ─── */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-[10px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] whitespace-nowrap">
+        {children}
+      </p>
+      <span className="flex-1 h-px bg-[#1d2132]" />
+    </div>
+  );
+}
+
+function PurpleRadio({ selected }: { selected: boolean }) {
+  return (
+    <span className={`size-[20px] rounded-full flex items-center justify-center shrink-0 border-2 ${
+      selected ? "border-[#7631EE]" : "border-[#2c3247]"
+    }`}>
+      {selected && <span className="size-[10px] rounded-full bg-[#7631EE]" />}
+    </span>
+  );
+}
+
+function GreenCheckCircle({ selected }: { selected: boolean }) {
+  return (
+    <span className={`size-[22px] rounded-full flex items-center justify-center shrink-0 mt-[1px] ${
+      selected ? "bg-[#123509]" : "border-2 border-[#2c3247]"
+    }`}>
+      {selected && (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6.5L4.8 9L10 3" stroke="#42bf23" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function PurpleCheckSquare({ selected }: { selected: boolean }) {
+  return (
+    <span className={`size-[20px] rounded-[6px] flex items-center justify-center border-2 ${
+      selected ? "bg-[#7631EE] border-[#7631EE]" : "border-[#2c3247]"
+    }`}>
+      {selected && (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6.5L4.8 9L10 3" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
   );
 }
 
