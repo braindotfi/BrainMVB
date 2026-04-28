@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
 import { useRuleSuggestions } from "@/lib/rule-suggestions";
+import { NEEDS_REVIEW } from "@/components/ReviewItems";
 
 interface Props {
   collapsed: boolean;
@@ -276,6 +277,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const ruleSuggestionsCount = useRuleSuggestions().length;
+  const reviewItemsCount = NEEDS_REVIEW.length;
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";
@@ -283,7 +285,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
   };
 
   /** Returns the badge count for a nav item by path, or 0 if no badge applies. */
-  const getNavCount = (path: string) => (path === "/rules" ? ruleSuggestionsCount : 0);
+  const getNavCount = (path: string) => {
+    if (path === "/rules") return ruleSuggestionsCount;
+    if (path === "/review") return reviewItemsCount;
+    return 0;
+  };
 
   if (collapsed) {
     return (
