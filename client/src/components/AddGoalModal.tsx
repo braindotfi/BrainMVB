@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 /* AddGoalModal — Figma 4074:65865 ("New Goal").
@@ -6,16 +6,20 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
    #11141b BG, blurred 56px title bar, #1d2132 stroke). The body
    scrolls when content exceeds viewport height. */
 
+export type AddGoalPayload = {
+  category: string;
+  name: string;
+  amount: string;
+  timeline: string;
+  priority: number;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (goal: {
-    category: string;
-    name: string;
-    amount: string;
-    timeline: string;
-    priority: number;
-  }) => void;
+  onCreate: (goal: AddGoalPayload) => void | Promise<void>;
+  /** When true, the Create button shows a loading state and is disabled. */
+  isSubmitting?: boolean;
 };
 
 const CATEGORIES = [
@@ -29,13 +33,14 @@ const CATEGORIES = [
 
 const TIMELINES = ["6 months", "12 months", "18 months", "Custom"];
 
-/* Static demo ranked list shown in the priority card. The user's new
-   goal slot is the disabled fourth row, mirroring the Figma mockup. */
-const PRIORITY_LIST = [
-  { name: "Hi $5M ARR", rank: "Ranked 1", muted: false },
-  { name: "Reach 18-month runway", rank: "Ranked 2", muted: false },
-  { name: "Reach 18-month runway", rank: "Ranked 3", muted: false },
-  { name: "Your new goal will go here", rank: "--", muted: true },
+/* Comparison anchors shown in the priority card. Each one has a baseline
+   priority value so the user's new goal can be re-ranked against them in
+   real time as the slider moves. All four entries are intentionally
+   different goals (no duplicates). */
+const PRIORITY_ANCHORS: { name: string; priority: number }[] = [
+  { name: "Hit $5M ARR",            priority: 88 },
+  { name: "Reach 18-month runway",  priority: 64 },
+  { name: "Q4 marketing budget",    priority: 35 },
 ];
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -78,6 +83,9 @@ const Chip = ({
   </button>
 );
 
+/* Figma 4077:66106 — amber-filled circle (#4A2300) with an inverted
+   exclamation glyph (#FF9500). The inner glyph is the 12px icon offset
+   2px in from each edge of the 16px circle, matching the Figma layers. */
 const HintIcon = () => (
   <svg
     width="16"
@@ -86,10 +94,15 @@ const HintIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className="block shrink-0"
+    aria-hidden
   >
-    <circle cx="8" cy="8" r="6" stroke="#6c779d" strokeWidth="1.2" />
-    <path d="M8 7v3.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
-    <circle cx="8" cy="5.4" r="0.6" fill="#6c779d" />
+    <circle cx="8" cy="8" r="8" fill="#4A2300" />
+    <path
+      d="M8 4.5L8.005 9M8 11.498H8.005"
+      stroke="#FF9500"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -110,12 +123,36 @@ const CloseIcon = () => (
   </svg>
 );
 
-export const AddGoalModal = ({ open, onOpenChange, onCreate }: Props) => {
+export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Props) => {
   const [category, setCategory] = useState("Pay Off Debt");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [timeline, setTimeline] = useState("12 months");
   const [priority, setPriority] = useState(29);
+
+  /* Build the live ranked list. The new goal joins the anchors and is
+     re-sorted by priority on every slider tick — higher priority bubbles
+     it up the list in real time. If the user hasn't typed a name yet we
+     keep the original "Your new goal will go here" placeholder copy. */
+  const rankedList = useMemo(() => {
+    const newGoal = {
+      key: "new",
+      name: name.trim() || "Your new goal will go here",
+      placeholder: name.trim().length === 0,
+      isNew: true,
+      priority,
+    };
+    const anchors = PRIORITY_ANCHORS.map((a, i) => ({
+      key: `anchor-${i}`,
+      name: a.name,
+      placeholder: false,
+      isNew: false,
+      priority: a.priority,
+    }));
+    return [...anchors, newGoal]
+      .sort((a, b) => b.priority - a.priority)
+      .map((row, idx) => ({ ...row, rank: idx + 1 }));
+  }, [name, priority]);
 
   const inputClass =
     "bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px] w-full " +
@@ -267,22 +304,36 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate }: Props) => {
                 </div>
 
                 <div className="flex flex-col gap-[8px] items-start w-full">
-                  {PRIORITY_LIST.map((p, i) => (
-                    <div key={i} className="flex gap-[8px] items-center w-full">
+                  {rankedList.map((p) => (
+                    <div
+                      key={p.key}
+                      data-testid={`priority-row-${p.key}`}
+                      className="flex gap-[8px] items-center w-full"
+                    >
                       <span
                         className="size-[6px] rounded-full shrink-0"
-                        style={{ backgroundColor: p.muted ? "#414965" : "#42bf23" }}
+                        style={{
+                          backgroundColor: p.isNew
+                            ? p.placeholder
+                              ? "#414965"
+                              : "#ff9500"
+                            : "#42bf23",
+                        }}
                       />
                       <p
                         className={
-                          "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] truncate " +
-                          (p.muted ? "text-[#414965]" : "text-[#6c779d]")
+                          "flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-[14px] truncate " +
+                          (p.placeholder
+                            ? "text-[#414965] font-medium"
+                            : p.isNew
+                              ? "text-[#ff9500] font-semibold"
+                              : "text-[#6c779d] font-medium")
                         }
                       >
                         {p.name}
                       </p>
                       <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[13px] whitespace-nowrap">
-                        {p.rank}
+                        {p.placeholder ? "--" : `Ranked ${p.rank}`}
                       </p>
                     </div>
                   ))}
@@ -302,13 +353,14 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate }: Props) => {
             <button
               type="button"
               data-testid="button-add-goal-create"
+              disabled={isSubmitting}
               onClick={() =>
                 onCreate({ category, name, amount, timeline, priority })
               }
-              className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] w-full"
+              className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">
-                Create
+                {isSubmitting ? "Creating…" : "Create"}
               </span>
             </button>
           </div>

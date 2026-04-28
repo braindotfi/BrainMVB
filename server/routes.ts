@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { keccak256, toBytes } from "viem";
 import { storage } from "./storage";
 import { z } from "zod";
+import { insertGoalSchema } from "@shared/schema";
 import {
   computeBrainAccountAddress,
   getDeployedAccount,
@@ -194,6 +195,33 @@ Execute the objective within your policy constraints. Use tools to act. When com
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
+  // ─────────────────────────────────────────────────────────────
+  // GOALS — Your Goals (home page)
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/goals", async (_req, res) => {
+    try {
+      const rows = await storage.listGoals("default");
+      res.json(rows);
+    } catch (err: any) {
+      console.error("[goals] list failed:", err);
+      res.status(500).json({ error: err?.message ?? "Failed to load goals" });
+    }
+  });
+
+  app.post("/api/goals", async (req, res) => {
+    try {
+      const parsed = insertGoalSchema.parse(req.body);
+      const goal = await storage.createGoal(parsed);
+      res.status(201).json(goal);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid goal", details: err.flatten() });
+      }
+      console.error("[goals] create failed:", err);
+      res.status(500).json({ error: err?.message ?? "Failed to create goal" });
+    }
+  });
 
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
