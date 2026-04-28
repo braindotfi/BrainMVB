@@ -6,3 +6,9 @@ id = "_ABhg8VED7dDJJf1n1vYz"
 uri = "file://deliverables/Brain-Migration-Handoff.docx"
 type = "word_document"
 title = "Brain Migration Handoff (DOCX)"
+
+[[outputs]]
+id = "F3s7_VHtLtoSaKmybGPau"
+uri = "file://deliverables/Brain-Migration-Plans.docx"
+type = "word_document"
+title = "Brain Finance — Migration Plans (Replit → brain-core)"
