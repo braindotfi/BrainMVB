@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { useAuth } from "@/lib/authContext";
 
-/* Actions widget icons (Figma 3839:43693) — green circle with checkmark */
+/* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
 const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
 
-/* Recommendations widget icons (Figma 3839:43709) — orange circle with "i" */
+/* Brain Detected widget icons (Figma 3839:43709) — orange circle with "i" */
 const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
 const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
-const ACTIONS = [
-  { id: 1, label: "Paid your AWS bill this morning." },
-  { id: 2, label: "Scheduled the office lease payment for tomorrow." },
+/* Each entry links to a specific row on the Activity page. activityId
+   matches the ActivityItemData.id values declared in ActivityPage. */
+const BRAIN_DID = [
+  { id: 1, label: "Paid your AWS bill this morning.", activityId: 1 },
+  { id: 2, label: "Scheduled the office lease payment for tomorrow.", activityId: 2 },
 ];
 
-const RECOMMENDATIONS = [
-  { id: 1, label: "I found a bill-pay agent that can help you manage vendor payments. Would you like to review it?" },
-  { id: 2, label: "Your operating runway extended. Want me to move extra cash to a yield vault?" },
+const BRAIN_DETECTED = [
+  { id: 1, label: "I found a bill-pay agent that can help you manage vendor payments. Would you like to review it?", activityId: 3 },
+  { id: 2, label: "Your operating runway extended. Want me to move extra cash to a yield vault?", activityId: 5 },
 ];
 
 /* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
@@ -119,40 +122,77 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: number; label: string };
-const ListItem = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div className="bg-[#0a0c10] flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full">
+type WidgetItem = { id: number; label: string; activityId: number };
+const ListItem = ({
+  icon,
+  label,
+  onClick,
+  testId,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  testId: string;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    data-testid={testId}
+    className="flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] text-left"
+  >
     {icon}
     <div className="flex flex-1 flex-col items-start min-w-px relative">
       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">{label}</p>
     </div>
-  </div>
+  </button>
 );
 
-const SectionWidget = ({ title, count, items, icon }: { title: string; count: number; items: WidgetItem[]; icon: React.ReactNode }) => (
-  <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-    <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-      <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
-        <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+const SectionWidget = ({
+  title,
+  count,
+  items,
+  icon,
+  targetTab,
+  testIdPrefix,
+}: {
+  title: string;
+  count: number;
+  items: WidgetItem[];
+  icon: React.ReactNode;
+  targetTab: "brain-did" | "brain-detected";
+  testIdPrefix: string;
+}) => {
+  const [, navigate] = useLocation();
+  return (
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
+          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+        <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+          {items.map((item, idx) => (
+            <div key={item.id} className="flex flex-col gap-[8px] w-full">
+              <ListItem
+                icon={icon}
+                label={item.label}
+                testId={`${testIdPrefix}-${item.id}`}
+                onClick={() => navigate(`/activity?tab=${targetTab}&row=${item.activityId}`)}
+              />
+              {idx < items.length - 1 && (
+                <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
-    <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-      <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-        {items.map((item, idx) => (
-          <div key={item.id} className="flex flex-col gap-[8px] w-full">
-            <ListItem icon={icon} label={item.label} />
-            {idx < items.length - 1 && (
-              <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export function HomePage() {
   const hour = new Date().getHours();
@@ -239,17 +279,31 @@ $432 less than last month. Nice.
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Middle row: Actions (left) + Recommendations (right) */}
+            {/* Middle row: Brain Did (left) + Brain Detected (right) */}
             <div className="flex gap-[16px] items-start relative shrink-0 w-full">
               <div className="flex flex-1 min-w-px">
-                <SectionWidget title="Actions"          count={ACTIONS.length}          items={ACTIONS}          icon={<GreenCheckIcon />} />
+                <SectionWidget
+                  title="Brain Did"
+                  count={BRAIN_DID.length}
+                  items={BRAIN_DID}
+                  icon={<GreenCheckIcon />}
+                  targetTab="brain-did"
+                  testIdPrefix="row-brain-did"
+                />
               </div>
               <div className="flex flex-1 min-w-px">
-                <SectionWidget title="Recommendations"  count={RECOMMENDATIONS.length}  items={RECOMMENDATIONS}  icon={<OrangeInfoIcon />} />
+                <SectionWidget
+                  title="Brain Detected"
+                  count={BRAIN_DETECTED.length}
+                  items={BRAIN_DETECTED}
+                  icon={<OrangeInfoIcon />}
+                  targetTab="brain-detected"
+                  testIdPrefix="row-brain-detected"
+                />
               </div>
             </div>
 
-            {/* Your Goals — full width below Actions/Recommendations */}
+            {/* Your Goals — full width below Brain Did / Brain Detected */}
             <GoalsSection />
           </div>
         </div>

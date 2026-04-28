@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
 
@@ -55,8 +56,8 @@ const ApprovedIcon = () => (
   </div>
 );
 
-type Tab = "All" | "Brain Did" | "You Approved" | "Brain Noticed";
-const TABS: Tab[] = ["All", "Brain Did", "You Approved", "Brain Noticed"];
+type Tab = "All" | "Brain Did" | "You Approved" | "Brain Detected";
+const TABS: Tab[] = ["All", "Brain Did", "You Approved", "Brain Detected"];
 
 const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
   paid: BrainDidIcon,
@@ -68,9 +69,20 @@ const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
 const TYPE_TO_TAB: Record<ActivityType, Tab> = {
   paid: "Brain Did",
   moved: "Brain Did",
-  noticed: "Brain Noticed",
+  noticed: "Brain Detected",
   approved: "You Approved",
 };
+
+const TAB_SLUG: Record<Tab, string> = {
+  "All": "all",
+  "Brain Did": "brain-did",
+  "You Approved": "you-approved",
+  "Brain Detected": "brain-detected",
+};
+
+const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
+  (Object.entries(TAB_SLUG) as [Tab, string][]).map(([t, s]) => [s, t]),
+);
 
 type ActivityItemData = {
   id: number;
@@ -95,12 +107,23 @@ const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
   { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
 ];
 
-const ActivityItem = ({ item }: { item: ActivityItemData }) => {
+const ActivityItem = ({
+  item,
+  highlighted,
+  rowRef,
+}: {
+  item: ActivityItemData;
+  highlighted: boolean;
+  rowRef?: (el: HTMLDivElement | null) => void;
+}) => {
   const Icon = ICON_MAP[item.type];
   return (
     <div
+      ref={rowRef}
       data-testid={`row-activity-${item.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer ${
+        highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"
+      }`}
     >
       <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
         <Icon />
@@ -131,7 +154,17 @@ const ActivityItem = ({ item }: { item: ActivityItemData }) => {
   );
 };
 
-const SectionCard = ({ title, items }: { title: string; items: ActivityItemData[] }) => {
+const SectionCard = ({
+  title,
+  items,
+  highlightedId,
+  registerRowRef,
+}: {
+  title: string;
+  items: ActivityItemData[];
+  highlightedId: number | null;
+  registerRowRef: (id: number) => (el: HTMLDivElement | null) => void;
+}) => {
   if (items.length === 0) return null;
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
@@ -144,7 +177,11 @@ const SectionCard = ({ title, items }: { title: string; items: ActivityItemData[
         <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
           {items.map((item, idx) => (
             <div key={item.id} className="flex flex-col gap-[8px] w-full">
-              <ActivityItem item={item} />
+              <ActivityItem
+                item={item}
+                highlighted={highlightedId === item.id}
+                rowRef={registerRowRef(item.id)}
+              />
               {idx < items.length - 1 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
             </div>
           ))}
@@ -155,7 +192,41 @@ const SectionCard = ({ title, items }: { title: string; items: ActivityItemData[
 };
 
 export function ActivityPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("All");
+  const search = useSearch();
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const initialTab = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "All";
+  const initialRow = (() => {
+    const v = params.get("row");
+    const n = v ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : null;
+  })();
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [highlightedId, setHighlightedId] = useState<number | null>(initialRow);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const registerRowRef = (id: number) => (el: HTMLDivElement | null) => {
+    if (el) rowRefs.current.set(id, el);
+    else rowRefs.current.delete(id);
+  };
+
+  // Sync state when the URL changes (e.g. coming from the home page).
+  useEffect(() => {
+    const tabParam = params.get("tab") ?? "";
+    const tab = SLUG_TO_TAB[tabParam] ?? "All";
+    setActiveTab(tab);
+    const rowParam = params.get("row");
+    const rowId = rowParam ? Number(rowParam) : NaN;
+    setHighlightedId(Number.isFinite(rowId) ? rowId : null);
+  }, [params]);
+
+  // Scroll the highlighted row into view and clear the highlight after a short pause.
+  useEffect(() => {
+    if (highlightedId == null) return;
+    const el = rowRefs.current.get(highlightedId);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = window.setTimeout(() => setHighlightedId(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [highlightedId]);
 
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
@@ -185,7 +256,10 @@ export function ActivityPage() {
                 return (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setHighlightedId(null);
+                    }}
                     className="flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
                     style={{ background: isActive ? "#4a2300" : "transparent" }}
                     data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
@@ -204,8 +278,18 @@ export function ActivityPage() {
 
           {/* Activity sections */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <SectionCard title="Today" items={todayItems} />
-            <SectionCard title="Yesterday" items={yesterdayItems} />
+            <SectionCard
+              title="Today"
+              items={todayItems}
+              highlightedId={highlightedId}
+              registerRowRef={registerRowRef}
+            />
+            <SectionCard
+              title="Yesterday"
+              items={yesterdayItems}
+              highlightedId={highlightedId}
+              registerRowRef={registerRowRef}
+            />
           </div>
 
         </div>
