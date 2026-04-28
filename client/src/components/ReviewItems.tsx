@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
-
-const IMG_DOT = INLINE_FIGMA.homeDot;
 
 export type ReviewItemType = {
   id: number;
@@ -95,59 +92,6 @@ export const NEEDS_REVIEW: ReviewItemType[] = [
     autoLabel: "Always sweep spare cash to savings",
   },
 ];
-
-export const ReviewItem = ({ item, onClick }: { item: ReviewItemType; onClick: () => void }) => (
-  <div
-    onClick={onClick}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-    className="content-stretch flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
-    data-testid={`review-item-${item.id}`}
-  >
-    <div className="flex flex-1 flex-col items-start min-w-px relative">
-      <div className="flex items-center justify-center relative shrink-0 w-full">
-        <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">{item.title}</p>
-      </div>
-      <div className="flex gap-[8px] items-center justify-center relative shrink-0">
-        {item.vendor && (
-          <>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.vendor}</p>
-            <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-          </>
-        )}
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.amount}</p>
-        <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.due}</p>
-      </div>
-    </div>
-  </div>
-);
-
-/* ─── Right-aligned variant for the Review page (Figma 4052:44148):
-       title + subtitle on the left, large amount on the right ─── */
-export const ReviewRow = ({ item, onClick }: { item: ReviewItemType; onClick: () => void }) => (
-  <div
-    onClick={onClick}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-    className="flex items-center justify-between gap-[16px] p-[12px] rounded-[10px] w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
-    data-testid={`review-row-${item.id}`}
-  >
-    <div className="flex flex-col items-start min-w-0 flex-1">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
-        {item.title}
-      </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
-        {item.vendor ? `${item.vendor} · ${item.due}` : item.due.charAt(0).toUpperCase() + item.due.slice(1)}
-      </p>
-    </div>
-    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#a8b9f4] text-[18px] shrink-0 tabular-nums">
-      {item.amount}
-    </p>
-  </div>
-);
 
 const InfoCell = ({ label, value }: { label: string; value: string }) => (
   <div className="bg-[#0a0c10] flex flex-col h-[58px] items-start p-[12px] rounded-[16px] w-full">

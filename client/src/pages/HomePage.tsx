@@ -3,12 +3,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { useAuth } from "@/lib/authContext";
-import {
-  NEEDS_REVIEW,
-  ReviewItem,
-  ReviewModal,
-  type ReviewItemType,
-} from "@/components/ReviewItems";
 
 /* Actions widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
@@ -163,7 +157,6 @@ const SectionWidget = ({ title, count, items, icon }: { title: string; count: nu
 export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const [activeReview, setActiveReview] = useState<ReviewItemType | null>(null);
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -246,52 +239,21 @@ $432 less than last month. Nice.
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Bottom row: Needs Review (left) + Actions/Recommendations stacked (right) */}
+            {/* Middle row: Actions (left) + Recommendations (right) */}
             <div className="flex gap-[16px] items-start relative shrink-0 w-full">
-              {/* Needs Review */}
-              <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px overflow-clip relative rounded-[16px]">
-                <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                  <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">Needs Review</p>
-                    <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{NEEDS_REVIEW.length}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {NEEDS_REVIEW.map((item, idx) => (
-                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                        <ReviewItem item={item} onClick={() => setActiveReview(item)} />
-                        {idx < NEEDS_REVIEW.length - 1 && (
-                          <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right column: Actions + Recommendations */}
-              <div className="flex flex-1 flex-col gap-[16px] items-start relative">
+              <div className="flex flex-1 min-w-px">
                 <SectionWidget title="Actions"          count={ACTIONS.length}          items={ACTIONS}          icon={<GreenCheckIcon />} />
+              </div>
+              <div className="flex flex-1 min-w-px">
                 <SectionWidget title="Recommendations"  count={RECOMMENDATIONS.length}  items={RECOMMENDATIONS}  icon={<OrangeInfoIcon />} />
               </div>
             </div>
 
-            {/* Your Goals */}
+            {/* Your Goals — full width below Actions/Recommendations */}
             <GoalsSection />
           </div>
         </div>
       </ScrollArea>
-
-      <ReviewModal
-        item={activeReview}
-        open={activeReview !== null}
-        onOpenChange={(o) => { if (!o) setActiveReview(null); }}
-        onConfirm={() => setActiveReview(null)}
-        onReject={() => setActiveReview(null)}
-      />
 
       <OnboardingFlow
         open={showOnboarding}
