@@ -10,9 +10,8 @@ import finances_inactive from "@assets/figma_icons/finances_inactive.svg";
 import finances_active_base from "@assets/figma_icons/finances_active_base.svg";
 import finances_active_stroke from "@assets/figma_icons/finances_active_stroke.svg";
 import rules_inactive from "@assets/figma_icons/rules_inactive.svg";
-import rules_active_body from "@assets/figma_icons/rules_active_body.svg";
-import rules_active_tab from "@assets/figma_icons/rules_active_tab.svg";
-import rules_active_subtract from "@assets/figma_icons/rules_active_subtract.svg";
+import rules_active_vec from "@assets/figma_icons/rules_active_vec.svg";
+import rules_active_vec1 from "@assets/figma_icons/rules_active_vec1.svg";
 import review_inactive_subtract from "@assets/figma_icons/review_inactive_subtract.svg";
 import review_active_body from "@assets/figma_icons/review_active_body.svg";
 import review_active_tab from "@assets/figma_icons/review_active_tab.svg";
@@ -82,9 +81,8 @@ export const ICONS = {
   finances_active_base,
   finances_active_stroke,
   rules_inactive,
-  rules_active_body,
-  rules_active_tab,
-  rules_active_subtract,
+  rules_active_vec,
+  rules_active_vec1,
   review_inactive_subtract,
   review_active_body,
   review_active_tab,

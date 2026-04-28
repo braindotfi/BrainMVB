@@ -150,25 +150,23 @@ const ReviewIconInactive = () => (
   </div>
 );
 
+/* Rules icon — Figma 4062:44620 (inactive) / 4062:44617 (active) */
 const RulesIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[4.17%_16.67%_4.17%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_body} />
+    <div className="absolute inset-[4.17%_8.33%]">
+      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_vec} />
     </div>
-    <div className="absolute bottom-1/2 left-[37.5%] right-[33.33%] top-1/4">
-      <div className="absolute inset-[-18.75%_-32.14%_-56.25%_-32.14%]">
-        <img alt="" className="block max-w-none size-full" src={ICONS.rules_active_tab} />
+    <div className="absolute bottom-[33.33%] left-[29.17%] right-1/4 top-[20.83%]">
+      <div className="absolute inset-[-10.23%_-20.45%_-30.68%_-20.45%]">
+        <img alt="" className="block max-w-none size-full" src={ICONS.rules_active_vec1} />
       </div>
-    </div>
-    <div className="absolute inset-[66.67%_4.17%_4.17%_37.5%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_subtract} />
     </div>
   </div>
 );
 
 const RulesIconInactive = () => (
   <div className="relative shrink-0 size-[24px]">
-    <div className="absolute left-px size-[22px] top-px">
+    <div className="absolute inset-[4.17%_8.33%]">
       <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_inactive} />
     </div>
   </div>
