@@ -28,6 +28,13 @@ Programmable neobank on Base L2.
 - Agent wallet/debit cards from AccountOverviewSection
 - `/api/agents` and `/api/marketplace` server routes
 
+## Onboarding & Plaid
+- `client/src/components/OnboardingFlow.tsx` — 8-step onboarding modal; step 1 (`StepConnectBank`) uses Plaid Link to connect real bank accounts (sandbox by default).
+- `server/plaid.ts` — Lazy Plaid client (defaults to sandbox; honors `PLAID_ENV`). Products: Auth + Transactions. Countries: US + CA.
+- Required secrets: `PLAID_CLIENT_ID`, `PLAID_SECRET` (already configured). Optional: `PLAID_ENV` (`sandbox` | `development` | `production`).
+- Storage: `bank_connections` PG table (Drizzle, `shared/schema.ts`); `accessToken` is sensitive and never returned to the client (stripped in routes).
+- Sandbox test login: `user_good` / `pass_good` against any institution.
+
 ## API Endpoints
 - `POST /api/auth/siwe/nonce` / `/verify` / `/logout` — SIWE auth
 - `GET /api/wirex/accounts` — WireX neobank accounts (demo fallback active)

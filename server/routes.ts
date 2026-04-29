@@ -934,17 +934,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
-    try {
-      const ok = await storage.removeToolConnection(DEMO_USER, req.params.toolId);
-      res.json({ success: ok });
-    } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
-    }
-  });
-
   /* ──────────────────────────────────────────────────────────────────────
    *  Plaid bank connections
+   *  NOTE: registered BEFORE the generic `:toolId/disconnect` so the
+   *  specific `/plaid/disconnect` handler wins for plaid.
    * ────────────────────────────────────────────────────────────────────── */
 
   app.get("/api/integrations/plaid/status", (_req, res) => {
@@ -1059,6 +1052,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const ok = await storage.removeBankConnection(DEMO_USER, itemId);
+      res.json({ success: ok });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  /* Generic tool disconnect — registered LAST so specific routes (e.g. plaid) win */
+  app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
+    try {
+      const ok = await storage.removeToolConnection(DEMO_USER, req.params.toolId);
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
