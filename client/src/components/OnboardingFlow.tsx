@@ -550,7 +550,7 @@ function StepConnectBank() {
           Let&apos;s connect your main account.
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain needs to see your checking account to understand what&apos;s coming in and going out. You can add savings, credit cards, and more in a minute.
+          Brain can add your additional financial accounts to understand what&apos;s coming in and going out. You can add savings, credit cards, and more in a minute.
         </p>
       </div>
 
