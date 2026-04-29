@@ -136,6 +136,20 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 
+/* ─── Bank Connections (Plaid) ─── */
+export const bankConnections = pgTable("bank_connections", {
+  userId: text("user_id").notNull(),
+  itemId: text("item_id").notNull(),               // Plaid item_id
+  accessToken: text("access_token").notNull(),     // Plaid access_token (sensitive — never returned to client)
+  institutionId: text("institution_id"),
+  institutionName: text("institution_name"),
+  accounts: jsonb("accounts").notNull(),           // BankAccount[]
+  connectedAt: timestamp("connected_at").defaultNow().notNull(),
+}, (t) => [
+  index("bank_connections_user_id_idx").on(t.userId),
+  index("bank_connections_user_item_idx").on(t.userId, t.itemId),
+]);
+
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),

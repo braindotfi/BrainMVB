@@ -1040,8 +1040,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/integrations/plaid/disconnect", async (req, res) => {
     try {
-      const itemId = String(req.body?.itemId ?? "");
-      if (!itemId) return res.status(400).json({ error: "itemId required" });
+      const parsed = z.object({ itemId: z.string().min(1) }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "itemId required" });
+      }
+      const { itemId } = parsed.data;
 
       // Best-effort revoke at Plaid; even if it fails we still drop our copy
       try {

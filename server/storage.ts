@@ -13,6 +13,7 @@ import {
   agentTransactions as agentTransactionsTable,
   notifications as notificationsTable,
   siweNonces as siweNoncesTable,
+  bankConnections as bankConnectionsTable,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -745,17 +746,52 @@ export class DatabaseStorage implements IStorage {
     return this.toolConns.delete(`${userId}::${toolId}`);
   }
 
-  // ─── Bank connections (kept in-memory; no DB schema yet) ───
-  private bankConns = new Map<string, BankConnection>();
+  // ─── Bank connections (Plaid) ───
   async listBankConnections(userId: string): Promise<BankConnection[]> {
-    return Array.from(this.bankConns.values()).filter(c => c.userId === userId);
+    const rows = await db
+      .select()
+      .from(bankConnectionsTable)
+      .where(eq(bankConnectionsTable.userId, userId));
+    return rows.map((r) => ({
+      userId: r.userId,
+      itemId: r.itemId,
+      accessToken: r.accessToken,
+      institutionId: r.institutionId,
+      institutionName: r.institutionName,
+      accounts: (r.accounts as BankAccount[]) ?? [],
+      connectedAt: r.connectedAt.toISOString(),
+    }));
   }
   async createBankConnection(conn: BankConnection): Promise<BankConnection> {
-    this.bankConns.set(`${conn.userId}::${conn.itemId}`, conn);
+    await db
+      .insert(bankConnectionsTable)
+      .values({
+        userId: conn.userId,
+        itemId: conn.itemId,
+        accessToken: conn.accessToken,
+        institutionId: conn.institutionId,
+        institutionName: conn.institutionName,
+        accounts: conn.accounts,
+        connectedAt: new Date(conn.connectedAt),
+      })
+      .onConflictDoUpdate({
+        target: [bankConnectionsTable.userId, bankConnectionsTable.itemId],
+        set: {
+          accessToken: conn.accessToken,
+          institutionId: conn.institutionId,
+          institutionName: conn.institutionName,
+          accounts: conn.accounts,
+          connectedAt: new Date(conn.connectedAt),
+        },
+      });
     return conn;
   }
   async removeBankConnection(userId: string, itemId: string): Promise<boolean> {
-    return this.bankConns.delete(`${userId}::${itemId}`);
+    const res = await db
+      .delete(bankConnectionsTable)
+      .where(and(eq(bankConnectionsTable.userId, userId), eq(bankConnectionsTable.itemId, itemId)))
+      .returning({ itemId: bankConnectionsTable.itemId });
+    return res.length > 0;
   }
 }
 
