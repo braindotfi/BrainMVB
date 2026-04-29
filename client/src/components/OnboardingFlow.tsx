@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
 
 type ToolConnection = {
   userId: string;
@@ -20,15 +21,6 @@ type UploadedFile = {
   status: "processing" | "done" | "warning";
   detail: string;
 };
-
-const BANKS: { id: string; name: string; logo: string; bg: string }[] = [
-  { id: "chase",      name: "Chase Bank",      logo: "C",   bg: "#117ACA" },
-  { id: "bofa",       name: "Bank of America", logo: "BA",  bg: "#FFFFFF" },
-  { id: "wells",      name: "Wells Fargo",     logo: "WF",  bg: "#D71E28" },
-  { id: "citi",       name: "Citibank",        logo: "citi",bg: "#FFFFFF" },
-  { id: "ally",       name: "Ally",            logo: "a",   bg: "#7B1FA2" },
-  { id: "capitalone", name: "Capital One",     logo: "C1",  bg: "#FFFFFF" },
-];
 
 /* ─── Step 3: Connect tools — third-party data sources ─── */
 type ToolCategory = "Accounting" | "Productivity" | "CRM & Sales" | "Payments" | "Communication" | "Crypto";
@@ -192,8 +184,6 @@ interface OnboardingFlowProps {
 
 export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
-  const [selectedBank, setSelectedBank] = useState<string | null>(null);
-  const [bankSearch, setBankSearch] = useState("");
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [toolSearch, setToolSearch] = useState("");
   const [connectingTool, setConnectingTool] = useState<string | null>(null);
@@ -285,8 +275,6 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   useEffect(() => {
     if (open) {
       setStep(0);
-      setSelectedBank(null);
-      setBankSearch("");
       setSelectedTools(new Set());
       setToolSearch("");
       setFiles([]);
@@ -358,14 +346,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
           >
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
               {step === 0 && <StepWelcome />}
-              {step === 1 && (
-                <StepConnectBank
-                  selected={selectedBank}
-                  onSelect={setSelectedBank}
-                  search={bankSearch}
-                  onSearchChange={setBankSearch}
-                />
-              )}
+              {step === 1 && <StepConnectBank />}
               {step === 2 && (
                 <StepConnectTools
                   selected={selectedTools}
@@ -502,65 +483,155 @@ function StepWelcome() {
 }
 
 /* ─── Step 2: Connect bank ─── */
-function StepConnectBank({
-  selected, onSelect, search, onSearchChange,
-}: {
-  selected: string | null;
-  onSelect: (id: string) => void;
-  search: string;
-  onSearchChange: (v: string) => void;
-}) {
-  const filtered = BANKS.filter(b => b.name.toLowerCase().includes(search.toLowerCase()));
+type BankAccountInfo = {
+  accountId: string;
+  name: string;
+  mask: string | null;
+  subtype: string | null;
+  type: string | null;
+};
+type BankConnectionInfo = {
+  itemId: string;
+  institutionId: string | null;
+  institutionName: string;
+  accounts: BankAccountInfo[];
+  connectedAt: string;
+};
+
+function StepConnectBank() {
+  const [error, setError] = useState<string | null>(null);
+
+  const statusQuery = useQuery<{ configured: boolean; env: string }>({
+    queryKey: ["/api/integrations/plaid/status"],
+  });
+  const isConfigured = statusQuery.data?.configured ?? false;
+
+  const connectionsQuery = useQuery<BankConnectionInfo[]>({
+    queryKey: ["/api/integrations/plaid/connections"],
+  });
+  const connections = connectionsQuery.data ?? [];
+
+  // Lazily fetch a Plaid Link token only when ready to connect
+  const linkTokenQuery = useQuery<{ link_token: string }>({
+    queryKey: ["/api/integrations/plaid/link-token"],
+    queryFn: async () => {
+      const res = await apiRequest("POST", "/api/integrations/plaid/link-token");
+      return res.json();
+    },
+    enabled: isConfigured,
+    retry: false,
+    staleTime: 25 * 60 * 1000, // Plaid link tokens last ~30 minutes
+  });
+
+  const exchangeMut = useMutation({
+    mutationFn: async (vars: { public_token: string; institution?: { id: string | null; name: string } }) => {
+      const res = await apiRequest("POST", "/api/integrations/plaid/exchange", vars);
+      return res.json();
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/plaid/connections"] });
+    },
+    onError: (err: Error) => setError(err.message.replace(/^\d+:\s*/, "")),
+  });
+
+  const disconnectMut = useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await apiRequest("POST", "/api/integrations/plaid/disconnect", { itemId });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/plaid/connections"] }),
+  });
+
   return (
     <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Let's connect your main account.
+          Let&apos;s connect your main account.
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain needs to see your checking account to understand what's coming in and going out. You can add savings, credit cards, and more in a minute.
+          Brain needs to see your checking account to understand what&apos;s coming in and going out. You can add savings, credit cards, and more in a minute.
         </p>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] px-[16px] h-[44px] border border-[#1d2132]">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <circle cx="11" cy="11" r="7" stroke="#6c779d" strokeWidth="2" />
-          <path d="M20 20L17 17" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search for your bank..."
-          data-testid="input-bank-search"
-          className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px]"
-        />
-      </div>
+      {/* Connected banks */}
+      {connections.length > 0 && (
+        <div className="flex flex-col gap-[8px]">
+          {connections.map((c) => (
+            <div
+              key={c.itemId}
+              data-testid={`card-bank-${c.itemId}`}
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border"
+              style={{ borderColor: "#22c55e" }}
+            >
+              <div
+                className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[12px] [font-family:'Gilroy',sans-serif]"
+                style={{ background: "#22c55e", color: "#062b13" }}
+              >
+                {c.institutionName.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
+                  {c.institutionName}
+                </span>
+                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#22c55e] text-[11px] leading-[14px] truncate">
+                  {c.accounts.length} account{c.accounts.length === 1 ? "" : "s"} connected
+                  {c.accounts[0]?.mask ? ` · ····${c.accounts[0].mask}` : ""}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => disconnectMut.mutate(c.itemId)}
+                disabled={disconnectMut.isPending}
+                data-testid={`button-disconnect-bank-${c.itemId}`}
+                className="px-[10px] py-[6px] rounded-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#fca5a5] hover:bg-[rgba(239,68,68,0.1)] transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Bank grid */}
-      <div className="grid grid-cols-2 gap-[12px]" role="radiogroup" aria-label="Choose your bank">
-        {filtered.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            role="radio"
-            aria-checked={selected === b.id}
-            onClick={() => onSelect(b.id)}
-            data-testid={`button-bank-${b.id}`}
-            className={`flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left ${
-              selected === b.id
-                ? "border-[#7631EE]"
-                : "border-[#1d2132] hover:border-[#2c3247]"
-            }`}
-          >
-            <BankLogo bank={b} />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
-              {b.name}
-            </span>
-          </button>
-        ))}
-      </div>
+      {error && (
+        <div
+          data-testid="alert-bank-error"
+          className="rounded-[12px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
+          style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)" }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Connect CTA */}
+      {!isConfigured ? (
+        <div
+          data-testid="alert-plaid-not-configured"
+          className="rounded-[12px] px-[14px] py-[12px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
+          style={{ background: "rgba(118,49,238,0.08)", color: "#a8b9f4", border: "1px solid rgba(118,49,238,0.25)" }}
+        >
+          Bank connections require Plaid credentials. Add{" "}
+          <code className="text-[#7631EE]">PLAID_CLIENT_ID</code> and{" "}
+          <code className="text-[#7631EE]">PLAID_SECRET</code> to enable this step.
+        </div>
+      ) : (
+        <PlaidConnectButton
+          token={linkTokenQuery.data?.link_token ?? null}
+          isLoading={linkTokenQuery.isLoading}
+          isExchanging={exchangeMut.isPending}
+          loadError={linkTokenQuery.error?.message ?? null}
+          hasExisting={connections.length > 0}
+          onSuccess={(public_token, metadata) => {
+            exchangeMut.mutate({
+              public_token,
+              institution: metadata.institution
+                ? { id: metadata.institution.institution_id, name: metadata.institution.name }
+                : undefined,
+            });
+          }}
+          onExit={(err) => { if (err) setError(err.display_message ?? err.error_message ?? "Bank connection cancelled"); }}
+        />
+      )}
 
       <InfoNotice
         title="Secure by Default"
@@ -574,20 +645,59 @@ function StepConnectBank({
   );
 }
 
-function BankLogo({ bank }: { bank: { id: string; name: string; logo: string; bg: string } }) {
-  // Solid-color circle with stylized letter — keeps the design self-contained.
-  const isLight = ["#FFFFFF"].includes(bank.bg.toUpperCase());
+function PlaidConnectButton({
+  token, isLoading, isExchanging, loadError, hasExisting, onSuccess, onExit,
+}: {
+  token: string | null;
+  isLoading: boolean;
+  isExchanging: boolean;
+  loadError: string | null;
+  hasExisting: boolean;
+  onSuccess: (public_token: string, metadata: PlaidLinkOnSuccessMetadata) => void;
+  onExit: (err: PlaidLinkError | null) => void;
+}) {
+  const { open, ready } = usePlaidLink({
+    token: token ?? "",
+    onSuccess: (public_token, metadata) => onSuccess(public_token, metadata),
+    onExit: (err) => onExit(err),
+  });
+
+  const disabled = !token || !ready || isLoading || isExchanging;
+  const label = isExchanging
+    ? "Linking accounts…"
+    : isLoading
+    ? "Preparing secure connection…"
+    : hasExisting
+    ? "+ Connect another bank"
+    : "Connect with Plaid";
+
   return (
-    <div
-      className="size-[32px] rounded-full flex items-center justify-center shrink-0"
-      style={{ background: bank.bg, border: isLight ? "1px solid #1d2132" : undefined }}
-    >
-      <span
-        className="[font-family:'Gilroy',sans-serif] font-bold text-[11px] leading-none"
-        style={{ color: isLight ? "#11141b" : "#FFFFFF" }}
+    <div className="flex flex-col gap-[8px]">
+      <button
+        type="button"
+        onClick={() => open()}
+        disabled={disabled}
+        data-testid="button-plaid-connect"
+        className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60"
+        style={{ background: "#7631EE", color: "#FFFFFF" }}
       >
-        {bank.logo}
-      </span>
+        {isExchanging || isLoading ? (
+          <span className="size-[16px] rounded-full border-2 border-white/40 border-t-white animate-spin" aria-hidden />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M3 7h18M3 12h18M3 17h12" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+          </svg>
+        )}
+        {label}
+      </button>
+      {loadError && !isLoading && (
+        <p className="[font-family:'Gilroy',sans-serif] text-[12px] text-[#fca5a5] text-center">
+          {loadError.replace(/^\d+:\s*/, "")}
+        </p>
+      )}
+      <p className="[font-family:'Gilroy',sans-serif] text-[11px] leading-[14px] text-[#6c779d] text-center">
+        Search 12,000+ institutions &middot; bank-grade encryption
+      </p>
     </div>
   );
 }

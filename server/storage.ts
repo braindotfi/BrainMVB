@@ -75,6 +75,11 @@ export interface IStorage {
   listToolConnections(userId: string): Promise<ToolConnection[]>;
   upsertToolConnection(conn: ToolConnection): Promise<ToolConnection>;
   removeToolConnection(userId: string, toolId: string): Promise<boolean>;
+
+  // Bank connections via Plaid
+  listBankConnections(userId: string): Promise<BankConnection[]>;
+  createBankConnection(conn: BankConnection): Promise<BankConnection>;
+  removeBankConnection(userId: string, itemId: string): Promise<boolean>;
 }
 
 export type ToolConnection = {
@@ -83,6 +88,24 @@ export type ToolConnection = {
   status: "connected" | "error";
   accountLabel?: string; // e.g. Stripe business name
   connectedAt: string;   // ISO
+};
+
+export type BankAccount = {
+  accountId: string;
+  name: string;
+  mask: string | null;
+  subtype: string | null;
+  type: string | null;
+};
+
+export type BankConnection = {
+  userId: string;
+  itemId: string;          // Plaid item_id (unique per institution per user)
+  accessToken: string;     // Plaid access_token (sensitive)
+  institutionId: string | null;
+  institutionName: string;
+  accounts: BankAccount[];
+  connectedAt: string;     // ISO
 };
 
 // ─── In-memory implementation (replace with Drizzle+PostgreSQL when DB is provisioned) ───
@@ -388,6 +411,19 @@ export class MemStorage implements IStorage {
   }
   async removeToolConnection(userId: string, toolId: string): Promise<boolean> {
     return this.toolConns.delete(`${userId}::${toolId}`);
+  }
+
+  // ─── Bank connections (Plaid) ───
+  private bankConns = new Map<string, BankConnection>(); // key = `${userId}::${itemId}`
+  async listBankConnections(userId: string): Promise<BankConnection[]> {
+    return Array.from(this.bankConns.values()).filter(c => c.userId === userId);
+  }
+  async createBankConnection(conn: BankConnection): Promise<BankConnection> {
+    this.bankConns.set(`${conn.userId}::${conn.itemId}`, conn);
+    return conn;
+  }
+  async removeBankConnection(userId: string, itemId: string): Promise<boolean> {
+    return this.bankConns.delete(`${userId}::${itemId}`);
   }
 }
 
@@ -707,6 +743,19 @@ export class DatabaseStorage implements IStorage {
   }
   async removeToolConnection(userId: string, toolId: string): Promise<boolean> {
     return this.toolConns.delete(`${userId}::${toolId}`);
+  }
+
+  // ─── Bank connections (kept in-memory; no DB schema yet) ───
+  private bankConns = new Map<string, BankConnection>();
+  async listBankConnections(userId: string): Promise<BankConnection[]> {
+    return Array.from(this.bankConns.values()).filter(c => c.userId === userId);
+  }
+  async createBankConnection(conn: BankConnection): Promise<BankConnection> {
+    this.bankConns.set(`${conn.userId}::${conn.itemId}`, conn);
+    return conn;
+  }
+  async removeBankConnection(userId: string, itemId: string): Promise<boolean> {
+    return this.bankConns.delete(`${userId}::${itemId}`);
   }
 }
 

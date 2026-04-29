@@ -943,5 +943,124 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  /* ──────────────────────────────────────────────────────────────────────
+   *  Plaid bank connections
+   * ────────────────────────────────────────────────────────────────────── */
+
+  app.get("/api/integrations/plaid/status", (_req, res) => {
+    res.json({
+      configured: !!(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET),
+      env: process.env.PLAID_ENV ?? "sandbox",
+    });
+  });
+
+  app.get("/api/integrations/plaid/connections", async (_req, res) => {
+    try {
+      const list = await storage.listBankConnections(DEMO_USER);
+      // Strip access_token before returning to the client
+      res.json(list.map(({ accessToken: _t, ...rest }) => rest));
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/integrations/plaid/link-token", async (_req, res) => {
+    try {
+      const { getPlaidClient, PLAID_PRODUCTS, PLAID_COUNTRIES } = await import("./plaid");
+      const client = getPlaidClient();
+      const result = await client.linkTokenCreate({
+        user: { client_user_id: DEMO_USER },
+        client_name: "Brain Finance",
+        products: PLAID_PRODUCTS,
+        country_codes: PLAID_COUNTRIES,
+        language: "en",
+      });
+      res.json({ link_token: result.data.link_token, expiration: result.data.expiration });
+    } catch (err) {
+      const msg = (err as Error).message || "Failed to create Plaid link token";
+      const isConfig = msg.includes("not configured");
+      res.status(isConfig ? 503 : 502).json({
+        error: msg,
+        code: isConfig ? "not_configured" : "plaid_error",
+      });
+    }
+  });
+
+  app.post("/api/integrations/plaid/exchange", async (req, res) => {
+    try {
+      const schema = z.object({
+        public_token: z.string().min(1),
+        institution: z.object({ id: z.string().nullable().optional(), name: z.string() }).optional(),
+      });
+      const { public_token, institution } = schema.parse(req.body);
+
+      const { getPlaidClient } = await import("./plaid");
+      const client = getPlaidClient();
+
+      const exch = await client.itemPublicTokenExchange({ public_token });
+      const accessToken = exch.data.access_token;
+      const itemId = exch.data.item_id;
+
+      // Pull account metadata so the UI can show real names + masks
+      const accountsResp = await client.accountsGet({ access_token: accessToken });
+      const accounts = accountsResp.data.accounts.map(a => ({
+        accountId: a.account_id,
+        name: a.name,
+        mask: a.mask ?? null,
+        subtype: a.subtype ?? null,
+        type: a.type ?? null,
+      }));
+
+      const inst = accountsResp.data.item.institution_id
+        ? await client.institutionsGetById({
+            institution_id: accountsResp.data.item.institution_id,
+            country_codes: (await import("./plaid")).PLAID_COUNTRIES,
+          }).then(r => r.data.institution).catch(() => null)
+        : null;
+
+      const conn = await storage.createBankConnection({
+        userId: DEMO_USER,
+        itemId,
+        accessToken,
+        institutionId: inst?.institution_id ?? institution?.id ?? null,
+        institutionName: inst?.name ?? institution?.name ?? "Connected Bank",
+        accounts,
+        connectedAt: new Date().toISOString(),
+      });
+
+      const { accessToken: _t, ...safe } = conn;
+      res.json(safe);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payload", details: err.errors });
+      }
+      res.status(502).json({ error: (err as Error).message || "Token exchange failed" });
+    }
+  });
+
+  app.post("/api/integrations/plaid/disconnect", async (req, res) => {
+    try {
+      const itemId = String(req.body?.itemId ?? "");
+      if (!itemId) return res.status(400).json({ error: "itemId required" });
+
+      // Best-effort revoke at Plaid; even if it fails we still drop our copy
+      try {
+        const conns = await storage.listBankConnections(DEMO_USER);
+        const target = conns.find(c => c.itemId === itemId);
+        if (target) {
+          const { getPlaidClient } = await import("./plaid");
+          await getPlaidClient().itemRemove({ access_token: target.accessToken });
+        }
+      } catch (revokeErr) {
+        console.warn("[plaid] item revoke failed:", (revokeErr as Error).message);
+      }
+
+      const ok = await storage.removeBankConnection(DEMO_USER, itemId);
+      res.json({ success: ok });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   return httpServer;
 }
