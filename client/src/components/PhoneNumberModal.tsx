@@ -169,7 +169,7 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
 
           {step === "enter" ? (
             <>
-              <Header title="Phone Number" onClose={() => onOpenChange(false)} />
+              <Header title="Update Phone Number" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]" style={{ paddingTop: 39, paddingBottom: 39 }}>
                 <div className="flex flex-col gap-1 w-full">
                   <FieldLabel>Country Code</FieldLabel>
