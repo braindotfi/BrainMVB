@@ -32,7 +32,7 @@ type AlertContextValue = {
 const AppAlertContext = createContext<AlertContextValue | null>(null);
 
 const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> = {
-  info:    { ring: "#ff9500", bg: "#4a2300", title: "#a8b9f4" },
+  info:    { ring: "#a8b9f4", bg: "#1d2132", title: "#a8b9f4" },
   error:   { ring: "#d20344", bg: "#350011", title: "#d20344" },
   success: { ring: "#42bf23", bg: "#123509", title: "#42bf23" },
 };
