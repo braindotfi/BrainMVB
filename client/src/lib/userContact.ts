@@ -4,6 +4,7 @@ import { useAuth } from "./authContext";
 const DEFAULT_PHONE = "+1 (415) 555-0192";
 
 let phone: string = DEFAULT_PHONE;
+let emailOverride: string | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -15,20 +16,25 @@ export function setUserPhone(next: string) {
   emit();
 }
 
+export function setUserEmail(next: string) {
+  emailOverride = next;
+  emit();
+}
+
 function subscribe(cb: () => void) {
   listeners.add(cb);
   return () => listeners.delete(cb);
 }
 
 function getSnapshot() {
-  return phone;
+  return `${phone}|${emailOverride ?? ""}`;
 }
 
 export function useUserContact() {
   const { user } = useAuth();
-  const currentPhone = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
-    email: user?.email ?? "treasury@acme.com",
-    phone: currentPhone,
+    email: emailOverride ?? user?.email ?? "treasury@acme.com",
+    phone,
   };
 }

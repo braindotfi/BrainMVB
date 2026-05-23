@@ -2,6 +2,7 @@ import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { PhoneNumberModal } from "@/components/PhoneNumberModal";
+import { EmailModal } from "@/components/EmailModal";
 import { useUserContact } from "@/lib/userContact";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
@@ -367,6 +368,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
   const [name, setName] = useState("ACME Inc.");
   const [editing, setEditing] = useState(false);
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-5">
@@ -442,8 +444,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Email"
             sublabel={email}
-            onClick={() => alert.info("Email address", `You're signed in as ${email}. Tap the chevron to update your email.`)}
-            right={<ChevronActionButton label="Edit email" testId="button-edit-email" onClick={() => alert.info("Email address", `You're signed in as ${email}. Tap the chevron to update your email.`)} />}
+            onClick={() => setEmailModalOpen(true)}
+            right={<ChevronActionButton label="Edit email" testId="button-edit-email" onClick={() => setEmailModalOpen(true)} />}
             useCircleIcon
           />
           <Divider />
@@ -481,6 +483,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
       </div>
 
       <PhoneNumberModal open={phoneModalOpen} onOpenChange={setPhoneModalOpen} currentPhone={phone} />
+      <EmailModal open={emailModalOpen} onOpenChange={setEmailModalOpen} currentEmail={email} />
     </div>
   );
 }
