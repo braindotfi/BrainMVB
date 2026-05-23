@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useRef, useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { PhoneNumberModal } from "@/components/PhoneNumberModal";
@@ -369,17 +369,72 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
   const [editing, setEditing] = useState(false);
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
+  const avatarFileRef = useRef<HTMLInputElement | null>(null);
+
+  const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert.error("Unsupported file", "Please choose an image file (PNG, JPG, GIF, or WebP).");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert.error("Image too large", "Please choose an image smaller than 5MB.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarSrc(reader.result);
+        alert.success("Profile photo updated", "Your new profile photo is now in use.");
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="flex flex-col gap-5">
       {/* Profile header card — borderless per Figma */}
       <Card noBorder>
         <div className="flex items-center gap-4 p-4">
-          <img
-            data-testid="img-avatar"
-            src={acmeAvatar}
-            alt={name}
-            className="size-[64px] rounded-full object-cover flex-shrink-0"
+          <button
+            type="button"
+            data-testid="button-avatar"
+            onClick={() => avatarFileRef.current?.click()}
+            aria-label="Change profile photo"
+            className="relative size-[64px] rounded-full flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-[#7631ee] hover-elevate"
+          >
+            <img
+              data-testid="img-avatar"
+              src={avatarSrc}
+              alt={name}
+              className="size-[64px] rounded-full object-cover"
+            />
+            <span
+              className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+              style={{ background: "rgba(10,12,16,0.55)" }}
+              aria-hidden="true"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
+                  stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                />
+                <circle cx="12" cy="13" r="3.25" stroke="#a8b9f4" strokeWidth="1.6"/>
+              </svg>
+            </span>
+          </button>
+          <input
+            ref={avatarFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            data-testid="input-avatar-file"
+            onChange={handleAvatarPick}
           />
           <div className="flex-1 min-w-0">
             {editing ? (

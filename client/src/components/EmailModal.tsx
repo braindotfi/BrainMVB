@@ -148,7 +148,7 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
 
           {step === "enter" ? (
             <>
-              <Header title="Email Address" onClose={() => onOpenChange(false)} />
+              <Header title="Enter New Email Address" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]">
                 <div className="flex flex-col gap-1 w-full">
                   <FieldLabel>Email</FieldLabel>
