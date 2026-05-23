@@ -17,15 +17,18 @@ const ChevronDown = ({ className = "size-[24px]" }: { className?: string }) => (
   </svg>
 );
 
+/* Close / Back glyphs sized + positioned to match Figma 3734:40234.
+   Outer button is 32px circle, icon group is 16px inset at (8,8).
+   Strokes are 1.5 × #a8b9f4, matching the Figma vector export. */
 const CloseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M12 4 4 12M4 4l8 8" stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M11.667 4.333 4.333 11.667M4.333 4.333l7.334 7.334" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const BackIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M10 3L5 8L10 13" stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10 3.333 5.333 8 10 12.667" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -209,6 +212,7 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
                 <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
                   Enter 6 digit code sent to you via SMS.
                 </p>
+                {/* Code input cells — Figma 3734:40248 */}
                 <div className="flex gap-2 w-full">
                   {code.map((c, i) => (
                     <input
@@ -222,31 +226,33 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
                       onChange={e => handleCodeChange(i, e.target.value)}
                       onKeyDown={e => handleCodeKey(i, e)}
                       onPaste={handleCodePaste}
-                      className="flex-1 h-[56px] rounded-[16px] text-center bg-transparent outline-none font-['Gilroy',sans-serif] font-semibold text-[22px] leading-[28px] text-white focus:ring-2 focus:ring-[#7631ee]"
+                      className="flex-1 min-w-0 h-[56px] rounded-[16px] text-center bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[20px] leading-[24px] text-[#6c779d] focus:text-white focus:ring-2 focus:ring-[#7631ee]"
                       style={{ background: "#222737" }}
                       autoFocus={i === 0}
                     />
                   ))}
                 </div>
-                <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d]">
-                  Didn't receive it?{" "}
+                {/* Action buttons — Figma 3734:40261 */}
+                <div className="flex gap-4 w-full pt-2">
                   <button
                     type="button"
                     data-testid="button-phone-resend"
                     onClick={() => alert.info("Code resent", `A new 6-digit code is on its way to ${fullPhone}. It expires in 10 minutes.`)}
-                    className="text-[#a8b9f4] underline hover:opacity-80"
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate"
+                    style={{ background: "#11141b", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
                   >
-                    Resend code
+                    Resend
                   </button>
-                </p>
-                <div className="pt-2">
-                  <PrimaryButton
-                    testId="button-phone-code-submit"
+                  <button
+                    type="button"
+                    data-testid="button-phone-code-submit"
                     onClick={handleVerify}
                     disabled={!canVerify}
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: "#123509", color: "#42bf23", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
                   >
-                    Verify
-                  </PrimaryButton>
+                    Confirm
+                  </button>
                 </div>
               </div>
             </>
