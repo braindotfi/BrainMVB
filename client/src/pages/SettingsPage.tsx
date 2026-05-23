@@ -14,6 +14,7 @@ import AccountFigma from "@/components/settings/figma/AccountSection";
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
   | "profile"
+  | "billing"
   | "security"
   | "notifications"
   | "payments"
@@ -175,8 +176,13 @@ const AccountNavIcon = ({ active }: { active: boolean }) =>
   );
 
 /* ─── Nav items definition ───────────────────────────────── */
+const BillingNavIcon = ({ active: _active }: { active: boolean }) => (
+  <FigmaNavIcon src={ICONS.settings_billing_icon} inset="20.83% 12.5%" />
+);
+
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
+  { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
   { id: "security",      label: "Security",          Icon: SecurityNavIcon },
   { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
   { id: "payments",      label: "Payments",          Icon: PaymentsNavIcon },
@@ -439,31 +445,10 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
         <Card noBorder>
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
-            label="Account"
-            onClick={() => alert.info("Account details", "You're signed in as ACME Inc. on the Pro plan. Tap the chevron to manage your profile.")}
-            right={<ChevronActionButton label="Open account details" testId="button-open-account" onClick={() => alert.info("Account details", "You're signed in as ACME Inc. on the Pro plan. Tap the chevron to manage your profile.")} />}
-            useCircleIcon
-          />
-          <Divider />
-          <SettingRow
-            icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
-            label="KYC Verification"
-            right={
-              <span
-                className="px-2 py-[3px] rounded-[22px]"
-                style={{
-                  background: "#123509",
-                  color: "#42bf23",
-                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "12px",
-                  lineHeight: "14px",
-                  border: "1px solid rgba(66,191,35,0.2)",
-                }}
-              >
-                Verified
-              </span>
-            }
+            label="Email"
+            sublabel={email}
+            onClick={() => alert.info("Email address", `You're signed in as ${email}. Tap the chevron to update your email.`)}
+            right={<ChevronActionButton label="Edit email" testId="button-edit-email" onClick={() => alert.info("Email address", `You're signed in as ${email}. Tap the chevron to update your email.`)} />}
             useCircleIcon
           />
           <Divider />
@@ -490,12 +475,41 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" />}
             useCircleIcon
           />
+          <Divider />
+          <SettingRow
+            icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
+            label="KYC Verification"
+            right={
+              <span
+                className="px-2 py-[3px] rounded-[22px]"
+                style={{
+                  background: "#123509",
+                  color: "#42bf23",
+                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "12px",
+                  lineHeight: "14px",
+                  border: "1px solid rgba(66,191,35,0.2)",
+                }}
+              >
+                Verified
+              </span>
+            }
+            useCircleIcon
+          />
         </Card>
       </div>
+    </div>
+  );
+}
 
-      {/* Misc card — borderless per Figma 3957:43975 */}
+/* ─── Billing section (lifted out of Profile per April 2026 update) ── */
+function BillingSection() {
+  const alert = useAppAlert();
+  return (
+    <div className="flex flex-col gap-5">
       <div>
-        <SectionLabel>Misc</SectionLabel>
+        <SectionLabel>Billing</SectionLabel>
         <Card noBorder>
           <SettingRow
             icon={<ProfileRowCircle src={ICONS.settings_billing_icon} w={20} h={14.5} />}
@@ -517,6 +531,7 @@ export function SettingsPage() {
 
   const SectionContent = {
     profile:       <ProfileSection toast={toast} />,
+    billing:       <BillingSection />,
     security:      <SecurityFigma />,
     notifications: <NotificationsFigma />,
     payments:      <PaymentsFigma />,
