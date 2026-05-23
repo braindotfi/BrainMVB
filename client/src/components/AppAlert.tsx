@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import infoIcon from "@assets/info_1779540800272.png";
+import errorIcon from "@assets/errors_1779540800271.png";
+import successIcon from "@assets/success_1779540800270.png";
 
 /* ─── Pop-up alerts (Figma 4086:66890 / 4086:66991 / 4086:67000) ───
    Three visual variants used as drop-in replacements for plain toasts
@@ -37,29 +40,20 @@ const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> 
   success: { ring: "#42bf23", bg: "#123509", title: "#42bf23" },
 };
 
-const InfoGlyph = ({ color }: { color: string }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 4.5L8.005 9M8 11.498H8.005" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const ErrorGlyph = ({ color }: { color: string }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M11.333 4.667 4.667 11.333M4.667 4.667l6.666 6.666" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const SuccessGlyph = ({ color }: { color: string }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3.333 8.333 6 11l6.667-6.667" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const Glyph = ({ variant, color }: { variant: AlertVariant; color: string }) => {
-  if (variant === "info")    return <InfoGlyph color={color} />;
-  if (variant === "error")   return <ErrorGlyph color={color} />;
-  return <SuccessGlyph color={color} />;
+const ICONS: Record<AlertVariant, string> = {
+  info:    infoIcon,
+  error:   errorIcon,
+  success: successIcon,
 };
+
+const Glyph = ({ variant }: { variant: AlertVariant }) => (
+  <img
+    src={ICONS[variant]}
+    alt=""
+    aria-hidden="true"
+    className="shrink-0 size-[24px] rounded-full object-cover"
+  />
+);
 
 /* Single alert card. Matches the Figma frame exactly: same outer
    chrome, same icon disc, same typography rhythm. The card itself
@@ -88,14 +82,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
           "0px 68px 13.5px rgba(0,0,0,0.06), 0px 38px 11.5px rgba(0,0,0,0.2), 0px 17px 8.5px rgba(0,0,0,0.34), 0px 4px 4.5px rgba(0,0,0,0.39)",
       }}
     >
-      <span
-        aria-hidden="true"
-        data-testid={`alert-icon-${alert.variant}`}
-        className="relative shrink-0 size-[24px] rounded-full flex items-center justify-center"
-        style={{ backgroundColor: accent.bg }}
-      >
-        <Glyph variant={alert.variant} color={accent.ring} />
-      </span>
+      <Glyph variant={alert.variant} />
       <div className="flex flex-col flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px]">
         <p
           data-testid={`alert-title-${alert.variant}`}
