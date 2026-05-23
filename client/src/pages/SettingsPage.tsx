@@ -1,6 +1,8 @@
 import { useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
+import { PhoneNumberModal } from "@/components/PhoneNumberModal";
+import { useUserContact } from "@/lib/userContact";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
@@ -361,10 +363,10 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
 
 function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
   const alert = useAppAlert();
+  const { email, phone } = useUserContact();
   const [name, setName] = useState("ACME Inc.");
-  const [email] = useState("treasury@acme.com");
-  const [phone] = useState("+1 (415) 555-0192");
   const [editing, setEditing] = useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-5">
@@ -402,13 +404,6 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
                 {name}
               </p>
             )}
-            <p
-              data-testid="text-profile-email"
-              className="mt-1"
-              style={{ color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}
-            >
-              {email}
-            </p>
           </div>
 
           {/* Edit button — Figma 3695:40062: amber pill #4a2300 / #ff9500 */}
@@ -456,23 +451,8 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
             sublabel={phone}
-            onClick={() =>
-              alert.error(
-                "Verification failed",
-                <>
-                  We couldn't verify {phone}. Tap{" "}
-                  <AppAlertLink
-                    onClick={() =>
-                      alert.info("Code resent", `A new 6-digit code is on its way to ${phone}. It expires in 10 minutes.`)
-                    }
-                  >
-                    here
-                  </AppAlertLink>{" "}
-                  to resend the verification code.
-                </>,
-              )
-            }
-            right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" />}
+            onClick={() => setPhoneModalOpen(true)}
+            right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" onClick={() => setPhoneModalOpen(true)} />}
             useCircleIcon
           />
           <Divider />
@@ -499,25 +479,214 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           />
         </Card>
       </div>
+
+      <PhoneNumberModal open={phoneModalOpen} onOpenChange={setPhoneModalOpen} currentPhone={phone} />
     </div>
   );
 }
 
-/* ─── Billing section (lifted out of Profile per April 2026 update) ── */
+/* ─── Billing section ──────────────────────────────────────
+   Plan summary, payment method, upcoming invoice and history. */
+const INVOICES: { id: string; date: string; description: string; amount: string; status: "paid" | "due" }[] = [
+  { id: "INV-2026-04", date: "Apr 1, 2026",  description: "Pro plan — April 2026",    amount: "$24.00", status: "paid" },
+  { id: "INV-2026-03", date: "Mar 1, 2026",  description: "Pro plan — March 2026",    amount: "$24.00", status: "paid" },
+  { id: "INV-2026-02", date: "Feb 1, 2026",  description: "Pro plan — February 2026", amount: "$24.00", status: "paid" },
+  { id: "INV-2026-01", date: "Jan 1, 2026",  description: "Pro plan — January 2026",  amount: "$24.00", status: "paid" },
+];
+
+function StatusPill({ status }: { status: "paid" | "due" }) {
+  const isPaid = status === "paid";
+  return (
+    <span
+      className="px-2 py-[3px] rounded-[22px]"
+      style={{
+        background: isPaid ? "#123509" : "#4a2300",
+        color:      isPaid ? "#42bf23" : "#ff9500",
+        fontFamily: "'Gilroy', sans-serif",
+        fontWeight: 600,
+        fontSize: "12px",
+        lineHeight: "14px",
+        border: `1px solid ${isPaid ? "rgba(66,191,35,0.2)" : "rgba(255,149,0,0.2)"}`,
+      }}
+    >
+      {isPaid ? "Paid" : "Due"}
+    </span>
+  );
+}
+
 function BillingSection() {
   const alert = useAppAlert();
+  const { email } = useUserContact();
+
   return (
     <div className="flex flex-col gap-5">
+      {/* Current plan summary card */}
       <div>
-        <SectionLabel>Billing</SectionLabel>
+        <SectionLabel>Current Plan</SectionLabel>
         <Card noBorder>
-          <SettingRow
-            icon={<ProfileRowCircle src={ICONS.settings_billing_icon} w={20} h={14.5} />}
-            label="Billing"
-            onClick={() => alert.success("Invoice paid", "Your April invoice of $24.00 has been paid in full. A receipt is on its way to treasury@acme.com.")}
-            right={<ChevronActionButton label="Open billing" testId="button-open-billing" onClick={() => alert.success("Invoice paid", "Your April invoice of $24.00 has been paid in full. A receipt is on its way to treasury@acme.com.")} />}
-            useCircleIcon
-          />
+          <div className="p-4 flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p
+                    data-testid="text-plan-name"
+                    style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
+                  >
+                    Pro plan
+                  </p>
+                  <span
+                    className="px-2 py-[3px] rounded-[22px]"
+                    style={{
+                      background: "#240757",
+                      color: "#a8b9f4",
+                      fontFamily: "'Gilroy', sans-serif",
+                      fontWeight: 600,
+                      fontSize: "12px",
+                      lineHeight: "14px",
+                      border: "1px solid rgba(118,49,238,0.3)",
+                    }}
+                  >
+                    Active
+                  </span>
+                </div>
+                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}>
+                  Unlimited agents, $5M monthly volume cap, priority support.
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p
+                  data-testid="text-plan-price"
+                  style={{ color: "#fff", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "24px", lineHeight: "28px" }}
+                >
+                  $24
+                </p>
+                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px" }}>
+                  per month
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                data-testid="button-upgrade-plan"
+                onClick={() => alert.info("Plan upgrade", "Upgrading takes effect immediately. You'll be prorated for the remainder of the current period.")}
+                className="flex-1 rounded-full px-4 py-2 hover-elevate"
+                style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
+              >
+                Change plan
+              </button>
+              <button
+                type="button"
+                data-testid="button-cancel-plan"
+                onClick={() => alert.info("Cancel subscription", "You can cancel anytime. Your plan stays active until the end of the billing period.")}
+                className="flex-1 rounded-full px-4 py-2 hover-elevate"
+                style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132" }}
+              >
+                Cancel subscription
+              </button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Payment method card */}
+      <div>
+        <SectionLabel>Payment Method</SectionLabel>
+        <Card noBorder>
+          <div className="p-4 flex items-center gap-4">
+            <div
+              className="size-[40px] rounded-[8px] flex items-center justify-center flex-shrink-0"
+              style={{ background: "#1d2132" }}
+            >
+              <svg width="24" height="16" viewBox="0 0 24 16" fill="none" aria-hidden="true">
+                <rect width="24" height="16" rx="2" fill="#7631ee"/>
+                <rect y="4" width="24" height="2" fill="#0a0c10"/>
+                <rect x="2" y="10" width="6" height="3" rx="0.5" fill="#a8b9f4"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                data-testid="text-card-brand"
+                style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}
+              >
+                Visa •••• 4242
+              </p>
+              <p
+                data-testid="text-card-meta"
+                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", marginTop: 2 }}
+              >
+                Expires 08/29 · Receipts to {email}
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="button-update-card"
+              onClick={() => alert.info("Update card", "Tap the chevron to securely update your card on file via your bank.")}
+              className="rounded-full px-4 py-2 hover-elevate flex-shrink-0"
+              style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
+            >
+              Update
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Next invoice card */}
+      <div>
+        <SectionLabel>Next Invoice</SectionLabel>
+        <Card noBorder>
+          <div className="p-4 flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <p
+                data-testid="text-next-invoice-date"
+                style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}
+              >
+                Due May 1, 2026
+              </p>
+              <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}>
+                Pro plan — May 2026
+              </p>
+            </div>
+            <p
+              data-testid="text-next-invoice-amount"
+              style={{ color: "#fff", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
+            >
+              $24.00
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Invoice history */}
+      <div>
+        <SectionLabel>Invoice History</SectionLabel>
+        <Card noBorder>
+          {INVOICES.map((inv, i) => (
+            <div key={inv.id}>
+              {i > 0 && <Divider />}
+              <button
+                type="button"
+                data-testid={`row-invoice-${inv.id}`}
+                onClick={() => alert.success("Invoice downloaded", `${inv.id} (${inv.description}) was sent to ${email}.`)}
+                className="w-full flex items-center justify-between gap-4 p-4 text-left hover-elevate"
+              >
+                <div className="flex flex-col gap-1 min-w-0">
+                  <p style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}>
+                    {inv.description}
+                  </p>
+                  <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}>
+                    {inv.date} · {inv.id}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <p style={{ color: "#fff", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}>
+                    {inv.amount}
+                  </p>
+                  <StatusPill status={inv.status} />
+                </div>
+              </button>
+            </div>
+          ))}
         </Card>
       </div>
     </div>
