@@ -219,8 +219,10 @@ export function LoginHistoryModal({
               Devices and browsers that recently signed in to your Brain account.
             </p>
 
-            {/* List container — Figma 4569:61474 */}
-            <div className="bg-[#0a0c10] h-[216px] overflow-y-auto rounded-[16px] w-[432px]">
+            {/* List container — Figma 4569:61474.
+                Height hugs content; capped at 216px (3 rows) with internal
+                scroll if more sessions ever exist. */}
+            <div className="bg-[#0a0c10] max-h-[216px] overflow-y-auto rounded-[16px] w-[432px]">
               <div className="flex flex-col p-[8px] w-full">
                 <div className="flex flex-col gap-[8px] w-full">
                   {sessions.length === 0 ? (
