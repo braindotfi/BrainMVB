@@ -229,6 +229,10 @@ type PinStep = "current" | "new" | "confirm";
 
 const PIN_LEN = 6;
 
+/*  Pixel-perfect rebuild of Figma nodes 4575:61704 / 4577:61879 / 4577:61911.
+    400-wide modal, solid #0a0c10 shell, 322-wide body inset 39px from sides,
+    body top 95px, button top 247px, six h-56 PIN cells, dark-orange CTA pill.  */
+
 function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: (v: string) => void; testIdPrefix: string }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const cells = useMemo(() => Array.from({ length: PIN_LEN }), []);
@@ -238,7 +242,7 @@ function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: 
   }, [value.length]);
 
   return (
-    <div className="flex gap-2 justify-center w-full">
+    <div className="flex gap-[8px] items-start w-full">
       {cells.map((_, i) => {
         const ch = value[i] ?? "";
         return (
@@ -274,15 +278,16 @@ function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: 
               const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, PIN_LEN);
               if (pasted) { e.preventDefault(); onChange(pasted); }
             }}
-            className="size-[48px] text-center rounded-[8px] outline-none focus:border-[#7631ee] transition-colors"
+            className="flex-1 min-w-0 h-[56px] text-center rounded-[16px] outline-none focus:ring-1 focus:ring-[#7631ee] transition-shadow"
             style={{
               background: "#222737",
-              border: "1px solid #1d2132",
+              border: "none",
               color: "#6c779d",
               fontFamily: "'JetBrains Mono', monospace",
               fontWeight: 500,
               fontSize: "20px",
               lineHeight: "24px",
+              padding: "10px 16px",
             }}
           />
         );
@@ -291,24 +296,18 @@ function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: 
   );
 }
 
-const STEP_COPY: Record<PinStep, { title: string; heading: string; sub: string; cta: string }> = {
+const STEP_COPY: Record<PinStep, { sub: string; cta: string }> = {
   current: {
-    title: "Change PIN",
-    heading: "Enter Current PIN",
-    sub: "Confirm your existing 6-digit transaction PIN to continue.",
+    sub: "Confirm your existing 6-digit PIN to continue.",
     cta: "Continue",
   },
   new: {
-    title: "Change PIN",
-    heading: "Set a New PIN",
-    sub: "Choose a new 6-digit PIN. Avoid obvious patterns like 123456.",
+    sub: "Choose a new 6-digit PIN. Avoid patterns like 123456.",
     cta: "Continue",
   },
   confirm: {
-    title: "Change PIN",
-    heading: "Confirm New PIN",
-    sub: "Re-enter the new PIN to confirm.",
-    cta: "Update PIN",
+    sub: "Re-enter your new PIN to confirm.",
+    cta: "Confirm",
   },
 };
 
@@ -345,7 +344,6 @@ export function ChangePinModal({
   const advance = () => {
     if (!canAdvance) return;
     if (step === "current") {
-      // Demo: any 6-digit value accepted as "current PIN".
       setStep("new");
     } else if (step === "new") {
       if (next === current) { setError("New PIN must differ from current PIN."); return; }
@@ -357,45 +355,71 @@ export function ChangePinModal({
     }
   };
 
-  const back = () => {
-    setError(null);
-    if (step === "new") setStep("current");
-    else if (step === "confirm") { setConfirm(""); setStep("new"); }
-  };
-
   return (
-    <ShellRoot open={open} onOpenChange={onOpenChange} testId="change-pin" description="Update your 6-digit transaction PIN.">
-      <Header
-        title={copy.title}
-        onClose={() => onOpenChange(false)}
-        onBack={step !== "current" ? back : undefined}
-        testIdPrefix="change-pin"
-      />
-      <div className="flex flex-col gap-4 p-[39px]">
-        <div className="flex flex-col gap-1 text-center">
-          <p className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-white">{copy.heading}</p>
-          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d]">{copy.sub}</p>
-        </div>
-        <PinInput
-          value={value}
-          onChange={setValue}
-          testIdPrefix={`input-pin-${step}`}
-        />
-        {error && (
-          <p data-testid="text-pin-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] text-center">
-            {error}
-          </p>
-        )}
-        <div className="pt-2">
-          <PrimaryButton
-            testId="button-change-pin-advance"
-            disabled={!canAdvance}
-            onClick={advance}
-          >
-            {copy.cta}
-          </PrimaryButton>
-        </div>
-      </div>
-    </ShellRoot>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Content
+          data-testid="modal-change-pin"
+          className="fixed left-1/2 top-1/2 z-50 w-[400px] -translate-x-1/2 -translate-y-1/2 bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-clip focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+        >
+          <Dialog.Description className="sr-only">Update your 6-digit transaction PIN.</Dialog.Description>
+
+          {/* Title + Controls — Figma 4575:61705 */}
+          <div className="relative h-[56px] w-full bg-[#0a0c10] border border-[#1d2132]">
+            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
+              Change Pin
+            </Dialog.Title>
+            <Dialog.Close
+              data-testid="button-close-change-pin"
+              aria-label="Close"
+              className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3.33 3.33L12.67 12.67M12.67 3.33L3.33 12.67" stroke="#6C779D" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </Dialog.Close>
+          </div>
+
+          {/* Body group — Figma 4575:61709 (top 95, left 39, w 322) */}
+          <div className="absolute left-[39px] top-[95px] w-[322px] flex flex-col gap-[16px] items-start">
+            <p
+              data-testid={`text-pin-sub-${step}`}
+              className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
+            >
+              {copy.sub}
+            </p>
+            <PinInput
+              value={value}
+              onChange={setValue}
+              testIdPrefix={`input-pin-${step}`}
+            />
+            {error && (
+              <p data-testid="text-pin-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
+                {error}
+              </p>
+            )}
+          </div>
+
+          {/* CTA — Figma 4575:61726 (top 247, left 39, w 322) */}
+          <div className="absolute left-[39px] top-[247px] w-[322px] flex items-center">
+            <button
+              type="button"
+              data-testid="button-change-pin-advance"
+              disabled={!canAdvance}
+              onClick={advance}
+              className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            >
+              <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
+                {copy.cta}
+              </span>
+            </button>
+          </div>
+
+          {/* Spacer so the absolutely-positioned content has room (top 247 + button ~48 + 41 padding ≈ 336). */}
+          <div className="h-[336px]" />
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
