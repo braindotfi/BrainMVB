@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { PhoneNumberModal } from "@/components/PhoneNumberModal";
 import { EmailModal } from "@/components/EmailModal";
+import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
 import { useUserContact } from "@/lib/userContact";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
@@ -572,9 +573,22 @@ function StatusPill({ status }: { status: "paid" | "due" }) {
   );
 }
 
+const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string; cadence: string }> = {
+  free:     { label: "Free plan",     tagline: "Try Brain — 1 agent, $10k monthly cap.",                  price: "$0",   cadence: "per month" },
+  pro:      { label: "Pro plan",      tagline: "Unlimited agents, $5M monthly volume cap, priority support.", price: "$24",  cadence: "per month" },
+  business: { label: "Business plan", tagline: "Dedicated infra, SLAs, custom policy signers.",           price: "$199", cadence: "per month" },
+};
+
 function BillingSection() {
   const alert = useAppAlert();
   const { email } = useUserContact();
+  const [planId, setPlanId] = useState<PlanId>("pro");
+  const [cardLast4, setCardLast4] = useState("4242");
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
+  const [updateCardOpen, setUpdateCardOpen] = useState(false);
+  const [cancelSubOpen, setCancelSubOpen] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const plan = PLAN_META[planId];
 
   return (
     <div className="flex flex-col gap-5">
@@ -590,25 +604,25 @@ function BillingSection() {
                     data-testid="text-plan-name"
                     style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
                   >
-                    Pro plan
+                    {plan.label}
                   </p>
                   <span
                     className="px-2 py-[3px] rounded-[22px]"
                     style={{
-                      background: "#240757",
-                      color: "#a8b9f4",
+                      background: cancelled ? "#4a2300" : "#240757",
+                      color:      cancelled ? "#ff9500" : "#a8b9f4",
                       fontFamily: "'Gilroy', sans-serif",
                       fontWeight: 600,
                       fontSize: "12px",
                       lineHeight: "14px",
-                      border: "1px solid rgba(118,49,238,0.3)",
+                      border: `1px solid ${cancelled ? "rgba(255,149,0,0.2)" : "rgba(118,49,238,0.3)"}`,
                     }}
                   >
-                    Active
+                    {cancelled ? "Cancelling" : "Active"}
                   </span>
                 </div>
                 <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}>
-                  Unlimited agents, $5M monthly volume cap, priority support.
+                  {plan.tagline}
                 </p>
               </div>
               <div className="text-right flex-shrink-0">
@@ -616,10 +630,10 @@ function BillingSection() {
                   data-testid="text-plan-price"
                   style={{ color: "#fff", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "24px", lineHeight: "28px" }}
                 >
-                  $24
+                  {plan.price}
                 </p>
                 <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px" }}>
-                  per month
+                  {plan.cadence}
                 </p>
               </div>
             </div>
@@ -627,7 +641,7 @@ function BillingSection() {
               <button
                 type="button"
                 data-testid="button-upgrade-plan"
-                onClick={() => alert.info("Plan upgrade", "Upgrading takes effect immediately. You'll be prorated for the remainder of the current period.")}
+                onClick={() => setChangePlanOpen(true)}
                 className="flex-1 rounded-full px-4 py-2 hover-elevate"
                 style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
               >
@@ -636,7 +650,7 @@ function BillingSection() {
               <button
                 type="button"
                 data-testid="button-cancel-plan"
-                onClick={() => alert.info("Cancel subscription", "You can cancel anytime. Your plan stays active until the end of the billing period.")}
+                onClick={() => setCancelSubOpen(true)}
                 className="flex-1 rounded-full px-4 py-2 hover-elevate"
                 style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132" }}
               >
@@ -667,7 +681,7 @@ function BillingSection() {
                 data-testid="text-card-brand"
                 style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}
               >
-                Visa •••• 4242
+                Visa •••• {cardLast4}
               </p>
               <p
                 data-testid="text-card-meta"
@@ -679,7 +693,7 @@ function BillingSection() {
             <button
               type="button"
               data-testid="button-update-card"
-              onClick={() => alert.info("Update card", "Tap the chevron to securely update your card on file via your bank.")}
+              onClick={() => setUpdateCardOpen(true)}
               className="rounded-full px-4 py-2 hover-elevate flex-shrink-0"
               style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
             >
@@ -747,6 +761,36 @@ function BillingSection() {
           ))}
         </Card>
       </div>
+
+      <ChangePlanModal
+        open={changePlanOpen}
+        onOpenChange={setChangePlanOpen}
+        currentPlan={planId}
+        onConfirm={(next) => {
+          setPlanId(next);
+          setCancelled(false);
+          setChangePlanOpen(false);
+          alert.success("Plan changed", `You're now on the ${PLAN_META[next].label}. Your next invoice will reflect the new rate.`);
+        }}
+      />
+      <UpdateCardModal
+        open={updateCardOpen}
+        onOpenChange={setUpdateCardOpen}
+        onConfirm={(last4) => {
+          setCardLast4(last4);
+          setUpdateCardOpen(false);
+          alert.success("Card updated", `Your card on file is now Visa •••• ${last4}.`);
+        }}
+      />
+      <CancelSubscriptionModal
+        show={cancelSubOpen}
+        onCancel={() => setCancelSubOpen(false)}
+        onConfirm={() => {
+          setCancelled(true);
+          setCancelSubOpen(false);
+          alert.success("Subscription cancelled", "Your plan stays active until the end of the current billing period.");
+        }}
+      />
     </div>
   );
 }
