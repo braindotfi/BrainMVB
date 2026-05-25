@@ -128,16 +128,16 @@ const SessionRow = ({ s }: { s: Session }) => (
             {s.device}
           </p>
           <Bullet />
-          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.browser}
           </p>
         </div>
         <div className="flex gap-[4px] items-center">
-          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.location}
           </p>
           <Bullet />
-          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.ip}
           </p>
         </div>
