@@ -104,8 +104,9 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
   );
 };
 
-/* Stacked viewport — top-right floating column. Uses a portal so the
-   alerts always paint on top of any modal/page chrome. */
+/* Stacked viewport — bottom-right floating column, shared with the shadcn
+   toaster so info / warning / confirmation pop-ups all stack in the same
+   area. New alerts slide in from the right and append to the bottom. */
 const AppAlertViewport = ({
   alerts,
   onDismiss,
@@ -117,7 +118,7 @@ const AppAlertViewport = ({
   return createPortal(
     <div
       data-testid="alert-viewport"
-      className="fixed top-[20px] right-[20px] z-[100] flex flex-col gap-[12px] pointer-events-none"
+      className="fixed bottom-[20px] right-[20px] z-[100] flex flex-col gap-[12px] pointer-events-none items-end"
     >
       {alerts.map((a) => (
         <div key={a.id} className="pointer-events-auto animate-in slide-in-from-right-4 fade-in duration-200">
