@@ -172,6 +172,15 @@ export function LoginHistoryModal({
             <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Login History
             </Dialog.Title>
+            <Dialog.Close
+              data-testid="button-close-login-history"
+              aria-label="Close"
+              className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3.33 3.33L12.67 12.67M12.67 3.33L3.33 12.67" stroke="#6C779D" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </Dialog.Close>
           </div>
 
           {/* Body — Figma 4569:61431 */}
