@@ -6,10 +6,15 @@ import {
   formatTimeoutLabel,
   useSessionTimeout,
 } from "@/lib/sessionTimeoutContext";
+import { LoginHistoryModal, ChangePinModal } from "@/components/SecurityModals";
+import { useAppAlert } from "@/components/AppAlert";
 
   export default function SecuritySection() {
+    const alert = useAppAlert();
     const { timeoutMin, setTimeoutMin } = useSessionTimeout();
     const [open, setOpen] = useState(false);
+    const [loginHistoryOpen, setLoginHistoryOpen] = useState(false);
+    const [changePinOpen, setChangePinOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -229,7 +234,13 @@ import {
                 </div>
               </div>
             </div>
-            <div className="relative rounded-[100px] shrink-0 size-[40px]">
+            <button
+              type="button"
+              data-testid="button-login-history"
+              aria-label="View login history"
+              onClick={() => setLoginHistoryOpen(true)}
+              className="relative rounded-[100px] shrink-0 size-[40px] hover-elevate"
+            >
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["f9526a37"]} />
               </div>
@@ -244,7 +255,7 @@ import {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
@@ -287,7 +298,13 @@ import {
                 </div>
               </div>
             </div>
-            <div className="relative rounded-[100px] shrink-0 size-[40px]">
+            <button
+              type="button"
+              data-testid="button-change-pin"
+              aria-label="Change PIN"
+              onClick={() => setChangePinOpen(true)}
+              className="relative rounded-[100px] shrink-0 size-[40px] hover-elevate"
+            >
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["f9526a37"]} />
               </div>
@@ -302,10 +319,19 @@ import {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
+      <LoginHistoryModal open={loginHistoryOpen} onOpenChange={setLoginHistoryOpen} />
+      <ChangePinModal
+        open={changePinOpen}
+        onOpenChange={setChangePinOpen}
+        onConfirm={() => {
+          setChangePinOpen(false);
+          alert.success("PIN updated", "Your transaction PIN was changed successfully.");
+        }}
+      />
       </div>
     );
   }
