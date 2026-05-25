@@ -381,43 +381,43 @@ export function ChangePinModal({
             </Dialog.Close>
           </div>
 
-          {/* Body group — Figma 4575:61709 (top 95, left 39, w 322) */}
-          <div className="absolute left-[39px] top-[95px] w-[322px] flex flex-col gap-[16px] items-start">
-            <p
-              data-testid={`text-pin-sub-${step}`}
-              className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
-            >
-              {copy.sub}
-            </p>
-            <PinInput
-              value={value}
-              onChange={setValue}
-              testIdPrefix={`input-pin-${step}`}
-            />
-            {error && (
-              <p data-testid="text-pin-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
-                {error}
+          {/* Body — Figma 4575:61709 / 4575:61726.
+              Figma frame is 400 × 336: header 56, body inset 39px sides, top
+              39px (= 95−56), button gap 24px (= 247−95−body), bottom 41px. */}
+          <div className="px-[39px] pt-[39px] pb-[41px] flex flex-col w-full">
+            <div className="flex flex-col gap-[16px] w-[322px]">
+              <p
+                data-testid={`text-pin-sub-${step}`}
+                className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
+              >
+                {copy.sub}
               </p>
-            )}
-          </div>
+              <PinInput
+                value={value}
+                onChange={setValue}
+                testIdPrefix={`input-pin-${step}`}
+              />
+              {error && (
+                <p data-testid="text-pin-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
+                  {error}
+                </p>
+              )}
+            </div>
 
-          {/* CTA — Figma 4575:61726 (top 247, left 39, w 322) */}
-          <div className="absolute left-[39px] top-[247px] w-[322px] flex items-center">
-            <button
-              type="button"
-              data-testid="button-change-pin-advance"
-              disabled={!canAdvance}
-              onClick={advance}
-              className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            >
-              <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
-                {copy.cta}
-              </span>
-            </button>
+            <div className="mt-[24px] flex items-center w-[322px]">
+              <button
+                type="button"
+                data-testid="button-change-pin-advance"
+                disabled={!canAdvance}
+                onClick={advance}
+                className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              >
+                <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
+                  {copy.cta}
+                </span>
+              </button>
+            </div>
           </div>
-
-          {/* Spacer so the absolutely-positioned content has room (top 247 + button ~48 + 41 padding ≈ 336). */}
-          <div className="h-[336px]" />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
