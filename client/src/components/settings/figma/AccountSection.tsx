@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { useAuth } from "@/lib/authContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 
 function parseBalance(raw?: string): number {
   if (!raw) return 0;
@@ -160,6 +161,7 @@ function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
 export default function AccountSection() {
   const { wirexAccounts, deleteAccount, deleteAccountData } = useAuth();
   const { toast } = useToast();
+  const appAlert = useAppAlert();
   const [modal, setModal] = useState<ModalKind>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -200,10 +202,10 @@ export default function AccountSection() {
     try {
       await deleteAccount();
       setModal(null);
-      toast({
-        title: "Account closed",
-        description: "Your Brain account and all associated records have been permanently deleted.",
-      });
+      appAlert.success(
+        "Account closed",
+        "Your Brain account and all associated records have been permanently deleted.",
+      );
     } catch (err: any) {
       toast({
         title: "Couldn't delete account",
@@ -221,10 +223,10 @@ export default function AccountSection() {
     try {
       await deleteAccountData();
       setModal(null);
-      toast({
-        title: "Data deleted",
-        description: "All your Brain data has been permanently deleted. Your account remains active.",
-      });
+      appAlert.success(
+        "Data deleted",
+        "All your Brain data has been permanently deleted. Your account remains active.",
+      );
     } catch (err: any) {
       toast({
         title: "Couldn't delete data",
