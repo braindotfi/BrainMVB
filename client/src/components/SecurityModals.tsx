@@ -168,7 +168,7 @@ export function LoginHistoryModal({
           </Dialog.Description>
 
           {/* Title + Controls (Figma 4569:61429) */}
-          <div className="relative h-[56px] w-full border border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
+          <div className="relative h-[56px] w-full border-b border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
             <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Login History
             </Dialog.Title>
@@ -366,7 +366,7 @@ export function ChangePinModal({
           <Dialog.Description className="sr-only">Update your 6-digit transaction PIN.</Dialog.Description>
 
           {/* Title + Controls — Figma 4575:61705 */}
-          <div className="relative h-[56px] w-full bg-[#0a0c10] border border-[#1d2132]">
+          <div className="relative h-[56px] w-full bg-[#0a0c10] border-b border-[#1d2132]">
             <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Change Pin
             </Dialog.Title>
