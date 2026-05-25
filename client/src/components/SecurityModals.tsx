@@ -83,6 +83,10 @@ const ShellRoot = ({ open, onOpenChange, testId, description, width = 400, child
 );
 
 /* ─── Login History ─────────────────────────────────────── */
+/*  Pixel-perfect rebuild of Figma node 4569:61428.
+    Outer 480px (432 list + 48 outer padding), header h-56 backdrop-blur,
+    list bg #0a0c10 rounded-16, status dots (green / gray) per row,
+    dark-red "Sign Out of All Devices" pill.                                  */
 
 type Session = {
   id: string;
@@ -95,77 +99,118 @@ type Session = {
 };
 
 const SESSIONS: Session[] = [
-  { id: "s1", device: "MacBook Pro",      browser: "Chrome 124",  location: "San Francisco, CA, US", ip: "172.58.12.4",   when: "Active now",         current: true },
-  { id: "s2", device: "iPhone 15 Pro",    browser: "Brain iOS",   location: "San Francisco, CA, US", ip: "76.103.220.18", when: "2 hours ago" },
-  { id: "s3", device: "Windows 11",       browser: "Edge 124",    location: "New York, NY, US",      ip: "207.97.227.239", when: "Yesterday, 8:42 PM" },
-  { id: "s4", device: "iPad Air",         browser: "Safari 17",   location: "Lisbon, PT",            ip: "85.247.21.91",   when: "May 21, 11:04 AM" },
-  { id: "s5", device: "MacBook Pro",      browser: "Chrome 124",  location: "Berlin, DE",            ip: "82.151.62.34",   when: "May 18, 9:17 AM" },
+  { id: "s1", device: "Macbook Pro",   browser: "Chrome 124", location: "San Francisco, CA, US", ip: "172.58.12.4", when: "Active Now",         current: true },
+  { id: "s2", device: "iPhone 15 Pro", browser: "Brain iOS",  location: "San Francisco, CA, US", ip: "172.58.12.4", when: "2 hours ago" },
+  { id: "s3", device: "iPhone 15 Pro", browser: "Brain iOS",  location: "Lisbon, PT",            ip: "172.58.12.4", when: "Yesterday, 8:42 PM" },
 ];
 
-const DeviceDot = ({ current }: { current?: boolean }) => (
-  <div className="size-[8px] rounded-full flex-shrink-0" style={{ background: current ? "#42bf23" : "#414965" }} />
+const Bullet = () => (
+  <span aria-hidden="true" className="size-[4px] rounded-full shrink-0" style={{ background: "#414965" }} />
+);
+
+const StatusDot = ({ active }: { active?: boolean }) => (
+  // 24×32 wrapper with a centered 12-px colored circle (Figma laptop/phone slots).
+  <div className="h-[32px] w-[24px] shrink-0 flex items-center justify-center">
+    <span className="size-[12px] rounded-full" style={{ background: active ? "#42bf23" : "#6c779d" }} />
+  </div>
+);
+
+const SessionRow = ({ s }: { s: Session }) => (
+  <div
+    data-testid={`row-session-${s.id}`}
+    className="bg-[#0a0c10] flex items-center gap-[16px] p-[8px] rounded-[8px] w-full"
+  >
+    <div className="flex flex-1 min-w-0 gap-[8px] items-center">
+      <StatusDot active={s.current} />
+      <div className="flex flex-col items-start justify-center w-[249px] shrink-0">
+        <div className="flex gap-[4px] items-center">
+          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
+            {s.device}
+          </p>
+          <Bullet />
+          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+            {s.browser}
+          </p>
+        </div>
+        <div className="flex gap-[4px] items-center">
+          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+            {s.location}
+          </p>
+          <Bullet />
+          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+            {s.ip}
+          </p>
+        </div>
+      </div>
+    </div>
+    <p
+      className="flex-1 min-w-0 font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-right whitespace-nowrap"
+      style={{ color: s.current ? "#42bf23" : "#a8b9f4" }}
+    >
+      {s.when}
+    </p>
+  </div>
 );
 
 export function LoginHistoryModal({
   open, onOpenChange,
 }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
-    <ShellRoot open={open} onOpenChange={onOpenChange} testId="login-history" description="Review devices currently signed in to your account." width={440}>
-      <Header title="Login History" onClose={() => onOpenChange(false)} testIdPrefix="login-history" />
-      <div className="flex flex-col gap-3 p-[24px]">
-        <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d]">
-          Devices and browsers that recently signed in to your Brain account.
-        </p>
-        <div className="flex flex-col rounded-[12px] overflow-hidden" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
-          {SESSIONS.map((s, idx) => (
-            <div
-              key={s.id}
-              data-testid={`row-session-${s.id}`}
-              className="flex items-center gap-3 p-3"
-              style={{ borderTop: idx === 0 ? "none" : "1px solid #1d2132" }}
-            >
-              <DeviceDot current={s.current} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "18px" }}>
-                    {s.device}
-                  </p>
-                  <span style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px" }}>
-                    · {s.browser}
-                  </span>
-                  {s.current && (
-                    <span
-                      className="px-2 py-[1px] rounded-[10px]"
-                      style={{ background: "#123509", color: "#42bf23", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "10px", lineHeight: "14px", border: "1px solid rgba(66,191,35,0.2)" }}
-                    >
-                      This device
-                    </span>
-                  )}
-                </div>
-                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px", marginTop: 2 }}>
-                  {s.location} · {s.ip}
-                </p>
-              </div>
-              <p
-                className="flex-shrink-0"
-                style={{ color: s.current ? "#42bf23" : "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px" }}
-              >
-                {s.when}
-              </p>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          data-testid="button-signout-others"
-          onClick={() => onOpenChange(false)}
-          className="w-full rounded-full px-6 py-3 hover-elevate"
-          style={{ background: "#350011", color: "#d20344", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Content
+          data-testid="modal-login-history"
+          className="fixed left-1/2 top-1/2 z-50 w-[480px] -translate-x-1/2 -translate-y-1/2 bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-clip focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
-          Sign out all other sessions
-        </button>
-      </div>
-    </ShellRoot>
+          <Dialog.Description className="sr-only">
+            Devices and browsers that recently signed in to your Brain account.
+          </Dialog.Description>
+
+          {/* Title + Controls (Figma 4569:61429) */}
+          <div className="relative h-[56px] w-full border border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
+            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
+              Login History
+            </Dialog.Title>
+          </div>
+
+          {/* Body — Figma 4569:61431 */}
+          <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
+            <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+              Devices and browsers that recently signed in to your Brain account.
+            </p>
+
+            {/* List container — Figma 4569:61474 */}
+            <div className="bg-[#0a0c10] h-[216px] overflow-clip rounded-[16px] w-[432px]">
+              <div className="flex flex-col p-[8px] w-full">
+                <div className="flex flex-col gap-[8px] w-full">
+                  {SESSIONS.map((s, i) => (
+                    <div key={s.id} className="flex flex-col gap-[8px] w-full">
+                      <SessionRow s={s} />
+                      {i < SESSIONS.length - 1 && (
+                        <div className="h-px w-full bg-[#1d2132]" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sign Out button — Figma 4569:61467 */}
+            <button
+              type="button"
+              data-testid="button-signout-others"
+              onClick={() => onOpenChange(false)}
+              className="flex flex-1 w-full items-center justify-center bg-[#350011] rounded-[100px] px-[20px] py-[10px] hover:opacity-80 transition-opacity"
+            >
+              <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#d20344] whitespace-nowrap">
+                Sign Out of All Devices
+              </span>
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
