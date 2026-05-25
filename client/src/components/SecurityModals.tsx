@@ -115,10 +115,10 @@ const StatusDot = ({ active }: { active?: boolean }) => (
   </div>
 );
 
-const SessionRow = ({ s }: { s: Session }) => (
+const SessionRow = ({ s, onSignOut }: { s: Session; onSignOut?: (id: string) => void }) => (
   <div
     data-testid={`row-session-${s.id}`}
-    className="bg-[#0a0c10] flex items-center gap-[16px] p-[8px] rounded-[8px] w-full"
+    className="bg-[#0a0c10] flex items-center gap-[16px] p-[8px] rounded-[8px] w-full group"
   >
     <div className="flex flex-1 min-w-0 gap-[8px] items-center">
       <StatusDot active={s.current} />
@@ -143,18 +143,48 @@ const SessionRow = ({ s }: { s: Session }) => (
         </div>
       </div>
     </div>
-    <p
-      className="flex-1 min-w-0 font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-right whitespace-nowrap"
-      style={{ color: s.current ? "#42bf23" : "#a8b9f4" }}
-    >
-      {s.when}
-    </p>
+    <div className="flex flex-1 min-w-0 items-center justify-end gap-[8px]">
+      <p
+        className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-right whitespace-nowrap"
+        style={{ color: s.current ? "#42bf23" : "#a8b9f4" }}
+      >
+        {s.when}
+      </p>
+      {!s.current && onSignOut && (
+        <button
+          type="button"
+          data-testid={`button-signout-session-${s.id}`}
+          aria-label={`Sign out ${s.device} session`}
+          onClick={() => onSignOut(s.id)}
+          className="size-[24px] shrink-0 rounded-full bg-[#222737] flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-[#350011] hover:text-[#d20344] transition-all focus:outline-none"
+          title="Sign out this session"
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3.33 3.33L12.67 12.67M12.67 3.33L3.33 12.67" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-[#6c779d] group-hover:text-[#d20344]" />
+          </svg>
+        </button>
+      )}
+    </div>
   </div>
 );
 
 export function LoginHistoryModal({
   open, onOpenChange,
 }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [sessions, setSessions] = useState<Session[]>(SESSIONS);
+
+  useEffect(() => {
+    if (open) setSessions(SESSIONS);
+  }, [open]);
+
+  const signOutOne = (id: string) => {
+    setSessions((list) => list.filter((s) => s.id !== id));
+  };
+
+  const signOutAll = () => {
+    setSessions((list) => list.filter((s) => s.current));
+  };
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -190,17 +220,26 @@ export function LoginHistoryModal({
             </p>
 
             {/* List container — Figma 4569:61474 */}
-            <div className="bg-[#0a0c10] h-[216px] overflow-clip rounded-[16px] w-[432px]">
+            <div className="bg-[#0a0c10] h-[216px] overflow-y-auto rounded-[16px] w-[432px]">
               <div className="flex flex-col p-[8px] w-full">
                 <div className="flex flex-col gap-[8px] w-full">
-                  {SESSIONS.map((s, i) => (
-                    <div key={s.id} className="flex flex-col gap-[8px] w-full">
-                      <SessionRow s={s} />
-                      {i < SESSIONS.length - 1 && (
-                        <div className="h-px w-full bg-[#1d2132]" />
-                      )}
-                    </div>
-                  ))}
+                  {sessions.length === 0 ? (
+                    <p
+                      data-testid="text-no-sessions"
+                      className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center py-[16px]"
+                    >
+                      No other active sessions.
+                    </p>
+                  ) : (
+                    sessions.map((s, i) => (
+                      <div key={s.id} className="flex flex-col gap-[8px] w-full">
+                        <SessionRow s={s} onSignOut={signOutOne} />
+                        {i < sessions.length - 1 && (
+                          <div className="h-px w-full bg-[#1d2132]" />
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -209,8 +248,9 @@ export function LoginHistoryModal({
             <button
               type="button"
               data-testid="button-signout-others"
-              onClick={() => onOpenChange(false)}
-              className="flex flex-1 w-full items-center justify-center bg-[#350011] rounded-[100px] px-[20px] py-[10px] hover:opacity-80 transition-opacity"
+              onClick={signOutAll}
+              disabled={!sessions.some((s) => !s.current)}
+              className="flex flex-1 w-full items-center justify-center bg-[#350011] rounded-[100px] px-[20px] py-[10px] hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#d20344] whitespace-nowrap">
                 Sign Out of All Devices
