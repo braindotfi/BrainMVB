@@ -363,7 +363,7 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
   </button>
 );
 
-function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
+function ProfileSection() {
   const alert = useAppAlert();
   const { email, phone } = useUserContact();
   const [name, setName] = useState("ACME Inc.");
@@ -468,7 +468,7 @@ function ProfileSection({ toast }: { toast: ReturnType<typeof useToast>["toast"]
           <button
             data-testid="button-edit-profile"
             onClick={() => {
-              if (editing) toast({ title: "Profile saved", description: "Your display name has been updated." });
+              if (editing) alert.success("Profile saved", "Your display name has been updated.");
               setEditing(v => !v);
             }}
             className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
@@ -801,7 +801,7 @@ export function SettingsPage() {
   const { toast } = useToast();
 
   const SectionContent = {
-    profile:       <ProfileSection toast={toast} />,
+    profile:       <ProfileSection />,
     billing:       <BillingSection />,
     security:      <SecurityFigma />,
     notifications: <NotificationsFigma />,
