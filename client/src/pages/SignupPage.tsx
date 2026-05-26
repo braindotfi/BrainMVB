@@ -20,7 +20,7 @@ export function SignupPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src={robotMoneyLogo} alt="Robot Money" className="h-[32px] w-auto object-contain" />
+        <img src={robotMoneyLogo} alt="Robot Money" className="h-[24px] w-auto object-contain" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
@@ -33,7 +33,7 @@ export function SignupPage() {
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
         <span className="[font-family:'Gilroy',sans-serif] text-[#3a4060] text-sm">
-          Copyright © 2025 Brain Finance. All rights reserved.
+          Copyright © 2026 Robotmoney. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
       </footer>
