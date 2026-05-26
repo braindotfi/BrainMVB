@@ -239,6 +239,9 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
             <>
               <Header title="Update Phone Number" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]" style={{ paddingTop: 39, paddingBottom: 39 }}>
+                <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
+                  Enter your new phone number.
+                </p>
                 <div className="flex flex-col gap-1 w-full">
                   <FieldLabel>Country Code</FieldLabel>
                   <div className="flex items-center gap-2 p-2 rounded-[8px]" style={{ background: "#222737" }}>
