@@ -36,6 +36,7 @@ import {
   getWirexBankAccounts,
   getWirexTransactions,
 } from "./wirex";
+import { generateInsights, getInsightsState, type DailyInsight } from "./insightsService";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -1156,6 +1157,23 @@ Rules:
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // INSIGHTS
+  // ─────────────────────────────────────────────────────────────
+  app.get("/api/insights", async (_req, res) => {
+    try {
+      const state = getInsightsState();
+      // Trigger background generation if stale (never generated or older than 24h)
+      if (!state.generatedAt || Date.now() - state.generatedAt.getTime() > 24 * 60 * 60 * 1000) {
+        generateInsights().catch((err) => console.error("[Insights] bg refresh failed:", err));
+      }
+      return res.json({ insights: state.insights, generatedAt: state.generatedAt, generating: state.generating });
+    } catch (err) {
+      console.error("[Insights] route error:", err);
+      return res.status(500).json({ error: "Failed to fetch insights" });
     }
   });
 

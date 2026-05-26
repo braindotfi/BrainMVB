@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
@@ -293,12 +294,35 @@ const SectionWidget = ({
   );
 };
 
+type SpendingInsight = { text: string; colorClass: string };
+
+function pickSpendingInsight(insights: { kind: string; text: string }[]): SpendingInsight {
+  if (!insights || insights.length === 0) {
+    return { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
+  }
+  // Prefer a spending / burn / alert insight first, then any
+  const idx = insights.findIndex((i) =>
+    /spend|burn|idle|alert|subscription|cost/i.test(i.text)
+  );
+  const pick = idx >= 0 ? insights[idx] : insights[0];
+  const isBad = pick.kind === "warning" || pick.kind === "alert";
+  return { text: pick.text, colorClass: isBad ? "text-[#ff9500]" : "text-[#42bf23]" };
+}
+
 export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
   const { format } = useCurrency();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const { data: insightsData } = useQuery({
+    queryKey: ["/api/insights"],
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: false,
+  });
+
+  const spendingInsight = pickSpendingInsight(insightsData?.insights ?? []);
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
@@ -368,8 +392,8 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#42bf23] text-[20px] w-full">
-{format("$432")} less than last month. Nice.
+                    <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[20px] w-full ${spendingInsight.colorClass}`}>
+                      {spendingInsight.text}
                     </p>
                   </div>
                 </div>
