@@ -3,13 +3,17 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useAppAlert } from "@/components/AppAlert";
 import { setUserPhone } from "@/lib/userContact";
 
-/* ─── Phone Number entry + Verify modals (Figma 3734:40206 + 3734:40233) ───
-   Two-step flow: enter phone → enter 6-digit code → on success update store.
+/* ─── Phone Number entry + Verify modals ───────────────────────────────
+   Three-step flow:
+   1) verify-current — verify ownership of current phone (Figma 4582:59986)
+   2) enter — enter new phone number
+   3) verify — enter 6-digit code sent to new phone
+   On success update the shared user-contact store.
    Demo code is "123456" — any other entry triggers an error alert.        */
 
 const VALID_CODE = "123456";
 
-type Step = "enter" | "verify";
+type Step = "verify-current" | "enter" | "verify";
 
 const ChevronDown = ({ className = "size-[24px]" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -96,7 +100,7 @@ const PrimaryButton = ({ children, onClick, disabled, testId }: { children: Reac
 
 export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: boolean; onOpenChange: (o: boolean) => void; currentPhone: string }) {
   const alert = useAppAlert();
-  const [step, setStep] = useState<Step>("enter");
+  const [step, setStep] = useState<Step>("verify-current");
   const [countryCode] = useState("+1");
   const [number, setNumber] = useState("");
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
@@ -104,7 +108,7 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
 
   useEffect(() => {
     if (open) {
-      setStep("enter");
+      setStep("verify-current");
       setNumber("");
       setCode(Array(6).fill(""));
     }
@@ -164,10 +168,74 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
           style={{ background: "#0a0c10" }}
         >
           <Dialog.Description className="sr-only">
-            {step === "enter" ? "Enter a new phone number" : "Verify your phone number with the SMS code"}
+            {step === "enter"
+              ? "Enter a new phone number"
+              : step === "verify"
+                ? "Verify your new phone number with the SMS code"
+                : "Verify your current phone number with the SMS code"}
           </Dialog.Description>
 
-          {step === "enter" ? (
+          {step === "verify-current" && (
+            <>
+              <Header title="Update Phone Number" onClose={() => onOpenChange(false)} />
+              <div className="flex flex-col gap-4 p-[39px]">
+                <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
+                  Enter the code we sent to {currentPhone} to update your phone number.
+                </p>
+                <div className="flex gap-2 w-full">
+                  {code.map((c, i) => (
+                    <input
+                      key={i}
+                      ref={el => { inputsRef.current[i] = el; }}
+                      data-testid={`input-phone-current-code-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={c}
+                      onChange={e => handleCodeChange(i, e.target.value)}
+                      onKeyDown={e => handleCodeKey(i, e)}
+                      onPaste={handleCodePaste}
+                      className="flex-1 min-w-0 h-[56px] rounded-[16px] text-center bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[20px] leading-[24px] text-[#6c779d] focus:text-white focus:ring-2 focus:ring-[#7631ee]"
+                      style={{ background: "#222737" }}
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-4 w-full pt-2">
+                  <button
+                    type="button"
+                    data-testid="button-phone-current-resend"
+                    onClick={() => alert.info("Code resent", `A new 6-digit code is on its way to ${currentPhone}. It expires in 10 minutes.`)}
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate"
+                    style={{ background: "#11141b", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+                  >
+                    Resend
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="button-phone-current-confirm"
+                    onClick={() => {
+                      if (codeValue === VALID_CODE) {
+                        setCode(Array(6).fill(""));
+                        setStep("enter");
+                      } else {
+                        alert.error("Incorrect code", "The code you entered doesn't match. Please try again.");
+                        setCode(Array(6).fill(""));
+                        inputsRef.current[0]?.focus();
+                      }
+                    }}
+                    disabled={!canVerify}
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: "#123509", color: "#42bf23", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === "enter" && (
             <>
               <Header title="Update Phone Number" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]" style={{ paddingTop: 39, paddingBottom: 39 }}>
@@ -200,19 +268,20 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
                     onClick={() => setStep("verify")}
                     disabled={!canContinue}
                   >
-                    Verify
+                    Continue
                   </PrimaryButton>
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {step === "verify" && (
             <>
-              <Header title="Verify Phone Number" onClose={() => onOpenChange(false)} onBack={() => setStep("enter")} />
+              <Header title="Verify Phone Number" onClose={() => onOpenChange(false)} onBack={() => { setCode(Array(6).fill("")); setStep("enter"); }} />
               <div className="flex flex-col gap-4 p-[39px]">
                 <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
                   Enter 6 digit code sent to you via SMS.
                 </p>
-                {/* Code input cells — Figma 3734:40248 */}
                 <div className="flex gap-2 w-full">
                   {code.map((c, i) => (
                     <input
@@ -232,7 +301,6 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
                     />
                   ))}
                 </div>
-                {/* Action buttons — Figma 3734:40261 */}
                 <div className="flex gap-4 w-full pt-2">
                   <button
                     type="button"
