@@ -43,16 +43,11 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
   );
 };
 
+import robotMoneyLogo from "@assets/robotmoney_1779790884383.png";
+
 const BrainLogo = () => (
-  <div className="h-[40px] relative shrink-0 w-[130px]">
-    <div className="absolute left-0 size-[40px] top-0 flex items-center justify-center">
-      <img alt="Brain" className="size-[40px] object-contain" src={ICONS.brain_logo_3d} />
-    </div>
-    <p className="absolute leading-[0] left-[44px] not-italic text-[0px] text-white top-[8px] whitespace-nowrap" style={{ fontFamily: "'Gridular', monospace" }}>
-      <span className="leading-[24px] text-[#7631ee] text-[28px]">br</span>
-      <span className="leading-[24px] text-[28px]">ai</span>
-      <span className="leading-[24px] text-[#7631ee] text-[28px]">n</span>
-    </p>
+  <div className="h-[40px] relative shrink-0 w-[130px] flex items-center">
+    <img alt="Brain" className="h-[32px] w-auto object-contain" src={robotMoneyLogo} />
   </div>
 );
 
@@ -289,9 +284,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             <button onClick={onToggle} title="Expand menu" className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]" style={{ background: "#222737" }}>
               <ExpandIcon />
             </button>
-            <div className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center">
-              <img className="w-[40px] h-[40px] object-contain flex-shrink-0" alt="Brain" src={ICONS.brain_logo_3d} />
-            </div>
             {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
               const count = getNavCount(path);
               return (
