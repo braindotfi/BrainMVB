@@ -338,11 +338,11 @@ const CopyIcon = ({ value }: { value: string }) => (
 /* ── Personal account cards (orange theme) ── */
 
 const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
-  const { symbol, currency: selectedCurrency } = useCurrency();
+  const { format, currency: selectedCurrency } = useCurrency();
   const addr = account?.address || "—";
   const truncated = addr.length > 16 ? addr.slice(0, 6) + "....." + addr.slice(-5) : addr;
   const name = account?.nameOnAccount || "—";
-  const balance = account?.balance ? `${symbol}${account.balance}` : `${symbol}0.00`;
+  const balance = format(account?.balance ?? "0.00");
   const currency = selectedCurrency;
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
@@ -406,10 +406,10 @@ const DebitCardView = ({ account }: { account?: WirexAccount }) => {
 };
 
 const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
-  const { symbol, currency: selectedCurrency } = useCurrency();
+  const { format, currency: selectedCurrency } = useCurrency();
   const iban = account?.iban || "—";
   const name = account?.nameOnAccount || "—";
-  const balance = account?.balance ? `${symbol}${account.balance}` : `${symbol}0.00`;
+  const balance = format(account?.balance ?? "0.00");
   const currency = selectedCurrency;
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">

@@ -79,8 +79,8 @@ const parseAmount = (raw: string): number => {
 };
 
 const useFmt = () => {
-  const { symbol } = useCurrency();
-  return (n: number) => `${symbol}${n.toLocaleString("en-US")}`;
+  const { format } = useCurrency();
+  return (n: number) => format(n);
 };
 
 const GoalProgress = ({ goal }: { goal: GoalRow }) => {
@@ -297,7 +297,7 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
-  const { symbol: currencySymbol } = useCurrency();
+  const { format } = useCurrency();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
@@ -351,7 +351,7 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Money in all accounts</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{currencySymbol}86,993</span>
+                      <span className="font-medium leading-[36px] text-[32px]">{format("$86,993")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#414965] text-[20px] w-full">
@@ -365,11 +365,11 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">You're spending about</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{currencySymbol}7,324</span>
+                      <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#42bf23] text-[20px] w-full">
-{currencySymbol}432 less than last month. Nice.
+{format("$432")} less than last month. Nice.
                     </p>
                   </div>
                 </div>

@@ -158,8 +158,8 @@ export const ReviewModal = ({
   onReject: () => void;
 }) => {
   const [auto, setAuto] = useState(false);
-  const { format, symbol } = useCurrency();
-  const swap = (s: string) => s.replace(/\$(?=\d)/g, symbol);
+  const { format } = useCurrency();
+  const swap = (s: string) => s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
   // or whenever it closes, so prior state doesn't leak between reviews.

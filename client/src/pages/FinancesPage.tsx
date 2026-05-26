@@ -49,7 +49,7 @@ const WidgetCard = ({ title, children }: { title: string; children: React.ReactN
   </div>
 );
 
-const InvoicesLateBanner = ({ symbol }: { symbol: string }) => (
+const InvoicesLateBanner = ({ format }: { format: (a: string | number) => string }) => (
   <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
     <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
       <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
@@ -67,7 +67,7 @@ const InvoicesLateBanner = ({ symbol }: { symbol: string }) => (
         </div>
         <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[14px] w-full">2 Invoices are late!</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">{symbol}4,200 from Brookside Consulting (12 days late) and {symbol}1,800 from Hartwell Group (8 days late).</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">{format("$4,200")} from Brookside Consulting (12 days late) and {format("$1,800")} from Hartwell Group (8 days late).</p>
         </div>
       </div>
     </div>
@@ -75,7 +75,7 @@ const InvoicesLateBanner = ({ symbol }: { symbol: string }) => (
 );
 
 export function FinancesPage() {
-  const { format, symbol } = useCurrency();
+  const { format } = useCurrency();
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -125,11 +125,11 @@ export function FinancesPage() {
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">
-                    About {symbol}18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
+                    About {format("$18,000")} a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
                   </p>
                 </div>
                 <Divider />
-                <InvoicesLateBanner symbol={symbol} />
+                <InvoicesLateBanner format={format} />
               </div>
             </div>
 
@@ -167,7 +167,7 @@ export function FinancesPage() {
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
-                    Nothing overdue. Your next bill is the Verizon phone bill for {symbol}189, due Friday. Brain is asking you about it on the home screen.
+                    Nothing overdue. Your next bill is the Verizon phone bill for {format("$189")}, due Friday. Brain is asking you about it on the home screen.
                   </p>
                 </div>
               </div>

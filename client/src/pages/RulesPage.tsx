@@ -33,7 +33,7 @@ function Switch({ active = false, onChange }: SwitchProps) {
 
 type Rule = { id: number; title: string | JSX.Element; description: string | JSX.Element; active: boolean };
 
-function buildInitialRules(symbol: string): Rule[] {
+function buildInitialRules(format: (a: string | number) => string): Rule[] {
   return [
     {
       id: 1,
@@ -47,7 +47,7 @@ function buildInitialRules(symbol: string): Rule[] {
       description: (
         <span>
           When checking has more than{" "}
-          <span className="underline [text-decoration-skip-ink:none] text-[#a8b9f4]">{symbol}25,000</span>
+          <span className="underline [text-decoration-skip-ink:none] text-[#a8b9f4]">{format("$25,000")}</span>
           , move the extra to your high-yield account.
         </span>
       ),
@@ -58,7 +58,7 @@ function buildInitialRules(symbol: string): Rule[] {
       title: (
         <span>
           Ask me before paying anything over{" "}
-          <span className="underline [text-decoration-skip-ink:none]">{symbol}500</span>
+          <span className="underline [text-decoration-skip-ink:none]">{format("$500")}</span>
         </span>
       ),
       description: "I'll show you the bill and ask. No surprises.",
@@ -80,11 +80,12 @@ function buildInitialRules(symbol: string): Rule[] {
 }
 
 export function RulesPage() {
-  const { symbol } = useCurrency();
+  const { format } = useCurrency();
+  const identityFormat = (a: string | number) => String(a);
   const [activeMap, setActiveMap] = useState<Record<number, boolean>>(
-    () => Object.fromEntries(buildInitialRules("$").map(r => [r.id, r.active])),
+    () => Object.fromEntries(buildInitialRules(identityFormat).map(r => [r.id, r.active])),
   );
-  const rules = buildInitialRules(symbol).map(r => ({ ...r, active: activeMap[r.id] ?? r.active }));
+  const rules = buildInitialRules(format).map(r => ({ ...r, active: activeMap[r.id] ?? r.active }));
   const suggestions = useRuleSuggestions();
 
   const toggleRule = (id: number) => setActiveMap(m => ({ ...m, [id]: !(m[id] ?? false) }));
