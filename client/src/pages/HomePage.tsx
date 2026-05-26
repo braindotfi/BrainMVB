@@ -355,7 +355,7 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] relative shrink-0 text-[#414965] text-[20px] w-full">
-                      Across bank, crypto and agent accounts.
+                      Across bank, digital, and agent accounts.
                     </p>
                   </div>
                 </div>
