@@ -148,7 +148,7 @@ const ActivityItem = ({
       </div>
       <div className="flex flex-col items-end justify-center leading-[20px] not-italic relative shrink-0 text-right w-[100px]">
         {item.amount && <p className="[font-family:'JetBrains_Mono',monospace] font-semibold relative shrink-0 text-[#a8b9f4] text-[18px] w-full text-right">{item.amount}</p>}
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold relative shrink-0 text-[#414965] text-[16px] w-full text-right">{item.time}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium relative shrink-0 text-[#414965] text-[14px] w-full text-right">{item.time}</p>
       </div>
     </div>
   );
