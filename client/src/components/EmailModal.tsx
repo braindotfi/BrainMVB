@@ -4,15 +4,18 @@ import { useAppAlert } from "@/components/AppAlert";
 import { setUserEmail } from "@/lib/userContact";
 
 /* ─── Email entry + Verify modals ──────────────────────────────────────
-   Two-step flow mirroring PhoneNumberModal: enter email → enter 6-digit
-   code → on success update the shared user-contact store.
+   Three-step flow:
+   1) verify-current — verify ownership of current email (Figma 4582:59937)
+   2) enter — enter new email address
+   3) verify — enter 6-digit code sent to new email
+   On success update the shared user-contact store.
    Demo code is "123456" — any other entry triggers an error alert.
-   Visual style is intentionally identical to PhoneNumberModal
+   Visual style matches PhoneNumberModal
    (Figma 3734:40206 + 3734:40233 references, repurposed for email).   */
 
 const VALID_CODE = "123456";
 
-type Step = "enter" | "verify";
+type Step = "verify-current" | "enter" | "verify";
 
 const CloseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -76,14 +79,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean; onOpenChange: (o: boolean) => void; currentEmail: string }) {
   const alert = useAppAlert();
-  const [step, setStep] = useState<Step>("enter");
+  const [step, setStep] = useState<Step>("verify-current");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
     if (open) {
-      setStep("enter");
+      setStep("verify-current");
       setEmail("");
       setCode(Array(6).fill(""));
     }
@@ -143,10 +146,62 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
           style={{ background: "#0a0c10" }}
         >
           <Dialog.Description className="sr-only">
-            {step === "enter" ? "Enter a new email address" : "Verify your email with the 6-digit code"}
+            {step === "enter"
+              ? "Enter a new email address"
+              : step === "verify"
+                ? "Verify your new email with the 6-digit code"
+                : "Verify your current email with the 6-digit code"}
           </Dialog.Description>
 
-          {step === "enter" ? (
+          {step === "verify-current" && (
+            <>
+              <Header title="Update Email Address" onClose={() => onOpenChange(false)} />
+              <div className="flex flex-col gap-4 p-[39px]">
+                <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
+                  Enter the code we sent to {currentEmail} to update your email.
+                </p>
+                <div className="flex gap-2 w-full">
+                  {code.map((c, i) => (
+                    <input
+                      key={i}
+                      ref={el => { inputsRef.current[i] = el; }}
+                      data-testid={`input-email-current-code-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={c}
+                      onChange={e => handleCodeChange(i, e.target.value)}
+                      onKeyDown={e => handleCodeKey(i, e)}
+                      onPaste={handleCodePaste}
+                      className="flex-1 min-w-0 h-[56px] rounded-[16px] text-center bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[20px] leading-[24px] text-[#6c779d] focus:text-white focus:ring-2 focus:ring-[#7631ee]"
+                      style={{ background: "#222737" }}
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+                <div className="pt-2">
+                  <PrimaryButton
+                    testId="button-email-current-continue"
+                    onClick={() => {
+                      if (codeValue === VALID_CODE) {
+                        setCode(Array(6).fill(""));
+                        setStep("enter");
+                      } else {
+                        alert.error("Incorrect code", "The code you entered doesn't match. Please try again.");
+                        setCode(Array(6).fill(""));
+                        inputsRef.current[0]?.focus();
+                      }
+                    }}
+                    disabled={!canVerify}
+                  >
+                    Continue
+                  </PrimaryButton>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === "enter" && (
             <>
               <Header title="Update Email Address" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]">
@@ -176,9 +231,11 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {step === "verify" && (
             <>
-              <Header title="Verify Email Address" onClose={() => onOpenChange(false)} onBack={() => setStep("enter")} />
+              <Header title="Verify Email Address" onClose={() => onOpenChange(false)} onBack={() => { setCode(Array(6).fill("")); setStep("enter"); }} />
               <div className="flex flex-col gap-4 p-[39px]">
                 <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
                   Enter 6 digit code sent to {trimmedEmail}.
