@@ -217,6 +217,9 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
             <>
               <Header title="Update Email Address" onClose={() => onOpenChange(false)} />
               <div className="flex flex-col gap-4 p-[39px]">
+                <p className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965]">
+                  Enter your new email address.
+                </p>
                 <div className="flex flex-col gap-1 w-full">
                   <FieldLabel>Enter New Email Address</FieldLabel>
                   <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
