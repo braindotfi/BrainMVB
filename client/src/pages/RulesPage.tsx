@@ -119,7 +119,7 @@ export function RulesPage() {
                             {rule.title}
                           </p>
                           <div className="flex items-center relative shrink-0 w-full">
-                            <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                            <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
                               {rule.description}
                             </p>
                           </div>
@@ -149,7 +149,7 @@ export function RulesPage() {
                       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{rule.title}</p>
                         <div className="flex items-center relative shrink-0 w-full">
-                          <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">{rule.description}</p>
+                          <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{rule.description}</p>
                         </div>
                       </div>
                       <Switch active={rule.active} onChange={() => toggleSuggestion(rule.id)} />

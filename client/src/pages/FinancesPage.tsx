@@ -101,11 +101,11 @@ export function FinancesPage() {
                     <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
                       <div className="flex gap-[4px] items-center relative shrink-0">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{acc.sub}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
                         {acc.sub2 && (
                           <>
                             <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{acc.sub2}</p>
+                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
                           </>
                         )}
                       </div>
