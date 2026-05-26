@@ -105,7 +105,6 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         data-testid="button-demo-login-existing"
         className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        <img src={robotMoneyLogo} alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo - Existing User
       </button>
 
@@ -114,7 +113,6 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         data-testid="button-demo-login-fresh"
         className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        <img src={robotMoneyLogo} alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo - Fresh User
       </button>
 
