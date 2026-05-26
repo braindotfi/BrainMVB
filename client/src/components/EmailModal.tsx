@@ -238,7 +238,7 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                     onClick={() => setStep("verify")}
                     disabled={!canContinue}
                   >
-                    Verify
+                    Continue
                   </PrimaryButton>
                 </div>
               </div>
