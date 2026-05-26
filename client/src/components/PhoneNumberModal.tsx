@@ -249,9 +249,9 @@ export function PhoneNumberModal({ open, onOpenChange, currentPhone }: { open: b
                     onClick={handleVerify}
                     disabled={!canVerify}
                     className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+                    style={{ background: "#123509", color: "#42bf23", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
                   >
-                    Continue
+                    Confirm
                   </button>
                 </div>
               </div>
