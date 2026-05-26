@@ -179,9 +179,19 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                     />
                   ))}
                 </div>
-                <div className="pt-2">
-                  <PrimaryButton
-                    testId="button-email-current-continue"
+                <div className="flex gap-4 w-full pt-2">
+                  <button
+                    type="button"
+                    data-testid="button-email-current-resend"
+                    onClick={() => alert.info("Code resent", `A new 6-digit code is on its way to ${currentEmail}. It expires in 10 minutes.`)}
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate"
+                    style={{ background: "#11141b", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+                  >
+                    Resend
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="button-email-current-continue"
                     onClick={() => {
                       if (codeValue === VALID_CODE) {
                         setCode(Array(6).fill(""));
@@ -193,9 +203,11 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                       }
                     }}
                     disabled={!canVerify}
+                    className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
                   >
                     Continue
-                  </PrimaryButton>
+                  </button>
                 </div>
               </div>
             </>
@@ -275,9 +287,9 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                     onClick={handleVerify}
                     disabled={!canVerify}
                     className="flex-1 min-w-0 rounded-full px-6 py-3 hover-elevate transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: "#123509", color: "#42bf23", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+                    style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
                   >
-                    Confirm
+                    Continue
                   </button>
                 </div>
               </div>
