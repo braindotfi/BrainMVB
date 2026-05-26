@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useQuery } from "@tanstack/react-query";
 import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
 
 /* AddGoalModal — Figma 4074:65865 ("New Goal").
@@ -124,6 +125,53 @@ const CloseIcon = () => (
   </svg>
 );
 
+/* Pulls a category-specific recommendation from Brain (Claude). The query is
+   keyed on category so switching tabs swaps the hint without re-fetching what
+   we've already loaded. Falls back gracefully on error. */
+const RecommendationCard = ({ category }: { category: string }) => {
+  const { data, isLoading, isError } = useQuery<{ text: string }>({
+    queryKey: ["/api/goals/recommendation", category],
+    queryFn: async ({ queryKey }) => {
+      const [base, cat] = queryKey as [string, string];
+      const res = await fetch(`${base}?category=${encodeURIComponent(cat)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    },
+    enabled: Boolean(category),
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const text = isLoading
+    ? "Brain is sizing this up against your account…"
+    : isError
+      ? "Brain couldn't reach the recommendation engine. Pick a target you can defend and continue."
+      : data?.text ?? "";
+
+  return (
+    <div
+      data-testid="card-goal-recommendation"
+      className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full"
+    >
+      <div className="flex flex-1 gap-[8px] items-start min-w-0">
+        <span className="relative shrink-0 size-[16px] mt-[1px]">
+          <HintIcon />
+        </span>
+        <p
+          data-testid="text-goal-recommendation"
+          className={
+            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] " +
+            (isLoading ? "text-[#414965] italic" : "text-[#6c779d]")
+          }
+        >
+          {text}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Props) => {
   const [category, setCategory] = useState("Pay Off Debt");
   const [name, setName] = useState("");
@@ -223,17 +271,8 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               </div>
             </div>
 
-            {/* Brain hint card */}
-            <div className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full">
-              <div className="flex flex-1 gap-[8px] items-start min-w-0">
-                <span className="relative shrink-0 size-[16px] mt-[1px]">
-                  <HintIcon />
-                </span>
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-                  Brain knows your monthly burn is $612K against $4.8M operating cash. Set the target at $11M to clear the 18-month bar based on current trajectory.
-                </p>
-              </div>
-            </div>
+            {/* Brain hint card — dynamic recommendation per selected category */}
+            <RecommendationCard category={category} />
 
             {/* Goal name */}
             <div className="flex flex-col gap-[8px] items-start w-full">

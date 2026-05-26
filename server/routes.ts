@@ -193,6 +193,23 @@ Execute the objective within your policy constraints. Use tools to act. When com
   return finalSummary;
 }
 
+const GOAL_REC_FALLBACK_DEFAULT =
+  "Set a target tied to one of your live metrics — e.g. operating cash, monthly burn, or AR — and Brain will keep agents aligned to it.";
+const GOAL_REC_FALLBACK: Record<string, string> = {
+  "Pay Off Debt":
+    "Target paying down the $1.2M term loan at 9.5% APR — clearing $400K this year saves ~$38K in interest and frees $9K/mo of cash flow.",
+  "Build Reserve":
+    "Aim for $11M in reserves to clear the 18-month runway bar against $612K monthly burn — current $4.8M leaves you ~6 months short.",
+  "Hit Milestone":
+    "With revenue at $1.42M last quarter and ~9% QoQ growth, $5M ARR is reachable in ~4 quarters — set it as the milestone and Brain will pace bookings.",
+  "Cut Spend":
+    "AI Agents and SaaS are 77% of spend. Trimming 15% off SaaS alone saves ~$8K/mo — set that as your monthly reduction target.",
+  "Capital Deploy":
+    "$42K is idle in operating cash. Deploy it to the USDC yield vault at 1.16% APY for ~$487/yr, or earmark it for the AlphaFlow agent at current trade cadence.",
+  "Other":
+    "Pick a number you want to move — runway, ARR, AR collected, burn — and Brain will translate it into agent budgets and policies.",
+};
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
   // ─────────────────────────────────────────────────────────────
@@ -260,6 +277,80 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error: any) {
       console.error("Delete data error:", error);
       return res.status(500).json({ error: error?.message || "Failed to delete data" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // GOAL RECOMMENDATIONS (Claude-powered)
+  // For the "New Goal" modal — given a category the user picks in
+  // the "What's it for?" tabs, returns a 1–2 sentence personalised
+  // recommendation grounded in the demo account snapshot.
+  // ─────────────────────────────────────────────────────────────
+  const goalRecCache = new Map<string, { text: string; at: number }>();
+  const GOAL_REC_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+  const GOAL_ACCOUNT_CONTEXT = `
+ACME Inc. business snapshot (USD):
+- Operating cash: $4.8M; monthly burn: $612K (runway ≈ 7.8 months)
+- Revenue last quarter: $1.42M, growing ~9% QoQ
+- Outstanding debt: $1.2M term loan @ 9.5% APR ($28K monthly service)
+- Idle cash not earning yield: $42K in operating account
+- AR overdue >30 days: $187K across 4 customers
+- Treasury yield earned this month: $548 (1.16% APY on $51K)
+- AlphaFlow trading volume this week: 47 trades (18% above 30-day avg)
+- Largest spend categories: AI Agents 48%, SaaS 29%, Vendor payments 16%
+- Active goals: "Hit $5M ARR" (priority 88), "Reach 18-month runway" (64), "Q4 marketing budget" (35)
+`.trim();
+
+  const GOAL_REC_SYSTEM = `You are Brain AI, the financial brain embedded in a neobank for businesses.
+The user is creating a new goal and just picked a CATEGORY in the "What's it for?" tabs.
+Given the company's account snapshot, return ONE concrete, numeric recommendation
+(1–2 short sentences, max ~220 chars) tailored to that category — what target to
+set and why, grounded in the snapshot's actual numbers.
+
+Rules:
+- Plain prose, no markdown, no bullet points, no leading label.
+- Reference real numbers from the snapshot (dollars, percentages, months).
+- Do not greet, do not restate the category. Just the recommendation.`;
+
+  app.get("/api/goals/recommendation", async (req, res) => {
+    const category = String(req.query.category ?? "").slice(0, 64);
+    if (!category) return res.status(400).json({ error: "category required" });
+
+    const cached = goalRecCache.get(category);
+    if (cached && Date.now() - cached.at < GOAL_REC_TTL_MS) {
+      return res.json({ text: cached.text, cached: true });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.json({ text: GOAL_REC_FALLBACK[category] ?? GOAL_REC_FALLBACK_DEFAULT, cached: false, fallback: true });
+    }
+
+    try {
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const message = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 220,
+        system: GOAL_REC_SYSTEM,
+        messages: [
+          {
+            role: "user",
+            content: `Snapshot:\n${GOAL_ACCOUNT_CONTEXT}\n\nCategory the user picked: "${category}".\n\nReturn the recommendation as plain text.`,
+          },
+        ],
+      });
+      const text = (message.content[0]?.type === "text" ? message.content[0].text : "").trim();
+      const clean = text.replace(/^["'`]+|["'`]+$/g, "").trim();
+      if (!clean) throw new Error("empty recommendation");
+      goalRecCache.set(category, { text: clean, at: Date.now() });
+      return res.json({ text: clean, cached: false });
+    } catch (err) {
+      console.error("[GoalRec] generation failed:", err);
+      return res.json({
+        text: GOAL_REC_FALLBACK[category] ?? GOAL_REC_FALLBACK_DEFAULT,
+        cached: false,
+        fallback: true,
+      });
     }
   });
 
