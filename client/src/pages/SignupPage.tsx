@@ -1,6 +1,7 @@
 import { Component, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
+import robotMoneyLogo from "@assets/robotmoney_1779790884383.png";
 
 export function SignupPage() {
   const { isLoggedIn } = useAuth();
@@ -19,7 +20,7 @@ export function SignupPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src="/figmaAssets/brainfull2x.png" alt="Brain Finance" className="h-[32px] object-contain" />
+        <img src={robotMoneyLogo} alt="Robot Money" className="h-[32px] w-auto object-contain" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
@@ -104,7 +105,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         data-testid="button-demo-login-existing"
         className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        <img src="/figmaAssets/brain2x.png" alt="" className="w-5 h-5 opacity-70 object-contain" />
+        <img src={robotMoneyLogo} alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo - Existing User
       </button>
 
@@ -113,7 +114,7 @@ function CrossmintSection({ apiKey }: { apiKey: string }) {
         data-testid="button-demo-login-fresh"
         className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
       >
-        <img src="/figmaAssets/brain2x.png" alt="" className="w-5 h-5 opacity-70 object-contain" />
+        <img src={robotMoneyLogo} alt="" className="w-5 h-5 opacity-70 object-contain" />
         Continue with Demo - Fresh User
       </button>
 
