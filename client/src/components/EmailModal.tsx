@@ -221,7 +221,7 @@ export function EmailModal({ open, onOpenChange, currentEmail }: { open: boolean
                   Enter your new email address.
                 </p>
                 <div className="flex flex-col gap-1 w-full">
-                  <FieldLabel>Enter New Email Address</FieldLabel>
+                  <FieldLabel>Email Address</FieldLabel>
                   <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
                     <input
                       data-testid="input-email-address"
