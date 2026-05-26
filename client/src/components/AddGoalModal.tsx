@@ -206,18 +206,6 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               Tell Brain what your business is working toward. Agents will run it under signed policy.
             </DialogPrimitive.Description>
 
-            {/* Brain hint card */}
-            <div className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full">
-              <div className="flex flex-1 gap-[8px] items-start min-w-0">
-                <span className="relative shrink-0 size-[16px] mt-[1px]">
-                  <HintIcon />
-                </span>
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-                  Brain knows your monthly burn is $612K against $4.8M operating cash. Set the target at $11M to clear the 18-month bar based on current trajectory.
-                </p>
-              </div>
-            </div>
-
             {/* What's it for? */}
             <div className="flex flex-col gap-[8px] items-start w-full">
               <SectionLabel>What&rsquo;s it for?</SectionLabel>
@@ -232,6 +220,18 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                     {c}
                   </Chip>
                 ))}
+              </div>
+            </div>
+
+            {/* Brain hint card */}
+            <div className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full">
+              <div className="flex flex-1 gap-[8px] items-start min-w-0">
+                <span className="relative shrink-0 size-[16px] mt-[1px]">
+                  <HintIcon />
+                </span>
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                  Brain knows your monthly burn is $612K against $4.8M operating cash. Set the target at $11M to clear the 18-month bar based on current trajectory.
+                </p>
               </div>
             </div>
 
@@ -250,7 +250,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
 
             {/* Target amount */}
             <div className="flex flex-col gap-[8px] items-start w-full">
-              <SectionLabel>Target Amount</SectionLabel>
+              <SectionLabel>Target amount</SectionLabel>
               <div
                 className={
                   "bg-[#222737] flex items-center gap-[4px] px-[8px] py-[10px] rounded-[8px] w-full transition-shadow " +
@@ -310,7 +310,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
 
             {/* By when */}
             <div className="flex flex-col gap-[8px] items-start w-full">
-              <SectionLabel>By When?</SectionLabel>
+              <SectionLabel>By when?</SectionLabel>
               <div className="flex flex-wrap gap-[8px] items-center w-full">
                 {TIMELINES.map((t) => (
                   <Chip
