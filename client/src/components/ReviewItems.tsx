@@ -189,12 +189,20 @@ export const ReviewModal = ({
         >
           {/* Title bar — Figma 4062:65550. Border on all sides per
               Figma; only the bottom is visible due to outer
-              overflow-clip + rounded-[24px]. Press Escape or click
-              the backdrop to dismiss (no close button in design). */}
+              overflow-clip + rounded-[24px]. */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
               Review Details
             </DialogPrimitive.Title>
+            <DialogPrimitive.Close
+              data-testid="button-review-close"
+              aria-label="Close"
+              className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L11 11M11 1L1 11" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </DialogPrimitive.Close>
           </div>
 
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
