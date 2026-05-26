@@ -366,7 +366,9 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
 function ProfileSection() {
   const alert = useAppAlert();
   const { email, phone } = useUserContact();
-  const [name, setName] = useState("ACME Inc.");
+  const [name, setName] = useState(() => {
+    try { return localStorage.getItem("brain_profile_name") || "ACME Inc."; } catch { return "ACME Inc."; }
+  });
   const [editing, setEditing] = useState(false);
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -468,7 +470,10 @@ function ProfileSection() {
           <button
             data-testid="button-edit-profile"
             onClick={() => {
-              if (editing) alert.success("Profile saved", "Your display name has been updated.");
+              if (editing) {
+                alert.success("Profile saved", "Your display name has been updated.");
+                try { localStorage.setItem("brain_profile_name", name); } catch {}
+              }
               setEditing(v => !v);
             }}
             className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"

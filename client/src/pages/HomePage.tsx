@@ -356,7 +356,7 @@ export function HomePage() {
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
                 <span className="leading-[24px] text-[20px]">{greeting}, </span>
-                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">ACME Inc.</span>
+                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{(() => { try { return localStorage.getItem("brain_profile_name") || "ACME Inc."; } catch { return "ACME Inc."; } })()}</span>
                 <span className="leading-[24px] text-[20px]">.</span>
               </p>
             </div>
