@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ICONS } from "@/assets/figma-icons";
+import { useCurrency } from "@/lib/currencyContext";
 
 export type ReviewItemType = {
   id: number;
@@ -157,6 +158,8 @@ export const ReviewModal = ({
   onReject: () => void;
 }) => {
   const [auto, setAuto] = useState(false);
+  const { format, symbol } = useCurrency();
+  const swap = (s: string) => s.replace(/\$(?=\d)/g, symbol);
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
   // or whenever it closes, so prior state doesn't leak between reviews.
@@ -199,7 +202,7 @@ export const ReviewModal = ({
                 gap-8, description #6c779d (Baby Blue 60). */}
             <div className="flex flex-col gap-[8px] items-start w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
-                {item.question}
+                {swap(item.question)}
               </p>
               <div className="flex items-center w-full">
                 <DialogPrimitive.Description
@@ -214,7 +217,7 @@ export const ReviewModal = ({
             <div className="flex flex-col gap-[24px] items-start w-full">
               <div className="grid grid-cols-2 gap-[8px] w-full">
                 <InfoCell label="Who"     value={item.who} />
-                <InfoCell label="Amount"  value={item.amountFull} />
+                <InfoCell label="Amount"  value={format(item.amountFull)} />
                 <InfoCell label="Due by"  value={item.dueBy} />
                 <InfoCell label="From"    value={item.from} />
               </div>

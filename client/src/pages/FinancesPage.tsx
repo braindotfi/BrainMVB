@@ -1,4 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCurrency } from "@/lib/currencyContext";
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
@@ -48,7 +49,7 @@ const WidgetCard = ({ title, children }: { title: string; children: React.ReactN
   </div>
 );
 
-const InvoicesLateBanner = () => (
+const InvoicesLateBanner = ({ symbol }: { symbol: string }) => (
   <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
     <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
       <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
@@ -66,7 +67,7 @@ const InvoicesLateBanner = () => (
         </div>
         <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[14px] w-full">2 Invoices are late!</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">$4,200 from Brookside Consulting (12 days late) and $1,800 from Hartwell Group (8 days late).</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">{symbol}4,200 from Brookside Consulting (12 days late) and {symbol}1,800 from Hartwell Group (8 days late).</p>
         </div>
       </div>
     </div>
@@ -74,6 +75,7 @@ const InvoicesLateBanner = () => (
 );
 
 export function FinancesPage() {
+  const { format, symbol } = useCurrency();
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -109,7 +111,7 @@ export function FinancesPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end justify-center relative shrink-0">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{acc.balance}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(acc.balance)}</p>
                     </div>
                   </div>
                   {idx < ACCOUNTS.length - 1 && <Divider />}
@@ -123,11 +125,11 @@ export function FinancesPage() {
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">
-                    About $18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
+                    About {symbol}18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
                   </p>
                 </div>
                 <Divider />
-                <InvoicesLateBanner />
+                <InvoicesLateBanner symbol={symbol} />
               </div>
             </div>
 
@@ -143,7 +145,7 @@ export function FinancesPage() {
                       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.category}</p>
                     </div>
                     <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{item.amount}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
                     </div>
                   </div>
                   <Divider />
@@ -154,7 +156,7 @@ export function FinancesPage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Total</p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-$7,810</p>
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">{format("-$7,810")}</p>
                 </div>
               </div>
             </WidgetCard>
@@ -165,7 +167,7 @@ export function FinancesPage() {
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
-                    Nothing overdue. Your next bill is the Verizon phone bill for $189, due Friday. Brain is asking you about it on the home screen.
+                    Nothing overdue. Your next bill is the Verizon phone bill for {symbol}189, due Friday. Brain is asking you about it on the home screen.
                   </p>
                 </div>
               </div>

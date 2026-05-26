@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRuleSuggestions, toggleSuggestion as toggleSuggestionStore } from "@/lib/rule-suggestions";
+import { useCurrency } from "@/lib/currencyContext";
 
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 const IMG_DIVIDER = INLINE_FIGMA.rulesDivider;
@@ -32,55 +33,61 @@ function Switch({ active = false, onChange }: SwitchProps) {
 
 type Rule = { id: number; title: string | JSX.Element; description: string | JSX.Element; active: boolean };
 
-const INITIAL_RULES: Rule[] = [
-  {
-    id: 1,
-    title: "Pay recurring bills automatically",
-    description: "Utilities, phone, software subscriptions that you've paid before.",
-    active: false,
-  },
-  {
-    id: 2,
-    title: "Move extra cash to savings",
-    description: (
-      <span>
-        When checking has more than{" "}
-        <span className="underline [text-decoration-skip-ink:none] text-[#a8b9f4]">$25,000</span>
-        , move the extra to your high-yield account.
-      </span>
-    ),
-    active: true,
-  },
-  {
-    id: 3,
-    title: (
-      <span>
-        Ask me before paying anything over{" "}
-        <span className="underline [text-decoration-skip-ink:none]">$500</span>
-      </span>
-    ),
-    description: "I'll show you the bill and ask. No surprises.",
-    active: true,
-  },
-  {
-    id: 4,
-    title: "Flag any strange behavior",
-    description: "Charges from new vendors, amounts that don't match a bill, or anything that doesn't fit normal pattern.",
-    active: true,
-  },
-  {
-    id: 5,
-    title: "Chase overdue invoices",
-    description: "Automatically email customers when an invoice is 7+ days late.",
-    active: false,
-  },
-];
+function buildInitialRules(symbol: string): Rule[] {
+  return [
+    {
+      id: 1,
+      title: "Pay recurring bills automatically",
+      description: "Utilities, phone, software subscriptions that you've paid before.",
+      active: false,
+    },
+    {
+      id: 2,
+      title: "Move extra cash to savings",
+      description: (
+        <span>
+          When checking has more than{" "}
+          <span className="underline [text-decoration-skip-ink:none] text-[#a8b9f4]">{symbol}25,000</span>
+          , move the extra to your high-yield account.
+        </span>
+      ),
+      active: true,
+    },
+    {
+      id: 3,
+      title: (
+        <span>
+          Ask me before paying anything over{" "}
+          <span className="underline [text-decoration-skip-ink:none]">{symbol}500</span>
+        </span>
+      ),
+      description: "I'll show you the bill and ask. No surprises.",
+      active: true,
+    },
+    {
+      id: 4,
+      title: "Flag any strange behavior",
+      description: "Charges from new vendors, amounts that don't match a bill, or anything that doesn't fit normal pattern.",
+      active: true,
+    },
+    {
+      id: 5,
+      title: "Chase overdue invoices",
+      description: "Automatically email customers when an invoice is 7+ days late.",
+      active: false,
+    },
+  ];
+}
 
 export function RulesPage() {
-  const [rules, setRules] = useState(INITIAL_RULES);
+  const { symbol } = useCurrency();
+  const [activeMap, setActiveMap] = useState<Record<number, boolean>>(
+    () => Object.fromEntries(buildInitialRules("$").map(r => [r.id, r.active])),
+  );
+  const rules = buildInitialRules(symbol).map(r => ({ ...r, active: activeMap[r.id] ?? r.active }));
   const suggestions = useRuleSuggestions();
 
-  const toggleRule = (id: number) => setRules(r => r.map(rule => rule.id === id ? { ...rule, active: !rule.active } : rule));
+  const toggleRule = (id: number) => setActiveMap(m => ({ ...m, [id]: !(m[id] ?? false) }));
   const toggleSuggestion = (id: number) => toggleSuggestionStore(id);
 
   return (

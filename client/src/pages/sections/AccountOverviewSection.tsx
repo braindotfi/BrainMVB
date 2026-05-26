@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AddAccountModal } from "@/components/AddAccountModal";
 import { useAuth, type WirexAccount } from "@/lib/authContext";
+import { useCurrency } from "@/lib/currencyContext";
 import { useTransactions } from "@/lib/transactionContext";
 import { ICONS } from "@/assets/figma-icons";
 
@@ -337,11 +338,12 @@ const CopyIcon = ({ value }: { value: string }) => (
 /* ── Personal account cards (orange theme) ── */
 
 const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
+  const { symbol, currency: selectedCurrency } = useCurrency();
   const addr = account?.address || "—";
   const truncated = addr.length > 16 ? addr.slice(0, 6) + "....." + addr.slice(-5) : addr;
   const name = account?.nameOnAccount || "—";
-  const balance = account?.balance ? `$${account.balance}` : "$0.00";
-  const currency = account?.currency || "USD";
+  const balance = account?.balance ? `${symbol}${account.balance}` : `${symbol}0.00`;
+  const currency = selectedCurrency;
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
@@ -364,11 +366,12 @@ const WalletAddressCard = ({ account }: { account?: WirexAccount }) => {
 };
 
 const DebitCardView = ({ account }: { account?: WirexAccount }) => {
+  const { currency: selectedCurrency } = useCurrency();
   const cardNum = account?.cardNumber || "•••• •••• •••• ••••";
   const expiry = account?.cardExpiry || "—";
   const cvv = account?.cardCvv || "—";
   const name = account?.nameOnAccount || "—";
-  const currency = account?.currency || "USD";
+  const currency = selectedCurrency;
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
@@ -403,10 +406,11 @@ const DebitCardView = ({ account }: { account?: WirexAccount }) => {
 };
 
 const BankAccountCard = ({ account }: { account?: WirexAccount }) => {
+  const { symbol, currency: selectedCurrency } = useCurrency();
   const iban = account?.iban || "—";
   const name = account?.nameOnAccount || "—";
-  const balance = account?.balance ? `$${account.balance}` : "$0.00";
-  const currency = account?.currency || "USD";
+  const balance = account?.balance ? `${symbol}${account.balance}` : `${symbol}0.00`;
+  const currency = selectedCurrency;
   return (
     <div className="absolute top-0 left-0 w-[370px] h-[200px] bg-brain-v1dark-orange rounded-2xl overflow-hidden shadow-[0px_5px_11px_#0000004a,0px_20px_20px_#00000042,0px_44px_26px_#00000026,0px_78px_31px_#0000000a,0px_122px_34px_#00000003] before:content-[''] before:absolute before:inset-0 before:p-[1.4px] before:rounded-2xl before:[background:linear-gradient(119deg,rgba(255,149,0,0.42)_0%,rgba(255,149,0,0)_36%,rgba(255,149,0,0.06)_67%,rgba(255,149,0,0.6)_100%)] before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude] before:z-[1] before:pointer-events-none">
       <OrangeGlow />
@@ -440,6 +444,7 @@ interface Props {
 
 export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange, focusExchangesTrigger, focusSendWithdrawalTrigger }: Props): JSX.Element => {
   const { wirexAccounts, user } = useAuth();
+  const { format } = useCurrency();
 
   // Find live WireX accounts by type
   const liveWallet = wirexAccounts.find(a => a.type === "wallet");
@@ -814,7 +819,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                         <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[16px] whitespace-nowrap">{asset.ticker}</span>
                       </div>
                       <div className="flex flex-1 flex-col gap-[4px] items-end justify-center min-w-0">
-                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#42bf23] text-[16px] leading-[20px] text-right w-full">{asset.value}</span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#42bf23] text-[16px] leading-[20px] text-right w-full">{format(asset.value)}</span>
                         <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[#414965] text-[14px] leading-[16px] text-right w-full">{asset.amount}</span>
                       </div>
                     </div>
@@ -916,7 +921,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                       <span
                         className="flex-1 [font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[20px] text-right min-w-0"
                         style={{ color: tx.positive ? "#42bf23" : "#d20344" }}
-                      >{tx.amount}</span>
+                      >{format(tx.amount)}</span>
                     </div>
                   </div>
                   {idx < filteredTx.length - 1 && <div className="h-px w-full" style={{ background: "#1d2132" }} />}
@@ -1398,7 +1403,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                               <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-sm leading-4 whitespace-nowrap">{asset.ticker}</span>
                             </div>
                             <div className="flex flex-col items-start justify-center gap-1 flex-1">
-                              <span className="self-stretch [font-family:'JetBrains_Mono',monospace] font-medium text-brain-v1green text-base text-right leading-5">{asset.value}</span>
+                              <span className="self-stretch [font-family:'JetBrains_Mono',monospace] font-medium text-brain-v1green text-base text-right leading-5">{format(asset.value)}</span>
                               <span className="self-stretch [font-family:'JetBrains_Mono',monospace] font-medium text-brain-v1baby-blue-30 text-sm text-right leading-4">{asset.amount}</span>
                             </div>
                           </div>
@@ -1451,7 +1456,7 @@ export const AccountOverviewSection = ({ collapsed, onToggle, onSend, onExchange
                               )}
                             </div>
                             <span className={`flex-shrink-0 [font-family:'JetBrains_Mono',monospace] font-medium text-base text-right leading-5 ${tx.positive ? "text-brain-v1green" : "text-brain-v1pink-red"}`}>
-                              {tx.amount}
+                              {format(tx.amount)}
                             </span>
                           </div>
                         </div>

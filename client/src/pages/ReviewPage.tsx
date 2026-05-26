@@ -5,14 +5,15 @@ import {
   ReviewModal,
   type ReviewItemType,
 } from "@/components/ReviewItems";
+import { useCurrency } from "@/lib/currencyContext";
 
 /* Sum of all pending review amounts → "Account Totals" footer row. */
-function totalAmount(items: ReviewItemType[]): string {
+function totalAmount(items: ReviewItemType[], symbol: string): string {
   const sum = items.reduce((acc, i) => {
     const n = Number(i.amountFull.replace(/[^0-9.]/g, ""));
     return acc + (Number.isFinite(n) ? n : 0);
   }, 0);
-  return `$${sum.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return `${symbol}${sum.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 /* Thin row separator used between Accounts/Expenses rows on the Finances page. */
@@ -36,7 +37,7 @@ const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
 
 /* Single review row — title + vendor/due subline on the left, amount on the right.
    Mirrors the Accounts row layout on the Finances page. */
-const ReviewRow = ({ item, onClick }: { item: ReviewItemType; onClick: () => void }) => (
+const ReviewRow = ({ item, onClick, format, symbol }: { item: ReviewItemType; onClick: () => void; format: (a: string) => string; symbol: string }) => (
   <div
     onClick={onClick}
     role="button"
@@ -50,12 +51,12 @@ const ReviewRow = ({ item, onClick }: { item: ReviewItemType; onClick: () => voi
         {item.title}
       </p>
       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-        {item.vendor ? `${item.vendor} · ${item.due}` : item.due}
+        {(item.vendor ? `${item.vendor} · ${item.due}` : item.due).replace(/\$(?=\d)/g, symbol)}
       </p>
     </div>
     <div className="flex flex-col items-end justify-center relative shrink-0">
       <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-        {item.amount}
+        {format(item.amount)}
       </p>
     </div>
   </div>
@@ -63,6 +64,7 @@ const ReviewRow = ({ item, onClick }: { item: ReviewItemType; onClick: () => voi
 
 export function ReviewPage() {
   const [activeReview, setActiveReview] = useState<ReviewItemType | null>(null);
+  const { symbol, format } = useCurrency();
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -85,7 +87,7 @@ export function ReviewPage() {
                 <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                   {NEEDS_REVIEW.map((item, idx) => (
                     <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                      <ReviewRow item={item} onClick={() => setActiveReview(item)} />
+                      <ReviewRow item={item} onClick={() => setActiveReview(item)} format={format} symbol={symbol} />
                       {idx < NEEDS_REVIEW.length - 1 && <Divider />}
                     </div>
                   ))}
@@ -102,7 +104,7 @@ export function ReviewPage() {
                     </div>
                     <div className="flex flex-col items-end justify-center relative shrink-0">
                       <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-                        {totalAmount(NEEDS_REVIEW)}
+                        {totalAmount(NEEDS_REVIEW, symbol)}
                       </p>
                     </div>
                   </div>
