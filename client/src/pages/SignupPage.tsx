@@ -20,7 +20,7 @@ export function SignupPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src={robotMoneyLogo} alt="Robot Money" className="h-[24px] w-auto object-contain" />
+        <img src={robotMoneyLogo} alt="Robot Money" className="h-[24px] w-auto object-contain mt-[3px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
