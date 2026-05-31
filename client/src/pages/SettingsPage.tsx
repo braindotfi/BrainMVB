@@ -524,7 +524,7 @@ function ProfileSection() {
             label="KYC Verification"
             right={
               <span
-                className="px-2 py-[3px] rounded-[22px]"
+                className="px-2 py-[3px] rounded-[22px] inline-flex items-center"
                 style={{
                   background: "#123509",
                   color: "#42bf23",
@@ -533,6 +533,7 @@ function ProfileSection() {
                   fontSize: "12px",
                   lineHeight: "14px",
                   border: "1px solid rgba(66,191,35,0.2)",
+                  height: "20px",
                 }}
               >
                 Verified
