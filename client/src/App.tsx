@@ -19,9 +19,6 @@ import { RulesPage } from "@/pages/RulesPage";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
-import { SendModal } from "@/components/SendModal";
-import { ExchangeModal } from "@/components/ExchangeModal";
-import { AddAccountModal } from "@/components/AddAccountModal";
 import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
@@ -32,13 +29,7 @@ function AppLayout() {
   const { toast } = useToast();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
-  const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
-  const [exchangeOpen, setExchangeOpen] = useState(false);
-  const [exchangeCardType, setExchangeCardType] = useState<"wallet" | "bank">("wallet");
   const [addSourceOpen, setAddSourceOpen] = useState(false);
-  const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
-  const [focusSendWithdrawalTrigger, setFocusSendWithdrawalTrigger] = useState<{ seq: number; sourceAccountType: "wallet" | "bank" } | null>(null);
   const [, navigate] = useLocation();
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Refs hold the latest function/value references so the listener-binding
@@ -144,20 +135,6 @@ function AppLayout() {
         <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
 
-      <SendModal
-        open={sendOpen}
-        onClose={() => setSendOpen(false)}
-        sourceAccountType={sendCardType}
-        onConfirmed={(type) =>
-          setFocusSendWithdrawalTrigger(prev => ({ seq: (prev?.seq ?? 0) + 1, sourceAccountType: type }))
-        }
-      />
-      <ExchangeModal
-        open={exchangeOpen}
-        onClose={() => setExchangeOpen(false)}
-        onConfirmed={() => setFocusExchangesTrigger(n => n + 1)}
-        accountType={exchangeCardType}
-      />
       <AddSourceModal
         open={addSourceOpen}
         onClose={() => setAddSourceOpen(false)}
