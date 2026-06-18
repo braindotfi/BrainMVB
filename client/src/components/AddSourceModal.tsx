@@ -424,9 +424,12 @@ function SourceRow({
         onClick={onRemove}
         disabled={removing}
         data-testid={removeTestId}
-        className="px-[10px] py-[6px] rounded-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#fca5a5] hover:bg-[rgba(239,68,68,0.1)] transition-colors disabled:opacity-50"
+        aria-label="Remove"
+        className="shrink-0 size-[36px] rounded-full bg-[#350011] hover:bg-[#4a0018] flex items-center justify-center transition-colors disabled:opacity-50"
       >
-        Remove
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+          <path d="M3 4.5h12M7 4.5V3.3c0-.44.36-.8.8-.8h2.4c.44 0 .8.36.8.8v1.2M14 4.5l-.56 9.13c-.04.6-.54 1.07-1.14 1.07H5.7c-.6 0-1.1-.47-1.14-1.07L4 4.5M7.3 7.6v4.1M10.7 7.6v4.1" stroke="#D20344" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
     </div>
   );
