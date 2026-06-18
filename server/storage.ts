@@ -14,6 +14,7 @@ import {
   notifications as notificationsTable,
   siweNonces as siweNoncesTable,
   bankConnections as bankConnectionsTable,
+  sourceDocuments as sourceDocumentsTable,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -81,6 +82,11 @@ export interface IStorage {
   listBankConnections(userId: string): Promise<BankConnection[]>;
   createBankConnection(conn: BankConnection): Promise<BankConnection>;
   removeBankConnection(userId: string, itemId: string): Promise<boolean>;
+
+  // Source documents (uploaded files registered as an ingestion source)
+  listSourceDocuments(userId: string): Promise<SourceDocument[]>;
+  createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument>;
+  removeSourceDocument(userId: string, id: string): Promise<boolean>;
 }
 
 export type ToolConnection = {
@@ -107,6 +113,24 @@ export type BankConnection = {
   institutionName?: string;
   accounts: BankAccount[];
   connectedAt: string;     // ISO
+};
+
+export type SourceDocument = {
+  id: string;
+  userId: string;
+  name: string;
+  size: number;            // bytes
+  mimeType: string | null;
+  category: string | null; // bank | accounting | payroll | tax | payments | general
+  uploadedAt: string;      // ISO
+};
+
+export type InsertSourceDocument = {
+  userId: string;
+  name: string;
+  size: number;
+  mimeType?: string | null;
+  category?: string | null;
 };
 
 // ─── In-memory implementation (replace with Drizzle+PostgreSQL when DB is provisioned) ───
@@ -425,6 +449,31 @@ export class MemStorage implements IStorage {
   }
   async removeBankConnection(userId: string, itemId: string): Promise<boolean> {
     return this.bankConns.delete(`${userId}::${itemId}`);
+  }
+
+  private sourceDocs = new Map<string, SourceDocument>(); // key = id
+  async listSourceDocuments(userId: string): Promise<SourceDocument[]> {
+    return Array.from(this.sourceDocs.values())
+      .filter(d => d.userId === userId)
+      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  }
+  async createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument> {
+    const created: SourceDocument = {
+      id: randomUUID(),
+      userId: doc.userId,
+      name: doc.name,
+      size: doc.size,
+      mimeType: doc.mimeType ?? null,
+      category: doc.category ?? null,
+      uploadedAt: new Date().toISOString(),
+    };
+    this.sourceDocs.set(created.id, created);
+    return created;
+  }
+  async removeSourceDocument(userId: string, id: string): Promise<boolean> {
+    const existing = this.sourceDocs.get(id);
+    if (!existing || existing.userId !== userId) return false;
+    return this.sourceDocs.delete(id);
   }
 }
 
@@ -791,6 +840,52 @@ export class DatabaseStorage implements IStorage {
       .delete(bankConnectionsTable)
       .where(and(eq(bankConnectionsTable.userId, userId), eq(bankConnectionsTable.itemId, itemId)))
       .returning({ itemId: bankConnectionsTable.itemId });
+    return res.length > 0;
+  }
+
+  // ─── Source documents ───
+  async listSourceDocuments(userId: string): Promise<SourceDocument[]> {
+    const rows = await db
+      .select()
+      .from(sourceDocumentsTable)
+      .where(eq(sourceDocumentsTable.userId, userId))
+      .orderBy(desc(sourceDocumentsTable.uploadedAt));
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      name: r.name,
+      size: r.size,
+      mimeType: r.mimeType,
+      category: r.category,
+      uploadedAt: r.uploadedAt.toISOString(),
+    }));
+  }
+  async createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument> {
+    const [row] = await db
+      .insert(sourceDocumentsTable)
+      .values({
+        userId: doc.userId,
+        name: doc.name,
+        size: doc.size,
+        mimeType: doc.mimeType ?? null,
+        category: doc.category ?? null,
+      })
+      .returning();
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      size: row.size,
+      mimeType: row.mimeType,
+      category: row.category,
+      uploadedAt: row.uploadedAt.toISOString(),
+    };
+  }
+  async removeSourceDocument(userId: string, id: string): Promise<boolean> {
+    const res = await db
+      .delete(sourceDocumentsTable)
+      .where(and(eq(sourceDocumentsTable.userId, userId), eq(sourceDocumentsTable.id, id)))
+      .returning({ id: sourceDocumentsTable.id });
     return res.length > 0;
   }
 }

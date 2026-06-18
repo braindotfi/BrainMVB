@@ -252,3 +252,24 @@ inline in `client/src/pages/HomePage.tsx`:
   custom Figma styling. The "Always …" toggle uses the shadcn `Checkbox`
   (Radix primitive) for accessible checkbox semantics.
 - Confirm/Reject currently just close the modal (no backend wiring).
+
+## Add Source — Data Ingestion Wizard (June 2026)
+Sidebar "Add Source" button (`NavigationMenuSection.tsx`, bg #4a2300/text #ff9500,
+8px above Logout) now opens `client/src/components/AddSourceModal.tsx` — a paginated,
+source-agnostic connector wizard aligned with the Brain data-ingestion architecture.
+- Radix Dialog shell (bg #11141b, border #1d2132, rounded-24, w-480). Navigation is a
+  **screen stack** (`stack: Screen[]`, push/back) — branching, not fixed step dots.
+  Header shows a back button (when depth>1) + contextual title + close.
+- Screens: `home` (connected banks + tools + documents, each removable),
+  `categories` (Bank/Accounting/Payroll/Payments/Tax/Documents), `bank` (Plaid via
+  `react-plaid-link`, mirrors `OnboardingFlow.tsx` StepConnectBank), `providers`
+  (Stripe live via `/api/integrations/stripe/connect`; QuickBooks/Xero/Wave/Gusto/
+  Rippling/ADP/PayPal/Square shown "Coming soon"), `documents` (upload).
+- Bank disconnect: POST `/api/integrations/plaid/disconnect` {itemId}. Tool disconnect:
+  POST `/api/integrations/:toolId/disconnect`.
+- Documents: `sourceDocuments` PG table (`shared/schema.ts`); storage CRUD mirrors
+  bankConnections. Routes `GET/POST /api/integrations/documents` +
+  `POST /api/integrations/documents/:id/delete` (DEMO_USER, zod-validated, registered
+  BEFORE the generic `:toolId/disconnect` so specific routes win).
+  **Only file metadata is persisted — no file bytes / object storage.**
+- `App.tsx` now renders `AddSourceModal` for the Add Source button (was AddAccountModal).

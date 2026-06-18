@@ -22,6 +22,7 @@ import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection"
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
 import { AddAccountModal } from "@/components/AddAccountModal";
+import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 
@@ -153,7 +154,7 @@ function AppLayout() {
         onConfirmed={() => setFocusExchangesTrigger(n => n + 1)}
         accountType={exchangeCardType}
       />
-      <AddAccountModal
+      <AddSourceModal
         open={addSourceOpen}
         onClose={() => setAddSourceOpen(false)}
       />

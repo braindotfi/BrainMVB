@@ -1150,6 +1150,54 @@ Rules:
     }
   });
 
+  /* ──────────────────────────────────────────────────────────────────────
+   *  Source documents (uploaded files registered as an ingestion source)
+   *  NOTE: only file metadata is persisted here — raw bytes are not stored.
+   * ────────────────────────────────────────────────────────────────────── */
+
+  app.get("/api/integrations/documents", async (_req, res) => {
+    try {
+      const list = await storage.listSourceDocuments(DEMO_USER);
+      res.json(list);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/integrations/documents", async (req, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1).max(512),
+        size: z.number().int().nonnegative().max(50 * 1024 * 1024 * 1024),
+        mimeType: z.string().max(256).nullable().optional(),
+        category: z.string().max(64).nullable().optional(),
+      });
+      const parsed = schema.parse(req.body);
+      const doc = await storage.createSourceDocument({
+        userId: DEMO_USER,
+        name: parsed.name,
+        size: parsed.size,
+        mimeType: parsed.mimeType ?? null,
+        category: parsed.category ?? null,
+      });
+      res.json(doc);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payload", details: err.errors });
+      }
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/integrations/documents/:id/delete", async (req, res) => {
+    try {
+      const ok = await storage.removeSourceDocument(DEMO_USER, req.params.id);
+      res.json({ success: ok });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   /* Generic tool disconnect — registered LAST so specific routes (e.g. plaid) win */
   app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
     try {

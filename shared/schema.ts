@@ -150,6 +150,19 @@ export const bankConnections = pgTable("bank_connections", {
   index("bank_connections_user_item_idx").on(t.userId, t.itemId),
 ]);
 
+/* ─── Source Documents (uploaded files registered as an ingestion source) ─── */
+export const sourceDocuments = pgTable("source_documents", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  size: integer("size").notNull(),          // bytes
+  mimeType: text("mime_type"),
+  category: text("category"),               // bank | accounting | payroll | tax | payments | general
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+}, (t) => [
+  index("source_documents_user_id_idx").on(t.userId),
+]);
+
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),
