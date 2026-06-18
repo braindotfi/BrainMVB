@@ -1,7 +1,7 @@
 import { Component, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
-import robotMoneyLogo from "@assets/robotmoney_1779790884383.png";
+import brainLogo from "@assets/BrainLogo_1781769246241.png";
 
 export function SignupPage() {
   const { isLoggedIn } = useAuth();
@@ -20,7 +20,7 @@ export function SignupPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src={robotMoneyLogo} alt="Robot Money" className="h-[24px] w-auto object-contain mt-[13px]" />
+        <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
