@@ -276,7 +276,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
   const total = banks.length + tools.length + docs.length;
 
   return (
-    <div className="flex flex-col gap-[16px]">
+    <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
           Sources Brain reads from
@@ -367,7 +367,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           <path d="M9 3.75V14.25M3.75 9H14.25" stroke="#ff9500" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        Connect a new source
+        Add New Source
       </button>
     </div>
   );
@@ -453,7 +453,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
   };
 
   return (
-    <div className="flex flex-col gap-[16px]">
+    <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
           What would you like to connect?
@@ -1087,7 +1087,7 @@ function ReadingScreen({
   const warningCount = READING_FILES.filter((f) => f.status === "warning").length;
 
   return (
-    <div className="flex flex-col gap-[16px]">
+    <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
           Reading your sources
