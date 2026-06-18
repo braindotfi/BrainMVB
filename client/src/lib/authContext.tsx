@@ -30,6 +30,7 @@ interface AuthContextType {
   wirexLoading: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
+  loginDemo: (fresh: boolean) => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -111,6 +112,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const loginDemo = useCallback(async (fresh: boolean) => {
+    const res = await fetch("/api/auth/demo", {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "Demo login failed");
+    const u = data.user;
+    // Fresh user → see the onboarding flow; existing user → skip it.
+    try {
+      const key = `brain_onboarding_complete_${u.id}`;
+      if (fresh) localStorage.removeItem(key);
+      else localStorage.setItem(key, "1");
+    } catch {
+      /* ignore storage errors */
+    }
+    setUser(u);
+  }, []);
+
   const loginWithGoogle = useCallback(() => {
     window.location.href = "/api/auth/google";
   }, []);
@@ -179,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       wirexLoading,
       loginWithPassword,
       register,
+      loginDemo,
       loginWithGoogle,
       logout,
       deleteAccount,

@@ -117,8 +117,14 @@ The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` in
 - Register accepts `email` + `password` (+ optional `username`, `name`); when no
   username is given it defaults to the email. Login takes `{ identifier, password }`
   where `identifier` is a username OR email (tries email lookup, then username).
-- Routes: `POST /api/auth/register` `/login` `/logout`, `GET /api/auth/user`,
+- Routes: `POST /api/auth/register` `/login` `/logout` `/demo`, `GET /api/auth/user`,
   `GET /api/auth/google` (redirect) + `/api/auth/google/callback`.
+- `POST /api/auth/demo` logs into a shared demo account (`demo@brain.finance`,
+  created on first use) and sets a real session — no credentials needed. The
+  `SignupPage` "Continue with Demo - Existing/Fresh User" buttons call
+  `loginDemo(fresh)` in `authContext`, which sets/clears the
+  `brain_onboarding_complete_<userId>` localStorage flag so Fresh shows the
+  onboarding flow and Existing skips it.
   `GET /api/config` returns `{ googleEnabled }` (true only when both Google
   secrets are set).
 - Google OAuth callback redirects failures to `/?auth_error=<code>`

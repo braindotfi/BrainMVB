@@ -169,6 +169,22 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
+  // ─── Demo login (no credentials) — explore the app with a shared demo account ───
+  app.post("/api/auth/demo", async (req, res) => {
+    const DEMO_EMAIL = "demo@brain.finance";
+    let user = await storage.getUserByEmail(DEMO_EMAIL);
+    if (!user) {
+      user = await storage.createUser({
+        username: DEMO_EMAIL,
+        email: DEMO_EMAIL,
+        password: null,
+        name: "ACME Inc.",
+      });
+    }
+    req.session.userId = user.id;
+    return res.json({ user: publicUser(user) });
+  });
+
   // ─── Current session user ───
   app.get("/api/auth/user", async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
