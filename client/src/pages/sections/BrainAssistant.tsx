@@ -5,8 +5,6 @@ import {
   ArrowUp,
   ChevronDown,
   Search,
-  Check,
-  X,
   CalendarDays,
   SquarePen,
 } from "lucide-react";
@@ -129,21 +127,6 @@ const SEED_SESSIONS: ChatSession[] = [
 ];
 
 const GROUP_ORDER = ["Today", "Jun 2026"];
-
-function StatusBadge({ status }: { status: "complete" | "fail" }) {
-  if (status === "complete") {
-    return (
-      <div className="flex-shrink-0 size-[20px] rounded-full flex items-center justify-center" style={{ background: "#1f3d2b" }}>
-        <Check className="size-[12px]" strokeWidth={2.5} color="#34d27b" />
-      </div>
-    );
-  }
-  return (
-    <div className="flex-shrink-0 size-[20px] rounded-full flex items-center justify-center" style={{ background: "#3d1f24" }}>
-      <X className="size-[12px]" strokeWidth={2.5} color="#f4607a" />
-    </div>
-  );
-}
 
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [sessions, setSessions] = useState<ChatSession[]>(SEED_SESSIONS);
@@ -439,8 +422,6 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         <span className="block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
                           {session.id === activeSessionId ? (
                             <img src={activeConvoIcon} alt="Active conversation" className="size-[20px] block" />
-                          ) : session.status ? (
-                            <StatusBadge status={session.status} />
                           ) : null}
                         </span>
                       </div>

@@ -50,6 +50,7 @@ Programmable neobank on Base L2.
   right-side 20px icon — green "Active" PNG (`@assets/Active_*.png`) on the active
   conversation, swapped to a red "Delete" PNG (`@assets/Delete_*.png`) on
   hover/focus (keyboard-accessible via `group-focus-within`, not display:none).
+  The old per-row complete/fail status badges (green check / red X) were removed.
   Delete calls `deleteSession(id)` (removes the session, clears `activeSessionId`
   if it was active). Rows are `div role="button"` (so the delete `<button>` nests
   validly); the row keydown handler early-returns when the event target isn't the
