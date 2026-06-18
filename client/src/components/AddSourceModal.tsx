@@ -282,7 +282,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
           Sources Brain reads from
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Everything connected to your financial memory. Remove any source any time — Brain only reads, never writes without your approval.
+          Everything connected to your financial memory. Remove any source any time. Brain only reads, and never writes without your approval.
         </p>
       </div>
 
@@ -459,7 +459,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
           What would you like to connect?
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Pick a category. Brain treats every source the same way — reads it, structures it, and adds it to your financial memory.
+          Pick a category. Brain treats every source the same way. It reads it, structures it, and adds it to your financial memory.
         </p>
       </div>
 
@@ -776,7 +776,7 @@ function ProviderPicker({ category }: { category: CategoryId }) {
           Connect {CATEGORY_META[category].label.toLowerCase()}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain reads from each tool you connect — never writes back without your explicit approval.
+          Brain reads from each tool you connect, and never writes back without your explicit approval.
         </p>
       </div>
 
@@ -1066,7 +1066,7 @@ function ReadStatusIcon({ status }: { status: ReadStatus }) {
     <img
       src={READ_STATUS_ICON[status]}
       alt={READ_STATUS_ALT[status]}
-      className="size-[28px] shrink-0"
+      className={`size-[28px] shrink-0${status === "processing" ? " animate-spin" : ""}`}
     />
   );
 }
@@ -1093,7 +1093,7 @@ function ReadingScreen({
           Reading your sources
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          This usually takes 1 to 3 minutes. You can keep using Brain while it finishes.
+          Brain is reviewing your new connected sources. This usually takes a few minutes.
         </p>
       </div>
 
@@ -1375,7 +1375,7 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
         type="button"
         onClick={onFinish}
         data-testid="button-found-finish"
-        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#16a34a] hover:bg-[#15873f] text-white"
+        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#123509] hover:bg-[#173f0c] text-[#42bf23]"
       >
         Finish
       </button>
