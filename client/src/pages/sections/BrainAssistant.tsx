@@ -6,10 +6,9 @@ import {
   ChevronDown,
   Search,
   SquarePen,
+  CalendarDays,
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
-import timeIcon from "@assets/Time_1781819514942.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
 import newSessionActiveIcon from "@assets/New_Session_Active_1781817819809.png";
 import newSessionInactiveIcon from "@assets/New_Session_Inactive_1781817819807.png";
@@ -236,8 +235,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
     setSending(true);
     try {
-      const res = await apiRequest("POST", "/api/assistant/chat", { messages: history });
-      const data = await res.json();
+      const res = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ messages: history }),
+      });
+      const data = await res.json().catch(() => null);
       const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
       setSessions((prev) =>
         prev.map((s) =>
@@ -510,7 +514,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               <div key={msg.id} className="flex flex-col gap-[12px]">
                 {msg.dateTag && (
                   <div className="flex items-center justify-center gap-[4px] py-[2px]">
-                    <img src={timeIcon} alt="" className="size-[12px] block" />
+                    <CalendarDays className="size-[12px]" color="#6c779d" strokeWidth={2} />
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] tracking-[-0.48px]">
                       {msg.dateTag}
                     </span>

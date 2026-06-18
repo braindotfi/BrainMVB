@@ -375,7 +375,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       .max(50),
   });
 
-  app.post("/api/assistant/chat", async (req, res) => {
+  app.post("/api/assistant/chat", requireAuth, async (req, res) => {
     const parsed = assistantChatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "invalid_messages" });
@@ -402,6 +402,20 @@ You can explain concepts and surface general guidance, but do not give regulated
       return res.json({ reply: reply || "Sorry, I couldn't generate a response. Please try again." });
     } catch (err) {
       console.error("[Assistant] chat failed:", err);
+      const status = (err as { status?: number })?.status;
+      const e = err as {
+        message?: string;
+        error?: { message?: string; error?: { message?: string } };
+      };
+      const apiMsg =
+        e?.error?.error?.message ?? e?.error?.message ?? e?.message ?? "";
+      if (status === 400 && /credit balance/i.test(apiMsg)) {
+        return res.status(402).json({
+          error: "assistant_no_credit",
+          reply:
+            "I can't answer right now — the Anthropic API key has no available credit. Please add credits or billing at console.anthropic.com to enable live answers.",
+        });
+      }
       return res.status(500).json({
         error: "assistant_failed",
         reply: "Something went wrong reaching the assistant. Please try again.",

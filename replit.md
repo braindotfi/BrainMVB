@@ -61,6 +61,23 @@ Programmable neobank on Base L2.
 - The old Send/Exchange modals remain rendered in `App.tsx` but are no longer
   openable (their only trigger was the removed account panel) — left in place as
   dead-but-harmless until a future cleanup.
+- **Live Claude chat (June 2026)**: `sendMessage` is async — it optimistically
+  appends the user bubble (creating a session if none) + an empty assistant
+  placeholder that renders an animated typing indicator, then `fetch`es
+  `POST /api/assistant/chat` ({messages:[{role,content}…]}). It reads the JSON
+  body even on non-2xx (so backend error `reply` strings reach the UI) and falls
+  back to `CANNED_REPLY`. A `sending` state disables the send button. The
+  collapsed Expand button calls `expandToLastSession` (opens the most recent
+  session, `sessions[0]`, instead of starting a new chat).
+- Backend route `POST /api/assistant/chat` (`server/routes.ts`, `requireAuth`):
+  zod-validated `messages`, Claude `claude-opus-4-5` with a Brain financial-assistant
+  system prompt. Returns 503 `assistant_unconfigured` when `ANTHROPIC_API_KEY`
+  unset, 402 `assistant_no_credit` (friendly reply) on Anthropic "credit balance
+  too low", 500 `assistant_failed` otherwise. Each error path includes a
+  user-facing `reply` string.
+- The timestamp divider still uses the lucide `CalendarDays` icon — the requested
+  "Time" PNG was never present in `attached_assets/`, so swapping it is pending the
+  asset being attached.
 
 ## Onboarding & Plaid
 - `client/src/components/OnboardingFlow.tsx` — 8-step onboarding modal; step 1 (`StepConnectBank`) uses Plaid Link to connect real bank accounts (sandbox by default).
