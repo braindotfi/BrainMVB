@@ -5,7 +5,7 @@ Programmable neobank on Base L2.
 ## Stack
 - **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Express.js (same server via Vite proxy)
-- **Auth**: Custom email+password (scrypt-hashed) + Google OAuth 2.0, express-session cookie sessions (`server/auth.ts`)
+- **Auth**: Custom username/email + password (scrypt-hashed) + Google OAuth 2.0, express-session cookie sessions (`server/auth.ts`). Login accepts a username OR email as the identifier.
 - **Web3**: wagmi v2, viem, RainbowKit (wallet connection; SIWE retained but no longer the primary login)
 - **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`) — retained for future use
 - **DB**: Drizzle ORM + PostgreSQL (DatabaseStorage, falls back to MemStorage if no DATABASE_URL)
@@ -114,6 +114,9 @@ The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` in
 - Backend: `server/auth.ts` — express-session (cookie), scrypt password hashing,
   manual Google OAuth 2.0 (no passport). `setupAuth(app)` wires session + routes.
   `requireAuth` middleware guards protected routes via `req.session.userId`.
+- Register accepts `email` + `password` (+ optional `username`, `name`); when no
+  username is given it defaults to the email. Login takes `{ identifier, password }`
+  where `identifier` is a username OR email (tries email lookup, then username).
 - Routes: `POST /api/auth/register` `/login` `/logout`, `GET /api/auth/user`,
   `GET /api/auth/google` (redirect) + `/api/auth/google/callback`.
   `GET /api/config` returns `{ googleEnabled }` (true only when both Google

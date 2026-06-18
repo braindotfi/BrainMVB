@@ -13,7 +13,9 @@ export function SignupPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // login: username OR email
+  const [username, setUsername] = useState(""); // register
+  const [email, setEmail] = useState(""); // register
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,21 +60,33 @@ export function SignupPage() {
     if (submitting) return;
     setError(null);
 
-    if (!email.trim() || !password) {
-      setError("Email and password are required.");
-      return;
-    }
-    if (mode === "register" && password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
+    if (mode === "login") {
+      if (!identifier.trim() || !password) {
+        setError("Username/email and password are required.");
+        return;
+      }
+    } else {
+      if (!email.trim() || !password) {
+        setError("Email and password are required.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
       if (mode === "login") {
-        await loginWithPassword(email.trim(), password);
+        await loginWithPassword(identifier.trim(), password);
       } else {
-        await register({ email: email.trim(), password, name: name.trim() || undefined });
+        await register({
+          email: email.trim(),
+          username: username.trim() || undefined,
+          password,
+          name: name.trim() || undefined,
+        });
       }
       navigate("/");
     } catch (err) {
@@ -87,6 +101,8 @@ export function SignupPage() {
     setMode(next);
     setError(null);
     setPassword("");
+    setIdentifier("");
+    setUsername("");
   };
 
   return (
@@ -150,20 +166,54 @@ export function SignupPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
-                Email
-              </label>
-              <input
-                data-testid="input-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
-              />
-            </div>
+            {mode === "login" ? (
+              <div className="flex flex-col gap-1.5">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                  Username or email
+                </label>
+                <input
+                  data-testid="input-identifier"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="username"
+                  placeholder="yourname or you@example.com"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                    Username
+                  </label>
+                  <input
+                    data-testid="input-username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
+                    placeholder="yourname"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                    Email
+                  </label>
+                  <input
+                    data-testid="input-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">

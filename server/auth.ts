@@ -60,12 +60,20 @@ function googleCallbackUrl(req: Request): string {
 
 const registerSchema = z.object({
   email: z.string().email(),
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username may only contain letters, numbers, and underscores")
+    .optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().trim().min(1).max(80).optional(),
 });
 
+// `identifier` is a username OR an email — either may be used to log in.
 const loginSchema = z.object({
-  email: z.string().min(1),
+  identifier: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -111,15 +119,24 @@ export function setupAuth(app: Express) {
     }
     const email = parsed.data.email.toLowerCase().trim();
     const { password, name } = parsed.data;
+    const username = parsed.data.username?.trim() || email;
 
     const existing = await storage.getUserByEmail(email);
     if (existing) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
+    // Only enforce username uniqueness when the user picked a custom one
+    // (otherwise it defaults to the email, which is already checked above).
+    if (parsed.data.username) {
+      const taken = await storage.getUserByUsername(username);
+      if (taken) {
+        return res.status(409).json({ error: "That username is already taken" });
+      }
+    }
 
     const hashed = await hashPassword(password);
     const user = await storage.createUser({
-      username: email,
+      username,
       email,
       password: hashed,
       name: name ?? null,
@@ -133,19 +150,19 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/login", async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ error: "Username/email and password are required" });
     }
-    const identifier = parsed.data.email.toLowerCase().trim();
+    const idRaw = parsed.data.identifier.trim();
     const user =
-      (await storage.getUserByEmail(identifier)) ??
-      (await storage.getUserByUsername(parsed.data.email.trim()));
+      (await storage.getUserByEmail(idRaw.toLowerCase())) ??
+      (await storage.getUserByUsername(idRaw));
 
     if (!user || !user.password) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid username/email or password" });
     }
     const ok = await verifyPassword(user.password, parsed.data.password);
     if (!ok) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
     req.session.userId = user.id;

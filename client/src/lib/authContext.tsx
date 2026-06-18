@@ -28,8 +28,8 @@ interface AuthContextType {
   isLoading: boolean;
   wirexAccounts: WirexAccount[];
   wirexLoading: boolean;
-  loginWithPassword: (email: string, password: string) => Promise<void>;
-  register: (params: { email: string; password: string; name?: string }) => Promise<void>;
+  loginWithPassword: (identifier: string, password: string) => Promise<void>;
+  register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -84,12 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.email) refreshWirexAccounts();
   }, [user?.email, refreshWirexAccounts]);
 
-  const loginWithPassword = useCallback(async (email: string, password: string) => {
+  const loginWithPassword = useCallback(async (identifier: string, password: string) => {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Login failed");
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (params: { email: string; password: string; name?: string }) => {
+    async (params: { email: string; username?: string; password: string; name?: string }) => {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
