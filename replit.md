@@ -5,7 +5,8 @@ Programmable neobank on Base L2.
 ## Stack
 - **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Express.js (same server via Vite proxy)
-- **Web3**: wagmi v2, viem, RainbowKit (wallet connection + SIWE auth)
+- **Auth**: Custom email+password (scrypt-hashed) + Google OAuth 2.0, express-session cookie sessions (`server/auth.ts`)
+- **Web3**: wagmi v2, viem, RainbowKit (wallet connection; SIWE retained but no longer the primary login)
 - **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`) — retained for future use
 - **DB**: Drizzle ORM + PostgreSQL (DatabaseStorage, falls back to MemStorage if no DATABASE_URL)
 - **Smart Contracts**: Hardhat + Base Sepolia (in `contracts/`)
@@ -27,6 +28,23 @@ Programmable neobank on Base L2.
 - Marketplace (Marketplace.tsx, FeaturedCarousel, MainContentSection, PerksPage)
 - Agent wallet/debit cards from AccountOverviewSection
 - `/api/agents` and `/api/marketplace` server routes
+- **Crossmint (removed June 2026)**: all `@crossmint/client-sdk-react-ui` code, the
+  `/api/crossmint/wallet` route, `.crossmint-form-wrapper` CSS, and the right-hand
+  `AccountOverviewSection` panel (replaced by Brain Assistant). NOTE: uninstalling
+  `@crossmint` dropped its transitive `tweetnacl` dep, which `vite.config.ts` reads
+  directly (`node_modules/tweetnacl/nacl-fast.js`) — `tweetnacl` is now a **direct**
+  dependency so the dev server boots. Do not remove it.
+
+## Brain Assistant Panel (June 2026)
+- `client/src/pages/sections/BrainAssistant.tsx` replaces the old right-hand account
+  panel in `App.tsx`. UI-only chat (no real LLM): collapsed rail (`w-[56px]`) /
+  expanded (`w-[390px]`); empty greeting state, user/assistant bubbles, suggested
+  chips, input (Plus/Mic/ArrowUp), and a session dropdown with search + status badges.
+  Built from Figma file `cC2lQwC3g9hv96o5Wgy8Ek` (Default 4658-61281, Conversation
+  4952-63232, Dropdown 4948-62054, Dropdown Search 4952-64034).
+- The old Send/Exchange modals remain rendered in `App.tsx` but are no longer
+  openable (their only trigger was the removed account panel) — left in place as
+  dead-but-harmless until a future cleanup.
 
 ## Onboarding & Plaid
 - `client/src/components/OnboardingFlow.tsx` — 8-step onboarding modal; step 1 (`StepConnectBank`) uses Plaid Link to connect real bank accounts (sandbox by default).
@@ -38,7 +56,6 @@ Programmable neobank on Base L2.
 ## API Endpoints
 - `POST /api/auth/siwe/nonce` / `/verify` / `/logout` — SIWE auth
 - `GET /api/wirex/accounts` — WireX neobank accounts (demo fallback active)
-- `GET /api/crossmint/wallet` — Crossmint embedded wallet
 - `GET /api/contracts/info` — Contract addresses + chain config
 - `GET /api/contracts/account/:ownerAddress` — BrainAccount address (deployed or counterfactual)
 - `POST /api/contracts/deploy-account` — Deploy BrainAccount via factory (CREATE2)
@@ -82,17 +99,37 @@ The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` in
 
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (already configured)
-- `CROSSMINT_CLIENT_API_KEY` + `CROSSMINT_SERVER_API_KEY` — Crossmint embedded wallets
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` — Google OAuth 2.0 login (optional;
+  when unset, `/api/config` returns `googleEnabled:false` and the Google button is
+  hidden — email/password login still works). Authorized redirect URI must be
+  `<app-origin>/api/auth/google/callback`.
+- `SESSION_SECRET` — express-session signing secret (falls back to a dev default if unset).
 - `WIREX_CLIENT_ID` + `WIREX_CLIENT_SECRET` — WireX neobank (auth broken, demo active)
 - `ALCHEMY_API_KEY` — For RPC + contract deployment (optional, falls back to public RPC)
 - `DEPLOYER_PRIVATE_KEY` — For Base Sepolia contract deploy
 - `POLICY_SIGNER_PRIVATE_KEY` — Brain backend policy engine signing key
 - `BASESCAN_API_KEY` — For contract verification on BaseScan
 
-## Auth Context
-- `AuthProvider` in `web3Provider.tsx`
-- Demo user ID = `"demo-user"` (no wallet needed for UI preview)
-- SIWE auth at `/api/auth/nonce` + `/api/auth/verify`
+## Auth Context (rebuilt June 2026 — custom login)
+- Backend: `server/auth.ts` — express-session (cookie), scrypt password hashing,
+  manual Google OAuth 2.0 (no passport). `setupAuth(app)` wires session + routes.
+  `requireAuth` middleware guards protected routes via `req.session.userId`.
+- Routes: `POST /api/auth/register` `/login` `/logout`, `GET /api/auth/user`,
+  `GET /api/auth/google` (redirect) + `/api/auth/google/callback`.
+  `GET /api/config` returns `{ googleEnabled }` (true only when both Google
+  secrets are set).
+- Google OAuth callback redirects failures to `/?auth_error=<code>`
+  (`google_unconfigured|google_state|google_token|google_profile|google_failed`);
+  `SignupPage.tsx` maps these to friendly messages and strips the param from the URL.
+- Frontend: `client/src/lib/authContext.tsx` — session-based context
+  (`loginWithPassword`, `register`, `loginWithGoogle`, `logout`, `AuthUser`, `isLoading`),
+  bootstraps from `/api/auth/user`. `App.tsx` gates the whole app on `isLoggedIn`
+  and shows `SignupPage` otherwise.
+- `client/src/pages/SignupPage.tsx` — dark-theme login/register tabs; Google button
+  only renders when `googleEnabled` (uses `react-icons/si` `SiGoogle`).
+- Destructive routes `DELETE /api/account` + `/api/account/data` now require
+  `requireAuth` and derive the target user from the session — body identifiers are ignored.
+- SIWE routes (`/api/auth/siwe/*`) remain but are no longer the primary login.
 
 ## Critical Bug Patterns
 - NEVER use derived arrays as `useEffect` dependency arrays — use primitive values

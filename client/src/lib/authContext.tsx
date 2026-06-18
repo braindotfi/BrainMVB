@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { queryClient } from "./queryClient";
 
-export interface CrossmintUser {
+export interface AuthUser {
   id: string;
-  email?: string;
-  walletAddress?: string;
+  username?: string;
+  email?: string | null;
+  name?: string | null;
+  walletAddress?: string | null;
 }
 
 export interface WirexAccount {
@@ -21,34 +23,46 @@ export interface WirexAccount {
 }
 
 interface AuthContextType {
-  user: CrossmintUser | null;
+  user: AuthUser | null;
   isLoggedIn: boolean;
   isLoading: boolean;
   wirexAccounts: WirexAccount[];
   wirexLoading: boolean;
-  login: () => void;
-  logout: () => void;
+  loginWithPassword: (email: string, password: string) => Promise<void>;
+  register: (params: { email: string; password: string; name?: string }) => Promise<void>;
+  loginWithGoogle: () => void;
+  logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   deleteAccountData: () => Promise<void>;
-  setUserAndAccounts: (user: CrossmintUser, accounts: WirexAccount[]) => void;
   refreshWirexAccounts: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const USER_KEY = "brain_auth_user";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CrossmintUser | null>(() => {
-    try {
-      const stored = sessionStorage.getItem(USER_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [wirexAccounts, setWirexAccounts] = useState<WirexAccount[]>([]);
   const [wirexLoading, setWirexLoading] = useState(false);
-  const [loginRequested, setLoginRequested] = useState(false);
+
+  // Bootstrap the session from the server cookie on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/user", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setUser(data.user ?? null);
+        }
+      } catch {
+        /* not logged in */
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const refreshWirexAccounts = useCallback(async () => {
     if (!user?.email) return;
@@ -66,50 +80,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.email]);
 
-  // Fetch the real Crossmint wallet address if we don't already have one
-  const refreshWalletAddress = useCallback(async (userId: string, email?: string) => {
+  useEffect(() => {
+    if (user?.email) refreshWirexAccounts();
+  }, [user?.email, refreshWirexAccounts]);
+
+  const loginWithPassword = useCallback(async (email: string, password: string) => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "Login failed");
+    setUser(data.user);
+  }, []);
+
+  const register = useCallback(
+    async (params: { email: string; password: string; name?: string }) => {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(params),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Registration failed");
+      setUser(data.user);
+    },
+    [],
+  );
+
+  const loginWithGoogle = useCallback(() => {
+    window.location.href = "/api/auth/google";
+  }, []);
+
+  const logout = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ userId });
-      if (email) params.set("email", email);
-      const res = await fetch(`/api/crossmint/wallet?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.address) {
-          setUser((prev) => {
-            if (!prev || prev.walletAddress === data.address) return prev;
-            const updated = { ...prev, walletAddress: data.address };
-            try { sessionStorage.setItem(USER_KEY, JSON.stringify(updated)); } catch {}
-            return updated;
-          });
-        }
-      }
-    } catch (e) {
-      console.error("Failed to fetch Crossmint wallet address:", e);
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+      /* ignore */
     }
-  }, []);
-
-  useEffect(() => {
-    if (user?.email) {
-      refreshWirexAccounts();
-    }
-  }, [user?.email]);
-
-  // Whenever we have a userId but no wallet address, try to resolve it
-  useEffect(() => {
-    if (user?.id && !user?.walletAddress) {
-      refreshWalletAddress(user.id, user?.email);
-    }
-  }, [user?.id, user?.walletAddress]);
-
-  const login = useCallback(() => {
-    setLoginRequested(true);
-  }, []);
-
-  const logout = useCallback(() => {
-    sessionStorage.removeItem(USER_KEY);
     setUser(null);
     setWirexAccounts([]);
-    setLoginRequested(false);
+    queryClient.clear();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -118,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await fetch("/api/account", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         userId: current.id,
         email: current.email,
@@ -128,11 +143,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error || `Account deletion failed (${res.status})`);
     }
-    // Account is gone — clear local session.
-    sessionStorage.removeItem(USER_KEY);
+    try { await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } catch {}
     setUser(null);
     setWirexAccounts([]);
-    setLoginRequested(false);
+    queryClient.clear();
   }, [user]);
 
   const deleteAccountData = useCallback(async () => {
@@ -141,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await fetch("/api/account/data", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         userId: current.id,
         email: current.email,
@@ -151,19 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error || `Data deletion failed (${res.status})`);
     }
-    // Data is wiped, but the user account remains so the session stays valid.
-    // Clear all React Query caches so stale agent / notification / transaction
-    // data doesn't linger in the UI after deletion.
     queryClient.clear();
     setWirexAccounts([]);
   }, [user]);
-
-  const setUserAndAccounts = useCallback((u: CrossmintUser, accounts: WirexAccount[]) => {
-    sessionStorage.setItem(USER_KEY, JSON.stringify(u));
-    setUser(u);
-    setWirexAccounts(accounts);
-    setLoginRequested(false);
-  }, []);
 
   return (
     <AuthContext.Provider value={{
@@ -172,11 +177,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       wirexAccounts,
       wirexLoading,
-      login,
+      loginWithPassword,
+      register,
+      loginWithGoogle,
       logout,
       deleteAccount,
       deleteAccountData,
-      setUserAndAccounts,
       refreshWirexAccounts,
     }}>
       {children}

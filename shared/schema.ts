@@ -10,14 +10,20 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: text("email").unique(),
+  password: text("password"),                  // nullable: Google-only accounts have no password
+  googleId: text("google_id").unique(),        // Google OAuth subject id
+  name: text("name"),                          // display name (from Google profile or signup)
   walletAddress: text("wallet_address").unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
+  googleId: true,
+  name: true,
   walletAddress: true,
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;

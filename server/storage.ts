@@ -20,7 +20,7 @@ import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
-  userId?: string;          // Crossmint id (free-form) — also used as agents.ownerId
+  userId?: string;          // app user id (free-form) — also used as agents.ownerId
   email?: string;           // mapped to users.username when SIWE created the row
   walletAddress?: string;   // canonical link to users.wallet_address
 }
@@ -40,6 +40,8 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserWallet(id: string, walletAddress: string): Promise<User | undefined>;
@@ -179,12 +181,28 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string) {
     return Array.from(this.users.values()).find(u => u.username === username);
   }
+  async getUserByEmail(email: string) {
+    const lower = email.toLowerCase();
+    return Array.from(this.users.values()).find(u => u.email?.toLowerCase() === lower);
+  }
+  async getUserByGoogleId(googleId: string) {
+    return Array.from(this.users.values()).find(u => u.googleId === googleId);
+  }
   async getUserByWallet(walletAddress: string) {
     return Array.from(this.users.values()).find(u => u.walletAddress === walletAddress);
   }
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id, walletAddress: insertUser.walletAddress ?? null, createdAt: new Date() };
+    const user: User = {
+      ...insertUser,
+      id,
+      email: insertUser.email ?? null,
+      password: insertUser.password ?? null,
+      googleId: insertUser.googleId ?? null,
+      name: insertUser.name ?? null,
+      walletAddress: insertUser.walletAddress ?? null,
+      createdAt: new Date(),
+    };
     this.users.set(id, user);
     return user;
   }
@@ -509,6 +527,14 @@ export class DatabaseStorage implements IStorage {
   }
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [row] = await db.select().from(usersTable).where(eq(usersTable.username, username)).limit(1);
+    return row ?? undefined;
+  }
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    return row ?? undefined;
+  }
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [row] = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId)).limit(1);
     return row ?? undefined;
   }
   async getUserByWallet(walletAddress: string): Promise<User | undefined> {

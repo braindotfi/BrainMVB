@@ -18,7 +18,7 @@ import { ReviewPage } from "@/pages/ReviewPage";
 import { RulesPage } from "@/pages/RulesPage";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
-import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
+import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
 import { AddAccountModal } from "@/components/AddAccountModal";
@@ -27,7 +27,7 @@ import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 
 function AppLayout() {
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, isLoading, logout } = useAuth();
   const { timeoutMin } = useSessionTimeout();
   const { toast } = useToast();
   const [navCollapsed, setNavCollapsed] = useState(false);
@@ -85,6 +85,14 @@ function AppLayout() {
     };
   }, [isLoggedIn, timeoutMin]);
 
+  if (isLoading) {
+    return (
+      <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-[#1d2132] border-t-[#7631ee] animate-spin" />
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
     return <SignupPage />;
   }
@@ -122,13 +130,9 @@ function AppLayout() {
           </Switch>
         </div>
 
-        <AccountOverviewSection
+        <BrainAssistant
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
-          onSend={(cardType) => { setSendCardType(cardType); setSendOpen(true); }}
-          onExchange={(cardType) => { setExchangeCardType(cardType); setExchangeOpen(true); }}
-          focusExchangesTrigger={focusExchangesTrigger}
-          focusSendWithdrawalTrigger={focusSendWithdrawalTrigger}
         />
       </div>
 

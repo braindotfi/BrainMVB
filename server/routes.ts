@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
+import { setupAuth, googleEnabled, requireAuth } from "./auth";
 import { keccak256, toBytes } from "viem";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -214,6 +215,11 @@ const GOAL_REC_FALLBACK: Record<string, string> = {
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
   // ─────────────────────────────────────────────────────────────
+  // AUTH (session + email/password + Google OAuth)
+  // ─────────────────────────────────────────────────────────────
+  setupAuth(app);
+
+  // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
   // ─────────────────────────────────────────────────────────────
   app.get("/api/account/balance", async (req, res) => {
@@ -243,17 +249,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     ]);
   });
 
-  // DELETE /api/account — permanently delete the user account and all associated records.
-  // Body: { userId?, email?, walletAddress? } — at least one is required.
-  app.delete("/api/account", async (req, res) => {
+  // DELETE /api/account — permanently delete the authenticated user's account and
+  // all associated records. The target user is derived from the session — never the body.
+  app.delete("/api/account", requireAuth, async (req, res) => {
     try {
-      const { userId, email, walletAddress } = (req.body ?? {}) as {
-        userId?: string; email?: string; walletAddress?: string;
-      };
-      if (!userId && !email && !walletAddress) {
-        return res.status(400).json({ error: "userId, email, or walletAddress required" });
-      }
-      const result = await storage.deleteUserAccount({ userId, email, walletAddress });
+      const userId = req.session.userId!;
+      const result = await storage.deleteUserAccount({ userId });
+      req.session.destroy(() => {});
       return res.json({ success: true, deleted: result });
     } catch (error: any) {
       console.error("Delete account error:", error);
@@ -261,19 +263,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // DELETE /api/account/data — purge all user-owned records (agents, memories,
+  // DELETE /api/account/data — purge all user-owned records (memories,
   // transactions, notifications) but KEEP the user account itself so the user
   // remains logged in and can rebuild their data from scratch.
-  // Body: { userId?, email?, walletAddress? } — at least one is required.
-  app.delete("/api/account/data", async (req, res) => {
+  // The target user is derived from the session — never the body.
+  app.delete("/api/account/data", requireAuth, async (req, res) => {
     try {
-      const { userId, email, walletAddress } = (req.body ?? {}) as {
-        userId?: string; email?: string; walletAddress?: string;
-      };
-      if (!userId && !email && !walletAddress) {
-        return res.status(400).json({ error: "userId, email, or walletAddress required" });
-      }
-      const result = await storage.deleteUserData({ userId, email, walletAddress });
+      const userId = req.session.userId!;
+      const result = await storage.deleteUserData({ userId });
       return res.json({ success: true, deleted: result });
     } catch (error: any) {
       console.error("Delete data error:", error);
@@ -410,102 +407,23 @@ Rules:
   // ─────────────────────────────────────────────────────────────
   app.get("/api/config", (_req, res) => {
     return res.json({
-      crossmintApiKey: process.env.CROSSMINT_CLIENT_API_KEY || "",
+      googleEnabled,
     });
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // CROSSMINT WALLET LOOKUP
-  // ─────────────────────────────────────────────────────────────
-
-  // GET /api/crossmint/wallet?userId=... — look up a user's embedded wallet address
-  const crossmintWalletCache = new Map<string, { address: string | null; expiresAt: number }>();
-
-  app.get("/api/crossmint/wallet", async (req, res) => {
-    const { userId } = req.query as { userId?: string };
-    if (!userId) return res.status(400).json({ error: "userId required" });
-
-    const { email } = req.query as { email?: string };
-    const cacheKey = `${userId}:${email ?? ""}`;
-    const cached = crossmintWalletCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return res.json({ address: cached.address, cached: true });
-    }
-
-    // Prefer the server-side key (required by Crossmint REST API); fall back to client key
-    const apiKey = process.env.CROSSMINT_SERVER_API_KEY || process.env.CROSSMINT_CLIENT_API_KEY;
-    if (!apiKey) return res.json({ address: null });
-
-    // Crossmint staging REST API — try both v1 and v2 locator patterns
-    const baseUrl = apiKey.startsWith("ck_staging_") || apiKey.startsWith("sk_staging_")
-      ? "https://staging.crossmint.com"
-      : "https://www.crossmint.com";
-
-    const headers = { "X-API-Key": apiKey, "Content-Type": "application/json" };
-
-    // Wallet locator format: userId:<id>:<walletType>
-    const locators: string[] = [`userId:${userId}:evm-smart-wallet`];
-    if (email) locators.push(`email:${encodeURIComponent(email)}:evm-smart-wallet`);
-
-    for (const locator of locators) {
-      const url = `${baseUrl}/api/2022-06-09/wallets/${locator}`;
-      try {
-        console.log("[Crossmint] Looking up wallet:", locator);
-        const resp = await fetch(url, { headers });
-        const txt = await resp.text();
-        console.log("[Crossmint] Wallet lookup:", resp.status, txt.slice(0, 200));
-        if (resp.ok) {
-          const data = JSON.parse(txt);
-          const wallet = Array.isArray(data) ? data[0] : data;
-          const address = wallet?.address ?? wallet?.publicKey ?? null;
-          if (address) {
-            crossmintWalletCache.set(cacheKey, { address, expiresAt: Date.now() + 5 * 60 * 1000 });
-            return res.json({ address });
-          }
-        }
-      } catch (e: any) {
-        console.error("[Crossmint] Wallet lookup error:", e.message);
-      }
-    }
-
-    crossmintWalletCache.set(cacheKey, { address: null, expiresAt: Date.now() + 2 * 60 * 1000 });
-    return res.json({ address: null });
   });
 
   // ─────────────────────────────────────────────────────────────
   // WIREX INTEGRATION
   // ─────────────────────────────────────────────────────────────
 
-  // POST /api/wirex/onboard — called after Crossmint login to provision WireX accounts
+  // POST /api/wirex/onboard — provision WireX accounts for a user (by email)
   app.post("/api/wirex/onboard", async (req, res) => {
     try {
       const { userId, email } = req.body;
-      let { walletAddress } = req.body;
+      const { walletAddress } = req.body;
       console.log("[Onboard] userId:", userId, "email:", email, "walletAddress:", walletAddress);
       if (!email) return res.status(400).json({ error: "email required" });
 
-      // If wallet address not provided by client, fetch it from Crossmint API server-side
-      if (!walletAddress && email) {
-        try {
-          const crossmintKey = process.env.CROSSMINT_SERVER_API_KEY || process.env.CROSSMINT_CLIENT_API_KEY;
-          const baseUrl = "https://staging.crossmint.com";
-          const locator = encodeURIComponent(`email:${email}:evm-smart-wallet`);
-          const walletResp = await fetch(`${baseUrl}/api/v1-alpha2/wallets/${locator}`, {
-            headers: { "x-api-key": crossmintKey || "", "Content-Type": "application/json" },
-          });
-          if (walletResp.ok) {
-            const walletData = await walletResp.json();
-            walletAddress = walletData?.address ?? walletData?.publicKey ?? undefined;
-            console.log("[Onboard] Crossmint wallet fetch:", walletAddress);
-          } else {
-            console.log("[Onboard] Crossmint wallet fetch status:", walletResp.status);
-          }
-        } catch (walletErr: any) {
-          console.log("[Onboard] Crossmint wallet fetch error:", walletErr?.message);
-        }
-      }
-
-      // Check/create WireX user — prefer the real Crossmint wallet address
+      // Check/create WireX user
       let wirexUser = await getWirexUser(email).catch((e) => { console.error("[Onboard] getUser error:", e.message); return null; });
       console.log("[Onboard] wirexUser after get:", JSON.stringify(wirexUser)?.slice(0, 200));
       if (!wirexUser) {

@@ -276,10 +276,3 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
-
-/* ── Crossmint embedded form overrides ── */
-.crossmint-form-wrapper button[type="submit"],
-.crossmint-form-wrapper form button:last-of-type,
-.crossmint-form-wrapper [data-testid="submit-button"] {
-  color: #ff9500 !important;
-}

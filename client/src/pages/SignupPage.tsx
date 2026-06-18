@@ -1,34 +1,216 @@
-import { Component, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
+import { SiGoogle } from "react-icons/si";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 
+type Mode = "login" | "register";
+
 export function SignupPage() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loginWithPassword, register, loginWithGoogle } = useAuth();
   const [, navigate] = useLocation();
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [keyLoaded, setKeyLoaded] = useState(false);
+
+  const [mode, setMode] = useState<Mode>("login");
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn) { navigate("/"); return; }
+    if (isLoggedIn) navigate("/");
+  }, [isLoggedIn, navigate]);
+
+  useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
-      .then((d) => { setApiKey(d.crossmintApiKey || ""); setKeyLoaded(true); })
-      .catch(() => { setApiKey(""); setKeyLoaded(true); });
-  }, [isLoggedIn]);
+      .then((d) => setGoogleEnabled(!!d.googleEnabled))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
+
+  // Surface OAuth errors passed back as ?auth_error=... by the Google callback.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("auth_error");
+    if (err) {
+      const messages: Record<string, string> = {
+        google_unconfigured: "Google sign-in isn't configured yet.",
+        google_state: "Google sign-in expired. Please try again.",
+        google_token: "Google sign-in failed. Please try again.",
+        google_profile: "Couldn't read your Google profile. Please try again.",
+        google_failed: "Google sign-in failed. Please try again.",
+      };
+      setError(messages[err] ?? "Sign-in failed. Please try again.");
+      // Clean the error param out of the URL so it doesn't persist on refresh.
+      params.delete("auth_error");
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (qs ? `?${qs}` : ""),
+      );
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setError(null);
+
+    if (!email.trim() || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    if (mode === "register" && password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (mode === "login") {
+        await loginWithPassword(email.trim(), password);
+      } else {
+        await register({ email: email.trim(), password, name: name.trim() || undefined });
+      }
+      navigate("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setPassword("");
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-[#7631ee] opacity-[0.18] blur-[120px] rounded-full" />
+
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
         <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
-        {!keyLoaded ? (
-          <div className="w-10 h-10 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <CrossmintSection apiKey={apiKey || ""} />
-        )}
+        <div className="w-full max-w-[420px] bg-[#11141b] border border-[#1d2132] rounded-[24px] px-7 py-8 shadow-2xl">
+          <div className="flex flex-col items-center text-center mb-6">
+            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px] tracking-[-0.96px]">
+              {mode === "login" ? "Welcome back" : "Create your account"}
+            </h1>
+            <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
+              {mode === "login"
+                ? "Sign in to your Brain Finance account"
+                : "Start banking smarter with Brain Finance"}
+            </p>
+          </div>
+
+          {/* Google OAuth */}
+          {googleEnabled && (
+            <>
+              <button
+                type="button"
+                data-testid="button-google-signin"
+                onClick={loginWithGoogle}
+                className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
+              >
+                <SiGoogle className="text-[18px]" />
+                Continue with Google
+              </button>
+
+              <div className="flex items-center gap-3 w-full my-5">
+                <div className="flex-1 h-px bg-[#1d2132]" />
+                <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or</span>
+                <div className="flex-1 h-px bg-[#1d2132]" />
+              </div>
+            </>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {mode === "register" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                  Name
+                </label>
+                <input
+                  data-testid="input-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  placeholder="Jane Doe"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                Email
+              </label>
+              <input
+                data-testid="input-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                Password
+              </label>
+              <input
+                data-testid="input-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
+                className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+              />
+            </div>
+
+            {error && (
+              <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-[#f4607a] text-[13px] px-1">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              data-testid="button-submit-auth"
+              disabled={submitting}
+              className="w-full h-[48px] mt-1 rounded-2xl bg-[#7631ee] hover:bg-[#8442f5] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2"
+            >
+              {submitting && (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {mode === "login" ? "Sign in" : "Create account"}
+            </button>
+          </form>
+
+          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
+            {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+            <button
+              type="button"
+              data-testid="button-toggle-mode"
+              onClick={() => switchMode(mode === "login" ? "register" : "login")}
+              className="text-[#a8b9f4] hover:text-[#7631ee] transition-colors font-medium"
+            >
+              {mode === "login" ? "Sign up" : "Sign in"}
+            </button>
+          </p>
+        </div>
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
@@ -39,248 +221,4 @@ export function SignupPage() {
       </footer>
     </div>
   );
-}
-
-function CrossmintSection({ apiKey }: { apiKey: string }) {
-  const { setUserAndAccounts } = useAuth();
-  const [, navigate] = useLocation();
-  const [status, setStatus] = useState<"idle" | "creating" | "done">("idle");
-
-  const handleOnboarding = async (userId: string, email?: string, walletAddress?: string) => {
-    if (status !== "idle") return;
-    setStatus("creating");
-    try {
-      const res = await fetch("/api/wirex/onboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, email, walletAddress }),
-      });
-      const data = await res.json();
-      setUserAndAccounts({ id: userId, email, walletAddress }, data.accounts ?? []);
-    } catch {
-      setUserAndAccounts({ id: userId, email, walletAddress }, []);
-    }
-    navigate("/");
-  };
-
-  const handleDemoExistingLogin = () => {
-    // Existing user: ensure onboarding flag is set so the home screen skips the onboarding flow.
-    try { localStorage.setItem("brain_onboarding_complete_demo-user", "1"); } catch {}
-    handleOnboarding("demo-user", "demo@brain.finance");
-  };
-
-  const handleDemoFreshLogin = () => {
-    // Fresh user: clear the onboarding flag so the home screen triggers the onboarding flow.
-    try { localStorage.removeItem("brain_onboarding_complete_demo-user"); } catch {}
-    handleOnboarding("demo-user", "demo@brain.finance");
-  };
-
-  if (status === "creating") {
-    return (
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[#a8b9f4] text-base [font-family:'Gilroy',sans-serif]">
-          Setting up your account…
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-[420px]">
-      {apiKey && (
-        <CrossmintErrorBoundary>
-          <LazyEmbeddedAuth apiKey={apiKey} onSuccess={handleOnboarding} />
-        </CrossmintErrorBoundary>
-      )}
-
-      <div className="flex items-center gap-3 w-full">
-        <div className="flex-1 h-px bg-[#1d2132]" />
-        <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
-        <div className="flex-1 h-px bg-[#1d2132]" />
-      </div>
-
-      <button
-        onClick={handleDemoExistingLogin}
-        data-testid="button-demo-login-existing"
-        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
-      >
-        Continue with Demo - Existing User
-      </button>
-
-      <button
-        onClick={handleDemoFreshLogin}
-        data-testid="button-demo-login-fresh"
-        className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] text-[#a8b9f4] text-base flex items-center justify-center gap-3"
-      >
-        Continue with Demo - Fresh User
-      </button>
-
-      <p className="text-[#414965] text-xs">
-        No wallet required · Explore all features
-      </p>
-    </div>
-  );
-}
-
-class CrossmintErrorBoundary extends Component<
-  { children: React.ReactNode },
-  { hasError: boolean; errorMessage: string }
-> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false, errorMessage: "" };
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, errorMessage: error?.message ?? "Unknown error" };
-  }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[Crossmint] EmbeddedAuthForm crashed:", error.message, info.componentStack);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
-          <p className="text-[#6c779d] text-sm [font-family:'Gilroy',sans-serif]">
-            Sign-in form unavailable — use Demo below
-          </p>
-          <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">
-            [boundary] {this.state.errorMessage}
-          </p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-function LazyEmbeddedAuth({
-  apiKey,
-  onSuccess,
-}: {
-  apiKey: string;
-  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
-}) {
-  const [Comp, setComp] = useState<React.ComponentType<any> | null>(null);
-  const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
-  const [AuthProv, setAuthProv] = useState<React.ComponentType<any> | null>(null);
-  const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
-  const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
-  const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
-  const [sdkError, setSdkError] = useState<string | null>(null);
-
-  useEffect(() => {
-    import("@crossmint/client-sdk-react-ui")
-      .then((m) => {
-        setComp(() => m.EmbeddedAuthForm);
-        setProvider(() => m.CrossmintProvider);
-        setAuthProv(() => m.CrossmintAuthProvider);
-        setWalletProv(() => m.CrossmintWalletProvider);
-        setUseAuthHook(() => m.useCrossmintAuth);
-        setUseWalletHook(() => m.useWallet);
-      })
-      .catch((err: unknown) => {
-        const e = err as Error;
-        const msg = e?.message ?? String(err);
-        console.error("[Crossmint] SDK import failed:", msg, e?.stack ?? "");
-        setSdkError(msg);
-      });
-  }, []);
-
-  if (sdkError !== null) {
-    return (
-      <div className="w-full max-w-[420px] rounded-[24px] bg-[#11141b] border border-[#1d2132] px-6 py-5 text-center">
-        <p className="text-[#6c779d] text-sm [font-family:'Gilroy',sans-serif]">
-          Sign-in form unavailable — use Demo below
-        </p>
-        <p className="text-[#d20344] text-[10px] mt-2 break-all opacity-70 font-mono">
-          [import] {sdkError}
-        </p>
-      </div>
-    );
-  }
-
-  if (!Comp || !Provider || !AuthProv || !WalletProv || !useAuthHook || !useWalletHook) {
-    return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
-  }
-
-  const appearance = {
-    colors: {
-      background: "#11141b",
-      backgroundSecondary: "#1d2132",
-      backgroundTertiary: "#222737",
-      inputBackground: "#222737",
-      textPrimary: "#e8eaf0",
-      textSecondary: "#6c779d",
-      accent: "#7631ee",
-      buttonBackground: "#7631ee",
-      buttonText: "#ff9500",
-      border: "#1d2132",
-      danger: "#d20344",
-      textLink: "#a8b9f4",
-    },
-    borderRadius: "12px",
-  };
-
-  // Chain: SDK auto-converts mainnet → testnet for non-production keys.
-  // Using "base" here works for both staging (converts to base-sepolia) and production.
-  const createOnLogin = {
-    chain: "base" as const,
-    signers: [{ type: "device" as const }],
-    recovery: { type: "passkey" as const },
-  };
-
-  return (
-    <Provider apiKey={apiKey}>
-      <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
-        <WalletProv createOnLogin={createOnLogin} appearance={appearance}>
-          <AuthWatcher
-            useAuthHook={useAuthHook!}
-            useWalletHook={useWalletHook!}
-            onSuccess={onSuccess}
-          >
-            <div className="w-full max-w-[420px] crossmint-form-wrapper">
-              <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
-                <Comp />
-              </div>
-            </div>
-          </AuthWatcher>
-        </WalletProv>
-      </AuthProv>
-    </Provider>
-  );
-}
-
-function AuthWatcher({
-  useAuthHook,
-  useWalletHook,
-  onSuccess,
-  children,
-}: {
-  useAuthHook: () => any;
-  useWalletHook: () => any;
-  onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
-  children: React.ReactNode;
-}) {
-  const auth = useAuthHook();
-  const wallet = useWalletHook();
-  const calledRef = useRef(false);
-
-  useEffect(() => {
-    if (auth?.status !== "logged-in" || !auth?.user) return;
-    if (calledRef.current) return;
-    // Wait for wallet creation (triggered by createOnLogin) to finish.
-    // Status sequence: not-loaded → in-progress → loaded/error.
-    if (wallet?.status === "in-progress" || wallet?.status === "not-loaded") return;
-    calledRef.current = true;
-    const address = wallet?.wallet?.address as string | undefined;
-    if (wallet?.status === "error") {
-      console.warn("[Crossmint] Wallet creation failed, continuing onboarding without wallet address");
-    } else {
-      console.log("[Crossmint] Wallet created:", address);
-    }
-    onSuccess(auth.user.id, auth.user.email, address);
-  }, [auth?.status, auth?.user?.id, wallet?.wallet?.address, wallet?.status]);
-
-  return <>{children}</>;
 }
