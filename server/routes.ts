@@ -415,13 +415,17 @@ Rules:
   // WIREX INTEGRATION
   // ─────────────────────────────────────────────────────────────
 
-  // POST /api/wirex/onboard — provision WireX accounts for a user (by email)
-  app.post("/api/wirex/onboard", async (req, res) => {
+  // POST /api/wirex/onboard — provision WireX accounts for the logged-in user.
+  // The target user is derived from the session — body identifiers are ignored
+  // so a caller can never provision/read another user's data (IDOR).
+  app.post("/api/wirex/onboard", requireAuth, async (req, res) => {
     try {
-      const { userId, email } = req.body;
-      const { walletAddress } = req.body;
-      console.log("[Onboard] userId:", userId, "email:", email, "walletAddress:", walletAddress);
-      if (!email) return res.status(400).json({ error: "email required" });
+      const sessionUser = await storage.getUser(req.session.userId!);
+      const email = sessionUser?.email;
+      const walletAddress = sessionUser?.walletAddress ?? undefined;
+      console.log("[Onboard] userId:", sessionUser?.id, "email:", email, "walletAddress:", walletAddress);
+      if (!email) return res.status(400).json({ error: "No email on account" });
+      const userId = sessionUser?.id;
 
       // Check/create WireX user
       let wirexUser = await getWirexUser(email).catch((e) => { console.error("[Onboard] getUser error:", e.message); return null; });
@@ -525,11 +529,13 @@ Rules:
     }
   });
 
-  // GET /api/wirex/accounts — refresh accounts for logged-in user
-  app.get("/api/wirex/accounts", async (req, res) => {
+  // GET /api/wirex/accounts — refresh accounts for the logged-in user.
+  // Email is taken from the session, not the query string (prevents IDOR).
+  app.get("/api/wirex/accounts", requireAuth, async (req, res) => {
     try {
-      const email = req.query.email as string;
-      if (!email) return res.status(400).json({ error: "email required" });
+      const sessionUser = await storage.getUser(req.session.userId!);
+      const email = sessionUser?.email;
+      if (!email) return res.status(400).json({ error: "No email on account" });
 
       const [wirexUser, wallets, cards, bankAccounts] = await Promise.all([
         getWirexUser(email).catch(() => null),
@@ -611,11 +617,14 @@ Rules:
     }
   });
 
-  // GET /api/wirex/transactions — get transactions for a specific account
-  app.get("/api/wirex/transactions", async (req, res) => {
+  // GET /api/wirex/transactions — transactions for the logged-in user.
+  // Email comes from the session; only accountId is read from the query.
+  app.get("/api/wirex/transactions", requireAuth, async (req, res) => {
     try {
-      const { email, accountId } = req.query as { email: string; accountId?: string };
-      if (!email) return res.status(400).json({ error: "email required" });
+      const { accountId } = req.query as { accountId?: string };
+      const sessionUser = await storage.getUser(req.session.userId!);
+      const email = sessionUser?.email;
+      if (!email) return res.status(400).json({ error: "No email on account" });
       const txs = await getWirexTransactions(email, accountId).catch(() => []);
       return res.json({ transactions: txs });
     } catch (error: any) {

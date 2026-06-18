@@ -132,6 +132,9 @@ The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` in
   only renders when `googleEnabled` (uses `react-icons/si` `SiGoogle`).
 - Destructive routes `DELETE /api/account` + `/api/account/data` now require
   `requireAuth` and derive the target user from the session — body identifiers are ignored.
+- WireX routes (`GET /api/wirex/accounts`, `/api/wirex/transactions`,
+  `POST /api/wirex/onboard`) require `requireAuth` and derive the email from the
+  session user; client-supplied `email`/`userId` are ignored (prevents IDOR).
 - SIWE routes (`/api/auth/siwe/*`) remain but are no longer the primary login.
 
 ## Critical Bug Patterns

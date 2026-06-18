@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user?.email) return;
     setWirexLoading(true);
     try {
-      const res = await fetch(`/api/wirex/accounts?email=${encodeURIComponent(user.email)}`);
+      const res = await fetch("/api/wirex/accounts", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setWirexAccounts(data.accounts ?? []);
