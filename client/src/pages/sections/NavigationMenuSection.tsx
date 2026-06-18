@@ -362,7 +362,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
           {/* Main Menu section */}
           <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
             <div className="flex items-center justify-center px-[8px] relative shrink-0 w-full">
-              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Main Menu</p>
+              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Menu</p>
             </div>
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
               {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
