@@ -412,9 +412,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
           </div>
         </div>
 
-        {/* Add Source */}
-        {onAddSource && (
-          <div className="flex flex-col items-start gap-[8px] mx-[7px] mb-[4px] shrink-0">
+        {/* Bottom buttons — Add Source + Logout */}
+        <div className="flex flex-col gap-[8px] mx-[7px] mb-[7px] shrink-0">
+          {onAddSource && (
             <button
               data-testid="button-add-source"
               onClick={onAddSource}
@@ -424,11 +424,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               <AddSourceIcon />
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">Add Source</p>
             </button>
-          </div>
-        )}
-
-        {/* Logout */}
-        <div className="flex flex-col items-start gap-[8px] mx-[7px] mb-[7px] shrink-0">
+          )}
           <button
             data-testid="button-logout"
             onClick={() => setShowLogoutConfirm(true)}
