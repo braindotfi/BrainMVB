@@ -287,30 +287,45 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
       <>
         <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
         <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
-          <div className="flex flex-col flex-1 items-center mt-2 gap-1 w-full px-[7px]">
+          <div className="flex flex-col flex-1 items-center mt-2 gap-[16px] w-full px-[7px]">
             <button onClick={onToggle} title="Expand menu" className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]" style={{ background: "#222737" }}>
               <ExpandIcon />
             </button>
-            {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
-              const count = getNavCount(path);
-              return (
-                <Link key={path} href={path} className="outline-none focus:outline-none">
-                  <button
-                    title={count > 0 ? `${label} (${count} new)` : label}
-                    data-testid={`nav-collapsed-${label.toLowerCase()}`}
-                    className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
-                  >
-                    {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
-                    {count > 0 && (
-                      <span
-                        data-testid={`badge-collapsed-${label.toLowerCase()}`}
-                        className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
-                      />
-                    )}
-                  </button>
-                </Link>
-              );
-            })}
+
+            {/* Divider */}
+            <div className="w-full h-px bg-[#1d2132]" />
+
+            {/* Menu group */}
+            <div className="flex flex-col gap-[4px] items-center w-full">
+              <div className="flex items-center justify-center px-[8px] w-[40px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px]">
+                  Menu
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1 items-center">
+                {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                  const count = getNavCount(path);
+                  return (
+                    <Link key={path} href={path} className="outline-none focus:outline-none">
+                      <button
+                        title={count > 0 ? `${label} (${count} new)` : label}
+                        data-testid={`nav-collapsed-${label.toLowerCase()}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                      >
+                        {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                        {count > 0 && (
+                          <span
+                            data-testid={`badge-collapsed-${label.toLowerCase()}`}
+                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                          />
+                        )}
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
             {onAddSource && (
