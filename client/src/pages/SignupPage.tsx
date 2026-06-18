@@ -138,7 +138,7 @@ export function SignupPage() {
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
               {mode === "login"
                 ? "Sign in to your Brain account."
-                : "Start managing your finances autonomously with Brain."}
+                : "Start managing your finances autonomously."}
             </p>
           </div>
 
