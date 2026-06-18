@@ -3,6 +3,9 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
+import doneIcon from "@assets/Done_1781789102202.png";
+import reviewingIcon from "@assets/Reviewing_1781789102203.png";
+import warningIcon from "@assets/Warning_1781789172904.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source — paginated wizard for connecting data sources to Brain.
@@ -39,7 +42,7 @@ const STEP_INDEX: Record<Screen, number> = {
 };
 const TOTAL_STEPS = 4;
 
-type CategoryId = "bank" | "accounting" | "payroll" | "tax" | "payments" | "documents";
+type CategoryId = "bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents";
 
 interface AddSourceModalProps {
   open: boolean;
@@ -83,6 +86,7 @@ type Provider = { id: string; name: string; logo: string; bg: string; light?: bo
 
 const CATEGORY_META: Record<CategoryId, { label: string; sub: string; target: Screen; accent: string }> = {
   bank:       { label: "Bank Accounts",  sub: "Checking, savings and credit via Plaid", target: "bank",      accent: "#22c55e" },
+  crypto:     { label: "Crypto Wallets", sub: "MetaMask, Coinbase Wallet, WalletConnect", target: "providers", accent: "#ff9500" },
   accounting: { label: "Accounting",     sub: "QuickBooks, Xero, Wave",                target: "providers", accent: "#7631EE" },
   payroll:    { label: "Payroll",        sub: "Gusto, Rippling, ADP",                  target: "providers", accent: "#a8b9f4" },
   tax:        { label: "Tax",            sub: "Returns, filings and tax documents",      target: "documents", accent: "#ff9500" },
@@ -90,9 +94,15 @@ const CATEGORY_META: Record<CategoryId, { label: string; sub: string; target: Sc
   documents:  { label: "Documents",      sub: "Statements, contracts, spreadsheets",   target: "documents", accent: "#ff9500" },
 };
 
-const CATEGORY_ORDER: CategoryId[] = ["bank", "accounting", "payroll", "payments", "tax", "documents"];
+const CATEGORY_ORDER: CategoryId[] = ["bank", "crypto", "accounting", "payroll", "payments", "tax", "documents"];
 
 const PROVIDERS: Partial<Record<CategoryId, Provider[]>> = {
+  crypto: [
+    { id: "metamask",      name: "MetaMask",        logo: "M", bg: "#F6851B" },
+    { id: "coinbasewallet", name: "Coinbase Wallet", logo: "C", bg: "#0052FF" },
+    { id: "walletconnect", name: "WalletConnect",   logo: "W", bg: "#3B99FC" },
+    { id: "ledger",        name: "Ledger",          logo: "L", bg: "#000000" },
+  ],
   accounting: [
     { id: "quickbooks", name: "QuickBooks", logo: "qb", bg: "#2CA01C" },
     { id: "xero",       name: "Xero",       logo: "X",  bg: "#13B5EA" },
@@ -434,6 +444,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
 
   const counts: Record<CategoryId, number> = {
     bank: banks.length,
+    crypto: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "crypto").length,
     accounting: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "accounting").length,
     payroll: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payroll").length,
     payments: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payments").length,
@@ -497,7 +508,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
         type="button"
         onClick={onContinue}
         data-testid="button-categories-continue"
-        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#7631EE] hover:bg-[#8444ff] text-white"
+        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
       >
         Continue
       </button>
@@ -508,6 +519,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
 function CategoryIcon({ cat, accent }: { cat: CategoryId; accent: string }) {
   const paths: Record<CategoryId, React.ReactNode> = {
     bank: <path d="M4 9h12M5 9v6m4-6v6m2-6v6m4-6v6M4 16h12M10 3l6 3H4l6-3Z" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    crypto: <g stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"><circle cx="10" cy="10" r="6.5" /><path d="M8 7.5h3.2a1.6 1.6 0 010 3.2H8m0 0h3.4a1.6 1.6 0 010 3.2H8M8 6v8.5M9.8 6v1.5M9.8 13v1.5" /></g>,
     accounting: <path d="M5 4h10v12H5zM7.5 7h5M7.5 10h5M7.5 13h3" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
     payroll: <path d="M10 5a5 5 0 100 10 5 5 0 000-10Zm0 2v6m-1.5-4.5h2.2a1.3 1.3 0 010 2.6H8.5m0 0h2.2a1.3 1.3 0 010 2.6H8.5" stroke={accent} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />,
     tax: <path d="M6 4h8v12H6zM8 7h4M8 10h4M8 13h2" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
@@ -1038,29 +1050,24 @@ const READING_FILES: ReadFile[] = [
   { id: "f4", name: "receipt_2142.jpg",          size: "1.2 MB", status: "warning",    detail: "Hard to read" },
 ];
 
+const READ_STATUS_ICON: Record<ReadStatus, string> = {
+  done: doneIcon,
+  processing: reviewingIcon,
+  warning: warningIcon,
+};
+const READ_STATUS_ALT: Record<ReadStatus, string> = {
+  done: "Done",
+  processing: "Reviewing",
+  warning: "Needs your help",
+};
+
 function ReadStatusIcon({ status }: { status: ReadStatus }) {
-  if (status === "done") {
-    return (
-      <span className="size-[28px] rounded-full bg-[#22c55e] flex items-center justify-center shrink-0">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <path d="M4 8L7 11L12 5" stroke="#062b13" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-    );
-  }
-  if (status === "warning") {
-    return (
-      <span className="size-[28px] rounded-full bg-[#4a2300] flex items-center justify-center shrink-0">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <path d="M8 2L15 14H1L8 2Z" stroke="#ff9500" strokeWidth="1.4" strokeLinejoin="round" />
-          <path d="M8 6.5V9" stroke="#ff9500" strokeWidth="1.4" strokeLinecap="round" />
-          <circle cx="8" cy="11.2" r="0.8" fill="#ff9500" />
-        </svg>
-      </span>
-    );
-  }
   return (
-    <span className="size-[28px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
+    <img
+      src={READ_STATUS_ICON[status]}
+      alt={READ_STATUS_ALT[status]}
+      className="size-[28px] shrink-0"
+    />
   );
 }
 
@@ -1145,7 +1152,7 @@ function ReadingScreen({
           type="button"
           onClick={onViewWiki}
           data-testid="button-reading-view-wiki"
-          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#7631EE] hover:bg-[#8444ff] text-white"
+          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#240757] hover:bg-[#2e0a6b] text-[#7631ee]"
         >
           View Wiki
         </button>
@@ -1153,7 +1160,7 @@ function ReadingScreen({
           type="button"
           onClick={onContinue}
           data-testid="button-reading-continue"
-          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#ff9500] hover:bg-[#ffa826] text-[#3d2200]"
+          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
         >
           Continue
         </button>
