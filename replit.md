@@ -3,355 +3,155 @@
 Programmable neobank on Base L2.
 
 ## Stack
-- **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Express.js (same server via Vite proxy)
-- **Auth**: Custom username/email + password (scrypt-hashed) + Google OAuth 2.0, express-session cookie sessions (`server/auth.ts`). Login accepts a username OR email as the identifier.
-- **Web3**: wagmi v2, viem, RainbowKit (wallet connection; SIWE retained but no longer the primary login)
-- **AI**: Claude ReAct agent runtime via Anthropic SDK (`ANTHROPIC_API_KEY`) — retained for future use
+- **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui, `wouter` routing
+- **Backend**: Express.js (same server/port via Vite)
+- **Auth**: Custom username/email + password (scrypt) + Google OAuth 2.0, express-session
+  cookie sessions (`server/auth.ts`). Login accepts a username OR email.
+- **Web3**: wagmi v2, viem, RainbowKit (wallet connect; SIWE retained, not primary login)
+- **AI**: Anthropic SDK (`ANTHROPIC_API_KEY`), model `claude-opus-4-5`
 - **DB**: Drizzle ORM + PostgreSQL (DatabaseStorage, falls back to MemStorage if no DATABASE_URL)
 - **Smart Contracts**: Hardhat + Base Sepolia (in `contracts/`)
 
 ## Key Files
-- `shared/schema.ts` — Drizzle schema (notifications, etc.)
-- `server/routes.ts` — All API routes (agents + marketplace sections removed)
-- `server/storage.ts` — MemStorage + DatabaseStorage (Drizzle/PG) + IStorage interface; `server/db.ts` — Drizzle pool
-- `server/policyEngine.ts` — Off-chain policy evaluation + ECDSA proof signing (viem)
-- `server/contractService.ts` — viem reads/writes to deployed contracts (demo fallback)
-- `client/src/lib/web3.ts` — wagmi config (Base + BaseSepolia)
-- `client/src/lib/web3Provider.tsx` — WagmiProvider > QueryClientProvider > RainbowKitProvider
-- `client/src/App.tsx` — Root app, routing, NavContext (only /settings route)
-- `client/src/components/WalletButton.tsx` — Wallet connect + SIWE auth
-- `client/src/pages/SettingsPage.tsx` — Only remaining page
+- `shared/schema.ts` — Drizzle schema
+- `server/routes.ts` — all API routes
+- `server/storage.ts` — MemStorage + DatabaseStorage + `IStorage`; `server/db.ts` — Drizzle pool
+- `server/auth.ts` — sessions, scrypt, Google OAuth, `requireAuth` middleware
+- `server/policyEngine.ts` — off-chain policy eval + ECDSA proof signing (viem)
+- `server/contractService.ts` — viem reads/writes to contracts (demo fallback)
+- `server/plaid.ts` — lazy Plaid client (sandbox default)
+- `client/src/App.tsx` — root app, routing, gates app on `isLoggedIn`
+- `client/src/lib/authContext.tsx` — session-based auth context
+- `client/src/lib/web3Provider.tsx` — provider tree (see Provider Order below)
+- `client/src/pages/sections/BrainAssistant.tsx` — right-hand AI chat panel
+- `client/src/components/AddSourceModal.tsx` — data-ingestion connector wizard
+- `client/src/components/OnboardingFlow.tsx` — 8-step onboarding (step 1 = Plaid)
+- `client/src/pages/SettingsPage.tsx`, `client/src/components/settings/figma/*` — settings
 
-## Removed Features
-- Agents pages (AgentsActivityPage, AgentManagePage, CreateAgentModal, AgentPerfChart)
-- Marketplace (Marketplace.tsx, FeaturedCarousel, MainContentSection, PerksPage)
-- Agent wallet/debit cards from AccountOverviewSection
-- `/api/agents` and `/api/marketplace` server routes
-- **Crossmint (removed June 2026)**: all `@crossmint/client-sdk-react-ui` code, the
-  `/api/crossmint/wallet` route, `.crossmint-form-wrapper` CSS, and the right-hand
-  `AccountOverviewSection` panel (replaced by Brain Assistant). NOTE: uninstalling
-  `@crossmint` dropped its transitive `tweetnacl` dep, which `vite.config.ts` reads
-  directly (`node_modules/tweetnacl/nacl-fast.js`) — `tweetnacl` is now a **direct**
-  dependency so the dev server boots. Do not remove it.
+## Critical Gotchas
+- **`tweetnacl` is a direct dependency** — `vite.config.ts` reads
+  `node_modules/tweetnacl/nacl-fast.js` directly. It was originally a transitive dep of the
+  (now removed) Crossmint SDK. Do NOT remove it or the dev server won't boot.
+- **Provider order (critical)**: `WagmiProvider > QueryClientProvider > RainbowKitProvider`.
+  The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` from
+  `@/lib/queryClient`.
+- **Never use derived arrays as `useEffect` dependency arrays** — use primitive values.
+- **Figma font syntax**: `font-['Gilroy:Medium',sans-serif]` is invalid (the colon breaks
+  the family name → falls back to plain sans-serif). Use
+  `font-['Gilroy',sans-serif] font-medium` instead. Gilroy is loaded via bunny.net at the
+  top of `client/src/index.css` (weights 400/500/600/700/800).
+- **Route ordering**: register specific routes before generic param routes (e.g.
+  `/api/integrations/documents/:id/delete` before `/api/integrations/:toolId/disconnect`).
+- **WireX credentials are broken** (`access_denied`) — demo fallback active in
+  `/api/wirex/accounts`.
 
-## Brain Assistant Panel (June 2026)
-- `client/src/pages/sections/BrainAssistant.tsx` replaces the old right-hand account
-  panel in `App.tsx`. UI-only chat (no real LLM): collapsed rail (`w-[54px]`) /
-  expanded (`w-[390px]`); empty greeting state, user/assistant bubbles, suggested
-  chips, input (Plus/Mic/ArrowUp), and a session dropdown with search + status badges.
-- Collapsed rail (Figma 4954-64593): Expand button → divider → "Chat" label →
-  New Session button → History button. Action buttons use pre-styled circular PNG
-  icons (`@assets/{New_Session,History}_{Active,Inactive}_*.png`,
-  `@assets/Expand_Button_*.png`) with an inactive→active opacity swap on hover.
-  New Session starts a fresh chat + expands; History expands + opens the session
-  dropdown.
-- Session dropdown rows (Figma 4949-62771): hover bg `#222737`; each row shows a
-  right-side 20px icon — green "Active" PNG (`@assets/Active_*.png`) on the active
-  conversation, swapped to a red "Delete" PNG (`@assets/Delete_*.png`) on
-  hover/focus (keyboard-accessible via `group-focus-within`, not display:none).
-  The old per-row complete/fail status badges (green check / red X) were removed.
-  Delete calls `deleteSession(id)` (removes the session, clears `activeSessionId`
-  if it was active). Rows are `div role="button"` (so the delete `<button>` nests
-  validly); the row keydown handler early-returns when the event target isn't the
-  row itself. Search field has NO stroke/border. Expanded-panel collapse button
-  uses the attached `@assets/Collapse_*.png` icon.
-  Built from Figma file `cC2lQwC3g9hv96o5Wgy8Ek` (Default 4658-61281, Conversation
-  4952-63232, Dropdown 4948-62054, Dropdown Search 4952-64034).
-- The old Send/Exchange modals remain rendered in `App.tsx` but are no longer
-  openable (their only trigger was the removed account panel) — left in place as
-  dead-but-harmless until a future cleanup.
-- **Live Claude chat (June 2026)**: `sendMessage` is async — it optimistically
-  appends the user bubble (creating a session if none) + an empty assistant
-  placeholder that renders an animated typing indicator, then `fetch`es
-  `POST /api/assistant/chat` ({messages:[{role,content}…]}). It reads the JSON
-  body even on non-2xx (so backend error `reply` strings reach the UI) and falls
-  back to `CANNED_REPLY`. A `sending` state disables the send button. The
-  collapsed Expand button calls `expandToLastSession` (opens the most recent
-  session, `sessions[0]`, instead of starting a new chat).
-- Backend route `POST /api/assistant/chat` (`server/routes.ts`, `requireAuth`):
-  zod-validated `messages`, Claude `claude-opus-4-5` with a Brain financial-assistant
-  system prompt. Returns 503 `assistant_unconfigured` when `ANTHROPIC_API_KEY`
-  unset, 402 `assistant_no_credit` (friendly reply) on Anthropic "credit balance
-  too low", 500 `assistant_failed` otherwise. Each error path includes a
-  user-facing `reply` string.
-- The timestamp divider still uses the lucide `CalendarDays` icon — the requested
-  "Time" PNG was never present in `attached_assets/`, so swapping it is pending the
-  asset being attached.
+## Brain Assistant Panel
+- `client/src/pages/sections/BrainAssistant.tsx` — right-hand chat panel (replaces the old
+  account panel in `App.tsx`). Collapsed rail `w-[54px]` / expanded `w-[390px]`. Sessions
+  with search + dropdown; per-row Active/Delete icons (delete on hover/focus, keyboard
+  accessible). Built from Figma file `cC2lQwC3g9hv96o5Wgy8Ek`.
+- **Live Claude chat**: `sendMessage` is async — optimistically appends the user bubble
+  (creating a session if needed) + an empty assistant placeholder (animated typing
+  indicator), then `fetch`es `POST /api/assistant/chat`. It reads the JSON body even on
+  non-2xx (so backend error `reply` strings reach the UI) and falls back to `CANNED_REPLY`.
+  A `sending` state disables the send button. The collapsed Expand button calls
+  `expandToLastSession` (opens the most recent session, not a new one).
+- Input has Attach (`Plus`) + Send (`ArrowUp`) only — the mic/voice button was removed.
+- Timestamp divider uses the attached Time PNG (`@assets/Time_*.png`).
+- The old Send/Exchange modals are still rendered in `App.tsx` but no longer openable
+  (dead-but-harmless until a future cleanup).
 
 ## Onboarding & Plaid
-- `client/src/components/OnboardingFlow.tsx` — 8-step onboarding modal; step 1 (`StepConnectBank`) uses Plaid Link to connect real bank accounts (sandbox by default).
-- `server/plaid.ts` — Lazy Plaid client (defaults to sandbox; honors `PLAID_ENV`). Products: Auth + Transactions. Countries: US + CA.
-- Required secrets: `PLAID_CLIENT_ID`, `PLAID_SECRET` (already configured). Optional: `PLAID_ENV` (`sandbox` | `development` | `production`).
-- Storage: `bank_connections` PG table (Drizzle, `shared/schema.ts`); `accessToken` is sensitive and never returned to the client (stripped in routes).
-- Sandbox test login: `user_good` / `pass_good` against any institution.
+- `OnboardingFlow.tsx` step 1 (`StepConnectBank`) + `AddSourceModal` use Plaid Link.
+- `server/plaid.ts` — sandbox default (honors `PLAID_ENV`); products Auth + Transactions;
+  countries US + CA. Sandbox login: `user_good` / `pass_good` against any institution.
+- Storage: `bank_connections` PG table; `accessToken` is sensitive and stripped before being
+  returned to the client.
+
+## Add Source — Data Ingestion Wizard
+- Sidebar "Add Source" button opens `AddSourceModal.tsx` — a source-agnostic connector
+  wizard using a **screen stack** (push/back), not fixed steps.
+- Screens: connected sources (removable), categories, bank (Plaid), providers (Stripe live
+  via `/api/integrations/stripe/connect`; others "Coming soon"), documents (upload).
+- Documents: `sourceDocuments` PG table — **only file metadata is persisted, no file bytes /
+  object storage.**
 
 ## API Endpoints
-- `POST /api/auth/siwe/nonce` / `/verify` / `/logout` — SIWE auth
-- `GET /api/wirex/accounts` — WireX neobank accounts (demo fallback active)
-- `GET /api/contracts/info` — Contract addresses + chain config
-- `GET /api/contracts/account/:ownerAddress` — BrainAccount address (deployed or counterfactual)
-- `POST /api/contracts/deploy-account` — Deploy BrainAccount via factory (CREATE2)
-- `GET /api/contracts/agent/:brainAccountAddress/:agentId` — On-chain agent config + balance
-- `GET /api/contracts/registry/:agentId` — AgentRegistry record
-- `POST /api/policy/evaluate/payment` — Evaluate + sign PaymentIntent (step 16 in x402 flow)
-- `POST /api/policy/evaluate/trade` — Evaluate + sign TradeIntent (trading flow)
-- `POST /api/policy/hash` — Compute keccak256 policy hash for setPolicy()
+- **Auth** (`server/auth.ts`): `POST /api/auth/register` `/login` `/logout` `/demo`,
+  `GET /api/auth/user`, `GET /api/auth/google` + `/callback`. `GET /api/config` →
+  `{ googleEnabled }`. SIWE: `POST /api/auth/siwe/nonce` `/verify` `/logout`.
+- **Assistant**: `POST /api/assistant/chat` (`requireAuth`) — zod-validated `messages`,
+  Claude with a Brain financial-assistant system prompt. Returns 503 `assistant_unconfigured`
+  (no key), 402 `assistant_no_credit` (Anthropic credit too low), 500 `assistant_failed` —
+  each with a user-facing `reply` string.
+- **WireX** (all `requireAuth`, email derived from session — client `email`/`userId`
+  ignored): `GET /api/wirex/accounts` `/transactions`, `POST /api/wirex/onboard`.
+- **Account** (`requireAuth`, target from session): `DELETE /api/account` `/account/data`.
+- **Contracts**: `GET /api/contracts/info`, `/account/:ownerAddress`,
+  `/agent/:brainAccountAddress/:agentId`, `/registry/:agentId`;
+  `POST /api/contracts/deploy-account`.
+- **Policy**: `POST /api/policy/evaluate/payment` `/evaluate/trade` `/hash`.
+- **Integrations**: `GET/POST /api/integrations/documents`,
+  `POST /api/integrations/documents/:id/delete`, `/plaid/disconnect`, `/:toolId/disconnect`,
+  `/stripe/connect`.
+
+## Auth Notes
+- `requireAuth` guards protected routes via `req.session.userId`.
+- Register: `email` + `password` (+ optional `username`, `name`); username defaults to email.
+  Login: `{ identifier, password }` (tries email lookup, then username).
+- `POST /api/auth/demo` logs into a shared demo account (`demo@brain.finance`) with a real
+  session. The SignupPage demo buttons call `loginDemo(fresh)` which toggles the
+  `brain_onboarding_complete_<userId>` localStorage flag (Fresh shows onboarding, Existing
+  skips it).
+- Google OAuth: button only renders when both Google secrets set. Callback failures redirect
+  to `/?auth_error=<code>`; `SignupPage.tsx` maps codes to friendly messages.
 
 ## Smart Contracts (contracts/)
-- `BrainAccount.sol` — ERC-4337 smart account (ReentrancyGuard, spend windows, trading caps)
-- `PolicyValidator.sol` — On-chain ECDSA proof verification (single-use, domain-tagged)
-- `AgentRegistry.sol` — ERC-8004 inspired agent registry (volume tracking, validation history)
-- `BrainAccountFactory.sol` — CREATE2 deterministic deployment factory
-
-### Contract Modes
-- `CONTRACT_MODE=demo` (default) — returns mock data, no chain interaction
-- Set env vars to enable live chain: `POLICY_SIGNER_PRIVATE_KEY`, `DEPLOYER_PRIVATE_KEY`, `ALCHEMY_API_KEY`, `POLICY_VALIDATOR_ADDRESS`, `AGENT_REGISTRY_ADDRESS`, `BRAIN_ACCOUNT_FACTORY_ADDRESS`
-
-### Domain Tags (must match between Solidity + TypeScript)
-- Payment: `keccak256("BrainFinance:PaymentProof:v1")`
-- Trade: `keccak256("BrainFinance:TradeProof:v1")`
-
-Deploy: `cd contracts && npm install && npm run compile && npm run deploy:sepolia`
-Test: `cd contracts && npm test`
+- `BrainAccount.sol` (ERC-4337 smart account), `PolicyValidator.sol` (on-chain ECDSA proof
+  verification), `AgentRegistry.sol` (ERC-8004 inspired), `BrainAccountFactory.sol` (CREATE2).
+- **Modes**: `CONTRACT_MODE=demo` (default, mock data). Live chain needs
+  `POLICY_SIGNER_PRIVATE_KEY`, `DEPLOYER_PRIVATE_KEY`, `ALCHEMY_API_KEY`,
+  `POLICY_VALIDATOR_ADDRESS`, `AGENT_REGISTRY_ADDRESS`, `BRAIN_ACCOUNT_FACTORY_ADDRESS`.
+- **Domain tags** (must match Solidity ↔ TypeScript): Payment
+  `keccak256("BrainFinance:PaymentProof:v1")`, Trade `keccak256("BrainFinance:TradeProof:v1")`.
+- Deploy: `cd contracts && npm install && npm run compile && npm run deploy:sepolia`.
+  Test: `cd contracts && npm test`.
 
 ## Design Tokens
-- Background: `#0d1017` / `#11141b`
-- Purple accent: `#7631ee`
-- Gold/orange: `#ff9500` / `#f59e0b`
-- Baby blue: `#a8b9f4` (60%), `#6c779d` (30%)
-- Fonts: Gilroy (headings), JetBrains Mono (numbers/code)
-- Panel: `rounded-[16px]`, `bg-[#11141b]`, `border-[#1d2132]`
-- Cards: `bg-[#0a0c10]`
+- Background: `#0d1017` / `#11141b`. Purple accent: `#7631ee`. Gold/orange: `#ff9500` /
+  `#f59e0b`. Baby blue: `#a8b9f4` (60%), `#6c779d` (30%).
+- Fonts: Gilroy (headings), JetBrains Mono (numbers/code).
+- Panel: `rounded-[16px] bg-[#11141b] border-[#1d2132]`. Cards: `bg-[#0a0c10]` (no border).
 
-## Provider Order (critical)
-```
-WagmiProvider > QueryClientProvider > RainbowKitProvider
-```
-The `QueryClientProvider` in `web3Provider.tsx` uses the shared `queryClient` instance from `@/lib/queryClient`.
+## Settings UI (Figma rebuilds)
+- Subpages in `client/src/components/settings/figma/`: Security, Notifications, Payments,
+  Agents, Legal, Account. Shared primitives in `FigmaPrimitives.tsx`. `ProfileSection` is
+  inline in `SettingsPage.tsx`.
+- Figma icons: SVGs in `attached_assets/figma_icons/` (subfolders `sub/`, `nav/`,
+  `add-money/`, `exchange/`) with typed registries in `client/src/assets/*-icons.ts`
+  (`SUB`, `NAV_ACTIVE`, `ADD_MONEY_ICONS`, `EXCHANGE_ICONS`).
+- To add a Figma icon: download URL hash → `attached_assets/figma_icons/<subdir>/<name>.svg`,
+  then add the import + map entry to the matching registry file.
+
+## Other Notable UI
+- Sidebar "Rules" nav shows a notification counter badge (`client/src/lib/rule-suggestions.ts`,
+  `useSyncExternalStore`-backed) when Brain has new rule suggestions.
+- HomePage "Needs Review" rows open a centered Radix-dialog popup (`@radix-ui/react-dialog`
+  primitives for focus trap / scroll lock); Confirm/Reject just close (no backend wiring yet).
+- Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
+  "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 
 ## Secrets Needed
-- `ANTHROPIC_API_KEY` — Claude API (already configured)
-- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` — Google OAuth 2.0 login (optional;
-  when unset, `/api/config` returns `googleEnabled:false` and the Google button is
-  hidden — email/password login still works). Authorized redirect URI must be
+- `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` — Google OAuth (optional). Redirect URI must be
   `<app-origin>/api/auth/google/callback`.
-- `SESSION_SECRET` — express-session signing secret (falls back to a dev default if unset).
-- `WIREX_CLIENT_ID` + `WIREX_CLIENT_SECRET` — WireX neobank (auth broken, demo active)
-- `ALCHEMY_API_KEY` — For RPC + contract deployment (optional, falls back to public RPC)
-- `DEPLOYER_PRIVATE_KEY` — For Base Sepolia contract deploy
-- `POLICY_SIGNER_PRIVATE_KEY` — Brain backend policy engine signing key
-- `BASESCAN_API_KEY` — For contract verification on BaseScan
+- `SESSION_SECRET` — express-session signing (dev default if unset).
+- `PLAID_CLIENT_ID` + `PLAID_SECRET` (configured); optional `PLAID_ENV`.
+- `WIREX_CLIENT_ID` + `WIREX_CLIENT_SECRET` (auth broken, demo active).
+- `ALCHEMY_API_KEY` (RPC + deploy, falls back to public RPC), `DEPLOYER_PRIVATE_KEY`,
+  `POLICY_SIGNER_PRIVATE_KEY`, `BASESCAN_API_KEY`.
 
-## Auth Context (rebuilt June 2026 — custom login)
-- Backend: `server/auth.ts` — express-session (cookie), scrypt password hashing,
-  manual Google OAuth 2.0 (no passport). `setupAuth(app)` wires session + routes.
-  `requireAuth` middleware guards protected routes via `req.session.userId`.
-- Register accepts `email` + `password` (+ optional `username`, `name`); when no
-  username is given it defaults to the email. Login takes `{ identifier, password }`
-  where `identifier` is a username OR email (tries email lookup, then username).
-- Routes: `POST /api/auth/register` `/login` `/logout` `/demo`, `GET /api/auth/user`,
-  `GET /api/auth/google` (redirect) + `/api/auth/google/callback`.
-- `POST /api/auth/demo` logs into a shared demo account (`demo@brain.finance`,
-  created on first use) and sets a real session — no credentials needed. The
-  `SignupPage` "Continue with Demo - Existing/Fresh User" buttons call
-  `loginDemo(fresh)` in `authContext`, which sets/clears the
-  `brain_onboarding_complete_<userId>` localStorage flag so Fresh shows the
-  onboarding flow and Existing skips it.
-  `GET /api/config` returns `{ googleEnabled }` (true only when both Google
-  secrets are set).
-- Google OAuth callback redirects failures to `/?auth_error=<code>`
-  (`google_unconfigured|google_state|google_token|google_profile|google_failed`);
-  `SignupPage.tsx` maps these to friendly messages and strips the param from the URL.
-- Frontend: `client/src/lib/authContext.tsx` — session-based context
-  (`loginWithPassword`, `register`, `loginWithGoogle`, `logout`, `AuthUser`, `isLoading`),
-  bootstraps from `/api/auth/user`. `App.tsx` gates the whole app on `isLoggedIn`
-  and shows `SignupPage` otherwise.
-- `client/src/pages/SignupPage.tsx` — dark-theme login/register tabs; Google button
-  only renders when `googleEnabled` (uses `react-icons/si` `SiGoogle`).
-- Destructive routes `DELETE /api/account` + `/api/account/data` now require
-  `requireAuth` and derive the target user from the session — body identifiers are ignored.
-- WireX routes (`GET /api/wirex/accounts`, `/api/wirex/transactions`,
-  `POST /api/wirex/onboard`) require `requireAuth` and derive the email from the
-  session user; client-supplied `email`/`userId` are ignored (prevents IDOR).
-- SIWE routes (`/api/auth/siwe/*`) remain but are no longer the primary login.
-
-## Critical Bug Patterns
-- NEVER use derived arrays as `useEffect` dependency arrays — use primitive values
-- WireX credentials broken (`access_denied`) — demo fallback active in `/api/wirex/accounts`
-- viem already installed in root project — backend services use it directly
-
-## Settings Subpages (Figma rebuild — April 2026)
-Five subpages (Security, Notifications, Payments, Agent Permissions, Legal, Account) are
-pixel-perfect Figma rebuilds living in `client/src/components/settings/figma/`:
-- `SecuritySection.tsx`, `NotificationsSection.tsx`, `PaymentsSectionFigma.tsx`,
-  `AgentsSection.tsx`, `LegalSection.tsx`, `AccountSection.tsx`
-- Shared primitives: `FigmaPrimitives.tsx` (Switch, Icons/ChevronDown)
-- Icons stored locally in `attached_assets/figma_icons/sub/<8charhash>.svg` (89 files)
-- Registry: `client/src/assets/sub-icons.ts` (`SUB[hash]` map)
-- Cards have NO border (`bg-[#0a0c10] rounded-[16px]`)
-- Each subpage starts with the Figma section group label (Authentication, Channels, Your Data, etc.)
-  — the global `<h1>` SECTION_TITLES header was removed.
-- `ProfileSection` remains inline in `SettingsPage.tsx` using shared helpers (Card, SettingRow, Divider).
-  - Layout matches Figma node 3957:43974: header card (Avatar + name + email + amber Edit pill),
-    Identity card (Account, KYC Verification, Phone Number), Misc card (Billing, Add Business Account).
-  - Wallet Address row was removed (no longer in design).
-  - Helpers `ProfileRowCircle` (single-svg circle icon at explicit w/h), `BriefcaseRowCircle`
-    (4-layer briefcase composite), and `ChevronActionButton` (40px circle + chevron-right) live
-    alongside the older `RowCircleIcon`.
-- Inactive `ProfileNavIcon` uses dedicated Figma "Subtract" mark (node 3957:44016) →
-  `attached_assets/figma_icons/settings_profile_inactive.svg`. Active branch keeps the
-  layered head + body composition.
-
-To re-export new Figma icons: download URL hash → `attached_assets/figma_icons/sub/<hash>.svg`
-and add the import + map entry to `client/src/assets/sub-icons.ts`.
-
-## Settings Nav Icon Active States (April 2026)
-Each settings nav item has an "active" variant pulled from Figma:
-- Security 3697:40137, Notifications 3704:37874, Payments 3706:38466,
-  Agents 3709:39289, Legal 3709:39914, Account 3716:40613
-- Active SVG layers stored in `attached_assets/figma_icons/nav/` (11 files)
-- Typed registry: `client/src/assets/nav-active-icons.ts` (`NAV_ACTIVE`)
-- Each `XxxNavIcon` in `SettingsPage.tsx` accepts `active: boolean` and renders
-  the multi-vector active treatment when true, otherwise the inactive single-vector.
-- Legal's active base is a CSS-drawn rounded rect with the purple linear-gradient
-  (this matches the Figma export, which uses a styled div not an SVG).
-
-## Font Fix (April 2026)
-Figma-exported components used `font-['Gilroy:Medium',sans-serif]` syntax
-where the colon makes the font name invalid → browsers fall back to plain sans-serif.
-Replaced across all `client/src/components/settings/figma/*.tsx`:
-- `font-['Gilroy:Medium',sans-serif]` → `font-['Gilroy',sans-serif] font-medium`
-- `font-['Gilroy:SemiBold',sans-serif]` → `font-['Gilroy',sans-serif] font-semibold`
-The "Gilroy" family is loaded via bunny.net at top of `client/src/index.css`
-with weights 400/500/600/700/800.
-
-## Rules Suggestion Counter Badge (April 2026)
-Sidebar "Rules" nav now shows a notification counter badge (Figma 3876:70929)
-when Brain has new rule suggestions:
-- Shared store: `client/src/lib/rule-suggestions.ts` (useSyncExternalStore-backed,
-  exports `useRuleSuggestions`, `toggleSuggestion`, `dismissSuggestion`,
-  `acceptSuggestion`). Initial seed: 1 suggestion ("Run payroll on payday").
-- `RulesPage.tsx` reads suggestions from this store instead of local useState.
-- `NavigationMenuSection.tsx` adds a `NotificationBadge` component:
-  bg #7631ee, text #240757, rounded-[4px], min-w-[16px], p-[2px],
-  font Gilroy SemiBold 12/12. Renders between label and ChevronRight when
-  count > 0. Collapsed sidebar uses an 8px purple dot ring-2 ring-[#11141b]
-  in the icon's top-right corner.
-
-## Add Money & Exchange Modals — Figma Refresh (April 2026)
-AddAccountModal and ExchangeModal now share SendModal's back-button style and
-use locally-stored Figma assets per Brain Finance design file `cC2lQwC3g9hv96o5Wgy8Ek`:
-- All 3 modals (Send, AddAccount, Exchange) use the same inline-SVG `BackBtn`:
-  32px circle bg #1d2132, chevron path `M10 3L5 8L10 13` stroke #a8b9f4 width 1.6,
-  viewBox `0 0 16 16`. Matches Figma frame 3608:34364.
-- AddAccountModal step-1 select-account row icon switches by selection state:
-  `+` icon (Figma 3608:34376) when no account selected, chevron-down once selected.
-- All Add Money icons (account icons, popup, step-2 bank/wallet/agent, QR popup)
-  use 16 SVGs in `attached_assets/figma_icons/add-money/`.
-- Typed registry: `client/src/assets/add-money-icons.ts` exports `ADD_MONEY_ICONS`.
-- Source frames: select-popup 3608:34242, step-2 bank 3005:34247, step-2 crypto
-  2979:41718, QR popup 2979:42687, step-2 agent 2979:42127.
-
-To re-export updated Add Money icons: download URL hash → `attached_assets/figma_icons/add-money/<name>.svg`,
-then add the import + map entry to `client/src/assets/add-money-icons.ts`.
-
-## Exchange Modal Account Icons + Crypto Rename (April 2026)
-"Stablecoin Account" → "Crypto Account" platform-wide. Wallet (Crypto Account)
-and Bank Account icons in the Exchange Money "From" select use locally-stored
-Figma exports per the design file:
-- Crypto: bg circle #240757 + glyph #7631ee (Figma 2979:45360)
-- Bank: bg circle #4A2300 + glyph #FF9500 (Figma 3949:42641)
-- Local SVGs: `attached_assets/figma_icons/exchange/{bank,crypto}_{circle_bg,glyph}.svg`
-- Typed registry: `client/src/assets/exchange-icons.ts` (`EXCHANGE_ICONS`).
-
-## AddAccountModal "Select Account" Button Visual Sync (April 2026)
-The right-side icon on Add Money's account selector now matches Exchange's
-"Select Asset" pill: a 32px circle bg #1d2132 wrapping the plus (empty) or
-chevron-down (filled) icon. Previously the icon floated bare in a 24px box.
-
-## SendModal "Select Account" Popup Sync (April 2026)
-SendModal's `RecipientPopup` now mirrors AddAccountModal's `AccountPopup`:
-- Same shell: 320px width, bg #0a0c10, border #1d2132, rounded-16, multi-shadow.
-- Header: border-b #1d2132 + backdrop-blur-10, title left-aligned, close on right.
-- First list item highlighted with bg #11141b (matches AccountPopup pattern).
-- All popup icons (`PopupShell`, `SearchBar`, `RecipientIcon`) migrated from
-  Figma asset URLs to local `ADD_MONEY_ICONS` (close, search, wallet, bank,
-  agent backgrounds + vectors).
-- Receipt success checkmark replaced with inline SVG (Figma URL had expired).
-- Result: zero `figma.com` references remaining in `client/src/components/SendModal.tsx`.
-
-## Crypto Account Naming + Finances Accounts Expansion (April 2026)
-- Renamed "Your Wallet" → "Crypto Account" platform-wide. Touched files:
-  `AddAccountModal.tsx` (ALL_ACCOUNTS row + Step-2 title), `SendModal.tsx`
-  (review-step source label), `SignupPage.tsx` (loading copy).
-- Finances → Accounts widget now lists, in addition to the existing Chase
-  Business Checking and Chase Savings, the user's: Crypto Account, Yield
-  Agent, TraderPro, Treasury AI Agent. The Account Totals row is recalculated
-  to $74,493 across bank, crypto and agents.
-- Home page first stat widget label updated: "Cash in the bank" →
-  "Money in all accounts".
-
-## "AI Agent Account" → "Agent Account" (April 2026)
-Generic recipient/account-type label "AI Agent Account" renamed to "Agent
-Account" in `SendModal.tsx` (RECIPIENT_TYPES + step-2 review row + agent
-fallback) and `AddAccountModal.tsx` (Step-2 comment). Proper agent names like
-"Treasury AI Agent" and the platform tagline "AI Agent Marketplace on Base"
-are intentionally unchanged.
-
-## Brain Icon Refresh (April 2026)
-- Activity page "Brain Did" icon (Figma 3943:42552): refreshed
-  `attached_assets/figma_icons/brain_did_bg.svg` and `brain_did_vec.svg`. The
-  surrounding `BrainDidIcon` component in `ActivityPage.tsx` already uses the
-  same circle+vector composition that Figma exports for this node, so no
-  component code change was needed — only assets.
-- Main-menu top-left brain logo (Figma 3879:42001): replaced
-  `attached_assets/figma_icons/brain_logo_3d.png` with the user-attached PNG
-  (`Frame_1000002163_1777050618125.png`). The Figma node uses 19+ ellipses +
-  Union shapes which would not be pixel-perfect to recompose, so per the
-  user's instructions we used the attached file as the canonical render.
-- `BrainLogo` in `NavigationMenuSection.tsx` now renders the new PNG directly
-  (single `<img src={ICONS.brain_logo_3d}>`) instead of the old
-  union+mask+overlay composition, so both the expanded and collapsed nav
-  states show the same updated logo. The legacy `brain_union`, `brain_mask`,
-  and `brain_overlay` SVG entries remain in `figma-icons.ts` for now in case
-  we need them again.
-
-## Needs Review Popup (April 2026)
-HomePage "Needs Review" widget rows are now interactive: tapping any row
-opens a centered "Review Needed" popup with a dimmed/blurred backdrop
-(Figma node 3846:44649; centering matches 3844:44172). Implementation lives
-inline in `client/src/pages/HomePage.tsx`:
-- `NEEDS_REVIEW` items typed via `ReviewItemType` and enriched with detail
-  fields (`question`, `description`, `who`, `amountFull`, `dueBy`, `from`,
-  `autoLabel`).
-- `ReviewItem` accepts `onClick` and is keyboard-accessible (`role=button`,
-  Enter/Space activation).
-- `ReviewModal` is built on `@radix-ui/react-dialog` primitives directly
-  (Root/Portal/Overlay/Content/Title/Description/Close) so it gets focus
-  trap, focus restore, Escape handling, body scroll lock, and proper
-  `role=dialog` / `aria-modal` semantics for free, while keeping the
-  custom Figma styling. The "Always …" toggle uses the shadcn `Checkbox`
-  (Radix primitive) for accessible checkbox semantics.
-- Confirm/Reject currently just close the modal (no backend wiring).
-
-## Add Source — Data Ingestion Wizard (June 2026)
-Sidebar "Add Source" button (`NavigationMenuSection.tsx`, bg #4a2300/text #ff9500,
-8px above Logout) now opens `client/src/components/AddSourceModal.tsx` — a paginated,
-source-agnostic connector wizard aligned with the Brain data-ingestion architecture.
-- Radix Dialog shell (bg #11141b, border #1d2132, rounded-24, w-480). Navigation is a
-  **screen stack** (`stack: Screen[]`, push/back) — branching, not fixed step dots.
-  Header shows a back button (when depth>1) + contextual title + close.
-- Screens: `home` (connected banks + tools + documents, each removable),
-  `categories` (Bank/Accounting/Payroll/Payments/Tax/Documents), `bank` (Plaid via
-  `react-plaid-link`, mirrors `OnboardingFlow.tsx` StepConnectBank), `providers`
-  (Stripe live via `/api/integrations/stripe/connect`; QuickBooks/Xero/Wave/Gusto/
-  Rippling/ADP/PayPal/Square shown "Coming soon"), `documents` (upload).
-- Bank disconnect: POST `/api/integrations/plaid/disconnect` {itemId}. Tool disconnect:
-  POST `/api/integrations/:toolId/disconnect`.
-- Documents: `sourceDocuments` PG table (`shared/schema.ts`); storage CRUD mirrors
-  bankConnections. Routes `GET/POST /api/integrations/documents` +
-  `POST /api/integrations/documents/:id/delete` (DEMO_USER, zod-validated, registered
-  BEFORE the generic `:toolId/disconnect` so specific routes win).
-  **Only file metadata is persisted — no file bytes / object storage.**
-- `App.tsx` now renders `AddSourceModal` for the Add Source button (was AddAccountModal).
+## Removed Features
+- Agents pages, Marketplace, agent wallet/debit cards, `/api/agents` + `/api/marketplace`.
+- Crossmint (June 2026): all `@crossmint/*` code, `/api/crossmint/wallet`,
+  `.crossmint-form-wrapper` CSS (see `tweetnacl` gotcha above).

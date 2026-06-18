@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Plus,
-  Mic,
   ArrowUp,
   ChevronDown,
   Search,
@@ -583,13 +582,6 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
           </button>
           <div className="flex items-center gap-[8px]">
-            <button
-              data-testid="button-assistant-mic"
-              className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
-              title="Voice"
-            >
-              <Mic className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
-            </button>
             <button
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
