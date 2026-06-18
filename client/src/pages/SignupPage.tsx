@@ -33,7 +33,7 @@ export function SignupPage() {
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
         <span className="[font-family:'Gilroy',sans-serif] text-[#3a4060] text-sm">
-          Copyright © 2026 Robotmoney. All rights reserved.
+          Copyright © 2026 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
       </footer>
