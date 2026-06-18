@@ -164,7 +164,9 @@ function LazyEmbeddedAuth({
   const [Comp, setComp] = useState<React.ComponentType<any> | null>(null);
   const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
   const [AuthProv, setAuthProv] = useState<React.ComponentType<any> | null>(null);
+  const [WalletProv, setWalletProv] = useState<React.ComponentType<any> | null>(null);
   const [useAuthHook, setUseAuthHook] = useState<(() => any) | null>(null);
+  const [useWalletHook, setUseWalletHook] = useState<(() => any) | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -173,7 +175,9 @@ function LazyEmbeddedAuth({
         setComp(() => m.EmbeddedAuthForm);
         setProvider(() => m.CrossmintProvider);
         setAuthProv(() => m.CrossmintAuthProvider);
+        setWalletProv(() => m.CrossmintWalletProvider);
         setUseAuthHook(() => m.useCrossmintAuth);
+        setUseWalletHook(() => m.useWallet);
       })
       .catch((err: unknown) => {
         const e = err as Error;
@@ -196,7 +200,7 @@ function LazyEmbeddedAuth({
     );
   }
 
-  if (!Comp || !Provider || !AuthProv || !useAuthHook) {
+  if (!Comp || !Provider || !AuthProv || !WalletProv || !useAuthHook || !useWalletHook) {
     return <div className="w-8 h-8 border-2 border-[#7631ee] border-t-transparent rounded-full animate-spin" />;
   }
 
@@ -218,16 +222,30 @@ function LazyEmbeddedAuth({
     borderRadius: "12px",
   };
 
+  // Chain: SDK auto-converts mainnet → testnet for non-production keys.
+  // Using "base" here works for both staging (converts to base-sepolia) and production.
+  const createOnLogin = {
+    chain: "base" as const,
+    signers: [{ type: "device" as const }],
+    recovery: { type: "passkey" as const },
+  };
+
   return (
     <Provider apiKey={apiKey}>
       <AuthProv loginMethods={["email", "google"]} authModalTitle="Sign in to Brain" appearance={appearance}>
-        <AuthWatcher useAuthHook={useAuthHook!} onSuccess={onSuccess}>
-          <div className="w-full max-w-[420px] crossmint-form-wrapper">
-            <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
-              <Comp />
+        <WalletProv createOnLogin={createOnLogin} appearance={appearance}>
+          <AuthWatcher
+            useAuthHook={useAuthHook!}
+            useWalletHook={useWalletHook!}
+            onSuccess={onSuccess}
+          >
+            <div className="w-full max-w-[420px] crossmint-form-wrapper">
+              <div className="bg-[#11141b] border border-[#1d2132] rounded-[24px] overflow-hidden shadow-2xl">
+                <Comp />
+              </div>
             </div>
-          </div>
-        </AuthWatcher>
+          </AuthWatcher>
+        </WalletProv>
       </AuthProv>
     </Provider>
   );
@@ -235,22 +253,34 @@ function LazyEmbeddedAuth({
 
 function AuthWatcher({
   useAuthHook,
+  useWalletHook,
   onSuccess,
   children,
 }: {
   useAuthHook: () => any;
+  useWalletHook: () => any;
   onSuccess: (userId: string, email?: string, walletAddress?: string) => void;
   children: React.ReactNode;
 }) {
   const auth = useAuthHook();
+  const wallet = useWalletHook();
   const calledRef = useRef(false);
 
   useEffect(() => {
     if (auth?.status !== "logged-in" || !auth?.user) return;
     if (calledRef.current) return;
+    // Wait for wallet creation (triggered by createOnLogin) to finish.
+    // Status sequence: not-loaded → in-progress → loaded/error.
+    if (wallet?.status === "in-progress" || wallet?.status === "not-loaded") return;
     calledRef.current = true;
-    onSuccess(auth.user.id, auth.user.email, undefined);
-  }, [auth?.status, auth?.user?.id]);
+    const address = wallet?.wallet?.address as string | undefined;
+    if (wallet?.status === "error") {
+      console.warn("[Crossmint] Wallet creation failed, continuing onboarding without wallet address");
+    } else {
+      console.log("[Crossmint] Wallet created:", address);
+    }
+    onSuccess(auth.user.id, auth.user.email, address);
+  }, [auth?.status, auth?.user?.id, wallet?.wallet?.address, wallet?.status]);
 
   return <>{children}</>;
 }
