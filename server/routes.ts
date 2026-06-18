@@ -352,6 +352,63 @@ Rules:
     }
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // BRAIN ASSISTANT CHAT (Claude-powered)
+  // Powers the right-hand Brain Assistant panel. Takes the running
+  // conversation and returns Claude's next reply.
+  // ─────────────────────────────────────────────────────────────
+  const ASSISTANT_SYSTEM = `You are Brain, the AI financial assistant inside Brain Finance — a programmable neobank for businesses on Base L2.
+Help the user with their finances, accounts, transactions, crypto basics, and how to use the platform.
+Be concise, warm, and practical: default to 1–4 short sentences unless the user asks for more detail.
+Use plain prose (no markdown headings or bullet dumps unless genuinely helpful).
+You can explain concepts and surface general guidance, but do not give regulated/individualized investment advice — instead point users to their own data and let them decide.`;
+
+  const assistantChatSchema = z.object({
+    messages: z
+      .array(
+        z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string().min(1).max(8000),
+        }),
+      )
+      .min(1)
+      .max(50),
+  });
+
+  app.post("/api/assistant/chat", async (req, res) => {
+    const parsed = assistantChatSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "invalid_messages" });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "assistant_unconfigured",
+        reply:
+          "I'm not connected to my brain yet — an ANTHROPIC_API_KEY needs to be configured before I can answer live.",
+      });
+    }
+
+    try {
+      const message = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 1024,
+        system: ASSISTANT_SYSTEM,
+        messages: parsed.data.messages,
+      });
+      const reply = (message.content.find((b) => b.type === "text") as
+        | Anthropic.TextBlock
+        | undefined)?.text?.trim();
+      return res.json({ reply: reply || "Sorry, I couldn't generate a response. Please try again." });
+    } catch (err) {
+      console.error("[Assistant] chat failed:", err);
+      return res.status(500).json({
+        error: "assistant_failed",
+        reply: "Something went wrong reaching the assistant. Please try again.",
+      });
+    }
+  });
+
   app.post("/api/account/allocate", async (req, res) => {
     try {
       const { agentId, amount, asset } = req.body;

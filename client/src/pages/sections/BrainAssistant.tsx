@@ -5,10 +5,11 @@ import {
   ArrowUp,
   ChevronDown,
   Search,
-  CalendarDays,
   SquarePen,
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
+import timeIcon from "@assets/Time_1781819514942.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
 import newSessionActiveIcon from "@assets/New_Session_Active_1781817819809.png";
 import newSessionInactiveIcon from "@assets/New_Session_Inactive_1781817819807.png";
@@ -134,6 +135,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [draft, setDraft] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [sending, setSending] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -172,29 +174,42 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     if (collapsed) onToggle();
   };
 
+  // Collapsed rail: expand the panel into the most recent (last) conversation,
+  // keeping the current one if one is already active.
+  const expandToLastSession = () => {
+    setActiveSessionId((cur) => cur ?? sessions[0]?.id ?? null);
+    if (collapsed) onToggle();
+  };
+
   // Collapsed rail: expand the panel and open the session history dropdown.
   const openHistoryExpanded = () => {
     if (collapsed) onToggle();
     setDropdownOpen(true);
   };
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || sending) return;
 
-    if (activeSession) {
+    setDraft("");
+
+    const userMsg: ChatMessage = { id: nextId(), role: "user", text: trimmed };
+    let sessionId = activeSession?.id ?? null;
+
+    // History to send to Claude (messages BEFORE this turn + the new user msg).
+    const priorMessages = sessionId
+      ? sessions.find((s) => s.id === sessionId)?.messages ?? []
+      : [];
+    const history = [...priorMessages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.text,
+    }));
+
+    // Optimistically append the user message (creating a session if needed).
+    if (sessionId) {
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === activeSession.id
-            ? {
-                ...s,
-                messages: [
-                  ...s.messages,
-                  { id: nextId(), role: "user", text: trimmed },
-                  { id: nextId(), role: "assistant", text: CANNED_REPLY },
-                ],
-              }
-            : s,
+          s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s,
         ),
       );
     } else {
@@ -202,15 +217,53 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         id: `session-${nextId()}`,
         title: trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed,
         group: "Today",
-        messages: [
-          { id: nextId(), role: "user", text: trimmed, dateTag: "Today" },
-          { id: nextId(), role: "assistant", text: CANNED_REPLY },
-        ],
+        messages: [{ ...userMsg, dateTag: "Today" }],
       };
+      sessionId = newSession.id;
       setSessions((prev) => [newSession, ...prev]);
       setActiveSessionId(newSession.id);
     }
-    setDraft("");
+
+    // Append an empty assistant placeholder (renders a typing indicator).
+    const assistantId = nextId();
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? { ...s, messages: [...s.messages, { id: assistantId, role: "assistant", text: "" }] }
+          : s,
+      ),
+    );
+
+    setSending(true);
+    try {
+      const res = await apiRequest("POST", "/api/assistant/chat", { messages: history });
+      const data = await res.json();
+      const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply } : m)) }
+            : s,
+        ),
+      );
+    } catch {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, text: "Something went wrong reaching the assistant. Please try again." }
+                    : m,
+                ),
+              }
+            : s,
+        ),
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const selectSession = (id: string) => {
@@ -248,7 +301,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           {/* Expand button */}
           <button
             data-testid="button-assistant-expand"
-            onClick={onToggle}
+            onClick={expandToLastSession}
             className="size-[40px]"
             title="Expand Brain Assistant"
           >
@@ -457,7 +510,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               <div key={msg.id} className="flex flex-col gap-[12px]">
                 {msg.dateTag && (
                   <div className="flex items-center justify-center gap-[4px] py-[2px]">
-                    <CalendarDays className="size-[12px]" color="#6c779d" strokeWidth={2} />
+                    <img src={timeIcon} alt="" className="size-[12px] block" />
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] tracking-[-0.48px]">
                       {msg.dateTag}
                     </span>
@@ -471,7 +524,15 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         : "bg-[#222737] text-[#6c779d] text-left"
                     }`}
                   >
-                    {msg.text}
+                    {msg.role === "assistant" && msg.text === "" ? (
+                      <span className="inline-flex gap-[3px] py-[2px]" aria-label="Brain is typing">
+                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce [animation-delay:-0.3s]" />
+                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce [animation-delay:-0.15s]" />
+                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
+                      </span>
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                 </div>
               </div>
@@ -528,7 +589,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             <button
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || sending}
               className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-40 hover:opacity-90"
               title="Send"
             >
