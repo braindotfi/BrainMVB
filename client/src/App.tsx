@@ -21,6 +21,7 @@ import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { AccountOverviewSection } from "@/pages/sections/AccountOverviewSection";
 import { SendModal } from "@/components/SendModal";
 import { ExchangeModal } from "@/components/ExchangeModal";
+import { AddAccountModal } from "@/components/AddAccountModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 
@@ -34,6 +35,7 @@ function AppLayout() {
   const [sendCardType, setSendCardType] = useState<"wallet" | "bank">("wallet");
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [exchangeCardType, setExchangeCardType] = useState<"wallet" | "bank">("wallet");
+  const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [focusExchangesTrigger, setFocusExchangesTrigger] = useState(0);
   const [focusSendWithdrawalTrigger, setFocusSendWithdrawalTrigger] = useState<{ seq: number; sourceAccountType: "wallet" | "bank" } | null>(null);
   const [, navigate] = useLocation();
@@ -104,6 +106,7 @@ function AppLayout() {
           collapsed={navCollapsed}
           onToggle={() => setNavCollapsed((v) => !v)}
           onLogout={handleLogout}
+          onAddSource={() => setAddSourceOpen(true)}
         />
 
         <div className="flex-1 min-w-0 min-h-0">
@@ -149,6 +152,10 @@ function AppLayout() {
         onClose={() => setExchangeOpen(false)}
         onConfirmed={() => setFocusExchangesTrigger(n => n + 1)}
         accountType={exchangeCardType}
+      />
+      <AddAccountModal
+        open={addSourceOpen}
+        onClose={() => setAddSourceOpen(false)}
       />
     </div>
     </NavContext.Provider>
