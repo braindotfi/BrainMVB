@@ -42,3 +42,7 @@ waitForPort = 5000
 
 [userenv.shared]
 VITE_CROSSMINT_CLIENT_API_KEY = "USE_SECRET"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000

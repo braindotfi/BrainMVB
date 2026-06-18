@@ -11,4 +11,7 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  // `user_sessions` is created at runtime by connect-pg-simple (createTableIfMissing),
+  // not in the Drizzle schema. Exclude it so `db:push` never tries to drop it.
+  tablesFilter: ["!user_sessions"],
 });
