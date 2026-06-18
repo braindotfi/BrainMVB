@@ -44,19 +44,8 @@ Programmable neobank on Base L2.
   New Session button → History button. Action buttons use pre-styled circular PNG
   icons (`@assets/{New_Session,History}_{Active,Inactive}_*.png`,
   `@assets/Expand_Button_*.png`) with an inactive→active opacity swap on hover.
-- Collapsed-rail popups (Figma New Session 4954-64879 / History 4954-65138):
-  the rail's New Session + History buttons NO LONGER expand the panel. Instead they
-  open a floating card to the LEFT of the 54px rail (`right-[calc(100%+8px)]`,
-  z-70). State `collapsedPopup: "new"|"history"|null`. The "New Session" popup
-  (w-386) = popup header ("New Session" + close X) + greeting + suggested chips +
-  composer; the "History" popup (w-322, max-h-424) = header (active-session label)
-  + search + grouped session list. Both close on click-outside (`collapsedRef`),
-  Escape, the header X, the Expand button, or selecting a session. The whole
-  collapsed branch is wrapped in a non-`overflow-hidden` relative container so the
-  cards aren't clipped. Shared render helpers (`renderSessionList`,
-  `renderSuggested`, `renderComposer`, `renderGreeting`, `popupHeader`) are reused
-  by both the expanded panel and these popups (the expanded XOR collapsed branch
-  guarantees no duplicate `data-testid` is mounted at once).
+  New Session starts a fresh chat + expands; History expands + opens the session
+  dropdown.
 - Session dropdown rows (Figma 4949-62771): hover bg `#222737`; each row shows a
   right-side 20px icon — green "Active" PNG (`@assets/Active_*.png`) on the active
   conversation, swapped to a red "Delete" PNG (`@assets/Delete_*.png`) on
