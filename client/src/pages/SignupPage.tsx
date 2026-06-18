@@ -133,12 +133,12 @@ export function SignupPage() {
         <div className="w-full max-w-[420px] bg-[#11141b] border border-[#1d2132] rounded-[24px] px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px] tracking-[-0.96px]">
-              {mode === "login" ? "Welcome back" : "Create your account"}
+              {mode === "login" ? "Welcome Back" : "Create Your Account"}
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
               {mode === "login"
-                ? "Sign in to your Brain Finance account"
-                : "Start banking smarter with Brain Finance"}
+                ? "Sign in to your Brain account."
+                : "Start managing your finances autonomously with Brain."}
             </p>
           </div>
 
@@ -291,7 +291,7 @@ export function SignupPage() {
               Continue with Demo - Fresh User
             </button>
             <p className="text-center text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">
-              No account required · Explore all features
+              No account required.
             </p>
           </div>
 
