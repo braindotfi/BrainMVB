@@ -7,6 +7,7 @@ import {
   Search,
   CalendarDays,
   SquarePen,
+  X,
 } from "lucide-react";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -134,9 +135,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [draft, setDraft] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [collapsedPopup, setCollapsedPopup] = useState<"new" | "history" | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const collapsedRef = useRef<HTMLDivElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
   const messages = activeSession?.messages ?? [];
@@ -159,6 +162,28 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    if (!collapsedPopup) return;
+    const handler = (e: MouseEvent) => {
+      if (collapsedRef.current && !collapsedRef.current.contains(e.target as Node)) {
+        setCollapsedPopup(null);
+        setSearch("");
+      }
+    };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setCollapsedPopup(null);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
+  }, [collapsedPopup]);
+
   const startNewSession = () => {
     setActiveSessionId(null);
     setDropdownOpen(false);
@@ -166,16 +191,18 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     setDraft("");
   };
 
-  // Collapsed rail: start a fresh chat and expand the panel.
-  const startNewSessionExpanded = () => {
-    startNewSession();
-    if (collapsed) onToggle();
+  // Collapsed rail: open the "New Session" popup beside the rail (no expand).
+  const openNewSessionPopup = () => {
+    setActiveSessionId(null);
+    setDraft("");
+    setSearch("");
+    setCollapsedPopup("new");
   };
 
-  // Collapsed rail: expand the panel and open the session history dropdown.
-  const openHistoryExpanded = () => {
-    if (collapsed) onToggle();
-    setDropdownOpen(true);
+  // Collapsed rail: open the "History" popup beside the rail (no expand).
+  const openHistoryPopup = () => {
+    setSearch("");
+    setCollapsedPopup("history");
   };
 
   const sendMessage = (text: string) => {
@@ -216,6 +243,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const selectSession = (id: string) => {
     setActiveSessionId(id);
     setDropdownOpen(false);
+    setCollapsedPopup(null);
     setSearch("");
   };
 
@@ -240,15 +268,188 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   const triggerLabel = activeSession ? activeSession.title : "New Chat Session";
 
+  // ── Shared render helpers ──────────────────────────────────────
+  const renderSessionList = () => (
+    <>
+      {/* Search */}
+      <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
+        <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
+        <input
+          data-testid="input-session-search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search"
+          className="flex-1 min-w-0 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+        />
+      </div>
+
+      {/* Grouped sessions */}
+      {filteredGroups.length === 0 && (
+        <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
+          No conversations found
+        </div>
+      )}
+      {filteredGroups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-[8px] w-full">
+          <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[16px]">
+            {group.label}
+          </div>
+          {group.items.map((session) => (
+            <div
+              key={session.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open conversation: ${session.title}`}
+              data-testid={`button-session-${session.id}`}
+              onClick={() => selectSession(session.id)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  selectSession(session.id);
+                }
+              }}
+              className={`group w-full flex items-center gap-[8px] p-[8px] rounded-[8px] cursor-pointer transition-colors ${session.id === activeSessionId ? "bg-[#222737]" : "hover:bg-[#222737]"}`}
+            >
+              <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+                {session.title}
+              </span>
+
+              {/* Right icon: delete on hover/focus; otherwise active check */}
+              <div className="relative flex-shrink-0 size-[20px] flex items-center justify-center">
+                <button
+                  type="button"
+                  aria-label={`Delete conversation: ${session.title}`}
+                  data-testid={`button-delete-session-${session.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSession(session.id);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  title="Delete conversation"
+                  className="absolute size-[20px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-opacity"
+                >
+                  <img src={deleteConvoIcon} alt="" className="size-[20px] block" />
+                </button>
+                <span className="block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
+                  {session.id === activeSessionId ? (
+                    <img src={activeConvoIcon} alt="Active conversation" className="size-[20px] block" />
+                  ) : null}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+
+  const renderSuggested = () => (
+    <div className="flex items-center gap-[8px] px-[7px] pt-[12px] pb-[8px] overflow-x-auto">
+      {SUGGESTED_QUESTIONS.map((q) => (
+        <button
+          key={q}
+          data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+          onClick={() => sendMessage(q)}
+          className="flex-shrink-0 bg-[#222737] px-[12px] py-[8px] rounded-[100px] transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px] leading-[16px] whitespace-nowrap"
+        >
+          {q}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderComposer = () => (
+    <div className="mx-[7px] mb-[7px] rounded-[12px] bg-[#0a0c10] p-[8px] flex flex-col gap-[10px]">
+      <input
+        data-testid="input-assistant-message"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(draft);
+          }
+        }}
+        placeholder="Ask me a question..."
+        className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] tracking-[-0.64px]"
+      />
+      <div className="flex items-center justify-between">
+        <button
+          data-testid="button-assistant-attach"
+          className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
+          title="Attach"
+        >
+          <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
+        </button>
+        <div className="flex items-center gap-[8px]">
+          <button
+            data-testid="button-assistant-mic"
+            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
+            title="Voice"
+          >
+            <Mic className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
+          </button>
+          <button
+            data-testid="button-assistant-send"
+            onClick={() => sendMessage(draft)}
+            disabled={!draft.trim()}
+            className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-40 hover:opacity-90"
+            title="Send"
+          >
+            <ArrowUp className="size-[18px]" color="#ffffff" strokeWidth={2.4} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderGreeting = () => (
+    <div className="flex flex-col items-center justify-center gap-[16px] px-[16px] py-[24px]">
+      <img src={brainLogo} alt="Brain" className="size-[48px]" />
+      <div className="flex flex-col items-center text-center">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px] tracking-[-0.96px]">
+          Hi, I'm Brain
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[18px] leading-[24px] tracking-[-0.72px]">
+          What can I help you with today?
+        </p>
+      </div>
+    </div>
+  );
+
+  const popupHeader = (title: string) => (
+    <div className="flex items-center gap-[10px] p-[16px] backdrop-blur-[10px] bg-[#11141b] border-b border-solid border-[#1d2132]">
+      <p className="flex-1 min-w-0 truncate [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16px] leading-[24px]">
+        {title}
+      </p>
+      <button
+        data-testid="button-collapsed-popup-close"
+        onClick={() => {
+          setCollapsedPopup(null);
+          setSearch("");
+        }}
+        className="flex-shrink-0 size-[24px] flex items-center justify-center"
+        title="Close"
+      >
+        <X className="size-[20px]" color="#6c779d" strokeWidth={2} />
+      </button>
+    </div>
+  );
+
   // ── Collapsed rail ─────────────────────────────────────────────
   if (collapsed) {
     return (
+      <div ref={collapsedRef} className="relative w-[54px] h-full flex-shrink-0">
       <div className="relative w-[54px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden">
         <div className="flex flex-col gap-[16px] items-start absolute left-[7px] top-[7px] w-[40px]">
           {/* Expand button */}
           <button
             data-testid="button-assistant-expand"
-            onClick={onToggle}
+            onClick={() => {
+              setCollapsedPopup(null);
+              onToggle();
+            }}
             className="size-[40px]"
             title="Expand Brain Assistant"
           >
@@ -270,7 +471,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               {/* New chat session */}
               <button
                 data-testid="button-collapsed-new-session"
-                onClick={startNewSessionExpanded}
+                onClick={openNewSessionPopup}
                 className="group relative size-[40px]"
                 title="New Chat Session"
               >
@@ -289,7 +490,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               {/* Session history */}
               <button
                 data-testid="button-collapsed-history"
-                onClick={openHistoryExpanded}
+                onClick={openHistoryPopup}
                 className="group relative size-[40px]"
                 title="Chat History"
               >
@@ -307,6 +508,33 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             </div>
           </div>
         </div>
+      </div>
+
+        {/* New Session popup (floats left of the rail) */}
+        {collapsedPopup === "new" && (
+          <div
+            data-testid="popup-collapsed-new-session"
+            className="absolute right-[calc(100%+8px)] top-0 z-[70] w-[386px] max-h-[calc(100vh-32px)] overflow-y-auto bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[16px] shadow-[0px_68px_27px_rgba(0,0,0,0.06),0px_38px_23px_rgba(0,0,0,0.2),0px_17px_17px_rgba(0,0,0,0.34),0px_4px_9px_rgba(0,0,0,0.39)] flex flex-col"
+          >
+            {popupHeader("New Session")}
+            {renderGreeting()}
+            {renderSuggested()}
+            {renderComposer()}
+          </div>
+        )}
+
+        {/* History popup (floats left of the rail) */}
+        {collapsedPopup === "history" && (
+          <div
+            data-testid="popup-collapsed-history"
+            className="absolute right-[calc(100%+8px)] top-0 z-[70] w-[322px] max-h-[424px] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[16px] shadow-[0px_68px_27px_rgba(0,0,0,0.06),0px_38px_23px_rgba(0,0,0,0.2),0px_17px_17px_rgba(0,0,0,0.34),0px_4px_9px_rgba(0,0,0,0.39)] flex flex-col overflow-hidden"
+          >
+            {popupHeader(triggerLabel)}
+            <div className="flex flex-col gap-[8px] p-[8px] overflow-y-auto">
+              {renderSessionList()}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -359,76 +587,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
               <div className="h-px w-full bg-[#1d2132]" />
 
-              {/* Search */}
-              <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
-                <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
-                <input
-                  data-testid="input-session-search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search"
-                  className="flex-1 min-w-0 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
-                />
-              </div>
-
-              {/* Grouped sessions */}
-              {filteredGroups.length === 0 && (
-                <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-                  No conversations found
-                </div>
-              )}
-              {filteredGroups.map((group) => (
-                <div key={group.label} className="flex flex-col gap-[8px] w-full">
-                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[16px]">
-                    {group.label}
-                  </div>
-                  {group.items.map((session) => (
-                    <div
-                      key={session.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open conversation: ${session.title}`}
-                      data-testid={`button-session-${session.id}`}
-                      onClick={() => selectSession(session.id)}
-                      onKeyDown={(e) => {
-                        if (e.target !== e.currentTarget) return;
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          selectSession(session.id);
-                        }
-                      }}
-                      className={`group w-full flex items-center gap-[8px] p-[8px] rounded-[8px] cursor-pointer transition-colors ${session.id === activeSessionId ? "bg-[#222737]" : "hover:bg-[#222737]"}`}
-                    >
-                      <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
-                        {session.title}
-                      </span>
-
-                      {/* Right icon: delete on hover/focus; otherwise active check or status */}
-                      <div className="relative flex-shrink-0 size-[20px] flex items-center justify-center">
-                        <button
-                          type="button"
-                          aria-label={`Delete conversation: ${session.title}`}
-                          data-testid={`button-delete-session-${session.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSession(session.id);
-                          }}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          title="Delete conversation"
-                          className="absolute size-[20px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-opacity"
-                        >
-                          <img src={deleteConvoIcon} alt="" className="size-[20px] block" />
-                        </button>
-                        <span className="block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
-                          {session.id === activeSessionId ? (
-                            <img src={activeConvoIcon} alt="Active conversation" className="size-[20px] block" />
-                          ) : null}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
+              {renderSessionList()}
             </div>
           )}
         </div>
@@ -480,63 +639,9 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         )}
       </div>
 
-      {/* Suggested questions */}
-      <div className="flex items-center gap-[8px] px-[7px] pt-[12px] pb-[8px] overflow-x-auto">
-        {SUGGESTED_QUESTIONS.map((q) => (
-          <button
-            key={q}
-            data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
-            onClick={() => sendMessage(q)}
-            className="flex-shrink-0 bg-[#222737] px-[12px] py-[8px] rounded-[100px] transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px] leading-[16px] whitespace-nowrap"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {renderSuggested()}
 
-      {/* Input field */}
-      <div className="mx-[7px] mb-[7px] rounded-[12px] bg-[#0a0c10] p-[8px] flex flex-col gap-[10px]">
-        <input
-          data-testid="input-assistant-message"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage(draft);
-            }
-          }}
-          placeholder="Ask me a question..."
-          className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] tracking-[-0.64px]"
-        />
-        <div className="flex items-center justify-between">
-          <button
-            data-testid="button-assistant-attach"
-            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
-            title="Attach"
-          >
-            <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
-          </button>
-          <div className="flex items-center gap-[8px]">
-            <button
-              data-testid="button-assistant-mic"
-              className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
-              title="Voice"
-            >
-              <Mic className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
-            </button>
-            <button
-              data-testid="button-assistant-send"
-              onClick={() => sendMessage(draft)}
-              disabled={!draft.trim()}
-              className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-40 hover:opacity-90"
-              title="Send"
-            >
-              <ArrowUp className="size-[18px]" color="#ffffff" strokeWidth={2.4} />
-            </button>
-          </div>
-        </div>
-      </div>
+      {renderComposer()}
     </div>
   );
 }
