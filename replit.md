@@ -37,9 +37,15 @@ Programmable neobank on Base L2.
 
 ## Brain Assistant Panel (June 2026)
 - `client/src/pages/sections/BrainAssistant.tsx` replaces the old right-hand account
-  panel in `App.tsx`. UI-only chat (no real LLM): collapsed rail (`w-[56px]`) /
+  panel in `App.tsx`. UI-only chat (no real LLM): collapsed rail (`w-[54px]`) /
   expanded (`w-[390px]`); empty greeting state, user/assistant bubbles, suggested
   chips, input (Plus/Mic/ArrowUp), and a session dropdown with search + status badges.
+- Collapsed rail (Figma 4954-64593): Expand button → divider → "Chat" label →
+  New Session button → History button. Action buttons use pre-styled circular PNG
+  icons (`@assets/{New_Session,History}_{Active,Inactive}_*.png`,
+  `@assets/Expand_Button_*.png`) with an inactive→active opacity swap on hover.
+  New Session starts a fresh chat + expands; History expands + opens the session
+  dropdown.
   Built from Figma file `cC2lQwC3g9hv96o5Wgy8Ek` (Default 4658-61281, Conversation
   4952-63232, Dropdown 4948-62054, Dropdown Search 4952-64034).
 - The old Send/Exchange modals remain rendered in `App.tsx` but are no longer

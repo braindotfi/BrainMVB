@@ -9,10 +9,14 @@ import {
   X,
   CalendarDays,
   SquarePen,
-  PanelRightOpen,
   PanelRightClose,
 } from "lucide-react";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
+import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
+import newSessionActiveIcon from "@assets/New_Session_Active_1781817819809.png";
+import newSessionInactiveIcon from "@assets/New_Session_Inactive_1781817819807.png";
+import historyActiveIcon from "@assets/History_Active_1781817819805.png";
+import historyInactiveIcon from "@assets/History_Inactive_1781817819808.png";
 
 interface BrainAssistantProps {
   collapsed: boolean;
@@ -177,6 +181,18 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     setDraft("");
   };
 
+  // Collapsed rail: start a fresh chat and expand the panel.
+  const startNewSessionExpanded = () => {
+    startNewSession();
+    if (collapsed) onToggle();
+  };
+
+  // Collapsed rail: expand the panel and open the session history dropdown.
+  const openHistoryExpanded = () => {
+    if (collapsed) onToggle();
+    setDropdownOpen(true);
+  };
+
   const sendMessage = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -237,16 +253,70 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   // ── Collapsed rail ─────────────────────────────────────────────
   if (collapsed) {
     return (
-      <div className="relative w-[56px] h-full rounded-[16px] border border-[#1d2132] bg-[#11141b] flex flex-col items-center py-[7px] gap-[12px]">
-        <button
-          data-testid="button-assistant-expand"
-          onClick={onToggle}
-          className="size-[40px] rounded-[12px] bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
-          title="Expand Brain Assistant"
-        >
-          <PanelRightOpen className="size-[20px]" color="#a8b9f4" strokeWidth={1.8} />
-        </button>
-        <img src={brainLogo} alt="Brain" className="size-[32px] mt-[4px]" />
+      <div className="relative w-[54px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden">
+        <div className="flex flex-col gap-[16px] items-start absolute left-[7px] top-[7px] w-[40px]">
+          {/* Expand button */}
+          <button
+            data-testid="button-assistant-expand"
+            onClick={onToggle}
+            className="size-[40px]"
+            title="Expand Brain Assistant"
+          >
+            <img src={expandBtnIcon} alt="Expand" className="size-[40px] block" />
+          </button>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-[#1d2132]" />
+
+          {/* Chat group */}
+          <div className="flex flex-col gap-[4px] items-start w-full">
+            <div className="flex items-center justify-center px-[8px] w-[40px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px]">
+                Chat
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-[8px] items-start">
+              {/* New chat session */}
+              <button
+                data-testid="button-collapsed-new-session"
+                onClick={startNewSessionExpanded}
+                className="group relative size-[40px]"
+                title="New Chat Session"
+              >
+                <img
+                  src={newSessionInactiveIcon}
+                  alt=""
+                  className="absolute inset-0 size-[40px] block transition-opacity group-hover:opacity-0"
+                />
+                <img
+                  src={newSessionActiveIcon}
+                  alt="New Chat Session"
+                  className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </button>
+
+              {/* Session history */}
+              <button
+                data-testid="button-collapsed-history"
+                onClick={openHistoryExpanded}
+                className="group relative size-[40px]"
+                title="Chat History"
+              >
+                <img
+                  src={historyInactiveIcon}
+                  alt=""
+                  className="absolute inset-0 size-[40px] block transition-opacity group-hover:opacity-0"
+                />
+                <img
+                  src={historyActiveIcon}
+                  alt="Chat History"
+                  className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
