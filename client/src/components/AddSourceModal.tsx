@@ -17,9 +17,27 @@ import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } fr
  *    bank       → connect a bank via Plaid
  *    providers  → pick a provider within a category (Stripe live, rest soon)
  *    documents  → upload documents (registered as a document source)
+ *    reading    → Brain reads the connected sources + initial reading
+ *    found      → "Here's everything Brain found" insight summary
+ *
+ *  Header shows onboarding-style pagination dots (no titles). The four primary
+ *  steps are home → categories → reading → found; the leaf connect screens
+ *  (bank / providers / documents) are sub-flows of the categories step.
  * ────────────────────────────────────────────────────────────────────────── */
 
-type Screen = "home" | "categories" | "bank" | "providers" | "documents";
+type Screen = "home" | "categories" | "bank" | "providers" | "documents" | "reading" | "found";
+
+/** Primary step index per screen (leaf connect screens stay on the categories step). */
+const STEP_INDEX: Record<Screen, number> = {
+  home: 0,
+  categories: 1,
+  bank: 1,
+  providers: 1,
+  documents: 1,
+  reading: 2,
+  found: 3,
+};
+const TOTAL_STEPS = 4;
 
 type CategoryId = "bank" | "accounting" | "payroll" | "tax" | "payments" | "documents";
 
@@ -127,6 +145,8 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
     screen === "categories" ? "Add a Source" :
     screen === "bank" ? "Connect a Bank" :
     screen === "providers" ? CATEGORY_META[activeCategory].label :
+    screen === "reading" ? "Reading Your Sources" :
+    screen === "found" ? "Everything Brain Found" :
     activeCategory === "tax" ? "Tax Documents" : "Upload Documents";
 
   const openCategory = useCallback((cat: CategoryId) => {
@@ -162,9 +182,8 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
               </button>
             )}
 
-            <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px]">
-              {headerTitle}
-            </DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">{headerTitle}</DialogPrimitive.Title>
+            <StepDots total={TOTAL_STEPS} current={STEP_INDEX[screen]} />
             <DialogPrimitive.Description id="add-source-description" className="sr-only">
               Connect and manage the data sources Brain reads from.
             </DialogPrimitive.Description>
@@ -184,12 +203,16 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
           <div className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-testid="add-source-scroll">
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
               {screen === "home" && <ConnectedSources open={open} onAddNew={() => push("categories")} />}
-              {screen === "categories" && <CategoryPicker onPick={openCategory} onDone={onClose} />}
+              {screen === "categories" && <CategoryPicker onPick={openCategory} onContinue={() => push("reading")} />}
               {screen === "bank" && <BankConnect onDone={back} />}
               {screen === "providers" && <ProviderPicker category={activeCategory} />}
               {screen === "documents" && (
                 <DocumentUpload category={activeCategory === "tax" ? "tax" : "general"} onDone={back} />
               )}
+              {screen === "reading" && (
+                <ReadingScreen onViewWiki={onClose} onContinue={() => push("found")} onAddMore={() => push("categories")} />
+              )}
+              {screen === "found" && <FoundScreen onFinish={onClose} />}
             </div>
           </div>
         </DialogPrimitive.Content>
@@ -400,7 +423,7 @@ function SourceRow({
 }
 
 /* ───────────────────────────── Screen: Category picker ───────────────────────────── */
-function CategoryPicker({ onPick, onDone }: { onPick: (cat: CategoryId) => void; onDone: () => void }) {
+function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => void; onContinue: () => void }) {
   const banksQuery = useQuery<BankConnectionInfo[]>({ queryKey: ["/api/integrations/plaid/connections"] });
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
@@ -417,8 +440,6 @@ function CategoryPicker({ onPick, onDone }: { onPick: (cat: CategoryId) => void;
     tax: docs.filter((d) => d.category === "tax").length,
     documents: docs.filter((d) => d.category !== "tax").length,
   };
-
-  const totalConnected = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
     <div className="flex flex-col gap-[16px]">
@@ -474,11 +495,11 @@ function CategoryPicker({ onPick, onDone }: { onPick: (cat: CategoryId) => void;
 
       <button
         type="button"
-        onClick={onDone}
-        data-testid="button-categories-done"
+        onClick={onContinue}
+        data-testid="button-categories-continue"
         className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#7631EE] hover:bg-[#8444ff] text-white"
       >
-        {totalConnected > 0 ? "Done" : "Maybe later"}
+        Continue
       </button>
     </div>
   );
@@ -984,4 +1005,373 @@ function formatSize(bytes: number): string {
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* ───────────────────────────── Header pagination dots ───────────────────────────── */
+function StepDots({ total, current }: { total: number; current: number }) {
+  return (
+    <div
+      className="flex items-center gap-[8px] px-[12px] py-[6px] rounded-full bg-[#1a0d33]"
+      data-testid="add-source-step-dots"
+      aria-hidden
+    >
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          className={`block rounded-full transition-colors ${
+            i === current ? "bg-[#7631EE] size-[8px]" : "bg-[rgba(118,49,238,0.3)] size-[6px]"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ───────────────────────────── Screen 3: Reading the sources ───────────────────────────── */
+type ReadStatus = "done" | "processing" | "warning";
+type ReadFile = { id: string; name: string; size: string; status: ReadStatus; detail: string };
+
+const READING_FILES: ReadFile[] = [
+  { id: "f1", name: "2024_chase_statements.zip", size: "8.2 MB", status: "done",       detail: "Processed · 12 statements · 1,847 transactions · 12 vendors" },
+  { id: "f2", name: "vendor_contracts.pdf",      size: "3.1 MB", status: "done",       detail: "Processed · 8 contracts, payment terms extracted" },
+  { id: "f3", name: "2023_invoices_export.csv",  size: "4.2 MB", status: "processing", detail: "Finding customers and recurring patterns" },
+  { id: "f4", name: "receipt_2142.jpg",          size: "1.2 MB", status: "warning",    detail: "Hard to read" },
+];
+
+function ReadStatusIcon({ status }: { status: ReadStatus }) {
+  if (status === "done") {
+    return (
+      <span className="size-[28px] rounded-full bg-[#22c55e] flex items-center justify-center shrink-0">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path d="M4 8L7 11L12 5" stroke="#062b13" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === "warning") {
+    return (
+      <span className="size-[28px] rounded-full bg-[#4a2300] flex items-center justify-center shrink-0">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path d="M8 2L15 14H1L8 2Z" stroke="#ff9500" strokeWidth="1.4" strokeLinejoin="round" />
+          <path d="M8 6.5V9" stroke="#ff9500" strokeWidth="1.4" strokeLinecap="round" />
+          <circle cx="8" cy="11.2" r="0.8" fill="#ff9500" />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span className="size-[28px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
+  );
+}
+
+function StatCell({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="bg-[#0a0c10] rounded-[12px] p-[14px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">{value}</p>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{label}</p>
+    </div>
+  );
+}
+
+function ReadingScreen({
+  onViewWiki, onContinue, onAddMore,
+}: { onViewWiki: () => void; onContinue: () => void; onAddMore: () => void }) {
+  const doneCount = READING_FILES.filter((f) => f.status === "done").length;
+  const warningCount = READING_FILES.filter((f) => f.status === "warning").length;
+
+  return (
+    <div className="flex flex-col gap-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+          Reading your sources
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          This usually takes 1 to 3 minutes. You can keep using Brain while it finishes.
+        </p>
+      </div>
+
+      <div className="bg-[#0a0c10] rounded-[16px] overflow-hidden">
+        {READING_FILES.map((f, i) => (
+          <div
+            key={f.id}
+            data-testid={`reading-row-${f.id}`}
+            className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
+          >
+            <ReadStatusIcon status={f.status} />
+            <div className="flex-1 min-w-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[20px] truncate">{f.name}</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{f.detail}</p>
+            </div>
+            <span className="shrink-0 px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px]">
+              {f.size}
+            </span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)]">
+          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">
+            {doneCount} of {READING_FILES.length} files done{warningCount ? ` · ${warningCount} needs your help` : ""}
+          </span>
+          <button
+            type="button"
+            onClick={onAddMore}
+            data-testid="button-reading-add-more"
+            className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
+          >
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path d="M6 1.5V10.5M1.5 6H10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Add More
+          </button>
+        </div>
+      </div>
+
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] uppercase tracking-wide pt-[4px]">
+        What Brain Learned So Far
+      </p>
+      <div className="grid grid-cols-2 gap-[8px]">
+        <StatCell value="31"    label="Vendors Identified" />
+        <StatCell value="14"    label="Recurring Bills Found" />
+        <StatCell value="$842K" label="In Transactions Read" />
+        <StatCell value="2 Years" label="History Covered" />
+      </div>
+
+      <InfoNotice
+        title="Brain reads, doesn't share."
+        body="Files are encrypted, used only to understand your business, and never shown to anyone else. You can delete any file at any time."
+      />
+
+      <div className="flex items-center gap-[12px] pt-[4px]">
+        <button
+          type="button"
+          onClick={onViewWiki}
+          data-testid="button-reading-view-wiki"
+          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#7631EE] hover:bg-[#8444ff] text-white"
+        >
+          View Wiki
+        </button>
+        <button
+          type="button"
+          onClick={onContinue}
+          data-testid="button-reading-continue"
+          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#ff9500] hover:bg-[#ffa826] text-[#3d2200]"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────── Screen 4: Everything Brain found ───────────────────────────── */
+type FoundTab = "all" | "pay" | "customers" | "onchain" | "team";
+type FoundRow = { id: string; title: string; tag?: string; detail: string; defaultChecked: boolean; unknown?: boolean };
+type FoundSection = { tab: Exclude<FoundTab, "all">; label: string; rows: FoundRow[]; extraRows: FoundRow[]; moreCount: number };
+
+const FOUND_TABS: { id: FoundTab; label: string; count: number }[] = [
+  { id: "all",       label: "All",      count: 67 },
+  { id: "pay",       label: "You Pay",  count: 14 },
+  { id: "customers", label: "Pays You", count: 38 },
+  { id: "onchain",   label: "On-Chain", count: 7 },
+  { id: "team",      label: "Team",     count: 8 },
+];
+
+const FOUND_SECTIONS: FoundSection[] = [
+  {
+    tab: "pay", label: "You Pay These Vendors", moreCount: 12,
+    rows: [
+      { id: "aws",       title: "Amazon Web Services", detail: "Recurring · Hosting · ~$8K/mo",   defaultChecked: true },
+      { id: "anthropic", title: "Anthropic",           detail: "Recurring · API · ~$1.8K/mo",     defaultChecked: true },
+    ],
+    extraRows: [
+      { id: "github",   title: "GitHub",   detail: "Recurring · Dev tools · ~$420/mo", defaultChecked: true },
+      { id: "figma",    title: "Figma",    detail: "Recurring · Design · ~$180/mo",    defaultChecked: true },
+      { id: "linear",   title: "Linear",   detail: "Recurring · Project mgmt · ~$96/mo", defaultChecked: true },
+    ],
+  },
+  {
+    tab: "customers", label: "Your Customers", moreCount: 36,
+    rows: [
+      { id: "peterson",  title: "Peterson Legal Group", detail: "Top Customer · ~$240K/yr · Stripe",          defaultChecked: true },
+      { id: "northstar", title: "Northstar Design Co",  detail: "$72K/yr · Pays from Base 0x8c3a...1f9e",      defaultChecked: true },
+    ],
+    extraRows: [
+      { id: "meridian", title: "Meridian Studios", detail: "$48K/yr · Stripe",                 defaultChecked: true },
+      { id: "loomly",   title: "Loomly Inc",       detail: "$31K/yr · Pays from Base 0x91a2...4c7d", defaultChecked: true },
+    ],
+  },
+  {
+    tab: "onchain", label: "On-Chain", moreCount: 36,
+    rows: [
+      { id: "aave",     title: "Aave",          tag: "Protocol", detail: "Lending · $1M USDC Position · Earning 4.2% APY", defaultChecked: true },
+      { id: "aerodrome", title: "Aerodrome DEX", tag: "Protocol", detail: "Swapping · 8 Swaps in 90d · USDC – DAI",        defaultChecked: true },
+      { id: "unknown",  title: "0x4a7e...c812", tag: "Unknown",  detail: "Frequent Recipient · $4,880 Total",             defaultChecked: false, unknown: true },
+    ],
+    extraRows: [
+      { id: "uniswap",  title: "Uniswap",       tag: "Protocol", detail: "Swapping · 3 Swaps in 90d · ETH – USDC", defaultChecked: true },
+      { id: "morpho",   title: "Morpho",        tag: "Protocol", detail: "Lending · $120K USDC Position",          defaultChecked: true },
+    ],
+  },
+  {
+    tab: "team", label: "Your Team (Payroll)", moreCount: 7,
+    rows: [
+      { id: "jane", title: "Jane Doe", tag: "Founding Engineer", detail: "Salary · Equity · Joined Jan 2024", defaultChecked: true },
+    ],
+    extraRows: [
+      { id: "marcus", title: "Marcus Lee", tag: "Engineer",      detail: "Salary · Joined Mar 2024", defaultChecked: true },
+      { id: "priya",  title: "Priya Shah", tag: "Designer",      detail: "Salary · Joined Jun 2024", defaultChecked: true },
+    ],
+  },
+];
+
+function FoundCheckbox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={`size-[20px] rounded-[4px] border flex items-center justify-center shrink-0 mt-[1px] transition-colors ${
+        checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"
+      }`}
+    >
+      {checked && (
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path d="M4 8L7 11L12 5" stroke="#7631EE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function FoundScreen({ onFinish }: { onFinish: () => void }) {
+  const [activeTab, setActiveTab] = useState<FoundTab>("all");
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    FOUND_SECTIONS.forEach((s) => [...s.rows, ...s.extraRows].forEach((r) => { init[r.id] = r.defaultChecked; }));
+    return init;
+  });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const toggle = (id: string) => setChecked((c) => ({ ...c, [id]: !c[id] }));
+  const toggleExpand = (tab: string) => setExpanded((e) => ({ ...e, [tab]: !e[tab] }));
+  const visibleSections = activeTab === "all" ? FOUND_SECTIONS : FOUND_SECTIONS.filter((s) => s.tab === activeTab);
+
+  return (
+    <div className="flex flex-col gap-[20px]">
+      <div className="flex flex-col gap-[8px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+          Here's everything Brain found.
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          Brain reviewed your connected sources, identified what was useful, and added the most relevant information to your personal financial Wiki.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] bg-[#06070a]">
+        {FOUND_TABS.map((t) => {
+          const active = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              data-testid={`tab-found-${t.id}`}
+              className={`flex-1 flex items-center justify-center gap-[4px] px-[8px] py-[4px] rounded-[100px] transition-colors ${
+                active ? "bg-[#4a2300]" : "hover:bg-[#11141b]"
+              }`}
+            >
+              <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] whitespace-nowrap ${active ? "text-[#ff9500]" : "text-[#414965]"}`}>
+                {t.label}
+              </span>
+              <span className={`flex items-center justify-center min-w-[16px] px-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] ${
+                active ? "bg-[#ff9500] text-[#4a2300]" : "bg-[#222737] text-[#6c779d]"
+              }`}>
+                {t.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Sections */}
+      {visibleSections.map((section) => {
+        const isExpanded = !!expanded[section.tab];
+        const rows = isExpanded ? [...section.rows, ...section.extraRows] : section.rows;
+        return (
+        <div key={section.tab} className="flex flex-col gap-[10px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] uppercase tracking-wide">
+            {section.label}
+          </p>
+          <div className="bg-[#0a0c10] rounded-[16px] overflow-hidden">
+            {rows.map((r, i) => (
+              <div
+                key={r.id}
+                className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggle(r.id)}
+                  aria-pressed={!!checked[r.id]}
+                  data-testid={`checkbox-found-${r.id}`}
+                  className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                >
+                  <FoundCheckbox checked={!!checked[r.id]} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-[8px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px] leading-[20px] truncate">{r.title}</p>
+                    {r.tag && (
+                      <span className={`shrink-0 px-[8px] py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] ${
+                        r.unknown ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#a78bfa]"
+                      }`}>
+                        {r.tag}
+                      </span>
+                    )}
+                  </div>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{r.detail}</p>
+                </div>
+                {r.unknown && (
+                  <button
+                    type="button"
+                    data-testid={`button-add-label-${r.id}`}
+                    className="shrink-0 px-[10px] py-[5px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
+                  >
+                    Add Label
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => toggleExpand(section.tab)}
+              aria-expanded={isExpanded}
+              data-testid={`button-more-${section.tab}`}
+              className="flex w-full items-center justify-center gap-[6px] px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)] hover:bg-[rgba(0,0,0,0.35)] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]"
+            >
+              {isExpanded ? "Show less" : `${section.moreCount} more`}
+              <svg
+                width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden
+                className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              >
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        );
+      })}
+
+      <div className="rounded-[12px] bg-[#240757] border border-[rgba(118,49,238,0.2)] p-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[20px]">
+          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onFinish}
+        data-testid="button-found-finish"
+        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#16a34a] hover:bg-[#15873f] text-white"
+      >
+        Finish
+      </button>
+    </div>
+  );
 }

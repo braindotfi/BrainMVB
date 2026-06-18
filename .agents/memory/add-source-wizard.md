@@ -22,8 +22,13 @@ The "Add Source" sidebar button opens a paginated, source-agnostic connector wiz
   **Why:** Express matches in registration order. **How to apply:** add any new
   `/api/integrations/<specific>` route above the generic disconnect handler.
 
-- **Wizard navigation is a screen stack, not step dots.** Flow branches (home→categories→leaf), so
-  it uses `stack: Screen[]` with push/back. Don't refactor to a linear dot indicator.
+- **Wizard navigation is a screen stack; step dots are display-only.** Flow branches
+  (home→categories→leaf, plus a linear categories→reading→found tail), so navigation uses
+  `stack: Screen[]` with push/back. The header renders onboarding-style StepDots driven by a
+  `STEP_INDEX` map (TOTAL_STEPS=4; leaf connect screens pin to the categories step) purely for
+  visual progress — it does NOT control navigation. Don't refactor nav into the dots.
+  **How to apply:** when adding a screen, add it to `STEP_INDEX` (and `headerTitle` for the
+  sr-only DialogTitle) so the dots/a11y label stay correct.
 
 - **Provider connect status:** only Stripe is live (`/api/integrations/stripe/connect`); other tools
   (QuickBooks/Xero/Wave/Gusto/Rippling/ADP/PayPal/Square) are intentionally "Coming soon" placeholders.
