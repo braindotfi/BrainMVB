@@ -64,10 +64,10 @@ type SourceDocument = {
 type Provider = { id: string; name: string; logo: string; bg: string; light?: boolean; live?: boolean };
 
 const CATEGORY_META: Record<CategoryId, { label: string; sub: string; target: Screen; accent: string }> = {
-  bank:       { label: "Bank Accounts",  sub: "Checking, savings & credit via Plaid", target: "bank",      accent: "#22c55e" },
+  bank:       { label: "Bank Accounts",  sub: "Checking, savings and credit via Plaid", target: "bank",      accent: "#22c55e" },
   accounting: { label: "Accounting",     sub: "QuickBooks, Xero, Wave",                target: "providers", accent: "#7631EE" },
   payroll:    { label: "Payroll",        sub: "Gusto, Rippling, ADP",                  target: "providers", accent: "#a8b9f4" },
-  tax:        { label: "Tax",            sub: "Returns, filings & tax documents",      target: "documents", accent: "#ff9500" },
+  tax:        { label: "Tax",            sub: "Returns, filings and tax documents",      target: "documents", accent: "#ff9500" },
   payments:   { label: "Payments",       sub: "Stripe, PayPal, Square",                target: "providers", accent: "#635BFF" },
   documents:  { label: "Documents",      sub: "Statements, contracts, spreadsheets",   target: "documents", accent: "#ff9500" },
 };
@@ -96,6 +96,15 @@ const TOOL_LABELS: Record<string, string> = {
   stripe: "Stripe", quickbooks: "QuickBooks", xero: "Xero", wave: "Wave",
   gusto: "Gusto", rippling: "Rippling", adp: "ADP", paypal: "PayPal", square: "Square",
 };
+
+// Reverse map: provider/tool id → its category (for counter tags).
+const TOOL_CATEGORY: Record<string, CategoryId> = Object.entries(PROVIDERS).reduce(
+  (acc, [cat, list]) => {
+    (list ?? []).forEach((p) => { acc[p.id] = cat as CategoryId; });
+    return acc;
+  },
+  {} as Record<string, CategoryId>,
+);
 
 export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
   const [stack, setStack] = useState<Screen[]>(["home"]);
@@ -175,7 +184,7 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
           <div className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-testid="add-source-scroll">
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
               {screen === "home" && <ConnectedSources open={open} onAddNew={() => push("categories")} />}
-              {screen === "categories" && <CategoryPicker onPick={openCategory} />}
+              {screen === "categories" && <CategoryPicker onPick={openCategory} onDone={onClose} />}
               {screen === "bank" && <BankConnect onDone={back} />}
               {screen === "providers" && <ProviderPicker category={activeCategory} />}
               {screen === "documents" && (
@@ -249,7 +258,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
           <span className="size-[20px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin" aria-hidden />
         </div>
       ) : total === 0 ? (
-        <div className="bg-[#0a0c10] rounded-[16px] p-[20px] border border-[#1d2132]" data-testid="empty-connected-sources">
+        <div className="bg-[#0a0c10] rounded-[16px] p-[20px]" data-testid="empty-connected-sources">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px]">No sources yet</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
             Connect a bank, your tools, or upload documents to give Brain its first look at your business.
@@ -361,7 +370,7 @@ function SourceRow({
   return (
     <div
       data-testid={testId}
-      className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border border-[#1d2132]"
+      className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px]"
     >
       <div
         className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[11px] [font-family:'Gilroy',sans-serif]"
@@ -391,7 +400,26 @@ function SourceRow({
 }
 
 /* ───────────────────────────── Screen: Category picker ───────────────────────────── */
-function CategoryPicker({ onPick }: { onPick: (cat: CategoryId) => void }) {
+function CategoryPicker({ onPick, onDone }: { onPick: (cat: CategoryId) => void; onDone: () => void }) {
+  const banksQuery = useQuery<BankConnectionInfo[]>({ queryKey: ["/api/integrations/plaid/connections"] });
+  const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
+  const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
+
+  const banks = banksQuery.data ?? [];
+  const tools = toolsQuery.data ?? [];
+  const docs = docsQuery.data ?? [];
+
+  const counts: Record<CategoryId, number> = {
+    bank: banks.length,
+    accounting: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "accounting").length,
+    payroll: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payroll").length,
+    payments: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payments").length,
+    tax: docs.filter((d) => d.category === "tax").length,
+    documents: docs.filter((d) => d.category !== "tax").length,
+  };
+
+  const totalConnected = Object.values(counts).reduce((a, b) => a + b, 0);
+
   return (
     <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px]">
@@ -406,13 +434,14 @@ function CategoryPicker({ onPick }: { onPick: (cat: CategoryId) => void }) {
       <div className="grid grid-cols-1 gap-[12px]">
         {CATEGORY_ORDER.map((cat) => {
           const m = CATEGORY_META[cat];
+          const count = counts[cat];
           return (
             <button
               key={cat}
               type="button"
               onClick={() => onPick(cat)}
               data-testid={`button-category-${cat}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[14px] border border-[#1d2132] hover:border-[#2c3247] transition-colors text-left"
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[14px] transition-colors text-left hover:bg-[#0f1219]"
             >
               <CategoryIcon cat={cat} accent={m.accent} />
               <div className="flex-1 min-w-0 flex flex-col">
@@ -423,13 +452,34 @@ function CategoryPicker({ onPick }: { onPick: (cat: CategoryId) => void }) {
                   {m.sub}
                 </span>
               </div>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              {count > 0 && (
+                <span
+                  data-testid={`badge-category-count-${cat}`}
+                  className="flex items-center gap-[5px] px-[9px] py-[4px] rounded-[22px] bg-[#240757] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] text-[#a78bfa] whitespace-nowrap shrink-0"
+                >
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
+                    <circle cx="8" cy="8" r="8" fill="#7631EE" />
+                    <path d="M4.5 8L7 10.5L11.5 6" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {count} connected
+                </span>
+              )}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
                 <path d="M6 3.5L10.5 8L6 12.5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           );
         })}
       </div>
+
+      <button
+        type="button"
+        onClick={onDone}
+        data-testid="button-categories-done"
+        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#7631EE] hover:bg-[#8444ff] text-white"
+      >
+        {totalConnected > 0 ? "Done" : "Maybe later"}
+      </button>
     </div>
   );
 }
@@ -504,8 +554,7 @@ function BankConnect({ onDone }: { onDone: () => void }) {
             <div
               key={c.itemId}
               data-testid={`card-bank-${c.itemId}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border"
-              style={{ borderColor: "#22c55e" }}
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px]"
             >
               <div
                 className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[12px] [font-family:'Gilroy',sans-serif]"
@@ -720,8 +769,7 @@ function ProviderPicker({ category }: { category: CategoryId }) {
               disabled={isConnecting || (!clickable)}
               onClick={() => handleClick(p)}
               data-testid={`button-provider-${p.id}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] border transition-colors text-left disabled:cursor-default"
-              style={{ borderColor: isConnected ? "#22c55e" : "#1d2132" }}
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] transition-colors text-left disabled:cursor-default"
             >
               <div
                 className="size-[32px] rounded-full flex items-center justify-center shrink-0"
@@ -869,13 +917,13 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
       {(uploadMut.isPending || docs.length > 0) && (
         <div className="flex flex-col gap-[6px]">
           {uploadMut.isPending && (
-            <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px] border border-[#1d2132]">
+            <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]">
               <span className="size-[16px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Uploading…</span>
             </div>
           )}
           {docs.map((d) => (
-            <div key={d.id} className="flex items-center justify-between gap-[12px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px] border border-[#1d2132]" data-testid={`doc-row-${d.id}`}>
+            <div key={d.id} className="flex items-center justify-between gap-[12px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]" data-testid={`doc-row-${d.id}`}>
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate flex-1 min-w-0">{d.name}</span>
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] shrink-0">{formatSize(d.size)}</span>
               <button
