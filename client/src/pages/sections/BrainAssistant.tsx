@@ -9,7 +9,6 @@ import {
   X,
   CalendarDays,
   SquarePen,
-  PanelRightClose,
 } from "lucide-react";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -17,6 +16,9 @@ import newSessionActiveIcon from "@assets/New_Session_Active_1781817819809.png";
 import newSessionInactiveIcon from "@assets/New_Session_Inactive_1781817819807.png";
 import historyActiveIcon from "@assets/History_Active_1781817819805.png";
 import historyInactiveIcon from "@assets/History_Inactive_1781817819808.png";
+import collapseBtnIcon from "@assets/Collapse_1781818197054.png";
+import activeConvoIcon from "@assets/Active_1781818047007.png";
+import deleteConvoIcon from "@assets/Delete_1781818067389.png";
 
 interface BrainAssistantProps {
   collapsed: boolean;
@@ -234,6 +236,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     setSearch("");
   };
 
+  const deleteSession = (id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    setActiveSessionId((cur) => (cur === id ? null : cur));
+  };
+
   const filteredGroups = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matched = q
@@ -329,10 +336,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         <button
           data-testid="button-assistant-collapse"
           onClick={onToggle}
-          className="flex-shrink-0 size-[40px] rounded-[12px] bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
+          className="flex-shrink-0 size-[40px]"
           title="Collapse Brain Assistant"
         >
-          <PanelRightClose className="size-[20px]" color="#a8b9f4" strokeWidth={1.8} />
+          <img src={collapseBtnIcon} alt="Collapse" className="size-[40px] block" />
         </button>
 
         <div className="relative flex-1 min-w-0" ref={dropdownRef}>
@@ -370,7 +377,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               <div className="h-px w-full bg-[#1d2132]" />
 
               {/* Search */}
-              <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737] border border-solid border-[#414965]">
+              <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
                 <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
                 <input
                   data-testid="input-session-search"
@@ -393,17 +400,51 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     {group.label}
                   </div>
                   {group.items.map((session) => (
-                    <button
+                    <div
                       key={session.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open conversation: ${session.title}`}
                       data-testid={`button-session-${session.id}`}
                       onClick={() => selectSession(session.id)}
-                      className={`w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors ${session.id === activeSessionId ? "bg-[#222737]" : "hover:bg-[#11141b]"}`}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectSession(session.id);
+                        }
+                      }}
+                      className={`group w-full flex items-center gap-[8px] p-[8px] rounded-[8px] cursor-pointer transition-colors ${session.id === activeSessionId ? "bg-[#222737]" : "hover:bg-[#222737]"}`}
                     >
                       <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
                         {session.title}
                       </span>
-                      {session.status && <StatusBadge status={session.status} />}
-                    </button>
+
+                      {/* Right icon: delete on hover/focus; otherwise active check or status */}
+                      <div className="relative flex-shrink-0 size-[20px] flex items-center justify-center">
+                        <button
+                          type="button"
+                          aria-label={`Delete conversation: ${session.title}`}
+                          data-testid={`button-delete-session-${session.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSession(session.id);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          title="Delete conversation"
+                          className="absolute size-[20px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-opacity"
+                        >
+                          <img src={deleteConvoIcon} alt="" className="size-[20px] block" />
+                        </button>
+                        <span className="block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
+                          {session.id === activeSessionId ? (
+                            <img src={activeConvoIcon} alt="Active conversation" className="size-[20px] block" />
+                          ) : session.status ? (
+                            <StatusBadge status={session.status} />
+                          ) : null}
+                        </span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ))}

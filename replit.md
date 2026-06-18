@@ -46,6 +46,15 @@ Programmable neobank on Base L2.
   `@assets/Expand_Button_*.png`) with an inactive→active opacity swap on hover.
   New Session starts a fresh chat + expands; History expands + opens the session
   dropdown.
+- Session dropdown rows (Figma 4949-62771): hover bg `#222737`; each row shows a
+  right-side 20px icon — green "Active" PNG (`@assets/Active_*.png`) on the active
+  conversation, swapped to a red "Delete" PNG (`@assets/Delete_*.png`) on
+  hover/focus (keyboard-accessible via `group-focus-within`, not display:none).
+  Delete calls `deleteSession(id)` (removes the session, clears `activeSessionId`
+  if it was active). Rows are `div role="button"` (so the delete `<button>` nests
+  validly); the row keydown handler early-returns when the event target isn't the
+  row itself. Search field has NO stroke/border. Expanded-panel collapse button
+  uses the attached `@assets/Collapse_*.png` icon.
   Built from Figma file `cC2lQwC3g9hv96o5Wgy8Ek` (Default 4658-61281, Conversation
   4952-63232, Dropdown 4948-62054, Dropdown Search 4952-64034).
 - The old Send/Exchange modals remain rendered in `App.tsx` but are no longer
