@@ -9,10 +9,10 @@ import {
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
-import newSessionActiveIcon from "@assets/New_Session_Active_1781817819809.png";
-import newSessionInactiveIcon from "@assets/New_Session_Inactive_1781817819807.png";
-import historyActiveIcon from "@assets/History_Active_1781817819805.png";
-import historyInactiveIcon from "@assets/History_Inactive_1781817819808.png";
+import draftActiveIcon from "@assets/Draft_Active_1781886641614.png";
+import draftInactiveIcon from "@assets/Draft_Inactive_1781886641614.png";
+import historyActiveIcon from "@assets/History_Active_1781886641612.png";
+import historyInactiveIcon from "@assets/History_Inactive_1781886641614.png";
 import collapseBtnIcon from "@assets/Collapse_1781818197054.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
 import deleteConvoIcon from "@assets/Delete_1781818067389.png";
@@ -322,32 +322,32 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               </span>
             </div>
 
-            <div className="flex flex-col gap-[8px] items-start">
-              {/* New chat session */}
+            <div className="flex flex-col gap-[4px] items-start">
+              {/* New chat */}
               <button
                 data-testid="button-collapsed-new-session"
                 onClick={startNewSessionExpanded}
                 className="group relative size-[40px]"
-                title="New Chat Session"
+                title="New Chat"
               >
                 <img
-                  src={newSessionInactiveIcon}
+                  src={draftInactiveIcon}
                   alt=""
                   className="absolute inset-0 size-[40px] block transition-opacity group-hover:opacity-0"
                 />
                 <img
-                  src={newSessionActiveIcon}
-                  alt="New Chat Session"
+                  src={draftActiveIcon}
+                  alt="New Chat"
                   className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
                 />
               </button>
 
-              {/* Session history */}
+              {/* History */}
               <button
                 data-testid="button-collapsed-history"
                 onClick={openHistoryExpanded}
                 className="group relative size-[40px]"
-                title="Chat History"
+                title="History"
               >
                 <img
                   src={historyInactiveIcon}
@@ -356,7 +356,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 />
                 <img
                   src={historyActiveIcon}
-                  alt="Chat History"
+                  alt="History"
                   className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
                 />
               </button>
