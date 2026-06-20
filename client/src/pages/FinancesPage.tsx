@@ -148,7 +148,7 @@ export function FinancesPage() {
               <WidgetHeader title="Income" />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[24px] text-[#a8b9f4] text-[16px] w-full">
                     About {format("$18,000")} a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export function FinancesPage() {
               <WidgetHeader title="Liabilities" />
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                 <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-normal leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
                     Nothing overdue. Your next bill is the Verizon phone bill for {format("$189")}, due Friday. Brain is asking you about it on the home screen.
                   </p>
                 </div>

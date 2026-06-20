@@ -378,7 +378,7 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[32px]">{format("$86,993")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
                     </p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] relative shrink-0 text-[#414965] text-[18px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[#414965] text-[18px] w-full">
                       Across bank, digital, and agent accounts.
                     </p>
                   </div>
@@ -392,7 +392,7 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
-                    <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] relative shrink-0 text-[18px] w-full ${spendingInsight.colorClass}`}>
+                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${spendingInsight.colorClass}`}>
                       {spendingInsight.text}
                     </p>
                   </div>
