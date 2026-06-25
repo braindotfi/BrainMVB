@@ -2,6 +2,17 @@
 
 Context: `HANDOFF.md` (2026-06-25 slice). Branch `feat/brain-core-integration` off `origin/feat/ui-rework`.
 
+## 0. Done since the slice (read path, all demo-compatible) ✅
+- **FinancesPage**: "Recent transactions" widget → `/api/brain/ledger/transactions` (real txns).
+- **HomePage**: "Money in all accounts" total → sum of `/api/brain/ledger/accounts`.
+- **Phase 4 (Wiki)**: BrainAssistant grounds answers in `POST /v1/wiki/question`
+  (`server/brain/client.ts` `askWikiQuestion`, parses the ```json envelope + evidence;
+  `/api/assistant/chat` injects grounding, returns `sources`); assistant shows a
+  **"Grounded in N records from your ledger"** evidence line.
+- All verified through the real Express server (demo session → `/api/brain/*` → api.brain.fi).
+- Remaining big value is gated on the **production-tenant decision** (writes / policy sign /
+  payment execute). Demo-compatible options left: a propose-only §6-gate demo, or detail panels.
+
 ## 1. Slice is GREEN (no brain-core change, no deploy) ✅
 
 The BFF gets tokens from the already-live **demo-provision fence** (`POST /v1/demo/provision-run`,

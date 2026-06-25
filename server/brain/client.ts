@@ -113,3 +113,49 @@ export function listLedgerAccounts(token: string, query?: { status?: string; lim
 export function getWikiSchema(token: string): Promise<WikiSchemaResponse> {
   return brainRequest<WikiSchemaResponse>("/wiki/schema", { token });
 }
+
+interface WikiQuestionResponse {
+  answer?: unknown;
+  evidence_ids?: unknown;
+  confidence?: unknown;
+}
+
+/** Strip a ```json … ``` (or bare ```) fence brain-core sometimes wraps the answer in. */
+function stripFence(s: string): string {
+  const m = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  return (m && m[1] ? m[1] : s).trim();
+}
+
+export interface WikiAnswer {
+  /** The answer text/JSON, fence-stripped — suitable to ground an LLM or render. */
+  raw: string;
+  /** Evidence ids (raw artifacts / ledger rows) backing the answer, deduped. */
+  evidenceIds: string[];
+  confidence: number | null;
+}
+
+/** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */
+export async function askWikiQuestion(token: string, question: string): Promise<WikiAnswer> {
+  const resp = await brainRequest<WikiQuestionResponse>("/wiki/question", {
+    token,
+    method: "POST",
+    body: { question },
+  });
+  const answerStr = typeof resp.answer === "string" ? resp.answer : JSON.stringify(resp.answer ?? resp);
+  const raw = stripFence(answerStr);
+
+  const evidence = new Set<string>();
+  const collect = (v: unknown): void => {
+    if (Array.isArray(v)) for (const e of v) if (typeof e === "string") evidence.add(e);
+  };
+  collect(resp.evidence_ids);
+  let confidence = typeof resp.confidence === "number" ? resp.confidence : null;
+  try {
+    const inner = JSON.parse(raw) as { evidence_ids?: unknown; confidence?: unknown };
+    collect(inner.evidence_ids);
+    if (confidence === null && typeof inner.confidence === "number") confidence = inner.confidence;
+  } catch {
+    // answer is prose, not JSON — nothing more to extract.
+  }
+  return { raw, evidenceIds: Array.from(evidence), confidence };
+}
