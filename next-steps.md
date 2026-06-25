@@ -1,54 +1,59 @@
 # BrainMVB — Next Steps
 
-Context: `HANDOFF.md` (2026-06-25 slice). Branch `feat/brain-core-integration` off `origin/feat/ui-rework`.
+Branch `feat/brain-core-integration` (off `origin/feat/ui-rework`), 3 commits, **not pushed**.
+Full context: `HANDOFF.md`. Auth = live demo-provision fence (key-free). node only via WSL.
 
-## 0. Done since the slice (read path, all demo-compatible) ✅
-- **FinancesPage**: "Recent transactions" widget → `/api/brain/ledger/transactions` (real txns).
-- **HomePage**: "Money in all accounts" total → sum of `/api/brain/ledger/accounts`.
-- **Phase 4 (Wiki)**: BrainAssistant grounds answers in `POST /v1/wiki/question`
-  (`server/brain/client.ts` `askWikiQuestion`, parses the ```json envelope + evidence;
-  `/api/assistant/chat` injects grounding, returns `sources`); assistant shows a
-  **"Grounded in N records from your ledger"** evidence line.
-- All verified through the real Express server (demo session → `/api/brain/*` → api.brain.fi).
-- Remaining big value is gated on the **production-tenant decision** (writes / policy sign /
-  payment execute). Demo-compatible options left: a propose-only §6-gate demo, or detail panels.
+## Done ✅ (committed)
+brain-core **read integration** across 5 surfaces, all on the demo path, server-verified:
+Accounts + Recent transactions (FinancesPage), "Money in all accounts" total (HomePage),
+grounded BrainAssistant (`/v1/wiki/question`) + evidence trail. `npm run brain:smoke` PASSES.
 
-## 1. Slice is GREEN (no brain-core change, no deploy) ✅
+## Done ✅ (UNCOMMITTED — Fork A: propose-only §6 demo)
+Flagship "Brain proposes → §6/Policy gate decides" moment with **no money movement**. New
+"Bills — let Brain decide" widget on FinancesPage lists the 3 AP invoices; "Let Brain pay" →
+`POST /api/brain/propose` → renders ALLOW / CONFIRM (owner+cfo) / REJECT + expandable policy
+trace + proposal/decision ids ("not executed"). New scoped BFF write route (propose+evaluate
+only), `getBrainSession` provision-race fix, `brain:smoke` extended to assert all 3 outcomes.
+Verified end-to-end vs live api.brain.fi (smoke + curl + live browser). See `HANDOFF.md` top
+section for the full file list + probe facts. **Commit when asked (branch-first).**
 
-The BFF gets tokens from the already-live **demo-provision fence** (`POST /v1/demo/provision-run`,
-key-free, the same path BrainSaaS uses). `npm run brain:smoke` PASSES against api.brain.fi:
-provisions a tenant, reads `/wiki/schema` 200 + `/ledger/accounts` 200 → 3 real accounts
-(Operating $1,687,200 · Reserve $1,200,000 · Brain Smart Account 0.005 ETH). The FinancesPage
-mapper matches this shape, so the Accounts widget renders live data.
+## To run / re-verify
+- Secret value is in `C:\Users\sanke\brain-prod-provision-secret.txt`.
+- `BRAIN_DEMO_PROVISION_SECRET='<secret>' npm run brain:smoke` → `[smoke] PASS`.
+- `BRAIN_DEMO_PROVISION_SECRET='<secret>' PORT=5052 npm run dev` → http://localhost:5052 →
+  "Continue with Demo — Existing User" → Finances + assistant. (If a 504 "Outdated Optimize Dep":
+  `rm -rf node_modules/.vite`, restart, hard-reload.)
 
-### To run it
-- [ ] Set BrainMVB secret `BRAIN_DEMO_PROVISION_SECRET` (value in `C:\Users\sanke\brain-prod-provision-secret.txt`).
-- [ ] `npm run brain:smoke` → `[smoke] PASS`.
-- [ ] `npm run dev`, log in (demo button), open **Finances → Accounts** → 3 live accounts.
-- [ ] Confirm the browser only calls `/api/brain/...` (never api.brain.fi), no token client-side.
+## The forks (pick one — neither started without your call)
 
-> Note: each `provision-run` mints a fresh seeded demo tenant. That's fine for the demo. A
-> production per-user (non-demo) tenant + auth path is a later phase — it would need a proper
-> brain-core auth route landed via a normal PR (NOT an ad-hoc commit/deploy). Discarded for now.
+### A. Propose-only §6-gate demo — ✅ DONE (uncommitted, see above)
+Built + verified. (Probe correction: the demo tenant DOES have payable invoices — `GET
+/v1/ledger/invoices` returns 3 AP bills, `metadata.scenario:"ap"`; they're `ledger_invoices`,
+not `ledger_obligations`, which is why the old note said "0 obligations". The `pay_invoice`
+shortcut resolves amount/currency/counterparty/source from the invoice; `obligation_id` is null.)
+Possible follow-ons if continuing A: approve-flow for the CONFIRM case (`POST
+/payment-intents/{id}/approve`, token has `payment_intent:approve`) to flip pending_approval →
+approved in the UI; surface the proposed intents elsewhere (Activity/Review pages).
 
-## 2. Prove the slice in the running app
-- [ ] `npm run dev`, log in (demo button), open **Finances → Accounts** → rows come from api.brain.fi.
-- [ ] Confirm in the network tab the browser only calls `/api/brain/...` (never api.brain.fi) and no JWT leaks.
+### B. Production-tenant decision (unlocks the real value)
+Real per-user data, policy **signing**, payment **execution** all require moving off the
+fresh-demo-tenant model to a real per-user tenant + auth path. That needs a proper **brain-core
+PR** (the reverted `POST /v1/auth/service-token` endpoint is the design: shared-secret fenced,
+scope-ceiling reads+propose/approve, mints via the existing `siwxSigner`, key stays on box). This
+is a strategic + cross-repo decision, not a quick task.
 
-## 3. Then iterate (reconciled to real v0.0.6 routes; see Brain-Migration-Plans.docx)
-- [ ] **Phase 3 Raw/Ledger:** `server/wirex.ts` + `server/plaid.ts` publish to `POST /v1/raw/ingest`
-      (`source_type:"plaid"`; WireX `api_partner`+`provider:"wirex"`); transactions from `/v1/ledger/transactions`.
-      Widen the BFF proxy to allow these specific write paths.
-- [ ] **Phase 4 Wiki:** retire `server/insightsService.ts`; HomePage Recommendations/Actions + "Ask Brain" →
-      `/v1/wiki/search` + `/v1/wiki/question`; detail panels → `/v1/wiki/entity/{id}`.
-- [ ] **Phase 5 Policy:** retire `server/policyEngine.ts`; Rules/Review → `/v1/policy/{tenant}/{versions,compose,sign,evaluate,simulate}`.
-- [ ] **Phase 6 Agent:** retire `server/contractService.ts` + the in-route ReAct loop + `contracts/`; use
-      `/v1/agents/*` + `/v1/payment-intents/*` (create→approve→execute via §6 gate). **Open: signer story w/o Crossmint** (RainbowKit/SIWE wallet vs brain-core-side).
-- [ ] **Phase 7 Audit (net-new):** Audit page over `/v1/audit/*` + `GET /v1/proof/{action_id}/view`.
-- [ ] **Phase 8 Cleanup:** execute `deliverables/DEAD-CODE-INVENTORY.md` (drop `@anthropic-ai/sdk`, hardhat/contracts,
-      dead tables); rewrite `replit.md`; consider adding `"target":"es2022"` to fix the pre-existing `tsc` reds.
+### C. Smaller demo-compatible polish (if continuing reads)
+- Account / transaction **detail panels** via `GET /v1/wiki/entity/{id}` (provenance + confidence).
+- HomePage **Recommendations** via `wiki/question` canned prompts + **retire `insightsService.ts`**
+  (note: `wiki/search` is empty on fresh tenants; "Actions"/obligations list is empty on demo).
+- Make the assistant evidence line **clickable** (needs a tx detail view first).
 
-## Open questions for the brain-core team (carried)
-1. Can `AUTH_SIGN_KEY` be provisioned to the BFF, or must minting be on-box?
-2. `source_type` enum: add `wirex`/`crossmint`? (use `api_partner`+provider meta until then)
-3. Fresh-User per-tenant provisioning: admin tenant-create vs `/v1/demo/provision-run`?
+## Deferred / gated
+- Phase 7 **Audit** page — demo tenant too sparse (1 event, no anchor).
+- Anything write/execute (Phase 5 Policy sign, Phase 6 execute) — gated on fork **B**.
+- Push the branch / open a PR — only when you ask.
+
+## Standing rules
+Commit only when asked (done for the read milestone); branch-first, never main; no Claude
+attribution; no `ai-assisted` PR label. Track dead/old code in `DEAD-CODE-INVENTORY.md`
+(don't delete it). brain-core protocol changes go via its own PR/CI, never ad-hoc.

@@ -19,12 +19,74 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
 import { brainAuthConfigured } from "./config";
 import { getBrainSession } from "./auth";
-import { brainRequest, BrainApiError } from "./client";
+import {
+  brainRequest,
+  BrainApiError,
+  listLedgerInvoices,
+  evaluatePolicy,
+  proposeInvoicePayment,
+  type PolicyAction,
+} from "./client";
 
 export function createBrainProxyRouter(): Router {
   const router = Router();
 
   router.use(requireAuth);
+
+  // POST /api/brain/propose — the ONLY write the BFF exposes (Fork A).
+  //
+  // Proposes a payment for a Ledger invoice and returns the §6/Policy decision.
+  // This is propose-only and demo-safe: the demo token carries
+  // `payment_intent:propose` + `policy:read` but NOT `payment_intent:execute`,
+  // and no execute path is proxied — so a proposal can never move money. The
+  // policy decision (allow/confirm/reject + trace) is derived from the SAME
+  // invoice the proposal pays, so the "why" the UI shows is truthful, not
+  // client-supplied.
+  router.post("/propose", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) {
+      return res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+    }
+    const invoiceId = (req.body as { invoice_id?: unknown } | undefined)?.invoice_id;
+    if (typeof invoiceId !== "string" || invoiceId.length === 0) {
+      return res.status(400).json({ error: "invalid_request", message: "invoice_id is required" });
+    }
+    try {
+      const { token, tenantId } = await getBrainSession(req.session.userId!);
+
+      // Look up the invoice server-side so the evaluate action mirrors what the
+      // propose actually pays (truthful trace, not client-asserted amounts).
+      const { invoices } = await listLedgerInvoices(token, { limit: 100 });
+      const invoice = invoices.find((i) => i.id === invoiceId);
+      if (invoice === undefined) {
+        return res.status(404).json({ error: "invoice_not_found", message: "no such invoice" });
+      }
+
+      // Best-effort policy trace (the propose itself is authoritative for status).
+      let decision = null;
+      try {
+        const action: PolicyAction = {
+          kind: "outbound_payment",
+          counterparty_id: invoice.counterparty_id,
+          amount: { currency: invoice.currency, value: invoice.amount_due },
+        };
+        decision = await evaluatePolicy(token, tenantId, action);
+      } catch (err) {
+        console.warn(
+          "[brain-proxy] policy evaluate failed (continuing without trace):",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+
+      // Authoritative: create the §6-gated PaymentIntent (no execution).
+      const intent = await proposeInvoicePayment(token, invoiceId);
+      return res.json({ intent, decision });
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
 
   // Generic read passthrough: GET /api/brain/<brain-core path>
   router.get(/.*/, async (req: Request, res: Response) => {

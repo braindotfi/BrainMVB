@@ -134,6 +134,107 @@ export interface WikiAnswer {
   confidence: number | null;
 }
 
+// ─── Ledger invoices (the AP "bills" inbox the propose demo pays from) ───────
+
+/** Subset of brain-core's Invoice schema we render in the bills inbox. */
+export interface BrainInvoice {
+  id: string;
+  invoice_number: string;
+  counterparty_id: string;
+  amount_due: string;
+  currency: string;
+  due_date?: string | null;
+  status: string;
+  /** Seed marks AP invoices with `{ scenario: "ap", po, flags }`. */
+  metadata?: { scenario?: string; po?: string | null; flags?: string[] } | null;
+}
+
+export interface ListInvoicesResponse {
+  invoices: BrainInvoice[];
+}
+
+/** GET /ledger/invoices */
+export function listLedgerInvoices(
+  token: string,
+  query?: { status?: string; limit?: number },
+): Promise<ListInvoicesResponse> {
+  return brainRequest<ListInvoicesResponse>("/ledger/invoices", { token, query });
+}
+
+// ─── Policy evaluate (read-only "why" for the §6 decision trace) ─────────────
+
+/** One rule's evaluation in a PolicyDecision trace (brain-core policy VM). */
+export interface PolicyTraceEntry {
+  rule_id: string;
+  matched: boolean;
+  checks: Array<{ key: string; passed: boolean; detail?: string }>;
+}
+
+/** brain-core PolicyDecision (the shape POST /policy/{tenant}/evaluate returns). */
+export interface PolicyDecision {
+  outcome: "allow" | "confirm" | "reject";
+  matched_rule_id: string | null;
+  required_approvers: string[];
+  trace: PolicyTraceEntry[];
+}
+
+/** The policy-VM action shape (services/policy/src/vm.ts `Action`). */
+export interface PolicyAction {
+  kind: "outbound_payment" | "inbound_payment" | "onchain_tx" | "agent_action" | "ledger_write";
+  counterparty_id: string | null;
+  amount: { currency: string; value: string } | null;
+}
+
+/**
+ * POST /policy/{tenantId}/evaluate — read-only dry-run of the active policy.
+ * Returns the outcome + matched rule + required approvers + per-check trace.
+ * Read-only (despite POST); needs only `policy:read`, which the demo token has.
+ */
+export function evaluatePolicy(
+  token: string,
+  tenantId: string,
+  action: PolicyAction,
+): Promise<PolicyDecision> {
+  return brainRequest<PolicyDecision>(`/policy/${tenantId}/evaluate`, {
+    token,
+    method: "POST",
+    body: { action },
+  });
+}
+
+// ─── PaymentIntent propose (creates a §6-gated intent; NEVER executes) ───────
+
+/** Subset of brain-core's PaymentIntent we surface after a propose. */
+export interface PaymentIntent {
+  id: string;
+  action_type: string;
+  source_account_id: string;
+  destination_counterparty_id: string;
+  amount: string;
+  currency: string;
+  invoice_id?: string | null;
+  /** approved (allow) | pending_approval (confirm) | rejected (reject) | … */
+  status: string;
+  policy_decision_id: string | null;
+}
+
+/**
+ * POST /payment-intents with the `pay_invoice` shortcut — proposes a payment for
+ * a Ledger invoice. brain-core resolves amount/currency/counterparty/source from
+ * the invoice, runs Policy, and returns the intent with its decided `status`.
+ *
+ * This is propose-ONLY: the returned intent is never executed here (the demo
+ * token has no `payment_intent:execute` scope and the BFF exposes no execute
+ * path). No money moves.
+ */
+export function proposeInvoicePayment(token: string, invoiceId: string): Promise<PaymentIntent> {
+  return brainRequest<PaymentIntent>("/payment-intents", {
+    token,
+    method: "POST",
+    body: { type: "pay_invoice", invoice_id: invoiceId },
+  });
+}
+
 /** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */
 export async function askWikiQuestion(token: string, question: string): Promise<WikiAnswer> {
   const resp = await brainRequest<WikiQuestionResponse>("/wiki/question", {

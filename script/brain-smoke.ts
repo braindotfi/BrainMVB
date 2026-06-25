@@ -18,7 +18,14 @@
 
 import { brainConfig, brainAuthConfigured } from "../server/brain/config";
 import { getBrainSession } from "../server/brain/auth";
-import { getWikiSchema, listLedgerAccounts, BrainApiError } from "../server/brain/client";
+import {
+  getWikiSchema,
+  listLedgerAccounts,
+  listLedgerInvoices,
+  evaluatePolicy,
+  proposeInvoicePayment,
+  BrainApiError,
+} from "../server/brain/client";
 
 async function main(): Promise<void> {
   console.warn(`[smoke] target: ${brainConfig.baseUrl}`);
@@ -43,6 +50,34 @@ async function main(): Promise<void> {
   console.warn(`[smoke] ✓ /ledger/accounts OK (${accounts.accounts.length} accounts)`);
   for (const a of accounts.accounts.slice(0, 8)) {
     console.warn(`         - ${a.name} [${a.account_type}] ${a.current_balance ?? "?"} ${a.currency}`);
+  }
+
+  // 3) Fork A — propose path: list AP invoices, evaluate policy, propose a payment.
+  //    Proves the §6/Policy decision surface end-to-end (read + propose, no execute).
+  const { invoices } = await listLedgerInvoices(token, { limit: 100 });
+  const apBills = invoices.filter((i) => i.metadata?.scenario === "ap");
+  if (apBills.length === 0) {
+    fail("/ledger/invoices returned no AP bills — propose demo has nothing to pay");
+  }
+  console.warn(`[smoke] ✓ /ledger/invoices OK (${apBills.length} AP bills)`);
+
+  const OUTCOMES = new Set(["approved", "pending_approval", "rejected"]);
+  for (const bill of apBills) {
+    const action = {
+      kind: "outbound_payment" as const,
+      counterparty_id: bill.counterparty_id,
+      amount: { currency: bill.currency, value: bill.amount_due },
+    };
+    const decision = await evaluatePolicy(token, tenantId, action);
+    const intent = await proposeInvoicePayment(token, bill.id);
+    if (!OUTCOMES.has(intent.status)) {
+      fail(`propose ${bill.invoice_number} returned unexpected status "${intent.status}"`);
+    }
+    console.warn(
+      `[smoke] ✓ propose ${bill.invoice_number} (${bill.amount_due} ${bill.currency}) ` +
+        `→ ${intent.status} [policy ${decision.outcome}` +
+        `${decision.matched_rule_id ? " · " + decision.matched_rule_id : ""}]`,
+    );
   }
 
   console.warn("[smoke] PASS");

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
+import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
@@ -269,6 +270,9 @@ export function FinancesPage() {
                 ))}
               </WidgetCard>
             )}
+
+            {/* Bills — Brain proposes, the §6 policy gate decides (brain-core) */}
+            <BrainBillsInbox />
 
             {/* Income */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">

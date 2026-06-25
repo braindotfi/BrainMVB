@@ -39,6 +39,7 @@ cleanup has a complete, evidence-backed list.
 | `client/src/pages/FinancesPage.tsx` → `STATIC_ACCOUNTS` | migrate-then-delete | Hardcoded account list ("Chase Business Checking" … "Account Totals"). **Being wired to `/api/brain/ledger/accounts` in this slice**; kept as the offline fallback. |
 | `server/routes.ts` → `GET /api/account/{balance,assets,transactions}` | suspect / migrate-then-delete | Return hardcoded JSON (USDC "5000.00", canned assets/txns). Confirm client usage, then source from `/v1/ledger/*`. |
 | `server/routes.ts` → `GOAL_REC_FALLBACK*` | suspect | Hardcoded goal-recommendation copy used as Anthropic fallback. Superseded by Wiki when Phase 4 lands. |
+| `client/src/pages/FinancesPage.tsx` → `InvoicesLateBanner` + static Income/Expenses/Liabilities copy | migrate-then-delete | Hardcoded "2 Invoices are late" banner + prose. The new **`BrainBillsInbox`** (live AP invoices via `/api/brain/ledger/invoices` + propose) is the real-data replacement for the AP/bills story; retire the static banner once the inbox covers the late/overdue framing (invoice `status:"overdue"` + `due_date` are available). Income/Expenses still static. |
 
 ## C. Newly observed (added as encountered)
 

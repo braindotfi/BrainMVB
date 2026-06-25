@@ -32,6 +32,15 @@ interface CachedSession extends BrainSession {
 }
 
 const cache = new Map<string, CachedSession>();
+/**
+ * In-flight session creations, keyed by app user. Coalesces concurrent callers
+ * onto ONE provision so a burst of first requests (e.g. the FinancesPage firing
+ * /ledger/accounts, /ledger/invoices and /ledger/counterparties on mount) all
+ * land in the SAME freshly-provisioned tenant. Without this, each request races
+ * an empty cache and provisions its own tenant, so cross-query joins (an
+ * invoice's counterparty_id vs the counterparties list) silently mismatch.
+ */
+const inflight = new Map<string, Promise<CachedSession>>();
 /** Refresh this many seconds before the token actually expires. */
 const REFRESH_SKEW = 60;
 
@@ -46,21 +55,37 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
     return { token: cached.token, tenantId: cached.tenantId };
   }
 
-  const mode = brainTokenMode();
-  let session: CachedSession;
-  if (mode === "demo-provision") {
-    session = await provisionSession();
-  } else if (mode === "local-key") {
-    session = await mintLocalSession(appUserId, now);
-  } else {
-    throw new Error(
-      "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred — the box " +
-        "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
-    );
+  // Coalesce: if a session is already being created for this user, await it.
+  const pending = inflight.get(appUserId);
+  if (pending) {
+    const session = await pending;
+    return { token: session.token, tenantId: session.tenantId };
   }
 
-  cache.set(appUserId, session);
-  return { token: session.token, tenantId: session.tenantId };
+  const create = createSession(appUserId, now);
+  inflight.set(appUserId, create);
+  try {
+    const session = await create;
+    cache.set(appUserId, session);
+    return { token: session.token, tenantId: session.tenantId };
+  } finally {
+    inflight.delete(appUserId);
+  }
+}
+
+/** Mint a new session via the configured token source. */
+function createSession(appUserId: string, now: number): Promise<CachedSession> {
+  const mode = brainTokenMode();
+  if (mode === "demo-provision") {
+    return provisionSession();
+  }
+  if (mode === "local-key") {
+    return mintLocalSession(appUserId, now);
+  }
+  throw new Error(
+    "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred — the box " +
+      "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
+  );
 }
 
 /** Ask the live demo fence to provision a tenant and hand back a scoped token. */
@@ -116,4 +141,5 @@ async function mintLocalSession(appUserId: string, now: number): Promise<CachedS
 /** Test/maintenance hook — drop all cached sessions. */
 export function clearBrainTokenCache(): void {
   cache.clear();
+  inflight.clear();
 }
