@@ -70,6 +70,42 @@ function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
   return rows;
 }
 
+// ─── brain-core Ledger transactions (via the BFF proxy) ─────────────────────
+interface BrainTransactionDTO {
+  id: string;
+  amount: string;
+  currency: string;
+  direction: "inflow" | "outflow" | "transfer" | "adjustment";
+  transaction_date: string;
+  description_normalized?: string | null;
+  description_raw?: string | null;
+}
+interface BrainTransactionsResponse {
+  transactions: BrainTransactionDTO[];
+  next_cursor?: string | null;
+}
+
+type TxRow = { id: string; label: string; date: string; amount: number; positive: boolean };
+
+function formatTxDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function mapBrainTransactions(list: BrainTransactionDTO[]): TxRow[] {
+  return list.map((t) => {
+    const positive = t.direction === "inflow";
+    const value = Number(t.amount);
+    return {
+      id: t.id,
+      label: t.description_normalized ?? t.description_raw ?? (positive ? "Incoming payment" : "Outgoing payment"),
+      date: formatTxDate(t.transaction_date),
+      amount: Number.isFinite(value) ? Math.abs(value) : 0,
+      positive,
+    };
+  });
+}
+
 const EXPENSES = [
   { category: "Payroll (8 people, twice a month)", amount: "$4,800" },
   { category: "Software and Subscriptions", amount: "$1,250" },
@@ -161,6 +197,13 @@ export function FinancesPage() {
       ? mapBrainAccounts(brainData.accounts)
       : staticAccounts;
 
+  // Recent transactions from brain-core's Ledger (empty until provisioning seeds them).
+  const { data: brainTx } = useQuery<BrainTransactionsResponse>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const transactions: TxRow[] = brainTx?.transactions ? mapBrainTransactions(brainTx.transactions.slice(0, 6)) : [];
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -203,6 +246,29 @@ export function FinancesPage() {
                 </div>
               ))}
             </WidgetCard>
+
+            {/* Recent transactions (brain-core Ledger) — only shown when present */}
+            {transactions.length > 0 && (
+              <WidgetCard title="Recent transactions">
+                {transactions.map((t, idx) => (
+                  <div key={t.id} className="flex flex-col gap-[8px] w-full">
+                    <div
+                      data-testid={`row-tx-${idx}`}
+                      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
+                    >
+                      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                      </div>
+                      <div className="flex flex-col items-end justify-center relative shrink-0">
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                      </div>
+                    </div>
+                    {idx < transactions.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </WidgetCard>
+            )}
 
             {/* Income */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
