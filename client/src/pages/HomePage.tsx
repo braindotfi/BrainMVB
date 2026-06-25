@@ -316,6 +316,19 @@ export function HomePage() {
   const { format } = useCurrency();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
+  // Falls back to the static figure when brain-core is unreachable/unconfigured.
+  const { data: brainAccounts } = useQuery<{ accounts?: { current_balance?: string | null }[] }>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    retry: false,
+  });
+  const liveTotal =
+    brainAccounts?.accounts && brainAccounts.accounts.length > 0
+      ? brainAccounts.accounts.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0)
+      : null;
+  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : format("$86,993");
+  const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : ".42";
+
   const { data: insightsData } = useQuery({
     queryKey: ["/api/insights"],
     staleTime: 5 * 60 * 1000,
@@ -323,6 +336,17 @@ export function HomePage() {
   });
 
   const spendingInsight = pickSpendingInsight(insightsData?.insights ?? []);
+
+  // Real ledger-grounded insight from brain-core (via the BFF). Preferred over the
+  // legacy mock-data insight; falls back to it when brain-core is unreachable.
+  const { data: brainRec } = useQuery<{ text?: string }>({
+    queryKey: ["/api/brain/recommendation"],
+    retry: false,
+  });
+  const insightLine =
+    brainRec?.text && brainRec.text.trim().length > 0
+      ? { text: brainRec.text, colorClass: "text-[#a8b9f4]" }
+      : spendingInsight;
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
@@ -375,8 +399,8 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Money in all accounts</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{format("$86,993")}</span>
-                      <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">.42</span>
+                      <span className="font-medium leading-[36px] text-[32px]">{totalWhole}</span>
+                      <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">{totalCents}</span>
                     </p>
                     <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[#414965] text-[18px] w-full">
                       Across bank, digital, and agent accounts.
@@ -392,8 +416,8 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
-                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${spendingInsight.colorClass}`}>
-                      {spendingInsight.text}
+                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${insightLine.colorClass}`}>
+                      {insightLine.text}
                     </p>
                   </div>
                 </div>

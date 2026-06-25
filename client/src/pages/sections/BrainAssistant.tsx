@@ -29,6 +29,8 @@ interface ChatMessage {
   role: MessageRole;
   text: string;
   dateTag?: string;
+  /** Evidence ids (ledger rows / raw artifacts) backing a grounded answer. */
+  sources?: string[];
 }
 
 interface ChatSession {
@@ -242,10 +244,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       });
       const data = await res.json().catch(() => null);
       const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
+      const sources = Array.isArray(data?.sources)
+        ? (data.sources as unknown[]).filter((x): x is string => typeof x === "string")
+        : [];
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
-            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply } : m)) }
+            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply, sources } : m)) }
             : s,
         ),
       );
@@ -538,6 +543,17 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     )}
                   </div>
                 </div>
+                {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                  <div className="flex justify-start">
+                    <span
+                      title={msg.sources.join("\n")}
+                      data-testid="assistant-sources"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px] tracking-[-0.4px] px-[4px] cursor-default"
+                    >
+                      Grounded in {msg.sources.length} record{msg.sources.length === 1 ? "" : "s"} from your ledger
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

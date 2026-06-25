@@ -38,6 +38,9 @@ import {
   getWirexTransactions,
 } from "./wirex";
 import { generateInsights, getInsightsState, type DailyInsight } from "./insightsService";
+import { createBrainProxyRouter } from "./brain/proxy";
+import { getBrainSession } from "./brain/auth";
+import { askWikiQuestion } from "./brain/client";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -220,6 +223,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   setupAuth(app);
 
   // ─────────────────────────────────────────────────────────────
+  // BRAIN-CORE BFF PROXY (session → tenant JWT → api.brain.fi)
+  // Reads flow through here; the browser never sees a brain-core JWT.
+  // ─────────────────────────────────────────────────────────────
+  app.use("/api/brain", createBrainProxyRouter());
+
+  // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
   // ─────────────────────────────────────────────────────────────
   app.get("/api/account/balance", async (req, res) => {
@@ -381,7 +390,30 @@ You can explain concepts and surface general guidance, but do not give regulated
       return res.status(400).json({ error: "invalid_messages" });
     }
 
+    // Best-effort: ground the answer in brain-core's Wiki (the user's real
+    // Ledger). If brain-core is unreachable/unconfigured we silently proceed
+    // ungrounded, so the assistant never breaks on the integration.
+    let grounding = "";
+    let sources: string[] = [];
+    try {
+      const lastUser = [...parsed.data.messages].reverse().find((m) => m.role === "user");
+      if (lastUser) {
+        const { token } = await getBrainSession(req.session.userId!);
+        const wiki = await askWikiQuestion(token, lastUser.content);
+        if (wiki.raw) {
+          grounding = wiki.raw;
+          sources = wiki.evidenceIds;
+        }
+      }
+    } catch (e) {
+      console.warn("[Assistant] wiki grounding skipped:", (e as Error)?.message);
+    }
+
     if (!process.env.ANTHROPIC_API_KEY) {
+      // No LLM to phrase the answer — return the grounded data directly if we have it.
+      if (grounding) {
+        return res.json({ reply: grounding, sources });
+      }
       return res.status(503).json({
         error: "assistant_unconfigured",
         reply:
@@ -389,17 +421,21 @@ You can explain concepts and surface general guidance, but do not give regulated
       });
     }
 
+    const system = grounding
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts and transactions — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
+      : ASSISTANT_SYSTEM;
+
     try {
       const message = await anthropic.messages.create({
         model: "claude-opus-4-5",
         max_tokens: 1024,
-        system: ASSISTANT_SYSTEM,
+        system,
         messages: parsed.data.messages,
       });
       const reply = (message.content.find((b) => b.type === "text") as
         | Anthropic.TextBlock
         | undefined)?.text?.trim();
-      return res.json({ reply: reply || "Sorry, I couldn't generate a response. Please try again." });
+      return res.json({ reply: reply || "Sorry, I couldn't generate a response. Please try again.", sources });
     } catch (err) {
       console.error("[Assistant] chat failed:", err);
       const status = (err as { status?: number })?.status;

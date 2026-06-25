@@ -1,0 +1,17 @@
+# Line endings: this repo is LF-only. The Windows checkout (C:\…) is a READ-ONLY
+# mirror; all edit/build/run/git happens in WSL so files stay LF. This guard makes
+# git normalize text to LF on add regardless of the tool/host that wrote them.
+* text=auto eol=lf
+
+# Binaries: never touch (prevents CRLF corruption of images/fonts/pdfs).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary

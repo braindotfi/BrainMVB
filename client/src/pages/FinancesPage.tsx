@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
+import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
@@ -21,6 +23,89 @@ const STATIC_ACCOUNTS = [
   { name: "Treasury AI Agent",       sub: "Cash reserves and T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
   { name: "Account Totals",          sub: "Across bank, crypto and agents",sub2: "",                                     balance: "$86,993" },
 ];
+
+// ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
+// Shape mirrors brain-core's Account schema (subset we render).
+type AccountKind = "bank_checking" | "bank_savings" | "card" | "loan" | "line_of_credit" | "onchain" | "payment_processor";
+interface BrainAccountDTO {
+  id: string;
+  name: string;
+  account_type: AccountKind;
+  currency: string;
+  institution?: string | null;
+  current_balance?: string | null;
+}
+interface BrainAccountsResponse {
+  accounts: BrainAccountDTO[];
+  next_cursor?: string | null;
+}
+
+const KIND_LABEL: Record<AccountKind, string> = {
+  bank_checking: "Bank checking",
+  bank_savings: "Savings",
+  card: "Card",
+  loan: "Loan",
+  line_of_credit: "Line of credit",
+  onchain: "On-chain balance",
+  payment_processor: "Payment processor",
+};
+
+type AccountRow = { name: string; sub: string; sub2: string; balance: string | number };
+
+/** Map brain-core Ledger accounts to the widget's row shape, appending a totals row.
+ *  Balances are treated as USD (the demo tenant's source currency); useCurrency().format
+ *  converts to the active display currency. */
+function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
+  const rows: AccountRow[] = list.map((a) => {
+    const label = KIND_LABEL[a.account_type] ?? a.account_type;
+    const value = a.current_balance != null ? Number(a.current_balance) : 0;
+    return {
+      name: a.name,
+      sub: a.institution ?? label,
+      sub2: a.institution ? label : "",
+      balance: Number.isFinite(value) ? value : 0,
+    };
+  });
+  const total = list.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0);
+  rows.push({ name: "Account Totals", sub: "Across bank, crypto and agents", sub2: "", balance: total });
+  return rows;
+}
+
+// ─── brain-core Ledger transactions (via the BFF proxy) ─────────────────────
+interface BrainTransactionDTO {
+  id: string;
+  amount: string;
+  currency: string;
+  direction: "inflow" | "outflow" | "transfer" | "adjustment";
+  transaction_date: string;
+  description_normalized?: string | null;
+  description_raw?: string | null;
+}
+interface BrainTransactionsResponse {
+  transactions: BrainTransactionDTO[];
+  next_cursor?: string | null;
+}
+
+type TxRow = { id: string; label: string; date: string; amount: number; positive: boolean };
+
+function formatTxDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function mapBrainTransactions(list: BrainTransactionDTO[]): TxRow[] {
+  return list.map((t) => {
+    const positive = t.direction === "inflow";
+    const value = Number(t.amount);
+    return {
+      id: t.id,
+      label: t.description_normalized ?? t.description_raw ?? (positive ? "Incoming payment" : "Outgoing payment"),
+      date: formatTxDate(t.transaction_date),
+      amount: Number.isFinite(value) ? Math.abs(value) : 0,
+      positive,
+    };
+  });
+}
 
 const EXPENSES = [
   { category: "Payroll (8 people, twice a month)", amount: "$4,800" },
@@ -82,8 +167,16 @@ export function FinancesPage() {
   const { format } = useCurrency();
   const { user } = useAuth();
 
-  // Build accounts list dynamically with real wallet address
-  const accounts = (() => {
+  // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
+  // The browser never sees a brain-core JWT — the BFF mints it server-side.
+  const { data: brainData } = useQuery<BrainAccountsResponse>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    retry: false,
+  });
+
+  // Static fallback (kept so the page renders if brain-core is unreachable or
+  // not yet configured). See deliverables/DEAD-CODE-INVENTORY.md.
+  const staticAccounts = (() => {
     const walletAddress = user?.walletAddress;
     const cryptoAccount = walletAddress
       ? { name: "Crypto Account", sub: truncateAddress(walletAddress), sub2: "On-chain USDC balance", balance: "$2,040" }
@@ -99,6 +192,18 @@ export function FinancesPage() {
       STATIC_ACCOUNTS[6], // Account Totals
     ];
   })();
+
+  const accounts: AccountRow[] =
+    brainData?.accounts && brainData.accounts.length > 0
+      ? mapBrainAccounts(brainData.accounts)
+      : staticAccounts;
+
+  // Recent transactions from brain-core's Ledger (empty until provisioning seeds them).
+  const { data: brainTx } = useQuery<BrainTransactionsResponse>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const transactions: TxRow[] = brainTx?.transactions ? mapBrainTransactions(brainTx.transactions.slice(0, 6)) : [];
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -142,6 +247,32 @@ export function FinancesPage() {
                 </div>
               ))}
             </WidgetCard>
+
+            {/* Recent transactions (brain-core Ledger) — only shown when present */}
+            {transactions.length > 0 && (
+              <WidgetCard title="Recent transactions">
+                {transactions.map((t, idx) => (
+                  <div key={t.id} className="flex flex-col gap-[8px] w-full">
+                    <div
+                      data-testid={`row-tx-${idx}`}
+                      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
+                    >
+                      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                      </div>
+                      <div className="flex flex-col items-end justify-center relative shrink-0">
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                      </div>
+                    </div>
+                    {idx < transactions.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </WidgetCard>
+            )}
+
+            {/* Bills — Brain proposes, the §6 policy gate decides (brain-core) */}
+            <BrainBillsInbox />
 
             {/* Income */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
