@@ -21,9 +21,45 @@ touched files in WSL afterward: `sed -i 's/\r$//' <files>`. Full rationale in th
 > throughout. Restored via `git checkout` of the pure-noise files + binaries and added
 > `.gitattributes`. Working tree is now clean (only the Fork A changes below).
 
-## CURRENT STATE — 2026-06-25 (Fork A: propose-only §6 demo — UNCOMMITTED)
+## CURRENT STATE — 2026-06-25 (Fork A + Decline — propose COMMITTED, decline UNCOMMITTED)
 
-**Fork A is built and verified end-to-end against live `api.brain.fi` (v0.0.6); NOT committed.**
+### Decline (reject) follow-on — built + verified, NOT yet committed
+After the committed propose work below, added an operator **Decline** action (human oversight):
+on a proposed bill (ALLOW or CONFIRM, not the policy-REJECTED one), a "Decline" button calls
+**`POST /api/brain/reject`** → brain-core `POST /v1/payment-intents/{id}/reject` → UI shows
+"✕ You declined this — Brain will not pay it." Demo-safe (uses the token's `payment_intent:approve`
+scope; no money moves). New files/edits (all LF, typecheck clean, `brain:smoke` PASSES incl. decline,
+browser-verified): `server/brain/client.ts` (`rejectPaymentIntent`), `server/brain/proxy.ts`
+(`POST /api/brain/reject` — the 2nd & last BFF write), `client/src/components/BrainBillsInbox.tsx`
+(Decline button + declined state), `script/brain-smoke.ts` (decline assertion).
+
+> **Why NOT the approve flow:** probed live — `POST /v1/payment-intents/{id}/approve` returns **HTTP
+> 500** for the demo agent token (no seeded human/org-role approvers), and the CONFIRM rule needs
+> **two** distinct roles (`owner`+`cfo`), so a single demo principal can't meet quorum anyway. Making
+> approve→approved work needs a brain-core change (seed approvers + fix the 500) via its own PR — out
+> of scope. Decline is the working human-in-the-loop action on the demo path.
+
+### Fork C (read polish) — recommendation slice, built + verified, UNCOMMITTED
+HomePage's "You're spending about" insight line is now **ledger-grounded** via brain-core instead
+of mock data: new BFF `GET /api/brain/recommendation` calls `POST /v1/wiki/question` with a canned
+prompt and returns a one-line insight (e.g. *"You have an upcoming inflow of 48000.00 USD from BigCo
+Industries on 2026-05-26"*); HomePage prefers it, falls back to the static line. **Retired the mock
+daily-insights cron** — removed `startDailyInsightsScheduler` from `server/index.ts` (it also spammed
+Anthropic 401s at boot); `insightsService.ts` + `GET /api/insights` are now unused (marked in
+DEAD-CODE §A, delete in Phase 8). Files: `server/brain/proxy.ts` (route), `client/src/pages/HomePage.tsx`,
+`server/index.ts`, `deliverables/DEAD-CODE-INVENTORY.md`. Verified (smoke PASS + browser).
+
+> **Fork C detail panels are BLOCKED on the demo path** (like approve): `GET /v1/wiki/entity/{id}`
+> requires an `ent_`-prefixed **wiki entity id** (`isBrainId(id,"ent")`), but the demo exposes only
+> ledger ids (`acct_`/`cp_`/`tx_`) — `wiki/entity/{acct_…}` 400s "malformed entity_id". Would need a
+> ledger-id → wiki-entity-id mapping (brain-core side) to wire provenance/confidence drill-downs.
+
+### Propose work (below) — COMMITTED
+
+**Fork A is built, verified end-to-end against live `api.brain.fi` (v0.0.6), and COMMITTED**
+(branch `feat/brain-core-integration`, still NOT pushed):
+- `4457d41 feat(brain): propose payments behind the §6 policy gate`
+- `bbc6791 chore: enforce LF line endings via .gitattributes`
 The flagship "Brain proposes a payment → the §6/Policy gate decides" moment, with **no money
 movement** (the demo token has `payment_intent:propose` + `policy:read` but NOT
 `payment_intent:execute`, and the BFF exposes no execute path).
@@ -64,8 +100,10 @@ amount:{currency,value}}` (amount MUST be the `{currency,value}` object, not a b
 `GET /v1/ledger/invoices` returns AP+AR rows; AP bills carry `metadata.scenario:"ap"` + `flags`.
 The provision response also returns `scenario.{vendors,customers,accounts,ap_invoices,ar_invoices,policy_id}`.
 
-**Next:** commit when asked (branch-first). Remaining forks unchanged: **B** production-tenant
-(writes/execution, needs a brain-core PR) and **C** read polish. See `next-steps.md`.
+**Next:** push the branch when asked. Remaining forks unchanged: **B** production-tenant
+(writes/execution, needs a brain-core PR) and **C** read polish. A natural Fork-A follow-on:
+wire the **approve** flow (`POST /payment-intents/{id}/approve`, token has `payment_intent:approve`)
+so the CONFIRM bill (Datacenter) can flip pending_approval → approved in the UI. See `next-steps.md`.
 
 ---
 
