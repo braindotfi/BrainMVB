@@ -24,6 +24,7 @@ import {
   listLedgerInvoices,
   evaluatePolicy,
   proposeInvoicePayment,
+  rejectPaymentIntent,
   BrainApiError,
 } from "../server/brain/client";
 
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
   console.warn(`[smoke] ✓ /ledger/invoices OK (${apBills.length} AP bills)`);
 
   const OUTCOMES = new Set(["approved", "pending_approval", "rejected"]);
+  let declinable: { id: string; number: string } | null = null;
   for (const bill of apBills) {
     const action = {
       kind: "outbound_payment" as const,
@@ -73,12 +75,26 @@ async function main(): Promise<void> {
     if (!OUTCOMES.has(intent.status)) {
       fail(`propose ${bill.invoice_number} returned unexpected status "${intent.status}"`);
     }
+    // Remember a non-rejected intent so we can exercise the decline path below.
+    if (declinable === null && intent.status !== "rejected") {
+      declinable = { id: intent.id, number: bill.invoice_number };
+    }
     console.warn(
       `[smoke] ✓ propose ${bill.invoice_number} (${bill.amount_due} ${bill.currency}) ` +
         `→ ${intent.status} [policy ${decision.outcome}` +
         `${decision.matched_rule_id ? " · " + decision.matched_rule_id : ""}]`,
     );
   }
+
+  // 4) Fork A — decline (reject) path: operator declines a proposed bill.
+  if (declinable === null) {
+    fail("no non-rejected proposal to exercise the decline path");
+  }
+  const declined = await rejectPaymentIntent(token, declinable.id, "smoke decline");
+  if (declined.status !== "rejected") {
+    fail(`reject ${declinable.number} returned status "${declined.status}" (expected rejected)`);
+  }
+  console.warn(`[smoke] ✓ decline ${declinable.number} → ${declined.status}`);
 
   console.warn("[smoke] PASS");
 }

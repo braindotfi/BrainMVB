@@ -25,6 +25,7 @@ import {
   listLedgerInvoices,
   evaluatePolicy,
   proposeInvoicePayment,
+  rejectPaymentIntent,
   type PolicyAction,
 } from "./client";
 
@@ -83,6 +84,36 @@ export function createBrainProxyRouter(): Router {
       // Authoritative: create the §6-gated PaymentIntent (no execution).
       const intent = await proposeInvoicePayment(token, invoiceId);
       return res.json({ intent, decision });
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // POST /api/brain/reject — operator declines a proposed PaymentIntent.
+  //
+  // The second (and last) write the BFF exposes. Demo-safe human-oversight
+  // action: transitions a proposed/pending intent to `rejected` via the
+  // `payment_intent:approve` scope the demo token holds. No execute path; no
+  // money movement. Mirror to /propose.
+  router.post("/reject", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) {
+      return res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+    }
+    const body = req.body as { payment_intent_id?: unknown; reason?: unknown } | undefined;
+    const intentId = body?.payment_intent_id;
+    if (typeof intentId !== "string" || !intentId.startsWith("pi_")) {
+      return res
+        .status(400)
+        .json({ error: "invalid_request", message: "payment_intent_id (pi_…) is required" });
+    }
+    const reason = typeof body?.reason === "string" ? body.reason : undefined;
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const intent = await rejectPaymentIntent(token, intentId, reason);
+      return res.json({ intent });
     } catch (err) {
       return relayError(res, err);
     }

@@ -235,6 +235,25 @@ export function proposeInvoicePayment(token: string, invoiceId: string): Promise
   });
 }
 
+/**
+ * POST /payment-intents/{id}/reject — operator declines a proposed/pending
+ * PaymentIntent. Demo-safe human-oversight action: uses the `payment_intent:approve`
+ * scope the demo token already holds, transitions the intent to `rejected`, and
+ * moves no money. (The complementary `approve` path is intentionally NOT exposed:
+ * the demo tenant has no seeded approvers and the live endpoint 500s for it.)
+ */
+export function rejectPaymentIntent(
+  token: string,
+  id: string,
+  reason?: string,
+): Promise<PaymentIntent> {
+  return brainRequest<PaymentIntent>(`/payment-intents/${id}/reject`, {
+    token,
+    method: "POST",
+    body: reason !== undefined ? { reason } : {},
+  });
+}
+
 /** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */
 export async function askWikiQuestion(token: string, question: string): Promise<WikiAnswer> {
   const resp = await brainRequest<WikiQuestionResponse>("/wiki/question", {

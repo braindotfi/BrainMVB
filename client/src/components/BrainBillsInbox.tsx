@@ -113,6 +113,8 @@ export function BrainBillsInbox() {
     retry: false,
   });
 
+  const [declined, setDeclined] = useState<Record<string, boolean>>({});
+
   const propose = useMutation<ProposeResponse, Error, string>({
     mutationFn: async (invoiceId: string) => {
       const res = await apiRequest("POST", "/api/brain/propose", { invoice_id: invoiceId });
@@ -120,6 +122,20 @@ export function BrainBillsInbox() {
     },
     onMutate: (invoiceId) => setActiveId(invoiceId),
     onSuccess: (data, invoiceId) => setResults((r) => ({ ...r, [invoiceId]: data })),
+    onSettled: () => setActiveId(null),
+  });
+
+  // Operator declines a proposed bill → real reject on brain-core (no money moves).
+  const reject = useMutation<PaymentIntentDTO, Error, { invoiceId: string; intentId: string }>({
+    mutationFn: async ({ intentId }) => {
+      const res = await apiRequest("POST", "/api/brain/reject", {
+        payment_intent_id: intentId,
+        reason: "Declined by operator",
+      });
+      return ((await res.json()) as { intent: PaymentIntentDTO }).intent;
+    },
+    onMutate: ({ invoiceId }) => setActiveId(invoiceId),
+    onSuccess: (_data, { invoiceId }) => setDeclined((d) => ({ ...d, [invoiceId]: true })),
     onSettled: () => setActiveId(null),
   });
 
@@ -254,6 +270,24 @@ export function BrainBillsInbox() {
                       )}
                     </>
                   )}
+
+                  {/* Human oversight: decline a proposed bill (real reject; no money moves) */}
+                  {outcome !== "reject" &&
+                    (declined[bill.id] ? (
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[13px]">
+                        ✕ You declined this — Brain will not pay it.
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={reject.isPending && activeId === bill.id}
+                        onClick={() => reject.mutate({ invoiceId: bill.id, intentId: result.intent.id })}
+                        data-testid={`decline-${bill.invoice_number}`}
+                        className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#d20344] border border-[rgba(210,3,68,0.4)] rounded-[8px] px-[12px] py-[6px] w-fit transition-colors hover:bg-[rgba(210,3,68,0.08)] disabled:opacity-50"
+                      >
+                        {reject.isPending && activeId === bill.id ? "Declining…" : "Decline"}
+                      </button>
+                    ))}
                 </div>
               )}
 
