@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
@@ -21,6 +22,53 @@ const STATIC_ACCOUNTS = [
   { name: "Treasury AI Agent",       sub: "Cash reserves and T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
   { name: "Account Totals",          sub: "Across bank, crypto and agents",sub2: "",                                     balance: "$86,993" },
 ];
+
+// ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
+// Shape mirrors brain-core's Account schema (subset we render).
+type AccountKind = "bank_checking" | "bank_savings" | "card" | "loan" | "line_of_credit" | "onchain" | "payment_processor";
+interface BrainAccountDTO {
+  id: string;
+  name: string;
+  account_type: AccountKind;
+  currency: string;
+  institution?: string | null;
+  current_balance?: string | null;
+}
+interface BrainAccountsResponse {
+  accounts: BrainAccountDTO[];
+  next_cursor?: string | null;
+}
+
+const KIND_LABEL: Record<AccountKind, string> = {
+  bank_checking: "Bank checking",
+  bank_savings: "Savings",
+  card: "Card",
+  loan: "Loan",
+  line_of_credit: "Line of credit",
+  onchain: "On-chain balance",
+  payment_processor: "Payment processor",
+};
+
+type AccountRow = { name: string; sub: string; sub2: string; balance: string | number };
+
+/** Map brain-core Ledger accounts to the widget's row shape, appending a totals row.
+ *  Balances are treated as USD (the demo tenant's source currency); useCurrency().format
+ *  converts to the active display currency. */
+function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
+  const rows: AccountRow[] = list.map((a) => {
+    const label = KIND_LABEL[a.account_type] ?? a.account_type;
+    const value = a.current_balance != null ? Number(a.current_balance) : 0;
+    return {
+      name: a.name,
+      sub: a.institution ?? label,
+      sub2: a.institution ? label : "",
+      balance: Number.isFinite(value) ? value : 0,
+    };
+  });
+  const total = list.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0);
+  rows.push({ name: "Account Totals", sub: "Across bank, crypto and agents", sub2: "", balance: total });
+  return rows;
+}
 
 const EXPENSES = [
   { category: "Payroll (8 people, twice a month)", amount: "$4,800" },
@@ -82,8 +130,16 @@ export function FinancesPage() {
   const { format } = useCurrency();
   const { user } = useAuth();
 
-  // Build accounts list dynamically with real wallet address
-  const accounts = (() => {
+  // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
+  // The browser never sees a brain-core JWT — the BFF mints it server-side.
+  const { data: brainData } = useQuery<BrainAccountsResponse>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    retry: false,
+  });
+
+  // Static fallback (kept so the page renders if brain-core is unreachable or
+  // not yet configured). See deliverables/DEAD-CODE-INVENTORY.md.
+  const staticAccounts = (() => {
     const walletAddress = user?.walletAddress;
     const cryptoAccount = walletAddress
       ? { name: "Crypto Account", sub: truncateAddress(walletAddress), sub2: "On-chain USDC balance", balance: "$2,040" }
@@ -99,6 +155,11 @@ export function FinancesPage() {
       STATIC_ACCOUNTS[6], // Account Totals
     ];
   })();
+
+  const accounts: AccountRow[] =
+    brainData?.accounts && brainData.accounts.length > 0
+      ? mapBrainAccounts(brainData.accounts)
+      : staticAccounts;
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">

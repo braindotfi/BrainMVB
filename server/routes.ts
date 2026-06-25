@@ -38,6 +38,7 @@ import {
   getWirexTransactions,
 } from "./wirex";
 import { generateInsights, getInsightsState, type DailyInsight } from "./insightsService";
+import { createBrainProxyRouter } from "./brain/proxy";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -218,6 +219,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // AUTH (session + email/password + Google OAuth)
   // ─────────────────────────────────────────────────────────────
   setupAuth(app);
+
+  // ─────────────────────────────────────────────────────────────
+  // BRAIN-CORE BFF PROXY (session → tenant JWT → api.brain.fi)
+  // Reads flow through here; the browser never sees a brain-core JWT.
+  // ─────────────────────────────────────────────────────────────
+  app.use("/api/brain", createBrainProxyRouter());
 
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
