@@ -26,8 +26,15 @@ import {
   evaluatePolicy,
   proposeInvoicePayment,
   rejectPaymentIntent,
+  askWikiQuestion,
   type PolicyAction,
 } from "./client";
+
+/** Canned prompt for the HomePage "Brain's take" line — one specific, numeric insight. */
+const RECOMMENDATION_PROMPT =
+  "In one sentence, give me the single most important and specific thing to know about my " +
+  "money right now (a cash-flow, spending, or receivable item). Be concrete and numeric; do " +
+  "not greet or add commentary.";
 
 export function createBrainProxyRouter(): Router {
   const router = Router();
@@ -116,6 +123,27 @@ export function createBrainProxyRouter(): Router {
       return res.json({ intent });
     } catch (err) {
       return relayError(res, err);
+    }
+  });
+
+  // GET /api/brain/recommendation — a one-line, ledger-grounded insight for the
+  // HomePage, synthesized from Wiki Q&A (read-only). Replaces the old mock-data
+  // daily-insights cron (server/insightsService.ts). Returns {} on any failure
+  // so the page falls back to its static line.
+  router.get("/recommendation", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) {
+      return res.json({}); // not configured → caller uses its static fallback
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const answer = await askWikiQuestion(token, RECOMMENDATION_PROMPT);
+      return res.json({ text: answer.raw, evidenceIds: answer.evidenceIds });
+    } catch (err) {
+      console.warn(
+        "[brain-proxy] recommendation failed (falling back):",
+        err instanceof Error ? err.message : String(err),
+      );
+      return res.json({});
     }
   });
 

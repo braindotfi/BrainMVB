@@ -337,6 +337,17 @@ export function HomePage() {
 
   const spendingInsight = pickSpendingInsight(insightsData?.insights ?? []);
 
+  // Real ledger-grounded insight from brain-core (via the BFF). Preferred over the
+  // legacy mock-data insight; falls back to it when brain-core is unreachable.
+  const { data: brainRec } = useQuery<{ text?: string }>({
+    queryKey: ["/api/brain/recommendation"],
+    retry: false,
+  });
+  const insightLine =
+    brainRec?.text && brainRec.text.trim().length > 0
+      ? { text: brainRec.text, colorClass: "text-[#a8b9f4]" }
+      : spendingInsight;
+
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
   useEffect(() => {
@@ -405,8 +416,8 @@ export function HomePage() {
                       <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
-                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${spendingInsight.colorClass}`}>
-                      {spendingInsight.text}
+                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${insightLine.colorClass}`}>
+                      {insightLine.text}
                     </p>
                   </div>
                 </div>
