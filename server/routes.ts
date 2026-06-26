@@ -16,7 +16,7 @@ import {
 } from "./wirex";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
-import { askWikiQuestion, type WikiEvidence } from "./brain/client";
+import { askWikiQuestion, listLedgerAccounts, type WikiEvidence } from "./brain/client";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -84,36 +84,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ─────────────────────────────────────────────────────────────
-  // GOAL RECOMMENDATIONS (Claude-powered)
+  // GOAL RECOMMENDATIONS (brain-grounded, Claude-phrased)
   // For the "New Goal" modal — given a category the user picks in
   // the "What's it for?" tabs, returns a 1–2 sentence personalised
-  // recommendation grounded in the demo account snapshot.
+  // recommendation grounded in the user's live brain-core Ledger
+  // (via Wiki Q&A) and phrased by Claude. Falls back to a curated,
+  // category-specific line when brain-core / Claude are unavailable.
   // ─────────────────────────────────────────────────────────────
   const goalRecCache = new Map<string, { text: string; at: number }>();
   const GOAL_REC_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-  const GOAL_ACCOUNT_CONTEXT = `
-ACME Inc. business snapshot (USD):
-- Operating cash: $4.8M; monthly burn: $612K (runway ≈ 7.8 months)
-- Revenue last quarter: $1.42M, growing ~9% QoQ
-- Outstanding debt: $1.2M term loan @ 9.5% APR ($28K monthly service)
-- Idle cash not earning yield: $42K in operating account
-- AR overdue >30 days: $187K across 4 customers
-- Treasury yield earned this month: $548 (1.16% APY on $51K)
-- AlphaFlow trading volume this week: 47 trades (18% above 30-day avg)
-- Largest spend categories: AI Agents 48%, SaaS 29%, Vendor payments 16%
-- Active goals: "Hit $5M ARR" (priority 88), "Reach 18-month runway" (64), "Q4 marketing budget" (35)
-`.trim();
-
   const GOAL_REC_SYSTEM = `You are Brain AI, the financial brain embedded in a neobank for businesses.
 The user is creating a new goal and just picked a CATEGORY in the "What's it for?" tabs.
-Given the company's account snapshot, return ONE concrete, numeric recommendation
+Given the user's real financial figures, return ONE concrete, numeric recommendation
 (1–2 short sentences, max ~220 chars) tailored to that category — what target to
-set and why, grounded in the snapshot's actual numbers.
+set and why, grounded in those actual numbers.
 
 Rules:
 - Plain prose, no markdown, no bullet points, no leading label.
-- Reference real numbers from the snapshot (dollars, percentages, months).
+- Reference only the real numbers provided (dollars, percentages, months); do not invent figures.
 - Do not greet, do not restate the category. Just the recommendation.`;
 
   app.get("/api/goals/recommendation", async (req, res) => {
@@ -126,11 +115,40 @@ Rules:
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
+      // No LLM to phrase — prefer the curated, category-specific line (reads better
+      // than a raw figure dump). Skip the grounding fetch since it would go unused.
       return res.json({ text: GOAL_REC_FALLBACK[category] ?? GOAL_REC_FALLBACK_DEFAULT, cached: false, fallback: true });
+    }
+
+    // Best-effort: ground the recommendation in the user's real brain-core Ledger
+    // account balances (replaces the old hardcoded mock snapshot). Read directly
+    // from /ledger/accounts — deterministic and correct, unlike a broad Wiki Q&A
+    // which misreads "accounts". Silently ungrounded on failure so the
+    // recommendation never breaks on the integration.
+    let grounding = "";
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const { accounts } = await listLedgerAccounts(token, { limit: 50 });
+      if (accounts.length > 0) {
+        const lines = accounts.map(
+          (a) => `- ${a.name} (${a.account_type}): ${a.current_balance ?? "?"} ${a.currency}`,
+        );
+        const usdTotal = accounts
+          .filter((a) => a.currency === "USD" && a.current_balance != null)
+          .reduce((sum, a) => sum + (Number(a.current_balance) || 0), 0);
+        grounding =
+          `Real account balances from Brain:\n${lines.join("\n")}\n` +
+          `Total USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD.`;
+      }
+    } catch (e) {
+      console.warn("[GoalRec] ledger grounding skipped:", (e as Error)?.message);
     }
 
     try {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const context = grounding
+        ? `The user's real financial figures from Brain (source of truth — use only these, do not invent):\n${grounding}`
+        : "No live financial figures are available; give general but actionable guidance for the category.";
       const message = await anthropic.messages.create({
         model: "claude-opus-4-5",
         max_tokens: 220,
@@ -138,7 +156,7 @@ Rules:
         messages: [
           {
             role: "user",
-            content: `Snapshot:\n${GOAL_ACCOUNT_CONTEXT}\n\nCategory the user picked: "${category}".\n\nReturn the recommendation as plain text.`,
+            content: `${context}\n\nCategory the user picked: "${category}".\n\nReturn the recommendation as plain text.`,
           },
         ],
       });
@@ -146,7 +164,7 @@ Rules:
       const clean = text.replace(/^["'`]+|["'`]+$/g, "").trim();
       if (!clean) throw new Error("empty recommendation");
       goalRecCache.set(category, { text: clean, at: Date.now() });
-      return res.json({ text: clean, cached: false });
+      return res.json({ text: clean, cached: false, grounded: !!grounding });
     } catch (err) {
       console.error("[GoalRec] generation failed:", err);
       return res.json({
