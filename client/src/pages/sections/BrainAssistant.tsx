@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Plus,
   ArrowUp,
@@ -6,6 +7,7 @@ import {
   Search,
   SquarePen,
 } from "lucide-react";
+import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -24,13 +26,20 @@ interface BrainAssistantProps {
 
 type MessageRole = "user" | "assistant";
 
+/** One grounding record backing an assistant answer (a ledger row / raw artifact). */
+interface EvidenceRecord {
+  entityId: string;
+  entityType: string | null;
+  excerpt: string | null;
+}
+
 interface ChatMessage {
   id: string;
   role: MessageRole;
   text: string;
   dateTag?: string;
-  /** Evidence ids (ledger rows / raw artifacts) backing a grounded answer. */
-  sources?: string[];
+  /** Evidence records (ledger rows / raw artifacts) backing a grounded answer. */
+  sources?: EvidenceRecord[];
 }
 
 interface ChatSession {
@@ -136,6 +145,20 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
+  // Evidence-trail UI: which message has its evidence list expanded, and which
+  // ledger transaction the detail sheet is showing (null = closed).
+  const [openEvidenceFor, setOpenEvidenceFor] = useState<string | null>(null);
+  const [openTxId, setOpenTxId] = useState<string | null>(null);
+  // Recent ledger transactions (same cache as Finances) — lets an evidence record
+  // whose id is a known transaction deep-link into the detail sheet.
+  const { data: txData } = useQuery<{ transactions: { id: string }[] }>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const txIds = useMemo(
+    () => new Set((txData?.transactions ?? []).map((t) => t.id)),
+    [txData],
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -244,8 +267,25 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       });
       const data = await res.json().catch(() => null);
       const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
-      const sources = Array.isArray(data?.sources)
-        ? (data.sources as unknown[]).filter((x): x is string => typeof x === "string")
+      // Tolerate both the structured `{entityId,entityType,excerpt}` shape and the
+      // legacy bare-string-id shape.
+      const sources: EvidenceRecord[] = Array.isArray(data?.sources)
+        ? (data.sources as unknown[])
+            .map((x): EvidenceRecord | null => {
+              if (typeof x === "string") return { entityId: x, entityType: null, excerpt: null };
+              if (x && typeof x === "object") {
+                const o = x as Record<string, unknown>;
+                const id = typeof o.entityId === "string" ? o.entityId : null;
+                if (!id) return null;
+                return {
+                  entityId: id,
+                  entityType: typeof o.entityType === "string" ? o.entityType : null,
+                  excerpt: typeof o.excerpt === "string" ? o.excerpt : null,
+                };
+              }
+              return null;
+            })
+            .filter((x): x is EvidenceRecord => x !== null)
         : [];
       setSessions((prev) =>
         prev.map((s) =>
@@ -544,14 +584,43 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                   </div>
                 </div>
                 {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
-                  <div className="flex justify-start">
-                    <span
-                      title={msg.sources.join("\n")}
+                  <div className="flex flex-col items-start gap-[6px] w-full">
+                    <button
+                      type="button"
                       data-testid="assistant-sources"
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px] tracking-[-0.4px] px-[4px] cursor-default"
+                      onClick={() => setOpenEvidenceFor((cur) => (cur === msg.id ? null : msg.id))}
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px] tracking-[-0.4px] px-[4px] cursor-pointer hover:underline text-left"
                     >
                       Grounded in {msg.sources.length} record{msg.sources.length === 1 ? "" : "s"} from your ledger
-                    </span>
+                      {openEvidenceFor === msg.id ? " ▾" : " ▸"}
+                    </button>
+                    {openEvidenceFor === msg.id && (
+                      <div className="flex flex-col gap-[4px] w-full pl-[4px]">
+                        {msg.sources.map((s, i) => {
+                          const text = s.excerpt ?? s.entityId;
+                          return txIds.has(s.entityId) ? (
+                            <button
+                              key={`${s.entityId}-${i}`}
+                              type="button"
+                              data-testid={`evidence-link-${i}`}
+                              onClick={() => setOpenTxId(s.entityId)}
+                              title={s.entityId}
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
+                            >
+                              {text}
+                            </button>
+                          ) : (
+                            <span
+                              key={`${s.entityId}-${i}`}
+                              title={s.entityId}
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[15px] break-words"
+                            >
+                              {text}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -610,6 +679,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           </div>
         </div>
       </div>
+      <TransactionDetailSheet txId={openTxId} onClose={() => setOpenTxId(null)} />
     </div>
   );
 }

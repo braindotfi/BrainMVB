@@ -40,7 +40,7 @@ import {
 import { generateInsights, getInsightsState, type DailyInsight } from "./insightsService";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
-import { askWikiQuestion } from "./brain/client";
+import { askWikiQuestion, type WikiEvidence } from "./brain/client";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -394,7 +394,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     // Ledger). If brain-core is unreachable/unconfigured we silently proceed
     // ungrounded, so the assistant never breaks on the integration.
     let grounding = "";
-    let sources: string[] = [];
+    let sources: WikiEvidence[] = [];
     try {
       const lastUser = [...parsed.data.messages].reverse().find((m) => m.role === "user");
       if (lastUser) {
@@ -402,7 +402,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         const wiki = await askWikiQuestion(token, lastUser.content);
         if (wiki.raw) {
           grounding = wiki.raw;
-          sources = wiki.evidenceIds;
+          sources = wiki.evidence;
         }
       }
     } catch (e) {

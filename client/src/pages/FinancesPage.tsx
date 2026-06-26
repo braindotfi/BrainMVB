@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
+import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
@@ -205,6 +207,9 @@ export function FinancesPage() {
   });
   const transactions: TxRow[] = brainTx?.transactions ? mapBrainTransactions(brainTx.transactions.slice(0, 6)) : [];
 
+  // Which transaction the detail sheet is showing (null = closed).
+  const [openTxId, setOpenTxId] = useState<string | null>(null);
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -255,7 +260,16 @@ export function FinancesPage() {
                   <div key={t.id} className="flex flex-col gap-[8px] w-full">
                     <div
                       data-testid={`row-tx-${idx}`}
-                      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setOpenTxId(t.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setOpenTxId(t.id);
+                        }
+                      }}
+                      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
                     >
                       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
@@ -342,6 +356,7 @@ export function FinancesPage() {
           </div>
         </div>
       </ScrollArea>
+      <TransactionDetailSheet txId={openTxId} onClose={() => setOpenTxId(null)} />
     </div>
   );
 }
