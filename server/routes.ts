@@ -2,31 +2,8 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { setupAuth, googleEnabled, requireAuth } from "./auth";
-import { keccak256, toBytes } from "viem";
 import { storage } from "./storage";
 import { z } from "zod";
-import {
-  computeBrainAccountAddress,
-  getDeployedAccount,
-  deployBrainAccount,
-  getOnChainAgentConfig,
-  getAgentBalance,
-  getRemainingBudget,
-  getAgentPolicyHash,
-  getRegistryRecord,
-  getAgentReputation,
-  formatUsdc,
-  DEPLOYED_ADDRESSES,
-  CONTRACT_MODE,
-} from "./contractService";
-import {
-  processPaymentIntent,
-  processTradeIntent,
-  computePolicyHash,
-  type AgentPolicy,
-  type PaymentIntent,
-  type TradeIntent,
-} from "./policyEngine";
 import {
   WirexCard,
   createWirexUser,
@@ -37,166 +14,11 @@ import {
   getWirexBankAccounts,
   getWirexTransactions,
 } from "./wirex";
-import { generateInsights, getInsightsState, type DailyInsight } from "./insightsService";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
-import { askWikiQuestion } from "./brain/client";
+import { askWikiQuestion, listLedgerAccounts, type WikiEvidence } from "./brain/client";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-/**
- * Safely convert a JSON-serialised numeric value to BigInt.
- * Throws a descriptive Error (caught by the route try/catch) if the value is
- * not a valid integer string, preventing server crashes from malformed input.
- */
-function safeBigInt(val: unknown, field: string): bigint {
-  const str = String(val ?? "0").trim();
-  if (!/^-?\d+$/.test(str)) {
-    throw new Error(`Invalid integer value for "${field}": ${str}`);
-  }
-  return BigInt(str);
-}
-
-// ─── Agent Runtime (ReAct Loop) ────────────────────────────────────────────────
-const BRAIN_TOOLS: Anthropic.Tool[] = [
-  {
-    name: "check_balance",
-    description: "Check the current USDC balance of the agent sub-account",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "get_policy",
-    description: "Retrieve the agent's current spending policy configuration",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "record_action",
-    description: "Write an observation or decision to agent memory",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        observation: { type: "string", description: "What happened or was decided" },
-        actionType: { type: "string", description: "Category: trade|payment|analysis|error" },
-      },
-      required: ["observation"],
-    },
-  },
-  {
-    name: "pay_x402",
-    description: "Execute an x402 payment to an external service URL",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        url: { type: "string", description: "Target resource URL" },
-        amount: { type: "string", description: "Amount in USDC (e.g. '1.50')" },
-        merchant: { type: "string", description: "Merchant wallet address or name" },
-      },
-      required: ["url", "amount", "merchant"],
-    },
-  },
-  {
-    name: "analyze_market",
-    description: "Analyze current market conditions for a given token or asset",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        asset: { type: "string", description: "Asset symbol e.g. ETH, USDC, BTC" },
-        timeframe: { type: "string", description: "Timeframe: 1h | 4h | 1d | 1w" },
-      },
-      required: ["asset"],
-    },
-  },
-];
-
-async function runAgentLoop(
-  agentId: string,
-  objective: string,
-  policy: object,
-  memories: Array<{ content: string; actionType: string | null }>
-): Promise<string> {
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: `You are an autonomous financial agent on Brain Finance.
-Agent ID: ${agentId}
-Objective: ${objective}
-Policy: ${JSON.stringify(policy)}
-Recent memory: ${JSON.stringify(memories.slice(-5))}
-
-Execute the objective within your policy constraints. Use tools to act. When complete, summarize what you did.`,
-    },
-  ];
-
-  let maxIterations = 8;
-  let finalSummary = "Agent completed its objective.";
-
-  while (maxIterations-- > 0) {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 2048,
-      tools: BRAIN_TOOLS,
-      messages,
-    });
-
-    messages.push({ role: "assistant", content: response.content });
-
-    if (response.stop_reason === "end_turn") {
-      const lastText = response.content.find(b => b.type === "text");
-      if (lastText && lastText.type === "text") finalSummary = lastText.text;
-      break;
-    }
-
-    if (response.stop_reason === "tool_use") {
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-      for (const block of response.content) {
-        if (block.type !== "tool_use") continue;
-        let result: object = {};
-        switch (block.name) {
-          case "check_balance":
-            result = { balance: "5000.00", currency: "USDC", agentId };
-            break;
-          case "get_policy":
-            result = policy;
-            break;
-          case "record_action": {
-            const inp = block.input as { observation: string; actionType?: string };
-            await storage.addMemory({ agentId, content: inp.observation, actionType: inp.actionType ?? "observation", metadata: null });
-            result = { recorded: true };
-            break;
-          }
-          case "pay_x402": {
-            const inp = block.input as { url: string; amount: string; merchant: string };
-            const tx = await storage.addTransaction({
-              agentId, txHash: null, intentHash: null,
-              resourceUri: inp.url, amountUsdc: inp.amount,
-              merchant: inp.merchant, status: "pending", blockNumber: null,
-            });
-            result = { success: true, txId: tx.id, status: "pending", message: `Payment of ${inp.amount} USDC to ${inp.merchant} initiated.` };
-            break;
-          }
-          case "analyze_market": {
-            const inp = block.input as { asset: string; timeframe?: string };
-            result = {
-              asset: inp.asset,
-              price: inp.asset === "ETH" ? 3250.42 : 1.00,
-              change24h: "+2.3%",
-              volume24h: "$1.2B",
-              sentiment: "bullish",
-              recommendation: "Hold — momentum positive, await confirmation.",
-            };
-            break;
-          }
-          default:
-            result = { error: "Unknown tool" };
-        }
-        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
-      }
-      messages.push({ role: "user", content: toolResults });
-    }
-  }
-
-  return finalSummary;
-}
 
 const GOAL_REC_FALLBACK_DEFAULT =
   "Set a target tied to one of your live metrics — e.g. operating cash, monthly burn, or AR — and Brain will keep agents aligned to it.";
@@ -231,32 +53,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
   // ─────────────────────────────────────────────────────────────
-  app.get("/api/account/balance", async (req, res) => {
-    // In production: query BrainAccount contract via Alchemy RPC
-    return res.json({
-      usdc: "5000.00",
-      eth: "1.2450",
-      totalUsd: "9043.13",
-      currency: "USD",
-    });
-  });
-
-  app.get("/api/account/assets", async (req, res) => {
-    return res.json([
-      { symbol: "USDC", name: "USD Coin", balance: "5000.00", usdValue: "5000.00", change24h: "0.00%", icon: "💵" },
-      { symbol: "ETH", name: "Ethereum", balance: "1.2450", usdValue: "4043.13", change24h: "+2.30%", icon: "⟠" },
-      { symbol: "MATIC", name: "Polygon", balance: "850.00", usdValue: "612.00", change24h: "-1.20%", icon: "⬡" },
-      { symbol: "BNB", name: "BNB Chain", balance: "2.10", usdValue: "1281.00", change24h: "+0.80%", icon: "🔶" },
-    ]);
-  });
-
-  app.get("/api/account/transactions", async (req, res) => {
-    return res.json([
-      { id: "1", type: "deposit", asset: "USDC", amount: "2500.00", status: "confirmed", timestamp: new Date(Date.now() - 3600000), description: "Deposit from Coinbase" },
-      { id: "2", type: "trade", asset: "ETH", amount: "0.5", status: "confirmed", timestamp: new Date(Date.now() - 7200000), description: "Buy ETH via AlphaFlow" },
-      { id: "3", type: "payment", asset: "USDC", amount: "150.00", status: "confirmed", timestamp: new Date(Date.now() - 86400000), description: "x402 payment to API service" },
-    ]);
-  });
 
   // DELETE /api/account — permanently delete the authenticated user's account and
   // all associated records. The target user is derived from the session — never the body.
@@ -288,36 +84,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ─────────────────────────────────────────────────────────────
-  // GOAL RECOMMENDATIONS (Claude-powered)
+  // GOAL RECOMMENDATIONS (brain-grounded, Claude-phrased)
   // For the "New Goal" modal — given a category the user picks in
   // the "What's it for?" tabs, returns a 1–2 sentence personalised
-  // recommendation grounded in the demo account snapshot.
+  // recommendation grounded in the user's live brain-core Ledger
+  // (via Wiki Q&A) and phrased by Claude. Falls back to a curated,
+  // category-specific line when brain-core / Claude are unavailable.
   // ─────────────────────────────────────────────────────────────
   const goalRecCache = new Map<string, { text: string; at: number }>();
   const GOAL_REC_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-  const GOAL_ACCOUNT_CONTEXT = `
-ACME Inc. business snapshot (USD):
-- Operating cash: $4.8M; monthly burn: $612K (runway ≈ 7.8 months)
-- Revenue last quarter: $1.42M, growing ~9% QoQ
-- Outstanding debt: $1.2M term loan @ 9.5% APR ($28K monthly service)
-- Idle cash not earning yield: $42K in operating account
-- AR overdue >30 days: $187K across 4 customers
-- Treasury yield earned this month: $548 (1.16% APY on $51K)
-- AlphaFlow trading volume this week: 47 trades (18% above 30-day avg)
-- Largest spend categories: AI Agents 48%, SaaS 29%, Vendor payments 16%
-- Active goals: "Hit $5M ARR" (priority 88), "Reach 18-month runway" (64), "Q4 marketing budget" (35)
-`.trim();
-
   const GOAL_REC_SYSTEM = `You are Brain AI, the financial brain embedded in a neobank for businesses.
 The user is creating a new goal and just picked a CATEGORY in the "What's it for?" tabs.
-Given the company's account snapshot, return ONE concrete, numeric recommendation
+Given the user's real financial figures, return ONE concrete, numeric recommendation
 (1–2 short sentences, max ~220 chars) tailored to that category — what target to
-set and why, grounded in the snapshot's actual numbers.
+set and why, grounded in those actual numbers.
 
 Rules:
 - Plain prose, no markdown, no bullet points, no leading label.
-- Reference real numbers from the snapshot (dollars, percentages, months).
+- Reference only the real numbers provided (dollars, percentages, months); do not invent figures.
 - Do not greet, do not restate the category. Just the recommendation.`;
 
   app.get("/api/goals/recommendation", async (req, res) => {
@@ -330,11 +115,40 @@ Rules:
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
+      // No LLM to phrase — prefer the curated, category-specific line (reads better
+      // than a raw figure dump). Skip the grounding fetch since it would go unused.
       return res.json({ text: GOAL_REC_FALLBACK[category] ?? GOAL_REC_FALLBACK_DEFAULT, cached: false, fallback: true });
+    }
+
+    // Best-effort: ground the recommendation in the user's real brain-core Ledger
+    // account balances (replaces the old hardcoded mock snapshot). Read directly
+    // from /ledger/accounts — deterministic and correct, unlike a broad Wiki Q&A
+    // which misreads "accounts". Silently ungrounded on failure so the
+    // recommendation never breaks on the integration.
+    let grounding = "";
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const { accounts } = await listLedgerAccounts(token, { limit: 50 });
+      if (accounts.length > 0) {
+        const lines = accounts.map(
+          (a) => `- ${a.name} (${a.account_type}): ${a.current_balance ?? "?"} ${a.currency}`,
+        );
+        const usdTotal = accounts
+          .filter((a) => a.currency === "USD" && a.current_balance != null)
+          .reduce((sum, a) => sum + (Number(a.current_balance) || 0), 0);
+        grounding =
+          `Real account balances from Brain:\n${lines.join("\n")}\n` +
+          `Total USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD.`;
+      }
+    } catch (e) {
+      console.warn("[GoalRec] ledger grounding skipped:", (e as Error)?.message);
     }
 
     try {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const context = grounding
+        ? `The user's real financial figures from Brain (source of truth — use only these, do not invent):\n${grounding}`
+        : "No live financial figures are available; give general but actionable guidance for the category.";
       const message = await anthropic.messages.create({
         model: "claude-opus-4-5",
         max_tokens: 220,
@@ -342,7 +156,7 @@ Rules:
         messages: [
           {
             role: "user",
-            content: `Snapshot:\n${GOAL_ACCOUNT_CONTEXT}\n\nCategory the user picked: "${category}".\n\nReturn the recommendation as plain text.`,
+            content: `${context}\n\nCategory the user picked: "${category}".\n\nReturn the recommendation as plain text.`,
           },
         ],
       });
@@ -350,7 +164,7 @@ Rules:
       const clean = text.replace(/^["'`]+|["'`]+$/g, "").trim();
       if (!clean) throw new Error("empty recommendation");
       goalRecCache.set(category, { text: clean, at: Date.now() });
-      return res.json({ text: clean, cached: false });
+      return res.json({ text: clean, cached: false, grounded: !!grounding });
     } catch (err) {
       console.error("[GoalRec] generation failed:", err);
       return res.json({
@@ -394,7 +208,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     // Ledger). If brain-core is unreachable/unconfigured we silently proceed
     // ungrounded, so the assistant never breaks on the integration.
     let grounding = "";
-    let sources: string[] = [];
+    let sources: WikiEvidence[] = [];
     try {
       const lastUser = [...parsed.data.messages].reverse().find((m) => m.role === "user");
       if (lastUser) {
@@ -402,7 +216,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         const wiki = await askWikiQuestion(token, lastUser.content);
         if (wiki.raw) {
           grounding = wiki.raw;
-          sources = wiki.evidenceIds;
+          sources = wiki.evidence;
         }
       }
     } catch (e) {
@@ -739,270 +553,6 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  // ── Contract / Protocol Routes ─────────────────────────────────────────────
-
-  /**
-   * GET /api/contracts/info
-   * Returns deployed contract addresses and chain config.
-   */
-  app.get("/api/contracts/info", (_req, res) => {
-    res.json({
-      mode: CONTRACT_MODE,
-      chainId: parseInt(process.env.CHAIN_ID ?? "84532"),
-      network: parseInt(process.env.CHAIN_ID ?? "84532") === 8453 ? "base" : "base-sepolia",
-      contracts: DEPLOYED_ADDRESSES,
-    });
-  });
-
-  /**
-   * GET /api/contracts/account/:ownerAddress
-   * Returns the BrainAccount address for a wallet (deployed or counterfactual).
-   */
-  app.get("/api/contracts/account/:ownerAddress", async (req, res) => {
-    try {
-      const { ownerAddress } = req.params;
-      const [deployed, computed] = await Promise.all([
-        getDeployedAccount(ownerAddress as `0x${string}`),
-        computeBrainAccountAddress(ownerAddress as `0x${string}`),
-      ]);
-      res.json({
-        ownerAddress,
-        brainAccountAddress: deployed ?? computed,
-        deployed: !!deployed,
-        counterfactual: !deployed ? computed : null,
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  /**
-   * POST /api/contracts/deploy-account
-   * Deploy a BrainAccount for the authenticated user via the factory.
-   * Body: { ownerAddress: string }
-   */
-  app.post("/api/contracts/deploy-account", async (req, res) => {
-    try {
-      const { ownerAddress } = req.body;
-      if (!ownerAddress) return res.status(400).json({ error: "ownerAddress required" });
-
-      const result = await deployBrainAccount(ownerAddress as `0x${string}`);
-      res.json({
-        success: true,
-        txHash: result.hash,
-        brainAccountAddress: result.address,
-        demo: CONTRACT_MODE === "demo",
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  /**
-   * GET /api/contracts/agent/:brainAccountAddress/:agentId
-   * Read on-chain agent config and balance.
-   */
-  app.get("/api/contracts/agent/:brainAccountAddress/:agentId", async (req, res) => {
-    try {
-      const { brainAccountAddress, agentId } = req.params;
-      const [config, balance, budget, policyHash] = await Promise.all([
-        getOnChainAgentConfig(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
-        getAgentBalance(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
-        getRemainingBudget(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
-        getAgentPolicyHash(brainAccountAddress as `0x${string}`, agentId as `0x${string}`),
-      ]);
-      res.json({
-        agentId,
-        brainAccountAddress,
-        config: {
-          ...config,
-          spendLimit: config.spendLimit.toString(),
-          timeWindowSeconds: config.timeWindowSeconds.toString(),
-          spentInWindow: config.spentInWindow.toString(),
-          windowStart: config.windowStart.toString(),
-          approvalThreshold: config.approvalThreshold.toString(),
-          maxPositionSize: config.maxPositionSize.toString(),
-          cumulativeExposure: config.cumulativeExposure.toString(),
-          maxCumulativeExposure: config.maxCumulativeExposure.toString(),
-        },
-        balance: balance.toString(),
-        balanceFormatted: formatUsdc(balance),
-        remainingBudget: budget.toString(),
-        remainingBudgetFormatted: formatUsdc(budget),
-        policyHash,
-        demo: CONTRACT_MODE === "demo",
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  /**
-   * GET /api/contracts/registry/:agentId
-   * Read an agent's on-chain registry record.
-   */
-  app.get("/api/contracts/registry/:agentId", async (req, res) => {
-    try {
-      const { agentId } = req.params;
-      const record = await getRegistryRecord(agentId as `0x${string}`);
-      if (!record) {
-        return res.json({ agentId, registered: false, demo: CONTRACT_MODE === "demo" });
-      }
-      res.json({
-        agentId,
-        registered: true,
-        record: {
-          ...record,
-          registeredAt: record.registeredAt.toString(),
-          lastActiveAt: record.lastActiveAt.toString(),
-          validationCount: record.validationCount.toString(),
-          totalVolumeUsdc: record.totalVolumeUsdc.toString(),
-          totalVolumeFormatted: formatUsdc(record.totalVolumeUsdc),
-        },
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  /**
-   * POST /api/policy/evaluate/payment
-   * Evaluate and sign a PaymentIntent through the Policy Engine.
-   *
-   * This is step 16 in the x402 flow: the Payment Orchestrator calls this
-   * after receiving a 402 response, before assembling the UserOperation.
-   *
-   * Body: { intent: PaymentIntent, policy: AgentPolicy }
-   * Returns: { approved, proof?, expiry?, intentHash?, reason? }
-   */
-  app.post("/api/policy/evaluate/payment", async (req, res) => {
-    try {
-      const { intent, policy } = req.body as { intent: PaymentIntent; policy: AgentPolicy };
-      if (!intent || !policy) {
-        return res.status(400).json({ error: "intent and policy are required" });
-      }
-
-      // Normalise bigint fields from JSON (JSON doesn't support BigInt natively)
-      const normIntent: PaymentIntent = {
-        ...intent,
-        amount: safeBigInt(intent.amount, "amount"),
-      };
-      const normPolicy: AgentPolicy = {
-        ...policy,
-        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
-        spentInWindow:       safeBigInt(policy.spentInWindow, "spentInWindow"),
-        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
-        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
-        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
-        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
-      };
-
-      const result = await processPaymentIntent(normIntent, normPolicy);
-
-      if (!result.approved) {
-        return res.json({ approved: false, reason: result.reason });
-      }
-
-      res.json({
-        approved: true,
-        proof: result.proof,
-        expiry: result.expiry,
-        intentHash: result.intentHash,
-      });
-    } catch (err: unknown) {
-      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
-      res.status(isValidation ? 400 : 500).json({
-        error: isValidation ? err.message : "Policy evaluation failed",
-      });
-    }
-  });
-
-  /**
-   * POST /api/policy/evaluate/trade
-   * Evaluate and sign a TradeIntent through the Policy Engine.
-   *
-   * This is step 3 in the trading flow.
-   *
-   * Body: { intent: TradeIntent, policy: AgentPolicy, currentExposure?: string }
-   */
-  app.post("/api/policy/evaluate/trade", async (req, res) => {
-    try {
-      const { intent, policy, currentExposure } = req.body as {
-        intent: TradeIntent;
-        policy: AgentPolicy;
-        currentExposure?: string;
-      };
-      if (!intent || !policy) {
-        return res.status(400).json({ error: "intent and policy are required" });
-      }
-
-      const normIntent: TradeIntent = {
-        ...intent,
-        size:       safeBigInt(intent.size, "size"),
-        priceLimit: intent.priceLimit ? safeBigInt(intent.priceLimit, "priceLimit") : undefined,
-      };
-      const normPolicy: AgentPolicy = {
-        ...policy,
-        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
-        spentInWindow:       safeBigInt(policy.spentInWindow, "spentInWindow"),
-        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
-        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
-        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
-        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
-      };
-      const exposure = currentExposure ? safeBigInt(currentExposure, "currentExposure") : BigInt(0);
-
-      const result = await processTradeIntent(normIntent, normPolicy, exposure);
-
-      if (!result.approved) {
-        return res.json({ approved: false, reason: result.reason });
-      }
-
-      res.json({
-        approved: true,
-        proof: result.proof,
-        expiry: result.expiry,
-        intentHash: result.intentHash,
-      });
-    } catch (err: unknown) {
-      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
-      res.status(isValidation ? 400 : 500).json({
-        error: isValidation ? err.message : "Policy evaluation failed",
-      });
-    }
-  });
-
-  /**
-   * POST /api/policy/hash
-   * Compute the keccak256 policy hash for a policy config.
-   * Used for BrainAccount.setPolicy() and AgentRegistry.setPolicyHash().
-   *
-   * Body: policy config fields
-   */
-  app.post("/api/policy/hash", (req, res) => {
-    try {
-      const policy = req.body as Parameters<typeof computePolicyHash>[0];
-      if (!policy?.agentId) return res.status(400).json({ error: "agentId required" });
-
-      const normPolicy = {
-        ...policy,
-        spendLimit:          safeBigInt(policy.spendLimit, "spendLimit"),
-        approvalThreshold:   safeBigInt(policy.approvalThreshold, "approvalThreshold"),
-        maxPositionSize:     safeBigInt(policy.maxPositionSize, "maxPositionSize"),
-        maxDailyLoss:        safeBigInt(policy.maxDailyLoss, "maxDailyLoss"),
-        maxCumulativeExposure: safeBigInt(policy.maxCumulativeExposure, "maxCumulativeExposure"),
-      };
-
-      const hash = computePolicyHash(normPolicy);
-      res.json({ policyHash: hash });
-    } catch (err: unknown) {
-      const isValidation = err instanceof Error && err.message.startsWith("Invalid integer");
-      res.status(isValidation ? 400 : 500).json({
-        error: isValidation ? err.message : "Policy hash computation failed",
-      });
-    }
-  });
-
   /* ──────────────────────────────────────────────────────────────────────
    *  Tool integrations  (Stripe wired; others coming soon)
    * ────────────────────────────────────────────────────────────────────── */
@@ -1239,23 +789,6 @@ You can explain concepts and surface general guidance, but do not give regulated
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
-    }
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // INSIGHTS
-  // ─────────────────────────────────────────────────────────────
-  app.get("/api/insights", async (_req, res) => {
-    try {
-      const state = getInsightsState();
-      // Trigger background generation if stale (never generated or older than 24h)
-      if (!state.generatedAt || Date.now() - state.generatedAt.getTime() > 24 * 60 * 60 * 1000) {
-        generateInsights().catch((err) => console.error("[Insights] bg refresh failed:", err));
-      }
-      return res.json({ insights: state.insights, generatedAt: state.generatedAt, generating: state.generating });
-    } catch (err) {
-      console.error("[Insights] route error:", err);
-      return res.status(500).json({ error: "Failed to fetch insights" });
     }
   });
 

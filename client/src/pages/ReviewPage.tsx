@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   NEEDS_REVIEW,
@@ -6,6 +7,30 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { useCurrency } from "@/lib/currencyContext";
+import { useIntents, type IntentRecord } from "@/lib/intentsStore";
+import { apiRequest } from "@/lib/queryClient";
+
+/** Map a live brain-core PaymentIntent (awaiting approval) onto a review item. */
+function intentToReview(rec: IntentRecord): ReviewItemType {
+  const amountStr = `$${rec.amount.toLocaleString()}`;
+  const approvers = rec.requiredApprovers.length > 0 ? rec.requiredApprovers.join(" + ") : "owner + CFO";
+  return {
+    id: rec.intentId,
+    live: true,
+    intentId: rec.intentId,
+    title: `Approve payment to ${rec.vendor}?`,
+    vendor: rec.vendor,
+    amount: amountStr,
+    due: "Needs approval",
+    question: `Should I pay ${rec.vendor} ${amountStr}?`,
+    description: `Brain proposed this payment (${rec.invoiceNumber}) and the §6 policy gate flagged it for human sign-off — it is above your auto-pay limit and needs approval from ${approvers} before it can settle.`,
+    who: rec.vendor,
+    amountFull: amountStr,
+    dueBy: "Awaiting approval",
+    from: "Brain Smart Account",
+    autoLabel: "Always require approval for large payments",
+  };
+}
 
 /* Sum of all pending review amounts → "Account Totals" footer row. */
 function totalAmount(items: ReviewItemType[], format: (a: string | number) => string): string {
@@ -68,6 +93,29 @@ const ReviewRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: (
 export function ReviewPage() {
   const [activeReview, setActiveReview] = useState<ReviewItemType | null>(null);
   const { format } = useCurrency();
+  const { intents, markDeclined } = useIntents();
+
+  // Real PaymentIntents the §6 gate flagged for approval (and not yet declined).
+  const liveReviews = intents
+    .filter((i) => i.outcome === "confirm" && !i.declined)
+    .map(intentToReview);
+
+  // Operator declines a real proposed payment → reject on brain-core (no money moves).
+  const reject = useMutation<unknown, Error, string>({
+    mutationFn: async (intentId: string) => {
+      const res = await apiRequest("POST", "/api/brain/reject", {
+        payment_intent_id: intentId,
+        reason: "Declined by operator",
+      });
+      return res.json();
+    },
+    onSuccess: (_d, intentId) => markDeclined(intentId),
+  });
+
+  const handleReject = () => {
+    if (activeReview?.live && activeReview.intentId) reject.mutate(activeReview.intentId);
+    setActiveReview(null);
+  };
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -82,6 +130,23 @@ export function ReviewPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+
+            {/* Needs your approval — real PaymentIntents the §6 gate flagged (brain-core) */}
+            {liveReviews.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Needs your approval" count={liveReviews.length} />
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                    {liveReviews.map((item, idx) => (
+                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                        <ReviewRow item={item} onClick={() => setActiveReview(item)} format={format} />
+                        {idx < liveReviews.length - 1 && <Divider />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Needs Review — same shell as the Accounts card on Finances */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
@@ -135,7 +200,7 @@ export function ReviewPage() {
         open={activeReview !== null}
         onOpenChange={(o) => { if (!o) setActiveReview(null); }}
         onConfirm={() => setActiveReview(null)}
-        onReject={() => setActiveReview(null)}
+        onReject={handleReject}
       />
     </div>
   );

@@ -116,6 +116,11 @@ export function getWikiSchema(token: string): Promise<WikiSchemaResponse> {
 
 interface WikiQuestionResponse {
   answer?: unknown;
+  /** Live shape: array of `{ entityType, entityId, excerpt }`. */
+  evidence?: unknown;
+  /** OpenAPI-spec shape: array of `{ entity_id, description, result_summary, … }`. */
+  evidence_path?: unknown;
+  /** Legacy / JSON-envelope shape: array of id strings. */
   evidence_ids?: unknown;
   confidence?: unknown;
 }
@@ -126,10 +131,22 @@ function stripFence(s: string): string {
   return (m && m[1] ? m[1] : s).trim();
 }
 
+/** One evidence record backing a Wiki answer (a ledger row / raw artifact). */
+export interface WikiEvidence {
+  /** The id of the backing record (ledger tx/account/counterparty id, or a raw artifact id). */
+  entityId: string;
+  /** What kind of record it is, when the API tells us (e.g. "transaction"); else null. */
+  entityType: string | null;
+  /** A short human-readable snippet describing the record, when present; else null. */
+  excerpt: string | null;
+}
+
 export interface WikiAnswer {
   /** The answer text/JSON, fence-stripped — suitable to ground an LLM or render. */
   raw: string;
-  /** Evidence ids (raw artifacts / ledger rows) backing the answer, deduped. */
+  /** Evidence records backing the answer (id + optional type/excerpt), deduped by id. */
+  evidence: WikiEvidence[];
+  /** Evidence ids only, deduped — kept for back-compat (recommendation route, grounding). */
   evidenceIds: string[];
   confidence: number | null;
 }
@@ -264,18 +281,56 @@ export async function askWikiQuestion(token: string, question: string): Promise<
   const answerStr = typeof resp.answer === "string" ? resp.answer : JSON.stringify(resp.answer ?? resp);
   const raw = stripFence(answerStr);
 
-  const evidence = new Set<string>();
-  const collect = (v: unknown): void => {
-    if (Array.isArray(v)) for (const e of v) if (typeof e === "string") evidence.add(e);
+  // Dedup evidence by id; the richest record (one that carries an excerpt) wins.
+  const byId = new Map<string, WikiEvidence>();
+  const add = (rec: WikiEvidence): void => {
+    const existing = byId.get(rec.entityId);
+    if (!existing || (!existing.excerpt && rec.excerpt)) byId.set(rec.entityId, rec);
   };
-  collect(resp.evidence_ids);
+  const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+  // Structured arrays: live `evidence:[{entityType,entityId,excerpt}]` or
+  // spec `evidence_path:[{entity_id,description,result_summary}]`. Tolerate camel/snake.
+  const addStructured = (v: unknown): void => {
+    if (!Array.isArray(v)) return;
+    for (const e of v) {
+      if (typeof e === "string") {
+        add({ entityId: e, entityType: null, excerpt: null });
+      } else if (e && typeof e === "object") {
+        const o = e as Record<string, unknown>;
+        const id = str(o.entityId) ?? str(o.entity_id);
+        if (!id) continue;
+        add({
+          entityId: id,
+          entityType: str(o.entityType) ?? str(o.entity_type),
+          excerpt: str(o.excerpt) ?? str(o.result_summary) ?? str(o.description),
+        });
+      }
+    }
+  };
+  // Flat id arrays: legacy/JSON-envelope `evidence_ids:[string]`.
+  const addIds = (v: unknown): void => {
+    if (Array.isArray(v)) for (const e of v) if (typeof e === "string") add({ entityId: e, entityType: null, excerpt: null });
+  };
+
+  addStructured(resp.evidence);
+  addStructured(resp.evidence_path);
+  addIds(resp.evidence_ids);
   let confidence = typeof resp.confidence === "number" ? resp.confidence : null;
   try {
-    const inner = JSON.parse(raw) as { evidence_ids?: unknown; confidence?: unknown };
-    collect(inner.evidence_ids);
+    const inner = JSON.parse(raw) as {
+      evidence?: unknown;
+      evidence_path?: unknown;
+      evidence_ids?: unknown;
+      confidence?: unknown;
+    };
+    addStructured(inner.evidence);
+    addStructured(inner.evidence_path);
+    addIds(inner.evidence_ids);
     if (confidence === null && typeof inner.confidence === "number") confidence = inner.confidence;
   } catch {
     // answer is prose, not JSON — nothing more to extract.
   }
-  return { raw, evidenceIds: Array.from(evidence), confidence };
+
+  const evidence = Array.from(byId.values());
+  return { raw, evidence, evidenceIds: evidence.map((e) => e.entityId), confidence };
 }

@@ -294,20 +294,8 @@ const SectionWidget = ({
   );
 };
 
-type SpendingInsight = { text: string; colorClass: string };
-
-function pickSpendingInsight(insights: { kind: string; text: string }[]): SpendingInsight {
-  if (!insights || insights.length === 0) {
-    return { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
-  }
-  // Prefer a spending / burn / alert insight first, then any
-  const idx = insights.findIndex((i) =>
-    /spend|burn|idle|alert|subscription|cost/i.test(i.text)
-  );
-  const pick = idx >= 0 ? insights[idx] : insights[0];
-  const isBad = pick.kind === "warning" || pick.kind === "alert";
-  return { text: pick.text, colorClass: isBad ? "text-[#ff9500]" : "text-[#42bf23]" };
-}
+// Shown when brain-core's ledger-grounded recommendation is unavailable.
+const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
 
 export function HomePage() {
   const hour = new Date().getHours();
@@ -329,16 +317,8 @@ export function HomePage() {
   const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : format("$86,993");
   const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : ".42";
 
-  const { data: insightsData } = useQuery({
-    queryKey: ["/api/insights"],
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: false,
-  });
-
-  const spendingInsight = pickSpendingInsight(insightsData?.insights ?? []);
-
-  // Real ledger-grounded insight from brain-core (via the BFF). Preferred over the
-  // legacy mock-data insight; falls back to it when brain-core is unreachable.
+  // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
+  // static line when brain-core is unreachable/unconfigured.
   const { data: brainRec } = useQuery<{ text?: string }>({
     queryKey: ["/api/brain/recommendation"],
     retry: false,
@@ -346,7 +326,7 @@ export function HomePage() {
   const insightLine =
     brainRec?.text && brainRec.text.trim().length > 0
       ? { text: brainRec.text, colorClass: "text-[#a8b9f4]" }
-      : spendingInsight;
+      : SPENDING_INSIGHT_FALLBACK;
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;

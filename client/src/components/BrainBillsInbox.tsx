@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/lib/currencyContext";
+import { useIntents } from "@/lib/intentsStore";
 
 // ─── brain-core shapes (subset rendered here; via the BFF proxy) ─────────────
 
@@ -100,6 +101,7 @@ function fmtDue(iso?: string | null): string {
 
 export function BrainBillsInbox() {
   const { format } = useCurrency();
+  const { addProposed, markDeclined } = useIntents();
   const [results, setResults] = useState<Record<string, ProposeResponse>>({});
   const [openTrace, setOpenTrace] = useState<Record<string, boolean>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -121,7 +123,24 @@ export function BrainBillsInbox() {
       return (await res.json()) as ProposeResponse;
     },
     onMutate: (invoiceId) => setActiveId(invoiceId),
-    onSuccess: (data, invoiceId) => setResults((r) => ({ ...r, [invoiceId]: data })),
+    onSuccess: (data, invoiceId) => {
+      setResults((r) => ({ ...r, [invoiceId]: data }));
+      // Publish to the session-wide feed so Review/Activity can surface it.
+      const bill = invData?.invoices.find((i) => i.id === invoiceId);
+      const vendor = cpData?.counterparties.find((c) => c.id === bill?.counterparty_id)?.name ?? "Vendor";
+      const amount = Number(data.intent.amount) || (bill ? Number(bill.amount_due) : 0) || 0;
+      addProposed({
+        intentId: data.intent.id,
+        invoiceId,
+        vendor,
+        invoiceNumber: bill?.invoice_number ?? invoiceId,
+        amount,
+        currency: data.intent.currency || bill?.currency || "USD",
+        outcome: statusToOutcome(data.intent.status),
+        status: data.intent.status,
+        requiredApprovers: data.decision?.required_approvers ?? [],
+      });
+    },
     onSettled: () => setActiveId(null),
   });
 
@@ -135,7 +154,10 @@ export function BrainBillsInbox() {
       return ((await res.json()) as { intent: PaymentIntentDTO }).intent;
     },
     onMutate: ({ invoiceId }) => setActiveId(invoiceId),
-    onSuccess: (_data, { invoiceId }) => setDeclined((d) => ({ ...d, [invoiceId]: true })),
+    onSuccess: (_data, { invoiceId, intentId }) => {
+      setDeclined((d) => ({ ...d, [invoiceId]: true }));
+      markDeclined(intentId);
+    },
     onSettled: () => setActiveId(null),
   });
 

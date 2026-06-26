@@ -22,6 +22,7 @@ import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
+import { IntentsProvider } from "@/lib/intentsStore";
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -148,12 +149,14 @@ function App() {
   return (
     <Web3Provider>
       <TransactionProvider>
-        <TooltipProvider>
-          <AppAlertProvider>
-            <Toaster />
-            <AppLayout />
-          </AppAlertProvider>
-        </TooltipProvider>
+        <IntentsProvider>
+          <TooltipProvider>
+            <AppAlertProvider>
+              <Toaster />
+              <AppLayout />
+            </AppAlertProvider>
+          </TooltipProvider>
+        </IntentsProvider>
       </TransactionProvider>
     </Web3Provider>
   );
