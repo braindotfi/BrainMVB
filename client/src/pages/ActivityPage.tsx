@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
+import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 
 type ActivityType = "paid" | "moved" | "noticed" | "approved";
 
@@ -85,7 +86,7 @@ const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
 );
 
 type ActivityItemData = {
-  id: number;
+  id: number | string;
   type: ActivityType;
   title: string;
   meta1: string;
@@ -94,6 +95,22 @@ type ActivityItemData = {
   amount: string;
   time: string;
 };
+
+/** Map a live brain-core PaymentIntent onto an activity-feed item. */
+function intentToActivity(rec: IntentRecord): ActivityItemData {
+  const amount = `$${rec.amount.toLocaleString()}`;
+  const base = { id: rec.intentId, amount, time: "Just now" };
+  if (rec.declined) {
+    return { ...base, type: "approved", title: `You declined the payment to ${rec.vendor}`, meta1: "Brain will not pay it", meta2: "" };
+  }
+  if (rec.outcome === "reject") {
+    return { ...base, type: "noticed", title: `Brain blocked a payment to ${rec.vendor}`, meta1: "Vendor not on the approved list", meta2: "" };
+  }
+  if (rec.outcome === "confirm") {
+    return { ...base, type: "noticed", title: `Payment to ${rec.vendor} needs your approval`, meta1: "Above your auto-pay limit", meta2: "Awaiting sign-off" };
+  }
+  return { ...base, type: "paid", title: `Brain approved a payment to ${rec.vendor}`, meta1: "Within your auto-pay policy", meta2: "Proposed — not executed" };
+}
 
 const TODAY_ACTIVITIES: ActivityItemData[] = [
   { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM" },
@@ -163,7 +180,7 @@ const SectionCard = ({
   title: string;
   items: ActivityItemData[];
   highlightedId: number | null;
-  registerRowRef: (id: number) => (el: HTMLDivElement | null) => void;
+  registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
 }) => {
   if (items.length === 0) return null;
   return (
@@ -194,6 +211,7 @@ const SectionCard = ({
 export function ActivityPage() {
   const search = useSearch();
   const params = useMemo(() => new URLSearchParams(search), [search]);
+  const { intents } = useIntents();
   const initialTab = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "All";
   const initialRow = (() => {
     const v = params.get("row");
@@ -203,8 +221,8 @@ export function ActivityPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [highlightedId, setHighlightedId] = useState<number | null>(initialRow);
-  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const registerRowRef = (id: number) => (el: HTMLDivElement | null) => {
+  const rowRefs = useRef<Map<number | string, HTMLDivElement>>(new Map());
+  const registerRowRef = (id: number | string) => (el: HTMLDivElement | null) => {
     if (el) rowRefs.current.set(id, el);
     else rowRefs.current.delete(id);
   };
@@ -231,6 +249,7 @@ export function ActivityPage() {
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
 
+  const liveItems = filterByTab(intents.map(intentToActivity));
   const todayItems = filterByTab(TODAY_ACTIVITIES);
   const yesterdayItems = filterByTab(YESTERDAY_ACTIVITIES);
 
@@ -278,6 +297,12 @@ export function ActivityPage() {
 
           {/* Activity sections */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+            <SectionCard
+              title="Just now"
+              items={liveItems}
+              highlightedId={highlightedId}
+              registerRowRef={registerRowRef}
+            />
             <SectionCard
               title="Today"
               items={todayItems}

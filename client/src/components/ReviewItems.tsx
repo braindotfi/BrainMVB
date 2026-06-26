@@ -4,7 +4,7 @@ import { ICONS } from "@/assets/figma-icons";
 import { useCurrency } from "@/lib/currencyContext";
 
 export type ReviewItemType = {
-  id: number;
+  id: number | string;
   title: string;
   vendor?: string;
   amount: string;
@@ -16,6 +16,10 @@ export type ReviewItemType = {
   dueBy: string;
   from: string;
   autoLabel: string;
+  /** True for a real brain-core PaymentIntent awaiting approval (vs a static demo item). */
+  live?: boolean;
+  /** The PaymentIntent id, when `live` — used to decline via the BFF. */
+  intentId?: string;
 };
 
 export const NEEDS_REVIEW: ReviewItemType[] = [
@@ -246,14 +250,25 @@ export const ReviewModal = ({
               </label>
             </div>
 
+            {/* For a real (live) PaymentIntent, approval is gated on owner + CFO
+                quorum that the demo tenant cannot satisfy, so Confirm is disabled
+                and only the (real) Decline action is offered. */}
+            {item.live && (
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
+                Approval needs owner + CFO sign-off — not available in the demo tenant. You can still
+                decline it below.
+              </p>
+            )}
+
             {/* Action row — Figma 4071:65833. Confirm + Decline. */}
             <div className="flex gap-[16px] items-start w-full">
               <button
                 onClick={() => onConfirm(auto)}
+                disabled={item.live}
                 data-testid="button-review-confirm"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#123509]"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">Confirm</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">{item.live ? "Approve" : "Confirm"}</span>
               </button>
               <button
                 onClick={onReject}
