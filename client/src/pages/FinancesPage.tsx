@@ -140,30 +140,78 @@ const WidgetCard = ({ title, children }: { title: string; children: React.ReactN
   </div>
 );
 
-const InvoicesLateBanner = ({ format }: { format: (a: string | number) => string }) => (
-  <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-    <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-      <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
-        <div className="relative shrink-0 size-[16px]">
-          <div className="absolute flex items-center justify-center left-0 size-[16px] top-0">
-            <div className="-rotate-90 flex-none">
-              <div className="relative size-[16px]">
-                <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_BG} />
+// ─── Overdue receivables (live) — replaces the static "2 Invoices are late" banner ──
+// Money owed TO the business that is past due. Excludes AP payables (those are the
+// "Bills — let Brain decide" inbox). Renders nothing when nothing is overdue.
+interface InvoiceLite {
+  id: string;
+  counterparty_id: string;
+  amount_due: string;
+  due_date?: string | null;
+  status: string;
+  metadata?: { scenario?: string } | null;
+}
+interface InvoicesLiteResponse { invoices: InvoiceLite[] }
+interface CounterpartyLite { id: string; name?: string | null }
+interface CounterpartiesLiteResponse { counterparties: CounterpartyLite[] }
+
+function daysLate(due?: string | null): number {
+  if (!due) return 0;
+  const t = new Date(due).getTime();
+  if (Number.isNaN(t)) return 0;
+  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
+}
+
+const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => string }) => {
+  const { data: invData } = useQuery<InvoicesLiteResponse>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const overdue = (invData?.invoices ?? []).filter(
+    (i) => i.status === "overdue" && i.metadata?.scenario !== "ap",
+  );
+  if (overdue.length === 0) return null;
+
+  const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
+  const detail = overdue
+    .slice(0, 3)
+    .map((i) => `${format(Number(i.amount_due))} from ${nameOf(i.counterparty_id)} (${daysLate(i.due_date)} days late)`)
+    .join(" and ");
+
+  return (
+    <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+      <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+        <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
+          <div className="relative shrink-0 size-[16px]">
+            <div className="absolute flex items-center justify-center left-0 size-[16px] top-0">
+              <div className="-rotate-90 flex-none">
+                <div className="relative size-[16px]">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_BG} />
+                </div>
               </div>
             </div>
+            <div className="absolute left-[2px] size-[12px] top-[2px]">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_ICON} />
+            </div>
           </div>
-          <div className="absolute left-[2px] size-[12px] top-[2px]">
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_ICON} />
+          <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[14px] w-full">
+              {overdue.length} invoice{overdue.length === 1 ? " is" : "s are"} overdue!
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
+              {detail}.
+            </p>
           </div>
-        </div>
-        <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[14px] w-full">2 Invoices are late!</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">{format("$4,200")} from Brookside Consulting (12 days late) and {format("$1,800")} from Hartwell Group (8 days late).</p>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export function FinancesPage() {
   const { format } = useCurrency();
@@ -298,7 +346,7 @@ export function FinancesPage() {
                   </p>
                 </div>
                 <Divider />
-                <InvoicesLateBanner format={format} />
+                <OverdueInvoicesBanner format={format} />
               </div>
             </div>
 
