@@ -138,6 +138,22 @@ Programmable neobank on Base L2.
   `useSyncExternalStore`-backed) when Brain has new rule suggestions.
 - HomePage "Needs Review" rows open a centered Radix-dialog popup (`@radix-ui/react-dialog`
   primitives for focus trap / scroll lock); Confirm/Reject just close (no backend wiring yet).
+
+## Needs Review (`/review`) — propose → approve → execute surface
+- Data-driven approval queue. Model in `client/src/lib/proposalTypes.ts`; 8 mock scenarios +
+  `ACCOUNT_SUMMARY` in `client/src/lib/mockProposals.ts`. ONE `ProposalDetail.tsx` renders all
+  scenarios via conditional sections (chips, facts mono block, evidence grid, confidence bar,
+  sweepMath, policy chip, verifyFirst, surface hint, JSON trace) — never per-agent JSX.
+- `ReviewPage.tsx` holds a `statuses` override map (keyed by proposal id). Handoff is fully
+  user-driven — NO setTimeout/auto-advance: approve→`executing` (held row with manual Cancel→
+  pending and Mark settled→executed), reject→`rejected`, postpone→`postponed`, verifyFirst→
+  `verifying` (parked, still tappable). Settled items collapse into a "Settled today" card.
+- Color discipline: `#d20344` ONLY for danger/alerts/reject; Approve uses purple `#7631ee`.
+- `ACCOUNT_SUMMARY.pendingAPTotal` (10,514) MUST equal the sum of the money-mover (AP)
+  proposals (Con Edison 486 + Apex 1,450 + Bright Futures 3,200 + Comcast 1,228 + AWS 4,150).
+  sweepMath must keep `operatingAfter > 0` after a ≥3-month buffer + pending AP.
+- Live brain-core PaymentIntents (`useIntents`) + legacy static `NEEDS_REVIEW` items still
+  render via the older `ReviewModal` ("Needs your approval" / "Routine approvals" cards).
 - Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
   "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 

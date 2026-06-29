@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { CheckCircle2, XCircle, Clock, ShieldQuestion, Loader } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   NEEDS_REVIEW,
   ReviewModal,
   type ReviewItemType,
 } from "@/components/ReviewItems";
+import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
+import { MOCK_PROPOSALS, ACCOUNT_SUMMARY } from "@/lib/mockProposals";
+import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { apiRequest } from "@/lib/queryClient";
 
-/** Map a live brain-core PaymentIntent (awaiting approval) onto a review item. */
+/* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
   const amountStr = `$${rec.amount.toLocaleString()}`;
   const approvers = rec.requiredApprovers.length > 0 ? rec.requiredApprovers.join(" + ") : "owner + CFO";
@@ -32,21 +36,9 @@ function intentToReview(rec: IntentRecord): ReviewItemType {
   };
 }
 
-/* Sum of all pending review amounts → "Account Totals" footer row. */
-function totalAmount(items: ReviewItemType[], format: (a: string | number) => string): string {
-  const sum = items.reduce((acc, i) => {
-    const n = Number(i.amountFull.replace(/[^0-9.]/g, ""));
-    return acc + (Number.isFinite(n) ? n : 0);
-  }, 0);
-  return format(Math.round(sum));
-}
+/* ── Shared primitives (match Finances/Rules widgets) ────────────────────── */
+const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
-/* Thin row separator used between Accounts/Expenses rows on the Finances page. */
-const Divider = () => (
-  <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
-);
-
-/* Card header — same typography as Finances/Rules widgets (text-[20px]). */
 const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
   <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
     <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
@@ -60,12 +52,337 @@ const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
   </div>
 );
 
-/* Single review row — title + vendor/due subline on the left, amount on the right.
-   Mirrors the Accounts row layout on the Finances page. */
-const convertInline = (s: string, format: (a: string | number) => string) =>
-  s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
+/* ── Pending / verifying proposal row (tappable → opens detail) ──────────── */
+const ProposalRow = ({
+  proposal,
+  status,
+  onClick,
+  format,
+}: {
+  proposal: Proposal;
+  status: ProposalStatus;
+  onClick: () => void;
+  format: (a: string | number) => string;
+}) => {
+  const parked = status === "verifying";
+  return (
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      data-testid={`row-proposal-${proposal.id}`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
+    >
+      {proposal.severity === "danger" && (
+        <div className="w-[3px] self-stretch rounded-full bg-[#d20344] shrink-0" />
+      )}
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+          {proposal.title}
+        </p>
+        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full ${parked ? "text-[#7631ee]" : "text-[#6c779d]"}`}>
+          {parked ? "Verifying with vendor — draft ready for review" : proposal.rowSubtitle}
+        </p>
+      </div>
+      {typeof proposal.amount === "number" && (
+        <div className="flex flex-col items-end justify-center relative shrink-0">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+            {format(proposal.amount)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
-const ReviewRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: () => void; format: (a: string | number) => string }) => (
+/* ── Executing row — HELD confirmation state with manual Cancel / Mark settled ── */
+const ExecutingRow = ({
+  proposal,
+  onCancel,
+  onSettle,
+  format,
+}: {
+  proposal: Proposal;
+  onCancel: () => void;
+  onSettle: () => void;
+  format: (a: string | number) => string;
+}) => (
+  <div
+    data-testid={`row-executing-${proposal.id}`}
+    className="flex flex-col gap-[10px] p-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-[#1d2132]"
+  >
+    <div className="flex gap-[12px] items-center w-full">
+      {/* static processing affordance — no spin that implies auto-progress */}
+      <Loader size={16} className="text-[#7631ee] shrink-0" />
+      <div className="flex flex-1 flex-col min-w-px">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px] truncate">
+          {proposal.title}
+        </p>
+        <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#7631ee] text-[12px] truncate">
+          Sent to execution · {proposal.cancelDeadlineLabel}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
+          {proposal.executionLabel}
+        </p>
+      </div>
+      {typeof proposal.amount === "number" && (
+        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[16px] shrink-0">
+          {format(proposal.amount)}
+        </p>
+      )}
+    </div>
+    <div className="flex gap-[8px] w-full">
+      <button
+        type="button"
+        onClick={onCancel}
+        data-testid={`button-cancel-${proposal.id}`}
+        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSettle}
+        data-testid={`button-settle-${proposal.id}`}
+        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.3)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      >
+        Mark settled
+      </button>
+    </div>
+  </div>
+);
+
+/* ── Collapsed settled/rejected/postponed row ────────────────────────────── */
+const SETTLED_META: Record<string, { icon: typeof CheckCircle2; color: string; label: (p: Proposal) => string }> = {
+  executed: { icon: CheckCircle2, color: "#42bf23", label: (p) => `Executed · ${p.auditId}` },
+  rejected: { icon: XCircle, color: "#d20344", label: () => "Rejected" },
+  postponed: { icon: Clock, color: "#6c779d", label: () => "Postponed to tomorrow" },
+};
+
+const SettledRow = ({ proposal, status }: { proposal: Proposal; status: ProposalStatus }) => {
+  const meta = SETTLED_META[status];
+  if (!meta) return null;
+  const Icon = meta.icon;
+  return (
+    <div
+      data-testid={`row-settled-${proposal.id}`}
+      className="flex gap-[10px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full"
+    >
+      <Icon size={15} style={{ color: meta.color }} className="shrink-0" />
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] truncate flex-1 min-w-px">
+        {proposal.title}
+      </p>
+      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[12px] shrink-0" style={{ color: meta.color }}>
+        {meta.label(proposal)}
+      </p>
+    </div>
+  );
+};
+
+/* ── Page ────────────────────────────────────────────────────────────────── */
+export function ReviewPage() {
+  const { format } = useCurrency();
+  const { intents, markDeclined } = useIntents();
+
+  /* Status overrides keyed by proposal id. Every transition is user-driven —
+     no setTimeout / auto-settle anywhere. */
+  const [statuses, setStatuses] = useState<Record<string, ProposalStatus>>({});
+  const [active, setActive] = useState<Proposal | null>(null);
+
+  const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
+  const setStatus = (id: string, status: ProposalStatus) =>
+    setStatuses((prev) => ({ ...prev, [id]: status }));
+
+  const pending = MOCK_PROPOSALS.filter((p) => statusOf(p) === "pending");
+  const verifying = MOCK_PROPOSALS.filter((p) => statusOf(p) === "verifying");
+  const executing = MOCK_PROPOSALS.filter((p) => statusOf(p) === "executing");
+  const settled = MOCK_PROPOSALS.filter((p) =>
+    ["executed", "rejected", "postponed"].includes(statusOf(p)),
+  );
+  const queue = [...pending, ...verifying];
+
+  const handleAction = (action: ProposalAction) => {
+    if (!active) return;
+    const next: ProposalStatus =
+      action === "approve" ? "executing"
+        : action === "reject" ? "rejected"
+          : action === "postpone" ? "postponed"
+            : "verifying";
+    setStatus(active.id, next);
+    setActive(null); // sheet closes on any action
+  };
+
+  /* Live brain-core PaymentIntents flagged by the §6 gate. */
+  const liveReviews = intents.filter((i) => i.outcome === "confirm" && !i.declined).map(intentToReview);
+  const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
+  const reject = useMutation<unknown, Error, string>({
+    mutationFn: async (intentId: string) => {
+      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
+      return res.json();
+    },
+    onSuccess: (_d, intentId) => markDeclined(intentId),
+  });
+  const handleLiveReject = () => {
+    if (activeLive?.live && activeLive.intentId) reject.mutate(activeLive.intentId);
+    setActiveLive(null);
+  };
+
+  /* Static legacy demo items (older approval flow) — kept available. */
+  const legacyItems = NEEDS_REVIEW;
+
+  return (
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[32px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
+
+          {/* Header */}
+          <div className="flex flex-col items-start relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
+          </div>
+
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+
+            {/* Auto-handled today — collapsed summary line (exception-only routing) */}
+            <div
+              className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
+              data-testid="row-auto-handled"
+            >
+              <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] min-w-px">
+                Brain auto-handled{" "}
+                <span className="text-[#a8b9f4] font-semibold">{ACCOUNT_SUMMARY.autoHandledCount} routine payments</span>{" "}
+                today under policy without asking.
+              </p>
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0">
+                {format(ACCOUNT_SUMMARY.autoHandledTotal)}
+              </p>
+            </div>
+
+            {/* Live — real brain-core PaymentIntents flagged by §6 (only when present) */}
+            {liveReviews.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Needs your approval" count={liveReviews.length} />
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  {liveReviews.map((item) => (
+                    <LiveRow key={item.id} item={item} onClick={() => setActiveLive(item)} format={format} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Needs Review — the data-driven proposal queue */}
+            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+              <WidgetHeader title="Needs Review" count={queue.length} />
+              <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                {queue.length === 0 && executing.length === 0 && (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] p-[8px]">
+                    Nothing left to review. You're all caught up.
+                  </p>
+                )}
+
+                {queue.map((p, idx) => (
+                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                    <ProposalRow proposal={p} status={statusOf(p)} onClick={() => setActive(p)} format={format} />
+                    {idx < queue.length - 1 && <Divider />}
+                  </div>
+                ))}
+
+                {/* Executing — held confirmation rows */}
+                {executing.map((p) => (
+                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                    {queue.length > 0 && <Divider />}
+                    <ExecutingRow
+                      proposal={p}
+                      onCancel={() => setStatus(p.id, "pending")}
+                      onSettle={() => setStatus(p.id, "executed")}
+                      format={format}
+                    />
+                  </div>
+                ))}
+
+                {/* Account Totals — pendingAPTotal reconciles from the AP proposals */}
+                <Divider />
+                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]" data-testid="row-account-totals">
+                  <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">Account Totals</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                      {format(ACCOUNT_SUMMARY.totalCash)} cash · about {ACCOUNT_SUMMARY.runwayMonths} months runway
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end justify-center relative shrink-0">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap" data-testid="text-pending-ap">
+                      {format(ACCOUNT_SUMMARY.pendingAPTotal)}
+                    </p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] whitespace-nowrap">pending AP</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Helper banner — purple */}
+            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <div className="flex flex-1 items-start min-w-px relative">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px]">
+                  Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes — you decide, and a separate execution service settles.
+                </p>
+              </div>
+            </div>
+
+            {/* Settled today — collapsed executed/rejected/postponed */}
+            {settled.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Settled today" count={settled.length} />
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  {settled.map((p) => (
+                    <SettledRow key={p.id} proposal={p} status={statusOf(p)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Legacy static demo approvals (older flow) */}
+            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+              <WidgetHeader title="Routine approvals" count={legacyItems.length} />
+              <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                {legacyItems.map((item, idx) => (
+                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                    <LiveRow item={item} onClick={() => setActiveLive(item)} format={format} />
+                    {idx < legacyItems.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </ScrollArea>
+
+      {/* Data-driven proposal sheet */}
+      <ProposalDetail
+        proposal={active}
+        currentStatus={active ? statusOf(active) : undefined}
+        open={active !== null}
+        onOpenChange={(o) => { if (!o) setActive(null); }}
+        onAction={handleAction}
+      />
+
+      {/* Legacy / live approval modal */}
+      <ReviewModal
+        item={activeLive}
+        open={activeLive !== null}
+        onOpenChange={(o) => { if (!o) setActiveLive(null); }}
+        onConfirm={() => setActiveLive(null)}
+        onReject={handleLiveReject}
+      />
+    </div>
+  );
+}
+
+/* Row used for both live PaymentIntents and legacy static demo items. */
+const LiveRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: () => void; format: (a: string | number) => string }) => (
   <div
     onClick={onClick}
     role="button"
@@ -75,133 +392,13 @@ const ReviewRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: (
     className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
   >
     <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-        {item.title}
-      </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-        {convertInline(item.vendor ? `${item.vendor} · ${item.due}` : item.due, format)}
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">{item.title}</p>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
+        {item.vendor ? `${item.vendor} · ${item.due}` : item.due}
       </p>
     </div>
     <div className="flex flex-col items-end justify-center relative shrink-0">
-      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-        {format(item.amount)}
-      </p>
+      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
     </div>
   </div>
 );
-
-export function ReviewPage() {
-  const [activeReview, setActiveReview] = useState<ReviewItemType | null>(null);
-  const { format } = useCurrency();
-  const { intents, markDeclined } = useIntents();
-
-  // Real PaymentIntents the §6 gate flagged for approval (and not yet declined).
-  const liveReviews = intents
-    .filter((i) => i.outcome === "confirm" && !i.declined)
-    .map(intentToReview);
-
-  // Operator declines a real proposed payment → reject on brain-core (no money moves).
-  const reject = useMutation<unknown, Error, string>({
-    mutationFn: async (intentId: string) => {
-      const res = await apiRequest("POST", "/api/brain/reject", {
-        payment_intent_id: intentId,
-        reason: "Declined by operator",
-      });
-      return res.json();
-    },
-    onSuccess: (_d, intentId) => markDeclined(intentId),
-  });
-
-  const handleReject = () => {
-    if (activeReview?.live && activeReview.intentId) reject.mutate(activeReview.intentId);
-    setActiveReview(null);
-  };
-
-  return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
-
-          {/* Header */}
-          <div className="flex flex-col items-start relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap">A few things I need your help on.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Take a quick look and decide what should happen next.</p>
-          </div>
-
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-
-            {/* Needs your approval — real PaymentIntents the §6 gate flagged (brain-core) */}
-            {liveReviews.length > 0 && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Needs your approval" count={liveReviews.length} />
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {liveReviews.map((item, idx) => (
-                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                        <ReviewRow item={item} onClick={() => setActiveReview(item)} format={format} />
-                        {idx < liveReviews.length - 1 && <Divider />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Needs Review — same shell as the Accounts card on Finances */}
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={NEEDS_REVIEW.length} />
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  {NEEDS_REVIEW.map((item, idx) => (
-                    <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                      <ReviewRow item={item} onClick={() => setActiveReview(item)} format={format} />
-                      {idx < NEEDS_REVIEW.length - 1 && <Divider />}
-                    </div>
-                  ))}
-
-                  {/* Account Totals footer row — informational only, no hover */}
-                  <Divider />
-                  <div
-                    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]"
-                    data-testid="row-review-totals"
-                  >
-                    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">Account Totals</p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Enough for about 6 months at your current spending</p>
-                    </div>
-                    <div className="flex flex-col items-end justify-center relative shrink-0">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-                        {totalAmount(NEEDS_REVIEW, format)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tip — same purple bar styling as Finances/Rules pages */}
-            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <div className="flex flex-1 items-start min-w-px relative">
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
-                    Not sure what to do? Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Swipe right to approve, left to reject, or up to postpone for tomorrow.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </ScrollArea>
-
-      <ReviewModal
-        item={activeReview}
-        open={activeReview !== null}
-        onOpenChange={(o) => { if (!o) setActiveReview(null); }}
-        onConfirm={() => setActiveReview(null)}
-        onReject={handleReject}
-      />
-    </div>
-  );
-}

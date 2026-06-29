@@ -1,0 +1,173 @@
+Build a React + TypeScript "Needs Review" page for "Brain" — a non-custodial,
+PROPOSE-ONLY financial agent layer for SMB finance teams. Brain analyzes and PROPOSES;
+it never holds or moves funds. A human approves, then a SEPARATE execution service settles.
+
+STYLING — MATCH THE EXISTING BRAIN APP (the purple/indigo review screen).
+- FIRST: if the repo contains design tokens, a global stylesheet, CSS variables, or a
+  theme module, IMPORT AND REUSE those exact tokens — colors, type scale, spacing, radii.
+  Do not hardcode values that already exist as tokens.
+- Aesthetic: deep indigo/near-black canvas, soft purple accents, off-white text, rounded
+  cards (generous radii), comfortable spacing, flat (no heavy gradients or glow). Calm and
+  legible — this is a financial approval surface, not a marketing page.
+- Headings in the app's display font; numbers, amounts, audit ids, policy refs, and the
+  fact blocks in a monospace face for precision.
+- ALERT COLOR: #D20344 — RESERVED for alerts, flags, danger, and "if this is wrong".
+  It is NOT a generic primary-button color. Do NOT paint Approve in #D20344. Purple is the
+  accent for interactive/affirmative elements; #D20344 carries only risk meaning.
+
+THE INTERACTION (most important): The review page shows a "Needs Review" list. TAPPING
+ANY review row opens a `ProposalDetail` modal/bottom-sheet for THAT item. The page and the
+popup read from ONE shared mock data source — the row and its detail are the same Proposal
+object. Closing the sheet returns to the list. Actions update that item's status in page
+state (see HANDOFF STATE below — do NOT silently remove rows on approve).
+
+DELIVERABLES
+1. `src/types.ts` — the data model (below).
+2. `src/mockProposals.ts` — ONE proposal per scenario below, so every UI branch is
+   exercised by real data.
+3. `ReviewPage` — recreates the screen: header "A few things I need your help on.",
+   subhead "Take a quick look and decide what should happen next.", a "Needs Review"
+   card listing pending proposals as tappable rows (title, rowSubtitle, amount on the
+   right), an "Account Totals" summary row, and the purple helper banner ("Tap any item to
+   see why Brain suggested it…"). Above the list, a collapsed "Auto-handled today" summary
+   line (count + total) for routine payments Brain cleared under policy WITHOUT asking —
+   reinforcing exception-only routing.
+4. `ProposalDetail` — the popup that opens on row tap (spec below).
+
+CORE PRINCIPLE — the popup is DATA-DRIVEN, not hardcoded per agent. One component renders
+all scenarios; sections appear/collapse based on which fields are present. Never write a
+separate component per agent. Adding a scenario = adding a Proposal object, never new JSX.
+
+DATA MODEL — define these TypeScript interfaces:
+
+type Agent = "invoice" | "collections" | "cash" | "close";
+type Surface = "business" | "individual";
+type Severity = "clean" | "info" | "warning" | "danger";
+type ProposalStatus = "pending" | "executing" | "executed" | "rejected" | "postponed" | "verifying";
+
+interface ReasonChip { label: string; severity: Severity; }
+interface EvidenceItem { kind: "invoice"|"transaction"|"prior_payment"|"contract"|"ledger_entry"|"forecast"; title: string; subtitle: string; href?: string; }
+interface FactRow { label: string; value: string; severity?: Severity; }
+interface ConfidenceInfo { score: number; band: "low"|"medium"|"high"; caveat: string; }
+interface PolicyRef { id: string; explanation: string; autoClearedOtherwise: boolean; }
+interface ActionConfig {
+  approve: { label: string; sublabel?: string };
+  reject:  { label: string; sublabel?: string };
+  postpone:{ label: string; sublabel?: string };
+  verifyFirst?: { label: string; sublabel?: string };
+}
+
+interface Proposal {
+  id: string;
+  auditId: string;
+  agent: Agent;
+  surface: Surface;
+  title: string;
+  rowSubtitle: string;
+  actionStatement: string;        // "Propose paying Bright Futures Studio $3,200"
+  actionMeta: string;             // "from Operating ••4821 · due Mon Jul 6"
+  executionLabel: string;         // post-approve mechanic, e.g. "ACH initiates Mon AM"
+  cancelDeadlineLabel: string;    // e.g. "cancel until 5:00 PM ET"
+  amount?: number;
+  amountDisplay?: string;
+  counterparty?: string;
+  dueLabel?: string;
+  severity: Severity;
+  reasonChips: ReasonChip[];
+  rationale: string;
+  facts?: FactRow[];
+  evidence: EvidenceItem[];
+  confidence: ConfidenceInfo;
+  whatHappensNext: string;
+  risk: string;
+  policy: PolicyRef;
+  actions: ActionConfig;
+  status: ProposalStatus;
+  sweepMath?: { totalCash: number; pendingAP: number; bufferMonths: number; bufferAmount: number; sweepAmount: number; operatingAfter: number; runwayAfterMonths: number; };
+  batchApprovable?: boolean;
+  policyThreshold?: string;
+}
+
+Also export `AccountSummary` { totalCash: number; runwayMonths: number; pendingAPTotal: number; autoHandledCount: number; autoHandledTotal: number; } and render it. pendingAPTotal MUST equal the sum of the money-mover proposals shown; runway figures must follow from the numbers.
+
+HANDOFF STATE — make the demo feel like propose → approve → execute. EVERY transition is
+MANUALLY driven by the user. NOTHING resolves on a timer or auto-advances. No setTimeout /
+auto-settle anywhere.
+- On APPROVE: do NOT remove the row. Set status to "executing" and transition the row into
+  a HELD confirmation state showing "Sent to execution · {cancelDeadlineLabel}" with the
+  executionLabel and a small static processing affordance (no spinner that implies
+  auto-progress). This makes visible that BRAIN PROPOSED, the human APPROVED, and a SEPARATE
+  execution service is now settling — Brain itself never moved the money.
+- The "executing" row stays in that held state INDEFINITELY until the user manually picks an
+  option. Provide TWO explicit controls on the executing row:
+    • "Cancel" → reverts status to "pending"; the item returns to the queue (proves the
+      cancel window is real and human-controlled).
+    • "Mark settled" → transitions "executing" → "executed", showing a quiet
+      "Executed · {auditId}" confirmation, then collapses the row into a settled list.
+  There is NO automatic transition between these — the user must choose.
+- REJECT → status "rejected"; row shows a brief "Rejected" confirmation and collapses. Do
+  not auto-dismiss on a timer; collapse immediately on the action. If a reject
+  sublabel/reason is configured, capture it (a simple reason note is fine).
+- POSTPONE → status "postponed"; row shows "Postponed to tomorrow" and collapses immediately.
+- VERIFY FIRST → status "verifying"; row stays visible as PARKED with "Verifying with vendor
+  — draft ready for review" (propose-only; no funds move). Resolved only by a later manual
+  action.
+- The detail sheet closes on any action and the page reflects the new row state. A small
+  inline confirmation is fine, but the row-level state is the primary signal, and every
+  state change requires an explicit user click.
+
+PROPOSALDETAIL RENDERING (conditional, top to bottom):
+- Header: agent badge (per-agent label/icon), auditId in mono (muted), close X.
+- reasonChips as pills first — flags use #D20344. If severity "clean" with no chips, show a
+  small neutral/purple "Looks routine" pill (not red).
+- actionStatement (large) + actionMeta + a line reinforcing Brain won't move funds until
+  approved.
+- "Why this needs your call": rationale; render facts[] as a mono block, coloring danger
+  rows #D20344.
+- Evidence grid (icon per kind); duplicate scenario shows BOTH invoices side by side.
+- Confidence: band + score + bar + caveat line beneath. Bar uses a neutral/purple fill,
+  not #D20344 (red is for alerts only).
+- "What happens next": whatHappensNext verbatim (exact mechanics + cancel window).
+- "If this is wrong": risk in #D20344, then the policy chip ("Flagged by {policy.id} —
+  {explanation}" + "Would have auto-cleared otherwise" when true), policy id in mono.
+- Sweep proposals: render sweepMath as a reconciling mono breakdown (total cash → minus
+  buffer → minus pending AP → sweepable) proving the account isn't drained; show runwayAfter.
+- Footer: Reject / Postpone / Approve with sublabels. If actions.verifyFirst exists, render
+  it as a prominent FULL-WIDTH fourth action ABOVE the row. Approve uses the purple accent —
+  NOT #D20344, even on danger items.
+- Business surface (batchApprovable): show policyThreshold hint, hide swipe hint. Individual
+  surface: show "Swipe right to approve · left to reject · up to postpone".
+- Raw six-layer trace / JSON behind a collapsed "Technical detail" disclosure.
+
+MOCK SCENARIOS (one Proposal each; cover every branch) — populate the queue:
+1. invoice / clean routine — office utilities, Con Edison, no chips, high confidence.
+2. invoice / DUPLICATE — same vendor, near-identical amount paid ~10 days ago; two invoice
+   evidence cards; reject sublabel "not a duplicate".
+3. invoice / BANK DETAILS CHANGED (fraud_anomaly) — Bright Futures Studio contractor invoice
+   $3,200, danger, facts block prior ··6610 vs new ··2087 "first seen today", verifyFirst
+   PRESENT, policy ap.fraud.v2, autoClearedOtherwise true.
+4. invoice / AMOUNT ANOMALY — +38% vs trailing average, medium confidence, warning.
+5. cash / TREASURY SWEEP — sweepMath respecting a >=3-month buffer AND covering pending AP;
+   operatingAfter > 0; runwayAfter shown. Do NOT drain the account.
+6. collections / OVERDUE RECEIVABLE — proposes a follow-up; whatHappensNext = "drafts a
+   reminder for your review, does not send".
+7. close / RECONCILIATION DISCREPANCY — bank line not matching a ledger entry within
+   tolerance; evidence = transaction + ledger_entry; proposes a correcting entry for review.
+8. invoice / business surface — batchApprovable true, policyThreshold set, no swipe hint.
+
+CONSTRAINTS
+- Money-mover wording is always "propose / recommend / draft" — never "I paid"/"I will pay".
+  Post-approve wording is "sent to execution" / "executed" — the execution service settles,
+  not Brain.
+- Every state change is user-initiated. No setTimeout-based auto-settle, auto-dismiss, or
+  auto-advance anywhere in the app.
+- All displayed numbers rounded; currency via Intl.NumberFormat; amounts/codes in mono;
+  totals reconcile from fields.
+- Reuse existing app design tokens; #D20344 only for alerts/flags/danger, never as a generic
+  primary; purple is the affirmative/interactive accent.
+- No backend; static mock data only; no localStorage. Component fully typed; sections render
+  purely from the data.
+
+Return types.ts, mockProposals.ts, ReviewPage, and ProposalDetail, wired so tapping a review
+row opens that item's detail sheet, with the propose → approve → execute handoff visible in
+the row state and every transition manually controlled by the user.
