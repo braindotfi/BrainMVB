@@ -297,6 +297,29 @@ const SectionWidget = ({
 // Shown when brain-core's ledger-grounded recommendation is unavailable.
 const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
 
+// Net monthly cash flow (inflow − outflow, averaged over the months present) from
+// brain-core ledger transactions. null when no transaction data is reachable
+// (then the card keeps its static fallback). Transfers/adjustments don't count.
+function netMonthlyCashflow(
+  txs?: { amount?: string; direction?: string; transaction_date?: string }[],
+): number | null {
+  if (!txs || txs.length === 0) return null;
+  const months = new Set<string>();
+  let net = 0;
+  let counted = 0;
+  for (const t of txs) {
+    const amt = Number(t.amount);
+    if (!Number.isFinite(amt)) continue;
+    if (t.direction === "inflow") net += amt;
+    else if (t.direction === "outflow") net -= amt;
+    else continue;
+    counted++;
+    if (t.transaction_date) months.add(t.transaction_date.slice(0, 7)); // YYYY-MM
+  }
+  if (counted === 0) return null;
+  return net / Math.max(1, months.size);
+}
+
 export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -327,6 +350,22 @@ export function HomePage() {
     brainRec?.text && brainRec.text.trim().length > 0
       ? { text: brainRec.text, colorClass: "text-[#a8b9f4]" }
       : SPENDING_INSIGHT_FALLBACK;
+
+  // Net cash flow per month from the live Ledger. With only inflows seeded today
+  // this reads as positive income; it nets real expenses automatically once money
+  // -out transactions land. Falls back to the static figure when unreachable.
+  const { data: brainTx } = useQuery<{
+    transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
+  }>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const netMonthly = netMonthlyCashflow(brainTx?.transactions);
+  const cashLabel = netMonthly !== null ? "Net cash flow" : "You're spending about";
+  const cashValue =
+    netMonthly !== null
+      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
+      : format("$7,324");
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
@@ -390,10 +429,10 @@ export function HomePage() {
               </div>
               <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px]">
                 <div className="flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">You're spending about</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">{cashLabel}</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{format("$7,324")}</span>
+                      <span className="font-medium leading-[36px] text-[32px]">{cashValue}</span>
                       <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
                     <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${insightLine.colorClass}`}>
