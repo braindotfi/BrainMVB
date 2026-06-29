@@ -1,0 +1,110 @@
+EXTEND the existing Brain `ProposalDetail` component to add an AUTO-HANDLED RECEIPT view
+for items in the "Approved Automatically" section of the review page. These are payments
+Brain ALREADY auto-approved and settled under a standing rule the user created — so tapping
+one opens a RECORD, not a decision. Reuse the SAME component, shell, tokens, and layout as
+the other proposal detail popups. Do not build a separate component.
+
+RENAME + ALIGN COPY (banner, section, and pill must all use the same "approved
+automatically" verb so they read as one idea):
+- The review page section currently labeled "Routine approvals" becomes "Approved
+  Automatically" (past tense — these are already settled).
+- The top banner currently reading "Brain auto-handled N routine payments today" becomes
+  "Brain approved N payments automatically today" (keep the count + $total).
+- The receipt's status pill reads "Approved automatically · no approval needed".
+Update the section heading, banner, pill, and any related copy so they match what tapping a
+row reveals.
+
+DERIVE THE BANNER FROM DATA (do not hardcode the count or total): the banner's N and $total
+MUST be computed at render time from the array of auto_handled proposals — N = the number of
+auto_handled items, total = the sum of their amounts (formatted via Intl.NumberFormat). The
+"Approved Automatically" section renders that same array. This guarantees the banner, the
+section, and the receipts can never drift. Never write a literal "14" or "$8,940" anywhere.
+
+CONSISTENCY — must match the existing ProposalDetail exactly:
+- Same modal/bottom-sheet shell, same purple/indigo app styling and tokens, same generous
+  rounded cards, same comfortable spacing.
+- Same header: agent badge (per-agent label/icon) on the left, auditId in monospace (muted)
+  on the right, close X.
+- Same monospace face for amounts, audit ids, policy refs, timestamps, and fact blocks.
+- ALERT COLOR #D20344 stays reserved for alerts/problems only; purple is the affirmative/
+  interactive accent. An auto-handled receipt has nothing wrong, so it uses NO red except on
+  the "Report a problem" action.
+- Sections still render purely from the data — empty fields collapse.
+
+ENTRY POINT: tapping any row in the "Approved Automatically" section opens this receipt view
+for that item. The top "Brain approved N payments automatically today" banner expands into
+this same list, each row opening the same receipt.
+
+DATA MODEL — extend the existing types:
+- Add to ProposalStatus the value "auto_handled" (already approved + settled by rule).
+- Add these optional fields to Proposal (present only for auto_handled items):
+    pastTenseStatement: string;     // "Paid Con Edison $486" — past tense; this is the ONE
+                                    // state where past-tense money-mover wording is correct
+    settledMeta: string;            // "from Operating ••4821 · settled today 8:02 AM ET ·
+                                    //  you set a rule that allows this"
+    handoffTimeline: { label: string; timestamp: string; note?: string; done: boolean }[];
+                                    // exactly 3 steps: proposed → approved automatically by
+                                    // your rule → execution service settled
+    clearedBecause: FactRow[];      // positive evidence: why it qualified (trusted vendor,
+                                    // amount under limit, no bank-detail change, cash ok)
+    rule: {                         // the standing rule that authorized it
+      name: string;                 // "Auto-clear utility bills"
+      summary: string;              // "Trusted vendors · utilities · under $1,000 · no
+                                    //  bank-detail change"
+      createdLabel: string;         // "You created this Jun 12 · cleared 7 payments since"
+      policyId: string;             // "policy/ap.tolerance.v3"
+      active: boolean;
+    };
+
+RENDERING — when status === "auto_handled", the popup renders (top to bottom):
+1. Status pill: GREEN "Approved automatically · no approval needed" (success tokens), in the
+   same slot where needs-review shows a red flag pill and routine-pending shows "Looks
+   routine".
+2. Headline: pastTenseStatement (large) with the amount in mono, then settledMeta beneath.
+   The "you set a rule that allows this" attribution is REQUIRED — it makes clear Brain
+   executed the user's standing instruction, not its own choice.
+3. "What happened" — handoffTimeline as a vertical 3-step timeline with check icons and
+   monospace timestamps. The steps MUST be: "Brain proposed the payment" → "Approved
+   automatically by your rule (no human step)" → "Execution service settled it (Brain never
+   held the funds)". This is the propose → approve → execute story told retroactively, and
+   is the most important block — it shows exactly where the human was removed and confirms
+   the non-custodial boundary held.
+4. "Why this cleared without asking" — clearedBecause rendered as a monospace fact block;
+   the qualifying amount line gets a success-colored "under $X limit" annotation.
+5. "The rule that approved this" — a bordered sub-card showing rule.name, an Active/Paused
+   status chip, rule.summary, and rule.createdLabel + rule.policyId in mono.
+6. An info note (purple/accent tint): "This is a record, not a request — it's already
+   settled. You can change how Brain handles these going forward."
+
+FOOTER ACTIONS — RETROACTIVE only. There is NO Approve/Reject/Postpone/Verify here; the
+decision already happened and the money already moved. Render:
+- "Pause this rule" — sets rule.active false (stops future auto-clears of this kind).
+- "Review rule" — opens/affords editing the rule's thresholds.
+- "Report a problem with this payment" (full width, flag icon in #D20344) — the feedback +
+  escape hatch. On tap: capture a brief reason AND immediately offer to PAUSE the rule and
+  flag any similar pending items, so one bad auto-approval can't silently repeat. This is
+  the highest-signal event in the app — treat it as policy feedback, not just a complaint.
+
+INTERACTION:
+- Read-only record; no status mutation except pausing the rule (sets rule.active false and
+  reflects an "Active → Paused" chip change).
+- Closing returns to the review page. Pausing a rule shows a brief inline confirmation.
+
+MOCK DATA — add a set of auto_handled proposals to mockProposals.ts to populate the
+"Approved Automatically" section, each with a full handoffTimeline, clearedBecause facts, and
+a rule. Include enough realistic items that the derived banner reads naturally (aim for
+roughly 10–14), and cover at least a utility bill (Con Edison $486), an office lease, and a
+SaaS renewal (Notion $240). The banner's count and total are DERIVED from this array (see
+above) — do not hardcode them.
+
+CONSTRAINTS (unchanged from the existing component):
+- Past-tense money-mover wording is allowed ONLY for auto_handled ("Paid …"). All other
+  states stay "propose / recommend / draft".
+- Every state change is user-initiated; no setTimeout auto-advance.
+- All displayed numbers rounded; currency via Intl.NumberFormat; codes/amounts/timestamps in
+  mono; banner count + total are derived from the auto_handled array, never hardcoded.
+- No backend; static mock data; no localStorage. Fully typed; sections render from data.
+
+Return the updated types.ts, the extended mockProposals.ts (with auto_handled items), and
+the updated ProposalDetail that renders the auto-handled receipt branch — wired so tapping a
+row in the "Approved Automatically" section opens it.

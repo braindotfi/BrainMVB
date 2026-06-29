@@ -1,93 +1,18 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Clock, ShieldQuestion, Loader } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Loader } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  NEEDS_REVIEW,
   ReviewModal,
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { MOCK_PROPOSALS, ACCOUNT_SUMMARY } from "@/lib/mockProposals";
+import { MOCK_PROPOSALS, ACCOUNT_SUMMARY, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { apiRequest } from "@/lib/queryClient";
-
-/* ── Convert legacy static demo items into full Proposal shape so they
-   render through the same ProposalDetail sheet (confidence, evidence,
-   policy trace, rationale, etc.) ─────────────────────────────────────────── */
-function legacyToProposal(item: ReviewItemType): Proposal {
-  const amountNum = parseFloat(item.amountFull.replace(/[$,]/g, ""));
-  return {
-    id: `legacy-${item.id}`,
-    auditId: `rut-${item.id}`,
-    agent: "invoice",
-    surface: "business",
-    title: item.title,
-    rowSubtitle: item.vendor ? `${item.vendor} \u00b7 ${item.due}` : item.due,
-    actionStatement: item.question,
-    actionMeta: `from ${item.from} \u00b7 ${item.dueBy}`,
-    executionLabel: "ACH settles next business day",
-    cancelDeadlineLabel: "cancel until 5:00 PM ET",
-    amount: amountNum,
-    amountDisplay: item.amount,
-    counterparty: item.who,
-    dueLabel: item.dueBy,
-    severity: "clean",
-    reasonChips: [{ label: "Looks routine", severity: "clean" }],
-    rationale: item.description,
-    facts: [
-      { label: "vendor", value: item.who },
-      { label: "amount", value: item.amountFull },
-      { label: "due by", value: item.dueBy },
-      { label: "from account", value: item.from },
-      { label: "auto policy", value: item.autoLabel },
-    ],
-    evidence: [
-      {
-        kind: "prior_payment",
-        title: "Matched 12 prior payments",
-        subtitle: "Same vendor, same amount, same cadence",
-      },
-      {
-        kind: "contract",
-        title: "Routine Payment Policy \u00a74.2",
-        subtitle: "Auto-cleared: vendor + amount + cadence match",
-      },
-    ],
-    confidence: {
-      score: 0.98,
-      band: "high",
-      caveat: "Pattern-matched against 12 months of history. No flags.",
-    },
-    whatHappensNext:
-      "If you approve, this will settle via ACH next business day. You can cancel until 5:00 PM ET today.",
-    risk: "If this is wrong, you can reverse the ACH within 24 hours. Risk: low \u2014 vendor and amount match 12-month pattern.",
-    policy: {
-      id: "routine-payment",
-      explanation:
-        "Auto-cleared under Routine Payment Policy \u00a74.2 (vendor + amount + cadence match)",
-      autoClearedOtherwise: true,
-    },
-    actions: {
-      approve: {
-        label: "Approve",
-        sublabel: "Settles next business day",
-      },
-      reject: {
-        label: "Reject",
-        sublabel: "Stop this payment",
-      },
-      postpone: {
-        label: "Postpone",
-        sublabel: "Review again tomorrow",
-      },
-    },
-    status: "pending",
-    batchApprovable: true,
-  };
-}
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
@@ -255,10 +180,52 @@ const SettledRow = ({ proposal, status }: { proposal: Proposal; status: Proposal
   );
 };
 
+/* ── Auto-handled receipt row — already settled under a standing rule.
+   Tapping opens the RECORD (not a decision). Green check + past-tense amount. ── */
+const AutoHandledRow = ({
+  proposal,
+  onClick,
+  format,
+}: {
+  proposal: Proposal;
+  onClick: () => void;
+  format: (a: string | number) => string;
+}) => (
+  <div
+    onClick={onClick}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+    data-testid={`row-auto-handled-${proposal.id}`}
+    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
+  >
+    <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
+    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+        {proposal.title}
+      </p>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full text-[#6c779d]">
+        {proposal.rowSubtitle}
+      </p>
+    </div>
+    {typeof proposal.amount === "number" && (
+      <div className="flex flex-col items-end justify-center relative shrink-0">
+        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+          {format(proposal.amount)}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#42bf23] text-[12px] text-right whitespace-nowrap">
+          Paid
+        </p>
+      </div>
+    )}
+  </div>
+);
+
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export function ReviewPage() {
   const { format } = useCurrency();
   const { intents, markDeclined } = useIntents();
+  const [, navigate] = useLocation();
 
   /* Status overrides keyed by proposal id. Every transition is user-driven —
      no setTimeout / auto-settle anywhere. */
@@ -303,9 +270,19 @@ export function ReviewPage() {
     setActiveLive(null);
   };
 
-  /* Static legacy demo items — converted into full Proposal shape so they
-     open in the same ProposalDetail sheet as the mock scenarios. */
-  const legacyProposals = useMemo(() => NEEDS_REVIEW.map(legacyToProposal), []);
+  /* Auto-handled receipts — already approved + settled under standing rules.
+     Banner count + total are DERIVED from this array so they can never drift. */
+  const autoHandled = AUTO_HANDLED_PROPOSALS;
+  const autoHandledTotal = autoHandled.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+
+  /* Pausing a rule is the only mutation on a receipt — keyed by policyId so all
+     receipts sharing a rule reflect the pause. Report-a-problem also pauses. */
+  const [pausedRules, setPausedRules] = useState<Record<string, boolean>>({});
+  const pauseRule = (p: Proposal) => {
+    if (p.rule) setPausedRules((prev) => ({ ...prev, [p.rule!.policyId]: true }));
+  };
+  const isRulePaused = (p: Proposal): boolean =>
+    p.rule ? (pausedRules[p.rule.policyId] ?? !p.rule.active) : false;
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -321,19 +298,19 @@ export function ReviewPage() {
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
 
-            {/* Auto-handled today — collapsed summary line (exception-only routing) */}
+            {/* Approved automatically today — derived summary (count + total from the array) */}
             <div
               className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
               data-testid="row-auto-handled"
             >
               <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
               <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] min-w-px">
-                Brain auto-handled{" "}
-                <span className="text-[#a8b9f4] font-semibold">{ACCOUNT_SUMMARY.autoHandledCount} routine payments</span>{" "}
-                today under policy without asking.
+                Brain approved{" "}
+                <span className="text-[#a8b9f4] font-semibold">{autoHandled.length} payments automatically</span>{" "}
+                today under a rule you set.
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0">
-                {format(ACCOUNT_SUMMARY.autoHandledTotal)}
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0" data-testid="text-auto-handled-total">
+                {format(autoHandledTotal)}
               </p>
             </div>
 
@@ -419,30 +396,40 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Routine Approvals — legacy items rendered through ProposalDetail */}
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Routine Approvals" count={legacyProposals.length} />
-              <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {legacyProposals.map((p, idx) => (
-                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                    <ProposalRow proposal={p} status={statusOf(p)} onClick={() => setActive(p)} format={format} />
-                    {idx < legacyProposals.length - 1 && <Divider />}
-                  </div>
-                ))}
+            {/* Approved Automatically — settled receipts; tapping a row opens the record */}
+            {autoHandled.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Approved Automatically" count={autoHandled.length} />
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  {autoHandled.map((p, idx) => (
+                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                      <AutoHandledRow proposal={p} onClick={() => setActive(p)} format={format} />
+                      {idx < autoHandled.length - 1 && <Divider />}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
       </ScrollArea>
 
-      {/* Data-driven proposal sheet */}
+      {/* Data-driven proposal sheet — also renders the auto_handled receipt branch */}
       <ProposalDetail
         proposal={active}
         currentStatus={active ? statusOf(active) : undefined}
         open={active !== null}
         onOpenChange={(o) => { if (!o) setActive(null); }}
         onAction={handleAction}
+        rulePaused={active ? isRulePaused(active) : undefined}
+        onPauseRule={pauseRule}
+        onReviewRule={() => { setActive(null); navigate("/rules"); }}
+        onReportProblem={(p, reason) => {
+          // Reporting a problem also pauses the rule so a bad auto-approval can't repeat.
+          console.warn(`[review] problem reported on auto-handled "${p.title}" (${p.auditId}): ${reason}`);
+          pauseRule(p);
+        }}
       />
 
       {/* Legacy / live approval modal */}

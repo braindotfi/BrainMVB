@@ -11,7 +11,8 @@ export type ProposalStatus =
   | "executed"
   | "rejected"
   | "postponed"
-  | "verifying";
+  | "verifying"
+  | "auto_handled";
 
 export interface ReasonChip {
   label: string;
@@ -56,6 +57,21 @@ export interface ActionConfig {
   verifyFirst?: { label: string; sublabel?: string };
 }
 
+export interface HandoffStep {
+  label: string;
+  timestamp: string;
+  note?: string;
+  done: boolean;
+}
+
+export interface AutoRule {
+  name: string;
+  summary: string;
+  createdLabel: string;
+  policyId: string;
+  active: boolean;
+}
+
 export interface SweepMath {
   totalCash: number;
   pendingAP: number;
@@ -95,12 +111,16 @@ export interface Proposal {
   sweepMath?: SweepMath;
   batchApprovable?: boolean;
   policyThreshold?: string;
+  /* Present only for status === "auto_handled" — a settled receipt, not a decision. */
+  pastTenseStatement?: string; // "Paid Con Edison $486"
+  settledMeta?: string; // "from Operating ••4821 · settled today 8:02 AM ET · you set a rule that allows this"
+  handoffTimeline?: HandoffStep[]; // proposed → approved automatically by rule → execution settled
+  clearedBecause?: FactRow[]; // positive evidence: why it qualified
+  rule?: AutoRule; // the standing rule that authorized it
 }
 
 export interface AccountSummary {
   totalCash: number;
   runwayMonths: number;
   pendingAPTotal: number;
-  autoHandledCount: number;
-  autoHandledTotal: number;
 }

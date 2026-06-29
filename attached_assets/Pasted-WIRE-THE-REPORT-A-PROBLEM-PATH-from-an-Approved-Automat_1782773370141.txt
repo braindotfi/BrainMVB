@@ -1,0 +1,75 @@
+WIRE THE "REPORT A PROBLEM" PATH from an Approved-Automatically receipt through to the Rule
+detail screen. Today the receipt's "Report a problem with this payment" action collects a
+reason and offers to pause the rule. Complete that loop so reporting a problem actually
+PAUSES the rule and lands the user on that rule's detail with the pause applied and an
+explanation of why. Reuse existing components, shell, tokens, monospace conventions, and the
+#D20344 alert color (alerts/problems only).
+
+THE FLOW
+1. On a receipt, the user taps "Report a problem with this payment".
+2. Show a brief reason capture — a short set of preset reasons plus a free-text note:
+   presets like "I didn't recognize this vendor", "Wrong amount", "Should have asked me
+   first", "Duplicate of another payment", "Other". Require a selection or note before
+   continuing. This is propose-only feedback — it does not claw back the settled payment
+   (that already happened); it changes future behavior.
+3. After the reason is captured, present the recommended safety action plainly:
+   "Pause '{rule.name}' so Brain stops auto-approving these and asks you instead?" with a
+   primary "Pause rule and review" (purple) and a secondary "Just send feedback" (the user
+   can report without pausing). Never auto-pause silently — the user confirms.
+4. On "Pause rule and review":
+   - Set the rule's active = false.
+   - Record a ProblemReport against the rule (see data model) including the reportedProposal
+     id, reason, note, and timestamp.
+   - FLAG SIMILAR PENDING ITEMS: any currently-pending proposals that would have been
+     covered by this rule (same agent + category, within cap, matching allowlist/category
+     scope) get a non-blocking marker — a small "Related to a paused rule" note — so the same
+     problem can't quietly repeat while the user decides. Do not change their status; just
+     surface the link.
+   - NAVIGATE to that rule's RuleDetail.
+5. On "Just send feedback": record the ProblemReport, leave the rule active, return to the
+   review page with a brief inline confirmation.
+
+RULE DETAIL — PAUSED-FROM-REPORT STATE
+When RuleDetail opens as a result of a problem report (or whenever the rule is paused and has
+unresolved reports), render at the TOP of the detail, above the scope controls:
+- A banner in the alert treatment (#D20344 accent, NOT full red fill — a left-accent or tinted
+  card consistent with the app): "Paused after you reported a problem." with the reason and
+  the linked payment (vendor, amount in mono, date) that opens that receipt.
+- Below it, a short "What changed" line: "Brain has stopped auto-approving these. New
+  {category} payments from {scope summary} will come to you for review until you resume."
+- The Active/Paused toggle reflects Paused. Resuming requires an explicit confirm with a
+  plain-language summary ("Resume auto-approving {scope}? Brain will clear matching payments
+  without asking again."). Pausing/resuming stays user-initiated.
+- Offer the obvious remediations inline so the user can fix the envelope rather than only
+  toggling: edit the allowlist (remove the vendor that triggered the report), lower the
+  amount cap, or delete the rule. Each is the existing edit control, just surfaced here.
+- Show the report(s) under a "Reported problems" section (reason, note, date in mono), so
+  there's an auditable trail of why the rule was paused.
+
+DATA MODEL — extend types:
+- Add a ProblemReport type:
+  interface ProblemReport { id: string; ruleId: string; proposalId: string; reason: string;
+    note?: string; reportedAtLabel: string; resolved: boolean; }
+- Add `problemReports: ProblemReport[]` to Rule (default empty).
+- Optionally add a transient `relatedToPausedRuleId?: string` marker on pending proposals
+  surfaced by step 4's flagging (kept in page state, not a status change).
+
+CONSISTENCY / CONSTRAINTS
+- Same shell, tokens, spacing, and component conventions as the rest of the app.
+- #D20344 only for the alert/problem treatment and destructive actions; purple is the
+  affirmative/interactive accent.
+- Reporting a problem never reverses the settled payment and never moves funds — it only
+  pauses future automation and records feedback. Make that clear in the copy.
+- Every state change user-initiated (report, pause, resume, edit, delete); no setTimeout
+  auto-advance; no silent writes.
+- Amounts/dates/policy-ids in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed; sections render from data.
+
+MOCK DATA — add one pre-seeded ProblemReport on a non-Con-Edison rule (e.g. a SaaS rule) so
+the paused-from-report RuleDetail state is demoable without having to trigger it live, plus
+keep the live path working from the Con Edison receipt.
+
+Return the updated types.ts (ProblemReport + Rule.problemReports), the receipt's reason-
+capture + pause-and-review flow, the updated RuleDetail with the paused-from-report banner,
+related-item flagging, and reported-problems trail — wired so "Report a problem" on a receipt
+pauses the rule and lands on its detail.

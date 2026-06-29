@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Receipt,
@@ -13,6 +13,11 @@ import {
   TrendingUp,
   ShieldAlert,
   ChevronDown,
+  Check,
+  CircleCheckBig,
+  Flag,
+  PauseCircle,
+  SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
@@ -22,6 +27,7 @@ import type {
   Agent,
   Severity,
   EvidenceItem,
+  FactRow,
 } from "@/lib/proposalTypes";
 
 /* Brain is PROPOSE-ONLY. One component renders every scenario; sections appear
@@ -81,12 +87,21 @@ export function ProposalDetail({
   open,
   onOpenChange,
   onAction,
+  rulePaused,
+  onPauseRule,
+  onReviewRule,
+  onReportProblem,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAction: (action: ProposalAction) => void;
+  /* auto_handled receipt — retroactive controls (decision already happened) */
+  rulePaused?: boolean;
+  onPauseRule?: (proposal: Proposal) => void;
+  onReviewRule?: (proposal: Proposal) => void;
+  onReportProblem?: (proposal: Proposal, reason: string) => void;
 }) {
   const { format } = useCurrency();
   const [showTrace, setShowTrace] = useState(false);
@@ -97,6 +112,8 @@ export function ProposalDetail({
   const AgentIcon = agent.icon;
   const confidencePct = Math.round(proposal.confidence.score * 100);
   const chips = proposal.reasonChips;
+  const effectiveStatus = currentStatus ?? proposal.status;
+  const isReceipt = effectiveStatus === "auto_handled";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -138,6 +155,17 @@ export function ProposalDetail({
           </div>
 
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+          {isReceipt ? (
+            <AutoHandledReceipt
+              proposal={proposal}
+              format={format}
+              rulePaused={rulePaused}
+              onPauseRule={onPauseRule}
+              onReviewRule={onReviewRule}
+              onReportProblem={onReportProblem}
+            />
+          ) : (
+          <>
             {/* Reason chips — flags use alert red. Clean & no chips → "Looks routine" */}
             <div className="flex flex-wrap gap-[8px] items-center w-full">
               {chips.length > 0 ? (
@@ -382,6 +410,9 @@ export function ProposalDetail({
               </div>
             </div>
 
+          </>
+          )}
+
             {/* Technical detail — raw six-layer trace / JSON, collapsed */}
             <div className="w-full border-t border-[#1d2132] pt-[16px]">
               <button
@@ -406,6 +437,267 @@ export function ProposalDetail({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+/* ── Auto-handled RECEIPT — a record of a payment Brain already approved + settled
+   under the user's standing rule. NO approve/reject/postpone/verify; the decision
+   already happened and the money already moved. Retroactive controls only. ───── */
+function AutoHandledReceipt({
+  proposal,
+  format,
+  rulePaused,
+  onPauseRule,
+  onReviewRule,
+  onReportProblem,
+}: {
+  proposal: Proposal;
+  format: (a: string | number) => string;
+  rulePaused?: boolean;
+  onPauseRule?: (proposal: Proposal) => void;
+  onReviewRule?: (proposal: Proposal) => void;
+  onReportProblem?: (proposal: Proposal, reason: string) => void;
+}) {
+  const rule = proposal.rule;
+  const paused = rulePaused ?? (rule ? !rule.active : false);
+  const [reporting, setReporting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [reported, setReported] = useState(false);
+
+  /* Reset the report panel whenever a different receipt is opened. */
+  useEffect(() => {
+    setReporting(false);
+    setReason("");
+    setReported(false);
+  }, [proposal.id]);
+
+  return (
+    <>
+      {/* 1 — status pill: GREEN "Approved automatically · no approval needed" */}
+      <div className="flex flex-wrap gap-[8px] items-center w-full">
+        <span
+          data-testid="chip-auto-handled"
+          className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap bg-[#123509] text-[#42bf23]"
+        >
+          <CircleCheckBig size={13} className="shrink-0" />
+          Approved automatically · no approval needed
+        </span>
+      </div>
+
+      {/* 2 — past-tense headline + amount mono + settledMeta (rule attribution) */}
+      <div className="flex flex-col gap-[6px] items-start w-full">
+        <p
+          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
+          data-testid="text-past-tense"
+        >
+          {proposal.pastTenseStatement}
+        </p>
+        {proposal.settledMeta && (
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[13px] w-full">
+            {proposal.settledMeta}
+          </p>
+        )}
+      </div>
+
+      {/* 3 — "What happened" — propose → approve → execute, told retroactively */}
+      {proposal.handoffTimeline && proposal.handoffTimeline.length > 0 && (
+        <div className="flex flex-col gap-[12px] items-start w-full">
+          <SectionLabel>What happened</SectionLabel>
+          <div className="flex flex-col w-full">
+            {proposal.handoffTimeline.map((step, i, arr) => (
+              <div key={i} className="flex gap-[12px] items-stretch w-full" data-testid={`timeline-step-${i}`}>
+                {/* rail */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="flex items-center justify-center size-[22px] rounded-full bg-[#123509] shrink-0">
+                    <Check size={13} className="text-[#42bf23]" strokeWidth={2.5} />
+                  </div>
+                  {i < arr.length - 1 && <div className="w-[2px] flex-1 bg-[#1d2132] my-[2px]" />}
+                </div>
+                {/* content */}
+                <div className={`flex flex-col gap-[2px] ${i < arr.length - 1 ? "pb-[16px]" : ""}`}>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
+                    {step.label}
+                    {step.note && (
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">
+                        {" "}— {step.note}
+                      </span>
+                    )}
+                  </p>
+                  <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[12px]">
+                    {step.timestamp}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4 — "Why this cleared without asking" — positive evidence, mono block */}
+      {proposal.clearedBecause && proposal.clearedBecause.length > 0 && (
+        <div className="flex flex-col gap-[12px] items-start w-full">
+          <SectionLabel>Why this cleared without asking</SectionLabel>
+          <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px]">
+            {proposal.clearedBecause.map((fact: FactRow, i: number) => {
+              const isLimit = /under limit/i.test(fact.label);
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
+                  data-testid={`cleared-${i}`}
+                >
+                  <span className="text-[#6c779d]">{fact.label}</span>
+                  <span className="text-right flex items-center gap-[6px]" style={{ color: isLimit ? "#42bf23" : factColor(fact.severity) }}>
+                    {fact.value}
+                    {isLimit && <Check size={13} className="text-[#42bf23] shrink-0" strokeWidth={2.5} />}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5 — "The rule that approved this" — bordered sub-card + Active/Paused chip */}
+      {rule && (
+        <div className="flex flex-col gap-[12px] items-start w-full">
+          <SectionLabel>The rule that approved this</SectionLabel>
+          <div className="w-full rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px]">
+            <div className="flex items-center justify-between gap-[12px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
+                {rule.name}
+              </p>
+              <span
+                data-testid="chip-rule-status"
+                className={`[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[3px] rounded-[100px] whitespace-nowrap ${
+                  paused ? "bg-[#3a2600] text-[#ff9500]" : "bg-[#123509] text-[#42bf23]"
+                }`}
+              >
+                {paused ? "Paused" : "Active"}
+              </span>
+            </div>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
+              {rule.summary}
+            </p>
+            <div className="flex flex-col gap-[2px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">
+              <span>{rule.createdLabel}</span>
+              <span className="text-[#6c779d]">{rule.policyId}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6 — info note: this is a record, not a request */}
+      <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[12px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[13px]">
+          This is a record, not a request — it's already settled. You can change how Brain handles these going forward.
+        </p>
+      </div>
+
+      {/* FOOTER — retroactive controls only. No approve/reject/postpone/verify. */}
+      <div className="flex flex-col gap-[12px] items-start w-full">
+        {paused && (
+          <div
+            data-testid="text-rule-paused-confirm"
+            className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#42bf23]"
+          >
+            {rule ? `"${rule.name}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
+          </div>
+        )}
+        <div className="flex gap-[10px] items-stretch w-full">
+          <button
+            type="button"
+            disabled={paused}
+            onClick={() => onPauseRule?.(proposal)}
+            data-testid="button-pause-rule"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+          >
+            <PauseCircle size={16} className="text-[#a8b9f4] shrink-0" />
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#a8b9f4] whitespace-nowrap">
+              {paused ? "Rule paused" : "Pause this rule"}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onReviewRule?.(proposal)}
+            data-testid="button-review-rule"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+          >
+            <SlidersHorizontal size={16} className="text-[#7631ee] shrink-0" />
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#7631ee] whitespace-nowrap">
+              Review rule
+            </span>
+          </button>
+        </div>
+
+        {/* Report a problem — the escape hatch. #D20344 is the ONLY red here. */}
+        {!reporting && !reported && (
+          <button
+            type="button"
+            onClick={() => setReporting(true)}
+            data-testid="button-report-problem"
+            className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2"
+            style={{ ["--tw-ring-color" as string]: ALERT }}
+          >
+            <Flag size={16} className="shrink-0" style={{ color: ALERT }} />
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
+              Report a problem with this payment
+            </span>
+          </button>
+        )}
+
+        {reporting && !reported && (
+          <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
+              What went wrong?
+            </p>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              data-testid="input-report-reason"
+              placeholder="e.g. wrong amount, vendor I don't recognize, shouldn't have auto-cleared…"
+              rows={2}
+              className="w-full resize-none rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
+            />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
+              Reporting this also pauses{rule ? ` "${rule.name}"` : " the rule"} and flags similar pending items, so one bad auto-approval can't silently repeat.
+            </p>
+            <div className="flex gap-[10px] items-stretch w-full">
+              <button
+                type="button"
+                onClick={() => { setReporting(false); setReason(""); }}
+                data-testid="button-report-cancel"
+                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={reason.trim().length === 0}
+                onClick={() => { onReportProblem?.(proposal, reason.trim()); setReported(true); }}
+                data-testid="button-report-submit"
+                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-50 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
+                style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
+              >
+                Report & pause rule
+              </button>
+            </div>
+          </div>
+        )}
+
+        {reported && (
+          <div
+            data-testid="text-report-confirm"
+            className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex items-start gap-[10px]"
+          >
+            <Flag size={16} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
+              Thanks — we logged this as policy feedback{rule ? ` and paused "${rule.name}"` : ""}. Similar pending items are flagged for your review.
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
