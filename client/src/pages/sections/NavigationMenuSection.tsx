@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
 import { useRuleSuggestions } from "@/lib/rule-suggestions";
-import { NEEDS_REVIEW } from "@/components/ReviewItems";
 import { useIntents } from "@/lib/intentsStore";
 
 interface Props {
@@ -270,7 +269,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const ruleSuggestionsCount = useRuleSuggestions().length;
   const liveApprovalCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
-  const reviewItemsCount = NEEDS_REVIEW.length + liveApprovalCount;
+  const reviewItemsCount = liveApprovalCount;
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";

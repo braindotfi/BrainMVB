@@ -14,6 +14,81 @@ import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { apiRequest } from "@/lib/queryClient";
 
+/* ── Convert legacy static demo items into full Proposal shape so they
+   render through the same ProposalDetail sheet (confidence, evidence,
+   policy trace, rationale, etc.) ─────────────────────────────────────────── */
+function legacyToProposal(item: ReviewItemType): Proposal {
+  const amountNum = parseFloat(item.amountFull.replace(/[$,]/g, ""));
+  return {
+    id: `legacy-${item.id}`,
+    auditId: `rut-${item.id}`,
+    agent: "invoice",
+    surface: "business",
+    title: item.title,
+    rowSubtitle: item.vendor ? `${item.vendor} \u00b7 ${item.due}` : item.due,
+    actionStatement: item.question,
+    actionMeta: `from ${item.from} \u00b7 ${item.dueBy}`,
+    executionLabel: "ACH settles next business day",
+    cancelDeadlineLabel: "cancel until 5:00 PM ET",
+    amount: amountNum,
+    amountDisplay: item.amount,
+    counterparty: item.who,
+    dueLabel: item.dueBy,
+    severity: "clean",
+    reasonChips: [{ label: "Looks routine", severity: "clean" }],
+    rationale: item.description,
+    facts: [
+      { label: "vendor", value: item.who },
+      { label: "amount", value: item.amountFull },
+      { label: "due by", value: item.dueBy },
+      { label: "from account", value: item.from },
+      { label: "auto policy", value: item.autoLabel },
+    ],
+    evidence: [
+      {
+        kind: "prior_payment",
+        title: "Matched 12 prior payments",
+        subtitle: "Same vendor, same amount, same cadence",
+      },
+      {
+        kind: "contract",
+        title: "Routine Payment Policy \u00a74.2",
+        subtitle: "Auto-cleared: vendor + amount + cadence match",
+      },
+    ],
+    confidence: {
+      score: 0.98,
+      band: "high",
+      caveat: "Pattern-matched against 12 months of history. No flags.",
+    },
+    whatHappensNext:
+      "If you approve, this will settle via ACH next business day. You can cancel until 5:00 PM ET today.",
+    risk: "If this is wrong, you can reverse the ACH within 24 hours. Risk: low \u2014 vendor and amount match 12-month pattern.",
+    policy: {
+      id: "routine-payment",
+      explanation:
+        "Auto-cleared under Routine Payment Policy \u00a74.2 (vendor + amount + cadence match)",
+      autoClearedOtherwise: true,
+    },
+    actions: {
+      approve: {
+        label: "Approve",
+        sublabel: "Settles next business day",
+      },
+      reject: {
+        label: "Reject",
+        sublabel: "Stop this payment",
+      },
+      postpone: {
+        label: "Postpone",
+        sublabel: "Review again tomorrow",
+      },
+    },
+    status: "pending",
+    batchApprovable: true,
+  };
+}
+
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
   const amountStr = `$${rec.amount.toLocaleString()}`;
@@ -228,8 +303,9 @@ export function ReviewPage() {
     setActiveLive(null);
   };
 
-  /* Static legacy demo items (older approval flow) — kept available. */
-  const legacyItems = NEEDS_REVIEW;
+  /* Static legacy demo items — converted into full Proposal shape so they
+     open in the same ProposalDetail sheet as the mock scenarios. */
+  const legacyProposals = useMemo(() => NEEDS_REVIEW.map(legacyToProposal), []);
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -343,14 +419,14 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Legacy static demo approvals (older flow) */}
+            {/* Routine Approvals — legacy items rendered through ProposalDetail */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Routine approvals" count={legacyItems.length} />
+              <WidgetHeader title="Routine Approvals" count={legacyProposals.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {legacyItems.map((item, idx) => (
-                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                    <LiveRow item={item} onClick={() => setActiveLive(item)} format={format} />
-                    {idx < legacyItems.length - 1 && <Divider />}
+                {legacyProposals.map((p, idx) => (
+                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                    <ProposalRow proposal={p} status={statusOf(p)} onClick={() => setActive(p)} format={format} />
+                    {idx < legacyProposals.length - 1 && <Divider />}
                   </div>
                 ))}
               </div>
