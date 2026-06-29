@@ -80,6 +80,7 @@ interface BrainTransactionDTO {
   currency: string;
   direction: "inflow" | "outflow" | "transfer" | "adjustment";
   transaction_date: string;
+  counterparty_id?: string | null;
   description_normalized?: string | null;
   description_raw?: string | null;
 }
@@ -108,14 +109,6 @@ function mapBrainTransactions(list: BrainTransactionDTO[]): TxRow[] {
     };
   });
 }
-
-const EXPENSES = [
-  { category: "Payroll (8 people, twice a month)", amount: "$4,800" },
-  { category: "Software and Subscriptions", amount: "$1,250" },
-  { category: "Rent", amount: "$1,100" },
-  { category: "Utilities and Phone", amount: "$380" },
-  { category: "Miscellaneous", amount: "$280" },
-];
 
 const Divider = () => (
   <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
@@ -209,6 +202,195 @@ const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => str
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ─── Income summary (live) — monthly inflow + top customers from the Ledger ──
+// Derived from brain-core ledger inflow transactions + counterparties for names.
+// Falls back to static copy only when no transaction data is reachable at all.
+function summarizeIncome(
+  txs: BrainTransactionDTO[],
+): { monthly: number; count: number; topCpIds: string[]; share: number } | null {
+  const inflows = txs.filter((t) => t.direction === "inflow");
+  if (inflows.length === 0) return null;
+  const months = new Set<string>();
+  const byCp = new Map<string, number>();
+  let total = 0;
+  for (const t of inflows) {
+    const amt = Number(t.amount);
+    if (!Number.isFinite(amt)) continue;
+    total += amt;
+    months.add(t.transaction_date.slice(0, 7)); // YYYY-MM
+    const cp = t.counterparty_id ?? "—";
+    byCp.set(cp, (byCp.get(cp) ?? 0) + amt);
+  }
+  const ranked = Array.from(byCp.entries()).sort((a, b) => b[1] - a[1]);
+  const top = ranked.slice(0, 3);
+  const share = total > 0 ? Math.round((top.reduce((s, [, v]) => s + v, 0) / total) * 100) : 0;
+  return { monthly: total / Math.max(1, months.size), count: byCp.size, topCpIds: top.map(([id]) => id), share };
+}
+
+const INCOME_FALLBACK =
+  "About $18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.";
+
+const IncomeSummary = ({ format }: { format: (a: string | number) => string }) => {
+  const { data: txData } = useQuery<BrainTransactionsResponse>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const s = txData?.transactions ? summarizeIncome(txData.transactions) : null;
+  const text = (() => {
+    if (!s) return INCOME_FALLBACK;
+    const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
+    const names = s.topCpIds.map(nameOf);
+    const joined =
+      names.length <= 1
+        ? names[0] ?? "one customer"
+        : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+    const verb = names.length > 1 ? "are" : "is";
+    const tail = s.share >= 99 ? " — essentially all your revenue" : `, together about ${s.share}% of your revenue`;
+    return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
+  })();
+
+  return (
+    <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+      <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[24px] text-[#a8b9f4] text-[16px] w-full">
+        {text}
+      </p>
+    </div>
+  );
+};
+
+// ─── Expenses (live) — outflow transactions grouped from the Ledger ──────────
+// Derived from brain-core ledger outflow transactions. The demo seed currently
+// carries only inflows, so this renders an honest empty state today and will
+// populate automatically when real money-out data lands. Never faked.
+// See deliverables/DATA-LIMITATIONS.md.
+type ExpenseRow = { category: string; amount: number };
+
+function summarizeExpenses(
+  txs: BrainTransactionDTO[],
+  nameOf: (id: string) => string,
+): ExpenseRow[] {
+  const byKey = new Map<string, number>();
+  for (const t of txs) {
+    if (t.direction !== "outflow") continue;
+    const amt = Number(t.amount);
+    if (!Number.isFinite(amt)) continue;
+    const key = t.description_normalized || (t.counterparty_id ? nameOf(t.counterparty_id) : "Other");
+    byKey.set(key, (byKey.get(key) ?? 0) + amt);
+  }
+  return Array.from(byKey.entries()).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
+}
+
+const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) => {
+  const { data: txData } = useQuery<BrainTransactionsResponse>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
+  const rows = txData?.transactions ? summarizeExpenses(txData.transactions, nameOf) : [];
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+
+  return (
+    <WidgetCard title="Expenses">
+      {rows.length === 0 ? (
+        <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+            No expenses recorded yet. This populates from your ledger as money goes out.
+          </p>
+        </div>
+      ) : (
+        <>
+          {rows.map((item, idx) => (
+            <div key={item.category} className="flex flex-col gap-[8px] w-full">
+              <div
+                data-testid={`row-expense-${idx}`}
+                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+              >
+                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.category}</p>
+                </div>
+                <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
+                </div>
+              </div>
+              <Divider />
+            </div>
+          ))}
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Total</p>
+            </div>
+            <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-{format(total)}</p>
+            </div>
+          </div>
+        </>
+      )}
+    </WidgetCard>
+  );
+};
+
+// ─── Liabilities (live) — outstanding accounts-payable from the Ledger ───────
+// "What we owe": sum of unpaid AP invoices (metadata.scenario === "ap"). The demo
+// tenant has no loan/line_of_credit accounts, so AP is the real liabilities figure.
+// Falls back to static copy only when no AP data is reachable at all.
+function shortDate(iso?: string | null): string {
+  if (!iso) return "soon";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "soon" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+const LIABILITIES_FALLBACK =
+  "Nothing overdue. Your next bill is the Verizon phone bill for $189, due Friday. Brain is asking you about it on the home screen.";
+
+const LiabilitiesSummary = ({ format }: { format: (a: string | number) => string }) => {
+  const { data: invData } = useQuery<InvoicesLiteResponse>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const ap = (invData?.invoices ?? []).filter((i) => i.metadata?.scenario === "ap" && i.status !== "paid");
+  const text = (() => {
+    if (ap.length === 0) return LIABILITIES_FALLBACK;
+    const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
+    const total = ap.reduce((s, i) => s + (Number(i.amount_due) || 0), 0);
+    const overdue = ap.filter((i) => i.status === "overdue");
+    const next = [...ap]
+      .sort((a, b) => new Date(a.due_date ?? 0).getTime() - new Date(b.due_date ?? 0).getTime())
+      .find((i) => i.status !== "overdue");
+    const owe = `You owe ${format(Math.round(total))} across ${ap.length} bill${ap.length === 1 ? "" : "s"}.`;
+    const od =
+      overdue.length > 0
+        ? ` ${nameOf(overdue[0].counterparty_id)} for ${format(Number(overdue[0].amount_due))} is overdue.`
+        : "";
+    const nx = next
+      ? ` Your next is ${nameOf(next.counterparty_id)} for ${format(Number(next.amount_due))}, due ${shortDate(next.due_date)}.`
+      : "";
+    return `${owe}${od}${nx} Brain can pay these from the Bills inbox above.`;
+  })();
+
+  return (
+    <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-normal leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
+        {text}
+      </p>
     </div>
   );
 };
@@ -336,57 +518,24 @@ export function FinancesPage() {
             {/* Bills — Brain proposes, the §6 policy gate decides (brain-core) */}
             <BrainBillsInbox />
 
-            {/* Income */}
+            {/* Income (live — monthly inflow + top customers from the Ledger) */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <WidgetHeader title="Income" />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[24px] text-[#a8b9f4] text-[16px] w-full">
-                    About {format("$18,000")} a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.
-                  </p>
-                </div>
+                <IncomeSummary format={format} />
                 <Divider />
                 <OverdueInvoicesBanner format={format} />
               </div>
             </div>
 
-            {/* Expenses */}
-            <WidgetCard title="Expenses">
-              {EXPENSES.map((item, idx) => (
-                <div key={item.category} className="flex flex-col gap-[8px] w-full">
-                  <div
-                    data-testid={`row-expense-${idx}`}
-                    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-                  >
-                    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.category}</p>
-                    </div>
-                    <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
-                    </div>
-                  </div>
-                  <Divider />
-                </div>
-              ))}
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Total</p>
-                </div>
-                <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">{format("-$7,810")}</p>
-                </div>
-              </div>
-            </WidgetCard>
+            {/* Expenses (live — outflow transactions from the Ledger; empty until seeded) */}
+            <ExpensesWidget format={format} />
 
-            {/* Liabilities */}
+            {/* Liabilities (live — outstanding accounts-payable from the Ledger) */}
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <WidgetHeader title="Liabilities" />
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-normal leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
-                    Nothing overdue. Your next bill is the Verizon phone bill for {format("$189")}, due Friday. Brain is asking you about it on the home screen.
-                  </p>
-                </div>
+                <LiabilitiesSummary format={format} />
               </div>
             </div>
 
