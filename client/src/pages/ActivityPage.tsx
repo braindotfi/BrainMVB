@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
+import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import type { Proposal } from "@/lib/proposalTypes";
 
 type ActivityType = "paid" | "moved" | "noticed" | "approved";
 
@@ -94,7 +96,33 @@ type ActivityItemData = {
   meta3?: string;
   amount: string;
   time: string;
+  /** Optional in-app destination opened when the row is tapped. */
+  linkTo?: string;
 };
+
+/** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
+function parseClockTime(t: string): number {
+  const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!m) return -1;
+  let h = parseInt(m[1], 10) % 12;
+  if (/PM/i.test(m[3])) h += 12;
+  return h * 60 + parseInt(m[2], 10);
+}
+
+/** Map an auto-handled proposal (an "Approved Automatically" receipt) onto an activity item. */
+function autoHandledToActivity(p: Proposal): ActivityItemData {
+  const settled = p.rowSubtitle.match(/settled\s+(.+)$/i);
+  return {
+    id: p.id,
+    type: "paid",
+    title: `Paid ${p.counterparty ?? p.title}`,
+    meta1: "Approved automatically",
+    meta2: p.rule?.name ?? "your standing rule",
+    amount: `$${(p.amount ?? 0).toLocaleString()}`,
+    time: settled ? settled[1] : "Today",
+    linkTo: `/review?receipt=${p.id}`,
+  };
+}
 
 /** Map a live brain-core PaymentIntent onto an activity-feed item. */
 function intentToActivity(rec: IntentRecord): ActivityItemData {
@@ -128,19 +156,35 @@ const ActivityItem = ({
   item,
   highlighted,
   rowRef,
+  onSelect,
 }: {
   item: ActivityItemData;
   highlighted: boolean;
   rowRef?: (el: HTMLDivElement | null) => void;
+  onSelect?: (item: ActivityItemData) => void;
 }) => {
   const Icon = ICON_MAP[item.type];
+  const clickable = Boolean(item.linkTo);
   return (
     <div
       ref={rowRef}
       data-testid={`row-activity-${item.id}`}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer ${
-        highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"
-      }`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onSelect?.(item) : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect?.(item);
+              }
+            }
+          : undefined
+      }
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
+        clickable ? "cursor-pointer" : ""
+      } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
     >
       <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
         <Icon />
@@ -176,11 +220,13 @@ const SectionCard = ({
   items,
   highlightedId,
   registerRowRef,
+  onSelect,
 }: {
   title: string;
   items: ActivityItemData[];
   highlightedId: number | null;
   registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
+  onSelect?: (item: ActivityItemData) => void;
 }) => {
   if (items.length === 0) return null;
   return (
@@ -198,6 +244,7 @@ const SectionCard = ({
                 item={item}
                 highlighted={highlightedId === item.id}
                 rowRef={registerRowRef(item.id)}
+                onSelect={onSelect}
               />
               {idx < items.length - 1 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
             </div>
@@ -210,6 +257,7 @@ const SectionCard = ({
 
 export function ActivityPage() {
   const search = useSearch();
+  const [, navigate] = useLocation();
   const params = useMemo(() => new URLSearchParams(search), [search]);
   const { intents } = useIntents();
   const initialTab = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "All";
@@ -249,9 +297,25 @@ export function ActivityPage() {
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
 
+  const autoHandledItems = useMemo(
+    () => AUTO_HANDLED_PROPOSALS.map(autoHandledToActivity),
+    [],
+  );
+  const todayMerged = useMemo(
+    () =>
+      [...autoHandledItems, ...TODAY_ACTIVITIES].sort(
+        (a, b) => parseClockTime(b.time) - parseClockTime(a.time),
+      ),
+    [autoHandledItems],
+  );
+
   const liveItems = filterByTab(intents.map(intentToActivity));
-  const todayItems = filterByTab(TODAY_ACTIVITIES);
+  const todayItems = filterByTab(todayMerged);
   const yesterdayItems = filterByTab(YESTERDAY_ACTIVITIES);
+
+  const handleSelect = (item: ActivityItemData) => {
+    if (item.linkTo) navigate(item.linkTo);
+  };
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -302,18 +366,21 @@ export function ActivityPage() {
               items={liveItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
+              onSelect={handleSelect}
             />
             <SectionCard
               title="Today"
               items={todayItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
+              onSelect={handleSelect}
             />
             <SectionCard
               title="Yesterday"
               items={yesterdayItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
+              onSelect={handleSelect}
             />
           </div>
 

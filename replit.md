@@ -175,6 +175,11 @@ Programmable neobank on Base L2.
 - Related pending-item flag (ReviewPage `relatedRuleFor`): NON-BLOCKING note, never changes
   status. Match = same `agent` + `counterparty` in rule `allowlist` + `amount ≤ cap`. Pending
   proposals have NO `category` field (only rule consts do) — don't match category for them.
+- `ActivityPage.tsx` surfaces the same `AUTO_HANDLED_PROPOSALS` receipts in the feed: each maps
+  to a `paid` activity item (→ "Brain Did" tab) via `autoHandledToActivity`, merged into the
+  "Today" section sorted desc by `parseClockTime` (time parsed from `rowSubtitle` "settled
+  H:MM AM"). Rows carry `linkTo: /review?receipt=<id>`; only `linkTo` rows are clickable
+  (keyboard-accessible, conditional `cursor-pointer`) and navigate to the receipt.
 - Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
   "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 
