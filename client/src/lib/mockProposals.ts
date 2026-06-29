@@ -1,4 +1,4 @@
-import type { Proposal, AccountSummary } from "./proposalTypes";
+import type { Proposal, AccountSummary, AutoRule } from "./proposalTypes";
 
 /* One Proposal per scenario so every UI branch is exercised by real data.
    Brain PROPOSES only — wording for money-movers is always
@@ -524,36 +524,60 @@ export const ACCOUNT_SUMMARY: AccountSummary = {
    Past-tense money-mover wording ("Paid …") is correct ONLY here. The review
    page derives the banner count + total from THIS array — never hardcode them.
    ───────────────────────────────────────────────────────────────────────────── */
-const UTILITY_RULE = {
+export const UTILITY_RULE: AutoRule = {
+  id: "utility",
   name: "Auto-clear utility bills",
   summary: "Trusted vendors · utilities · under $1,000 · no bank-detail change",
   createdLabel: "You created this Jun 12 · cleared 7 payments since",
   policyId: "policy/ap.tolerance.v3",
   active: true,
+  agent: "invoice",
+  category: "utilities",
+  cap: 1000,
+  allowlist: ["Con Edison Business", "NYC DEP", "National Grid"],
+  scopeSummary: "trusted utility vendors under $1,000",
 };
 
-const SAAS_RULE = {
+export const SAAS_RULE: AutoRule = {
+  id: "saas",
   name: "Auto-clear software subscriptions",
   summary: "Known SaaS vendors · recurring · under $500 · matched prior charge",
   createdLabel: "You created this May 3 · cleared 19 payments since",
   policyId: "policy/ap.saas.v2",
   active: true,
+  agent: "invoice",
+  category: "software subscriptions",
+  cap: 500,
+  allowlist: ["Notion", "GitHub", "Slack", "Figma", "1Password"],
+  scopeSummary: "known SaaS vendors under $500",
 };
 
-const LEASE_RULE = {
+export const LEASE_RULE: AutoRule = {
+  id: "lease",
   name: "Auto-clear fixed rent & lease",
   summary: "Contracted amount · same payee · same account · monthly cadence",
   createdLabel: "You created this Feb 1 · cleared 5 payments since",
   policyId: "policy/ap.fixed.v1",
   active: true,
+  agent: "invoice",
+  category: "rent & lease",
+  cap: 10000,
+  allowlist: ["Hudson Yards Property"],
+  scopeSummary: "the contracted lease payee on a monthly cadence",
 };
 
-const PAYROLL_RULE = {
+export const PAYROLL_RULE: AutoRule = {
+  id: "payroll",
   name: "Auto-clear payroll & benefits",
   summary: "Approved provider · scheduled run · matched headcount · under cap",
   createdLabel: "You created this Jan 8 · cleared 12 payments since",
   policyId: "policy/ap.payroll.v4",
   active: true,
+  agent: "invoice",
+  category: "payroll & benefits",
+  cap: 5000,
+  allowlist: ["Gusto"],
+  scopeSummary: "the approved payroll provider on scheduled runs under $5,000",
 };
 
 function autoHandled(p: {

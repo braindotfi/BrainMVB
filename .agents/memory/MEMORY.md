@@ -1,1 +1,2 @@
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
+- [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.

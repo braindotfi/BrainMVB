@@ -64,12 +64,30 @@ export interface HandoffStep {
   done: boolean;
 }
 
+export interface ProblemReport {
+  id: string;
+  ruleId: string; // the AutoRule.id this was filed against
+  proposalId: string; // the receipt that triggered the report
+  reason: string;
+  note?: string;
+  reportedAtLabel: string;
+  resolved: boolean;
+}
+
 export interface AutoRule {
+  id: string; // URL-safe slug, e.g. "utility" — used by the /rules/:id route
   name: string;
   summary: string;
   createdLabel: string;
   policyId: string;
   active: boolean;
+  /* Scope — drives remediations + "related pending item" flagging. */
+  agent?: Agent;
+  category?: string; // e.g. "utility", "software subscription"
+  cap?: number; // amount ceiling this rule auto-clears under
+  allowlist?: string[]; // trusted vendor names
+  scopeSummary?: string; // plain-language scope, e.g. "trusted utility vendors under $1,000"
+  problemReports?: ProblemReport[];
 }
 
 export interface SweepMath {

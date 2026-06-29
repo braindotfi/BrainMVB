@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Clock, Loader } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Loader, Flag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ReviewModal,
@@ -13,6 +13,12 @@ import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  useRules,
+  pauseRule as storePauseRule,
+  reportProblem as storeReportProblem,
+  sendFeedback as storeSendFeedback,
+} from "@/lib/rulesStore";
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
@@ -275,14 +281,51 @@ export function ReviewPage() {
   const autoHandled = AUTO_HANDLED_PROPOSALS;
   const autoHandledTotal = autoHandled.reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
-  /* Pausing a rule is the only mutation on a receipt — keyed by policyId so all
-     receipts sharing a rule reflect the pause. Report-a-problem also pauses. */
-  const [pausedRules, setPausedRules] = useState<Record<string, boolean>>({});
+  /* Rule state lives in the shared rulesStore so receipts, the review queue, and
+     RuleDetail all stay in sync. Pausing / reporting are the only receipt mutations. */
+  const rules = useRules();
+  const ruleOf = (p: Proposal) =>
+    p.rule ? rules.find((r) => r.id === p.rule!.id || r.policyId === p.rule!.policyId) : undefined;
   const pauseRule = (p: Proposal) => {
-    if (p.rule) setPausedRules((prev) => ({ ...prev, [p.rule!.policyId]: true }));
+    const r = ruleOf(p);
+    if (r) storePauseRule(r.id);
   };
-  const isRulePaused = (p: Proposal): boolean =>
-    p.rule ? (pausedRules[p.rule.policyId] ?? !p.rule.active) : false;
+  const isRulePaused = (p: Proposal): boolean => {
+    const r = ruleOf(p);
+    return r ? !r.active : p.rule ? !p.rule.active : false;
+  };
+
+  /* Related pending items: a paused rule with an open report flags any pending
+     proposal it WOULD have auto-cleared — i.e. one that falls inside the rule's
+     actual scope (same agent, vendor on the rule's allowlist, amount within its
+     cap). This is a NON-BLOCKING note — it never changes a proposal's status. */
+  const pausedRulesWithReports = rules.filter(
+    (r) => !r.active && (r.problemReports ?? []).some((pr) => !pr.resolved),
+  );
+  const relatedRuleFor = (p: Proposal) =>
+    pausedRulesWithReports.find(
+      (r) =>
+        r.agent === p.agent &&
+        typeof p.amount === "number" &&
+        typeof r.cap === "number" &&
+        p.amount <= r.cap &&
+        !!p.counterparty &&
+        (r.allowlist ?? []).includes(p.counterparty),
+    );
+
+  /* Auto-open a receipt linked from RuleDetail (/review?receipt=<id>). */
+  const search = useSearch();
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const receiptId = params.get("receipt");
+    if (!receiptId) return;
+    const target = autoHandled.find((p) => p.id === receiptId);
+    if (target) {
+      setActive(target);
+      navigate("/review", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -339,6 +382,24 @@ export function ReviewPage() {
                 {queue.map((p, idx) => (
                   <div key={p.id} className="flex flex-col gap-[8px] w-full">
                     <ProposalRow proposal={p} status={statusOf(p)} onClick={() => setActive(p)} format={format} />
+                    {(() => {
+                      const related = relatedRuleFor(p);
+                      if (!related) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/rules/${related.id}`)}
+                          data-testid={`note-related-rule-${p.id}`}
+                          className="flex items-center gap-[8px] mx-[8px] px-[10px] py-[7px] rounded-[8px] text-left transition-colors focus:outline-none focus-visible:ring-2"
+                          style={{ backgroundColor: "rgba(210,3,68,0.07)", border: "1px solid rgba(210,3,68,0.25)", ["--tw-ring-color" as string]: "#d20344" }}
+                        >
+                          <Flag size={13} className="shrink-0" style={{ color: "#d20344" }} />
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[12px] text-[#a8b9f4]">
+                            Waiting for you because you paused <span className="font-semibold">“{related.name}”</span> — review the rule
+                          </span>
+                        </button>
+                      );
+                    })()}
                     {idx < queue.length - 1 && <Divider />}
                   </div>
                 ))}
@@ -424,11 +485,23 @@ export function ReviewPage() {
         onAction={handleAction}
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}
-        onReviewRule={() => { setActive(null); navigate("/rules"); }}
-        onReportProblem={(p, reason) => {
-          // Reporting a problem also pauses the rule so a bad auto-approval can't repeat.
-          console.warn(`[review] problem reported on auto-handled "${p.title}" (${p.auditId}): ${reason}`);
-          pauseRule(p);
+        onReviewRule={(p) => {
+          const r = ruleOf(p);
+          setActive(null);
+          navigate(r ? `/rules/${r.id}` : "/rules");
+        }}
+        onReportProblem={(p, report) => {
+          const r = ruleOf(p);
+          if (!r) return;
+          if (report.pause) {
+            // Pause + record, then take the user to the rule to review it.
+            storeReportProblem(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+            setActive(null);
+            navigate(`/rules/${r.id}`);
+          } else {
+            // Feedback only — record but leave the rule running.
+            storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+          }
         }}
       />
 

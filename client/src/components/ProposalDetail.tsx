@@ -101,7 +101,7 @@ export function ProposalDetail({
   rulePaused?: boolean;
   onPauseRule?: (proposal: Proposal) => void;
   onReviewRule?: (proposal: Proposal) => void;
-  onReportProblem?: (proposal: Proposal, reason: string) => void;
+  onReportProblem?: (proposal: Proposal, report: { reason: string; note: string; pause: boolean }) => void;
 }) {
   const { format } = useCurrency();
   const [showTrace, setShowTrace] = useState(false);
@@ -443,6 +443,14 @@ export function ProposalDetail({
 /* ── Auto-handled RECEIPT — a record of a payment Brain already approved + settled
    under the user's standing rule. NO approve/reject/postpone/verify; the decision
    already happened and the money already moved. Retroactive controls only. ───── */
+const REPORT_PRESETS = [
+  "I didn't recognize this vendor",
+  "Wrong amount",
+  "Should have asked me first",
+  "Duplicate of another payment",
+  "Other",
+];
+
 function AutoHandledReceipt({
   proposal,
   format,
@@ -456,20 +464,35 @@ function AutoHandledReceipt({
   rulePaused?: boolean;
   onPauseRule?: (proposal: Proposal) => void;
   onReviewRule?: (proposal: Proposal) => void;
-  onReportProblem?: (proposal: Proposal, reason: string) => void;
+  onReportProblem?: (proposal: Proposal, report: { reason: string; note: string; pause: boolean }) => void;
 }) {
   const rule = proposal.rule;
   const paused = rulePaused ?? (rule ? !rule.active : false);
-  const [reporting, setReporting] = useState(false);
-  const [reason, setReason] = useState("");
-  const [reported, setReported] = useState(false);
+  /* Report flow is a small wizard: idle → "reason" capture → "confirm" safety
+     action → done. Never auto-advances; the user drives every step. */
+  const [reportStep, setReportStep] = useState<"idle" | "reason" | "confirm" | "done">("idle");
+  const [didPause, setDidPause] = useState(false);
+  const [preset, setPreset] = useState("");
+  const [note, setNote] = useState("");
 
   /* Reset the report panel whenever a different receipt is opened. */
   useEffect(() => {
-    setReporting(false);
-    setReason("");
-    setReported(false);
+    setReportStep("idle");
+    setDidPause(false);
+    setPreset("");
+    setNote("");
   }, [proposal.id]);
+
+  const reasonReady = preset !== "" || note.trim().length > 0;
+  const effectiveReason = preset || (note.trim() ? "Other" : "");
+  const submit = (pause: boolean) => {
+    onReportProblem?.(proposal, { reason: effectiveReason, note: note.trim(), pause });
+    if (!pause) {
+      setDidPause(false);
+      setReportStep("done");
+    }
+    // When pause=true the parent navigates to RuleDetail, so no "done" state needed here.
+  };
 
   return (
     <>
@@ -631,10 +654,10 @@ function AutoHandledReceipt({
         </div>
 
         {/* Report a problem — the escape hatch. #D20344 is the ONLY red here. */}
-        {!reporting && !reported && (
+        {reportStep === "idle" && (
           <button
             type="button"
-            onClick={() => setReporting(true)}
+            onClick={() => setReportStep("reason")}
             data-testid="button-report-problem"
             className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2"
             style={{ ["--tw-ring-color" as string]: ALERT }}
@@ -646,26 +669,46 @@ function AutoHandledReceipt({
           </button>
         )}
 
-        {reporting && !reported && (
-          <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px]">
+        {/* Step 1 — capture a reason: preset chips + optional free-text note. */}
+        {reportStep === "reason" && (
+          <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[12px]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
               What went wrong?
             </p>
+            <div className="flex flex-wrap gap-[8px]">
+              {REPORT_PRESETS.map((p) => {
+                const selected = preset === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPreset(selected ? "" : p)}
+                    data-testid={`chip-report-reason-${p.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}
+                    aria-pressed={selected}
+                    className="px-[12px] py-[6px] rounded-[100px] border transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
+                    style={
+                      selected
+                        ? { backgroundColor: "rgba(210,3,68,0.15)", borderColor: ALERT, color: ALERT, ["--tw-ring-color" as string]: ALERT }
+                        : { backgroundColor: "#06070a", borderColor: "#1d2132", color: "#a8b9f4", ["--tw-ring-color" as string]: "#414965" }
+                    }
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
             <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              data-testid="input-report-reason"
-              placeholder="e.g. wrong amount, vendor I don't recognize, shouldn't have auto-cleared…"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              data-testid="input-report-note"
+              placeholder="Add a note (optional)…"
               rows={2}
               className="w-full resize-none rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
             />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
-              Reporting this also pauses{rule ? ` "${rule.name}"` : " the rule"} and flags similar pending items, so one bad auto-approval can't silently repeat.
-            </p>
             <div className="flex gap-[10px] items-stretch w-full">
               <button
                 type="button"
-                onClick={() => { setReporting(false); setReason(""); }}
+                onClick={() => { setReportStep("idle"); setPreset(""); setNote(""); }}
                 data-testid="button-report-cancel"
                 className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
               >
@@ -673,26 +716,66 @@ function AutoHandledReceipt({
               </button>
               <button
                 type="button"
-                disabled={reason.trim().length === 0}
-                onClick={() => { onReportProblem?.(proposal, reason.trim()); setReported(true); }}
-                data-testid="button-report-submit"
+                disabled={!reasonReady}
+                onClick={() => setReportStep("confirm")}
+                data-testid="button-report-continue"
                 className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-50 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
                 style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
               >
-                Report & pause rule
+                Continue
               </button>
             </div>
           </div>
         )}
 
-        {reported && (
+        {/* Step 2 — confirm the safety action. Pausing is NEVER silent: the user
+            chooses to pause-and-review (purple primary) or just send feedback. */}
+        {reportStep === "confirm" && (
+          <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[12px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#a8b9f4]">
+              Want to pause this rule while you review?
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
+              Pausing{rule ? ` "${rule.name}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
+            </p>
+            <div className="flex flex-col gap-[8px] w-full">
+              <button
+                type="button"
+                onClick={() => { setDidPause(true); submit(true); }}
+                data-testid="button-report-pause-review"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              >
+                Pause rule and review
+              </button>
+              <button
+                type="button"
+                onClick={() => submit(false)}
+                data-testid="button-report-feedback-only"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+              >
+                Just send feedback
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportStep("reason")}
+                data-testid="button-report-back"
+                className="self-center mt-[2px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px]"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback-only confirmation (pause path navigates away instead). */}
+        {reportStep === "done" && (
           <div
             data-testid="text-report-confirm"
-            className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex items-start gap-[10px]"
+            className="w-full rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px] flex items-start gap-[10px]"
           >
-            <Flag size={16} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
+            <Check size={16} className="shrink-0 mt-[1px] text-[#42bf23]" strokeWidth={2.5} />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
-              Thanks — we logged this as policy feedback{rule ? ` and paused "${rule.name}"` : ""}. Similar pending items are flagged for your review.
+              Thanks — we logged this as policy feedback{rule ? ` on "${rule.name}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
             </p>
           </div>
         )}

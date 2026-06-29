@@ -154,6 +154,27 @@ Programmable neobank on Base L2.
   sweepMath must keep `operatingAfter > 0` after a ≥3-month buffer + pending AP.
 - Live brain-core PaymentIntents (`useIntents`) + legacy static `NEEDS_REVIEW` items still
   render via the older `ReviewModal` ("Needs your approval" / "Routine approvals" cards).
+
+## Rules store & Report-a-Problem (`/rules/:id`)
+- `client/src/lib/rulesStore.ts` — `useSyncExternalStore` single source of truth for the 4
+  standing auto-clear rules (active state, scope cap/allowlist, `ProblemReport[]`). Seeded
+  from the now-EXPORTED rule consts in `mockProposals.ts` (UTILITY/SAAS/LEASE/PAYROLL).
+  Receipts, `ReviewPage`, and `RuleDetail` all read/write it. SAAS pre-seeded paused + 1
+  report (`auto-figma`) for demo; UTILITY stays active for the live Con Edison path.
+- `AutoRule` gained a URL-safe `id` slug (route uses `/rules/<id>`, NOT policyId — slashes),
+  plus `agent`/`category`/`cap`/`allowlist`/`scopeSummary`/`problemReports`. `ProblemReport`
+  added to `proposalTypes.ts`.
+- Receipt report flow (`ProposalDetail` auto-handled branch): preset chips + optional note →
+  confirm step ("Pause rule and review" purple primary / "Just send feedback" secondary) —
+  pausing is NEVER silent. `onReportProblem(p, {reason, note, pause})`.
+- `RuleDetail.tsx` (`/rules/:id`): paused-from-report banner (#D20344 only) with linked
+  payment (vendor + settledMeta date mono + amount), "what changed" line, Active/Paused
+  toggle (resume needs confirm + resolves open reports), remediations (remove vendor / lower
+  cap / delete), reported-problems trail. Linked payment → `/review?receipt=<id>`; ReviewPage
+  reads `useSearch()` and auto-opens the receipt.
+- Related pending-item flag (ReviewPage `relatedRuleFor`): NON-BLOCKING note, never changes
+  status. Match = same `agent` + `counterparty` in rule `allowlist` + `amount ≤ cap`. Pending
+  proposals have NO `category` field (only rule consts do) — don't match category for them.
 - Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
   "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 
