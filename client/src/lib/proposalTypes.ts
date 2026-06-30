@@ -74,6 +74,12 @@ export interface ProblemReport {
   resolved: boolean;
 }
 
+/* What a rule DOES, used to group the Rules page into typed sections:
+   - automation: acts for you (auto-clears matching payments)
+   - guardrail:  pulls you back in above a threshold (asks before acting)
+   - always_on:  a protection that can't be turned off (locked) */
+export type RuleKind = "automation" | "guardrail" | "always_on";
+
 export interface AutoRule {
   id: string; // URL-safe slug, e.g. "utility" — used by the /rules/:id route
   name: string;
@@ -81,13 +87,30 @@ export interface AutoRule {
   createdLabel: string;
   policyId: string;
   active: boolean;
+  kind?: RuleKind; // section the rule belongs to (defaults to "automation")
+  locked?: boolean; // always_on rules — no pause/delete toggle
   /* Scope — drives remediations + "related pending item" flagging. */
   agent?: Agent;
   category?: string; // e.g. "utility", "software subscription"
   cap?: number; // amount ceiling this rule auto-clears under
+  threshold?: number; // guardrail trip point / sweep amount (inline-editable)
+  thresholdEditable?: boolean; // whether the threshold pill is editable inline
   allowlist?: string[]; // trusted vendor names
   scopeSummary?: string; // plain-language scope, e.g. "trusted utility vendors under $1,000"
   problemReports?: ProblemReport[];
+}
+
+/* Evidence-backed AI suggestion: a proposed rule Brain noticed a pattern for,
+   shown with the facts behind it. Default OFF/unaccepted — the user must
+   explicitly accept (which runs the create-rule flow). */
+export interface RuleSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  proposedRule: Partial<AutoRule>;
+  evidence: FactRow[];
+  confidence: "low" | "medium" | "high";
+  dismissed: boolean;
 }
 
 export interface SweepMath {

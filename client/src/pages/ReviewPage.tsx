@@ -18,6 +18,7 @@ import {
   pauseRule as storePauseRule,
   reportProblem as storeReportProblem,
   sendFeedback as storeSendFeedback,
+  setRuleDraft,
 } from "@/lib/rulesStore";
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
@@ -489,6 +490,20 @@ export function ReviewPage() {
           const r = ruleOf(p);
           setActive(null);
           navigate(r ? `/rules/${r.id}` : "/rules");
+        }}
+        onAlwaysHandle={(p) => {
+          // Promote a routine proposal into a standing rule: pre-fill the create
+          // flow in allowlist mode, then hand off to the Rules page.
+          setRuleDraft({
+            kind: "automation",
+            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            category: "bill",
+            agent: p.agent,
+            cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
+            allowlist: p.counterparty ? [p.counterparty] : [],
+          });
+          setActive(null);
+          navigate("/rules?create=1");
         }}
         onReportProblem={(p, report) => {
           const r = ruleOf(p);

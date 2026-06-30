@@ -526,6 +526,7 @@ export const ACCOUNT_SUMMARY: AccountSummary = {
    ───────────────────────────────────────────────────────────────────────────── */
 export const UTILITY_RULE: AutoRule = {
   id: "utility",
+  kind: "automation",
   name: "Auto-clear utility bills",
   summary: "Trusted vendors · utilities · under $1,000 · no bank-detail change",
   createdLabel: "You created this Jun 12 · cleared 7 payments since",
@@ -540,6 +541,7 @@ export const UTILITY_RULE: AutoRule = {
 
 export const SAAS_RULE: AutoRule = {
   id: "saas",
+  kind: "automation",
   name: "Auto-clear software subscriptions",
   summary: "Known SaaS vendors · recurring · under $500 · matched prior charge",
   createdLabel: "You created this May 3 · cleared 19 payments since",
@@ -554,6 +556,7 @@ export const SAAS_RULE: AutoRule = {
 
 export const LEASE_RULE: AutoRule = {
   id: "lease",
+  kind: "automation",
   name: "Auto-clear fixed rent & lease",
   summary: "Contracted amount · same payee · same account · monthly cadence",
   createdLabel: "You created this Feb 1 · cleared 5 payments since",
@@ -568,6 +571,7 @@ export const LEASE_RULE: AutoRule = {
 
 export const PAYROLL_RULE: AutoRule = {
   id: "payroll",
+  kind: "automation",
   name: "Auto-clear payroll & benefits",
   summary: "Approved provider · scheduled run · matched headcount · under cap",
   createdLabel: "You created this Jan 8 · cleared 12 payments since",

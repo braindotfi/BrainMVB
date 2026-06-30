@@ -1,0 +1,107 @@
+REBUILD the Brain "Rules" page. Today it's a flat list of toggles. Regroup it into three
+typed sections so each rule's KIND is legible, add a plain-English rule builder, and make AI
+suggestions evidence-backed. Reuse the existing app shell, purple/indigo tokens, rounded
+cards, monospace for amounts/caps/policy-ids/dates, and the #D20344 alert color (alerts/
+problems/destructive only — never a generic primary). Match existing components; do not
+invent a new look.
+
+FRAME (header): keep "Your Rules" / "Tell me how I should help you." but change the subhead
+to "Grouped by what each rule does — what acts for you, what protects you, and what never
+changes." Keep the bottom helper banner about plain-English rules compiling to enforceable
+policies.
+
+THE CORE CHANGE — three sections, because today's toggles are actually different object
+types with different risk:
+
+1) AUTOMATIONS · act for you (delegations that remove you from the loop)
+   - Rules that auto-approve a narrow class of proposals: pay recurring bills, move extra
+     cash to savings, chase overdue invoices, run payroll.
+   - Each row shows its SCOPE INLINE (not just a toggle) so a rule is understandable without
+     opening it: e.g. "6 trusted vendors · under $1,000 · cleared 14 this month" in mono.
+   - A chevron + tap opens the existing RuleDetail. A per-row Active/Paused toggle pauses
+     without opening.
+   - PAUSED-FROM-REPORT STATE: a rule paused via the report-a-problem flow renders here with
+     a #D20344 left-accent and "Paused after you reported a problem · tap to review", toggle
+     off. This makes the rules page the single control tower where every automation — including
+     stopped ones — is visible.
+   - Inline editable amounts (e.g. the $25,000 sweep threshold) use the dashed-underline
+     inline-editable style.
+
+2) GUARDRAILS · pull you back in (thresholds, not delegations)
+   - Rules like "Ask me before paying over $500". The AMOUNT is the primary control: render
+     it as an inline-editable bordered pill (mono) with a small edit affordance, not buried
+     in a toggle.
+   - Subtext frames it as a protection: "No automation clears anything above this without you."
+
+3) ALWAYS ON · can't be turned off (the non-negotiable guards)
+   - "Flag unusual activity", "Stop on changed bank details", "Catch possible duplicates".
+   - Render as LOCKED rows: lock icon, an "Always on" label, NO toggle. These are read-only.
+   - Caption beneath: "Brain always does these — they're your safety floor and can't be
+     disabled, even by a rule."
+   - IMPORTANT: this fixes a real problem — "flag strange behavior" must NOT be a toggle a
+     user can switch off. Move it out of the toggleable list into here.
+
+NEW RULE — PLAIN-ENGLISH SENTENCE BUILDER (replaces a blank form):
+- A dashed-border "New rule" card where the user composes a sentence by tapping highlighted
+  blanks: "When a [bill ▾] from a [trusted vendor ▾] is under [$___], [pay it automatically ▾]."
+  Each bracket is a tappable chip (accent-tinted) that opens a small picker/input.
+- The vendor blank's picker draws ONLY from trusted vendors; show non-trusted vendors greyed
+  with a "trust first →" link (jumps to the vendor surface) — do not allow adding a
+  non-trusted vendor to a rule.
+- Show the COMPILE STEP visibly: a mono line "compiles to policy/ap.tolerance.v3" so the user
+  sees plain English become enforceable policy. Behind the scenes the sentence builds the
+  same Rule object used everywhere (scope: allowlist mode default, amountCap, trustedVendors
+  Only, locked alwaysEscalates guards).
+- "Create rule" requires an explicit tap with a plain-language confirmation of exactly what
+  will be auto-approved (persistent-config change — never silent).
+
+AI SUGGESTIONS — EVIDENCE-BACKED, NOT BARE TOGGLES (this is the differentiator):
+- Section "Suggested for you · learned from your history".
+- Each suggestion card shows the EVIDENCE that triggered it, in a mono fact block, e.g.:
+    you approved  Con Edison, Comcast, Verizon
+    11 times      in 3 months
+    always        under $600 · never flagged
+  plus a confidence label ("Confidence · high"). The evidence is what makes the ML story
+  tangible — it's pattern-derived from THIS tenant, not a template.
+- Actions: "Review & accept" (opens the pre-filled create-rule confirmation — NOT a silent
+  enable), "Tweak first" (opens the builder pre-filled), "Dismiss" (records a signal that
+  tunes future suggestions).
+- Suggestions DEFAULT OFF / unaccepted — never pre-enabled. Accepting standing authority
+  sight-unseen is the same fatigue trap as the review queue; require the review step.
+
+DATA MODEL (extend existing types; reuse Rule from the rules work):
+- Add a discriminated `kind: "automation" | "guardrail" | "always_on"` to Rule (or a derived
+  selector) so the page groups purely from data — adding a rule of a kind = it appears in the
+  right section, no new JSX.
+- always_on rules carry `locked: true` and render without a toggle.
+- Add a RuleSuggestion type: { id, proposedRule: Partial<Rule>, evidence: FactRow[],
+  confidence: "low"|"medium"|"high", dismissed: boolean }.
+- guardrail rules expose an editable `threshold` (amount) as the primary control.
+
+WIRING (consistency with the rest of the app):
+- "Review rule" on an Approved-Automatically receipt opens the RuleDetail of the rule whose
+  id matches — that rule lives in the AUTOMATIONS section here.
+- "Always handle this" promotion from a routine proposal lands in the create-rule flow,
+  pre-filled, allowlist mode.
+- The report-a-problem pause surfaces the rule here in its paused state.
+- The vendor blank in the builder links to the (separate) vendor-trust surface; if that
+  surface isn't built yet, link to a placeholder route — do not inline-grant trust here.
+
+CONSTRAINTS (unchanged):
+- Sections render purely from data; empty sections collapse.
+- #D20344 only for the paused-from-report state, delete, and alerts; purple is affirmative/
+  interactive; green/success for active toggles.
+- Locked always_on rules can never be toggled off in the UI.
+- Every state change user-initiated; no setTimeout auto-advance; no silent persistent-config
+  writes (create/edit/delete rules all confirm).
+- Amounts/caps/dates/policy-ids in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed.
+
+MOCK DATA — update mockRules.ts so the three sections populate: ~3 automations (one paused-
+from-report), 1–2 guardrails (one with an editable threshold), the locked always_on guards,
+and 1–2 RuleSuggestions with real evidence blocks. Wire automation rules' ids to the existing
+auto_handled receipts so "Review rule" resolves.
+
+Return the updated types.ts, updated mockRules.ts, and the rebuilt RulesPage with the three
+sections, the sentence-builder, and the evidence-backed suggestions — wired so receipts'
+"Review rule" and routine "Always handle this" both resolve into it.

@@ -17,6 +17,7 @@ import { FinancesPage } from "@/pages/FinancesPage";
 import { ReviewPage } from "@/pages/ReviewPage";
 import { RulesPage } from "@/pages/RulesPage";
 import { RuleDetail } from "@/pages/RuleDetail";
+import { VendorsPage } from "@/pages/VendorsPage";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
@@ -118,6 +119,7 @@ function AppLayout() {
             <Route path="/review" component={ReviewPage} />
             <Route path="/rules/:id" component={RuleDetail} />
             <Route path="/rules" component={RulesPage} />
+            <Route path="/vendors" component={VendorsPage} />
             <Route path="/activity" component={ActivityPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />

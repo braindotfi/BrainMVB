@@ -18,6 +18,7 @@ import {
   Flag,
   PauseCircle,
   SlidersHorizontal,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
@@ -91,6 +92,7 @@ export function ProposalDetail({
   onPauseRule,
   onReviewRule,
   onReportProblem,
+  onAlwaysHandle,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
@@ -102,6 +104,8 @@ export function ProposalDetail({
   onPauseRule?: (proposal: Proposal) => void;
   onReviewRule?: (proposal: Proposal) => void;
   onReportProblem?: (proposal: Proposal, report: { reason: string; note: string; pause: boolean }) => void;
+  /* routine pending proposal — promote into a standing rule via the create flow */
+  onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
   const { format } = useCurrency();
   const [showTrace, setShowTrace] = useState(false);
@@ -408,6 +412,21 @@ export function ProposalDetail({
                   variant="approve"
                 />
               </div>
+
+              {/* Routine proposal → promote into a standing rule (create flow). */}
+              {proposal.batchApprovable && onAlwaysHandle && (
+                <button
+                  type="button"
+                  onClick={() => onAlwaysHandle(proposal)}
+                  data-testid="button-always-handle"
+                  className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#0a0c10] border border-[#1d2132] hover:border-[rgba(118,49,238,0.45)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <Sparkles size={15} className="text-[#7631ee] shrink-0" />
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#a8b9f4]">
+                    Always handle this for me
+                  </span>
+                </button>
+              )}
             </div>
 
           </>

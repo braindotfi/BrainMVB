@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { AutoRule, ProblemReport } from "./proposalTypes";
-import { UTILITY_RULE, SAAS_RULE, LEASE_RULE, PAYROLL_RULE } from "./mockProposals";
+import { INITIAL_RULES } from "./mockRules";
 
 /* ── Shared rules store ───────────────────────────────────────────────────────
    Single source of truth for the standing auto-clear rules: live active state,
@@ -22,7 +22,7 @@ function seedRule(base: AutoRule): AutoRule {
    RuleDetail state is demoable without triggering it live. UTILITY stays active
    for the live Con Edison path. */
 function seedRules(): AutoRule[] {
-  const rules = [UTILITY_RULE, SAAS_RULE, LEASE_RULE, PAYROLL_RULE].map(seedRule);
+  const rules = INITIAL_RULES.map(seedRule);
   const saas = rules.find((r) => r.id === "saas");
   if (saas) {
     saas.active = false;
@@ -169,7 +169,36 @@ export function lowerCap(id: string, amount: number) {
   updateRule(id, (r) => ({ ...r, cap: amount }));
 }
 
+/* Inline threshold edit — guardrail trip point or automation sweep amount. */
+export function setThreshold(id: string, amount: number) {
+  updateRule(id, (r) => ({ ...r, threshold: amount }));
+}
+
 export function deleteRule(id: string) {
   rules = rules.filter((r) => r.id !== id);
   notify();
+}
+
+/* ── Create a rule (from the sentence builder or an accepted suggestion) ──────
+   Every create is explicit and user-initiated. The new rule is prepended within
+   its section so it's visible immediately. */
+export function createRule(rule: AutoRule) {
+  rules = [{ ...rule, problemReports: [] }, ...rules];
+  notify();
+}
+
+/* ── Rule draft handoff ───────────────────────────────────────────────────────
+   "Always handle this" on a routine receipt sets a draft, then navigates to the
+   Rules page which consumes it to pre-fill the create flow. No backend, no
+   localStorage — a one-shot module slot. ───────────────────────────────────── */
+let ruleDraft: Partial<AutoRule> | null = null;
+
+export function setRuleDraft(draft: Partial<AutoRule>) {
+  ruleDraft = draft;
+}
+
+export function consumeRuleDraft(): Partial<AutoRule> | null {
+  const d = ruleDraft;
+  ruleDraft = null;
+  return d;
 }
