@@ -23,7 +23,9 @@ import {
 
 /* ── Tabs (mirrors the Activity page's segmented control) ─────────────────── */
 type ReviewTab = "All" | "Needs Review" | "Approved Automatically";
-const REVIEW_TABS: ReviewTab[] = ["All", "Needs Review", "Approved Automatically"];
+/* "All" is intentionally hidden for now — kept in the type/logic so the
+   filtering branches still compile and can be re-enabled later. */
+const REVIEW_TABS: ReviewTab[] = ["Needs Review", "Approved Automatically"];
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
@@ -242,7 +244,7 @@ export function ReviewPage() {
      no setTimeout / auto-settle anywhere. */
   const [statuses, setStatuses] = useState<Record<string, ProposalStatus>>({});
   const [active, setActive] = useState<Proposal | null>(null);
-  const [activeTab, setActiveTab] = useState<ReviewTab>("All");
+  const [activeTab, setActiveTab] = useState<ReviewTab>("Needs Review");
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
   const setStatus = (id: string, status: ProposalStatus) =>
@@ -371,12 +373,12 @@ export function ReviewPage() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className="flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#240757" : "transparent" }}
+                    style={{ background: isActive ? "#4a2300" : "transparent" }}
                     data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
                   >
                     <p
                       className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#7631ee" : "#414965" }}
+                      style={{ color: isActive ? "#ff9500" : "#414965" }}
                     >
                       {tab}
                     </p>

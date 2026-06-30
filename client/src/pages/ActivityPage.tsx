@@ -60,7 +60,9 @@ const ApprovedIcon = () => (
 );
 
 type Tab = "All" | "Brain Did" | "You Approved" | "Brain Detected";
-const TABS: Tab[] = ["All", "Brain Did", "You Approved", "Brain Detected"];
+/* "All" is intentionally hidden for now — kept in the type/logic (filterByTab
+   still treats it as the unfiltered view) so it can be re-enabled later. */
+const TABS: Tab[] = ["Brain Did", "You Approved", "Brain Detected"];
 
 const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
   paid: BrainDidIcon,
@@ -260,7 +262,8 @@ export function ActivityPage() {
   const [, navigate] = useLocation();
   const params = useMemo(() => new URLSearchParams(search), [search]);
   const { intents } = useIntents();
-  const initialTab = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "All";
+  const resolvedInitial = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "Brain Did";
+  const initialTab: Tab = resolvedInitial === "All" ? "Brain Did" : resolvedInitial;
   const initialRow = (() => {
     const v = params.get("row");
     const n = v ? Number(v) : NaN;
@@ -278,8 +281,8 @@ export function ActivityPage() {
   // Sync state when the URL changes (e.g. coming from the home page).
   useEffect(() => {
     const tabParam = params.get("tab") ?? "";
-    const tab = SLUG_TO_TAB[tabParam] ?? "All";
-    setActiveTab(tab);
+    const resolved = SLUG_TO_TAB[tabParam] ?? "Brain Did";
+    setActiveTab(resolved === "All" ? "Brain Did" : resolved);
     const rowParam = params.get("row");
     const rowId = rowParam ? Number(rowParam) : NaN;
     setHighlightedId(Number.isFinite(rowId) ? rowId : null);
