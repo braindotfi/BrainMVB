@@ -21,6 +21,10 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 
+/* ── Tabs (mirrors the Activity page's segmented control) ─────────────────── */
+type ReviewTab = "All" | "Needs Review" | "Approved Automatically";
+const REVIEW_TABS: ReviewTab[] = ["All", "Needs Review", "Approved Automatically"];
+
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
   const amountStr = `$${rec.amount.toLocaleString()}`;
@@ -238,6 +242,7 @@ export function ReviewPage() {
      no setTimeout / auto-settle anywhere. */
   const [statuses, setStatuses] = useState<Record<string, ProposalStatus>>({});
   const [active, setActive] = useState<Proposal | null>(null);
+  const [activeTab, setActiveTab] = useState<ReviewTab>("All");
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
   const setStatus = (id: string, status: ProposalStatus) =>
@@ -328,38 +333,82 @@ export function ReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
+  /* Tab visibility — "All" shows everything; the other tabs filter the view. */
+  const showNeedsReview = activeTab === "All" || activeTab === "Needs Review";
+  const showApproved = activeTab === "All" || activeTab === "Approved Automatically";
+
+  /* Helper banner (purple) — sits mid-page in "All", but pins to the bottom
+     of the page when the "Needs Review" tab is selected. */
+  const HelperBanner = () => (
+    <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+      <div className="flex flex-1 items-start min-w-px relative">
+        <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px]">
+          Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes — you decide, and a separate execution service settles.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[32px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+            {/* Header */}
+            <div className="flex flex-col items-start relative shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
+            </div>
+
+            {/* Tab bar */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0">
+              {REVIEW_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                    style={{ background: isActive ? "#240757" : "transparent" }}
+                    data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                      style={{ color: isActive ? "#7631ee" : "#414965" }}
+                    >
+                      {tab}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
 
-            {/* Approved automatically today — derived summary (count + total from the array) */}
-            <div
-              className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
-              data-testid="row-auto-handled"
-            >
-              <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] min-w-px">
-                Brain approved{" "}
-                <span className="text-[#a8b9f4] font-semibold">{autoHandled.length} payments automatically</span>{" "}
-                today under a rule you set.
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0" data-testid="text-auto-handled-total">
-                {format(autoHandledTotal)}
-              </p>
-            </div>
+            {/* Approved automatically today — derived summary (count + total from the array).
+                Stays pinned to the top for both "All" and the "Approved Automatically" tab. */}
+            {showApproved && (
+              <div
+                className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
+                data-testid="row-auto-handled"
+              >
+                <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] min-w-px">
+                  Brain approved{" "}
+                  <span className="text-[#a8b9f4] font-semibold">{autoHandled.length} payments automatically</span>{" "}
+                  today under a rule you set.
+                </p>
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0" data-testid="text-auto-handled-total">
+                  {format(autoHandledTotal)}
+                </p>
+              </div>
+            )}
 
             {/* Live — real brain-core PaymentIntents flagged by §6 (only when present) */}
-            {liveReviews.length > 0 && (
+            {showNeedsReview && liveReviews.length > 0 && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Needs your approval" count={liveReviews.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
@@ -371,6 +420,7 @@ export function ReviewPage() {
             )}
 
             {/* Needs Review — the data-driven proposal queue */}
+            {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <WidgetHeader title="Needs Review" count={queue.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
@@ -436,18 +486,14 @@ export function ReviewPage() {
                 </div>
               </div>
             </div>
+            )}
 
-            {/* Helper banner — purple */}
-            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <div className="flex flex-1 items-start min-w-px relative">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px]">
-                  Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes — you decide, and a separate execution service settles.
-                </p>
-              </div>
-            </div>
+            {/* Helper banner — purple. In "All" it sits here; the "Needs Review"
+                tab renders it at the very bottom of the page instead. */}
+            {activeTab === "All" && <HelperBanner />}
 
             {/* Settled today — collapsed executed/rejected/postponed */}
-            {settled.length > 0 && (
+            {showNeedsReview && settled.length > 0 && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Settled today" count={settled.length} />
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
@@ -459,7 +505,7 @@ export function ReviewPage() {
             )}
 
             {/* Approved Automatically — settled receipts; tapping a row opens the record */}
-            {autoHandled.length > 0 && (
+            {showApproved && autoHandled.length > 0 && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoHandled.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
@@ -472,6 +518,9 @@ export function ReviewPage() {
                 </div>
               </div>
             )}
+
+            {/* Helper banner pinned to the BOTTOM of the page on the "Needs Review" tab. */}
+            {activeTab === "Needs Review" && <HelperBanner />}
 
           </div>
         </div>
