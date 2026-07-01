@@ -323,19 +323,25 @@ const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", co
 /** Locale for dates: USD → en-US ("Apr 15, 2025"), EUR → en-GB ("15 Apr 2025"). */
 const DATE_LOCALE: Record<CurrencyCode, string> = { USD: "en-US", EUR: "en-GB" };
 
-/** Re-format raw amounts in a sentence like "$432" or "$1234.56" into comma-
-  formatted equivalents (respecting the active currency's symbol + FX rate). */
+/** Re-format raw amounts in a sentence like "$432", "$1234.56" or "48000.00 USD"
+  into comma-formatted equivalents (respecting the active currency's symbol + FX rate).
+  Matches: symbol-prefixed ($/€) OR plain number + currency code (USD/EUR/GBP). */
 function formatAmountsInText(text: string, formatFn: (amount: string | number) => string): string {
-  return text.replace(/(?:\+?-?)(?:\$|€)\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?/g, (match) => {
-    // Try to parse the number out, re-format it, and keep the sign.
-    const raw = match.replace(/[$,€\s]/g, "");
+  // Pattern 1: symbol-prefixed amounts ($123, $1,234.56, -€432)
+  const symbolPattern = /(?:\+?-?)(?:\$|€)\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?/g;
+  // Pattern 2: plain number + currency code (48000.00 USD, 1,234.56 EUR)
+  const codePattern = /(?:\b\d{1,3}(?:,\d{3})*|\b\d+)(?:\.\d+)?\s*(?:USD|EUR|GBP)\b/g;
+
+  const reformat = (match: string) => {
+    const raw = match.replace(/[$,€\s]|USD|EUR|GBP/gi, "");
     const sign = match.startsWith("-") ? "-" : match.startsWith("+") ? "+" : "";
     const num = Number(raw);
     if (!Number.isFinite(num)) return match;
     const formatted = formatFn(num);
-    // formatFn returns something like "-$432" or "+$1,234"; prepend sign if absent.
     return sign && !formatted.startsWith(sign) ? sign + formatted : formatted;
-  });
+  };
+
+  return text.replace(symbolPattern, reformat).replace(codePattern, reformat);
 }
 
 /** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
@@ -363,7 +369,7 @@ function formatDatesInText(text: string, currency: CurrencyCode): string {
   Red = negative / outflow / "over" / "exceeded" / "shortfall" / "decline". */
 function detectSentimentColor(text: string): string {
   const lower = text.toLowerCase();
-  // Negative / outflow / danger signals
+  // 1) Negative / outflow / danger signals — always red, highest priority
   const negative = [
     "over budget", "shortfall", "decline", "dropping", "fell",
     "negative", "deficit", "loss", "lost", "missed", "overdue", "late",
@@ -371,21 +377,22 @@ function detectSentimentColor(text: string): string {
     "overdraft", "bounced", "rejected", "failed", "unpaid",
   ];
   if (negative.some((w) => lower.includes(w))) return "text-[#d20344]";
-  // Warning / caution signals
-  const warning = [
-    "watch", "caution", "careful", "attention", "upcoming", "due soon",
-    "approaching", "nearing", "almost", "limited", "tight", "constrained",
-    "review", "verify", "check", "pending", "unusual", "unexpected",
-  ];
-  if (warning.some((w) => lower.includes(w))) return "text-[#ff9500]";
-  // Positive / inflow / good signals (default fallback when nothing negative/warning)
+  // 2) Positive / inflow / good signals — green, checked before warning so that
+  //    an "upcoming inflow" is green (the inflow wins) not orange.
   const positive = [
     "saved", "surplus", "extra", "more than", "higher", "increase", "gained",
     "growth", "up", "rising", "exceeded target", "ahead", "on track", "nice",
     "good", "strong", "healthy", "positive", "inflow", "received", "collected",
   ];
   if (positive.some((w) => lower.includes(w))) return "text-[#42bf23]";
-  // Neutral / no strong sentiment → baby-blue (matches existing default)
+  // 3) Warning / caution signals — orange, only when no positive signal present
+  const warning = [
+    "watch", "caution", "careful", "attention", "upcoming", "due soon",
+    "approaching", "nearing", "almost", "limited", "tight", "constrained",
+    "review", "verify", "check", "pending", "unusual", "unexpected",
+  ];
+  if (warning.some((w) => lower.includes(w))) return "text-[#ff9500]";
+  // 4) Neutral / no strong sentiment → baby-blue (matches existing default)
   return "text-[#a8b9f4]";
 }
 
