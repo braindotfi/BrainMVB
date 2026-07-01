@@ -170,30 +170,30 @@ function Toggle({ active, onChange, testId }: { active: boolean; onChange: () =>
   );
 }
 
-/* ── Section wrapper — collapses when empty ─────────────────────────────────── */
+const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
+
+/* ── Section wrapper — card with header, collapses when empty ───────────────── */
 function Section({
-  eyebrow,
-  sub,
+  title,
   count,
   children,
 }: {
-  eyebrow: string;
-  sub: string;
+  title: string;
   count: number;
   children: React.ReactNode;
 }) {
   if (count === 0) return null;
   return (
-    <div className="flex flex-col gap-[10px] w-full">
-      <div className="flex flex-col gap-[2px] px-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase tracking-[0.08em] text-[#6c779d] text-[12px] leading-[16px]">
-          {eyebrow}
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
+          {title}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[13px] leading-[18px]">
-          {sub}
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px]">
+          {count} records
         </p>
       </div>
-      <div className="bg-[#0a0c10] flex flex-col rounded-[16px] p-[8px] w-full gap-[2px]">
+      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
         {children}
       </div>
     </div>
@@ -861,13 +861,12 @@ export function RulesPage() {
           {/* Tab content — each tab shows its own section */}
 
           {activeTab === "Automations" && (
-            <Section
-              eyebrow="Automations · act for you"
-              sub="These run on their own. Tap one to see or tighten its scope."
-              count={automations.length}
-            >
-              {automations.map((r) => (
-                <AutomationRow key={r.id} rule={r} format={format} />
+            <Section title="Automations" count={automations.length}>
+              {automations.map((r, idx) => (
+                <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                  <AutomationRow rule={r} format={format} />
+                  {idx < automations.length - 1 && <Divider />}
+                </div>
               ))}
             </Section>
           )}
@@ -881,13 +880,12 @@ export function RulesPage() {
           )}
 
           {activeTab === "Guardrails" && (
-            <Section
-              eyebrow="Guardrails · pull you back in"
-              sub="Brain stops and asks you above these limits."
-              count={guardrails.length}
-            >
-              {guardrails.map((r) => (
-                <GuardrailRow key={r.id} rule={r} format={format} />
+            <Section title="Guardrails" count={guardrails.length}>
+              {guardrails.map((r, idx) => (
+                <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                  <GuardrailRow rule={r} format={format} />
+                  {idx < guardrails.length - 1 && <Divider />}
+                </div>
               ))}
             </Section>
           )}
@@ -901,13 +899,12 @@ export function RulesPage() {
           )}
 
           {activeTab === "Always On" && (
-            <Section
-              eyebrow="Always on · can't be turned off"
-              sub="Built-in protections that run no matter what."
-              count={alwaysOn.length}
-            >
-              {alwaysOn.map((r) => (
-                <AlwaysOnRow key={r.id} rule={r} />
+            <Section title="Always On" count={alwaysOn.length}>
+              {alwaysOn.map((r, idx) => (
+                <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                  <AlwaysOnRow rule={r} />
+                  {idx < alwaysOn.length - 1 && <Divider />}
+                </div>
               ))}
             </Section>
           )}
