@@ -173,13 +173,10 @@ export function BrainBillsInbox() {
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       {/* Header */}
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex flex-col gap-[2px] px-[16px] py-[14px] relative shrink-0 w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
-          Bills — let Brain decide
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-          Brain proposes each payment and your policy gate decides: pay now, get approval, or block.
-        </p>
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+        <div className="flex flex-1 items-center min-w-px relative">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">Bills</p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
