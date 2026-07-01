@@ -43,7 +43,7 @@ function parseAmount(amount: string | number): { sign: "" | "-"; value: number; 
     rest = rest.slice(1).trimStart();
   }
   rest = rest.replace(/^(?:\$|€|£|¥|USD|EUR|GBP|JPY)\s*/i, "");
-  const match = rest.match(/^([\d,]+)(?:\.(\d+))?/);
+  const match = rest.match(/^(\d[\d,]*)(?:\.(\d+))?/);
   if (!match) return null;
   const intPart = match[1].replace(/,/g, "");
   const decPart = match[2] ?? "";

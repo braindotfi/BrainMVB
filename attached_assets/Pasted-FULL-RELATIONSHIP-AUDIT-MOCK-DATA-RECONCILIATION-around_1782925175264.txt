@@ -1,0 +1,115 @@
+FULL RELATIONSHIP AUDIT + MOCK-DATA RECONCILIATION around the PROPOSAL LIFECYCLE. Verify every
+entity relationship in a proposal's life — from Brain proposing, through review/auto-clear,
+approval, execution, settlement, audit record, and on-chain anchor — is wired AND coherent
+across proposals, vendors, rules, invoices, and audit records. Then update mock data so every
+scenario is realistic and internally consistent.
+
+Work on a branch; git fetch/pull first. DIAGNOSE + REPORT before changing anything. Update
+CLAUDE.md + replit.md at the end. Do NOT touch data that comes from live/brain-core APIs — only
+static mock data is in scope (call out anything you believe is API-sourced and leave it alone).
+
+=========================================================================
+STEP 1 — MAP THE LIFECYCLE GRAPH (report, no changes yet)
+=========================================================================
+For EACH proposal in mock data, trace its full graph and print a per-proposal row showing every
+link and whether it resolves + is coherent:
+
+  proposal → vendor (vendorId)
+  proposal → invoice (invoiceId)
+  invoice → vendor (invoice.vendorId)  [must equal proposal's vendor]
+  proposal → rule, if auto-cleared or governed (ruleId)  [rule allowlist must include the vendor]
+  proposal → audit record(s) (the proposed/approved/executed/flagged events for this proposal)
+  audit record → linked[] (rule/vendor/invoice by refId)
+  audit record → anchor (AnchorProof)
+  vendor → rules (vendor.ruleIds)  [reciprocal: rule.allowlist ↔ vendor.ruleIds agree]
+
+Use the canonical stores as the source of truth for ids (rulesStore, MOCK_VENDORS,
+MOCK_INVOICES). For every edge, mark: RESOLVES (id exists) and COHERENT (see Step 2 checks).
+Flag every edge that is missing, dangling, or incoherent.
+
+=========================================================================
+STEP 2 — COHERENCE CHECKS (the "resolves-but-lies" class)
+=========================================================================
+Resolution is not enough. Assert each of these across the graph and list every violation:
+
+AMOUNTS
+- invoice.amount == the proposal amount == the audit record amount == the settled card amount,
+  for the same lifecycle. No silent drift ($4,150 vs $4,090).
+- A sweep/treasury proposal's math reconciles (buffer + pending AP covered; operatingAfter > 0).
+
+VENDOR ↔ TRUST ↔ BEHAVIOR
+- The vendor of a proposal exists and its trustStatus is coherent with how the proposal behaved:
+  * auto_approved/auto-cleared → vendor is "trusted" AND the clearing rule's allowlist includes
+    that vendor AND amount ≤ the rule cap.
+  * human-approved-above-limit (e.g. AWS) → vendor is NOT auto-clearing it; do NOT mark it
+    "trusted-as-if-auto" just to look tidy. Status matches evidence.
+  * flagged/held (e.g. Bright Futures bank-detail change) → vendor is "under_review" EVERYWHERE;
+    it must NOT appear as auto_approved in any audit record.
+- A kind:"vendor" link must point at an actual vendor. Non-vendor counterparties (payroll
+  employees, protocols, ledger) must use an accurate non-vendor kind, not "vendor".
+- vendor.ruleIds and rule.allowlist are reciprocal — if a rule lists a vendor, that vendor lists
+  the rule, and vice versa.
+
+VENDOR HISTORY ↔ PAYMENTS
+- Every vendor's history (paymentCount, totalPaid, avgAmount, first/lastPaidLabel,
+  payeeAccountLast4) reconciles with the invoices/payments/audit records that reference it. A
+  vendor with a linked paid invoice must have paymentCount ≥ 1 and totals/dates/account that
+  reflect it. No "trusted since January, 11 payments" for a vendor whose only referenced record
+  is one July invoice; no zero-history vendor sitting behind a paid invoice.
+
+RULES
+- Every ruleId referenced resolves to a canonical rule; auto_approved records link a rule whose
+  category matches the vendor/invoice category (don't clear a contractor invoice with a lease
+  rule); a flagged/held payment carries NO rule link.
+
+LIFECYCLE / STATUS
+- A proposal's status and its audit lifecycle agree (pending has no executed/anchor; executed
+  has the full proposed→approved→executed timeline; auto_approved shows "approved by rule, no
+  human step").
+- ANCHOR honesty: pending/executing → "pending_next_batch" (Verify disabled, no hashes);
+  executed+anchored → real (truncated) hashes + Verify enabled. Never "anchored" for something
+  unsettled.
+
+LINKED-ROW SPLIT
+- The old conflated "Proposal · Invoice #…" row is fully gone; audit-record popup, ProposalDetail,
+  and SettledRecordCard each render separate Proposal / Invoice / Vendor rows, each calling its
+  own resolver (openProposalDetail / openInvoiceDetail / openVendorDetail / openRuleDetail), with
+  resolve-or-plain-text fallback, no dead taps.
+
+=========================================================================
+STEP 3 — FIX + RECONCILE MOCK DATA
+=========================================================================
+Fix every RESOLVES/COHERENT violation from Steps 1-2. When fixing:
+- Repoint refs to the correct EXISTING canonical id; do NOT invent entities to satisfy a bad ref.
+- Where a scenario is genuinely incomplete, add realistic, self-consistent mock data so the whole
+  lifecycle makes sense end to end (a proposal has a real vendor with coherent history, a real
+  invoice whose amount matches, the right rule or the right flag, an audit record whose lifecycle
+  and anchor state match its status).
+- Keep the canonical demo anchors intact and consistent: AWS (AUD-3308FE, $4,150, AWS-2026-07,
+  vendor Amazon Web Services, human-approved-above-limit, executed+anchored); Con Edison
+  (auto-cleared by the utilities rule, trusted); Bright Futures (under_review, bank-detail change,
+  held — one story on every surface).
+- Do NOT modify anything sourced from live/brain-core APIs; list what you treated as API-sourced.
+
+=========================================================================
+STEP 4 — UNIFY + EXTEND THE GUARD
+=========================================================================
+Consolidate the boot-time dev consistency checks into ONE guard (or one runner) that covers
+rules + vendors + invoices + proposals + audit records, asserting BOTH resolution AND the Step-2
+coherence rules (amounts match, trust↔behavior, reciprocal rule/vendor, vendor history reconciles,
+category match, lifecycle/anchor honesty, kind correctness). Log loudly in dev (console.error
+listing "source → id" or "source → mismatch"); never throw; run in main.tsx. This is the durable
+net that catches the next drift before it ships.
+
+=========================================================================
+STEP 5 — VERIFY END TO END
+=========================================================================
+For each canonical proposal (AWS, Con Edison auto-cleared, Bright Futures flagged, the treasury
+sweep, a collections item, a reconciliation item), walk and confirm the entire chain opens and is
+coherent: proposal → vendor detail, → invoice viewer (amount matches), → rule detail (if any), →
+audit record (lifecycle + anchor state correct), and the reciprocal vendor.ruleIds. List each
+path with pass/fail.
+
+Return: the Step-1 lifecycle graph report, the Step-2 violations found, the Step-3 fixes +
+mock-data additions (and what you treated as API-sourced and left alone), the unified guard, and
+the Step-5 verification. Update CLAUDE.md + replit.md.
