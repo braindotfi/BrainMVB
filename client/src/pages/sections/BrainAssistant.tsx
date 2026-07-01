@@ -51,8 +51,9 @@ interface ChatSession {
 }
 
 const SUGGESTED_QUESTIONS = [
-  "What is BTC?",
-  "My wallet balance",
+  "Forecast cash flow",
+  "Anything change overnight?",
+  "What needs attention?",
   "Show last 10 transactions",
 ];
 

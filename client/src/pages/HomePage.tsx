@@ -9,6 +9,18 @@ import { useAuth } from "@/lib/authContext";
 import { useCurrency } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { getBrainDidTodayItems, getNeedsReviewProposals } from "@/lib/brainFeed";
+import { SettledRecordCard } from "@/components/SettledRecordCard";
+import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
+import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
+import { openRuleDetail } from "@/lib/openRuleDetail";
+import {
+  useRules,
+  pauseRule as storePauseRule,
+  reportProblem as storeReportProblem,
+  sendFeedback as storeSendFeedback,
+  setRuleDraft,
+} from "@/lib/rulesStore";
+import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 
 /* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
@@ -334,22 +346,57 @@ export function HomePage() {
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  /* Records opened directly from the Home widgets — the settled receipt card
+     (Brain Did) and the proposal sheet (Brain Detected). Both mirror the exact
+     surfaces used on the Activity / Review pages, opened in place. */
+  const [selectedSettled, setSelectedSettled] = useState<Proposal | null>(null);
+  const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
+  const reviewStatuses = useReviewStatuses();
+
+  const rules = useRules();
+  const ruleOf = (p: Proposal) =>
+    p.rule ? rules.find((r) => r.id === p.rule!.id || r.policyId === p.rule!.policyId) : undefined;
+  const isRulePaused = (p: Proposal): boolean => {
+    const r = ruleOf(p);
+    return r ? !r.active : p.rule ? !p.rule.active : false;
+  };
+
+  const handleReviewAction = (action: ProposalAction) => {
+    if (!selectedReview) return;
+    const next: ProposalStatus =
+      action === "approve" ? "executing"
+        : action === "reject" ? "rejected"
+          : action === "postpone" ? "postponed"
+            : "verifying";
+    setReviewStatus(selectedReview.id, next);
+    setSelectedReview(null);
+  };
+
   /* Brain Did — the exact "Brain Did" items for today (mirrors the Activity
-     page's Today section under the "Brain Did" tab). Tapping a row deep-links to
-     that same row on the Activity page. */
+     page's Today section under the "Brain Did" tab). Tapping a row opens its
+     settled record card right here, no navigation to the Activity page. */
   const brainDidItems: WidgetItem[] = getBrainDidTodayItems().map((it) => ({
     id: String(it.id),
     label: it.title,
-    onClick: () => navigate(`/activity?tab=brain-did&row=${it.id}`),
+    onClick: () => {
+      if (it.proposal) setSelectedSettled(it.proposal);
+      else navigate(`/activity?tab=brain-did&row=${it.id}`);
+    },
   }));
 
   /* Brain Detected — what Brain is advising for review (mirrors the Review
-     page's "Needs Review" queue). Tapping opens the Review page. */
-  const brainDetectedItems: WidgetItem[] = getNeedsReviewProposals().map((p) => ({
-    id: p.id,
-    label: p.title,
-    onClick: () => navigate("/review"),
-  }));
+     page's "Needs Review" queue). Tapping opens the proposal sheet right here,
+     no navigation to the Review page. */
+  const brainDetectedItems: WidgetItem[] = getNeedsReviewProposals()
+    .filter((p) => {
+      const s = reviewStatuses[p.id] ?? p.status;
+      return s === "pending" || s === "verifying";
+    })
+    .map((p) => ({
+      id: p.id,
+      label: p.title,
+      onClick: () => setSelectedReview(p),
+    }));
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -490,8 +537,8 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Your Goals — full width below Brain Did / Brain Detected */}
-            <GoalsSection />
+            {/* Your Goals — hidden for now */}
+            {/* <GoalsSection /> */}
           </div>
         </div>
       </ScrollArea>
@@ -500,6 +547,56 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
+      />
+
+      {/* Brain Did — settled receipt card, opened in place */}
+      <SettledRecordCard
+        proposal={selectedSettled}
+        open={selectedSettled !== null}
+        onOpenChange={(o) => { if (!o) setSelectedSettled(null); }}
+        onViewAuditLog={() => {
+          navigate(`/audit-log?record=${selectedSettled?.auditId ?? ""}`);
+          setSelectedSettled(null);
+        }}
+        anchorAuditId={selectedSettled?.auditId}
+      />
+
+      {/* Brain Detected — proposal sheet, opened in place */}
+      <ProposalDetail
+        proposal={selectedReview}
+        currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
+        open={selectedReview !== null}
+        onOpenChange={(o) => { if (!o) setSelectedReview(null); }}
+        onAction={handleReviewAction}
+        rulePaused={selectedReview ? isRulePaused(selectedReview) : undefined}
+        onPauseRule={(p) => { const r = ruleOf(p); if (r) storePauseRule(r.id); }}
+        onReviewRule={(p) => {
+          setSelectedReview(null);
+          openRuleDetail(p.rule?.id, navigate);
+        }}
+        onAlwaysHandle={(p) => {
+          setRuleDraft({
+            kind: "automation",
+            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            category: "bill",
+            agent: p.agent,
+            cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
+            allowlist: p.counterparty ? [p.counterparty] : [],
+          });
+          setSelectedReview(null);
+          navigate("/rules?create=1");
+        }}
+        onReportProblem={(p, report) => {
+          const r = ruleOf(p);
+          if (!r) return;
+          if (report.pause) {
+            storeReportProblem(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+            setSelectedReview(null);
+            openRuleDetail(r.id, navigate);
+          } else {
+            storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+          }
+        }}
       />
     </div>
   );

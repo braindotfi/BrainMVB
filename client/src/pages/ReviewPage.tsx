@@ -21,6 +21,7 @@ import {
   sendFeedback as storeSendFeedback,
   setRuleDraft,
 } from "@/lib/rulesStore";
+import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 
 /* ── Tabs (mirrors the Activity page's segmented control) ─────────────────── */
 type ReviewTab = "All" | "Needs Review" | "Approved Automatically";
@@ -241,15 +242,15 @@ export function ReviewPage() {
   const { intents, markDeclined } = useIntents();
   const [, navigate] = useLocation();
 
-  /* Status overrides keyed by proposal id. Every transition is user-driven —
-     no setTimeout / auto-settle anywhere. */
-  const [statuses, setStatuses] = useState<Record<string, ProposalStatus>>({});
+  /* Status overrides keyed by proposal id, held in the shared reviewStatusStore
+     so decisions made here AND on the Home "Brain Detected" widget stay in sync.
+     Every transition is user-driven — no setTimeout / auto-settle anywhere. */
+  const statuses = useReviewStatuses();
   const [active, setActive] = useState<Proposal | null>(null);
   const [activeTab, setActiveTab] = useState<ReviewTab>("Needs Review");
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
-  const setStatus = (id: string, status: ProposalStatus) =>
-    setStatuses((prev) => ({ ...prev, [id]: status }));
+  const setStatus = (id: string, status: ProposalStatus) => setReviewStatus(id, status);
 
   const pending = MOCK_PROPOSALS.filter((p) => statusOf(p) === "pending");
   const verifying = MOCK_PROPOSALS.filter((p) => statusOf(p) === "verifying");

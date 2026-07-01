@@ -144,10 +144,14 @@ Programmable neobank on Base L2.
   `ACCOUNT_SUMMARY` in `client/src/lib/mockProposals.ts`. ONE `ProposalDetail.tsx` renders all
   scenarios via conditional sections (chips, facts mono block, evidence grid, confidence bar,
   sweepMath, policy chip, verifyFirst, surface hint, JSON trace) — never per-agent JSX.
-- `ReviewPage.tsx` holds a `statuses` override map (keyed by proposal id). Handoff is fully
+- Review-status overrides live in a SHARED store `client/src/lib/reviewStatusStore.ts`
+  (`useSyncExternalStore`, same pattern as `rulesStore`): `useReviewStatuses()` +
+  `setReviewStatus(id, status)`. Both `ReviewPage.tsx` and HomePage's "Brain Detected" widget
+  read/write it, so a decision on either surface reflects on the other (SSOT). Handoff is fully
   user-driven — NO setTimeout/auto-advance: approve→`executing` (held row with manual Cancel→
   pending and Mark settled→executed), reject→`rejected`, postpone→`postponed`, verifyFirst→
   `verifying` (parked, still tappable). Settled items collapse into a "Settled today" card.
+  Store is module-global (not reset on logout, matching `rulesStore`/`intentsStore`).
 - Color discipline: `#d20344` ONLY for danger/alerts/reject; Approve uses purple `#7631ee`.
 - `ACCOUNT_SUMMARY.pendingAPTotal` (10,514) MUST equal the sum of the money-mover (AP)
   proposals (Con Edison 486 + Apex 1,450 + Bright Futures 3,200 + Comcast 1,228 + AWS 4,150).
