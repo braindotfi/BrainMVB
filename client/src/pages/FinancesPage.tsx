@@ -252,7 +252,7 @@ function summarizeIncome(
 const INCOME_FALLBACK =
   "About $18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.";
 
-const IncomeSummary = ({ format }: { format: (a: string | number) => string }) => {
+const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: txData } = useQuery<BrainTransactionsResponse>({
     queryKey: ["/api/brain/ledger/transactions"],
     retry: false,
@@ -263,6 +263,7 @@ const IncomeSummary = ({ format }: { format: (a: string | number) => string }) =
   });
 
   const s = txData?.transactions ? summarizeIncome(txData.transactions) : null;
+  const count = s ? s.count : 12; // 12 from INCOME_FALLBACK
   const text = (() => {
     if (!s) return INCOME_FALLBACK;
     const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
@@ -275,6 +276,10 @@ const IncomeSummary = ({ format }: { format: (a: string | number) => string }) =
     const tail = s.share >= 99 ? " — essentially all your revenue" : `, together about ${s.share}% of your revenue`;
     return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
   })();
+
+  useEffect(() => {
+    onCount?.(count);
+  }, [count, onCount]);
 
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
@@ -416,6 +421,7 @@ const LiabilitiesSummary = ({ format }: { format: (a: string | number) => string
 export function FinancesPage() {
   const { format } = useCurrency();
   const { user } = useAuth();
+  const [incomeCount, setIncomeCount] = useState<number>(12); // fallback from INCOME_FALLBACK
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT — the BFF mints it server-side.
@@ -582,9 +588,9 @@ export function FinancesPage() {
             {/* INCOME */}
             {activeTab === "Income" && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Income" />
+                <WidgetHeader title="Income" count={incomeCount} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  <IncomeSummary format={format} />
+                  <IncomeSummary format={format} onCount={setIncomeCount} />
                   <Divider />
                   <OverdueInvoicesBanner format={format} />
                 </div>
