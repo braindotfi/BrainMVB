@@ -379,7 +379,7 @@ function shortDate(iso?: string | null): string {
 const LIABILITIES_FALLBACK =
   "Nothing overdue. Your next bill is the Verizon phone bill for $189, due Friday. Brain is asking you about it on the home screen.";
 
-const LiabilitiesSummary = ({ format }: { format: (a: string | number) => string }) => {
+const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: invData } = useQuery<InvoicesLiteResponse>({
     queryKey: ["/api/brain/ledger/invoices"],
     retry: false,
@@ -390,6 +390,7 @@ const LiabilitiesSummary = ({ format }: { format: (a: string | number) => string
   });
 
   const ap = (invData?.invoices ?? []).filter((i) => i.metadata?.scenario === "ap" && i.status !== "paid");
+  const count = ap.length || 3; // 3 from LIABILITIES_FALLBACK
   const text = (() => {
     if (ap.length === 0) return LIABILITIES_FALLBACK;
     const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
@@ -409,6 +410,10 @@ const LiabilitiesSummary = ({ format }: { format: (a: string | number) => string
     return `${owe}${od}${nx} Brain can pay these from the Bills inbox above.`;
   })();
 
+  useEffect(() => {
+    onCount?.(count);
+  }, [count, onCount]);
+
   return (
     <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-normal leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
@@ -422,6 +427,7 @@ export function FinancesPage() {
   const { format } = useCurrency();
   const { user } = useAuth();
   const [incomeCount, setIncomeCount] = useState<number>(12); // fallback from INCOME_FALLBACK
+  const [liabilitiesCount, setLiabilitiesCount] = useState<number>(3); // fallback from LIABILITIES_FALLBACK
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT — the BFF mints it server-side.
@@ -603,9 +609,9 @@ export function FinancesPage() {
             {/* LIABILITIES */}
             {activeTab === "Liabilities" && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Liabilities" />
+                <WidgetHeader title="Liabilities" count={liabilitiesCount} />
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <LiabilitiesSummary format={format} />
+                  <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
                 </div>
               </div>
             )}
