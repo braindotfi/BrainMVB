@@ -446,10 +446,10 @@ export function FinancesPage() {
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header */}
-          <div className="flex flex-col items-start relative shrink-0 w-full">
+          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Finances</p>
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap">Here's your financial snapshot right now.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Updated 2 minutes ago...</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated 2 minutes ago...</p>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">

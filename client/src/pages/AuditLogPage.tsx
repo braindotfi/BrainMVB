@@ -70,10 +70,10 @@ export function AuditLogPage() {
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             {/* Header */}
             <div className="flex items-start justify-between w-full">
-              <div className="flex flex-col items-start relative shrink-0">
+              <div className="flex flex-col items-start gap-[4px] relative shrink-0">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
               </div>
               <button
                 type="button"

@@ -395,7 +395,7 @@ export function HomePage() {
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header */}
-          <div className="flex flex-col items-start relative shrink-0 w-full">
+          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
                 <span className="leading-[24px] text-[20px]">{greeting}, </span>

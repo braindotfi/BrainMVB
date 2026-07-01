@@ -604,9 +604,9 @@ export function RulesPage() {
           <div className="flex flex-col gap-[16px] items-start w-full">
             <div className="flex flex-col items-start gap-[4px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Rules</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Tell me how I should help you.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-                Grouped by what each rule does — what acts for you, what protects you, and what never changes.
+                Manage the rules that guide Brain's reviews, recommendations, and actions.
               </p>
             </div>
 

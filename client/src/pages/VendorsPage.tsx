@@ -143,13 +143,13 @@ export function VendorsPage() {
 
           {/* Header + tab bar */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex flex-col items-start relative shrink-0">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Trusted vendors</p>
+            <div className="flex flex-col items-start gap-[4px] relative shrink-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-                {MOCK_VENDORS.length} vendors in your network
+                The people and businesses you pay.
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
-                Trust is granted deliberately here — never from inside a rule.
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+                See vendor activity, payment history, risks, and recommendations.
               </p>
             </div>
 
