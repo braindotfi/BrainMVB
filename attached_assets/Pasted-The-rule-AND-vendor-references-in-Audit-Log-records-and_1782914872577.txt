@@ -1,0 +1,28 @@
+The rule AND vendor references in Audit Log records and in the "Linked" evidence sections
+aren't opening their detail views. Rules were fixed once before (see CLAUDE.md "Rule
+references") — treat that working pattern as the reference implementation and bring vendor and
+invoice links up to the SAME standard. DIAGNOSE first, report, then fix data, logic, or both.
+
+Work on a branch; git fetch/pull first. Update CLAUDE.md when done.
+
+STEP 1 — DIAGNOSE AND REPORT (do not fix yet). Print a findings report:
+
+A) COMPARE AGAINST THE KNOWN-GOOD RULE PATTERN. The rule links work via: canonical rulesStore,
+   a single openRuleDetail(id) resolver, linked refs by id (audit `linked[]` kind:"rule" →
+   refId; receipts embed the rule object), resolve-or-plain-text fallback, and a dev
+   consistency check. For VENDORS and INVOICES, confirm each of these exists and matches:
+   - Is there a canonical store (vendorsStore / invoicesStore) seeded from mock data?
+   - Is there a single resolver (openVendorDetail / openInvoiceDetail) that mirrors
+     openRuleDetail — same signature shape, same resolve-or-warn-or-plain-text behavior?
+   - Do the "Linked" rows actually CALL the resolver on tap (onClick present, right element,
+     not swallowed by a parent handler / stopPropagation)?
+   - Field-name check: audit `linked[]` entries — do kind:"vendor" and kind:"invoice" carry
+     the id in `refId` (same as kind:"rule"), or did a different field creep in (vendorId,
+     invoice_id, etc.)? Flag any drift. Confirm what each consumer READS vs what mock WRITES.
+
+B) ID CONSISTENCY (the most likely culprit — this is how rules broke before). List canonical
+   ids from each store: rulesStore, vendorsStore, invoicesStore. Then list EVERY reference to
+   each across all mock data (audit records' linked[], proposals/receipts, settled cards,
+   vendor.ruleIds, invoice.vendorId/proposalId). For each reference, state whether it EXACTLY
+   matches a canonical id. Flag every mismatch, every ref that resolves to nothing, and every
+   record that SHOULD carry a linked ref but has none
