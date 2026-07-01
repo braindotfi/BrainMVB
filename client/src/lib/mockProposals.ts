@@ -660,6 +660,61 @@ function settledTimeline(proposedAt: string, approvedAt: string, settledAt: stri
   ];
 }
 
+/* A human-approved, executed proposal — the settled counterpart of an item that
+   was escalated above threshold and signed off by a person (not a standing
+   rule). Renders in SettledRecordCard as "You approved · executed". */
+function settledApproved(p: {
+  id: string;
+  auditId: string;
+  agent: Proposal["agent"];
+  title: string;
+  counterparty: string;
+  amount: number;
+  pastTenseStatement: string;
+  settledMeta: string;
+  rowSubtitle: string;
+  rationale: string;
+  facts: Proposal["facts"];
+  timeline: Proposal["handoffTimeline"];
+}): Proposal {
+  return {
+    id: p.id,
+    auditId: p.auditId,
+    agent: p.agent,
+    surface: "business",
+    title: p.title,
+    rowSubtitle: p.rowSubtitle,
+    actionStatement: p.pastTenseStatement,
+    actionMeta: p.settledMeta,
+    executionLabel: "settled by execution service",
+    cancelDeadlineLabel: "already settled",
+    amount: p.amount,
+    counterparty: p.counterparty,
+    severity: "clean",
+    reasonChips: [],
+    rationale: p.rationale,
+    facts: p.facts,
+    evidence: [],
+    confidence: { score: 1, band: "high", caveat: "You reviewed and approved this before it settled." },
+    whatHappensNext: "Already settled — nothing further to do.",
+    risk: "",
+    policy: {
+      id: "manual.human_approval",
+      explanation: "Escalated above threshold and approved by a human before the execution service settled it.",
+      autoClearedOtherwise: false,
+    },
+    actions: {
+      approve: { label: "Approve" },
+      reject: { label: "Reject" },
+      postpone: { label: "Postpone" },
+    },
+    status: "executed",
+    pastTenseStatement: p.pastTenseStatement,
+    settledMeta: p.settledMeta,
+    handoffTimeline: p.timeline,
+  };
+}
+
 export const AUTO_HANDLED_PROPOSALS: Proposal[] = [
   autoHandled({
     id: "auto-conedison",
@@ -926,3 +981,106 @@ export const AUTO_HANDLED_PROPOSALS: Proposal[] = [
     timeline: settledTimeline("today 6:25 AM ET", "today 6:25 AM ET", "today 6:28 AM ET"),
   }),
 ];
+
+/* ── Settled records for the static Activity feed items ────────────────────────
+   The Adobe / Comcast / payroll / USDC rows in the Activity feed are settled
+   history, not pending decisions. Each carries the Proposal below so tapping the
+   row opens the SettledRecordCard (§4), reconciled by auditId with its twin in
+   mockAuditRecords.ts (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z). */
+export const ADOBE_SETTLED: Proposal = autoHandled({
+  id: "settled-adobe",
+  auditId: "AUD-4E2N",
+  agent: "invoice",
+  title: "Adobe Creative Cloud (team plan)",
+  counterparty: "Adobe",
+  amount: 540,
+  pastTenseStatement: "Paid Adobe $540",
+  settledMeta: "on card ••4821 · settled Jul 5, 9:14 AM ET · you set a rule that allows this",
+  rowSubtitle: "Adobe · settled 9:14 AM",
+  rationale:
+    "Your recurring Creative Cloud team subscription. Vendor and charge matched the prior month exactly, so your software-subscriptions rule cleared it without asking.",
+  clearedBecause: [
+    { label: "vendor", value: "Adobe · known SaaS" },
+    { label: "this charge", value: "$540" },
+    { label: "prior charge", value: "$540 · matched" },
+    { label: "under limit", value: "$540 / $600", severity: "clean" },
+    { label: "card on file", value: "unchanged" },
+  ],
+  rule: SAAS_RULE,
+  timeline: settledTimeline("Jul 5, 9:12 AM ET", "Jul 5, 9:13 AM ET", "Jul 5, 9:14 AM ET"),
+});
+
+export const COMCAST_SETTLED: Proposal = autoHandled({
+  id: "settled-comcast",
+  auditId: "AUD-1B3T",
+  agent: "invoice",
+  title: "Comcast Business Fiber",
+  counterparty: "Comcast Business",
+  amount: 240,
+  pastTenseStatement: "Paid Comcast $240",
+  settledMeta: "from Operating ••4821 · settled Jul 5, 6:46 AM ET · you set a rule that allows this",
+  rowSubtitle: "Comcast Business · settled 6:46 AM",
+  rationale:
+    "Your monthly business internet, flat-rate plan matching every prior month. Cleared under your utility-bills rule.",
+  clearedBecause: [
+    { label: "vendor", value: "Comcast Business · trusted" },
+    { label: "this invoice", value: "$240" },
+    { label: "plan rate", value: "$240 · matched" },
+    { label: "under limit", value: "$240 / $1,000", severity: "clean" },
+    { label: "bank details", value: "unchanged" },
+  ],
+  rule: UTILITY_RULE,
+  timeline: settledTimeline("Jul 5, 6:45 AM ET", "Jul 5, 6:45 AM ET", "Jul 5, 6:46 AM ET"),
+});
+
+export const PAYROLL_SETTLED: Proposal = settledApproved({
+  id: "settled-payroll",
+  auditId: "AUD-5J7Y",
+  agent: "close",
+  title: "Payroll run — J. Smith (Engineering)",
+  counterparty: "J. Smith (Engineering)",
+  amount: 5600,
+  pastTenseStatement: "Ran payroll for J. Smith (Engineering)",
+  settledMeta: "ACH to Wells Fargo · you approved Jul 2, 9:55 AM · settled Jul 2, 10:02 AM ET",
+  rowSubtitle: "J. Smith (Engineering) · settled 10:02 AM",
+  rationale:
+    "Scheduled engineering payroll run. It exceeded your auto-approval threshold, so Brain escalated it for your sign-off before the execution service sent the ACH.",
+  facts: [
+    { label: "employee", value: "J. Smith (Engineering)" },
+    { label: "amount", value: "$5,600" },
+    { label: "destination", value: "Wells Fargo" },
+    { label: "approval", value: "above threshold · human", severity: "info" },
+  ],
+  timeline: [
+    { label: "Close Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
+    { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
+    { label: "You approved", timestamp: "Jul 2, 9:55 AM ET", done: true },
+    { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "Brain never held the funds", done: true },
+  ],
+});
+
+export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
+  id: "settled-usdc",
+  auditId: "AUD-4M6Z",
+  agent: "cash",
+  title: "USDC moved to AAVE yield protocol",
+  counterparty: "AAVE v3",
+  amount: 3500,
+  pastTenseStatement: "Moved $3,500 USDC to AAVE v3",
+  settledMeta: "from Operating ••4821 · you approved Jul 4, 6:27 PM · settled Jul 4, 6:28 PM ET",
+  rowSubtitle: "AAVE v3 · settled 6:28 PM",
+  rationale:
+    "Your operating balance sat above the idle-cash threshold. Brain proposed moving the excess into AAVE v3 to earn yield; because it was above your sweep limit, it asked you first.",
+  facts: [
+    { label: "protocol", value: "AAVE v3" },
+    { label: "amount", value: "$3,500" },
+    { label: "current APY", value: "4.5%" },
+    { label: "approval", value: "above sweep limit · human", severity: "info" },
+  ],
+  timeline: [
+    { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", done: true },
+    { label: "Escalated to human — above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
+    { label: "You approved yield move", timestamp: "Jul 4, 6:27 PM ET", done: true },
+    { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
+  ],
+});

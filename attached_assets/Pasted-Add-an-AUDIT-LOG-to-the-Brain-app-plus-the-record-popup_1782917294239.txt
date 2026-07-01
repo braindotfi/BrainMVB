@@ -1,0 +1,184 @@
+Add an AUDIT LOG to the Brain app, plus the record popups that open from it and from
+approved items elsewhere. Reuse the existing app shell, purple/indigo tokens, rounded cards,
+row dividers, and monospace for amounts/ids/hashes/dates. #D20344 stays reserved for
+alerts/flagged/destructive only. Match the existing components — do not invent a new look.
+ONE exception to the palette: the ACTIVE audit-log tab uses ORANGE (use the app's existing
+orange token if one exists, else #F59E0B). Orange is scoped ONLY to the active tab indicator
+— do not adopt it anywhere else.
+
+=========================================================================
+1) NAVIGATION
+=========================================================================
+- Add an "Audit Log" item to the LEFT MAIN MENU, in the "Other" section, positioned
+  DIRECTLY ABOVE the Settings button. Use a ledger/shield-style icon consistent with the
+  existing nav icons (e.g. a document-with-check or shield-check).
+- It routes to a new full page (AuditLogPage), not a modal.
+
+=========================================================================
+2) AUDIT LOG PAGE (styled like the Review page)
+=========================================================================
+Header block, same visual treatment as the review page header:
+- Kicker (small, muted, uppercase): "Your Audit Log"
+- Title (large display): "Here's your decision history with Brain."
+- Text (muted subhead): "Every decision is recorded, anchored, and verifiable."
+- An "Export" affordance on the right of the header (download icon + "Export").
+
+TABS (horizontal, below the header):
+- Tabs: Approvals · Auto-Approved · Rule Changes · Trust Changes · Flagged · Last 30 Days
+- The ACTIVE tab is ORANGE (filled or underline indicator in orange, orange text);
+  inactive tabs are muted/neutral. Default active tab = "Approvals".
+- Tabs filter the record list below purely from data (by record eventType / date window).
+  "Last 30 Days" is a date-window filter, not an event type.
+
+RECORD LIST (register rows — same row styling as the review queue):
+Each row shows:
+- An event-type chip (small, uppercase): APPROVED / AUTO-APPROVED / RULE CHANGE /
+  TRUST GRANTED / TRUST REVOKED / FLAGGED.
+- A plain-language summary line (e.g. "Office lease payment approved", "Con Edison cleared
+  by rule", "Bank details changed · payment held for review").
+- A monospace subtitle with the key facts: amount (if any) · actor (email or "system") ·
+  audit id (e.g. "$8,400 · sarah@meridian · AUD-7J9X").
+- On the right: an ANCHOR STATUS chip ("Anchored" success-tinted, or "Pending" muted) and a
+  chevron.
+- FLAGGED rows carry a #D20344 left-accent border so problems are findable without making
+  the log alarmist.
+- Footer caption under the list: "A governance record — every entry is anchored and
+  independently verifiable."
+
+Tapping any row opens the appropriate record popup (see §3/§4).
+
+=========================================================================
+3) CANONICAL AUDIT RECORD POPUP (opens from audit-log rows)
+=========================================================================
+Read-only, canonical immutable view. Same modal/sheet shell as other detail popups.
+Top to bottom:
+- Header: event-type chip (FLAGGED chip tinted #D20344; others neutral), audit id in mono
+  (muted), close X.
+- Title: plain-language what happened (e.g. "Payment held — bank details changed").
+- Meta: counterparty · amount (mono) · timestamp.
+- "Decision lifecycle": a vertical timeline with check/alert icons and mono timestamps —
+  e.g. "Invoice Agent proposed payment (system)" → "Escalated to human — routing number
+  changed (policy/ap.fraud.v2)". Steps come from the record's lifecycle data.
+- "Linked": navigable rows to related entities (Vendor, Proposal, Rule) each opening that
+  entity.
+- ANCHOR PROOF section at the very bottom (deepest section — never above the decision
+  content): use the shared AnchorStatus component in FULL/PROOF mode:
+    • shield icon + "Anchored · tamper-evident" (or the pending state, see shared component)
+    • plain-language guarantee: "This record is anchored on Base and can't be altered.
+      Confirm it independently, without trusting Brain."
+    • a mono block: merkle root, base tx, block (truncated hashes e.g. 0x9f3a…c41e)
+    • a "Verify on-chain" button (purple accent) — enabled only when anchored.
+
+=========================================================================
+4) SETTLED "APPROVED RECORD" CARD (the operational view)
+=========================================================================
+This is the post-approval/settled version of a proposal detail — it appears after tapping an
+APPROVED or EXECUTED item in the activity/review flow (not the pending proposal, the settled
+one). Same layout as the pending proposal detail, with these differences:
+- Status pill: GREEN "You approved · executed" (success tokens) instead of a review flag.
+- Headline in past tense once executed: "Paid Amazon Web Services $4,150" (past-tense
+  money-mover wording is correct here because it happened), with a meta line recording the
+  lifecycle: "from Operating ••4821 · you approved Jul 3 · settled Jul 7, 9:02 AM ET".
+- The reasoning body (why / evidence / confidence / what-happened / policy) remains available
+  but may render condensed; keep the Technical-detail disclosure with the reasoning trace.
+- NO decision buttons (no Reject/Postpone/Approve/Always-handle) — the decision is done.
+- ANCHOR STATUS LINE near the bottom: use the shared AnchorStatus component in STATUS mode
+  (NOT the full hash block):
+    • quiet shield + "Anchored · tamper-evident" (or "Recorded · anchoring in next batch"
+      when still executing), a one-line guarantee, an inline "Verify" link.
+    • a "View full record in Audit Log" button that DEEP-LINKS to the Audit Log and opens
+      that record's canonical popup (§3).
+- Rule: STATUS here, PROOF there. The settled card shows anchor STATUS and links out; the
+  full merkle/tx/block proof lives only in the canonical audit record.
+
+=========================================================================
+5) SHARED AnchorStatus COMPONENT (keeps every surface consistent)
+=========================================================================
+One component, two modes, driven by an anchorStatus field:
+- mode="status" (operational surfaces: settled Approved Record card, auto-handled receipt,
+  proposal detail): shield + short label + one-line guarantee + inline "Verify" + optional
+  "View full record" link. No hash block.
+- mode="proof" (canonical audit record, rule audit trail): the above PLUS the mono
+  merkle/tx/block block and the prominent "Verify on-chain" button.
+States (honest, batched-anchoring progression):
+    "pending_next_batch" → clock icon, "Recorded · anchoring in next batch", Verify DISABLED,
+       hashes shown as "pending next batch".
+    "anchored" → shield-check (success tint), "Anchored · tamper-evident", Verify ENABLED,
+       real (truncated) hashes.
+Never claim "anchored" for a record still pending its batch. Verify is disabled until
+anchored.
+
+=========================================================================
+DATA MODEL (extend existing types)
+=========================================================================
+type AuditEventType = "approved" | "auto_approved" | "rule_change" | "trust_granted"
+  | "trust_revoked" | "flagged";
+type AnchorStatus = "pending_next_batch" | "anchored";
+
+interface AnchorProof {
+  status: AnchorStatus;
+  auditId: string;
+  merkleRoot?: string;   // present when anchored
+  baseTx?: string;       // present when anchored
+  block?: number;
+  anchoredAtLabel?: string;
+  verifyHref?: string;
+}
+interface LifecycleStep { label: string; timestamp: string; note?: string;
+  kind: "ok" | "alert"; }
+interface AuditRecord {
+  id: string;              // "AUD-7K2M"
+  eventType: AuditEventType;
+  summary: string;         // plain-language
+  counterparty?: string;
+  amount?: number;
+  actor: string;           // "sarah@meridian" | "system"
+  occurredAtLabel: string;
+  lifecycle: LifecycleStep[];
+  linked: { kind: "vendor"|"proposal"|"rule"; label: string; refId: string }[];
+  anchor: AnchorProof;
+  // link back to an operational item, if this record is an approved/executed payment:
+  proposalId?: string;
+}
+- Reuse existing Proposal for the settled Approved Record card; add `anchor: AnchorProof`
+  and a settled/executed status so it can render §4.
+
+=========================================================================
+WIRING
+=========================================================================
+- Left-nav "Audit Log" (above Settings) → AuditLogPage.
+- Tabs filter the AuditRecord list by eventType / date window; active tab orange.
+- Audit-log row tap → canonical Audit Record popup (§3).
+- Approved/executed item tapped in the review/activity flow → settled Approved Record card
+  (§4); its "View full record" deep-links into the Audit Log canonical popup for the same
+  record (match by proposalId ↔ AuditRecord).
+- The AnchorStatus component is the single source for anchor UI across §3, §4, the
+  auto-handled receipt, and the rule audit trail.
+
+=========================================================================
+CONSTRAINTS
+=========================================================================
+- Consistent with existing shell/tokens/spacing; #D20344 only for flagged/alerts/destructive;
+  purple is the affirmative/interactive accent; ORANGE only for the active tab.
+- Lists/tabs render purely from data; empty tabs show a simple empty state.
+- Never overclaim anchoring; honor the pending→anchored progression.
+- Every state change user-initiated; no setTimeout auto-advance/auto-anchor. If you include a
+  demo control to move records from pending→anchored, make it a manual button, not a timer.
+- Amounts/ids/hashes/dates in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed.
+
+=========================================================================
+MOCK DATA
+=========================================================================
+Add mockAuditRecords.ts with ~10-14 records spanning every eventType and both anchor states
+(most anchored, 1-2 pending_next_batch), each with a lifecycle, linked entities, and anchor
+proof. Include the recurring demo items so surfaces reconcile: Bright Futures flagged
+(bank-detail change, AUD-7K2M), Con Edison auto-approved by rule (AUD-3F9P), the AWS approved
+payment (AUD-3308FE) linked via proposalId to the settled Approved Record card, an office
+lease approval, a trust-granted event, and a rule-change event. Truncate hashes realistically
+(0x9f3a…c41e).
+
+Return: the nav update, AuditLogPage (header + orange tabs + register rows), the canonical
+AuditRecord popup, the settled Approved Record card, the shared AnchorStatus component, the
+extended types, and mockAuditRecords.ts — wired so audit-log rows open the canonical record
+and approved items open the settled card that deep-links back into the log.

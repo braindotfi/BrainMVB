@@ -110,7 +110,7 @@ const ActivityItem = ({
   onSelect?: (item: ActivityItemData) => void;
 }) => {
   const Icon = ICON_MAP[item.type];
-  const clickable = Boolean(item.linkTo);
+  const clickable = Boolean(item.linkTo || item.proposal);
   return (
     <div
       ref={rowRef}

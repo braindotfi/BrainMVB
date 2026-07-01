@@ -1,4 +1,11 @@
-import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "@/lib/mockProposals";
+import {
+  AUTO_HANDLED_PROPOSALS,
+  MOCK_PROPOSALS,
+  ADOBE_SETTLED,
+  COMCAST_SETTLED,
+  PAYROLL_SETTLED,
+  USDC_SWEEP_SETTLED,
+} from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
 
 /* ── Shared source of truth for the Activity feed + Review queue ───────────────
@@ -50,13 +57,13 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
 }
 
 export const TODAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM" },
-  { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM" },
+  { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM", proposal: ADOBE_SETTLED },
+  { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM", proposal: COMCAST_SETTLED },
 ];
 
 export const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM" },
-  { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
+  { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM", proposal: USDC_SWEEP_SETTLED },
+  { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM", proposal: PAYROLL_SETTLED },
 ];
 
 /** Activity types that belong under the Activity page's "Brain Did" tab. */
