@@ -38,12 +38,17 @@ export function AuditRecordPopup({
     // would REPLACE the deep-link we just pushed and dump the user back on the
     // audit log. The route change unmounts this page (and dialog) on its own.
     // The invoice branch opens a stacked viewer on THIS page, so it also stays.
+    //
+    // For vendor/proposal we pass a `returnTo` so closing that detail returns
+    // to THIS exact audit record popup (re-opened via ?record=), matching the
+    // stacked invoice-viewer experience.
+    const returnTo = `/audit-log?record=${record.id}`;
     if (link.kind === "rule") {
       openRuleDetail(link.refId, navigate);
     } else if (link.kind === "proposal") {
-      openProposalDetail(link.refId, navigate);
+      openProposalDetail(link.refId, navigate, returnTo);
     } else if (link.kind === "vendor") {
-      openVendorDetail(link.refId, navigate);
+      openVendorDetail(link.refId, navigate, returnTo);
     } else if (link.kind === "invoice") {
       openInvoiceDetail(link.refId, (inv) => {
         setViewingInvoice(inv);

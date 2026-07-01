@@ -104,7 +104,13 @@ export function VendorsPage() {
 
   const handleCloseDetail = () => {
     setActiveVendor(null);
-    navigate("/vendors", { replace: true });
+    // If we arrived here via a deep-link that carried a `?from=` return target
+    // (e.g. from the Audit Log record popup), go back there so that surface
+    // re-opens — mirroring the stacked invoice-viewer experience. Otherwise
+    // just drop the ?vendor= param.
+    const params = new URLSearchParams(search);
+    const from = params.get("from");
+    navigate(from ?? "/vendors", { replace: true });
   };
 
   const handleOpenVendor = (vendor: Vendor) => {

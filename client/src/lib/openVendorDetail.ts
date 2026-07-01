@@ -20,12 +20,17 @@ export function resolveVendor(
 export function openVendorDetail(
   vendorId: string | null | undefined,
   navigate: (to: string) => void,
+  returnTo?: string,
 ): boolean {
   const vendor = resolveVendor(vendorId);
   if (!vendor) {
     console.warn(`openVendorDetail: no vendor found for id '${vendorId ?? ""}'`);
     return false;
   }
-  navigate(`/vendors?vendor=${vendor.id}`);
+  // `returnTo` lets a caller (e.g. the Audit Log record popup) request that
+  // closing the vendor detail returns to where it came from, mirroring the
+  // stacked invoice-viewer experience. VendorsPage reads `?from=` on close.
+  const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
+  navigate(`/vendors?vendor=${vendor.id}${suffix}`);
   return true;
 }

@@ -248,6 +248,10 @@ export function ReviewPage() {
      Every transition is user-driven — no setTimeout / auto-settle anywhere. */
   const statuses = useReviewStatuses();
   const [active, setActive] = useState<Proposal | null>(null);
+  // When a proposal is opened via a deep-link that carried a `?from=` return
+  // target (e.g. from the Audit Log record popup), dismissing the sheet returns
+  // there so that surface re-opens — mirroring the stacked invoice experience.
+  const [returnTo, setReturnTo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ReviewTab>("Needs Review");
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
@@ -270,6 +274,7 @@ export function ReviewPage() {
             : "verifying";
     setStatus(active.id, next);
     setActive(null); // sheet closes on any action
+    setReturnTo(null); // an action isn't a "return" close — drop any stale target
   };
 
   /* Live brain-core PaymentIntents flagged by the §6 gate. */
@@ -335,6 +340,9 @@ export function ReviewPage() {
     if (receiptId) {
       const target = autoHandled.find((p) => p.id === receiptId);
       if (target) {
+        // Reset the return target from this deep-link's own `?from=` (usually
+        // absent → null), so a stale target from a prior open can't linger.
+        setReturnTo(params.get("from"));
         setActive(target);
         navigate("/review", { replace: true });
       }
@@ -344,12 +352,33 @@ export function ReviewPage() {
     if (proposalId) {
       const target = resolveProposal(proposalId);
       if (target) {
+        // Capture any `?from=` return target BEFORE we strip the query, so
+        // dismissing the sheet can navigate back there (re-opening that surface).
+        setReturnTo(params.get("from"));
         setActive(target);
         navigate("/review", { replace: true });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  /* Close the proposal sheet. If it was opened from another surface (carrying a
+     `?from=` return target), navigate back there so it re-opens. */
+  const dismissDetail = () => {
+    setActive(null);
+    if (returnTo) {
+      const dest = returnTo;
+      setReturnTo(null);
+      navigate(dest, { replace: true });
+    }
+  };
+
+  /* Open a proposal from within this page (row click) — clears any stale return
+     target so a later dismiss doesn't wrongly navigate away. */
+  const openLocal = (p: Proposal) => {
+    setReturnTo(null);
+    setActive(p);
+  };
 
   /* Tab visibility — "All" shows everything; the other tabs filter the view. */
   const showNeedsReview = activeTab === "All" || activeTab === "Needs Review";
@@ -450,7 +479,7 @@ export function ReviewPage() {
 
                 {queue.map((p, idx) => (
                   <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                    <ProposalRow proposal={p} status={statusOf(p)} onClick={() => setActive(p)} format={format} />
+                    <ProposalRow proposal={p} status={statusOf(p)} onClick={() => openLocal(p)} format={format} />
                     {(() => {
                       const related = relatedRuleFor(p);
                       if (!related) return null;
@@ -529,7 +558,7 @@ export function ReviewPage() {
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                   {autoHandled.map((p, idx) => (
                     <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                      <AutoHandledRow proposal={p} onClick={() => setActive(p)} format={format} />
+                      <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
                       {idx < autoHandled.length - 1 && <Divider />}
                     </div>
                   ))}
@@ -549,7 +578,7 @@ export function ReviewPage() {
         proposal={active}
         currentStatus={active ? statusOf(active) : undefined}
         open={active !== null}
-        onOpenChange={(o) => { if (!o) setActive(null); }}
+        onOpenChange={(o) => { if (!o) dismissDetail(); }}
         onAction={handleAction}
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}

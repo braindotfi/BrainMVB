@@ -46,6 +46,7 @@ export function resolveProposal(
 export function openProposalDetail(
   proposalId: string | null | undefined,
   navigate: (to: string) => void,
+  returnTo?: string,
 ): boolean {
   const proposal = resolveProposal(proposalId);
   if (!proposal) {
@@ -54,6 +55,10 @@ export function openProposalDetail(
     );
     return false;
   }
-  navigate(`/review?proposal=${proposal.id}`);
+  // `returnTo` lets a caller (e.g. the Audit Log record popup) request that
+  // closing the proposal sheet returns to where it came from, mirroring the
+  // stacked invoice-viewer experience. ReviewPage reads `?from=` on open.
+  const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
+  navigate(`/review?proposal=${proposal.id}${suffix}`);
   return true;
 }
