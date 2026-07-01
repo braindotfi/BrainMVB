@@ -22,8 +22,7 @@ RuleDetail when tapped. They all go through one helper and one canonical store.
   - Receipts embed the whole rule object (`proposal.rule`); consumers read
     `proposal.rule.id`.
   - Audit records reference by id: `linked[]` entries with `kind:"rule"` carry the
-    id in `refId` (vendors use `kind:"vendor"` and render as plain text — no vendor
-    page exists yet).
+    id in `refId`.
   - There is **no** `ruleId`/`rule_id` field for RuleDetail refs; don't introduce
     naming drift. (`BrainBillsInbox`'s `rule_id` is the separate brain-core bills
     payload — unrelated.)
@@ -32,16 +31,66 @@ RuleDetail when tapped. They all go through one helper and one canonical store.
   safety net (e.g. a rule deleted via `deleteRule`, then an old receipt is opened) —
   **shipped mock data must have zero dangling refs.**
 
-### Dev guards (two tiers)
+## Vendor + invoice references (same contract, different stores)
+
+Vendors and invoices follow the **identical** pattern as rules — referenced by id,
+resolved via their own `openXDetail` helper against a canonical store, with a
+resolve-or-plain-text fallback:
+- **Vendors** — canonical store `MOCK_VENDORS` (`mockVendors.ts`). Helper
+  `openVendorDetail.ts`: `resolveVendor(id)` decides tappable-vs-plain;
+  `openVendorDetail(id, navigate)` pushes `/vendors?vendor=<id>` (VendorsPage reads
+  `?vendor=` via `useSearch` and auto-opens the detail). Referenced by `linked[]`
+  `kind:"vendor"` (`refId`) **and** by `invoice.vendorId`.
+- **Invoices** — canonical store `MOCK_INVOICES` (`mockInvoices.ts`). Helper
+  `openInvoiceDetail.ts`: `resolveInvoice(id)` decides tappable-vs-plain;
+  `openInvoiceDetail(id, setOpen)` opens `InvoiceViewerPopup` (setter, not navigate —
+  by design, so it stacks over the audit popup). Referenced by `linked[]`
+  `kind:"invoice"` (`refId`) **and** by `proposal.invoiceId`.
+- **A vendor's `history` must reconcile with its referenced invoices/payments** — a
+  vendor with a linked paid invoice must have `paymentCount ≥ 1` and
+  `totalPaid/avgAmount/lastPaidLabel` consistent with the referenced amounts/dates;
+  `trustStatus` must match how its records actually behaved (a payment human-approved
+  above the auto-pay limit is NOT "trusted"; a single recent payment reads as the
+  "new" tier). No stubs, no contradictory tenure.
+
+### NON-vendor counterparties are NOT vendor links
+Payroll employees, DeFi protocols, and internal accounts are **not** in the
+trust/allowlist model — forcing them into `MOCK_VENDORS` would resolve-but-lie. They
+use accurate `linked[]` kinds instead (`kind:"employee"`, `"protocol"`, `"ledger"` in
+`LinkedEntityKind`) and render as plain, non-tappable text with **no** `(… unavailable)`
+suffix (they were never meant to resolve). Never label them `kind:"vendor"`.
+
+### Dev guards — unified, resolution AND coherence for all three entity types
 `client/src/lib/ruleConsistencyCheck.ts` runs on dev boot (imported in `main.tsx`,
-guarded by `import.meta.env.DEV`). It never throws; it only `console.error`s.
+guarded by `import.meta.env.DEV`). It never throws; it only `console.error`s. It now
+covers **rules, vendors, and invoices** — resolution guards run first, coherence
+guards second. Extend this one module; **don't fork** a parallel checker.
 
-1. **`checkRuleReferences()`** — resolution guard. Collects every rule ref from
-   `MOCK_AUDIT_RECORDS` + `AUTO_HANDLED_PROPOSALS` and asserts each resolves via
-   `getRule`. Catches bad ids like `cleaning`/`contractor` that don't exist in the
-   store. Logs: `[rule-consistency] OK ...` or a list of unresolved `source → 'id'`.
+**Resolution guards** (does every referenced id point at a real store entity?):
 
-2. **`checkSemanticAuditRecords()`** — narrative guard. Asserts that the mock audit
+1. **`checkRuleReferences()`** — every rule ref from `MOCK_AUDIT_RECORDS` +
+   `AUTO_HANDLED_PROPOSALS` resolves via `getRule`. Logs `[rule-consistency] OK ...`.
+
+2. **`checkVendorReferences()`** — every `kind:"vendor"` linked ref + every
+   `invoice.vendorId` resolves via `resolveVendor`, and every `vendor.ruleIds`
+   resolves via `getRule` (the reverse edge). This is the guard whose ABSENCE let the
+   vendor-id drift (`aws`/`adobe`/`comcast`/`bright-futures`) ship silently. Logs
+   `[vendor-consistency] OK ...`.
+
+3. **`checkInvoiceReferences()`** — every `kind:"invoice"` linked ref + every
+   `proposal.invoiceId` (across `MOCK_PROPOSALS` + `AUTO_HANDLED_PROPOSALS`) resolves
+   via `resolveInvoice`. Logs `[invoice-consistency] OK ...`.
+
+**Coherence guards** (does a *resolved* ref also tell the truth? — this is the gap
+that let rules break before):
+
+4. **`checkReferenceCoherence()`** — for each audit record: a linked invoice's
+   `total` == the record's `amount`; a linked invoice's `vendorId` == the record's
+   linked vendor; every `kind:"vendor"` ref points at an ACTUAL vendor (catches the
+   `j-smith`/`aave` misfiling class); and a vendor with a linked PAID invoice is not
+   contradicted by zero payment history. Logs `[coherence] OK ...`.
+
+5. **`checkSemanticAuditRecords()`** — narrative guard. Asserts that the mock audit
    records tell a consistent story:
    - An **untrusted vendor** (listed in `UNTRUSTED_VENDORS`) must never have an
      `auto_approved` audit record — they're either flagged for human review or held

@@ -28,7 +28,19 @@ export interface LifecycleStep {
   kind: "ok" | "alert";
 }
 
-export type LinkedEntityKind = "vendor" | "proposal" | "rule" | "invoice";
+/* "vendor" | "rule" | "invoice" resolve against their canonical stores and open a
+   detail surface. "proposal" deep-links to /review. "employee" | "protocol" |
+   "ledger" are NON-VENDOR counterparties (payroll employees, DeFi protocols,
+   internal accounts) that are NOT in the trust/allowlist model — they render as
+   accurate plain, non-tappable text with no detail surface. */
+export type LinkedEntityKind =
+  | "vendor"
+  | "proposal"
+  | "rule"
+  | "invoice"
+  | "employee"
+  | "protocol"
+  | "ledger";
 
 export interface LinkedEntity {
   kind: LinkedEntityKind;

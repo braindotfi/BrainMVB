@@ -1,0 +1,71 @@
+Diagnosis accepted (STEP 1 report). Cause is mock-data ID mismatch, not logic. Apply the fix
+on a branch; git fetch/pull first; update CLAUDE.md + replit.md when done.
+
+FIX 1 — RECONCILE VENDOR IDS so every kind:"vendor" linked ref and every invoice.vendorId
+resolves to a canonical MOCK_VENDORS id:
+- Fix slug drift: "bright-futures" → "brightfutures" in mockAuditRecords (AUD-7K2M, AUD-7N2S)
+  AND in invoice BFS-0426's vendorId.
+- Add the missing REAL vendors to MOCK_VENDORS with sensible trustStatus/history so they're
+  coherent, not stubs: aws (Amazon Web Services), adobe, comcast, brookside. Fix invoice
+  AWS-2026-07 vendorId → "aws".
+- Repoint every remaining dangling kind:"vendor" ref to the correct canonical id.
+
+FIX 2 — NON-VENDOR PARTIES (the "open question"): choose option (a) AND correct their kind.
+These are NOT vendors and must not be forced into the vendor catalogue (a payroll employee or
+DeFi protocol in the trust/allowlist model is incoherent — resolves-but-lies):
+- j-smith (payroll employee), aave (DeFi protocol), general ledger (internal account): do NOT
+  create vendor entries. Change their linked[] entry `kind` away from "vendor" to an accurate
+  kind (e.g. "employee", "protocol"/"counterparty", "ledger") that renders as plain,
+  non-tappable text with no detail surface. The point is correctness of label, not
+  tappability. If a simple accurate kind isn't worth adding, drop the misfiled vendor link
+  entirely — but do not leave them labeled "vendor".
+
+FIX 3 — LATENT invoice.vendorId DRIFT: fix all invoice.vendorId to canonical ids now (aws,
+brightfutures, conedison) even though nothing renders that link yet, so the invoice→vendor row
+resolves the moment it's added.
+
+FIX 4 — NEW VENDORS MUST RECONCILE WITH THEIR EXISTING INVOICES/PAYMENTS (no stubs): each newly
+added vendor (aws, adobe, comcast, brookside) must have a history that is CONSISTENT with the
+invoices, proposals, and audit records that reference it — not empty or placeholder data.
+Specifically:
+- If a vendor has a linked invoice/payment (e.g. aws ↔ AWS-2026-07 $4,150; the AUD-3308FE
+  approved+executed record), its history.paymentCount ≥ 1, and history.totalPaid, avgAmount,
+  and lastPaidLabel are consistent with those referenced amounts/dates (e.g. avgAmount and
+  totalPaid reflect the $4,150 invoice; lastPaidLabel aligns with the Jul 7 settlement).
+- payeeAccountLast4 matches the account on the vendor's linked invoice/payment where one
+  exists.
+- trustStatus is coherent with the story: a vendor whose payment was human-approved above the
+  auto-pay limit (aws) should NOT be marked "trusted" as if it were auto-cleared unless that's
+  intended; pick the status that matches how its referenced records actually behaved.
+- A vendor referenced only by a single recent payment should read like the "new" tier, not a
+  long-tenured trusted vendor. Match the tier to the evidence.
+Do not invent contradictory history (e.g. "trusted since January, 11 payments" for a vendor
+whose only referenced record is one July invoice).
+
+FIX 5 — UNIFIED GUARD (extend, don't fork; mirror checkRuleReferences). Add vendor + invoice
+coverage to the boot-time dev guard so drift can never ship silently again. Assert BOTH:
+- RESOLUTION: every kind:"vendor"/"invoice"/"rule" linked ref, every invoice.vendorId, every
+  proposal.invoiceId, and every vendor.ruleIds resolves to a real store entity.
+- COHERENCE (not just resolution — this is the gap that let rules break before): a linked
+  invoice's amount == the linking record's amount; a linked invoice's vendorId == the record's
+  vendor; no auto_approved audit record for an under_review vendor; every kind:"vendor" ref
+  points at an actual vendor (catch the j-smith/aave misfiling class); and a vendor's
+  history.paymentCount/totalPaid is not contradicted by its referenced invoices (flag a vendor
+  with a linked paid invoice but zero payment history).
+Log loudly in dev (console.error listing "source → 'id'" or "source → mismatch"); never throw;
+run in main.tsx alongside the rule guards.
+
+VERIFY END TO END — list each: audit record → Linked Rule/Vendor/Invoice each opens the correct
+detail; AUD-3308FE links invoice AWS-2026-07 ($4,150) + vendor Amazon Web Services with amounts
+matching AND the aws vendor's history reflecting that payment; Bright Futures resolves and reads
+under_review/held everywhere; the non-vendor rows render as accurate plain text, not "vendor
+unavailable".
+
+CLAUDE.md — extend the references contract to vendors + invoices (referenced by id, resolved via
+their openXDetail against the canonical store, resolve-or-plain-text fallback); note the unified
+guard now covers resolution AND coherence for all three entity types; note that non-vendor
+counterparties (employees, protocols, ledger) are NOT vendor links; note that a vendor's history
+must reconcile with its referenced invoices/payments.
+
+Return: fixes applied, the unified guard, the end-to-end verification, and the CLAUDE.md +
+replit.md updates.

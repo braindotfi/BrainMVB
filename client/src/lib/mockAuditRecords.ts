@@ -91,7 +91,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Payment held pending verification", timestamp: "Jul 5, 2:11 PM ET", kind: "alert" },
     ],
     linked: [
-      { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
+      { kind: "vendor", label: "Bright Futures Studio", refId: "brightfutures" },
       { kind: "proposal", label: "Bright Futures payment · Jul 5", refId: "prop-bankchange" },
       { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
     ],
@@ -272,7 +272,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", kind: "ok" },
     ],
     linked: [
-      { kind: "vendor", label: "J. Smith (Engineering)", refId: "j-smith" },
+      { kind: "employee", label: "J. Smith (Engineering)", refId: "j-smith" },
     ],
     anchor: {
       status: "pending_next_batch",
@@ -388,7 +388,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", kind: "ok" },
     ],
     linked: [
-      { kind: "vendor", label: "AAVE v3", refId: "aave" },
+      { kind: "protocol", label: "AAVE v3", refId: "aave" },
     ],
     anchor: {
       status: "anchored",
@@ -423,7 +423,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Payment held pending verification", timestamp: "Jul 6, 8:15 AM ET", kind: "alert" },
     ],
     linked: [
-      { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
+      { kind: "vendor", label: "Bright Futures Studio", refId: "brightfutures" },
       { kind: "proposal", label: "Bright Futures payment · Jul 6", refId: "prop-bankchange" },
       { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
     ],

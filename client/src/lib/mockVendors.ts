@@ -138,4 +138,126 @@ export const MOCK_VENDORS: Vendor[] = [
     eligibleForTrust: false,
     ruleIds: [],
   },
+
+  /* ── Referenced by audit records / invoices / proposals ──────────────────
+     Each history below is reconciled with the record(s) that reference it —
+     amounts, dates, tier, and rule membership all match how those records
+     actually behaved. NOT stubs.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* aws — one human-approved payment above the auto-pay limit (AUD-3308FE,
+     $4,150, settled Jul 7; invoice AWS-2026-07). Single recent payment ⇒ "new"
+     tier; it required human approval precisely because it is not yet trusted. */
+  {
+    id: "aws",
+    name: "Amazon Web Services",
+    category: "Cloud Infrastructure",
+    trustStatus: "new",
+    payeeAccountLast4: "9021",
+    history: {
+      paymentCount: 1,
+      totalPaid: 4150,
+      firstPaidLabel: "Jul 7, 2026",
+      lastPaidLabel: "Jul 7, 2026",
+      avgAmount: 4150,
+      flagCount: 0,
+    },
+    flags: [],
+    eligibleForTrust: false,
+    ruleIds: [],
+  },
+
+  /* adobe — auto-cleared SaaS subscription (AUD-4E2N, $540, Jul 5) by the
+     "SaaS Subscriptions" rule ⇒ trusted + on the saas allowlist. Recurring
+     monthly history at the referenced $540. */
+  {
+    id: "adobe",
+    name: "Adobe",
+    category: "Software",
+    trustStatus: "trusted",
+    payeeAccountLast4: "7745",
+    history: {
+      paymentCount: 7,
+      totalPaid: 3780,
+      firstPaidLabel: "Jan 2026",
+      lastPaidLabel: "Jul 5, 2026",
+      avgAmount: 540,
+      flagCount: 0,
+    },
+    flags: [],
+    trustGrantedLabel:
+      "You trusted this vendor Jan 8 · 7 payments since, none flagged",
+    ruleIds: ["saas"],
+    eligibleForTrust: false,
+  },
+
+  /* comcast — auto-cleared utility bill (AUD-1B3T, $240, Jul 5) by the
+     "Utility Bills" rule ⇒ trusted + on the utility allowlist. Recurring
+     monthly history at the referenced $240. */
+  {
+    id: "comcast",
+    name: "Comcast Business",
+    category: "Utilities",
+    trustStatus: "trusted",
+    payeeAccountLast4: "3120",
+    history: {
+      paymentCount: 6,
+      totalPaid: 1440,
+      firstPaidLabel: "Feb 2026",
+      lastPaidLabel: "Jul 5, 2026",
+      avgAmount: 240,
+      flagCount: 0,
+    },
+    flags: [],
+    trustGrantedLabel:
+      "You trusted this vendor Feb 14 · 6 payments since, none flagged",
+    ruleIds: ["utility"],
+    eligibleForTrust: false,
+  },
+
+  /* brookside — recurring office lease, human-approved above the auto-pay
+     limit each cycle (AUD-8A1R, $8,400, Jul 1). Established but not auto-clear
+     ⇒ "known" tier (large amounts always escalate to human review). */
+  {
+    id: "brookside",
+    name: "Brookside Commercial Properties",
+    category: "Real Estate",
+    trustStatus: "known",
+    payeeAccountLast4: "5540",
+    history: {
+      paymentCount: 5,
+      totalPaid: 42000,
+      firstPaidLabel: "Mar 2026",
+      lastPaidLabel: "Jul 1, 2026",
+      avgAmount: 8400,
+      flagCount: 0,
+    },
+    flags: [],
+    eligibleForTrust: false,
+    ruleIds: [],
+  },
+
+  /* meridian — trust just granted after identity + bank-detail verification
+     (AUD-6G3W, Jun 28). No payments have run yet, so history is empty by
+     design; the record carries no amount. */
+  {
+    id: "meridian",
+    name: "Meridian LLC",
+    category: "Professional Services",
+    trustStatus: "trusted",
+    payeeAccountLast4: "6208",
+    history: {
+      paymentCount: 0,
+      totalPaid: 0,
+      firstPaidLabel: "—",
+      lastPaidLabel: "—",
+      avgAmount: 0,
+      flagCount: 0,
+    },
+    flags: [],
+    trustGrantedLabel:
+      "You trusted this vendor Jun 28 · identity + bank details verified",
+    ruleIds: [],
+    eligibleForTrust: false,
+  },
 ];

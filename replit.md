@@ -183,6 +183,26 @@ Programmable neobank on Base L2.
 - Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
   "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 
+## Linked references contract (rules + vendors + invoices)
+- Every "Linked" ref (Audit Log popup, receipts, settled cards) is referenced BY ID and
+  resolved through ONE helper against ONE canonical store, with a resolve-or-plain-text
+  fallback: rules → `openRuleDetail`/`getRule` (rulesStore); vendors →
+  `openVendorDetail`/`resolveVendor` (`mockVendors.ts`, deep-links `/vendors?vendor=<id>`);
+  invoices → `openInvoiceDetail`/`resolveInvoice` (`mockInvoices.ts`, opens
+  `InvoiceViewerPopup`). `invoice.vendorId` + `proposal.invoiceId` must also be canonical.
+- A vendor's `history` must RECONCILE with its referenced invoices/payments (amounts,
+  dates, tier, trustStatus) — no stubs, no contradictory tenure. A human-approved-above-
+  limit payment is NOT "trusted"; a single recent payment reads as the "new" tier.
+- Non-vendor counterparties (payroll employees, DeFi protocols, internal ledgers) are NOT
+  vendors — they use accurate `linked[]` kinds (`employee`/`protocol`/`ledger` in
+  `LinkedEntityKind`) and render as plain, non-tappable text. Never label them `vendor`.
+- `client/src/lib/ruleConsistencyCheck.ts` (dev-boot, `main.tsx`, never throws) is the
+  UNIFIED guard covering all three types: RESOLUTION (`checkRuleReferences` /
+  `checkVendorReferences` / `checkInvoiceReferences`) + COHERENCE
+  (`checkReferenceCoherence`: linked invoice amount == record amount, invoice.vendorId ==
+  record's vendor, kind:"vendor" points at a real vendor, no paid-invoice vendor with zero
+  history) + `checkSemanticAuditRecords`. Extend this module; don't fork it. See CLAUDE.md.
+
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` — Google OAuth (optional). Redirect URI must be

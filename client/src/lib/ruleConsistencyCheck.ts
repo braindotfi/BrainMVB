@@ -1,7 +1,11 @@
 import { MOCK_AUDIT_RECORDS } from "./mockAuditRecords";
-import { AUTO_HANDLED_PROPOSALS } from "./mockProposals";
+import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "./mockProposals";
 import { getRule } from "./rulesStore";
 import { UNTRUSTED_VENDORS } from "./mockRules";
+import { MOCK_VENDORS } from "./mockVendors";
+import { resolveVendor } from "./openVendorDetail";
+import { MOCK_INVOICES } from "./mockInvoices";
+import { resolveInvoice } from "./openInvoiceDetail";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
    These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
@@ -157,4 +161,187 @@ export function checkRuleReferences(): RuleRef[] {
   }
 
   return unresolved;
+}
+
+/* ── Vendor + invoice reference resolution guard ──────────────────────────
+   Mirrors checkRuleReferences for the other two entity types. Asserts that
+   EVERY vendor id and EVERY invoice id referenced anywhere in mock data
+   resolves to a real store entity. This is the guard whose ABSENCE let the
+   vendor-id drift (aws / adobe / comcast / bright-futures / …) ship silently.
+   Also asserts vendor.ruleIds resolve to real rules (the reverse edge).
+   Runs in dev on boot, logs loudly, never throws.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+export type EntityRef = { source: string; id: string };
+
+/* Collect every place a VENDOR is referenced by id across mock data. */
+export function collectVendorReferences(): EntityRef[] {
+  const refs: EntityRef[] = [];
+
+  // Audit records — linked entities of kind "vendor".
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    for (const link of rec.linked) {
+      if (link.kind === "vendor") {
+        refs.push({ source: `audit ${rec.id} linked vendor`, id: link.refId });
+      }
+    }
+  }
+
+  // Invoices — the vendor they belong to.
+  for (const inv of MOCK_INVOICES) {
+    refs.push({ source: `invoice ${inv.id} vendorId`, id: inv.vendorId });
+  }
+
+  return refs;
+}
+
+export function checkVendorReferences(): EntityRef[] {
+  const unresolved = collectVendorReferences().filter(
+    (r) => !resolveVendor(r.id),
+  );
+
+  // Reverse edge: every rule a vendor claims membership of must exist.
+  const badRuleEdges: EntityRef[] = [];
+  for (const v of MOCK_VENDORS) {
+    for (const rid of v.ruleIds) {
+      if (!getRule(rid)) {
+        badRuleEdges.push({ source: `vendor ${v.id} ruleId`, id: rid });
+      }
+    }
+  }
+
+  const all = [...unresolved, ...badRuleEdges];
+  if (all.length > 0) {
+    console.error(
+      `[vendor-consistency] ${all.length} vendor reference(s) do not resolve ` +
+        `to any vendor in mockVendors (or a vendor.ruleIds points at a missing rule):\n` +
+        all.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[vendor-consistency] OK — every vendor reference (linked refs, invoice.vendorId, vendor.ruleIds) resolves.",
+    );
+  }
+
+  return all;
+}
+
+/* Collect every place an INVOICE is referenced by id across mock data. */
+export function collectInvoiceReferences(): EntityRef[] {
+  const refs: EntityRef[] = [];
+
+  // Audit records — linked entities of kind "invoice".
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    for (const link of rec.linked) {
+      if (link.kind === "invoice") {
+        refs.push({ source: `audit ${rec.id} linked invoice`, id: link.refId });
+      }
+    }
+  }
+
+  // Proposals (pending + auto-handled) — the invoice they clear.
+  for (const p of [...MOCK_PROPOSALS, ...AUTO_HANDLED_PROPOSALS]) {
+    if (p.invoiceId) {
+      refs.push({ source: `proposal ${p.id} invoiceId`, id: p.invoiceId });
+    }
+  }
+
+  return refs;
+}
+
+export function checkInvoiceReferences(): EntityRef[] {
+  const unresolved = collectInvoiceReferences().filter(
+    (r) => !resolveInvoice(r.id),
+  );
+
+  if (unresolved.length > 0) {
+    console.error(
+      `[invoice-consistency] ${unresolved.length} invoice reference(s) do not resolve ` +
+        `to any invoice in mockInvoices — dangling refs will render as "(invoice unavailable)":\n` +
+        unresolved.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[invoice-consistency] OK — every invoice reference (linked refs, proposal.invoiceId) resolves.",
+    );
+  }
+
+  return unresolved;
+}
+
+/* ── Cross-entity COHERENCE guard ─────────────────────────────────────────
+   Resolution is necessary but not sufficient — the reference can resolve yet
+   still LIE. This is the gap that let rules break before (an id that resolved
+   to the wrong thing). Beyond resolution, assert that:
+     • a linked invoice's total == the linking audit record's amount;
+     • a linked invoice's vendorId == the record's linked vendor;
+     • every kind:"vendor" linked ref points at an ACTUAL vendor (catches the
+       j-smith/aave misfiling class — a payroll employee or DeFi protocol
+       masquerading as a vendor);
+     • a vendor with a linked PAID invoice is not contradicted by zero payment
+       history (paymentCount === 0).
+   (The "no auto_approved record for an under_review vendor" invariant lives in
+   checkSemanticAuditRecords above.) Logs loudly, never throws.
+   ──────────────────────────────────────────────────────────────────────────── */
+export function checkReferenceCoherence(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    const invLink = rec.linked.find((l) => l.kind === "invoice");
+    const venLink = rec.linked.find((l) => l.kind === "vendor");
+
+    // Every kind:"vendor" ref must point at an actual vendor.
+    if (venLink && !resolveVendor(venLink.refId)) {
+      issues.push({
+        source: `audit ${rec.id}`,
+        message: `linked vendor '${venLink.refId}' is not an actual vendor — a non-vendor counterparty (employee/protocol/ledger) is misfiled as kind:"vendor"`,
+      });
+    }
+
+    if (invLink) {
+      const inv = resolveInvoice(invLink.refId);
+      if (inv) {
+        // Amount coherence: invoice total must match the record amount.
+        if (typeof rec.amount === "number" && inv.total !== rec.amount) {
+          issues.push({
+            source: `audit ${rec.id}`,
+            message: `linked invoice ${inv.id} total (${inv.total}) ≠ record amount (${rec.amount})`,
+          });
+        }
+        // Vendor coherence: invoice.vendorId must match the record's vendor.
+        if (venLink && inv.vendorId !== venLink.refId) {
+          issues.push({
+            source: `audit ${rec.id}`,
+            message: `linked invoice ${inv.id} vendorId ('${inv.vendorId}') ≠ record's linked vendor ('${venLink.refId}')`,
+          });
+        }
+      }
+    }
+  }
+
+  // A vendor with a linked PAID invoice must have real payment history.
+  for (const inv of MOCK_INVOICES) {
+    if (inv.status === "paid") {
+      const v = resolveVendor(inv.vendorId);
+      if (v && v.history.paymentCount === 0) {
+        issues.push({
+          source: `vendor ${v.id}`,
+          message: `has a linked paid invoice (${inv.id}) but zero payment history (paymentCount === 0)`,
+        });
+      }
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[coherence] ${issues.length} cross-entity coherence issue(s) in mock data:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[coherence] OK — linked invoice amounts/vendors match their records and no vendor contradicts its paid invoices.",
+    );
+  }
+
+  return issues;
 }

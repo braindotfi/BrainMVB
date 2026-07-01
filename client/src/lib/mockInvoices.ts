@@ -46,7 +46,7 @@ export const MOCK_INVOICES: Invoice[] = [
   {
     id: "BFS-0426",
     number: "Invoice #BFS-0426",
-    vendorId: "bright-futures",
+    vendorId: "brightfutures",
     vendorName: "Bright Futures Studio",
     billingPeriod: "April 2026",
     issuedLabel: "Jul 4, 2026",
