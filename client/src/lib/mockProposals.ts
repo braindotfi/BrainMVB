@@ -1084,3 +1084,72 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
     { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
   ],
 });
+
+/* ── Flagged SaaS renewal held for review (audit twin AUD-3K8Q) ────────────────
+   The Jun 30 Notion renewal Brain HELD because a higher seat count pushed the
+   monthly charge above the threshold it holds new/changed subscriptions at. It's
+   the "proposal" linked ref (prop-notion) on the flagged audit record. Kept out
+   of the live "today" review queue (it's a past, already-surfaced item) but
+   resolvable by id so the Audit Log's linked-evidence entry deep-links to this
+   exact record instead of a generic /review. */
+export const NOTION_RENEWAL_FLAGGED: Proposal = {
+  id: "prop-notion",
+  auditId: "AUD-3K8Q",
+  agent: "invoice",
+  surface: "business",
+  title: "Subscription renewal above the new-vendor threshold",
+  rowSubtitle: "Notion Team · higher seat count flagged",
+  actionStatement: "Propose paying Notion Team $240",
+  actionMeta: "on card ••4821 · renewal due Mon Jun 30",
+  executionLabel: "charge held — not initiated",
+  cancelDeadlineLabel: "nothing scheduled until you decide",
+  amount: 240,
+  counterparty: "Notion Team",
+  dueLabel: "Due Mon Jun 30",
+  severity: "warning",
+  reasonChips: [
+    { label: "New seat count", severity: "warning" },
+    { label: "Above monthly threshold", severity: "warning" },
+  ],
+  rationale:
+    "Your Notion workspace renewed with more seats than last cycle, pushing the monthly charge above the threshold Brain holds new or changed subscriptions at. The vendor and card on file are unchanged — only the seat count, and therefore the amount, moved.",
+  facts: [
+    { label: "vendor", value: "Notion Team" },
+    { label: "prior charge", value: "$180 · 12 seats" },
+    { label: "this charge", value: "$240 · 16 seats", severity: "warning" },
+    { label: "change", value: "+$60 · +4 seats", severity: "warning" },
+    { label: "card on file", value: "unchanged" },
+  ],
+  evidence: [
+    {
+      kind: "invoice",
+      title: "Renewal invoice",
+      subtitle: "Jun 30 · $240.00 · 16 seats",
+    },
+    {
+      kind: "prior_payment",
+      title: "Last renewal",
+      subtitle: "May 30 · $180.00 · 12 seats",
+    },
+  ],
+  confidence: {
+    score: 0.72,
+    band: "medium",
+    caveat:
+      "The increase looks like normal team growth, but the seat jump crossed your review threshold — confirm the new seats are intended.",
+  },
+  whatHappensNext:
+    "Nothing is scheduled. If you approve, the execution service charges the card for the new seat count. If you reject, the renewal is held and Brain follows up with the workspace owner about the added seats.",
+  risk: "If this is wrong, you pay every month for seats nobody uses — a recurring overcharge until someone notices.",
+  policy: {
+    id: "ap.threshold.v2",
+    explanation: "recurring charge rose above the new/changed-subscription threshold",
+    autoClearedOtherwise: true,
+  },
+  actions: {
+    approve: { label: "Approve renewal", sublabel: "charge the new amount" },
+    reject: { label: "Reject", sublabel: "keep the prior plan" },
+    postpone: { label: "Postpone", sublabel: "decide tomorrow" },
+  },
+  status: "pending",
+};

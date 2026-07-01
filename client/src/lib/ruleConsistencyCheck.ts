@@ -6,6 +6,7 @@ import { MOCK_VENDORS } from "./mockVendors";
 import { resolveVendor } from "./openVendorDetail";
 import { MOCK_INVOICES } from "./mockInvoices";
 import { resolveInvoice } from "./openInvoiceDetail";
+import { resolveProposal } from "./openProposalDetail";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
    These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
@@ -263,6 +264,43 @@ export function checkInvoiceReferences(): EntityRef[] {
   } else {
     console.info(
       "[invoice-consistency] OK — every invoice reference (linked refs, proposal.invoiceId) resolves.",
+    );
+  }
+
+  return unresolved;
+}
+
+/* Collect every place a PROPOSAL is referenced by id across mock data. */
+export function collectProposalReferences(): EntityRef[] {
+  const refs: EntityRef[] = [];
+
+  // Audit records — linked entities of kind "proposal".
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    for (const link of rec.linked) {
+      if (link.kind === "proposal") {
+        refs.push({ source: `audit ${rec.id} linked proposal`, id: link.refId });
+      }
+    }
+  }
+
+  return refs;
+}
+
+export function checkProposalReferences(): EntityRef[] {
+  const unresolved = collectProposalReferences().filter(
+    (r) => !resolveProposal(r.id),
+  );
+
+  if (unresolved.length > 0) {
+    console.error(
+      `[proposal-consistency] ${unresolved.length} proposal reference(s) do not resolve ` +
+        `to any proposal (queue, receipts, or standalone records) — dangling refs will ` +
+        `render as "(proposal unavailable)":\n` +
+        unresolved.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[proposal-consistency] OK — every proposal reference in mock data resolves.",
     );
   }
 

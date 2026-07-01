@@ -14,6 +14,7 @@ if (import.meta.env.DEV) {
     m.checkRuleReferences();
     m.checkVendorReferences();
     m.checkInvoiceReferences();
+    m.checkProposalReferences();
     // Coherence guards — resolved refs must also tell the truth.
     m.checkSemanticAuditRecords();
     m.checkReferenceCoherence();

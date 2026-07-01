@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
 import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
+import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { Invoice } from "@/lib/invoiceTypes";
 
 export function AuditRecordPopup({
@@ -35,7 +36,8 @@ export function AuditRecordPopup({
       const opened = openRuleDetail(link.refId, navigate);
       if (!opened) return; // deleted rule — non-tappable, no-op
     } else if (link.kind === "proposal") {
-      navigate(`/review`);
+      const opened = openProposalDetail(link.refId, navigate);
+      if (!opened) return; // missing proposal — non-tappable, no-op
     } else if (link.kind === "vendor") {
       const opened = openVendorDetail(link.refId, navigate);
       if (!opened) return; // deleted vendor — non-tappable, no-op
@@ -129,16 +131,17 @@ export function AuditRecordPopup({
             {/* Linked entities */}
             {record.linked.length > 0 && (
               <div className="flex flex-col gap-[8px] w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase tracking-[0.04em]">Linked</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase tracking-[0.04em]">Linked evidence</p>
                 <div className="flex flex-col gap-[4px] w-full">
                   {record.linked.map((link) => {
-                    // Rules and vendors resolve against their catalogues;
-                    // a deleted entity renders as plain, non-tappable text.
+                    // Every linked kind resolves against its canonical store;
+                    // a missing/deleted entity renders as plain, non-tappable text.
                     const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                     const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
                     const invoiceGone = link.kind === "invoice" && !resolveInvoice(link.refId);
+                    const proposalGone = link.kind === "proposal" && !resolveProposal(link.refId);
                     const tappable =
-                      link.kind === "proposal" ||
+                      (link.kind === "proposal" && !proposalGone) ||
                       (link.kind === "rule" && !ruleGone) ||
                       (link.kind === "vendor" && !vendorGone) ||
                       (link.kind === "invoice" && !invoiceGone);
@@ -152,7 +155,7 @@ export function AuditRecordPopup({
                         >
                           <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
                           <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
-                          {(ruleGone || vendorGone || invoiceGone) && (
+                          {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
                             <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">
                               ({link.kind} unavailable)
                             </span>

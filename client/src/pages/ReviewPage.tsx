@@ -10,6 +10,7 @@ import {
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import { MOCK_PROPOSALS, ACCOUNT_SUMMARY, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
+import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
@@ -323,16 +324,29 @@ export function ReviewPage() {
         (r.allowlist ?? []).includes(p.counterparty),
     );
 
-  /* Auto-open a receipt linked from RuleDetail (/review?receipt=<id>). */
+  /* Auto-open a record linked from elsewhere:
+       /review?receipt=<id>  — a settled auto-handled receipt (from RuleDetail)
+       /review?proposal=<id> — any proposal by id (from the Audit Log's linked
+                               evidence), resolved across every proposal source. */
   const search = useSearch();
   useEffect(() => {
     const params = new URLSearchParams(search);
     const receiptId = params.get("receipt");
-    if (!receiptId) return;
-    const target = autoHandled.find((p) => p.id === receiptId);
-    if (target) {
-      setActive(target);
-      navigate("/review", { replace: true });
+    if (receiptId) {
+      const target = autoHandled.find((p) => p.id === receiptId);
+      if (target) {
+        setActive(target);
+        navigate("/review", { replace: true });
+      }
+      return;
+    }
+    const proposalId = params.get("proposal");
+    if (proposalId) {
+      const target = resolveProposal(proposalId);
+      if (target) {
+        setActive(target);
+        navigate("/review", { replace: true });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
