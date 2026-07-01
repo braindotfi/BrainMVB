@@ -12,3 +12,9 @@ id = "F3s7_VHtLtoSaKmybGPau"
 uri = "file://deliverables/Brain-Migration-Plans.docx"
 type = "word_document"
 title = "Brain Finance — Migration Plans (Replit → brain-core)"
+
+[[outputs]]
+id = "AFh-_68zee5u0mDhFAO4R"
+uri = "file://CLAUDE.md"
+type = "text"
+title = "CLAUDE.md"
