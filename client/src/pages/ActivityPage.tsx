@@ -3,11 +3,19 @@ import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
-import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
 import { SettledRecordCard } from "@/components/SettledRecordCard";
-
-type ActivityType = "paid" | "moved" | "approved";
+import {
+  AUTO_HANDLED_PROPOSALS,
+} from "@/lib/mockProposals";
+import {
+  type ActivityType,
+  type ActivityItemData,
+  parseClockTime,
+  autoHandledToActivity,
+  TODAY_ACTIVITIES,
+  YESTERDAY_ACTIVITIES,
+} from "@/lib/brainFeed";
 
 /* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
 const BrainDidIcon = () => (
@@ -72,46 +80,6 @@ const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
   (Object.entries(TAB_SLUG) as [Tab, string][]).map(([t, s]) => [s, t]),
 );
 
-type ActivityItemData = {
-  id: number | string;
-  type: ActivityType;
-  title: string;
-  meta1: string;
-  meta2: string;
-  meta3?: string;
-  amount: string;
-  time: string;
-  /** Optional in-app destination opened when the row is tapped. */
-  linkTo?: string;
-  /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open a SettledRecordCard. */
-  proposal?: Proposal;
-};
-
-/** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
-function parseClockTime(t: string): number {
-  const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-  if (!m) return -1;
-  let h = parseInt(m[1], 10) % 12;
-  if (/PM/i.test(m[3])) h += 12;
-  return h * 60 + parseInt(m[2], 10);
-}
-
-/** Map an auto-handled proposal (an "Approved Automatically" receipt) onto an activity item. */
-function autoHandledToActivity(p: Proposal): ActivityItemData {
-  const settled = p.rowSubtitle.match(/settled\s+(.+)$/i);
-  return {
-    id: p.id,
-    type: "paid",
-    title: `Paid ${p.counterparty ?? p.title}`,
-    meta1: "Approved automatically",
-    meta2: p.rule?.name ?? "your standing rule",
-    amount: `$${(p.amount ?? 0).toLocaleString()}`,
-    time: settled ? settled[1] : "Today",
-    linkTo: `/review?receipt=${p.id}`,
-    proposal: p,
-  };
-}
-
 /** Map a live brain-core PaymentIntent onto an activity-feed item.
     Outcomes "reject" / "confirm" (detections that need review) are intentionally
     filtered out here because they are a duplicate of the Review page's job.
@@ -127,16 +95,6 @@ function intentToActivity(rec: IntentRecord): ActivityItemData | null {
   }
   return { ...base, type: "paid", title: `Brain approved a payment to ${rec.vendor}`, meta1: "Within your auto-pay policy", meta2: "Proposed — not executed" };
 }
-
-const TODAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM" },
-  { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM" },
-];
-
-const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM" },
-  { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
-];
 
 const filterNulls = <T,>(arr: (T | null)[]): T[] => arr.filter((x): x is T => x !== null);
 
@@ -212,7 +170,7 @@ const SectionCard = ({
 }: {
   title: string;
   items: ActivityItemData[];
-  highlightedId: number | null;
+  highlightedId: string | null;
   registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
   onSelect?: (item: ActivityItemData) => void;
 }) => {
@@ -230,7 +188,7 @@ const SectionCard = ({
             <div key={item.id} className="flex flex-col gap-[8px] w-full">
               <ActivityItem
                 item={item}
-                highlighted={highlightedId === item.id}
+                highlighted={highlightedId === String(item.id)}
                 rowRef={registerRowRef(item.id)}
                 onSelect={onSelect}
               />
@@ -250,18 +208,17 @@ export function ActivityPage() {
   const { intents } = useIntents();
   const resolvedInitial = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "Brain Did";
   const initialTab: Tab = resolvedInitial === "All" ? "Brain Did" : resolvedInitial;
-  const initialRow = (() => {
-    const v = params.get("row");
-    const n = v ? Number(v) : NaN;
-    return Number.isFinite(n) ? n : null;
-  })();
+  // Row ids can be numeric (static activities) or strings (auto-handled
+  // receipts, e.g. "prop-aws"). Keep the raw param string and compare by string
+  // so deep-links from the home page work for both.
+  const initialRow = params.get("row") || null;
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [highlightedId, setHighlightedId] = useState<number | null>(initialRow);
-  const rowRefs = useRef<Map<number | string, HTMLDivElement>>(new Map());
+  const [highlightedId, setHighlightedId] = useState<string | null>(initialRow);
+  const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const registerRowRef = (id: number | string) => (el: HTMLDivElement | null) => {
-    if (el) rowRefs.current.set(id, el);
-    else rowRefs.current.delete(id);
+    if (el) rowRefs.current.set(String(id), el);
+    else rowRefs.current.delete(String(id));
   };
 
   // Sync state when the URL changes (e.g. coming from the home page).
@@ -269,9 +226,7 @@ export function ActivityPage() {
     const tabParam = params.get("tab") ?? "";
     const resolved = SLUG_TO_TAB[tabParam] ?? "Brain Did";
     setActiveTab(resolved === "All" ? "Brain Did" : resolved);
-    const rowParam = params.get("row");
-    const rowId = rowParam ? Number(rowParam) : NaN;
-    setHighlightedId(Number.isFinite(rowId) ? rowId : null);
+    setHighlightedId(params.get("row") || null);
   }, [params]);
 
   // Scroll the highlighted row into view and clear the highlight after a short pause.

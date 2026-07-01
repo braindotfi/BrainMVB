@@ -8,6 +8,7 @@ import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { useCurrency } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
+import { getBrainDidTodayItems, getNeedsReviewProposals } from "@/lib/brainFeed";
 
 /* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
@@ -17,19 +18,6 @@ const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
 const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
 const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
-
-/* Each entry mirrors a row on the Activity page. activityId matches
-   the ActivityItemData.id values declared in ActivityPage. */
-const BRAIN_DID = [
-  { id: 1, label: "Paid Adobe Creative Cloud (team plan)", activityId: 1 },
-  { id: 2, label: "Paid Comcast Business Fiber", activityId: 2 },
-  { id: 3, label: "Moved idle USDC from operating to AAVE yield protocol", activityId: 4 },
-];
-
-const BRAIN_DETECTED = [
-  { id: 1, label: "Noticed a new charge from a new vendor", activityId: 3 },
-  { id: 2, label: "Got paid by Northstar Design", activityId: 5 },
-];
 
 /* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
 type GoalRow = {
@@ -222,7 +210,7 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: number; label: string; activityId: number };
+type WidgetItem = { id: string; label: string; onClick: () => void };
 const ListItem = ({
   icon,
   label,
@@ -247,48 +235,66 @@ const ListItem = ({
   </button>
 );
 
+const DEFAULT_VISIBLE = 3;
+
 const SectionWidget = ({
   title,
-  count,
   items,
   icon,
-  targetTab,
   testIdPrefix,
 }: {
   title: string;
-  count: number;
   items: WidgetItem[];
   icon: React.ReactNode;
-  targetTab: "brain-did" | "brain-detected";
   testIdPrefix: string;
 }) => {
-  const [, navigate] = useLocation();
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = items.length > DEFAULT_VISIBLE;
+  const visible = expanded ? items : items.slice(0, DEFAULT_VISIBLE);
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
           <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{items.length}</p>
           </div>
         </div>
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-        <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-          {items.map((item, idx) => (
-            <div key={item.id} className="flex flex-col gap-[8px] w-full">
-              <ListItem
-                icon={icon}
-                label={item.label}
-                testId={`${testIdPrefix}-${item.id}`}
-                onClick={() => navigate(`/activity?tab=${targetTab}&row=${item.activityId}`)}
-              />
-              {idx < items.length - 1 && (
-                <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-              )}
-            </div>
-          ))}
-        </div>
+        {visible.length === 0 ? (
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] p-[8px]">
+            Nothing here today.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            {visible.map((item, idx) => (
+              <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                <ListItem
+                  icon={icon}
+                  label={item.label}
+                  testId={`${testIdPrefix}-${item.id}`}
+                  onClick={item.onClick}
+                />
+                {idx < visible.length - 1 && (
+                  <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            data-testid={`button-${testIdPrefix}-view-more`}
+            className="mt-[8px] self-start flex items-center gap-[4px] px-[10px] py-[6px] rounded-[8px] transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+          >
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[13px] whitespace-nowrap">
+              {expanded ? "View less" : `View ${items.length - DEFAULT_VISIBLE} more`}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -325,7 +331,25 @@ export function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
   const { format } = useCurrency();
+  const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  /* Brain Did — the exact "Brain Did" items for today (mirrors the Activity
+     page's Today section under the "Brain Did" tab). Tapping a row deep-links to
+     that same row on the Activity page. */
+  const brainDidItems: WidgetItem[] = getBrainDidTodayItems().map((it) => ({
+    id: String(it.id),
+    label: it.title,
+    onClick: () => navigate(`/activity?tab=brain-did&row=${it.id}`),
+  }));
+
+  /* Brain Detected — what Brain is advising for review (mirrors the Review
+     page's "Needs Review" queue). Tapping opens the Review page. */
+  const brainDetectedItems: WidgetItem[] = getNeedsReviewProposals().map((p) => ({
+    id: p.id,
+    label: p.title,
+    onClick: () => navigate("/review"),
+  }));
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -451,20 +475,16 @@ export function HomePage() {
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Did"
-                  count={BRAIN_DID.length}
-                  items={BRAIN_DID}
+                  items={brainDidItems}
                   icon={<GreenCheckIcon />}
-                  targetTab="brain-did"
                   testIdPrefix="row-brain-did"
                 />
               </div>
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Detected"
-                  count={BRAIN_DETECTED.length}
-                  items={BRAIN_DETECTED}
+                  items={brainDetectedItems}
                   icon={<OrangeInfoIcon />}
-                  targetTab="brain-detected"
                   testIdPrefix="row-brain-detected"
                 />
               </div>
