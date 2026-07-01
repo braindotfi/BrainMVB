@@ -19,6 +19,7 @@ import { RulesPage } from "@/pages/RulesPage";
 import { RuleDetail } from "@/pages/RuleDetail";
 import { VendorsPage } from "@/pages/VendorsPage";
 import { ActivityPage } from "@/pages/ActivityPage";
+import { AuditLogPage } from "@/pages/AuditLogPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { AddSourceModal } from "@/components/AddSourceModal";
@@ -121,6 +122,7 @@ function AppLayout() {
             <Route path="/rules" component={RulesPage} />
             <Route path="/vendors" component={VendorsPage} />
             <Route path="/activity" component={ActivityPage} />
+            <Route path="/audit-log" component={AuditLogPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>

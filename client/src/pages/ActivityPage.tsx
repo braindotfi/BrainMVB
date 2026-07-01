@@ -3,8 +3,9 @@ import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
-import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
+import { SettledRecordCard } from "@/components/SettledRecordCard";
 
 type ActivityType = "paid" | "moved" | "approved";
 
@@ -82,6 +83,8 @@ type ActivityItemData = {
   time: string;
   /** Optional in-app destination opened when the row is tapped. */
   linkTo?: string;
+  /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open a SettledRecordCard. */
+  proposal?: Proposal;
 };
 
 /** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
@@ -105,6 +108,7 @@ function autoHandledToActivity(p: Proposal): ActivityItemData {
     amount: `$${(p.amount ?? 0).toLocaleString()}`,
     time: settled ? settled[1] : "Today",
     linkTo: `/review?receipt=${p.id}`,
+    proposal: p,
   };
 }
 
@@ -298,8 +302,14 @@ export function ActivityPage() {
   const todayItems = filterByTab(todayMerged);
   const yesterdayItems = filterByTab(YESTERDAY_ACTIVITIES);
 
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+
   const handleSelect = (item: ActivityItemData) => {
-    if (item.linkTo) navigate(item.linkTo);
+    if (item.proposal) {
+      setSelectedProposal(item.proposal);
+    } else if (item.linkTo) {
+      navigate(item.linkTo);
+    }
   };
 
   return (
@@ -371,6 +381,17 @@ export function ActivityPage() {
 
         </div>
       </ScrollArea>
+
+      <SettledRecordCard
+        proposal={selectedProposal}
+        open={selectedProposal !== null}
+        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
+        onViewAuditLog={() => {
+          navigate(`/audit-log?record=${selectedProposal?.auditId ?? ""}`);
+          setSelectedProposal(null);
+        }}
+        anchorAuditId={selectedProposal?.auditId}
+      />
     </div>
   );
 }

@@ -39,7 +39,7 @@ export type ProposalAction = "approve" | "reject" | "postpone" | "verifyFirst";
 
 const ALERT = "#d20344";
 
-const AGENT_META: Record<Agent, { label: string; icon: LucideIcon }> = {
+export const AGENT_META: Record<Agent, { label: string; icon: LucideIcon }> = {
   invoice: { label: "Invoice Agent", icon: Receipt },
   collections: { label: "Collections Agent", icon: HandCoins },
   cash: { label: "Cash Agent", icon: Landmark },
@@ -56,7 +56,7 @@ const EVIDENCE_ICON: Record<EvidenceItem["kind"], LucideIcon> = {
 };
 
 /* Pills: danger → alert red; warning → gold; info → baby blue; clean → purple. */
-function chipClasses(severity: Severity): string {
+export function chipClasses(severity: Severity): string {
   switch (severity) {
     case "danger":
       return "bg-[#350011] text-[#d20344]";
@@ -70,13 +70,13 @@ function chipClasses(severity: Severity): string {
   }
 }
 
-function factColor(severity?: Severity): string {
+export function factColor(severity?: Severity): string {
   if (severity === "danger") return ALERT;
   if (severity === "warning") return "#ff9500";
   return "#a8b9f4";
 }
 
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+export const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px] uppercase tracking-[0.04em] w-full">
     {children}
   </p>

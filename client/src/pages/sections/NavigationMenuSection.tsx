@@ -255,7 +255,24 @@ const MAIN_NAV: NavItem[] = [
   { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
 
+const AuditLogIconActive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <path d="m9 15 2 2 4-4" />
+  </svg>
+);
+
+const AuditLogIconInactive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <path d="m9 15 2 2 4-4" />
+  </svg>
+);
+
 const OTHER_NAV: NavItem[] = [
+  { path: "/audit-log", label: "Audit Log", ActiveIcon: AuditLogIconActive, InactiveIcon: AuditLogIconInactive },
   { path: "/settings", label: "Settings", ActiveIcon: SettingsIconActive, InactiveIcon: SettingsIconInactive },
 ];
 
