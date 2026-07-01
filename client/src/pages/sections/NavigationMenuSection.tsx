@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
-import { useRuleSuggestions } from "@/lib/rule-suggestions";
 import { useIntents } from "@/lib/intentsStore";
 import { MOCK_PROPOSALS } from "@/lib/mockProposals";
 
@@ -300,7 +299,6 @@ const AddSourceIcon = () => (
 export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSource }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const ruleSuggestionsCount = useRuleSuggestions().length;
   const liveApprovalCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
   const reviewItemsCount = MOCK_PROPOSALS.length + liveApprovalCount;
 
@@ -311,7 +309,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
 
   /** Returns the badge count for a nav item by path, or 0 if no badge applies. */
   const getNavCount = (path: string) => {
-    if (path === "/rules") return ruleSuggestionsCount;
     if (path === "/review") return reviewItemsCount;
     return 0;
   };
