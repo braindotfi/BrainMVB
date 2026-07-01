@@ -250,7 +250,7 @@ function summarizeIncome(
 }
 
 const INCOME_FALLBACK =
-  "About $18,000 a month from 12 customers. Your biggest three are Northstar Design, Peterson Legal, and Willow Creek Dental, together about half your revenue.";
+  "No income recorded yet. This populates from your ledger as money comes in.";
 
 const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: txData } = useQuery<BrainTransactionsResponse>({
@@ -377,7 +377,7 @@ function shortDate(iso?: string | null): string {
 }
 
 const LIABILITIES_FALLBACK =
-  "Nothing overdue. Your next bill is the Verizon phone bill for $189, due Friday. Brain is asking you about it on the home screen.";
+  "No outstanding liabilities. You're all caught up.";
 
 const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: invData } = useQuery<InvoicesLiteResponse>({
@@ -582,7 +582,7 @@ export function FinancesPage() {
                   ))
                 ) : (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No recent transactions yet.</p>
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No transactions yet. Activity will appear here once money starts moving.</p>
                   </div>
                 )}
               </WidgetCard>

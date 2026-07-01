@@ -488,7 +488,7 @@ export function ReviewPage() {
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 {queue.length === 0 && executing.length === 0 && (
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] p-[8px]">
-                    Nothing left to review. You're all caught up.
+                    Nothing needs your attention right now. Brain is keeping things moving.
                   </p>
                 )}
 
@@ -584,7 +584,7 @@ export function ReviewPage() {
             {showApproved && autoHandled.length === 0 && (
               <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                  No auto-approved payments yet. Brain will handle them under your standing rules.
+                  No auto-approved items yet. Brain will make them here when they happen.
                 </p>
               </div>
             )}

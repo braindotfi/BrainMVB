@@ -856,7 +856,7 @@ export function RulesPage() {
           {activeTab === "Automations" && automations.length === 0 && (
             <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No automations yet. Create one above.
+                No automated rules yet. Create one for Brain to automatically handle payments for you.
               </p>
             </div>
           )}
@@ -875,7 +875,7 @@ export function RulesPage() {
           {activeTab === "Guardrails" && guardrails.length === 0 && (
             <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No guardrails set. Add one to protect yourself from large payments.
+                No guardrails set. Create one to block risky transactions automatically.
               </p>
             </div>
           )}
@@ -894,7 +894,7 @@ export function RulesPage() {
           {activeTab === "Always On" && alwaysOn.length === 0 && (
             <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No always-on rules configured.
+                No always-on rules active. These run in the background without human approval.
               </p>
             </div>
           )}
@@ -916,7 +916,7 @@ export function RulesPage() {
           {activeTab === "Suggested" && suggestions.length === 0 && (
             <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No suggestions right now. Brain will surface new ones as it learns your habits.
+                No new suggestions from Brain right now. Check back as your patterns grow.
               </p>
             </div>
           )}

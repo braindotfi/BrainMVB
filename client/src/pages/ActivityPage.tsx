@@ -355,7 +355,9 @@ export function ActivityPage() {
             {liveItems.length === 0 && todayItems.length === 0 && yesterdayItems.length === 0 && (
               <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                  No activity in this view yet. Brain will record everything it does or notices as it happens.
+                  {activeTab === "Brain Did"
+                    ? "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here."
+                    : "No manual approvals yet. Items you personally approve will show up here."}
                 </p>
               </div>
             )}

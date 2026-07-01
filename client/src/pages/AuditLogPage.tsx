@@ -117,7 +117,14 @@ export function AuditLogPage() {
             </div>
             {filtered.length === 0 && (
               <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">No records for this filter.</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                  {activeTab === "Approvals" && "No approval records yet."}
+                  {activeTab === "Auto-Approved" && "No auto-approval records yet."}
+                  {activeTab === "Rule Changes" && "No rule changes recorded yet."}
+                  {activeTab === "Trust Changes" && "No trust status changes yet."}
+                  {activeTab === "Flagged" && "No flagged transactions yet."}
+                  {activeTab === "Last 30 Days" && "No events in the last 30 days."}
+                </p>
               </div>
             )}
 

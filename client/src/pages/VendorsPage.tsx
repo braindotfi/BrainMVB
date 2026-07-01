@@ -196,7 +196,10 @@ export function VendorsPage() {
           {tabVendors.length === 0 ? (
             <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No vendors in this category.
+                {activeTab === "Under Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                {activeTab === "New" && "No new vendors detected yet."}
+                {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                {activeTab === "Known" && "No known vendors yet. Regular payees show up here."}
               </p>
             </div>
           ) : (
