@@ -473,6 +473,9 @@ type BuilderState = {
 
 const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
 
+type RuleTab = "Automations" | "Guardrails" | "Always On" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Automations", "Guardrails", "Always On", "Suggested"];
+
 export function RulesPage() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -480,6 +483,7 @@ export function RulesPage() {
   const rules = useRules();
   const suggestions = useRuleSuggestions();
 
+  const [activeTab, setActiveTab] = useState<RuleTab>("Automations");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
   const [openChip, setOpenChip] = useState<null | "category" | "vendor" | "action">(null);
@@ -583,18 +587,62 @@ export function RulesPage() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
+  const ruleTabCount = (tab: RuleTab) => {
+    if (tab === "Automations") return automations.length;
+    if (tab === "Guardrails") return guardrails.length;
+    if (tab === "Always On") return alwaysOn.length;
+    return suggestions.length;
+  };
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[28px] items-start pb-[24px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Rules</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Tell me how I should help you.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-              Grouped by what each rule does — what acts for you, what protects you, and what never changes.
-            </p>
+          {/* Header + tab bar */}
+          <div className="flex flex-col gap-[16px] items-start w-full">
+            <div className="flex flex-col items-start gap-[4px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Rules</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Tell me how I should help you.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+                Grouped by what each rule does — what acts for you, what protects you, and what never changes.
+              </p>
+            </div>
+
+            {/* Tab bar — active tab is ORANGE */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+              {RULE_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                const count = ruleTabCount(tab);
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                    style={{ background: isActive ? "#4a2300" : "transparent" }}
+                    data-testid={`tab-rule-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                      style={{ color: isActive ? "#ff9500" : "#414965" }}
+                    >
+                      {tab}
+                    </p>
+                    {count > 0 && (
+                      <span
+                        className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[5px] py-[1px] rounded-[4px] min-w-[18px] text-center"
+                        style={{
+                          background: isActive ? "rgba(255,149,0,0.18)" : "#1d2132",
+                          color: isActive ? "#ff9500" : "#6c779d",
+                        }}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Create-rule confirmation (from the builder OR an accepted suggestion) */}
@@ -801,57 +849,86 @@ export function RulesPage() {
             </div>
           )}
 
-          {/* Sections — render purely from data; empty ones collapse */}
-          <Section
-            eyebrow="Automations · act for you"
-            sub="These run on their own. Tap one to see or tighten its scope."
-            count={automations.length}
-          >
-            {automations.map((r) => (
-              <AutomationRow key={r.id} rule={r} format={format} />
-            ))}
-          </Section>
+          {/* Tab content — each tab shows its own section */}
+          {activeTab === "Automations" && (
+            <Section
+              eyebrow="Automations · act for you"
+              sub="These run on their own. Tap one to see or tighten its scope."
+              count={automations.length}
+            >
+              {automations.map((r) => (
+                <AutomationRow key={r.id} rule={r} format={format} />
+              ))}
+            </Section>
+          )}
 
-          <Section
-            eyebrow="Guardrails · pull you back in"
-            sub="Brain stops and asks you above these limits."
-            count={guardrails.length}
-          >
-            {guardrails.map((r) => (
-              <GuardrailRow key={r.id} rule={r} format={format} />
-            ))}
-          </Section>
+          {activeTab === "Automations" && automations.length === 0 && (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                No automations yet. Create one above.
+              </p>
+            </div>
+          )}
 
-          <Section
-            eyebrow="Always on · can't be turned off"
-            sub="Built-in protections that run no matter what."
-            count={alwaysOn.length}
-          >
-            {alwaysOn.map((r) => (
-              <AlwaysOnRow key={r.id} rule={r} />
-            ))}
-          </Section>
+          {activeTab === "Guardrails" && (
+            <Section
+              eyebrow="Guardrails · pull you back in"
+              sub="Brain stops and asks you above these limits."
+              count={guardrails.length}
+            >
+              {guardrails.map((r) => (
+                <GuardrailRow key={r.id} rule={r} format={format} />
+              ))}
+            </Section>
+          )}
 
-          {/* Evidence-backed suggestions */}
-          {suggestions.length > 0 && (
+          {activeTab === "Guardrails" && guardrails.length === 0 && (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                No guardrails set. Add one to protect yourself from large payments.
+              </p>
+            </div>
+          )}
+
+          {activeTab === "Always On" && (
+            <Section
+              eyebrow="Always on · can't be turned off"
+              sub="Built-in protections that run no matter what."
+              count={alwaysOn.length}
+            >
+              {alwaysOn.map((r) => (
+                <AlwaysOnRow key={r.id} rule={r} />
+              ))}
+            </Section>
+          )}
+
+          {activeTab === "Always On" && alwaysOn.length === 0 && (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                No always-on rules configured.
+              </p>
+            </div>
+          )}
+
+          {activeTab === "Suggested" && suggestions.length > 0 && (
             <div className="flex flex-col gap-[10px] w-full">
-              <div className="flex items-center gap-[8px] px-[4px]">
-                <Sparkles size={15} className="text-[#7631ee]" />
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase tracking-[0.08em] text-[#6c779d] text-[12px] leading-[16px]">
-                  Suggested · based on your habits
-                </p>
-              </div>
-              <div className="flex flex-col gap-[10px] w-full">
-                {suggestions.map((s) => (
-                  <SuggestionCard
-                    key={s.id}
-                    suggestion={s}
-                    onAccept={() => onAcceptSuggestion(s)}
-                    onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                    onDismiss={() => dismissSuggestion(s.id)}
-                  />
-                ))}
-              </div>
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.id}
+                  suggestion={s}
+                  onAccept={() => onAcceptSuggestion(s)}
+                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                  onDismiss={() => dismissSuggestion(s.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {activeTab === "Suggested" && suggestions.length === 0 && (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                No suggestions right now. Brain will surface new ones as it learns your habits.
+              </p>
             </div>
           )}
 

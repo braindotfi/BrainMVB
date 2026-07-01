@@ -7,6 +7,9 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 
+type VendorTab = "Under Review" | "New" | "Trusted" | "Known";
+const VENDOR_TABS: VendorTab[] = ["Under Review", "New", "Trusted", "Known"];
+
 const TRUST_STATUS_META: Record<
   TrustStatus,
   { label: string; chipBg: string; chipText: string; icon: typeof ShieldCheck }
@@ -78,21 +81,6 @@ function VendorRow({
   );
 }
 
-/* ── Section header ──────────────────────────────────────────────────────────── */
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-      <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
-        {count > 0 && (
-          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ── Main page ─────────────────────────────────────────────────────────────────── */
 export function VendorsPage() {
@@ -100,6 +88,7 @@ export function VendorsPage() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
+  const [activeTab, setActiveTab] = useState<VendorTab>("Under Review");
 
   /* Deep-link: ?vendor=<id> opens that vendor automatically */
   useEffect(() => {
@@ -131,117 +120,111 @@ export function VendorsPage() {
     return { trusted, underReview, known, newVendors };
   }, []);
 
+  const tabVendors: Vendor[] = useMemo(() => {
+    if (activeTab === "Under Review") return grouped.underReview;
+    if (activeTab === "New") return grouped.newVendors;
+    if (activeTab === "Trusted") return grouped.trusted;
+    return grouped.known;
+  }, [activeTab, grouped]);
+
+  const tabCount = (tab: VendorTab) => {
+    if (tab === "Under Review") return grouped.underReview.length;
+    if (tab === "New") return grouped.newVendors.length;
+    if (tab === "Trusted") return grouped.trusted.length;
+    return grouped.known.length;
+  };
+
   const suggestionCount = grouped.known.filter((v) => v.eligibleForTrust).length;
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[32px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
+        <div className="flex flex-col gap-[28px] items-start pb-[24px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
+          {/* Header + tab bar */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex items-start justify-between w-full">
-              <div className="flex flex-col items-start relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Trusted vendors</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-                  {MOCK_VENDORS.length} vendors in your network
-                </p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
-                  Trust is granted deliberately here — never from inside a rule.
-                </p>
-              </div>
+            <div className="flex flex-col items-start relative shrink-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Trusted vendors</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
+                {MOCK_VENDORS.length} vendors in your network
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+                Trust is granted deliberately here — never from inside a rule.
+              </p>
+            </div>
+
+            {/* Tab bar — active tab is ORANGE */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+              {VENDOR_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                const count = tabCount(tab);
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                    style={{ background: isActive ? "#4a2300" : "transparent" }}
+                    data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                      style={{ color: isActive ? "#ff9500" : "#414965" }}
+                    >
+                      {tab}
+                    </p>
+                    {count > 0 && (
+                      <span
+                        className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[5px] py-[1px] rounded-[4px] min-w-[18px] text-center"
+                        style={{
+                          background: isActive ? "rgba(255,149,0,0.18)" : "#1d2132",
+                          color: isActive ? "#ff9500" : "#6c779d",
+                        }}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Under review */}
-          {grouped.underReview.length > 0 && (
-            <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-              <SectionHeader title="Under review" count={grouped.underReview.length} />
+          {/* Tab content */}
+          {tabVendors.length === 0 ? (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                No vendors in this category.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {grouped.underReview.map((vendor, idx) => (
+                {tabVendors.map((vendor, idx) => (
                   <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
                     <VendorRow
                       vendor={vendor}
                       format={format}
                       onClick={() => handleOpenVendor(vendor)}
                       badge={
-                        <span
-                          className="px-[6px] py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] shrink-0"
-                          style={{ background: "rgba(210,3,68,0.08)", color: "#d20344" }}
-                        >
-                          Flag raised
-                        </span>
-                      }
-                    />
-                    {idx < grouped.underReview.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* New */}
-          {grouped.newVendors.length > 0 && (
-            <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-              <SectionHeader title="New" count={grouped.newVendors.length} />
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {grouped.newVendors.map((vendor, idx) => (
-                  <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                    <VendorRow
-                      vendor={vendor}
-                      format={format}
-                      onClick={() => handleOpenVendor(vendor)}
-                    />
-                    {idx < grouped.newVendors.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Trusted */}
-          {grouped.trusted.length > 0 && (
-            <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-              <SectionHeader title="Trusted" count={grouped.trusted.length} />
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {grouped.trusted.map((vendor, idx) => (
-                  <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                    <VendorRow
-                      vendor={vendor}
-                      format={format}
-                      onClick={() => handleOpenVendor(vendor)}
-                    />
-                    {idx < grouped.trusted.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Known — with Brain suggestion for eligible ones */}
-          {grouped.known.length > 0 && (
-            <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-              <SectionHeader title="Known" count={grouped.known.length} />
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {grouped.known.map((vendor, idx) => (
-                  <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                    <VendorRow
-                      vendor={vendor}
-                      format={format}
-                      onClick={() => handleOpenVendor(vendor)}
-                      badge={
-                        vendor.eligibleForTrust ? (
+                        vendor.trustStatus === "under_review" ? (
+                          <span
+                            className="px-[6px] py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] shrink-0"
+                            style={{ background: "rgba(210,3,68,0.08)", color: "#d20344" }}
+                          >
+                            Flag raised
+                          </span>
+                        ) : vendor.trustStatus === "known" && vendor.eligibleForTrust ? (
                           <span
                             className="px-[6px] py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] flex items-center gap-[4px] shrink-0"
                             style={{ background: "rgba(118,49,238,0.10)", color: "#7631ee" }}
                           >
                             <Sparkles size={11} />
-                            Brain suggests trust
+                            Brain suggests
                           </span>
                         ) : undefined
                       }
                     />
-                    {idx < grouped.known.length - 1 && <Divider />}
+                    {idx < tabVendors.length - 1 && <Divider />}
                   </div>
                 ))}
               </div>

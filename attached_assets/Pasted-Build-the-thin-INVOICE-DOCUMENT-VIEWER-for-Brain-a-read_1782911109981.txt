@@ -1,0 +1,117 @@
+Build the thin INVOICE / DOCUMENT VIEWER for Brain: a read-only popup that shows the source
+document Brain ingested, the fields it extracted, and where the document came from. It opens
+when a user taps an invoice/document reference (e.g. the "Linked · Invoice" row on an audit
+record or proposal detail). This is a VIEWER, not an AP system.
+
+STYLING — MATCH THE CURRENT APP EXACTLY. Reuse existing tokens, fonts, spacing, radii, card/
+row/chip/button styles, and the proposal-detail / audit-record popup shell. Dark indigo
+canvas, purple accents, monospace for amounts/ids/dates. #D20344 for alerts/mismatch only;
+success/green for a clean match; purple for interactive. NO orange (reserved for audit tabs).
+
+SCOPE — THIN. Build ONLY: the invoice viewer popup (source document pane, extracted fields,
+provenance, amount-coherence note), the openInvoiceDetail helper, and the split linked rows.
+Do NOT build invoice creation, editing, approval routing, AP aging, or any invoice management
+— those live in the customer's accounting system. Brain reads the document; the accounting app
+owns it. Reinforce this with a caption in the viewer.
+
+WHERE INVOICE DATA COMES FROM (frame the model around this): Brain does not originate invoices
+— it INGESTS them via connectors (accounting sync like QuickBooks/Xero/Merge, or an email/
+document channel). The original artifact lives in the Raw layer; the parsed record in the
+Ledger layer. So an invoice is: a source document (PDF/image ref) + extracted structured
+fields + provenance (which connector, when, a Provenance enum value) + a ledger ref. Records
+reference an invoice BY ID (like rules and vendors) — never by a copied string.
+
+DATA MODEL:
+type Provenance = "CONNECTOR_SYNC" | "EMAIL_INGEST" | "DOCUMENT_UPLOAD" | "PAYMENT_RAIL";
+interface InvoiceLineItem { label: string; amount: number; }
+interface Invoice {
+  id: string;                    // "AWS-2026-07" (the invoice number doubles as id here)
+  vendorId: string;              // resolves to a Vendor via openVendorDetail
+  vendorName: string;
+  amount: number;                // total
+  dueDateLabel: string;
+  payeeAccountLast4: string;
+  lineItems: InvoiceLineItem[];
+  documentHref?: string;         // link to the original PDF/image (Raw layer)
+  provenance: {
+    source: string;              // "QuickBooks (accounting)"
+    ingestedAtLabel: string;     // "Jul 6, 3:12 PM ET"
+    enum: Provenance;            // "CONNECTOR_SYNC"
+    ledgerRef: string;           // "LGR-88214"
+  };
+  proposalId?: string;           // the proposal that reasoned over this invoice
+}
+- Add `invoiceId?: string` to the relevant records (proposals, AuditRecords for payment
+  events, settled Approved Record cards) so their linked section can resolve the invoice.
+
+INVOICE VIEWER POPUP (same shell as other detail popups), top to bottom:
+- Header: "Invoice" chip + invoice id in mono, close X.
+- "Source document": a rendered representation of the document on a LIGHT (paper-like) pane —
+  vendor letterhead, line items, total, due date — with an "Open original PDF" button
+  (documentHref). This pane depicts paper, so a light background here is intentional and
+  allowed even in the dark app.
+- "What Brain extracted": a mono block — vendor, invoice id, amount, due date, pay-to
+  account ··{last4}. This lets the user confirm Brain parsed the document correctly.
+- AMOUNT-COHERENCE NOTE: if the invoice amount equals the linked proposal/payment amount, a
+  green success line "Amount matches the approved payment ($X)." If it does NOT match, a
+  #D20344 line "Amount differs from the payment ($invoice vs $payment) — review." (This makes
+  the coherence check visible, and is the guard against a resolves-but-lies mismatch.)
+- "Where it came from": a mono provenance block — source, ingested-at, provenance enum,
+  ledger ref.
+- Caption at the bottom: "A viewer, not an AP system — Brain reads the document, your
+  accounting app owns it."
+
+SPLIT THE CONFLATED LINKED ROW (IA fix): today some surfaces show one row like
+"Proposal · Invoice #AWS-2026-07", conflating two entities. Split the linked section into
+SEPARATE rows, each resolving to the correct surface via its own helper:
+  • "PROPOSAL · {short label}" → openProposalDetail(proposalId)
+  • "INVOICE · #{invoiceId}"   → openInvoiceDetail(invoiceId)
+  • "VENDOR · {vendorName}"    → openVendorDetail(vendorId)
+Only render rows whose ids are present. Apply this on the audit-record popup, the proposal
+detail, and the settled Approved Record card.
+
+WIRING:
+- Add openInvoiceDetail(invoiceId) as the single resolver — mirror openRuleDetail /
+  openVendorDetail exactly: resolve against a canonical invoices source (invoicesStore seeded
+  from mockInvoices); on an unresolved id, console.warn "openInvoiceDetail: no invoice found
+  for id '<id>'", render the reference as plain non-tappable text with a muted "(invoice
+  unavailable)" note, never a dead tap. Return false on miss.
+- No new nav item needed — the viewer is reached only via linked rows (it's an evidence
+  viewer, not a top-level destination). Do NOT add "Invoices" to the main menu.
+
+COHERENCE GUARD (extend the dev consistency check, per CLAUDE.md conventions):
+- Extend ruleConsistencyCheck (or add invoiceConsistencyCheck) to assert, in dev only, that:
+  (1) every invoiceId referenced by a record resolves to a real invoice;
+  (2) a linked invoice's amount EQUALS the referencing proposal/audit amount (the resolves-
+      but-lies guard — an audit record for $4,150 must not link an invoice that says $4,090);
+  (3) a linked invoice's vendorId matches the record's vendor.
+  Log loudly (console.error listing "source → mismatch"); never throw. Run on boot in dev.
+
+CONSTRAINTS:
+- Read-only viewer; no invoice mutation of any kind.
+- Records reference invoices by id; never carry a copied invoice string for resolution.
+- Match app styling/tokens; #D20344 for amount mismatch only; success for a clean match;
+  purple interactive; no orange.
+- Amounts/ids/dates in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed; the viewer renders purely from
+  the Invoice object.
+- DATA COHERENCE (per CLAUDE.md): an entity tells ONE story across surfaces. The AWS invoice
+  ($4,150, AUD-3308FE) must match its proposal and audit record exactly. Bright Futures stays
+  under_review/held everywhere — if it has an invoice, the invoice reflects the flagged bank
+  detail (new account), consistent with the fraud story.
+
+MOCK DATA — mockInvoices.ts: at minimum the AWS invoice (AWS-2026-07, vendor Amazon Web
+Services, $4,150, due Jul 7, line items, provenance QuickBooks/CONNECTOR_SYNC, ledger
+LGR-88214, linked to the AWS proposal/audit AUD-3308FE). Add 1-2 more tied to existing demo
+items (e.g. the Bright Futures contractor invoice reflecting the bank-detail change; a
+Con Edison utility invoice). Wire vendorId to real vendors and proposalId/invoiceId so the
+split linked rows resolve end to end.
+
+CLAUDE.md — add a short "Invoice references" note mirroring the rule-references contract:
+invoices are referenced by id, resolved only via openInvoiceDetail against invoicesStore; the
+coherence guard asserts amount + vendor agree with the linking record; the viewer is read-only
+(no AP management — accounting system owns invoices).
+
+Return mockInvoices.ts, the updated types (Invoice + invoiceId on records), the invoice viewer
+popup, the openInvoiceDetail helper, the split linked rows across the three surfaces, the
+extended coherence guard, and the CLAUDE.md note — all matching the current app styling.
