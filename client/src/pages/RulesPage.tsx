@@ -210,7 +210,7 @@ function AutomationRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
 
   return (
     <div
-      className="relative flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px]"
+      className="relative flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
       style={pausedFromReport ? { boxShadow: `inset 3px 0 0 0 ${ALERT}` } : undefined}
       data-testid={`row-automation-${rule.id}`}
     >
@@ -282,7 +282,7 @@ function GuardrailRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
   const [, navigate] = useLocation();
   return (
     <div
-      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px]"
+      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
       data-testid={`row-guardrail-${rule.id}`}
     >
       <button
@@ -321,7 +321,7 @@ function GuardrailRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
 function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
-      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px]"
+      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
       data-testid={`row-alwayson-${rule.id}`}
     >
       <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#1d2132]">

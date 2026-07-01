@@ -591,7 +591,6 @@ export function FinancesPage() {
                 <WidgetHeader title="Income" count={incomeCount} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                   <IncomeSummary format={format} onCount={setIncomeCount} />
-                  <Divider />
                   <OverdueInvoicesBanner format={format} />
                 </div>
               </div>
