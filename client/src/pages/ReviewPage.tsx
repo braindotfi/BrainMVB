@@ -584,6 +584,14 @@ export function ReviewPage() {
               </div>
             )}
 
+            {showApproved && autoHandled.length === 0 && (
+              <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                  No auto-approved payments yet. Brain will handle them under your standing rules.
+                </p>
+              </div>
+            )}
+
             {/* Helper banner pinned to the BOTTOM of the page on the "Needs Review" tab. */}
             {activeTab === "Needs Review" && <HelperBanner />}
 

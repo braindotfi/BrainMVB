@@ -346,6 +346,13 @@ export function ActivityPage() {
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
             />
+            {liveItems.length === 0 && todayItems.length === 0 && yesterdayItems.length === 0 && (
+              <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                  No activity in this view yet. Brain will record everything it does or notices as it happens.
+                </p>
+              </div>
+            )}
           </div>
 
         </div>

@@ -1,10 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
+
+function timeAgo(ts: number): string {
+  const diffMs = Date.now() - ts;
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 10) return "Just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.round(diffH / 24);
+  return `${diffD}d ago`;
+}
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
@@ -444,6 +457,14 @@ export function FinancesPage() {
   const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
   const [activeTab, setActiveTab] = useState<FinanceTab>("Accounts");
 
+  // Dynamic "last updated" timestamp — refreshes every 10s
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
+    return () => window.clearInterval(id);
+  }, []);
+  const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -453,7 +474,7 @@ export function FinancesPage() {
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Finances</p>
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap">Here's your financial snapshot right now.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated 2 minutes ago...</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated {updatedLabel}</p>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
