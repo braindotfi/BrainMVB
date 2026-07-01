@@ -119,7 +119,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     occurredAtMs: 1782384467451,
     rowSubtitle: "$8,400 · sarah@meridian · AUD-8A1R",
     lifecycle: [
-      { label: "Close Agent proposed payment", timestamp: "Jun 30, 6:00 PM ET", kind: "ok" },
+      { label: "Invoice Agent proposed payment", timestamp: "Jun 30, 6:00 PM ET", kind: "ok" },
       { label: "Escalated to human — above auto-pay limit", timestamp: "Jun 30, 6:01 PM ET", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 1, 8:55 AM ET", kind: "ok" },
       { label: "ACH settled", timestamp: "Jul 1, 9:00 AM ET", kind: "ok" },
@@ -266,7 +266,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     occurredAtMs: 1782470867451,
     rowSubtitle: "$5,600 · sarah@meridian · AUD-5J7Y",
     lifecycle: [
-      { label: "Close Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", kind: "ok" },
+      { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", kind: "ok" },
       { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 2, 9:55 AM ET", kind: "ok" },
       { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", kind: "ok" },

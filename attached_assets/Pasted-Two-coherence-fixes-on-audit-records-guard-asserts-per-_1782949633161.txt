@@ -1,0 +1,36 @@
+Two coherence fixes on audit records + guard asserts, per the payroll record (AUD-5J7Y) review.
+git fetch/pull first; work on a feature branch (e.g. fix/anchor-verify-and-agent-coherence);
+track done/pending; update CLAUDE.md at the end.
+
+FIX 1 — VERIFY BUTTON MUST KEY OFF ANCHOR STATUS. On AUD-5J7Y (and anywhere the anchor proof
+renders), "Verify on-chain" is enabled while anchor.status is "pending_next_batch" ("Hashes
+pending next batch"). That claims verifiability that doesn't exist yet. Fix the shared
+AnchorStatus/anchor-proof component so:
+- status "pending_next_batch" → Verify rendered DISABLED (muted, cursor-not-allowed) with the
+  caption "Verification opens once anchored." No live link.
+- status "anchored" → Verify enabled (purple), hashes shown.
+This must be driven by anchor.status in the ONE shared component — audit-record popup, settled
+card, receipt all inherit it. No per-surface overrides.
+
+FIX 2 — AGENT ↔ EVENT COHERENCE. AUD-5J7Y's lifecycle says "Close Agent proposed payroll run."
+Close is the reconciliation agent; payroll is not its domain. Fix the record so the proposing
+agent matches the event's domain per the canonical agent catalog (Invoice=AP, Collections=AR,
+Cash=treasury, Close=reconciliation). Payroll proposals should come from the agent that owns
+payment proposals in our catalog (or reference the payroll rule), not Close. Sweep/audit the
+OTHER mock audit records for the same class of mismatch (an agent proposing outside its domain)
+and fix any found — list them.
+
+GUARD — extend the unified dev consistency guard (do not fork):
+- ANCHOR-UI assert: no record with anchor.status "pending_next_batch" may present an enabled
+  verify affordance / a verifyHref; hashes must be absent until anchored. (Assert at the data
+  level: pending records must not carry merkleRoot/baseTx/verifyHref.)
+- AGENT-DOMAIN assert: each audit record's proposing agent matches its event domain
+  (invoice→AP/vendor payments, collections→AR, cash→treasury/sweep, close→reconciliation;
+  payroll→its owning agent/rule). console.error listing "record → agent mismatch"; never throw.
+
+VERIFY: AUD-5J7Y shows disabled Verify with pending copy; an anchored record still shows enabled
+Verify; the payroll record's agent reads correctly; guard passes clean at boot; list any other
+agent-domain fixes made.
+
+Return: the component fix, the record fixes (with the sweep results), the two new asserts, and
+the CLAUDE.md update.

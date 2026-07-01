@@ -238,6 +238,15 @@ Programmable neobank on Base L2.
   purchase_order); bank_transaction + contract carry none. Display labels MAY differ from a
   vendor's canonical name (e.g. "Notion Team" vs "Notion Labs") — not equality-checked. Extend
   this module; don't fork it. See CLAUDE.md.
+- Same guard module also runs `checkAnchorUiCoherence` — a record whose `anchor.status` is
+  `pending_next_batch` must NOT carry `merkleRoot`/`baseTx`/`verifyHref` (nothing to verify yet).
+  This mirrors the shared `AnchorStatus` component, which renders Verify DISABLED with the caption
+  "Verification opens once anchored." and NO live link whenever pending, in BOTH proof + status
+  modes, driven purely from `anchor.status` — and `checkAgentDomainCoherence` — the proposing
+  agent parsed from a lifecycle label ("<X> Agent proposed|detected …") must stay inside its
+  catalog domain (Invoice=AP/vendor payments incl. payroll & subscriptions, Collections=AR,
+  Cash=treasury/sweep, Close=reconciliation); flags only when the action phrase clearly matches a
+  DIFFERENT domain, skips ambiguous phrases (no false positives).
 
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).

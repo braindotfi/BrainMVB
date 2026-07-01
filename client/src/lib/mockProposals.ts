@@ -1037,7 +1037,7 @@ export const COMCAST_SETTLED: Proposal = autoHandled({
 export const PAYROLL_SETTLED: Proposal = settledApproved({
   id: "settled-payroll",
   auditId: "AUD-5J7Y",
-  agent: "close",
+  agent: "invoice",
   title: "Payroll run — J. Smith (Engineering)",
   counterparty: "J. Smith (Engineering)",
   amount: 5600,
@@ -1053,7 +1053,7 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
     { label: "approval", value: "above threshold · human", severity: "info" },
   ],
   timeline: [
-    { label: "Close Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
+    { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
     { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
     { label: "You approved", timestamp: "Jul 2, 9:55 AM ET", done: true },
     { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "Brain never held the funds", done: true },

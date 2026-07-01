@@ -562,3 +562,109 @@ export function checkReferenceCoherence(): SemanticIssue[] {
 
   return issues;
 }
+
+/* ── ANCHOR-UI coherence guard ────────────────────────────────────────────
+   Verification is only real once a record is anchored on-chain. A record still
+   "pending_next_batch" must NOT advertise a verifiable state at the DATA level:
+   no merkleRoot / baseTx / verifyHref may be present (there is nothing to link
+   to yet). Asserting at the data level is what keeps the ONE shared AnchorStatus
+   component honest across every surface (audit popup, settled card, receipt) —
+   the UI renders Verify disabled purely from anchor.status, so a pending record
+   that carried hashes/href would be a lie waiting to leak into the UI.
+   ──────────────────────────────────────────────────────────────────────────── */
+export function checkAnchorUiCoherence(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    if (rec.anchor.status !== "pending_next_batch") continue;
+    const leaked: string[] = [];
+    if (rec.anchor.merkleRoot) leaked.push("merkleRoot");
+    if (rec.anchor.baseTx) leaked.push("baseTx");
+    if (rec.anchor.verifyHref) leaked.push("verifyHref");
+    if (leaked.length > 0) {
+      issues.push({
+        source: `audit ${rec.id}`,
+        message: `is anchor.status "pending_next_batch" but carries ${leaked.join(", ")} — a not-yet-anchored record must not present a verifiable/linkable proof`,
+      });
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[anchor-ui-consistency] ${issues.length} anchor-state issue(s) in mock data:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[anchor-ui-consistency] OK — no pending_next_batch record advertises hashes or a verify link.",
+    );
+  }
+
+  return issues;
+}
+
+/* ── AGENT-DOMAIN coherence guard ─────────────────────────────────────────
+   The proposing agent on an audit record must stay inside its own domain per the
+   canonical agent catalog: Invoice = AP / vendor payments (incl. payroll runs &
+   subscriptions), Collections = AR, Cash = treasury / sweep, Close =
+   reconciliation. This catches the class where an agent proposes outside its lane
+   (e.g. the Close Agent — reconciliation — "proposing a payroll run" or a vendor
+   payment, which belongs to the Invoice Agent).
+   The proposing agent lives only in the lifecycle label ("<X> Agent proposed |
+   detected …"), so we parse it, then match the ACTION PHRASE against per-domain
+   keywords. We flag ONLY when the phrase clearly belongs to a different agent's
+   domain and NOT the proposing agent's — an ambiguous phrase (no keyword match)
+   is skipped, so the guard never fires false positives on future copy. Never
+   throws; only console.error's.
+   ──────────────────────────────────────────────────────────────────────────── */
+const AGENT_DOMAIN_KEYWORDS: Record<string, RegExp> = {
+  // Invoice Agent — accounts payable: vendor payments, payroll, subscriptions, bills.
+  invoice: /payment|payroll|invoice|subscription|renewal|utility|bill|vendor|ach to/,
+  // Collections Agent — accounts receivable: chasing money owed TO the business.
+  collections: /receivable|overdue|reminder|dunning|collection|past due/,
+  // Cash Agent — treasury: idle-balance sweeps, yield moves.
+  cash: /sweep|yield|idle|treasury|savings|operating balance|deposit to/,
+  // Close Agent — reconciliation: ledger/close discrepancies, correcting entries.
+  close: /reconcil|ledger|correcting entry|close period|month-end|journal entry/,
+};
+
+export function checkAgentDomainCoherence(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+  const PROPOSE_RE = /^(Invoice|Collections|Cash|Close) Agent (?:proposed|detected) (.+)$/;
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    for (const step of rec.lifecycle) {
+      const m = step.label.match(PROPOSE_RE);
+      if (!m) continue;
+      const agent = m[1].toLowerCase();
+      const phrase = m[2].toLowerCase();
+
+      // Which domains does the action phrase belong to?
+      const matchedDomains = Object.keys(AGENT_DOMAIN_KEYWORDS).filter((a) =>
+        AGENT_DOMAIN_KEYWORDS[a].test(phrase),
+      );
+      // Ambiguous (no domain keyword) → can't judge, skip.
+      if (matchedDomains.length === 0) continue;
+      // Coherent if the proposing agent is one of the matched domains.
+      if (matchedDomains.includes(agent)) continue;
+
+      issues.push({
+        source: `audit ${rec.id}`,
+        message: `${m[1]} Agent proposed/detected "${m[2]}" — that action is in the ${matchedDomains.join("/")} domain, not the ${agent} agent's. An agent must not act outside its catalog domain.`,
+      });
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[agent-domain-consistency] ${issues.length} record → agent mismatch(es) in mock data:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[agent-domain-consistency] OK — every audit record's proposing agent stays inside its catalog domain.",
+    );
+  }
+
+  return issues;
+}

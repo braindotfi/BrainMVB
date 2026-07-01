@@ -75,8 +75,9 @@ suffix (they were never meant to resolve). Never label them `kind:"vendor"`.
 ### Dev guards — unified, resolution AND coherence for all entity types
 `client/src/lib/ruleConsistencyCheck.ts` runs on dev boot (imported in `main.tsx`,
 guarded by `import.meta.env.DEV`). It never throws; it only `console.error`s. It now
-covers **rules, vendors, documents, and proposals** — resolution guards run first,
-coherence guards second. Extend this one module; **don't fork** a parallel checker.
+covers **rules, vendors, documents, proposals, anchor-UI state, and agent↔event
+domain** — resolution guards run first, coherence guards second. Extend this one
+module; **don't fork** a parallel checker.
 
 **Resolution guards** (does every referenced id point at a real store entity?):
 
@@ -146,6 +147,29 @@ that let rules break before):
    Futures was auto_approved. Logs: `[semantic-consistency] OK ...` or listed
    mismatches.
 
+6. **`checkAnchorUiCoherence()`** — anchor-UI honesty guard. On-chain verification
+   is only real once a record is anchored, so any record whose `anchor.status` is
+   `pending_next_batch` must NOT carry `merkleRoot` / `baseTx` / `verifyHref` (there
+   is nothing to link to yet). This is the DATA-level assertion that keeps the ONE
+   shared `AnchorStatus` component honest across every surface — the UI renders the
+   Verify affordance disabled (with the caption "Verification opens once anchored.")
+   purely from `anchor.status`, so a pending record carrying hashes/href would be a
+   lie waiting to leak into the UI. Logs `[anchor-ui-consistency] OK ...`.
+
+7. **`checkAgentDomainCoherence()`** — agent↔event domain guard. The proposing
+   agent named in a lifecycle label must stay inside its canonical catalog domain
+   (see `AGENT_META` in `ProposalDetail.tsx`): **Invoice** = AP / vendor payments
+   (incl. payroll runs & subscriptions), **Collections** = AR, **Cash** =
+   treasury/sweep, **Close** = reconciliation. The proposing agent lives ONLY in the
+   lifecycle label (`"<X> Agent proposed|detected …"`), so the guard parses it, then
+   matches the ACTION PHRASE against per-domain keyword regexes (`AGENT_DOMAIN_KEYWORDS`).
+   It flags ONLY when the matched domain(s) are non-empty AND the proposing agent is
+   not among them; an ambiguous phrase (no keyword match) is SKIPPED so the guard
+   never fires false positives on future copy. This is the guard that catches the
+   class where e.g. the Close Agent (reconciliation) "proposes a payroll run" or a
+   vendor payment — which belong to the Invoice Agent. Logs
+   `[agent-domain-consistency] OK ...`.
+
 ### History (2026-07): the "rule links don't work" bug
 
 **Phase 1 — resolution fix**
@@ -191,6 +215,22 @@ entire demo — it must NEVER be auto_approved. Cross-surface check confirmed:
 **Result:** Both `AUD-7K2M` and `AUD-7N2S` now tell the same story as the review
 proposal and the `ReviewItems` surface: Bright Futures is HELD for bank-detail
 verification, never auto-cleared.
+
+**Phase 3 — anchor-UI honesty + agent↔event domain coherence**
+Two more "resolves-but-lies" classes, each fixed in data AND locked by a new
+unified dev guard (see guards 6 & 7 above):
+- **Anchor-UI:** on-chain verification is only real once anchored, so `AnchorStatus`
+  now renders the Verify affordance DISABLED with the caption "Verification opens
+  once anchored." and NO live link whenever `anchor.status` is `pending_next_batch`
+  — in BOTH proof and status modes, driven purely from `anchor.status`. Guarded by
+  `checkAnchorUiCoherence` (a pending record must not carry `merkleRoot`/`baseTx`/
+  `verifyHref`).
+- **Agent↔event domain:** two records had the WRONG proposing agent for the action —
+  `AUD-8A1R` ("Close Agent proposed payment" for an office-lease AP payment) and
+  `AUD-5J7Y` ("Close Agent proposed payroll run") both belong to the **Invoice**
+  Agent (AP). Fixed the lifecycle labels; `AUD-5J7Y`'s linked `PAYROLL_SETTLED`
+  proposal (`mockProposals.ts`) also had `agent: "close"` → changed to `"invoice"`
+  with its timeline label updated to match. Guarded by `checkAgentDomainCoherence`.
 
 ## Route ordering (wouter)
 `/rules/:id` is registered before `/rules` in `App.tsx` — keep specific routes ahead

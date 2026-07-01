@@ -71,29 +71,49 @@ export function AnchorStatus({
         </div>
       )}
 
-      {/* Action row: Verify button in proof mode; inline verify link in status mode */}
+      {/* Action row: Verify button in proof mode; inline verify link in status mode.
+         Verification is only real once anchored — while pending, the affordance is
+         rendered disabled with an explicit caption and NO live link, driven purely
+         by anchor.status so every surface (audit popup, settled card, receipt) is
+         consistent. */}
       {mode === "proof" ? (
-        <button
-          type="button"
-          onClick={onVerify}
-          disabled={pending}
-          data-testid="button-verify-on-chain"
-          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4ef4] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-        >
-          Verify on-chain
-          <ExternalLink size={13} />
-        </button>
-      ) : (
-        <div className="flex gap-[12px] items-center w-full">
+        <div className="flex flex-col gap-[6px] w-full">
           <button
             type="button"
-            onClick={onVerify}
+            onClick={pending ? undefined : onVerify}
             disabled={pending}
-            data-testid="button-verify-inline"
-            className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#7631ee] hover:text-[#a8b9f4] disabled:text-[#414965] disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            aria-disabled={pending}
+            data-testid="button-verify-on-chain"
+            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4ef4] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#7631ee] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
-            Verify
+            Verify on-chain
+            <ExternalLink size={13} />
           </button>
+          {pending && (
+            <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+              Verification opens once anchored.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex gap-[12px] items-center w-full">
+          {pending ? (
+            <span
+              data-testid="text-verify-pending-caption"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]"
+            >
+              Verification opens once anchored.
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onVerify}
+              data-testid="button-verify-inline"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#7631ee] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              Verify
+            </button>
+          )}
           {onViewFullRecord && (
             <button
               type="button"

@@ -18,6 +18,8 @@ if (import.meta.env.DEV) {
     // Coherence guards — resolved refs must also tell the truth.
     m.checkSemanticAuditRecords();
     m.checkReferenceCoherence();
+    m.checkAnchorUiCoherence();
+    m.checkAgentDomainCoherence();
   });
 }
 
