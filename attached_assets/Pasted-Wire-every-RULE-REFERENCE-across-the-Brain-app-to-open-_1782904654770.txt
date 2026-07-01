@@ -1,0 +1,40 @@
+Wire every RULE REFERENCE across the Brain app to open the Rule detail (RuleDetail) for that
+rule. Rules are already a first-class type with stable ids and a built RuleDetail screen —
+this is pure wiring, no new rule UI. Reuse existing navigation/modal patterns; do not change
+RuleDetail itself.
+
+RESOLUTION: all rule links resolve by `ruleId` against the existing rules source (mockRules).
+Add a single helper (e.g. openRuleDetail(ruleId)) that looks up the rule and opens its
+RuleDetail (as the app's existing sheet/route pattern). Every link below calls it — do not
+duplicate lookup logic per surface.
+
+WIRE THESE SURFACES (each already carries or can derive a ruleId):
+1. Auto-handled receipt popup — the "The rule that approved this" sub-card, and its "Review
+   rule" action, open RuleDetail for that receipt's ruleId. (This is the receipt→rule path
+   already specced; ensure it's actually wired to open RuleDetail, not a placeholder.)
+2. Audit Log — any record whose lifecycle/policy references a rule (AUTO-APPROVED and
+   RULE CHANGE events), and the canonical Audit Record popup's "Linked" section: a
+   "Rule · {name}" row opens RuleDetail via ruleId.
+3. Rules page — an AUTOMATION row tap opens its RuleDetail (confirm this is live).
+4. Settled Approved Record card — if the payment was cleared or governed by a rule, show a
+   "Cleared by rule · {name}" link that opens RuleDetail.
+5. Rule suggestions / "Always handle this" — unchanged (those open the CREATE flow, not an
+   existing rule); do not reroute them.
+
+BEHAVIOR:
+- If a ruleId doesn't resolve (rule deleted), the link renders as plain, non-tappable text
+  with a muted "(rule removed)" note — never a dead tap or a crash.
+- Opening RuleDetail from any of these preserves back-navigation to where the user came from
+  (receipt, audit record, etc.).
+- Do NOT wire vendor references yet — leave any "Vendor · {name}" rows as plain text for now
+  (the vendor detail page isn't built). Only rules are linked in this pass.
+
+DATA: ensure the linkable records carry ruleId where a rule governs them — auto_handled
+proposals (ruleId already present), AuditRecords for auto_approved/rule_change events (add
+ruleId to those mock records), and any settled Approved Record cleared by a rule. Wire the
+existing Con Edison rule ("Auto-clear utility bills", policy/ap.tolerance.v3) as the resolving
+target for the Con Edison receipt and its audit record so the path is demoable end to end.
+
+Return the openRuleDetail helper, the updated surfaces (receipt, audit record popup, rules
+page, settled card) with rule references wired, and any mock-data additions of ruleId — with
+vendor references intentionally left as plain text pending the vendor page.

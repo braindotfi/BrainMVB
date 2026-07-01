@@ -1,11 +1,12 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X, CircleCheck } from "lucide-react";
+import { X, CircleCheck, ChevronRight } from "lucide-react";
 import { AnchorStatus } from "./AnchorStatus";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
 import type { Proposal } from "@/lib/proposalTypes";
 import { AGENT_META, factColor, SectionLabel } from "./ProposalDetail";
 import { MOCK_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
+import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 
 /* ── Settled Approved Record Card ─────────────────────────────────────────────────────────────
    Post-approval / settled view of a proposal. Same layout as ProposalDetail,
@@ -113,6 +114,40 @@ export function SettledRecordCard({
                 </div>
               </div>
             )}
+
+            {/* Cleared by rule — links to RuleDetail when the governing rule
+                still resolves; a deleted rule shows a muted "(rule removed)". */}
+            {proposal.rule && (() => {
+              const ruleGone = !resolveRule(proposal.rule!.id);
+              if (ruleGone) {
+                return (
+                  <div className="flex flex-col gap-[8px] w-full">
+                    <SectionLabel>Cleared by rule</SectionLabel>
+                    <div
+                      data-testid="text-cleared-by-rule"
+                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] w-full"
+                    >
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{proposal.rule!.name}</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule removed)</span>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex flex-col gap-[8px] w-full">
+                  <SectionLabel>Cleared by rule</SectionLabel>
+                  <button
+                    type="button"
+                    onClick={() => { openRuleDetail(proposal.rule!.id, navigate); onOpenChange(false); }}
+                    data-testid="button-cleared-by-rule"
+                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{proposal.rule!.name}</span>
+                    <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Anchor Status — status mode */}
             <div className="h-px w-full bg-[#1d2132]" />

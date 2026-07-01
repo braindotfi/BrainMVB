@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
+import { resolveRule } from "@/lib/openRuleDetail";
 import type {
   Proposal,
   ProposalStatus,
@@ -487,6 +488,9 @@ function AutoHandledReceipt({
 }) {
   const rule = proposal.rule;
   const paused = rulePaused ?? (rule ? !rule.active : false);
+  // The link resolves only while the rule still exists in the store; a deleted
+  // rule keeps the receipt readable but renders a muted "(rule removed)" note.
+  const ruleResolves = !!rule && !!resolveRule(rule.id);
   /* Report flow is a small wizard: idle → "reason" capture → "confirm" safety
      action → done. Never auto-advances; the user drives every step. */
   const [reportStep, setReportStep] = useState<"idle" | "reason" | "confirm" | "done">("idle");
@@ -600,11 +604,12 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* 5 — "The rule that approved this" — bordered sub-card + Active/Paused chip */}
-      {rule && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
-          <SectionLabel>The rule that approved this</SectionLabel>
-          <div className="w-full rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px]">
+      {/* 5 — "The rule that approved this" — bordered sub-card + Active/Paused
+          chip. The whole card taps through to RuleDetail when the rule still
+          resolves; a deleted rule stays readable but non-tappable. */}
+      {rule && (() => {
+        const cardInner = (
+          <>
             <div className="flex items-center justify-between gap-[12px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
                 {rule.name}
@@ -625,9 +630,33 @@ function AutoHandledReceipt({
               <span>{rule.createdLabel}</span>
               <span className="text-[#6c779d]">{rule.policyId}</span>
             </div>
+            {!ruleResolves && (
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]">
+                (rule removed)
+              </span>
+            )}
+          </>
+        );
+        return (
+          <div className="flex flex-col gap-[12px] items-start w-full">
+            <SectionLabel>The rule that approved this</SectionLabel>
+            {ruleResolves ? (
+              <button
+                type="button"
+                onClick={() => onReviewRule?.(proposal)}
+                data-testid="button-rule-card"
+                className="w-full rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px] text-left hover:border-[#7631ee]/40 hover:bg-[#0d0f16] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              >
+                {cardInner}
+              </button>
+            ) : (
+              <div className="w-full rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px] flex flex-col gap-[10px]">
+                {cardInner}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 6 — info note: this is a record, not a request */}
       <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[12px]">
@@ -661,9 +690,10 @@ function AutoHandledReceipt({
           </button>
           <button
             type="button"
+            disabled={!ruleResolves}
             onClick={() => onReviewRule?.(proposal)}
             data-testid="button-review-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             <SlidersHorizontal size={16} className="text-[#7631ee] shrink-0" />
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#7631ee] whitespace-nowrap">

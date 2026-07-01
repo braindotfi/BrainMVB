@@ -9,6 +9,7 @@ import {
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import { MOCK_PROPOSALS, ACCOUNT_SUMMARY, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { openRuleDetail } from "@/lib/openRuleDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
@@ -441,7 +442,7 @@ export function ReviewPage() {
                       return (
                         <button
                           type="button"
-                          onClick={() => navigate(`/rules/${related.id}`)}
+                          onClick={() => openRuleDetail(related.id, navigate)}
                           data-testid={`note-related-rule-${p.id}`}
                           className="flex items-center gap-[8px] mx-[8px] px-[10px] py-[7px] rounded-[8px] text-left transition-colors focus:outline-none focus-visible:ring-2"
                           style={{ backgroundColor: "rgba(210,3,68,0.07)", border: "1px solid rgba(210,3,68,0.25)", ["--tw-ring-color" as string]: "#d20344" }}
@@ -538,9 +539,8 @@ export function ReviewPage() {
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}
         onReviewRule={(p) => {
-          const r = ruleOf(p);
           setActive(null);
-          navigate(r ? `/rules/${r.id}` : "/rules");
+          openRuleDetail(p.rule?.id, navigate);
         }}
         onAlwaysHandle={(p) => {
           // Promote a routine proposal into a standing rule: pre-fill the create
@@ -563,7 +563,7 @@ export function ReviewPage() {
             // Pause + record, then take the user to the rule to review it.
             storeReportProblem(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
             setActive(null);
-            navigate(`/rules/${r.id}`);
+            openRuleDetail(r.id, navigate);
           } else {
             // Feedback only — record but leave the rule running.
             storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });

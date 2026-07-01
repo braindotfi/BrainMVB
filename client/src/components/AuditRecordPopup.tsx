@@ -5,6 +5,7 @@ import { auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
 import { AnchorStatus } from "./AnchorStatus";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
+import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 
 export function AuditRecordPopup({
   record,
@@ -23,12 +24,13 @@ export function AuditRecordPopup({
   const isFlagged = record.eventType === "flagged";
 
   const handleNavigate = (link: LinkedEntity) => {
-    if (link.kind === "vendor") {
-      navigate("/vendors");
-    } else if (link.kind === "rule") {
-      navigate(`/rules/${link.refId}`);
+    if (link.kind === "rule") {
+      const opened = openRuleDetail(link.refId, navigate);
+      if (!opened) return; // deleted rule — non-tappable, no-op
     } else if (link.kind === "proposal") {
       navigate(`/review`);
+    } else {
+      return; // vendor rows are plain text for now (vendor page not built)
     }
     onOpenChange(false);
   };
@@ -111,19 +113,43 @@ export function AuditRecordPopup({
               <div className="flex flex-col gap-[8px] w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase tracking-[0.04em]">Linked</p>
                 <div className="flex flex-col gap-[4px] w-full">
-                  {record.linked.map((link) => (
-                    <button
-                      key={`${link.kind}-${link.refId}`}
-                      type="button"
-                      onClick={() => handleNavigate(link)}
-                      data-testid={`button-linked-${link.kind}-${link.refId}`}
-                      className="flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#1d2132] transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    >
-                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{link.label}</span>
-                      <ChevronRight size={14} className="text-[#414965] shrink-0" />
-                    </button>
-                  ))}
+                  {record.linked.map((link) => {
+                    // Rules resolve against the store; a deleted rule (or any
+                    // vendor row, since the vendor page isn't built) renders as
+                    // plain, non-tappable text — never a dead tap.
+                    const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
+                    const tappable = link.kind === "proposal" || (link.kind === "rule" && !ruleGone);
+
+                    if (!tappable) {
+                      return (
+                        <div
+                          key={`${link.kind}-${link.refId}`}
+                          data-testid={`text-linked-${link.kind}-${link.refId}`}
+                          className="flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#0a0c10] w-full"
+                        >
+                          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
+                          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
+                          {ruleGone && (
+                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule removed)</span>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={`${link.kind}-${link.refId}`}
+                        type="button"
+                        onClick={() => handleNavigate(link)}
+                        data-testid={`button-linked-${link.kind}-${link.refId}`}
+                        className="flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#1d2132] transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      >
+                        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{link.label}</span>
+                        <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -1,2 +1,3 @@
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
+- [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → plain "(rule removed)", never a dead tap.
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
