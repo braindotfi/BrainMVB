@@ -20,7 +20,7 @@ import type { Proposal } from "./proposalTypes";
    use `resolveProposal` to decide whether to render a tappable link or plain
    text; they never duplicate the lookup. An unresolved id is a bug (dangling
    reference) — we `console.warn` loudly rather than fail silently. Mirrors
-   openRuleDetail / openVendorDetail / openInvoiceDetail. */
+   openRuleDetail / openVendorDetail / openDocumentDetail. */
 
 /* Every source a proposal can be referenced from. Standalone settled/held
    records aren't in the queue arrays, so they're listed explicitly. Exported so

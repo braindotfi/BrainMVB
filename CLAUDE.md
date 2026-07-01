@@ -31,23 +31,35 @@ RuleDetail when tapped. They all go through one helper and one canonical store.
   safety net (e.g. a rule deleted via `deleteRule`, then an old receipt is opened) —
   **shipped mock data must have zero dangling refs.**
 
-## Vendor + invoice references (same contract, different stores)
+## Vendor + document references (same contract, different stores)
 
-Vendors and invoices follow the **identical** pattern as rules — referenced by id,
+Vendors and documents follow the **identical** pattern as rules — referenced by id,
 resolved via their own `openXDetail` helper against a canonical store, with a
 resolve-or-plain-text fallback:
 - **Vendors** — canonical store `MOCK_VENDORS` (`mockVendors.ts`). Helper
   `openVendorDetail.ts`: `resolveVendor(id)` decides tappable-vs-plain;
   `openVendorDetail(id, navigate)` pushes `/vendors?vendor=<id>` (VendorsPage reads
   `?vendor=` via `useSearch` and auto-opens the detail). Referenced by `linked[]`
-  `kind:"vendor"` (`refId`) **and** by `invoice.vendorId`.
-- **Invoices** — canonical store `MOCK_INVOICES` (`mockInvoices.ts`). Helper
-  `openInvoiceDetail.ts`: `resolveInvoice(id)` decides tappable-vs-plain;
-  `openInvoiceDetail(id, setOpen)` opens `InvoiceViewerPopup` (setter, not navigate —
-  by design, so it stacks over the audit popup). Referenced by `linked[]`
-  `kind:"invoice"` (`refId`) **and** by `proposal.invoiceId`.
-- **A vendor's `history` must reconcile with its referenced invoices/payments** — a
-  vendor with a linked paid invoice must have `paymentCount ≥ 1` and
+  `kind:"vendor"` (`refId`) **and** by `document.vendorId`.
+- **Documents** — canonical store `MOCK_DOCUMENTS` (`mockDocuments.ts`, served by
+  `documentsStore.ts` `getDocument`/`allDocuments`). Helper `openDocumentDetail.ts`:
+  `resolveDocument(id)` decides tappable-vs-plain; `openDocumentDetail(id, setOpen)`
+  opens `DocumentViewerPopup` (setter, not navigate — by design, so it stacks over the
+  audit popup). Referenced by `linked[]` `kind:"invoice"` (`refId`) **and** by
+  `proposal.invoiceId`. This is the **generalized read-only EVIDENCE viewer**: ONE
+  `DocumentRecord` type + ONE component render EVERY `DocKind` (`invoice` |
+  `prior_payment` | `bank_transaction` | `contract` | `purchase_order`) from
+  `documentTypes.ts` — there is NO per-kind type or per-kind component. It replaced the
+  invoice-only `mockInvoices`/`invoiceTypes`/`openInvoiceDetail`/`InvoiceViewerPopup`
+  (all deleted). The audit-log linked kind stays `"invoice"` (the `LinkedEntityKind`
+  that overlaps `DocKind`) and routes through `openDocumentDetail`. Every kind shows
+  provenance + a "viewer, not the system of record" caption; `bank_transaction` carries
+  a `reconciliation` block; a `compareToId` twin drives an in-place COMPARE toggle
+  (duplicate invoice / bank-detail change). KNOWN vendors carry `vendorId` (+
+  `vendorName`) and deep-link; NON-vendor counterparties (landlords, ledgers) carry
+  only `counterparty` text and no `vendorId`.
+- **A vendor's `history` must reconcile with its referenced documents/payments** — a
+  vendor with a linked paid document must have `paymentCount ≥ 1` and
   `totalPaid/avgAmount/lastPaidLabel` consistent with the referenced amounts/dates;
   `trustStatus` must match how its records actually behaved (a payment human-approved
   above the auto-pay limit is NOT "trusted"; a single recent payment reads as the
@@ -60,11 +72,11 @@ use accurate `linked[]` kinds instead (`kind:"employee"`, `"protocol"`, `"ledger
 `LinkedEntityKind`) and render as plain, non-tappable text with **no** `(… unavailable)`
 suffix (they were never meant to resolve). Never label them `kind:"vendor"`.
 
-### Dev guards — unified, resolution AND coherence for all three entity types
+### Dev guards — unified, resolution AND coherence for all entity types
 `client/src/lib/ruleConsistencyCheck.ts` runs on dev boot (imported in `main.tsx`,
 guarded by `import.meta.env.DEV`). It never throws; it only `console.error`s. It now
-covers **rules, vendors, and invoices** — resolution guards run first, coherence
-guards second. Extend this one module; **don't fork** a parallel checker.
+covers **rules, vendors, documents, and proposals** — resolution guards run first,
+coherence guards second. Extend this one module; **don't fork** a parallel checker.
 
 **Resolution guards** (does every referenced id point at a real store entity?):
 
@@ -72,14 +84,15 @@ guards second. Extend this one module; **don't fork** a parallel checker.
    `AUTO_HANDLED_PROPOSALS` resolves via `getRule`. Logs `[rule-consistency] OK ...`.
 
 2. **`checkVendorReferences()`** — every `kind:"vendor"` linked ref + every
-   `invoice.vendorId` resolves via `resolveVendor`, and every `vendor.ruleIds`
-   resolves via `getRule` (the reverse edge). This is the guard whose ABSENCE let the
-   vendor-id drift (`aws`/`adobe`/`comcast`/`bright-futures`) ship silently. Logs
+   `document.vendorId` (only docs that name a KNOWN vendor) resolves via
+   `resolveVendor`, and every `vendor.ruleIds` resolves via `getRule` (the reverse
+   edge). This is the guard whose ABSENCE let the vendor-id drift
+   (`aws`/`adobe`/`comcast`/`bright-futures`) ship silently. Logs
    `[vendor-consistency] OK ...`.
 
-3. **`checkInvoiceReferences()`** — every `kind:"invoice"` linked ref + every
+3. **`checkDocumentReferences()`** — every `kind:"invoice"` linked ref + every
    `proposal.invoiceId` (across `MOCK_PROPOSALS` + `AUTO_HANDLED_PROPOSALS`) resolves
-   via `resolveInvoice`. Logs `[invoice-consistency] OK ...`.
+   via `resolveDocument` against `MOCK_DOCUMENTS`. Logs `[document-consistency] OK ...`.
 
    **`checkProposalReferences()`** — every audit record's `kind:"proposal"` linked
    ref **and** its top-level `proposalId` resolve via `resolveProposal` (which spans
@@ -89,22 +102,30 @@ guards second. Extend this one module; **don't fork** a parallel checker.
 **Coherence guards** (does a *resolved* ref also tell the truth? — this is the gap
 that let rules break before):
 
-4. **`checkReferenceCoherence()`** — for each audit record: a linked invoice's
-   `total` == the record's `amount`; a linked invoice's `vendorId` == the record's
-   linked vendor; every `kind:"vendor"` ref points at an ACTUAL vendor (catches the
-   `j-smith`/`aave` misfiling class); and a vendor with a linked PAID invoice is not
-   contradicted by zero payment history. **Plus lifecycle coherence** across the
-   proposal→invoice→audit→anchor chain (the "resolves-but-lies-about-STATE" class):
+4. **`checkReferenceCoherence()`** — for each audit record: a linked document's
+   `amount` == the record's `amount`; a linked document's `vendorId` (when it names a
+   KNOWN vendor) == the record's linked vendor; every `kind:"vendor"` ref points at an
+   ACTUAL vendor (catches the `j-smith`/`aave` misfiling class); and a vendor with a
+   linked PAID document is not contradicted by zero payment history. **Plus lifecycle
+   coherence** across the proposal→document→audit→anchor chain (the
+   "resolves-but-lies-about-STATE" class):
    - a SETTLED audit record (`approved`/`auto_approved`) must not link a proposal
      that is still `pending`/`verifying`/`postponed` — a settled/anchored event
      can't point at an un-acted proposal (this is why `AUD-3308FE` links the
      executed twin `settled-aws`, not the still-pending `prop-aws`);
-   - a linked invoice's status matches the event type (`approved`/`auto_approved`
-     ⇒ `paid`; `flagged` ⇒ `held`);
+   - a linked document's status matches the event type (`approved`/`auto_approved`
+     ⇒ `paid`; `flagged` ⇒ `held`) — **only for kinds that HAVE a status**
+     (invoice/prior_payment/purchase_order); `bank_transaction` + `contract` carry
+     none and are skipped;
    - a proposal's `invoiceId` matches its OWN lifecycle — a pending-like proposal
-     must not own a `paid` invoice, and an `executed`/`auto_handled` proposal must
-     own one;
-   - an invoice's `vendorName` == its resolved `vendor.name` (catches rename drift).
+     must not own a `paid` document, and an `executed`/`auto_handled` proposal must
+     own one — **and** its document `amount` == the proposal `amount`;
+   - a document's `vendorName` == its resolved `vendor.name` (catches rename drift);
+   - **document integrity**: every `bank_transaction` carries a `reconciliation`
+     block, a document naming a KNOWN vendor also carries a `vendorName`, and a
+     `compareToId` twin resolves + names the SAME vendor (when both known) + sits
+     within a 5% amount band (the pair exists to surface a duplicate / bank-detail
+     change, so a wildly different vendor or amount would be an incoherent compare).
    NOTE: a `flagged` record CAN link a pending proposal and CAN be anchored (a hold
    is itself an auditable event — see `AUD-3K8Q`), so neither is treated as a lie;
    display labels (linked-ref label, counterparty) MAY differ from a vendor's

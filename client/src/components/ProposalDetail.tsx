@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
 import { resolveRule } from "@/lib/openRuleDetail";
-import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
-import { InvoiceViewerPopup } from "./InvoiceViewerPopup";
-import type { Invoice } from "@/lib/invoiceTypes";
+import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
+import { DocumentViewerPopup } from "./DocumentViewerPopup";
+import { type DocumentRecord, docKindLabel } from "@/lib/documentTypes";
 import type {
   Proposal,
   ProposalStatus,
@@ -122,8 +122,8 @@ export function ProposalDetail({
 }) {
   const { format } = useCurrency();
   const [showTrace, setShowTrace] = useState(false);
-  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
+  const [documentOpen, setDocumentOpen] = useState(false);
 
   if (!proposal) return null;
 
@@ -286,18 +286,18 @@ export function ProposalDetail({
                   );
                 })}
               </div>
-              {/* Source invoice — tappable link when invoiceId resolves */}
+              {/* Source document — tappable link when invoiceId resolves */}
               {proposal.invoiceId && (() => {
-                const invGone = !resolveInvoice(proposal.invoiceId);
-                if (invGone) return null;
+                const srcDoc = resolveDocument(proposal.invoiceId);
+                if (!srcDoc) return null;
                 return (
                   <button
                     type="button"
-                    onClick={() => openInvoiceDetail(proposal.invoiceId, (inv) => { setViewingInvoice(inv); setInvoiceOpen(true); })}
+                    onClick={() => openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); })}
                     data-testid="button-source-invoice"
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">INVOICE</span>
+                    <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{proposal.invoiceId}</span>
                     <ChevronRight size={14} className="text-[#414965] shrink-0" />
                   </button>
@@ -495,10 +495,10 @@ export function ProposalDetail({
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
-      <InvoiceViewerPopup
-        invoice={viewingInvoice}
-        open={invoiceOpen}
-        onOpenChange={setInvoiceOpen}
+      <DocumentViewerPopup
+        document={viewingDocument}
+        open={documentOpen}
+        onOpenChange={setDocumentOpen}
       />
     </DialogPrimitive.Root>
   );

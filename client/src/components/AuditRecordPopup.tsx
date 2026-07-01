@@ -4,14 +4,14 @@ import { X, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
 import { AnchorStatus } from "./AnchorStatus";
-import { InvoiceViewerPopup } from "./InvoiceViewerPopup";
+import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
-import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
+import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
-import type { Invoice } from "@/lib/invoiceTypes";
+import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 
 export function AuditRecordPopup({
@@ -32,8 +32,8 @@ export function AuditRecordPopup({
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
-  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
+  const [documentOpen, setDocumentOpen] = useState(false);
 
   if (!record) return null;
 
@@ -45,11 +45,11 @@ export function AuditRecordPopup({
     // `navigate('/audit-log', {replace:true})` to clear the ?record= param, which
     // would REPLACE the deep-link we just pushed and dump the user back on the
     // audit log. The route change unmounts this page (and dialog) on its own.
-    // The invoice branch opens a stacked viewer on THIS page, so it also stays.
+    // The document branch opens a stacked viewer on THIS page, so it also stays.
     //
     // For vendor/proposal we pass a `returnTo` so closing that detail returns
     // to THIS exact audit record popup (re-opened via ?record=), matching the
-    // stacked invoice-viewer experience.
+    // stacked document-viewer experience.
     const returnTo = `/audit-log?record=${record.id}`;
     if (link.kind === "rule") {
       openRuleDetail(link.refId, navigate);
@@ -58,9 +58,11 @@ export function AuditRecordPopup({
     } else if (link.kind === "vendor") {
       openVendorDetail(link.refId, navigate, returnTo);
     } else if (link.kind === "invoice") {
-      openInvoiceDetail(link.refId, (inv) => {
-        setViewingInvoice(inv);
-        setInvoiceOpen(true);
+      // Linked evidence documents (invoices today; any DocKind) open in the
+      // universal document/record viewer via the ONE canonical resolver.
+      openDocumentDetail(link.refId, (d) => {
+        setViewingDocument(d);
+        setDocumentOpen(true);
       });
     }
   };
@@ -157,7 +159,7 @@ export function AuditRecordPopup({
                     // a missing/deleted entity renders as plain, non-tappable text.
                     const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                     const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
-                    const invoiceGone = link.kind === "invoice" && !resolveInvoice(link.refId);
+                    const invoiceGone = link.kind === "invoice" && !resolveDocument(link.refId);
                     const proposalGone = link.kind === "proposal" && !resolveProposal(link.refId);
                     const tappable =
                       (link.kind === "proposal" && !proposalGone) ||
@@ -213,10 +215,10 @@ export function AuditRecordPopup({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
-    <InvoiceViewerPopup
-      invoice={viewingInvoice}
-      open={invoiceOpen}
-      onOpenChange={setInvoiceOpen}
+    <DocumentViewerPopup
+      document={viewingDocument}
+      open={documentOpen}
+      onOpenChange={setDocumentOpen}
     />
     </>
   );

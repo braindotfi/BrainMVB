@@ -187,40 +187,57 @@ Programmable neobank on Base L2.
 - Naming conventions applied platform-wide: "Crypto Account" (not "Your Wallet" /
   "Stablecoin Account"), "Agent Account" (generic label; proper agent names unchanged).
 
-## Linked references contract (rules + vendors + invoices)
+## Linked references contract (rules + vendors + documents)
 - Every "Linked" ref (Audit Log popup, receipts, settled cards) is referenced BY ID and
   resolved through ONE helper against ONE canonical store, with a resolve-or-plain-text
   fallback: rules → `openRuleDetail`/`getRule` (rulesStore); vendors →
   `openVendorDetail`/`resolveVendor` (`mockVendors.ts`, deep-links `/vendors?vendor=<id>`);
-  invoices → `openInvoiceDetail`/`resolveInvoice` (`mockInvoices.ts`, opens
-  `InvoiceViewerPopup`). `invoice.vendorId` + `proposal.invoiceId` must also be canonical.
-- A vendor's `history` must RECONCILE with its referenced invoices/payments (amounts,
+  documents → `openDocumentDetail`/`resolveDocument` (`mockDocuments.ts`/`documentsStore.ts`,
+  opens `DocumentViewerPopup`). `document.vendorId` + `proposal.invoiceId` must also be
+  canonical.
+- **Generalized document/record EVIDENCE viewer** — `DocumentViewerPopup.tsx` is ONE
+  read-only viewer for every kind of evidence Brain surfaces, keyed off a `DocKind`
+  discriminator (`invoice` | `prior_payment` | `bank_transaction` | `contract` |
+  `purchase_order`) in `client/src/lib/documentTypes.ts` (`DocumentRecord`). It renders all
+  kinds from that one shape (no per-kind type/component) and always shows provenance +
+  a "viewer, not the system of record" caption. `bank_transaction` carries a
+  `reconciliation` block; a doc with a `compareToId` twin offers an in-place COMPARE toggle
+  (duplicate invoice / bank-detail change). KNOWN vendors carry `vendorId` (+ `vendorName`)
+  and deep-link; NON-vendor counterparties (landlords, internal ledgers) carry only
+  `counterparty` text. The audit-log linked kind stays `"invoice"` but routes through
+  `openDocumentDetail`. (The old invoice-only `openInvoiceDetail`/`resolveInvoice`/
+  `mockInvoices`/`invoiceTypes`/`InvoiceViewerPopup` were REPLACED by this.)
+- A vendor's `history` must RECONCILE with its referenced documents/payments (amounts,
   dates, tier, trustStatus) — no stubs, no contradictory tenure. A human-approved-above-
   limit payment is NOT "trusted"; a single recent payment reads as the "new" tier.
 - Non-vendor counterparties (payroll employees, DeFi protocols, internal ledgers) are NOT
   vendors — they use accurate `linked[]` kinds (`employee`/`protocol`/`ledger` in
   `LinkedEntityKind`) and render as plain, non-tappable text. Never label them `vendor`.
-- The proposal LIFECYCLE must be coherent end to end (proposal→invoice→audit→anchor). A
+- The proposal LIFECYCLE must be coherent end to end (proposal→document→audit→anchor). A
   settled/anchored audit record (`approved`/`auto_approved`) must NOT link a still-pending
   proposal — settled events point at their OWN settled twin. So a settled twin exists per
-  settled-but-still-queued item: `AWS_SETTLED` (id `settled-aws`, AUD-3308FE, invoice
+  settled-but-still-queued item: `AWS_SETTLED` (id `settled-aws`, AUD-3308FE, document
   AWS-2026-07) is the executed prior-cycle counterpart of the still-pending `prop-aws` in the
   review queue; the audit record's linked proposal + `proposalId` point at `settled-aws`, NOT
   `prop-aws`. Standalone settled/held records live outside the queue arrays, so they must be
   registered in `openProposalDetail.ts` `allProposals()` (else their refs dangle). A proposal's
-  `invoiceId` must match its lifecycle: pending-like proposals never own a `paid` invoice;
+  `invoiceId` must match its lifecycle: pending-like proposals never own a `paid` document;
   executed/auto_handled proposals do. A FLAGGED record CAN link a pending proposal and CAN be
   anchored (a hold is an auditable event) — that's NOT a lie.
 - `client/src/lib/ruleConsistencyCheck.ts` (dev-boot, `main.tsx`, never throws) is the
   UNIFIED guard covering all types: RESOLUTION (`checkRuleReferences` /
-  `checkVendorReferences` / `checkInvoiceReferences` / `checkProposalReferences`) + COHERENCE
-  (`checkReferenceCoherence`: linked invoice amount == record amount, invoice.vendorId ==
-  record's vendor, kind:"vendor" points at a real vendor, no paid-invoice vendor with zero
-  history; PLUS lifecycle: settled record's linked proposal not pending, invoice status matches
+  `checkVendorReferences` / `checkDocumentReferences` / `checkProposalReferences`) + COHERENCE
+  (`checkReferenceCoherence`: linked document amount == record amount, document.vendorId ==
+  record's vendor, kind:"vendor" points at a real vendor, no paid-document vendor with zero
+  history; PLUS lifecycle: settled record's linked proposal not pending, document status matches
   event type [approved/auto_approved→paid, flagged→held], proposal.invoiceId matches proposal
-  status, invoice.vendorName == resolved vendor.name) + `checkSemanticAuditRecords`. Display
-  labels MAY differ from a vendor's canonical name (e.g. "Notion Team" vs "Notion Labs") — not
-  equality-checked. Extend this module; don't fork it. See CLAUDE.md.
+  status + its document amount == proposal amount, document.vendorName == resolved vendor.name;
+  PLUS document integrity: bank_transaction has a reconciliation block, a compareToId twin
+  resolves + names the same vendor + is within a 5% amount band) + `checkSemanticAuditRecords`.
+  Document status coherence only applies to kinds WITH a status (invoice/prior_payment/
+  purchase_order); bank_transaction + contract carry none. Display labels MAY differ from a
+  vendor's canonical name (e.g. "Notion Team" vs "Notion Labs") — not equality-checked. Extend
+  this module; don't fork it. See CLAUDE.md.
 
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).

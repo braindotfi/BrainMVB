@@ -1,11 +1,11 @@
 import { MOCK_AUDIT_RECORDS } from "./mockAuditRecords";
-import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "./mockProposals";
+import { AUTO_HANDLED_PROPOSALS } from "./mockProposals";
 import { getRule } from "./rulesStore";
 import { UNTRUSTED_VENDORS } from "./mockRules";
 import { MOCK_VENDORS } from "./mockVendors";
 import { resolveVendor } from "./openVendorDetail";
-import { MOCK_INVOICES } from "./mockInvoices";
-import { resolveInvoice } from "./openInvoiceDetail";
+import { MOCK_DOCUMENTS } from "./mockDocuments";
+import { resolveDocument } from "./openDocumentDetail";
 import { allProposals, resolveProposal } from "./openProposalDetail";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
@@ -188,9 +188,12 @@ export function collectVendorReferences(): EntityRef[] {
     }
   }
 
-  // Invoices — the vendor they belong to.
-  for (const inv of MOCK_INVOICES) {
-    refs.push({ source: `invoice ${inv.id} vendorId`, id: inv.vendorId });
+  // Documents — the vendor they belong to (when they have a KNOWN vendor;
+  // non-vendor counterparties like landlords/ledgers carry no vendorId).
+  for (const doc of MOCK_DOCUMENTS) {
+    if (doc.vendorId) {
+      refs.push({ source: `document ${doc.id} vendorId`, id: doc.vendorId });
+    }
   }
 
   return refs;
@@ -227,21 +230,27 @@ export function checkVendorReferences(): EntityRef[] {
   return all;
 }
 
-/* Collect every place an INVOICE is referenced by id across mock data. */
-export function collectInvoiceReferences(): EntityRef[] {
+/* Collect every place a DOCUMENT is referenced by id across mock data. The
+   canonical documentsStore serves every DocKind (invoice / prior_payment /
+   bank_transaction / contract / purchase_order); the references today are the
+   audit-log linked evidence (linked kind "invoice") and a proposal's source
+   document (`proposal.invoiceId`). Both must resolve or they dangle. */
+export function collectDocumentReferences(): EntityRef[] {
   const refs: EntityRef[] = [];
 
-  // Audit records — linked entities of kind "invoice".
+  // Audit records — linked evidence (kind "invoice" routes to the doc viewer).
   for (const rec of MOCK_AUDIT_RECORDS) {
     for (const link of rec.linked) {
       if (link.kind === "invoice") {
-        refs.push({ source: `audit ${rec.id} linked invoice`, id: link.refId });
+        refs.push({ source: `audit ${rec.id} linked document`, id: link.refId });
       }
     }
   }
 
-  // Proposals (pending + auto-handled) — the invoice they clear.
-  for (const p of [...MOCK_PROPOSALS, ...AUTO_HANDLED_PROPOSALS]) {
+  // Proposals (queue + receipts + standalone settled/held twins via allProposals) —
+  // the source document they clear. Scope matches the lifecycle coherence check so a
+  // dangling invoiceId on a standalone twin can't evade resolution.
+  for (const p of allProposals()) {
     if (p.invoiceId) {
       refs.push({ source: `proposal ${p.id} invoiceId`, id: p.invoiceId });
     }
@@ -250,20 +259,20 @@ export function collectInvoiceReferences(): EntityRef[] {
   return refs;
 }
 
-export function checkInvoiceReferences(): EntityRef[] {
-  const unresolved = collectInvoiceReferences().filter(
-    (r) => !resolveInvoice(r.id),
+export function checkDocumentReferences(): EntityRef[] {
+  const unresolved = collectDocumentReferences().filter(
+    (r) => !resolveDocument(r.id),
   );
 
   if (unresolved.length > 0) {
     console.error(
-      `[invoice-consistency] ${unresolved.length} invoice reference(s) do not resolve ` +
-        `to any invoice in mockInvoices — dangling refs will render as "(invoice unavailable)":\n` +
+      `[document-consistency] ${unresolved.length} document reference(s) do not resolve ` +
+        `to any document in mockDocuments — dangling refs will render as "(document unavailable)":\n` +
         unresolved.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
     );
   } else {
     console.info(
-      "[invoice-consistency] OK — every invoice reference (linked refs, proposal.invoiceId) resolves.",
+      "[document-consistency] OK — every document reference (linked evidence, proposal.invoiceId) resolves.",
     );
   }
 
@@ -390,34 +399,39 @@ export function checkReferenceCoherence(): SemanticIssue[] {
     }
 
     if (invLink) {
-      const inv = resolveInvoice(invLink.refId);
-      if (inv) {
-        // Amount coherence: invoice total must match the record amount.
-        if (typeof rec.amount === "number" && inv.total !== rec.amount) {
+      const doc = resolveDocument(invLink.refId);
+      if (doc) {
+        // Amount coherence: document amount must match the record amount.
+        if (typeof rec.amount === "number" && doc.amount !== rec.amount) {
           issues.push({
             source: `audit ${rec.id}`,
-            message: `linked invoice ${inv.id} total (${inv.total}) ≠ record amount (${rec.amount})`,
+            message: `linked document ${doc.id} amount (${doc.amount}) ≠ record amount (${rec.amount})`,
           });
         }
-        // Vendor coherence: invoice.vendorId must match the record's vendor.
-        if (venLink && inv.vendorId !== venLink.refId) {
+        // Vendor coherence: document.vendorId must match the record's vendor.
+        // (Only when the document names a KNOWN vendor — non-vendor
+        // counterparties carry no vendorId and are checked below.)
+        if (venLink && doc.vendorId && doc.vendorId !== venLink.refId) {
           issues.push({
             source: `audit ${rec.id}`,
-            message: `linked invoice ${inv.id} vendorId ('${inv.vendorId}') ≠ record's linked vendor ('${venLink.refId}')`,
+            message: `linked document ${doc.id} vendorId ('${doc.vendorId}') ≠ record's linked vendor ('${venLink.refId}')`,
           });
         }
-        // Status coherence: invoice status must match the record's event type.
-        if (isSettledEvent && inv.status !== "paid") {
-          issues.push({
-            source: `audit ${rec.id}`,
-            message: `is a settled ${rec.eventType} record but linked invoice ${inv.id} status is '${inv.status}' (expected 'paid')`,
-          });
-        }
-        if (rec.eventType === "flagged" && inv.status !== "held") {
-          issues.push({
-            source: `audit ${rec.id}`,
-            message: `is a flagged/held record but linked invoice ${inv.id} status is '${inv.status}' (expected 'held')`,
-          });
+        // Status coherence: document status must match the record's event type.
+        // Only meaningful for kinds with a payment lifecycle (a status set).
+        if (doc.status) {
+          if (isSettledEvent && doc.status !== "paid") {
+            issues.push({
+              source: `audit ${rec.id}`,
+              message: `is a settled ${rec.eventType} record but linked document ${doc.id} status is '${doc.status}' (expected 'paid')`,
+            });
+          }
+          if (rec.eventType === "flagged" && doc.status !== "held") {
+            issues.push({
+              source: `audit ${rec.id}`,
+              message: `is a flagged/held record but linked document ${doc.id} status is '${doc.status}' (expected 'held')`,
+            });
+          }
         }
       }
     }
@@ -429,40 +443,109 @@ export function checkReferenceCoherence(): SemanticIssue[] {
   // An unsettled proposal must not own a paid invoice; a settled one must.
   for (const p of allProposals()) {
     if (!p.invoiceId) continue;
-    const inv = resolveInvoice(p.invoiceId);
-    if (!inv) continue; // resolution is covered by checkInvoiceReferences
-    if (UNSETTLED_STATUSES.includes(p.status) && inv.status === "paid") {
+    const doc = resolveDocument(p.invoiceId);
+    if (!doc) continue; // resolution is covered by checkDocumentReferences
+    // Amount coherence: a proposal's source document amount must match the
+    // payment amount it clears (both present).
+    if (
+      typeof p.amount === "number" &&
+      typeof doc.amount === "number" &&
+      doc.amount !== p.amount
+    ) {
       issues.push({
         source: `proposal ${p.id}`,
-        message: `is ${p.status} but its linked invoice ${inv.id} is already 'paid' — an unsettled proposal cannot own a settled invoice`,
+        message: `amount (${p.amount}) ≠ its source document ${doc.id} amount (${doc.amount})`,
       });
     }
-    if (SETTLED_STATUSES.includes(p.status) && inv.status !== "paid") {
-      issues.push({
-        source: `proposal ${p.id}`,
-        message: `is ${p.status} (settled) but its linked invoice ${inv.id} status is '${inv.status}' (expected 'paid')`,
-      });
-    }
-  }
-
-  for (const inv of MOCK_INVOICES) {
-    // A vendor with a linked PAID invoice must have real payment history.
-    if (inv.status === "paid") {
-      const v = resolveVendor(inv.vendorId);
-      if (v && v.history.paymentCount === 0) {
+    // Lifecycle coherence only applies to documents that HAVE a payment status
+    // (invoice / prior_payment / purchase_order); bank_transaction & contract
+    // carry no status and are legitimately linked by proposals of any state.
+    if (doc.status) {
+      if (UNSETTLED_STATUSES.includes(p.status) && doc.status === "paid") {
         issues.push({
-          source: `vendor ${v.id}`,
-          message: `has a linked paid invoice (${inv.id}) but zero payment history (paymentCount === 0)`,
+          source: `proposal ${p.id}`,
+          message: `is ${p.status} but its linked document ${doc.id} is already 'paid' — an unsettled proposal cannot own a settled document`,
+        });
+      }
+      if (SETTLED_STATUSES.includes(p.status) && doc.status !== "paid") {
+        issues.push({
+          source: `proposal ${p.id}`,
+          message: `is ${p.status} (settled) but its linked document ${doc.id} status is '${doc.status}' (expected 'paid')`,
         });
       }
     }
-    // Name coherence: invoice.vendorName must match the catalogue vendor.name.
-    const v = resolveVendor(inv.vendorId);
-    if (v && inv.vendorName !== v.name) {
+  }
+
+  for (const doc of MOCK_DOCUMENTS) {
+    // A KNOWN vendor with a paid document must have real payment history.
+    if (doc.status === "paid" && doc.vendorId) {
+      const v = resolveVendor(doc.vendorId);
+      if (v && v.history.paymentCount === 0) {
+        issues.push({
+          source: `vendor ${v.id}`,
+          message: `has a linked paid document (${doc.id}) but zero payment history (paymentCount === 0)`,
+        });
+      }
+    }
+    // Name coherence: a KNOWN vendor's document.vendorName must match the
+    // catalogue vendor.name.
+    if (doc.vendorId) {
+      const v = resolveVendor(doc.vendorId);
+      if (v && doc.vendorName && doc.vendorName !== v.name) {
+        issues.push({
+          source: `document ${doc.id}`,
+          message: `vendorName '${doc.vendorName}' ≠ resolved vendor.name '${v.name}' (vendorId '${doc.vendorId}') — document names its vendor differently from the catalogue`,
+        });
+      }
+    }
+    // A document naming a KNOWN vendor must also carry a vendorName (so the
+    // viewer can render the catalogue name without a second lookup).
+    if (doc.vendorId && !doc.vendorName) {
       issues.push({
-        source: `invoice ${inv.id}`,
-        message: `vendorName '${inv.vendorName}' ≠ resolved vendor.name '${v.name}' (vendorId '${inv.vendorId}') — invoice names its vendor differently from the catalogue`,
+        source: `document ${doc.id}`,
+        message: `has vendorId '${doc.vendorId}' but no vendorName`,
       });
+    }
+    // bank_transaction records ARE the reconciliation evidence — they must
+    // carry a reconciliation block or the viewer has nothing to render.
+    if (doc.kind === "bank_transaction" && !doc.reconciliation) {
+      issues.push({
+        source: `document ${doc.id}`,
+        message: `is a bank_transaction but has no reconciliation block`,
+      });
+    }
+    // Compare pair coherence: a document's compareToId twin must resolve, name
+    // the SAME vendor (when both are known vendors), and sit within a small
+    // amount band — the pair exists to surface a duplicate / bank-detail change,
+    // so a wildly different vendor or amount would be an incoherent comparison.
+    if (doc.compareToId) {
+      const twin = resolveDocument(doc.compareToId);
+      if (!twin) {
+        issues.push({
+          source: `document ${doc.id}`,
+          message: `compareToId '${doc.compareToId}' does not resolve to a document`,
+        });
+      } else {
+        if (doc.vendorId && twin.vendorId && doc.vendorId !== twin.vendorId) {
+          issues.push({
+            source: `document ${doc.id}`,
+            message: `compare twin ${twin.id} names a different vendor ('${twin.vendorId}' ≠ '${doc.vendorId}') — the comparison is incoherent`,
+          });
+        }
+        if (
+          typeof doc.amount === "number" &&
+          typeof twin.amount === "number" &&
+          twin.amount > 0
+        ) {
+          const delta = Math.abs(doc.amount - twin.amount) / twin.amount;
+          if (delta > 0.05) {
+            issues.push({
+              source: `document ${doc.id}`,
+              message: `compare twin ${twin.id} amount (${twin.amount}) differs from ${doc.amount} by ${(delta * 100).toFixed(1)}% (> 5%) — too far apart to be a duplicate/bank-change pair`,
+            });
+          }
+        }
+      }
     }
   }
 
@@ -473,7 +556,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[coherence] OK — linked invoice amounts/vendors match their records and no vendor contradicts its paid invoices.",
+      "[coherence] OK — linked document amounts/vendors/status match their records, compare pairs are coherent, and no vendor contradicts its paid documents.",
     );
   }
 

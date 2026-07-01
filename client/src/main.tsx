@@ -13,7 +13,7 @@ if (import.meta.env.DEV) {
     // Resolution guards — every referenced id points at a real store entity.
     m.checkRuleReferences();
     m.checkVendorReferences();
-    m.checkInvoiceReferences();
+    m.checkDocumentReferences();
     m.checkProposalReferences();
     // Coherence guards — resolved refs must also tell the truth.
     m.checkSemanticAuditRecords();
