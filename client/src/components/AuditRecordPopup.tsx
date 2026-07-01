@@ -116,7 +116,8 @@ export function AuditRecordPopup({
                   {record.linked.map((link) => {
                     // Rules resolve against the store; a deleted rule (or any
                     // vendor row, since the vendor page isn't built) renders as
-                    // plain, non-tappable text — never a dead tap.
+                    // plain, non-tappable text with "(rule unavailable)" — never
+                    // a dead tap.
                     const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                     const tappable = link.kind === "proposal" || (link.kind === "rule" && !ruleGone);
 
@@ -130,7 +131,7 @@ export function AuditRecordPopup({
                           <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
                           <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
                           {ruleGone && (
-                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule removed)</span>
+                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule unavailable)</span>
                           )}
                         </div>
                       );

@@ -489,7 +489,7 @@ function AutoHandledReceipt({
   const rule = proposal.rule;
   const paused = rulePaused ?? (rule ? !rule.active : false);
   // The link resolves only while the rule still exists in the store; a deleted
-  // rule keeps the receipt readable but renders a muted "(rule removed)" note.
+  // rule keeps the receipt readable but renders a muted "(rule unavailable)" note.
   const ruleResolves = !!rule && !!resolveRule(rule.id);
   /* Report flow is a small wizard: idle → "reason" capture → "confirm" safety
      action → done. Never auto-advances; the user drives every step. */
@@ -632,7 +632,7 @@ function AutoHandledReceipt({
             </div>
             {!ruleResolves && (
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]">
-                (rule removed)
+                (rule unavailable)
               </span>
             )}
           </>

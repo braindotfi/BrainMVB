@@ -15,7 +15,7 @@ sanctioned exception, since those rules come straight from the store).
 
 **Why:** a rule id may be stale (rule deleted). `resolveRule` gates whether a
 reference is a tappable link or plain, non-tappable text with a muted
-"(rule removed)" note — so there is never a dead tap or crash.
+"(rule unavailable)" note (openRuleDetail also console.warns on an unresolved id, never silent) — so there is never a dead tap or crash.
 
 **How to apply:**
 - Resolution is against the live rules store (`getRule`), not the embedded
@@ -26,5 +26,6 @@ reference is a tappable link or plain, non-tappable text with a muted
   own in-page back button is hardcoded to `/rules`, and RuleDetail must not be
   modified.
 - Vendor references stay plain text until a vendor detail page exists.
-- Unresolvable demo refIds today: `cleaning`, `contractor` (deleted-rule
-  fallback demo); `utility` (Con Edison) and `saas` resolve.
+- Shipped mock data has ZERO dangling refs (dev guard `ruleConsistencyCheck.ts`,
+  wired in main.tsx under import.meta.env.DEV, asserts every mock ref resolves).
+  The "(rule unavailable)" fallback is only for rules deleted at runtime.

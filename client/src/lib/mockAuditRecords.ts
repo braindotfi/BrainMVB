@@ -236,7 +236,6 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Apex Cleaning Co", refId: "apex" },
-      { kind: "rule", label: "Cleaning Services", refId: "cleaning" },
     ],
     anchor: {
       status: "anchored",
@@ -310,7 +309,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-0C4U",
     eventType: "rule_change",
-    summary: "New rule created: ‘Cleaning Services’",
+    summary: "New rule created: ‘Move extra cash to savings’",
     actor: "sarah@meridian",
     occurredAtLabel: "Jul 6, 3:30 PM ET",
     occurredAtMs: 1782902867451,
@@ -321,7 +320,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Rule active", timestamp: "Jul 6, 3:30 PM ET", kind: "ok" },
     ],
     linked: [
-      { kind: "rule", label: "Cleaning Services", refId: "cleaning" },
+      { kind: "rule", label: "Move extra cash to savings", refId: "sweep" },
     ],
     anchor: {
       status: "anchored",
@@ -414,7 +413,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
-      { kind: "rule", label: "Contractor Retainers", refId: "contractor" },
+      { kind: "rule", label: "Auto-clear fixed rent & lease", refId: "lease" },
     ],
     anchor: {
       status: "pending_next_batch",

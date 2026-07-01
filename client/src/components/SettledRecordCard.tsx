@@ -116,7 +116,7 @@ export function SettledRecordCard({
             )}
 
             {/* Cleared by rule — links to RuleDetail when the governing rule
-                still resolves; a deleted rule shows a muted "(rule removed)". */}
+                still resolves; a deleted rule shows a muted "(rule unavailable)". */}
             {proposal.rule && (() => {
               const ruleGone = !resolveRule(proposal.rule!.id);
               if (ruleGone) {
@@ -128,7 +128,7 @@ export function SettledRecordCard({
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] w-full"
                     >
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{proposal.rule!.name}</span>
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule removed)</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule unavailable)</span>
                     </div>
                   </div>
                 );

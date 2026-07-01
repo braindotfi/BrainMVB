@@ -1,0 +1,58 @@
+The rule links aren't working — tapping a rule reference (on receipts, audit records, the
+rules page, the settled card) does not open RuleDetail. DIAGNOSE the cause before fixing, then
+fix whichever it is: mock-data inconsistency, wiring/logic, or both.
+
+Work on a branch; don't change RuleDetail's internal UI. When done, update CLAUDE.md with what
+was wrong and what you changed.
+
+STEP 1 — DIAGNOSE AND REPORT FIRST (do not fix yet). Print a short findings report covering:
+
+A) ID CONSISTENCY. List every rule id in mockRules (the canonical source). Then list every
+   ruleId reference across ALL other mock data (auto_handled receipts/proposals, AuditRecords
+   for auto_approved/rule_change events, settled Approved Record cards, vendor ruleIds). For
+   each reference, state whether it EXACTLY matches a rule id in mockRules. Flag every mismatch
+   (e.g. reference "rule_utilities" vs actual id "utilities-auto-clear"), every reference that
+   resolves to nothing, and every record that SHOULD carry a ruleId but has none.
+   Also check for field-name drift: ruleId vs rule_id vs ruleID vs ruleIds — confirm the exact
+   property name each surface reads and each mock object writes, and whether they agree.
+
+B) HELPER WIRING. Show the openRuleDetail(ruleId) helper. Confirm: (1) it exists and is
+   imported where used, (2) it looks up against the correct rules source, (3) each linked
+   surface actually CALLS it on tap (onClick present, on the right element, not swallowed by a
+   parent handler or a stopPropagation), and (4) what it passes to RuleDetail — an id or the
+   resolved object — and what RuleDetail actually expects. Flag any mismatch.
+
+C) FAILURE MODE. State plainly, per surface, WHY the link currently does nothing: unresolved
+   id? missing onClick? wrong source? id/object shape mismatch? Attribute each broken surface to
+   one of these.
+
+Print the report. Then proceed to fix.
+
+STEP 2 — FIX based on the findings:
+- If MOCK DATA: make every ruleId reference exactly match a canonical rule id in mockRules.
+  Do NOT invent new rules to satisfy a bad reference — point references at the correct existing
+  rule. Standardize the field name across all sources. Ensure every record that is governed by
+  a rule (auto_approved payments, rule_change audit events, rule-cleared settled cards) carries
+  the correct ruleId; add it where missing.
+- If LOGIC: fix the helper and its call sites so every rule reference invokes
+  openRuleDetail(ruleId) on tap, resolves against the single canonical rules source, and opens
+  RuleDetail in the shape it expects. Centralize the lookup in the one helper — no per-surface
+  duplicate resolution.
+- If BOTH: fix both.
+
+STEP 3 — MAKE FAILURE LOUD (so this can't silently regress):
+- In openRuleDetail, if the ruleId does not resolve, console.warn a clear message
+  ("openRuleDetail: no rule found for id '{ruleId}'") and render the reference as plain,
+  non-tappable text with a muted "(rule unavailable)" note — never a dead tap.
+- Add a dev-time consistency check (a small function run in dev, or a test) that asserts EVERY
+  ruleId referenced anywhere in mock data resolves to a real rule in mockRules, and fails/logs
+  loudly listing any that don't. This is the guard that would have caught the original bug.
+
+STEP 4 — VERIFY END TO END. Confirm the demo path works: the Con Edison auto-handled receipt's
+"Review rule" / "the rule that approved this" opens the "Auto-clear utility bills"
+(policy/ap.tolerance.v3) RuleDetail; the Con Edison AUTO-APPROVED audit record's rule link
+opens the same rule; an AUTOMATION row on the rules page opens its RuleDetail. List each path
+and confirm it resolves.
+
+Return: the STEP 1 findings report, the fixes applied (data, logic, or both), the new
+loud-failure guard + consistency check, and the STEP 4 verification. Update CLAUDE.md.
