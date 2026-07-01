@@ -1,0 +1,126 @@
+Generalize the Brain invoice viewer into ONE document/record viewer keyed off a `kind`
+discriminator. Instead of a surface per evidence type, a single component renders invoices,
+prior payments, bank transactions, contracts, and purchase orders — each showing the fields
+that make sense for its kind. This is a read-only EVIDENCE VIEWER, not a management system for
+any of these record types.
+
+PROCESS (per project conventions):
+- git fetch + pull first; work on a new feature branch (e.g. feature/document-record-viewer).
+- Track done-vs-pending against this plan as you go.
+- Update CLAUDE.md (and replit.md) at the end with the new contract.
+
+STYLING — MATCH THE CURRENT APP EXACTLY. Reuse existing tokens/fonts/spacing/radii/card/row/
+chip/button styles and the proposal-detail / audit-record popup shell. Dark indigo canvas,
+purple accents, monospace for amounts/ids/dates/accounts. #D20344 for alerts/mismatch only;
+success/green for a clean match; purple interactive. NO orange (reserved for audit tabs).
+
+SCOPE — THIN. Build ONLY the read-only viewer, the single resolver, and the kind-specific
+rendering. Do NOT build creation/editing/approval/management for any record type — those live
+in the customer's accounting/banking systems. Brain reads the artifact; the source system owns
+it. Reinforce with a per-kind caption.
+
+WHERE THE DATA COMES FROM (frame the model): Brain does not originate these records — it
+INGESTS them via connectors (accounting sync, bank/Plaid, email/document channel, payment
+rail). The original artifact lives in the Raw layer; parsed fields in the Ledger layer. Every
+record is referenced BY ID (like rules/vendors), never by a copied string, and carries
+provenance.
+
+DATA MODEL — one discriminated type:
+type DocKind = "invoice" | "prior_payment" | "bank_transaction" | "contract" | "purchase_order";
+type Provenance = "CONNECTOR_SYNC" | "EMAIL_INGEST" | "DOCUMENT_UPLOAD" | "PAYMENT_RAIL" | "BANK_FEED";
+interface DocProvenance { source: string; ingestedAtLabel: string; enum: Provenance; ledgerRef: string; }
+interface DocLineItem { label: string; amount: number; }
+interface DocumentRecord {
+  id: string;                 // canonical id (e.g. "AWS-2026-07", "TXN-55021", "CTR-LEASE-24")
+  kind: DocKind;
+  vendorId?: string;          // resolves via openVendorDetail where applicable
+  vendorName?: string;
+  title: string;              // human label ("Invoice AWS-2026-07", "ACH · Con Edison", "Office Lease")
+  amount?: number;
+  dateLabel: string;          // due date / txn date / effective date, per kind
+  payeeAccountLast4?: string;
+  counterparty?: string;      // for bank_transaction / non-vendor parties
+  lineItems?: DocLineItem[];  // invoices / POs
+  documentHref?: string;      // original PDF/image (Raw) where one exists
+  provenance: DocProvenance;
+  proposalId?: string;        // the proposal that reasoned over this record, if any
+  // coherence target: the amount/vendor this record is expected to match on its linking record
+}
+
+RENDERING — one component, fields shown per kind:
+- Shared shell: kind chip + id (mono) in header, close X; a body that renders the relevant
+  sections; a provenance block; a per-kind caption ("A viewer, not an AP/banking system …").
+- kind "invoice" / "purchase_order": source-document pane (light/paper background, vendor
+  letterhead, line items, total, date) + "Open original PDF" (documentHref) + "What Brain
+  extracted" mono block (vendor, id, amount, date, pay-to account).
+- kind "prior_payment": renders like an invoice/receipt but framed as a PAST payment (date
+  paid, amount, account) — used for duplicate / amount-anomaly comparisons. Support a COMPARE
+  layout: when opened as a comparison, show THIS record beside the current one with differing
+  fields highlighted (e.g. same vendor+amount ⇒ duplicate; account changed ⇒ flag).
+- kind "bank_transaction": the Plaid/bank-feed line — date, amount, direction, counterparty,
+  account ··last4, and (for reconciliation) a side-by-side "bank line vs ledger entry" view
+  with the mismatched field in #D20344. No paper pane (it's a feed record, not a document).
+- kind "contract": effective dates, recurring amount/cadence, counterparty, "Open original
+  PDF" — justifies "expected" recurring payments.
+- ALL kinds: an AMOUNT-COHERENCE note when the record is linked to a proposal/payment — green
+  "Matches the linked payment ($X)" or #D20344 "Differs ($record vs $linked) — review".
+- ALL kinds: provenance block (source, ingested-at, enum, ledgerRef).
+
+WIRING:
+- Single resolver openDocumentDetail(id) mirroring openRuleDetail/openVendorDetail exactly:
+  resolve against a canonical documentsStore (seeded from mockDocuments); on miss, console.warn
+  "openDocumentDetail: no record found for id '<id>'", render the reference as plain
+  non-tappable text with a muted "(unavailable)" note, never a dead tap; return false on miss.
+- REPLACE the invoice-specific resolver/refs: linked-evidence rows for invoice/prior_payment/
+  bank_transaction/contract/PO all call openDocumentDetail. Keep the split linked rows (Proposal
+  / Document(kind) / Vendor), each to its own resolver. (If openInvoiceDetail already exists,
+  fold it into openDocumentDetail or make it delegate — one code path, no parallel invoice-only
+  logic.)
+- No new nav item — the viewer is reached only via linked-evidence rows, not a destination.
+  Do NOT add "Documents"/"Transactions"/"Contracts" to the main menu.
+- vendorId (where present) resolves via openVendorDetail; non-vendor counterparties render as
+  plain text with an accurate label (not a vendor link).
+
+COHERENCE GUARD — extend the existing unified dev guard (do not fork a new one):
+- RESOLUTION: every document ref (proposal→documentId, audit linked[] kind in the DocKind set,
+  prior-payment comparisons) resolves in documentsStore; every document.vendorId resolves.
+- COHERENCE: a linked document's amount == the linking proposal/audit/settled amount; a linked
+  document's vendorId == the linking record's vendor; a duplicate-comparison pair is actually
+  comparable (same vendor, near amount); a bank_transaction used for reconciliation has a
+  ledger counterpart. Log loudly in dev; never throw; run in main.tsx.
+
+CONSTRAINTS:
+- Read-only; no mutation of any record kind.
+- Referenced by id; never a copied string for resolution.
+- Match app styling; #D20344 for mismatch/reconciliation-diff only; success for match; purple
+  interactive; no orange. Amounts/ids/dates in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed; the viewer renders purely from
+  the DocumentRecord (per kind). Do NOT modify anything sourced from live/brain-core APIs —
+  list what you treat as API-sourced and leave it alone.
+- DATA COHERENCE (per CLAUDE.md): each record tells ONE story across surfaces. AWS invoice
+  ($4,150, AWS-2026-07) matches its proposal + audit + vendor. Bright Futures stays
+  under_review/held everywhere; if a prior_payment or bank_transaction references it, it
+  reflects the bank-detail change consistently.
+
+MOCK DATA — mockDocuments.ts covering multiple kinds tied to existing demo items:
+- invoice: AWS-2026-07 (Amazon Web Services, $4,150, QuickBooks/CONNECTOR_SYNC, ledger ref),
+  the Con Edison utility invoice, the Bright Futures contractor invoice (reflecting the changed
+  account).
+- prior_payment: the earlier Bright Futures payment on the OLD account (for the bank-detail
+  comparison) and/or an Apex payment for the duplicate scenario.
+- bank_transaction: a Plaid line for the reconciliation ("bank line doesn't match ledger")
+  scenario, with a ledger counterpart.
+- contract: the office lease agreement justifying the recurring lease payment.
+Wire vendorId/proposalId so split linked rows and comparisons resolve end to end via the
+canonical stores (no invented ids).
+
+CLAUDE.md — replace the "Invoice references" note with a "Document/record references" contract:
+records referenced by id, resolved only via openDocumentDetail against documentsStore, kind
+discriminates rendering, resolve-or-plain-text fallback; unified guard covers resolution +
+coherence; viewer is read-only (source systems own the records); non-vendor counterparties are
+not vendor links.
+
+Return (on the feature branch): mockDocuments.ts, the DocumentRecord type, the generalized
+document/record viewer (all kinds), openDocumentDetail (with openInvoiceDetail folded in or
+delegating), the updated split linked rows, the extended unified guard, the done/pending
+tracking, and the CLAUDE.md + replit.md updates.
