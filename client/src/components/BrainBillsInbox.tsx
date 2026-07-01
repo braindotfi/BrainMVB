@@ -163,7 +163,6 @@ export function BrainBillsInbox() {
 
   // AP bills only (seed marks them scenario:"ap"); newest-largest first is fine as-is.
   const bills = (invData?.invoices ?? []).filter((i) => i.metadata?.scenario === "ap");
-  if (bills.length === 0) return null; // brain-core unreachable / not configured
 
   const nameOf = (cpId: string): string => {
     const cp = cpData?.counterparties.find((c) => c.id === cpId);
