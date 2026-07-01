@@ -6,7 +6,7 @@ import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { getBrainDidTodayItems, getNeedsReviewProposals } from "@/lib/brainFeed";
 import { SettledRecordCard } from "@/components/SettledRecordCard";
@@ -315,6 +315,80 @@ const SectionWidget = ({
 // Shown when brain-core's ledger-grounded recommendation is unavailable.
 const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
 
+/* ── Insight-text helpers ────────────────────────────────────────────────────────────
+   The recommendation string from brain-core often contains raw numbers and
+   dates. We post-process it to match the user's chosen formatting: comma-
+   separated amounts, locale-aware dates, and color-coded sentiment. */
+
+/** Locale for dates: USD → en-US ("Apr 15, 2025"), EUR → en-GB ("15 Apr 2025"). */
+const DATE_LOCALE: Record<CurrencyCode, string> = { USD: "en-US", EUR: "en-GB" };
+
+/** Re-format raw amounts in a sentence like "$432" or "$1234.56" into comma-
+  formatted equivalents (respecting the active currency's symbol + FX rate). */
+function formatAmountsInText(text: string, formatFn: (amount: string | number) => string): string {
+  return text.replace(/(?:\+?-?)(?:\$|€)\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?/g, (match) => {
+    // Try to parse the number out, re-format it, and keep the sign.
+    const raw = match.replace(/[$,€\s]/g, "");
+    const sign = match.startsWith("-") ? "-" : match.startsWith("+") ? "+" : "";
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return match;
+    const formatted = formatFn(num);
+    // formatFn returns something like "-$432" or "+$1,234"; prepend sign if absent.
+    return sign && !formatted.startsWith(sign) ? sign + formatted : formatted;
+  });
+}
+
+/** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
+  to the user's locale based on the selected currency. */
+function formatDatesInText(text: string, currency: CurrencyCode): string {
+  const locale = DATE_LOCALE[currency];
+  // ISO dates: 2025-04-15
+  let out = text.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (_, y, m, d) => {
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    if (Number.isNaN(date.getTime())) return _;
+    return date.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+  });
+  // Month-name patterns: "April 15" or "April 15, 2025"
+  out = out.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,\s+(\d{4}))?\b/g, (match, _month, day, year) => {
+    const d = new Date(year ? `${match}` : `${_month} ${day}, ${new Date().getFullYear()}`);
+    if (Number.isNaN(d.getTime())) return match;
+    return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+  });
+  return out;
+}
+
+/** Detect sentiment in the recommendation text so we can colour-code it.
+  Green = positive / inflow / "less spending" / "saved" / "surplus".
+  Orange = warning / caution / "watch" / "upcoming" / "due" / "attention".
+  Red = negative / outflow / "over" / "exceeded" / "shortfall" / "decline". */
+function detectSentimentColor(text: string): string {
+  const lower = text.toLowerCase();
+  // Negative / outflow / danger signals
+  const negative = [
+    "over budget", "shortfall", "decline", "dropping", "fell",
+    "negative", "deficit", "loss", "lost", "missed", "overdue", "late",
+    "underfunded", "insufficient", "short", "risky", "danger", "critical",
+    "overdraft", "bounced", "rejected", "failed", "unpaid",
+  ];
+  if (negative.some((w) => lower.includes(w))) return "text-[#d20344]";
+  // Warning / caution signals
+  const warning = [
+    "watch", "caution", "careful", "attention", "upcoming", "due soon",
+    "approaching", "nearing", "almost", "limited", "tight", "constrained",
+    "review", "verify", "check", "pending", "unusual", "unexpected",
+  ];
+  if (warning.some((w) => lower.includes(w))) return "text-[#ff9500]";
+  // Positive / inflow / good signals (default fallback when nothing negative/warning)
+  const positive = [
+    "saved", "surplus", "extra", "more than", "higher", "increase", "gained",
+    "growth", "up", "rising", "exceeded target", "ahead", "on track", "nice",
+    "good", "strong", "healthy", "positive", "inflow", "received", "collected",
+  ];
+  if (positive.some((w) => lower.includes(w))) return "text-[#42bf23]";
+  // Neutral / no strong sentiment → baby-blue (matches existing default)
+  return "text-[#a8b9f4]";
+}
+
 // Net monthly cash flow (inflow − outflow, averaged over the months present) from
 // brain-core ledger transactions. null when no transaction data is reachable
 // (then the card keeps its static fallback). Transfers/adjustments don't count.
@@ -342,7 +416,7 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -417,10 +491,16 @@ export function HomePage() {
     queryKey: ["/api/brain/recommendation"],
     retry: false,
   });
-  const insightLine =
-    brainRec?.text && brainRec.text.trim().length > 0
-      ? { text: brainRec.text, colorClass: "text-[#a8b9f4]" }
-      : SPENDING_INSIGHT_FALLBACK;
+  /* Post-process the recommendation text: comma-format amounts, locale-format
+     dates (USD → US date style, EUR → European), and detect sentiment for color.
+     The fallback line is also formatted so static text stays consistent. */
+  const rawText = brainRec?.text?.trim() ?? "";
+  const processedText = rawText
+    ? formatDatesInText(formatAmountsInText(rawText, format), currency)
+    : formatAmountsInText(SPENDING_INSIGHT_FALLBACK.text, format);
+  const insightLine = rawText
+    ? { text: processedText, colorClass: detectSentimentColor(processedText) }
+    : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   // Net cash flow per month from the live Ledger. With only inflows seeded today
   // this reads as positive income; it nets real expenses automatically once money
