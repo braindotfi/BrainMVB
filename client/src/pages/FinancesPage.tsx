@@ -512,37 +512,39 @@ export function FinancesPage() {
               </WidgetCard>
             )}
 
-            {/* RECENT */}
+            {/* RECENT — no header, rows render directly */}
             {activeTab === "Recent" && (
               transactions.length > 0 ? (
-                <WidgetCard title="Recent transactions">
-                  {transactions.map((t, idx) => (
-                    <div key={t.id} className="flex flex-col gap-[8px] w-full">
-                      <div
-                        data-testid={`row-tx-${idx}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setOpenTxId(t.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setOpenTxId(t.id);
-                          }
-                        }}
-                        className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-                      >
-                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                  <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                    {transactions.map((t, idx) => (
+                      <div key={t.id} className="flex flex-col gap-[8px] w-full">
+                        <div
+                          data-testid={`row-tx-${idx}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setOpenTxId(t.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setOpenTxId(t.id);
+                            }
+                          }}
+                          className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+                        >
+                          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
+                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                          </div>
+                          <div className="flex flex-col items-end justify-center relative shrink-0">
+                            <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end justify-center relative shrink-0">
-                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
-                        </div>
+                        {idx < transactions.length - 1 && <Divider />}
                       </div>
-                      {idx < transactions.length - 1 && <Divider />}
-                    </div>
-                  ))}
-                </WidgetCard>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">No recent transactions yet.</p>
