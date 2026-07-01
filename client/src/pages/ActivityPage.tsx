@@ -6,7 +6,7 @@ import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
 
-type ActivityType = "paid" | "moved" | "noticed" | "approved";
+type ActivityType = "paid" | "moved" | "approved";
 
 /* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
 const BrainDidIcon = () => (
@@ -18,21 +18,6 @@ const BrainDidIcon = () => (
       <div className="absolute inset-[12.5%]">
         <div className="absolute inset-[-5.56%]">
           <img alt="" className="block max-w-none size-full" src={ICONS.brain_did_vec} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const NoticedIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.noticed_bg} />
-    </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
-      <div className="absolute inset-[12.5%_12.5%_20.83%_12.5%]">
-        <div className="absolute inset-[-6.25%_-5.56%]">
-          <img alt="" className="block max-w-none size-full" src={ICONS.noticed_vec} />
         </div>
       </div>
     </div>
@@ -59,22 +44,20 @@ const ApprovedIcon = () => (
   </div>
 );
 
-type Tab = "All" | "Brain Did" | "You Approved" | "Brain Detected";
+type Tab = "All" | "Brain Did" | "You Approved";
 /* "All" is intentionally hidden for now — kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
-const TABS: Tab[] = ["Brain Did", "You Approved", "Brain Detected"];
+const TABS: Tab[] = ["Brain Did", "You Approved"];
 
 const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
   paid: BrainDidIcon,
   moved: BrainDidIcon,
-  noticed: NoticedIcon,
   approved: ApprovedIcon,
 };
 
 const TYPE_TO_TAB: Record<ActivityType, Tab> = {
   paid: "Brain Did",
   moved: "Brain Did",
-  noticed: "Brain Detected",
   approved: "You Approved",
 };
 
@@ -82,7 +65,6 @@ const TAB_SLUG: Record<Tab, string> = {
   "All": "all",
   "Brain Did": "brain-did",
   "You Approved": "you-approved",
-  "Brain Detected": "brain-detected",
 };
 
 const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
@@ -126,18 +108,18 @@ function autoHandledToActivity(p: Proposal): ActivityItemData {
   };
 }
 
-/** Map a live brain-core PaymentIntent onto an activity-feed item. */
-function intentToActivity(rec: IntentRecord): ActivityItemData {
+/** Map a live brain-core PaymentIntent onto an activity-feed item.
+    Outcomes "reject" / "confirm" (detections that need review) are intentionally
+    filtered out here because they are a duplicate of the Review page's job.
+    Only "paid" / "declined" (user action) become activity feed items. */
+function intentToActivity(rec: IntentRecord): ActivityItemData | null {
   const amount = `$${rec.amount.toLocaleString()}`;
   const base = { id: rec.intentId, amount, time: "Just now" };
   if (rec.declined) {
     return { ...base, type: "approved", title: `You declined the payment to ${rec.vendor}`, meta1: "Brain will not pay it", meta2: "" };
   }
-  if (rec.outcome === "reject") {
-    return { ...base, type: "noticed", title: `Brain blocked a payment to ${rec.vendor}`, meta1: "Vendor not on the approved list", meta2: "" };
-  }
-  if (rec.outcome === "confirm") {
-    return { ...base, type: "noticed", title: `Payment to ${rec.vendor} needs your approval`, meta1: "Above your auto-pay limit", meta2: "Awaiting sign-off" };
+  if (rec.outcome === "reject" || rec.outcome === "confirm") {
+    return null;
   }
   return { ...base, type: "paid", title: `Brain approved a payment to ${rec.vendor}`, meta1: "Within your auto-pay policy", meta2: "Proposed — not executed" };
 }
@@ -145,14 +127,14 @@ function intentToActivity(rec: IntentRecord): ActivityItemData {
 const TODAY_ACTIVITIES: ActivityItemData[] = [
   { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM" },
   { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM" },
-  { id: 3, type: "noticed", title: "Noticed a new charge from a new vendor", meta1: "Meridian LLC", meta2: "I emailed your bookkeeper and cc'ed you", amount: "$1,515", time: "3:11 AM" },
 ];
 
 const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
   { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM" },
-  { id: 5, type: "noticed", title: "Got paid by Northstar Design", meta1: "Invoice #INV-2024-041", meta2: "Paid 3 days early", amount: "$6,200", time: "2:20 PM" },
   { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM" },
 ];
+
+const filterNulls = <T,>(arr: (T | null)[]): T[] => arr.filter((x): x is T => x !== null);
 
 const ActivityItem = ({
   item,
@@ -312,7 +294,7 @@ export function ActivityPage() {
     [autoHandledItems],
   );
 
-  const liveItems = filterByTab(intents.map(intentToActivity));
+  const liveItems = filterByTab(filterNulls(intents.map(intentToActivity)));
   const todayItems = filterByTab(todayMerged);
   const yesterdayItems = filterByTab(YESTERDAY_ACTIVITIES);
 
