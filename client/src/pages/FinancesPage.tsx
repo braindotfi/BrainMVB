@@ -263,7 +263,7 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   });
 
   const s = txData?.transactions ? summarizeIncome(txData.transactions) : null;
-  const count = s ? s.count : 12; // 12 from INCOME_FALLBACK
+  const count = s ? s.count : 0;
   const text = (() => {
     if (!s) return INCOME_FALLBACK;
     const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
@@ -390,7 +390,7 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
   });
 
   const ap = (invData?.invoices ?? []).filter((i) => i.metadata?.scenario === "ap" && i.status !== "paid");
-  const count = ap.length || 3; // 3 from LIABILITIES_FALLBACK
+  const count = ap.length;
   const text = (() => {
     if (ap.length === 0) return LIABILITIES_FALLBACK;
     const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
@@ -426,8 +426,8 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
 export function FinancesPage() {
   const { format } = useCurrency();
   const { user } = useAuth();
-  const [incomeCount, setIncomeCount] = useState<number>(12); // fallback from INCOME_FALLBACK
-  const [liabilitiesCount, setLiabilitiesCount] = useState<number>(3); // fallback from LIABILITIES_FALLBACK
+  const [incomeCount, setIncomeCount] = useState<number>(0);
+  const [liabilitiesCount, setLiabilitiesCount] = useState<number>(0);
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT — the BFF mints it server-side.
