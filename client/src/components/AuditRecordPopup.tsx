@@ -12,15 +12,23 @@ import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
 import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
 import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { Invoice } from "@/lib/invoiceTypes";
+import { RecordPager } from "./RecordPager";
 
 export function AuditRecordPopup({
   record,
   open,
   onOpenChange,
+  onPrev,
+  onNext,
+  pagerDisabled,
 }: {
   record: AuditRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /* header pager — cycle through the other records in the active tab */
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -79,6 +87,14 @@ export function AuditRecordPopup({
                 {record.id}
               </span>
             </div>
+            {onPrev && onNext && (
+              <RecordPager
+                onPrev={onPrev}
+                onNext={onNext}
+                disabled={pagerDisabled}
+                testIdPrefix="audit-record"
+              />
+            )}
             <DialogPrimitive.Close
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-audit-popup"

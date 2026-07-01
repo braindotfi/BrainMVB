@@ -1,5 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, useEffect } from "react";
+import { RecordPager } from "./RecordPager";
 import {
   X,
   ShieldCheck,
@@ -69,10 +70,17 @@ export function VendorDetailPopup({
   vendor,
   open,
   onOpenChange,
+  onPrev,
+  onNext,
+  pagerDisabled,
 }: {
   vendor: Vendor | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /* header pager — cycle through the other vendors in the active tab */
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -111,6 +119,14 @@ export function VendorDetailPopup({
                 {vendor.id}
               </span>
             </div>
+            {onPrev && onNext && (
+              <RecordPager
+                onPrev={onPrev}
+                onNext={onNext}
+                disabled={pagerDisabled}
+                testIdPrefix="vendor"
+              />
+            )}
             <DialogPrimitive.Close
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-vendor-popup"

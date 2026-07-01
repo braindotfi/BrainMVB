@@ -133,6 +133,20 @@ export function VendorsPage() {
     return grouped.known;
   }, [activeTab, grouped]);
 
+  /* Header pager — cycle (wrap-around) through the vendors in the active tab.
+     Paging navigates the ?vendor= param so the deep-link effect stays in sync. */
+  const vendorIdx = activeVendor ? tabVendors.findIndex((v) => v.id === activeVendor.id) : -1;
+  const vendorPagerDisabled = vendorIdx < 0 || tabVendors.length <= 1;
+  const pageVendor = (dir: 1 | -1) => {
+    if (vendorPagerDisabled) return;
+    const next = tabVendors[(vendorIdx + dir + tabVendors.length) % tabVendors.length];
+    // Preserve any existing params (e.g. `from` return-to-audit target) — only
+    // swap the vendor, so closing after paging still returns to the origin.
+    const params = new URLSearchParams(search);
+    params.set("vendor", next.id);
+    navigate(`/vendors?${params.toString()}`, { replace: true });
+  };
+
   const tabCount = (tab: VendorTab) => {
     if (tab === "Under Review") return grouped.underReview.length;
     if (tab === "New") return grouped.newVendors.length;
@@ -250,6 +264,9 @@ export function VendorsPage() {
         vendor={activeVendor}
         open={activeVendor !== null}
         onOpenChange={(o) => { if (!o) handleCloseDetail(); }}
+        onPrev={() => pageVendor(-1)}
+        onNext={() => pageVendor(1)}
+        pagerDisabled={vendorPagerDisabled}
       />
     </div>
   );

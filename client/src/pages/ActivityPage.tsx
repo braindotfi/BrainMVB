@@ -267,6 +267,20 @@ export function ActivityPage() {
     }
   };
 
+  /* Header pager — cycle (wrap-around) through the tappable records in the active
+     tab, in display order (Just now → Today → Yesterday). Rows without a proposal
+     (link-only) are excluded since they don't open this popup. */
+  const pagerItems = [...liveItems, ...todayItems, ...yesterdayItems].filter((it) => it.proposal);
+  const pagerIdx = selectedProposal
+    ? pagerItems.findIndex((it) => it.proposal!.id === selectedProposal.id)
+    : -1;
+  const pagerDisabled = pagerIdx < 0 || pagerItems.length <= 1;
+  const pageProposal = (dir: 1 | -1) => {
+    if (pagerDisabled) return;
+    const next = pagerItems[(pagerIdx + dir + pagerItems.length) % pagerItems.length];
+    setSelectedProposal(next.proposal!);
+  };
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -346,6 +360,9 @@ export function ActivityPage() {
           setSelectedProposal(null);
         }}
         anchorAuditId={selectedProposal?.auditId}
+        onPrev={() => pageProposal(-1)}
+        onNext={() => pageProposal(1)}
+        pagerDisabled={pagerDisabled}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { RecordPager } from "./RecordPager";
 import {
   Receipt,
   HandCoins,
@@ -98,11 +99,18 @@ export function ProposalDetail({
   onReviewRule,
   onReportProblem,
   onAlwaysHandle,
+  onPrev,
+  onNext,
+  pagerDisabled,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /* header pager — cycle through the other records in the active tab */
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
   onAction: (action: ProposalAction) => void;
   /* auto_handled receipt — retroactive controls (decision already happened) */
   rulePaused?: boolean;
@@ -154,6 +162,14 @@ export function ProposalDetail({
                 {proposal.auditId}
               </span>
             </div>
+            {onPrev && onNext && (
+              <RecordPager
+                onPrev={onPrev}
+                onNext={onNext}
+                disabled={pagerDisabled}
+                testIdPrefix="proposal"
+              />
+            )}
             <DialogPrimitive.Close
               data-testid="button-proposal-close"
               aria-label="Close"

@@ -380,6 +380,24 @@ export function ReviewPage() {
     setActive(p);
   };
 
+  /* Header pager — cycle (wrap-around) through the sibling list the open proposal
+     belongs to: the Needs Review queue or the Approved Automatically receipts. A
+     deep-linked proposal in neither list has no siblings, so the pager disables. */
+  const pagerList: Proposal[] | null = !active
+    ? null
+    : queue.some((p) => p.id === active.id)
+      ? queue
+      : autoHandled.some((p) => p.id === active.id)
+        ? autoHandled
+        : null;
+  const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
+  const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
+  const pageProposal = (dir: 1 | -1) => {
+    if (!pagerList || proposalPagerDisabled) return;
+    setReturnTo(null);
+    setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
+  };
+
   /* Tab visibility — "All" shows everything; the other tabs filter the view. */
   const showNeedsReview = activeTab === "All" || activeTab === "Needs Review";
   const showApproved = activeTab === "All" || activeTab === "Approved Automatically";
@@ -579,6 +597,9 @@ export function ReviewPage() {
         currentStatus={active ? statusOf(active) : undefined}
         open={active !== null}
         onOpenChange={(o) => { if (!o) dismissDetail(); }}
+        onPrev={() => pageProposal(-1)}
+        onNext={() => pageProposal(1)}
+        pagerDisabled={proposalPagerDisabled}
         onAction={handleAction}
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}

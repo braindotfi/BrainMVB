@@ -11,6 +11,7 @@ import { MOCK_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
 import type { Invoice } from "@/lib/invoiceTypes";
+import { RecordPager } from "./RecordPager";
 
 /* ── Settled Approved Record Card ─────────────────────────────────────────────────────────────
    Post-approval / settled view of a proposal. Same layout as ProposalDetail,
@@ -23,12 +24,19 @@ export function SettledRecordCard({
   onOpenChange,
   onViewAuditLog,
   anchorAuditId,
+  onPrev,
+  onNext,
+  pagerDisabled,
 }: {
   proposal: Proposal | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onViewAuditLog?: () => void;
   anchorAuditId?: string;
+  /* header pager — cycle through the other records in the active tab */
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -68,6 +76,14 @@ export function SettledRecordCard({
               </span>
               <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965]">{proposal.auditId}</span>
             </div>
+            {onPrev && onNext && (
+              <RecordPager
+                onPrev={onPrev}
+                onNext={onNext}
+                disabled={pagerDisabled}
+                testIdPrefix="settled-record"
+              />
+            )}
             <DialogPrimitive.Close
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-settled-card"

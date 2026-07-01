@@ -62,6 +62,14 @@ export function AuditLogPage() {
     return MOCK_AUDIT_RECORDS;
   }, [activeTab]);
 
+  /* Header pager — cycle (wrap-around) through the records in the active tab. */
+  const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
+  const pagerDisabled = activeIdx < 0 || filtered.length <= 1;
+  const pageRecord = (dir: 1 | -1) => {
+    if (pagerDisabled) return;
+    setActiveRecord(filtered[(activeIdx + dir + filtered.length) % filtered.length]);
+  };
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -188,6 +196,9 @@ export function AuditLogPage() {
         record={activeRecord}
         open={activeRecord !== null}
         onOpenChange={(o) => { if (!o) handleCloseRecord(); }}
+        onPrev={() => pageRecord(-1)}
+        onNext={() => pageRecord(1)}
+        pagerDisabled={pagerDisabled}
       />
     </div>
   );
