@@ -867,6 +867,13 @@ export function RulesPage() {
           {/* YOUR RULES: only the rules this account authored in the creator */}
           {activeTab === "Your Rules" && (
             <div className="flex flex-col gap-[28px] w-full">
+              {userAutomations.length > 0 && (
+                <Section count={userAutomations.length}>
+                  {userAutomations.map((r) => (
+                    <AutomationRow key={r.id} rule={r} format={format} />
+                  ))}
+                </Section>
+              )}
               {userGuardrails.length > 0 && (
                 <Section
                   eyebrow="Guardrails · pull you back in"

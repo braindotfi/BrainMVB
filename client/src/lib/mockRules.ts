@@ -96,10 +96,10 @@ export const DUPLICATE_GUARD: AutoRule = {
   scopeSummary: "a charge that matches one already paid",
 };
 
-/* ── A rule the user authored in the "New rule" creator. `userCreated: true`
+/* ── Rules the user authored in the "New rule" creator. `userCreated: true`
    is what the "Your Rules" tab filters on — only self-authored rules appear
-   there, while the category tabs still show the full system + user set. This
-   one is the seeded example; real creations are persisted per tenant. ────── */
+   there, while the category tabs still show the full system + user set. These
+   are seeded examples; real creations are persisted per tenant. ──────────── */
 export const USER_EXAMPLE_RULE: AutoRule = {
   id: "hosting-vercel",
   kind: "automation",
@@ -116,6 +116,22 @@ export const USER_EXAMPLE_RULE: AutoRule = {
   userCreated: true,
 };
 
+export const USER_GUARD_RAIL: AutoRule = {
+  id: "pause-intl-wire",
+  kind: "guardrail",
+  name: "Pause international wires over the limit",
+  summary: "Any international wire above the limit waits for your approval",
+  createdLabel: "You created this May 8",
+  policyId: "policy/guardrail.intlwire.v1",
+  active: true,
+  agent: "invoice",
+  category: "wire transfer",
+  threshold: 5000,
+  thresholdEditable: true,
+  scopeSummary: "international wires over $5,000",
+  userCreated: true,
+};
+
 /* The full seed list. Order within a kind is the display order. The store layers
    the SAAS paused-from-report demo state on top of this. */
 export const INITIAL_RULES: AutoRule[] = [
@@ -129,6 +145,7 @@ export const INITIAL_RULES: AutoRule[] = [
   // Guardrails — pull you back in
   APPROVAL_GUARDRAIL,
   SECOND_APPROVAL_GUARDRAIL,
+  USER_GUARD_RAIL,
   // Always-on — can't be turned off
   ANOMALY_GUARD,
   BANK_CHANGE_GUARD,
