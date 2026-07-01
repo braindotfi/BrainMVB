@@ -127,17 +127,22 @@ const Divider = () => (
   <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
 );
 
-const WidgetHeader = ({ title }: { title: string }) => (
+const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
   <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-    <div className="flex flex-1 items-center min-w-px relative">
+    <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
+      {typeof count === "number" && (
+        <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+        </div>
+      )}
     </div>
   </div>
 );
 
-const WidgetCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+const WidgetCard = ({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) => (
   <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-    <WidgetHeader title={title} />
+    <WidgetHeader title={title} count={count} />
     <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
       <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
         {children}
@@ -317,7 +322,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
   const total = rows.reduce((s, r) => s + r.amount, 0);
 
   return (
-    <WidgetCard title="Expenses">
+    <WidgetCard title="Expenses" count={rows.length}>
       {rows.length === 0 ? (
         <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
           <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -504,7 +509,7 @@ export function FinancesPage() {
 
             {/* ACCOUNTS */}
             {activeTab === "Accounts" && (
-              <WidgetCard title="Accounts">
+              <WidgetCard title="Accounts" count={accounts.length}>
                 {accounts.map((acc, idx) => (
                   <div key={acc.name} className="flex flex-col gap-[8px] w-full">
                     <div
@@ -535,7 +540,7 @@ export function FinancesPage() {
 
             {/* RECENT */}
             {activeTab === "Recent" && (
-              <WidgetCard title="Recent">
+              <WidgetCard title="Recent" count={transactions.length}>
                 {transactions.length > 0 ? (
                   transactions.map((t, idx) => (
                     <div key={t.id} className="flex flex-col gap-[8px] w-full">

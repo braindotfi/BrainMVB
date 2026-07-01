@@ -163,12 +163,14 @@ const ActivityItem = ({
 
 const SectionCard = ({
   title,
+  count,
   items,
   highlightedId,
   registerRowRef,
   onSelect,
 }: {
   title: string;
+  count?: number;
   items: ActivityItemData[];
   highlightedId: string | null;
   registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
@@ -178,8 +180,13 @@ const SectionCard = ({
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-        <div className="flex flex-1 items-center min-w-px relative">
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
+          {typeof count === "number" && (
+            <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
@@ -323,6 +330,7 @@ export function ActivityPage() {
             </div>
             <SectionCard
               title="Just now"
+              count={liveItems.length}
               items={liveItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
@@ -330,6 +338,7 @@ export function ActivityPage() {
             />
             <SectionCard
               title="Today"
+              count={todayItems.length}
               items={todayItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
@@ -337,6 +346,7 @@ export function ActivityPage() {
             />
             <SectionCard
               title="Yesterday"
+              count={yesterdayItems.length}
               items={yesterdayItems}
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}

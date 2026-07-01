@@ -186,12 +186,12 @@ function Section({
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-          {title}
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px]">
-          {count} records
-        </p>
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
+          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
+          </div>
+        </div>
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
         {children}
@@ -593,12 +593,7 @@ export function RulesPage() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
-  const ruleTabCount = (tab: RuleTab) => {
-    if (tab === "Automations") return automations.length;
-    if (tab === "Guardrails") return guardrails.length;
-    if (tab === "Always On") return alwaysOn.length;
-    return suggestions.length;
-  };
+  // tab counts removed — shown in table header instead
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -619,7 +614,6 @@ export function RulesPage() {
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {RULE_TABS.map((tab) => {
                 const isActive = activeTab === tab;
-                const count = ruleTabCount(tab);
                 return (
                   <button
                     key={tab}
@@ -634,17 +628,6 @@ export function RulesPage() {
                     >
                       {tab}
                     </p>
-                    {count > 0 && (
-                      <span
-                        className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[5px] py-[1px] rounded-[4px] min-w-[18px] text-center"
-                        style={{
-                          background: isActive ? "rgba(255,149,0,0.18)" : "#1d2132",
-                          color: isActive ? "#ff9500" : "#6c779d",
-                        }}
-                      >
-                        {count}
-                      </span>
-                    )}
                   </button>
                 );
               })}

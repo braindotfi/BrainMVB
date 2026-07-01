@@ -147,12 +147,7 @@ export function VendorsPage() {
     navigate(`/vendors?${params.toString()}`, { replace: true });
   };
 
-  const tabCount = (tab: VendorTab) => {
-    if (tab === "Under Review") return grouped.underReview.length;
-    if (tab === "New") return grouped.newVendors.length;
-    if (tab === "Trusted") return grouped.trusted.length;
-    return grouped.known.length;
-  };
+  // tab counts removed — shown in table header instead
 
   const suggestionCount = grouped.known.filter((v) => v.eligibleForTrust).length;
 
@@ -177,7 +172,6 @@ export function VendorsPage() {
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {VENDOR_TABS.map((tab) => {
                 const isActive = activeTab === tab;
-                const count = tabCount(tab);
                 return (
                   <button
                     key={tab}
@@ -192,17 +186,6 @@ export function VendorsPage() {
                     >
                       {tab}
                     </p>
-                    {count > 0 && (
-                      <span
-                        className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[5px] py-[1px] rounded-[4px] min-w-[18px] text-center"
-                        style={{
-                          background: isActive ? "rgba(255,149,0,0.18)" : "#1d2132",
-                          color: isActive ? "#ff9500" : "#6c779d",
-                        }}
-                      >
-                        {count}
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -220,10 +203,11 @@ export function VendorsPage() {
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               {/* Section header matching the selected tab name */}
               <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                <div className="flex flex-1 items-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-                    {activeTab}
-                  </p>
+                <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
+                  <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{tabVendors.length}</p>
+                  </div>
                 </div>
               </div>
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
