@@ -6,6 +6,7 @@ import { AnchorStatus } from "./AnchorStatus";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
+import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
 
 export function AuditRecordPopup({
   record,
@@ -29,8 +30,11 @@ export function AuditRecordPopup({
       if (!opened) return; // deleted rule — non-tappable, no-op
     } else if (link.kind === "proposal") {
       navigate(`/review`);
+    } else if (link.kind === "vendor") {
+      const opened = openVendorDetail(link.refId, navigate);
+      if (!opened) return; // deleted vendor — non-tappable, no-op
     } else {
-      return; // vendor rows are plain text for now (vendor page not built)
+      return;
     }
     onOpenChange(false);
   };
@@ -114,12 +118,14 @@ export function AuditRecordPopup({
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase tracking-[0.04em]">Linked</p>
                 <div className="flex flex-col gap-[4px] w-full">
                   {record.linked.map((link) => {
-                    // Rules resolve against the store; a deleted rule (or any
-                    // vendor row, since the vendor page isn't built) renders as
-                    // plain, non-tappable text with "(rule unavailable)" — never
-                    // a dead tap.
+                    // Rules and vendors resolve against their catalogues;
+                    // a deleted entity renders as plain, non-tappable text.
                     const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
-                    const tappable = link.kind === "proposal" || (link.kind === "rule" && !ruleGone);
+                    const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
+                    const tappable =
+                      link.kind === "proposal" ||
+                      (link.kind === "rule" && !ruleGone) ||
+                      (link.kind === "vendor" && !vendorGone);
 
                     if (!tappable) {
                       return (
@@ -130,8 +136,10 @@ export function AuditRecordPopup({
                         >
                           <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
                           <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
-                          {ruleGone && (
-                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule unavailable)</span>
+                          {(ruleGone || vendorGone) && (
+                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">
+                              ({link.kind} unavailable)
+                            </span>
                           )}
                         </div>
                       );

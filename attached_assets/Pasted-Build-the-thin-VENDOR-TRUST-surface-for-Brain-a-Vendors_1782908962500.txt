@@ -1,0 +1,147 @@
+Build the thin VENDOR-TRUST surface for Brain: a Vendors list page grouped by trust status,
+and a Vendor detail popup that renders four distinct trust-state variants where trust is
+granted, revoked, or restored. Include Brain's propose-only trust suggestion.
+
+STYLING — MATCH THE CURRENT APP EXACTLY. Do not introduce a new look.
+- FIRST reuse the app's existing design tokens, CSS variables, fonts, spacing scale, radii,
+  card styles, row dividers, chip/pill styles, and button styles. Import them; do not hardcode
+  values that already exist as tokens.
+- Same dark indigo/near-black canvas, soft purple accents, off-white text, rounded cards,
+  comfortable spacing, monospace for amounts/accounts/dates as used elsewhere.
+- Page header uses the SAME kicker/title/subhead treatment as the Review and Audit Log pages.
+- Rows use the SAME list-row pattern as the review queue / audit log (title, mono subtitle,
+  right-side status chip + chevron).
+- Popups use the SAME modal/bottom-sheet shell and header pattern as the proposal-detail /
+  audit-record popups.
+- Color discipline (as in the rest of the app): #D20344 ONLY for alerts / under-review /
+  flags / destructive; success/green for trusted; purple for interactive/affirmative. Orange
+  is reserved for the audit-log active tab — DO NOT use orange here.
+
+SCOPE — THIN. Build ONLY: vendor list, vendor detail (four state variants), grant/revoke/
+restore trust, Brain's trust suggestion. Do NOT build vendor onboarding, W-9/document
+collection, bank-detail verification workflows, a numeric risk score, or vendor messaging.
+
+TRUST MODEL (the spine): trust is a status a vendor holds, granted by the user but informed by
+Brain's evidence, and it gates automation eligibility.
+- Statuses: "new" (0-2 payments, always reviewed, never auto-clearable), "known" (history
+  building, still reviewed, not allowlist-eligible), "trusted" (user-vetted, the ONLY status
+  eligible for a rule allowlist / auto-clear), "under_review" (trust suspended after a flag,
+  treated like new until resolved).
+- HARD RULE: a bank-detail / payee-account change on a TRUSTED vendor auto-drops it to
+  "under_review". Trust is bound to the vendor AND the account paid; change the account and
+  trust does not carry over. (Same guard as policy/ap.fraud.v2.)
+- Brain computes eligibility and SUGGESTS trust but NEVER auto-grants. Granting is always an
+  explicit human action.
+
+DATA MODEL:
+type TrustStatus = "new" | "known" | "trusted" | "under_review";
+interface VendorFlag { kind: "bank_detail_change"|"amount_anomaly"|"reported_problem"|"possible_duplicate"; label: string; raisedAtLabel: string; priorAccountLast4?: string; newAccountLast4?: string; }
+interface Vendor {
+  id: string; name: string; category: string; trustStatus: TrustStatus;
+  payeeAccountLast4: string;
+  history: { paymentCount: number; totalPaid: number; firstPaidLabel: string; lastPaidLabel: string; avgAmount: number; flagCount: number; };
+  flags: VendorFlag[];
+  trustGrantedLabel?: string;      // "You trusted this vendor Jun 12 · 7 payments since"
+  wasTrustedLabel?: string;        // for under_review: "was trusted since May 2"
+  eligibleForTrust: boolean;       // Brain's signal → drives the suggestion (known only)
+  eligibilityEvidence?: FactRow[]; // the facts behind the suggestion
+  ruleIds: string[];               // rules whose allowlist includes this vendor
+}
+
+VENDORS LIST PAGE (styled like Review/Audit pages):
+- Kicker "Your Vendors", Title "Who you pay, and who you trust.", Text "Trusted vendors can
+  be handled automatically. Everyone else always comes to you."
+- Grouped sections IN THIS ORDER, each a card with the standard row pattern:
+    1. "Needs attention" — under_review vendors, #D20344 left-accent on rows, at TOP.
+    2. "Trusted · eligible for automation" — trusted vendors.
+    3. "Known · building history" — known vendors; those with eligibleForTrust show a small
+       purple "Brain suggests trust" chip on the row.
+    4. "New · always reviewed" — new vendors.
+- Rows: name, "{category} · {paymentCount} payments" (mono subtitle), trust-status chip,
+  chevron. Tapping opens the Vendor detail popup.
+- Empty sections collapse.
+
+VENDOR DETAIL POPUP — ONE component, FOUR state variants off trustStatus. Shared shell:
+store icon + vendor name in header, close X; a status chip band; a "History" mono block
+(payments/total, average, "paid to ··{last4}", flags); a rules section; a state-specific
+footer. Render the variants exactly as follows:
+
+VARIANT A — status "known" (may suggest trust):
+- Status band: neutral "Known" chip + "{category} · not yet trusted".
+- History block (clean).
+- IF eligibleForTrust: a PURPLE-BORDERED card "Brain suggests trusting this vendor" with
+  eligibilityEvidence in a mono block, and the line "You decide — Brain never grants trust on
+  its own." (If not eligible, omit this card.)
+- "If trusted, used by": rule rows (ruleIds) → open RuleDetail via openRuleDetail(ruleId).
+- Footer: primary purple "Trust Vendor" → opens confirm: "Trust {name}? Rules can then
+  auto-clear their payments within your limits. Brain still stops if their bank details ever
+  change." Caption: "You'll confirm exactly what trust allows."
+
+VARIANT B — status "trusted":
+- Status band: success "Trusted" chip (shield icon).
+- Provenance line from trustGrantedLabel: "You trusted this vendor {date} · N payments since,
+  none flagged."
+- History block (clean, shows bound account).
+- "Used by": active rule rows → openRuleDetail.
+- Footer: "Revoke trust" in #D20344 text (not a filled red button). Caption: "Revoking pauses
+  any rule that uses this vendor." Revoke confirms and CASCADES: flag/pause rules in ruleIds
+  and surface matching pending items (reuse the report-a-problem cascade pattern).
+
+VARIANT C — status "under_review":
+- Status band: #D20344 "Trust paused" chip.
+- A #D20344 alert block naming the flag from flags[]: title "Bank details changed" and a mono
+  sub-block "prior ··{priorAccountLast4} / new ··{newAccountLast4} first seen {date}".
+- History block, including wasTrustedLabel ("was trusted since {date}").
+- "Paused rules": the rules in ruleIds shown paused (#D20344 pause icon), not tappable-to-run.
+- Footer: TWO stacked buttons — "Review the change" (enabled) and "Restore trust" (DISABLED
+  until "Review the change" has been acted on). Restore re-grants FROM SCRATCH (same confirm
+  as a fresh grant), never a one-tap un-pause. Caption: "Restoring re-grants from scratch,
+  only after you review."
+
+VARIANT D — status "new":
+- Status band: muted "New · always reviewed" chip.
+- Sparse History block (few payments).
+- A muted info block: "Brain will suggest trust once there's enough clean history. Every
+  payment is reviewed until then." (No suggestion card — new vendors are never auto-suggested.)
+- Footer: a DE-EMPHASIZED "Trust Vendor" button + caution caption "Only N payment(s) so far —
+  Brain hasn't vetted this vendor yet." Manual trust is allowed (preserves user authority) but
+  clearly cautioned. Trusting still opens the same confirm as Variant A.
+
+WIRING:
+- Add "Vendors" to the left main menu (near Rules), routing to VendorsListPage.
+- Add openVendorDetail(vendorId) as the single resolver — mirror the existing
+  openRuleDetail(ruleId) helper; handle an unresolved id gracefully (plain text, no crash,
+  console.warn "openVendorDetail: no vendor found for id '<id>'").
+- NOW FLIP the plain-text vendor references left as placeholders elsewhere (audit record
+  "Linked · Vendor" entries with kind:"vendor", proposal/receipt vendor references) to call
+  openVendorDetail(vendorId).
+- Rule builder allowlist picker: trusted vendors selectable; known/new/under_review shown
+  greyed with a "trust first →" link calling openVendorDetail — do NOT inline-grant from the
+  picker (keep the two confirms separate).
+
+CONSTRAINTS:
+- trustStatus gates everything; the rule allowlist can contain ONLY trusted vendors (enforce
+  in the picker).
+- Grant/revoke/restore are persistent-config changes → always confirmed, never silent.
+  Pausing is automatic (on flag); restoring is a manual re-grant.
+- Never auto-grant trust; Brain only suggests.
+- Match existing app styling/tokens; #D20344 for under_review/flags/revoke; success for
+  trusted; purple interactive; NO orange.
+- Amounts/accounts/dates in monospace; currency via Intl.NumberFormat.
+- No backend; static mock data; no localStorage; fully typed; variants render purely from
+  trustStatus + data.
+- DATA COHERENCE (per CLAUDE.md): a vendor tells ONE story across surfaces. Bright Futures is
+  under_review (bank-detail-change, payment held) — it must NOT appear as auto_approved
+  anywhere. Keep every Bright Futures reference consistent with under_review.
+
+MOCK DATA — mockVendors.ts covering all four variants: Bright Futures (under_review,
+bank_detail_change flag with prior ··6610 / new ··2087, wasTrustedLabel set), Con Edison +
+Notion (trusted, wired to their rules via ruleIds, trustGrantedLabel set), Apex Cleaning
+(known, eligibleForTrust true with eligibilityEvidence), Northstar Design (new, 1 payment).
+Wire ruleIds so rule rows resolve to real rules via openRuleDetail using the canonical rule
+ids in rulesStore (utility, saas, lease, payroll, sweep, etc.) — no invented ids.
+
+Return mockVendors.ts, the updated types, VendorsListPage (four grouped sections), the Vendor
+detail popup with all FOUR state variants (A-D) and the grant/revoke/restore flows, the
+openVendorDetail helper, the nav entry, and the now-wired vendor references across audit
+records / receipts / the rule builder picker — all matching the current app's styling.

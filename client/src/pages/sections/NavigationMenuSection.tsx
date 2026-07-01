@@ -247,11 +247,26 @@ type NavItem = {
   InactiveIcon: () => JSX.Element;
 };
 
+/* Vendors icon — shield/building motif matching trust semantics */
+const VendorsIconActive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+const VendorsIconInactive = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
 const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Home", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
   { path: "/finances", label: "Finances", ActiveIcon: FinancesIconActive, InactiveIcon: FinancesIconInactive },
   { path: "/review", label: "Review", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
   { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
+  { path: "/vendors", label: "Vendors", ActiveIcon: VendorsIconActive, InactiveIcon: VendorsIconInactive },
   { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
 
