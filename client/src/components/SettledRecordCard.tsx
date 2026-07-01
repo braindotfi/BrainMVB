@@ -1,12 +1,16 @@
+import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, CircleCheck, ChevronRight } from "lucide-react";
 import { AnchorStatus } from "./AnchorStatus";
+import { InvoiceViewerPopup } from "./InvoiceViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
 import type { Proposal } from "@/lib/proposalTypes";
 import { AGENT_META, factColor, SectionLabel } from "./ProposalDetail";
 import { MOCK_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
+import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
+import type { Invoice } from "@/lib/invoiceTypes";
 
 /* ── Settled Approved Record Card ─────────────────────────────────────────────────────────────
    Post-approval / settled view of a proposal. Same layout as ProposalDetail,
@@ -28,6 +32,8 @@ export function SettledRecordCard({
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   if (!proposal) return null;
 
@@ -46,6 +52,7 @@ export function SettledRecordCard({
   const meta = proposal.settledMeta ?? proposal.actionMeta;
 
   return (
+    <>
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -149,6 +156,40 @@ export function SettledRecordCard({
               );
             })()}
 
+            {/* Source invoice — tappable when invoiceId resolves */}
+            {proposal.invoiceId && (() => {
+              const invGone = !resolveInvoice(proposal.invoiceId);
+              if (invGone) {
+                return (
+                  <div className="flex flex-col gap-[8px] w-full">
+                    <SectionLabel>Source invoice</SectionLabel>
+                    <div
+                      data-testid="text-source-invoice-unavailable"
+                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] w-full"
+                    >
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{proposal.invoiceId}</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(invoice unavailable)</span>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex flex-col gap-[8px] w-full">
+                  <SectionLabel>Source invoice</SectionLabel>
+                  <button
+                    type="button"
+                    onClick={() => openInvoiceDetail(proposal.invoiceId, (inv) => { setViewingInvoice(inv); setInvoiceOpen(true); })}
+                    data-testid="button-source-invoice"
+                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">INVOICE</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{proposal.invoiceId}</span>
+                    <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Anchor Status — status mode */}
             <div className="h-px w-full bg-[#1d2132]" />
             <div className="flex flex-col gap-[8px] w-full">
@@ -166,5 +207,11 @@ export function SettledRecordCard({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+    <InvoiceViewerPopup
+      invoice={viewingInvoice}
+      open={invoiceOpen}
+      onOpenChange={setInvoiceOpen}
+    />
+    </>
   );
 }

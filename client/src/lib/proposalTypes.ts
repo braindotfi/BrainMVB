@@ -158,6 +158,8 @@ export interface Proposal {
   handoffTimeline?: HandoffStep[]; // proposed → approved automatically by rule → execution settled
   clearedBecause?: FactRow[]; // positive evidence: why it qualified
   rule?: AutoRule; // the standing rule that authorized it
+  /* Link to the source invoice document (if this proposal was generated from one). */
+  invoiceId?: string;
 }
 
 export interface AccountSummary {

@@ -1,12 +1,16 @@
+import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
 import { AnchorStatus } from "./AnchorStatus";
+import { InvoiceViewerPopup } from "./InvoiceViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
 import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
+import { openInvoiceDetail, resolveInvoice } from "@/lib/openInvoiceDetail";
+import type { Invoice } from "@/lib/invoiceTypes";
 
 export function AuditRecordPopup({
   record,
@@ -19,6 +23,8 @@ export function AuditRecordPopup({
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   if (!record) return null;
 
@@ -33,6 +39,13 @@ export function AuditRecordPopup({
     } else if (link.kind === "vendor") {
       const opened = openVendorDetail(link.refId, navigate);
       if (!opened) return; // deleted vendor — non-tappable, no-op
+    } else if (link.kind === "invoice") {
+      const opened = openInvoiceDetail(link.refId, (inv) => {
+        setViewingInvoice(inv);
+        setInvoiceOpen(true);
+      });
+      if (!opened) return;
+      return; // don't close the audit popup — invoice viewer stacks on top
     } else {
       return;
     }
@@ -46,6 +59,7 @@ export function AuditRecordPopup({
   };
 
   return (
+    <>
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -122,10 +136,12 @@ export function AuditRecordPopup({
                     // a deleted entity renders as plain, non-tappable text.
                     const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                     const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
+                    const invoiceGone = link.kind === "invoice" && !resolveInvoice(link.refId);
                     const tappable =
                       link.kind === "proposal" ||
                       (link.kind === "rule" && !ruleGone) ||
-                      (link.kind === "vendor" && !vendorGone);
+                      (link.kind === "vendor" && !vendorGone) ||
+                      (link.kind === "invoice" && !invoiceGone);
 
                     if (!tappable) {
                       return (
@@ -136,7 +152,7 @@ export function AuditRecordPopup({
                         >
                           <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
                           <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
-                          {(ruleGone || vendorGone) && (
+                          {(ruleGone || vendorGone || invoiceGone) && (
                             <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">
                               ({link.kind} unavailable)
                             </span>
@@ -175,5 +191,11 @@ export function AuditRecordPopup({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+    <InvoiceViewerPopup
+      invoice={viewingInvoice}
+      open={invoiceOpen}
+      onOpenChange={setInvoiceOpen}
+    />
+    </>
   );
 }

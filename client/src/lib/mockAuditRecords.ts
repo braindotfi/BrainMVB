@@ -24,8 +24,10 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Amazon Web Services", refId: "aws" },
-      { kind: "proposal", label: "Invoice #AWS-2026-07", refId: "prop-aws" },
+      { kind: "proposal", label: "AWS payment · Jul 7", refId: "prop-aws" },
+      { kind: "invoice", label: "#AWS-2026-07", refId: "AWS-2026-07" },
     ],
+    invoiceId: "AWS-2026-07",
     anchor: {
       status: "anchored",
       auditId: "AUD-3308FE",
@@ -58,7 +60,9 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     linked: [
       { kind: "vendor", label: "Con Edison Business", refId: "conedison" },
       { kind: "rule", label: "Utility Bills", refId: "utility" },
+      { kind: "invoice", label: "#CE-2026-0631", refId: "CE-2026-0631" },
     ],
+    invoiceId: "CE-2026-0631",
     anchor: {
       status: "anchored",
       auditId: "AUD-3F9P",
@@ -88,8 +92,10 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
-      { kind: "proposal", label: "Invoice #BFS-0426", refId: "prop-bankchange" },
+      { kind: "proposal", label: "Bright Futures payment · Jul 5", refId: "prop-bankchange" },
+      { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
     ],
+    invoiceId: "BFS-0426",
     anchor: {
       status: "anchored",
       auditId: "AUD-7K2M",
@@ -418,8 +424,10 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
-      { kind: "proposal", label: "Invoice #BFS-0426", refId: "prop-bankchange" },
+      { kind: "proposal", label: "Bright Futures payment · Jul 6", refId: "prop-bankchange" },
+      { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
     ],
+    invoiceId: "BFS-0426",
     anchor: {
       status: "pending_next_batch",
       auditId: "AUD-7N2S",

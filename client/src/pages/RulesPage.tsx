@@ -473,8 +473,8 @@ type BuilderState = {
 
 const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
 
-type RuleTab = "Automations" | "Guardrails" | "Always On" | "Suggested";
-const RULE_TABS: RuleTab[] = ["Automations", "Guardrails", "Always On", "Suggested"];
+type RuleTab = "Your Rules" | "Automations" | "Guardrails" | "Always On" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Your Rules", "Automations", "Guardrails", "Always On", "Suggested"];
 
 export function RulesPage() {
   const { format } = useCurrency();
@@ -483,7 +483,7 @@ export function RulesPage() {
   const rules = useRules();
   const suggestions = useRuleSuggestions();
 
-  const [activeTab, setActiveTab] = useState<RuleTab>("Automations");
+  const [activeTab, setActiveTab] = useState<RuleTab>("Your Rules");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
   const [openChip, setOpenChip] = useState<null | "category" | "vendor" | "action">(null);
@@ -588,6 +588,7 @@ export function RulesPage() {
   };
 
   const ruleTabCount = (tab: RuleTab) => {
+    if (tab === "Your Rules") return rules.length;
     if (tab === "Automations") return automations.length;
     if (tab === "Guardrails") return guardrails.length;
     if (tab === "Always On") return alwaysOn.length;
@@ -645,8 +646,8 @@ export function RulesPage() {
             </div>
           </div>
 
-          {/* Create-rule confirmation (from the builder OR an accepted suggestion) */}
-          {pendingCreate && (
+          {/* Create-rule confirmation — only on Your Rules tab */}
+          {activeTab === "Your Rules" && pendingCreate && (
             <div
               className="w-full rounded-[16px] border p-[16px] flex flex-col gap-[12px]"
               style={{ background: "#240757", borderColor: "rgba(118,49,238,0.35)" }}
@@ -685,8 +686,8 @@ export function RulesPage() {
             </div>
           )}
 
-          {/* New rule — sentence builder */}
-          {!builderOpen ? (
+          {/* New rule — sentence builder — only on Your Rules tab */}
+          {activeTab === "Your Rules" && (!builderOpen ? (
             <button
               type="button"
               onClick={() => setBuilderOpen(true)}
@@ -847,9 +848,50 @@ export function RulesPage() {
                 </button>
               </div>
             </div>
-          )}
+          ))}
 
           {/* Tab content — each tab shows its own section */}
+
+          {/* YOUR RULES: overview of all rules grouped */}
+          {activeTab === "Your Rules" && (
+            <div className="flex flex-col gap-[28px] w-full">
+              <Section
+                eyebrow="Automations · act for you"
+                sub="These run on their own. Tap one to see or tighten its scope."
+                count={automations.length}
+              >
+                {automations.map((r) => (
+                  <AutomationRow key={r.id} rule={r} format={format} />
+                ))}
+              </Section>
+              <Section
+                eyebrow="Guardrails · pull you back in"
+                sub="Brain stops and asks you above these limits."
+                count={guardrails.length}
+              >
+                {guardrails.map((r) => (
+                  <GuardrailRow key={r.id} rule={r} format={format} />
+                ))}
+              </Section>
+              <Section
+                eyebrow="Always on · can't be turned off"
+                sub="Built-in protections that run no matter what."
+                count={alwaysOn.length}
+              >
+                {alwaysOn.map((r) => (
+                  <AlwaysOnRow key={r.id} rule={r} />
+                ))}
+              </Section>
+              {rules.length === 0 && (
+                <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                    No rules yet. Create one above.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "Automations" && (
             <Section
               eyebrow="Automations · act for you"

@@ -9,6 +9,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
   {
     id: "prop-utilities",
     auditId: "AUD-7F3A21",
+    invoiceId: "CE-2026-0631",
     agent: "invoice",
     surface: "individual",
     title: "Pay the office electricity bill?",
@@ -129,6 +130,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
   {
     id: "prop-bankchange",
     auditId: "AUD-D4488B",
+    invoiceId: "BFS-0426",
     agent: "invoice",
     surface: "individual",
     title: "Bank details changed on a contractor invoice",
@@ -452,6 +454,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
   {
     id: "prop-aws",
     auditId: "AUD-3308FE",
+    invoiceId: "AWS-2026-07",
     agent: "invoice",
     surface: "business",
     title: "Approve the monthly AWS bill?",

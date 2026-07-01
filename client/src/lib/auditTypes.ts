@@ -28,7 +28,7 @@ export interface LifecycleStep {
   kind: "ok" | "alert";
 }
 
-export type LinkedEntityKind = "vendor" | "proposal" | "rule";
+export type LinkedEntityKind = "vendor" | "proposal" | "rule" | "invoice";
 
 export interface LinkedEntity {
   kind: LinkedEntityKind;
@@ -51,6 +51,8 @@ export interface AuditRecord {
   /* Link back to an operational item when this record is an approved/executed
      payment so the settled Approved Record card can deep-link to the log. */
   proposalId?: string;
+  /* Link to the source invoice document (if this record is payment-related). */
+  invoiceId?: string;
   /* Optional subtitle for the register row (key facts: amount · actor · audit id) */
   rowSubtitle?: string;
 }
