@@ -20,8 +20,37 @@ export type SemanticIssue = { source: string; message: string };
 export function checkSemanticAuditRecords(): SemanticIssue[] {
   const issues: SemanticIssue[] = [];
 
+  // Derive "under review" vendors from the data itself: any vendor that has a
+  // `flagged` or `trust_revoked` audit record is conceptually under review and
+  // must never also have an `auto_approved` record (held payments were not
+  // cleared by a rule).  Bright Futures is the canonical example.
+  const underReviewVendors = new Set<string>();
   for (const rec of MOCK_AUDIT_RECORDS) {
-    // 1 — An untrusted vendor must never have an auto_approved record.
+    if (
+      (rec.eventType === "flagged" || rec.eventType === "trust_revoked") &&
+      rec.counterparty
+    ) {
+      underReviewVendors.add(rec.counterparty);
+    }
+  }
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    // 1 — An under-review vendor (flagged or trust_revoked) must never have an
+    //     auto_approved record.  A held/escalated payment was NOT cleared.
+    if (
+      rec.eventType === "auto_approved" &&
+      rec.counterparty &&
+      underReviewVendors.has(rec.counterparty)
+    ) {
+      issues.push({
+        source: `audit ${rec.id}`,
+        message: `Vendor "${rec.counterparty}" is under review (has a flagged/trust_revoked record) and must not have an auto_approved record (held payments are not cleared by a rule)`,
+      });
+    }
+
+    // 1b — An explicitly untrusted vendor must also never have an auto_approved
+    //      record (catches vendors that are permanently untrusted but never
+    //      got a flagged record in the demo data).
     if (
       rec.eventType === "auto_approved" &&
       rec.counterparty &&
