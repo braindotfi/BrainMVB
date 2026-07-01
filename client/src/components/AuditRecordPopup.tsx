@@ -32,26 +32,24 @@ export function AuditRecordPopup({
   const isFlagged = record.eventType === "flagged";
 
   const handleNavigate = (link: LinkedEntity) => {
+    // Route deep-links (rule/proposal/vendor) navigate to another page. We must
+    // NOT call onOpenChange(false) here: the parent's close handler does
+    // `navigate('/audit-log', {replace:true})` to clear the ?record= param, which
+    // would REPLACE the deep-link we just pushed and dump the user back on the
+    // audit log. The route change unmounts this page (and dialog) on its own.
+    // The invoice branch opens a stacked viewer on THIS page, so it also stays.
     if (link.kind === "rule") {
-      const opened = openRuleDetail(link.refId, navigate);
-      if (!opened) return; // deleted rule — non-tappable, no-op
+      openRuleDetail(link.refId, navigate);
     } else if (link.kind === "proposal") {
-      const opened = openProposalDetail(link.refId, navigate);
-      if (!opened) return; // missing proposal — non-tappable, no-op
+      openProposalDetail(link.refId, navigate);
     } else if (link.kind === "vendor") {
-      const opened = openVendorDetail(link.refId, navigate);
-      if (!opened) return; // deleted vendor — non-tappable, no-op
+      openVendorDetail(link.refId, navigate);
     } else if (link.kind === "invoice") {
-      const opened = openInvoiceDetail(link.refId, (inv) => {
+      openInvoiceDetail(link.refId, (inv) => {
         setViewingInvoice(inv);
         setInvoiceOpen(true);
       });
-      if (!opened) return;
-      return; // don't close the audit popup — invoice viewer stacks on top
-    } else {
-      return;
     }
-    onOpenChange(false);
   };
 
   const handleVerify = () => {
