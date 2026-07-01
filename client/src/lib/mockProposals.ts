@@ -9,7 +9,6 @@ export const MOCK_PROPOSALS: Proposal[] = [
   {
     id: "prop-utilities",
     auditId: "AUD-7F3A21",
-    invoiceId: "CE-2026-0631",
     agent: "invoice",
     surface: "individual",
     title: "Pay the office electricity bill?",
@@ -34,7 +33,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     evidence: [
       {
         kind: "invoice",
-        title: "Invoice #CE-2026-0631",
+        title: "Invoice #CE-2026-0702",
         subtitle: "Billing period Jun 1 – Jun 30 · $486.00",
       },
       {
@@ -129,7 +128,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
   /* 3 — invoice / BANK DETAILS CHANGED (fraud_anomaly) ──────────────────── */
   {
     id: "prop-bankchange",
-    auditId: "AUD-D4488B",
+    auditId: "AUD-7K2M",
     invoiceId: "BFS-0426",
     agent: "invoice",
     surface: "individual",
@@ -171,7 +170,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       {
         kind: "contract",
         title: "Master services agreement",
-        subtitle: "Signed Jan 2025 · remittance to ••6610",
+        subtitle: "Signed Jul 2025 · remittance to ••6610",
       },
     ],
     confidence: {
@@ -453,19 +452,18 @@ export const MOCK_PROPOSALS: Proposal[] = [
   /* 8 — invoice / BUSINESS SURFACE (batchApprovable) ────────────────────── */
   {
     id: "prop-aws",
-    auditId: "AUD-3308FE",
-    invoiceId: "AWS-2026-07",
+    auditId: "AUD-9E22B4",
     agent: "invoice",
     surface: "business",
     title: "Approve the monthly AWS bill?",
     rowSubtitle: "Amazon Web Services · cloud infrastructure",
     actionStatement: "Propose paying Amazon Web Services $4,150",
-    actionMeta: "from Operating ••4821 · due Tue Jul 7",
+    actionMeta: "from Operating ••4821 · due Fri Aug 7",
     executionLabel: "ACH initiates Mon AM",
     cancelDeadlineLabel: "cancel until 9:00 AM ET Mon",
     amount: 4150,
     counterparty: "Amazon Web Services",
-    dueLabel: "Due Tue Jul 7",
+    dueLabel: "Due Fri Aug 7",
     severity: "clean",
     reasonChips: [],
     rationale:
@@ -479,13 +477,13 @@ export const MOCK_PROPOSALS: Proposal[] = [
     evidence: [
       {
         kind: "invoice",
-        title: "Invoice #EU-INV-99102",
-        subtitle: "Jun usage · $4,150.00 · committed-use discount applied",
+        title: "Invoice #AWS-2026-08",
+        subtitle: "Jul usage · $4,150.00 · committed-use discount applied",
       },
       {
         kind: "prior_payment",
         title: "Last payment",
-        subtitle: "Jun 7 · $4,088.00 · Operating ••4821",
+        subtitle: "Jul 7 · $4,150.00 · Operating ••4821",
       },
     ],
     confidence: {
@@ -716,28 +714,31 @@ function settledApproved(p: {
 }
 
 export const AUTO_HANDLED_PROPOSALS: Proposal[] = [
-  autoHandled({
-    id: "auto-conedison",
-    auditId: "AUD-AH-0461",
-    agent: "invoice",
-    title: "Con Edison electricity bill",
-    counterparty: "Con Edison Business",
-    amount: 486,
-    pastTenseStatement: "Paid Con Edison $486",
-    settledMeta: "from Operating ••4821 · settled today 8:02 AM ET · you set a rule that allows this",
-    rowSubtitle: "Con Edison Business · settled 8:02 AM",
-    rationale:
-      "Your usual monthly electricity bill. Vendor, account, and amount all matched the established pattern, so your standing rule cleared it without asking.",
-    clearedBecause: [
-      { label: "vendor", value: "trusted · 14 prior payments" },
-      { label: "this invoice", value: "$486" },
-      { label: "trailing avg (6mo)", value: "$472" },
-      { label: "under limit", value: "$486 / $1,000", severity: "clean" },
-      { label: "bank details", value: "unchanged" },
-    ],
-    rule: UTILITY_RULE,
-    timeline: settledTimeline("today 7:58 AM ET", "today 7:58 AM ET", "today 8:02 AM ET"),
-  }),
+  {
+    ...autoHandled({
+      id: "auto-conedison",
+      auditId: "AUD-3F9P",
+      agent: "invoice",
+      title: "Con Edison electricity bill",
+      counterparty: "Con Edison Business",
+      amount: 486,
+      pastTenseStatement: "Paid Con Edison $486",
+      settledMeta: "from Operating ••4821 · settled today 8:02 AM ET · you set a rule that allows this",
+      rowSubtitle: "Con Edison Business · settled 8:02 AM",
+      rationale:
+        "Your usual monthly electricity bill. Vendor, account, and amount all matched the established pattern, so your standing rule cleared it without asking.",
+      clearedBecause: [
+        { label: "vendor", value: "trusted · 14 prior payments" },
+        { label: "this invoice", value: "$486" },
+        { label: "trailing avg (6mo)", value: "$472" },
+        { label: "under limit", value: "$486 / $1,000", severity: "clean" },
+        { label: "bank details", value: "unchanged" },
+      ],
+      rule: UTILITY_RULE,
+      timeline: settledTimeline("today 7:58 AM ET", "today 7:58 AM ET", "today 8:02 AM ET"),
+    }),
+    invoiceId: "CE-2026-0631",
+  },
   autoHandled({
     id: "auto-notion",
     auditId: "AUD-AH-0462",
@@ -1084,6 +1085,42 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
     { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
   ],
 });
+
+/* ── Human-approved, executed AWS bill (audit twin AUD-3308FE, invoice AWS-2026-07)
+   The PRIOR month's cloud bill. It exceeded the business-surface batch
+   auto-approval limit, so Brain escalated it and sarah@meridian signed off before
+   the execution service settled the ACH. This is the SETTLED counterpart the
+   AUD-3308FE audit record + AWS-2026-07 paid invoice point at — distinct from the
+   still-pending current-cycle prop-aws in the review queue. Reachable by id from
+   the Audit Log's linked-evidence deep-link, not rendered in the live queue. */
+export const AWS_SETTLED: Proposal = {
+  ...settledApproved({
+    id: "settled-aws",
+    auditId: "AUD-3308FE",
+    agent: "invoice",
+    title: "Amazon Web Services — monthly cloud bill",
+    counterparty: "Amazon Web Services",
+    amount: 4150,
+    pastTenseStatement: "Paid Amazon Web Services $4,150",
+    settledMeta: "from Operating ••4821 · you approved Jul 7, 8:55 AM · settled Jul 7, 9:02 AM ET",
+    rowSubtitle: "Amazon Web Services · settled 9:02 AM",
+    rationale:
+      "Your monthly cloud infrastructure bill. It exceeded the business-surface batch auto-approval limit, so Brain escalated it for your sign-off before the execution service sent the ACH.",
+    facts: [
+      { label: "vendor", value: "Amazon Web Services" },
+      { label: "amount", value: "$4,150" },
+      { label: "destination", value: "ACH ••9021" },
+      { label: "approval", value: "above batch limit · human", severity: "info" },
+    ],
+    timeline: [
+      { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", done: true },
+      { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
+      { label: "You approved", timestamp: "Jul 7, 8:55 AM ET", done: true },
+      { label: "Execution service settled the ACH", timestamp: "Jul 7, 9:02 AM ET", note: "Brain never held the funds", done: true },
+    ],
+  }),
+  invoiceId: "AWS-2026-07",
+};
 
 /* ── Flagged SaaS renewal held for review (audit twin AUD-3K8Q) ────────────────
    The Jun 30 Notion renewal Brain HELD because a higher seat count pushed the

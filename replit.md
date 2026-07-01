@@ -200,12 +200,27 @@ Programmable neobank on Base L2.
 - Non-vendor counterparties (payroll employees, DeFi protocols, internal ledgers) are NOT
   vendors — they use accurate `linked[]` kinds (`employee`/`protocol`/`ledger` in
   `LinkedEntityKind`) and render as plain, non-tappable text. Never label them `vendor`.
+- The proposal LIFECYCLE must be coherent end to end (proposal→invoice→audit→anchor). A
+  settled/anchored audit record (`approved`/`auto_approved`) must NOT link a still-pending
+  proposal — settled events point at their OWN settled twin. So a settled twin exists per
+  settled-but-still-queued item: `AWS_SETTLED` (id `settled-aws`, AUD-3308FE, invoice
+  AWS-2026-07) is the executed prior-cycle counterpart of the still-pending `prop-aws` in the
+  review queue; the audit record's linked proposal + `proposalId` point at `settled-aws`, NOT
+  `prop-aws`. Standalone settled/held records live outside the queue arrays, so they must be
+  registered in `openProposalDetail.ts` `allProposals()` (else their refs dangle). A proposal's
+  `invoiceId` must match its lifecycle: pending-like proposals never own a `paid` invoice;
+  executed/auto_handled proposals do. A FLAGGED record CAN link a pending proposal and CAN be
+  anchored (a hold is an auditable event) — that's NOT a lie.
 - `client/src/lib/ruleConsistencyCheck.ts` (dev-boot, `main.tsx`, never throws) is the
-  UNIFIED guard covering all three types: RESOLUTION (`checkRuleReferences` /
-  `checkVendorReferences` / `checkInvoiceReferences`) + COHERENCE
+  UNIFIED guard covering all types: RESOLUTION (`checkRuleReferences` /
+  `checkVendorReferences` / `checkInvoiceReferences` / `checkProposalReferences`) + COHERENCE
   (`checkReferenceCoherence`: linked invoice amount == record amount, invoice.vendorId ==
   record's vendor, kind:"vendor" points at a real vendor, no paid-invoice vendor with zero
-  history) + `checkSemanticAuditRecords`. Extend this module; don't fork it. See CLAUDE.md.
+  history; PLUS lifecycle: settled record's linked proposal not pending, invoice status matches
+  event type [approved/auto_approved→paid, flagged→held], proposal.invoiceId matches proposal
+  status, invoice.vendorName == resolved vendor.name) + `checkSemanticAuditRecords`. Display
+  labels MAY differ from a vendor's canonical name (e.g. "Notion Team" vs "Notion Labs") — not
+  equality-checked. Extend this module; don't fork it. See CLAUDE.md.
 
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).

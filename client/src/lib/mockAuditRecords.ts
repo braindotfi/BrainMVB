@@ -24,7 +24,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Amazon Web Services", refId: "aws" },
-      { kind: "proposal", label: "AWS payment · Jul 7", refId: "prop-aws" },
+      { kind: "proposal", label: "AWS payment · Jul 7", refId: "settled-aws" },
       { kind: "invoice", label: "#AWS-2026-07", refId: "AWS-2026-07" },
     ],
     invoiceId: "AWS-2026-07",
@@ -37,7 +37,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       anchoredAtLabel: "Jul 7, 9:04 AM ET",
       verifyHref: "https://basescan.org/tx/0x72b1…8e2d",
     },
-    proposalId: "prop-aws",
+    proposalId: "settled-aws",
   },
 
   /* 2 ─ Auto-approved by standing rule (Con Edison) ─────────────── */
@@ -398,39 +398,6 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       block: 21_847_875,
       anchoredAtLabel: "Jul 4, 6:30 PM ET",
       verifyHref: "https://basescan.org/tx/0x1b7f…c8e4",
-    },
-  },
-
-  /* 14 ─ Flagged ─ Bright Futures bank-detail change (held for review) ───────────────
-     This record is the audit twin of AUD-7K2M (flagged) and the proposal
-     prop-bankchange. Bright Futures is the canonical bank-detail-change
-     fraud example everywhere in the demo — it must NEVER have an
-     auto_approved record, because the always-on bank-detail-change guard
-     holds it for human review. */
-  {
-    id: "AUD-7N2S",
-    eventType: "flagged",
-    summary: "Payment held — bank details changed",
-    counterparty: "Bright Futures Studio",
-    amount: 3200,
-    actor: "system",
-    occurredAtLabel: "Jul 6, 8:15 AM ET",
-    occurredAtMs: 1782902867451,
-    rowSubtitle: "$3,200 · system · AUD-7N2S",
-    lifecycle: [
-      { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 8:12 AM ET", kind: "ok" },
-      { label: "Escalated to human — routing number changed", timestamp: "Jul 6, 8:13 AM ET", note: "policy/ap.fraud.v2", kind: "alert" },
-      { label: "Payment held pending verification", timestamp: "Jul 6, 8:15 AM ET", kind: "alert" },
-    ],
-    linked: [
-      { kind: "vendor", label: "Bright Futures Studio", refId: "brightfutures" },
-      { kind: "proposal", label: "Bright Futures payment · Jul 6", refId: "prop-bankchange" },
-      { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
-    ],
-    invoiceId: "BFS-0426",
-    anchor: {
-      status: "pending_next_batch",
-      auditId: "AUD-7N2S",
     },
   },
 ];

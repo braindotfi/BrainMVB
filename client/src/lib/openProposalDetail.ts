@@ -1,6 +1,7 @@
 import {
   ADOBE_SETTLED,
   AUTO_HANDLED_PROPOSALS,
+  AWS_SETTLED,
   COMCAST_SETTLED,
   MOCK_PROPOSALS,
   NOTION_RENEWAL_FLAGGED,
@@ -22,12 +23,15 @@ import type { Proposal } from "./proposalTypes";
    openRuleDetail / openVendorDetail / openInvoiceDetail. */
 
 /* Every source a proposal can be referenced from. Standalone settled/held
-   records aren't in the queue arrays, so they're listed explicitly. */
-function allProposals(): Proposal[] {
+   records aren't in the queue arrays, so they're listed explicitly. Exported so
+   dev guards (ruleConsistencyCheck) can assert coherence over the SAME complete
+   set of proposals — otherwise standalone twins escape the lifecycle checks. */
+export function allProposals(): Proposal[] {
   return [
     ...MOCK_PROPOSALS,
     ...AUTO_HANDLED_PROPOSALS,
     ADOBE_SETTLED,
+    AWS_SETTLED,
     COMCAST_SETTLED,
     PAYROLL_SETTLED,
     USDC_SWEEP_SETTLED,

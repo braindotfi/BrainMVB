@@ -6,7 +6,7 @@ import { MOCK_VENDORS } from "./mockVendors";
 import { resolveVendor } from "./openVendorDetail";
 import { MOCK_INVOICES } from "./mockInvoices";
 import { resolveInvoice } from "./openInvoiceDetail";
-import { resolveProposal } from "./openProposalDetail";
+import { allProposals, resolveProposal } from "./openProposalDetail";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
    These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
@@ -274,12 +274,17 @@ export function checkInvoiceReferences(): EntityRef[] {
 export function collectProposalReferences(): EntityRef[] {
   const refs: EntityRef[] = [];
 
-  // Audit records — linked entities of kind "proposal".
+  // Audit records — linked entities of kind "proposal" AND the top-level
+  // `proposalId` wiring (used to deep-link the record's own proposal). Both are
+  // live references, so both must resolve or they dangle.
   for (const rec of MOCK_AUDIT_RECORDS) {
     for (const link of rec.linked) {
       if (link.kind === "proposal") {
         refs.push({ source: `audit ${rec.id} linked proposal`, id: link.refId });
       }
+    }
+    if (rec.proposalId) {
+      refs.push({ source: `audit ${rec.id} proposalId`, id: rec.proposalId });
     }
   }
 
@@ -318,15 +323,52 @@ export function checkProposalReferences(): EntityRef[] {
        masquerading as a vendor);
      • a vendor with a linked PAID invoice is not contradicted by zero payment
        history (paymentCount === 0).
+   PLUS the lifecycle-state coherence that catches "resolves-but-lies" across the
+   proposal → invoice → audit → anchor chain (a reference that resolves to the
+   WRONG lifecycle state):
+     • a SETTLED audit record (approved / auto_approved) must not link a proposal
+       that is still pending/verifying/postponed — a settled/anchored event can't
+       point at an un-acted proposal (catches the AUD-3308FE → prop-aws(pending)
+       class);
+     • a linked invoice's status must match the record's event type
+       (approved/auto_approved ⇒ paid; flagged ⇒ held);
+     • a proposal's invoiceId must match its own lifecycle — a pending/verifying/
+       postponed proposal must not OWN a paid invoice, and a settled proposal
+       (executed/auto_handled) must own a paid one (catches the pending-proposal-
+       owns-settled-invoice class);
+     • an invoice's vendorName must equal its resolved vendor.name (catches the
+       vendor-rename drift where the invoice and the catalogue disagree).
+   NOTE: a FLAGGED record CAN link a pending proposal and CAN be anchored (a hold
+   is itself an auditable event) — see AUD-3K8Q — so neither is treated as a lie.
+   Display labels (linked-ref label, counterparty) are allowed to differ from a
+   vendor's canonical name (e.g. "Notion Team" vs "Notion Labs"), so labels are
+   NOT equality-checked.
    (The "no auto_approved record for an under_review vendor" invariant lives in
    checkSemanticAuditRecords above.) Logs loudly, never throws.
    ──────────────────────────────────────────────────────────────────────────── */
+// Lifecycle buckets over ProposalStatus. `executing` is deliberately in NEITHER:
+// it's an in-flight, approved-but-not-yet-settled state, so its invoice can
+// legitimately still be unpaid/held — asserting either way would misfire.
+//   UNSETTLED — never acted on / declined: must NOT own a paid invoice, and a
+//               settled (approved/auto_approved) audit record must NOT link one.
+//   SETTLED   — actually paid out: MUST own a paid invoice.
+const UNSETTLED_STATUSES: ReadonlyArray<string> = [
+  "pending",
+  "verifying",
+  "postponed",
+  "rejected",
+];
+const SETTLED_STATUSES: ReadonlyArray<string> = ["executed", "auto_handled"];
+
 export function checkReferenceCoherence(): SemanticIssue[] {
   const issues: SemanticIssue[] = [];
 
   for (const rec of MOCK_AUDIT_RECORDS) {
     const invLink = rec.linked.find((l) => l.kind === "invoice");
     const venLink = rec.linked.find((l) => l.kind === "vendor");
+    const propLink = rec.linked.find((l) => l.kind === "proposal");
+    const isSettledEvent =
+      rec.eventType === "approved" || rec.eventType === "auto_approved";
 
     // Every kind:"vendor" ref must point at an actual vendor.
     if (venLink && !resolveVendor(venLink.refId)) {
@@ -334,6 +376,17 @@ export function checkReferenceCoherence(): SemanticIssue[] {
         source: `audit ${rec.id}`,
         message: `linked vendor '${venLink.refId}' is not an actual vendor — a non-vendor counterparty (employee/protocol/ledger) is misfiled as kind:"vendor"`,
       });
+    }
+
+    // Lifecycle coherence: a settled record must not link an un-acted proposal.
+    if (propLink && isSettledEvent) {
+      const prop = resolveProposal(propLink.refId);
+      if (prop && UNSETTLED_STATUSES.includes(prop.status)) {
+        issues.push({
+          source: `audit ${rec.id}`,
+          message: `is a settled ${rec.eventType} record but its linked proposal '${prop.id}' is still ${prop.status} — a settled/anchored event cannot point at an un-acted proposal`,
+        });
+      }
     }
 
     if (invLink) {
@@ -353,12 +406,47 @@ export function checkReferenceCoherence(): SemanticIssue[] {
             message: `linked invoice ${inv.id} vendorId ('${inv.vendorId}') ≠ record's linked vendor ('${venLink.refId}')`,
           });
         }
+        // Status coherence: invoice status must match the record's event type.
+        if (isSettledEvent && inv.status !== "paid") {
+          issues.push({
+            source: `audit ${rec.id}`,
+            message: `is a settled ${rec.eventType} record but linked invoice ${inv.id} status is '${inv.status}' (expected 'paid')`,
+          });
+        }
+        if (rec.eventType === "flagged" && inv.status !== "held") {
+          issues.push({
+            source: `audit ${rec.id}`,
+            message: `is a flagged/held record but linked invoice ${inv.id} status is '${inv.status}' (expected 'held')`,
+          });
+        }
       }
     }
   }
 
-  // A vendor with a linked PAID invoice must have real payment history.
+  // Proposal ↔ invoice lifecycle coherence over EVERY proposal source (queue,
+  // receipts, AND standalone settled/held twins via allProposals) — otherwise
+  // exactly the twins this guard exists to protect (e.g. settled-aws) escape it.
+  // An unsettled proposal must not own a paid invoice; a settled one must.
+  for (const p of allProposals()) {
+    if (!p.invoiceId) continue;
+    const inv = resolveInvoice(p.invoiceId);
+    if (!inv) continue; // resolution is covered by checkInvoiceReferences
+    if (UNSETTLED_STATUSES.includes(p.status) && inv.status === "paid") {
+      issues.push({
+        source: `proposal ${p.id}`,
+        message: `is ${p.status} but its linked invoice ${inv.id} is already 'paid' — an unsettled proposal cannot own a settled invoice`,
+      });
+    }
+    if (SETTLED_STATUSES.includes(p.status) && inv.status !== "paid") {
+      issues.push({
+        source: `proposal ${p.id}`,
+        message: `is ${p.status} (settled) but its linked invoice ${inv.id} status is '${inv.status}' (expected 'paid')`,
+      });
+    }
+  }
+
   for (const inv of MOCK_INVOICES) {
+    // A vendor with a linked PAID invoice must have real payment history.
     if (inv.status === "paid") {
       const v = resolveVendor(inv.vendorId);
       if (v && v.history.paymentCount === 0) {
@@ -367,6 +455,14 @@ export function checkReferenceCoherence(): SemanticIssue[] {
           message: `has a linked paid invoice (${inv.id}) but zero payment history (paymentCount === 0)`,
         });
       }
+    }
+    // Name coherence: invoice.vendorName must match the catalogue vendor.name.
+    const v = resolveVendor(inv.vendorId);
+    if (v && inv.vendorName !== v.name) {
+      issues.push({
+        source: `invoice ${inv.id}`,
+        message: `vendorName '${inv.vendorName}' ≠ resolved vendor.name '${v.name}' (vendorId '${inv.vendorId}') — invoice names its vendor differently from the catalogue`,
+      });
     }
   }
 

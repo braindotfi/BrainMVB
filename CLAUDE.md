@@ -81,6 +81,11 @@ guards second. Extend this one module; **don't fork** a parallel checker.
    `proposal.invoiceId` (across `MOCK_PROPOSALS` + `AUTO_HANDLED_PROPOSALS`) resolves
    via `resolveInvoice`. Logs `[invoice-consistency] OK ...`.
 
+   **`checkProposalReferences()`** — every audit record's `kind:"proposal"` linked
+   ref **and** its top-level `proposalId` resolve via `resolveProposal` (which spans
+   the queue, receipts, AND standalone settled/held twins). Logs
+   `[proposal-consistency] OK ...`.
+
 **Coherence guards** (does a *resolved* ref also tell the truth? — this is the gap
 that let rules break before):
 
@@ -88,7 +93,25 @@ that let rules break before):
    `total` == the record's `amount`; a linked invoice's `vendorId` == the record's
    linked vendor; every `kind:"vendor"` ref points at an ACTUAL vendor (catches the
    `j-smith`/`aave` misfiling class); and a vendor with a linked PAID invoice is not
-   contradicted by zero payment history. Logs `[coherence] OK ...`.
+   contradicted by zero payment history. **Plus lifecycle coherence** across the
+   proposal→invoice→audit→anchor chain (the "resolves-but-lies-about-STATE" class):
+   - a SETTLED audit record (`approved`/`auto_approved`) must not link a proposal
+     that is still `pending`/`verifying`/`postponed` — a settled/anchored event
+     can't point at an un-acted proposal (this is why `AUD-3308FE` links the
+     executed twin `settled-aws`, not the still-pending `prop-aws`);
+   - a linked invoice's status matches the event type (`approved`/`auto_approved`
+     ⇒ `paid`; `flagged` ⇒ `held`);
+   - a proposal's `invoiceId` matches its OWN lifecycle — a pending-like proposal
+     must not own a `paid` invoice, and an `executed`/`auto_handled` proposal must
+     own one;
+   - an invoice's `vendorName` == its resolved `vendor.name` (catches rename drift).
+   NOTE: a `flagged` record CAN link a pending proposal and CAN be anchored (a hold
+   is itself an auditable event — see `AUD-3K8Q`), so neither is treated as a lie;
+   display labels (linked-ref label, counterparty) MAY differ from a vendor's
+   canonical name ("Notion Team" vs "Notion Labs") and are NOT equality-checked.
+   Logs `[coherence] OK ...`. NB: standalone settled/held twins (`AWS_SETTLED` etc.)
+   live outside the queue arrays, so they must be registered in
+   `openProposalDetail.ts` `allProposals()` or their refs dangle.
 
 5. **`checkSemanticAuditRecords()`** — narrative guard. Asserts that the mock audit
    records tell a consistent story:

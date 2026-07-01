@@ -25,7 +25,7 @@ export const MOCK_INVOICES: Invoice[] = [
     tax: 0,
     total: 4150.0,
     status: "paid",
-    proposalId: "prop-aws",
+    proposalId: "settled-aws",
     auditId: "AUD-3308FE",
     coherence: {
       status: "match",
@@ -92,7 +92,7 @@ export const MOCK_INVOICES: Invoice[] = [
     tax: 0,
     total: 486.0,
     status: "paid",
-    proposalId: "prop-utilities",
+    proposalId: "auto-conedison",
     auditId: "AUD-3F9P",
     coherence: {
       status: "match",
