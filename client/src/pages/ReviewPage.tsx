@@ -487,9 +487,9 @@ export function ReviewPage() {
               <WidgetHeader title="Needs Review" count={queue.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 {queue.length === 0 && executing.length === 0 && (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] p-[8px]">
-                    Nothing needs your attention right now. Brain is keeping things moving.
-                  </p>
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+                  </div>
                 )}
 
                 {queue.map((p, idx) => (
@@ -582,10 +582,8 @@ export function ReviewPage() {
             )}
 
             {showApproved && autoHandled.length === 0 && (
-              <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                  No auto-approved items yet. Brain will make them here when they happen.
-                </p>
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No auto-approved items yet. Brain will make them here when they happen.</p>
               </div>
             )}
 

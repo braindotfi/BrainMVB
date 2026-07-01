@@ -116,8 +116,8 @@ export function AuditLogPage() {
               })}
             </div>
             {filtered.length === 0 && (
-              <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                   {activeTab === "Approvals" && "No approval records yet."}
                   {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                   {activeTab === "Rule Changes" && "No rule changes recorded yet."}

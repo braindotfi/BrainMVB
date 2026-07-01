@@ -282,10 +282,8 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   }, [count, onCount]);
 
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start justify-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[24px] text-[#a8b9f4] text-[16px] w-full">
-        {text}
-      </p>
+    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">{text}</p>
     </div>
   );
 };
@@ -330,9 +328,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
     <WidgetCard title="Expenses" count={rows.length}>
       {rows.length === 0 ? (
         <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-            No expenses recorded yet. This populates from your ledger as money goes out.
-          </p>
+          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No expenses recorded yet. This populates from your ledger as money goes out.</p>
         </div>
       ) : (
         <>
@@ -415,10 +411,8 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
   }, [count, onCount]);
 
   return (
-    <div className="bg-[#0a0c10] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-normal leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
-        {text}
-      </p>
+    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">{text}</p>
     </div>
   );
 };

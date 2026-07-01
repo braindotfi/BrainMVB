@@ -184,9 +184,7 @@ export function BrainBillsInbox() {
       <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
         {bills.length === 0 && (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              No bills waiting for payment right now.
-            </p>
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No bills waiting for payment right now.</p>
           </div>
         )}
         {bills.map((bill) => {

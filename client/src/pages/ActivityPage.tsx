@@ -353,8 +353,8 @@ export function ActivityPage() {
               onSelect={handleSelect}
             />
             {liveItems.length === 0 && todayItems.length === 0 && yesterdayItems.length === 0 && (
-              <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                   {activeTab === "Brain Did"
                     ? "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here."
                     : "No manual approvals yet. Items you personally approve will show up here."}

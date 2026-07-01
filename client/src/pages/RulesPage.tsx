@@ -854,10 +854,8 @@ export function RulesPage() {
           )}
 
           {activeTab === "Automations" && automations.length === 0 && (
-            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No automated rules yet. Create one for Brain to automatically handle payments for you.
-              </p>
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>
             </div>
           )}
 
@@ -873,10 +871,8 @@ export function RulesPage() {
           )}
 
           {activeTab === "Guardrails" && guardrails.length === 0 && (
-            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No guardrails set. Create one to block risky transactions automatically.
-              </p>
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>
             </div>
           )}
 
@@ -892,10 +888,8 @@ export function RulesPage() {
           )}
 
           {activeTab === "Always On" && alwaysOn.length === 0 && (
-            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No always-on rules active. These run in the background without human approval.
-              </p>
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No always-on rules active. These run in the background without human approval.</p>
             </div>
           )}
 
@@ -914,10 +908,8 @@ export function RulesPage() {
           )}
 
           {activeTab === "Suggested" && suggestions.length === 0 && (
-            <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                No new suggestions from Brain right now. Check back as your patterns grow.
-              </p>
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
             </div>
           )}
 
