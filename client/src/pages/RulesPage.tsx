@@ -21,6 +21,7 @@ import {
   setThreshold as setRuleThreshold,
   createRule,
   consumeRuleDraft,
+  hydrateUserRules,
 } from "@/lib/rulesStore";
 import {
   useRuleSuggestions,
@@ -494,6 +495,12 @@ export function RulesPage() {
   const guardrails = rules.filter((r) => r.kind === "guardrail");
   const alwaysOn = rules.filter((r) => r.kind === "always_on");
 
+  // "Your Rules" shows ONLY rules the user authored in the creator (persisted
+  // per tenant). The category tabs below still show the full system + user set.
+  const userRules = rules.filter((r) => r.userCreated);
+  const userAutomations = userRules.filter((r) => (r.kind ?? "automation") === "automation");
+  const userGuardrails = userRules.filter((r) => r.kind === "guardrail");
+
   const resetBuilder = () => {
     setBuilder(EMPTY_BUILDER);
     setOpenChip(null);
@@ -510,6 +517,11 @@ export function RulesPage() {
     setOpenChip(null);
     setBuilderOpen(true);
   };
+
+  /* Load this account's persisted user-created rules into the store on mount. */
+  useEffect(() => {
+    void hydrateUserRules();
+  }, []);
 
   /* "Always handle this" handoff: consume the draft + open the builder pre-filled. */
   useEffect(() => {
@@ -588,7 +600,7 @@ export function RulesPage() {
   };
 
   const ruleTabCount = (tab: RuleTab) => {
-    if (tab === "Your Rules") return rules.length;
+    if (tab === "Your Rules") return userRules.length;
     if (tab === "Automations") return automations.length;
     if (tab === "Guardrails") return guardrails.length;
     if (tab === "Always On") return alwaysOn.length;
@@ -852,40 +864,35 @@ export function RulesPage() {
 
           {/* Tab content — each tab shows its own section */}
 
-          {/* YOUR RULES: overview of all rules grouped */}
+          {/* YOUR RULES: only the rules this account authored in the creator */}
           {activeTab === "Your Rules" && (
             <div className="flex flex-col gap-[28px] w-full">
-              <Section
-                eyebrow="Automations · act for you"
-                sub="These run on their own. Tap one to see or tighten its scope."
-                count={automations.length}
-              >
-                {automations.map((r) => (
-                  <AutomationRow key={r.id} rule={r} format={format} />
-                ))}
-              </Section>
-              <Section
-                eyebrow="Guardrails · pull you back in"
-                sub="Brain stops and asks you above these limits."
-                count={guardrails.length}
-              >
-                {guardrails.map((r) => (
-                  <GuardrailRow key={r.id} rule={r} format={format} />
-                ))}
-              </Section>
-              <Section
-                eyebrow="Always on · can't be turned off"
-                sub="Built-in protections that run no matter what."
-                count={alwaysOn.length}
-              >
-                {alwaysOn.map((r) => (
-                  <AlwaysOnRow key={r.id} rule={r} />
-                ))}
-              </Section>
-              {rules.length === 0 && (
+              {userAutomations.length > 0 && (
+                <Section
+                  eyebrow="Automations · act for you"
+                  sub="These run on their own. Tap one to see or tighten its scope."
+                  count={userAutomations.length}
+                >
+                  {userAutomations.map((r) => (
+                    <AutomationRow key={r.id} rule={r} format={format} />
+                  ))}
+                </Section>
+              )}
+              {userGuardrails.length > 0 && (
+                <Section
+                  eyebrow="Guardrails · pull you back in"
+                  sub="Brain stops and asks you above these limits."
+                  count={userGuardrails.length}
+                >
+                  {userGuardrails.map((r) => (
+                    <GuardrailRow key={r.id} rule={r} format={format} />
+                  ))}
+                </Section>
+              )}
+              {userRules.length === 0 && (
                 <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                    No rules yet. Create one above.
+                    You haven't created any rules yet. Use "New rule" above to write one in plain English — it'll be saved to your account.
                   </p>
                 </div>
               )}

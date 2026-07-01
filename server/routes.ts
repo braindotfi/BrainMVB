@@ -782,6 +782,59 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
+  /* ──────────────────────────────────────────────────────────────────────
+   *  User rules — rules authored via the "New rule" creator, persisted per
+   *  tenant (associated with the logged-in account via the session).
+   * ────────────────────────────────────────────────────────────────────── */
+
+  const userRulePayload = z.object({
+    id: z.string().min(1).max(128),
+    name: z.string().min(1).max(256),
+    summary: z.string().max(512).optional(),
+    kind: z.enum(["automation", "guardrail", "always_on"]).optional(),
+    policyId: z.string().min(1).max(128),
+    active: z.boolean().optional(),
+    agent: z.string().max(32).nullable().optional(),
+    category: z.string().max(64).nullable().optional(),
+    cap: z.number().int().nonnegative().nullable().optional(),
+    threshold: z.number().int().nonnegative().nullable().optional(),
+    thresholdEditable: z.boolean().nullable().optional(),
+    allowlist: z.array(z.string().max(128)).max(64).nullable().optional(),
+    scopeSummary: z.string().max(512).nullable().optional(),
+    createdLabel: z.string().max(128).optional(),
+  });
+
+  app.get("/api/rules", requireAuth, async (req, res) => {
+    try {
+      const list = await storage.listUserRules(req.session.userId!);
+      res.json(list);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/rules", requireAuth, async (req, res) => {
+    try {
+      const parsed = userRulePayload.parse(req.body);
+      const rule = await storage.createUserRule({ ...parsed, userId: req.session.userId! });
+      res.json(rule);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payload", details: err.errors });
+      }
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.delete("/api/rules/:id", requireAuth, async (req, res) => {
+    try {
+      const ok = await storage.removeUserRule(req.session.userId!, String(req.params.id));
+      res.json({ success: ok });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   /* Generic tool disconnect — registered LAST so specific routes (e.g. plaid) win */
   app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
     try {

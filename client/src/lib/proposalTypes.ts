@@ -98,6 +98,7 @@ export interface AutoRule {
   allowlist?: string[]; // trusted vendor names
   scopeSummary?: string; // plain-language scope, e.g. "trusted utility vendors under $1,000"
   problemReports?: ProblemReport[];
+  userCreated?: boolean; // authored via the "New rule" creator (persisted per tenant); the "Your Rules" tab shows only these
 }
 
 /* Evidence-backed AI suggestion: a proposed rule Brain noticed a pattern for,

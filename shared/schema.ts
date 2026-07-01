@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   pgTable, text, varchar, boolean, integer, numeric,
-  timestamp, jsonb, bigint, uuid, index,
+  timestamp, jsonb, bigint, uuid, index, primaryKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -167,6 +167,29 @@ export const sourceDocuments = pgTable("source_documents", {
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 }, (t) => [
   index("source_documents_user_id_idx").on(t.userId),
+]);
+
+/* ─── User Rules (rules authored via the "New rule" creator, per tenant) ─── */
+export const userRules = pgTable("user_rules", {
+  id: varchar("id").notNull(),                        // client-generated slug id (unique per tenant)
+  userId: text("user_id").notNull(),                 // owning tenant/account
+  name: text("name").notNull(),
+  summary: text("summary").notNull().default(""),
+  kind: text("kind").notNull().default("automation"),   // automation | guardrail | always_on
+  policyId: text("policy_id").notNull(),
+  active: boolean("active").notNull().default(true),
+  agent: text("agent"),
+  category: text("category"),
+  cap: integer("cap"),                               // auto-clear ceiling
+  threshold: integer("threshold"),                   // guardrail trip point / sweep amount
+  thresholdEditable: boolean("threshold_editable"),
+  allowlist: text("allowlist").array(),              // trusted vendor names
+  scopeSummary: text("scope_summary"),
+  createdLabel: text("created_label").notNull().default("You created this"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.id] }),
+  index("user_rules_user_id_idx").on(t.userId),
 ]);
 
 /* ─── SIWE Sessions ─── */

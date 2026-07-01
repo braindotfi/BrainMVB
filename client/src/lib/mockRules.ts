@@ -96,6 +96,26 @@ export const DUPLICATE_GUARD: AutoRule = {
   scopeSummary: "a charge that matches one already paid",
 };
 
+/* ── A rule the user authored in the "New rule" creator. `userCreated: true`
+   is what the "Your Rules" tab filters on — only self-authored rules appear
+   there, while the category tabs still show the full system + user set. This
+   one is the seeded example; real creations are persisted per tenant. ────── */
+export const USER_EXAMPLE_RULE: AutoRule = {
+  id: "hosting-vercel",
+  kind: "automation",
+  name: "Auto-clear hosting from Vercel",
+  summary: "Vercel · hosting · under $300 · matched prior charge",
+  createdLabel: "You created this Jun 24",
+  policyId: "policy/ap.tolerance.v3",
+  active: true,
+  agent: "invoice",
+  category: "hosting",
+  cap: 300,
+  allowlist: ["Vercel"],
+  scopeSummary: "Vercel (hosting) under $300",
+  userCreated: true,
+};
+
 /* The full seed list. Order within a kind is the display order. The store layers
    the SAAS paused-from-report demo state on top of this. */
 export const INITIAL_RULES: AutoRule[] = [
@@ -105,6 +125,7 @@ export const INITIAL_RULES: AutoRule[] = [
   LEASE_RULE,
   PAYROLL_RULE,
   SWEEP_RULE,
+  USER_EXAMPLE_RULE,
   // Guardrails — pull you back in
   APPROVAL_GUARDRAIL,
   SECOND_APPROVAL_GUARDRAIL,

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
-import type { AutoRule, ProblemReport } from "./proposalTypes";
+import type { AutoRule, Agent, RuleKind } from "./proposalTypes";
 import { INITIAL_RULES } from "./mockRules";
+import { apiRequest } from "./queryClient";
 
 /* ── Shared rules store ───────────────────────────────────────────────────────
    Single source of truth for the standing auto-clear rules: live active state,
@@ -175,16 +176,102 @@ export function setThreshold(id: string, amount: number) {
 }
 
 export function deleteRule(id: string) {
+  const existing = rules.find((r) => r.id === id);
   rules = rules.filter((r) => r.id !== id);
   notify();
+  if (existing?.userCreated) void persistDelete(id);
 }
 
 /* ── Create a rule (from the sentence builder or an accepted suggestion) ──────
    Every create is explicit and user-initiated. The new rule is prepended within
-   its section so it's visible immediately. */
+   its section so it's visible immediately, flagged `userCreated` (so it surfaces
+   on the "Your Rules" tab), and persisted to the tenant's account. */
 export function createRule(rule: AutoRule) {
-  rules = [{ ...rule, problemReports: [] }, ...rules];
+  const created: AutoRule = { ...rule, userCreated: true, problemReports: [] };
+  rules = [created, ...rules];
   notify();
+  void persistCreate(created);
+}
+
+/* ── Backend persistence (per-tenant, session-authenticated) ─────────────────
+   User-created rules are stored in Postgres and associated with the logged-in
+   account. The store stays the SSOT for the session; the network calls keep the
+   account's rules durable across reloads. All calls fail soft — a persistence
+   error never blocks the optimistic UI. ──────────────────────────────────── */
+function toRulePayload(rule: AutoRule) {
+  return {
+    id: rule.id,
+    name: rule.name,
+    summary: rule.summary ?? "",
+    kind: rule.kind ?? "automation",
+    policyId: rule.policyId,
+    active: rule.active,
+    agent: rule.agent ?? null,
+    category: rule.category ?? null,
+    cap: rule.cap ?? null,
+    threshold: rule.threshold ?? null,
+    thresholdEditable: rule.thresholdEditable ?? null,
+    allowlist: rule.allowlist ?? null,
+    scopeSummary: rule.scopeSummary ?? null,
+    createdLabel: rule.createdLabel,
+  };
+}
+
+async function persistCreate(rule: AutoRule) {
+  try {
+    await apiRequest("POST", "/api/rules", toRulePayload(rule));
+  } catch (err) {
+    console.warn("[rulesStore] failed to persist rule", err);
+  }
+}
+
+async function persistDelete(id: string) {
+  try {
+    await apiRequest("DELETE", `/api/rules/${encodeURIComponent(id)}`);
+  } catch (err) {
+    console.warn("[rulesStore] failed to delete rule", err);
+  }
+}
+
+/* Load the tenant's persisted rules and merge any not already in the store.
+   Idempotent + fetched once per session (retried if it fails). Rules from the
+   account are all `userCreated`, so they land on the "Your Rules" tab. */
+let hydrated = false;
+export async function hydrateUserRules() {
+  if (hydrated) return;
+  hydrated = true;
+  try {
+    const res = await apiRequest("GET", "/api/rules");
+    const rows: any[] = await res.json();
+    const existingIds = new Set(rules.map((r) => r.id));
+    const incoming: AutoRule[] = rows
+      .filter((row) => row && typeof row.id === "string" && !existingIds.has(row.id))
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        summary: row.summary ?? "",
+        createdLabel: row.createdLabel ?? "You created this",
+        policyId: row.policyId,
+        active: !!row.active,
+        kind: (row.kind ?? "automation") as RuleKind,
+        agent: (row.agent ?? undefined) as Agent | undefined,
+        category: row.category ?? undefined,
+        cap: row.cap ?? undefined,
+        threshold: row.threshold ?? undefined,
+        thresholdEditable: row.thresholdEditable ?? undefined,
+        allowlist: row.allowlist ?? undefined,
+        scopeSummary: row.scopeSummary ?? undefined,
+        userCreated: true,
+        problemReports: [],
+      }));
+    if (incoming.length) {
+      rules = [...incoming, ...rules];
+      notify();
+    }
+  } catch (err) {
+    hydrated = false; // allow a retry on the next mount
+    console.warn("[rulesStore] failed to hydrate user rules", err);
+  }
 }
 
 /* ── Rule draft handoff ───────────────────────────────────────────────────────

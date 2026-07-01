@@ -15,6 +15,7 @@ import {
   siweNonces as siweNoncesTable,
   bankConnections as bankConnectionsTable,
   sourceDocuments as sourceDocumentsTable,
+  userRules as userRulesTable,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -89,6 +90,11 @@ export interface IStorage {
   listSourceDocuments(userId: string): Promise<SourceDocument[]>;
   createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument>;
   removeSourceDocument(userId: string, id: string): Promise<boolean>;
+
+  // User rules (authored via the "New rule" creator, per tenant)
+  listUserRules(userId: string): Promise<UserRule[]>;
+  createUserRule(rule: InsertUserRule): Promise<UserRule>;
+  removeUserRule(userId: string, id: string): Promise<boolean>;
 }
 
 export type ToolConnection = {
@@ -133,6 +139,42 @@ export type InsertSourceDocument = {
   size: number;
   mimeType?: string | null;
   category?: string | null;
+};
+
+export type UserRule = {
+  id: string;
+  userId: string;
+  name: string;
+  summary: string;
+  kind: "automation" | "guardrail" | "always_on";
+  policyId: string;
+  active: boolean;
+  agent: string | null;
+  category: string | null;
+  cap: number | null;
+  threshold: number | null;
+  thresholdEditable: boolean | null;
+  allowlist: string[] | null;
+  scopeSummary: string | null;
+  createdLabel: string;
+};
+
+export type InsertUserRule = {
+  id: string;
+  userId: string;
+  name: string;
+  summary?: string;
+  kind?: "automation" | "guardrail" | "always_on";
+  policyId: string;
+  active?: boolean;
+  agent?: string | null;
+  category?: string | null;
+  cap?: number | null;
+  threshold?: number | null;
+  thresholdEditable?: boolean | null;
+  allowlist?: string[] | null;
+  scopeSummary?: string | null;
+  createdLabel?: string;
 };
 
 // ─── In-memory implementation (replace with Drizzle+PostgreSQL when DB is provisioned) ───
@@ -492,6 +534,35 @@ export class MemStorage implements IStorage {
     const existing = this.sourceDocs.get(id);
     if (!existing || existing.userId !== userId) return false;
     return this.sourceDocs.delete(id);
+  }
+
+  private userRulesStore = new Map<string, UserRule>(); // key = `${userId}::${id}`
+  async listUserRules(userId: string): Promise<UserRule[]> {
+    return Array.from(this.userRulesStore.values()).filter(r => r.userId === userId);
+  }
+  async createUserRule(rule: InsertUserRule): Promise<UserRule> {
+    const created: UserRule = {
+      id: rule.id,
+      userId: rule.userId,
+      name: rule.name,
+      summary: rule.summary ?? "",
+      kind: rule.kind ?? "automation",
+      policyId: rule.policyId,
+      active: rule.active ?? true,
+      agent: rule.agent ?? null,
+      category: rule.category ?? null,
+      cap: rule.cap ?? null,
+      threshold: rule.threshold ?? null,
+      thresholdEditable: rule.thresholdEditable ?? null,
+      allowlist: rule.allowlist ?? null,
+      scopeSummary: rule.scopeSummary ?? null,
+      createdLabel: rule.createdLabel ?? "You created this",
+    };
+    this.userRulesStore.set(`${created.userId}::${created.id}`, created);
+    return created;
+  }
+  async removeUserRule(userId: string, id: string): Promise<boolean> {
+    return this.userRulesStore.delete(`${userId}::${id}`);
   }
 }
 
@@ -914,6 +985,84 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: sourceDocumentsTable.id });
     return res.length > 0;
   }
+
+  // ─── User rules ───
+  async listUserRules(userId: string): Promise<UserRule[]> {
+    const rows = await db
+      .select()
+      .from(userRulesTable)
+      .where(eq(userRulesTable.userId, userId))
+      .orderBy(desc(userRulesTable.createdAt));
+    return rows.map(mapUserRuleRow);
+  }
+  async createUserRule(rule: InsertUserRule): Promise<UserRule> {
+    const [row] = await db
+      .insert(userRulesTable)
+      .values({
+        id: rule.id,
+        userId: rule.userId,
+        name: rule.name,
+        summary: rule.summary ?? "",
+        kind: rule.kind ?? "automation",
+        policyId: rule.policyId,
+        active: rule.active ?? true,
+        agent: rule.agent ?? null,
+        category: rule.category ?? null,
+        cap: rule.cap ?? null,
+        threshold: rule.threshold ?? null,
+        thresholdEditable: rule.thresholdEditable ?? null,
+        allowlist: rule.allowlist ?? null,
+        scopeSummary: rule.scopeSummary ?? null,
+        createdLabel: rule.createdLabel ?? "You created this",
+      })
+      .onConflictDoUpdate({
+        target: [userRulesTable.userId, userRulesTable.id],
+        set: {
+          name: rule.name,
+          summary: rule.summary ?? "",
+          kind: rule.kind ?? "automation",
+          policyId: rule.policyId,
+          active: rule.active ?? true,
+          agent: rule.agent ?? null,
+          category: rule.category ?? null,
+          cap: rule.cap ?? null,
+          threshold: rule.threshold ?? null,
+          thresholdEditable: rule.thresholdEditable ?? null,
+          allowlist: rule.allowlist ?? null,
+          scopeSummary: rule.scopeSummary ?? null,
+          createdLabel: rule.createdLabel ?? "You created this",
+        },
+      })
+      .returning();
+    return mapUserRuleRow(row);
+  }
+  async removeUserRule(userId: string, id: string): Promise<boolean> {
+    const res = await db
+      .delete(userRulesTable)
+      .where(and(eq(userRulesTable.userId, userId), eq(userRulesTable.id, id)))
+      .returning({ id: userRulesTable.id });
+    return res.length > 0;
+  }
+}
+
+function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {
+  return {
+    id: r.id,
+    userId: r.userId,
+    name: r.name,
+    summary: r.summary,
+    kind: r.kind as UserRule["kind"],
+    policyId: r.policyId,
+    active: r.active,
+    agent: r.agent,
+    category: r.category,
+    cap: r.cap,
+    threshold: r.threshold,
+    thresholdEditable: r.thresholdEditable,
+    allowlist: r.allowlist,
+    scopeSummary: r.scopeSummary,
+    createdLabel: r.createdLabel,
+  };
 }
 
 async function createStorage(): Promise<IStorage> {
