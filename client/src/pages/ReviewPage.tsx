@@ -419,14 +419,14 @@ export function ReviewPage() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Header */}
-            <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
-            </div>
+          {/* Header */}
+          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
+          </div>
 
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             {/* Tab bar */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0">
               {REVIEW_TABS.map((tab) => {
@@ -449,9 +449,6 @@ export function ReviewPage() {
                 );
               })}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
 
             {/* Approved automatically today — derived summary (count + total from the array).
                 Stays pinned to the top for both "All" and the "Approved Automatically" tab. */}

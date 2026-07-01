@@ -75,24 +75,24 @@ export function AuditLogPage() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Header */}
-            <div className="flex items-start justify-between w-full">
-              <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
-              </div>
-              <button
-                type="button"
-                className="flex items-center gap-[6px] px-[12px] py-[8px] rounded-[100px] bg-[#0a0c10] border border-[#1d2132] hover:bg-[#11141b] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                data-testid="button-export-audit-log"
-              >
-                <Download size={14} className="text-[#6c779d]" />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">Export</span>
-              </button>
+          {/* Header */}
+          <div className="flex items-start justify-between w-full">
+            <div className="flex flex-col items-start gap-[4px] relative shrink-0">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
             </div>
+            <button
+              type="button"
+              className="flex items-center gap-[6px] px-[12px] py-[8px] rounded-[100px] bg-[#0a0c10] border border-[#1d2132] hover:bg-[#11141b] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              data-testid="button-export-audit-log"
+            >
+              <Download size={14} className="text-[#6c779d]" />
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">Export</span>
+            </button>
+          </div>
 
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             {/* Tab bar — active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {AUDIT_TABS.map((tab) => {
@@ -115,10 +115,6 @@ export function AuditLogPage() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Record list */}
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             {filtered.length === 0 && (
               <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">No records for this filter.</p>

@@ -161,18 +161,18 @@ export function VendorsPage() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header + tab bar */}
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-                The people and businesses you pay.
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-                See vendor activity, payment history, risks, and recommendations.
-              </p>
-            </div>
+          {/* Header */}
+          <div className="flex flex-col items-start gap-[4px] relative shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
+              The people and businesses you pay.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+              See vendor activity, payment history, risks, and recommendations.
+            </p>
+          </div>
 
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             {/* Tab bar — active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {VENDOR_TABS.map((tab) => {
