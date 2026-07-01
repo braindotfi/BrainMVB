@@ -7,9 +7,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Dev guard: fail loudly if any mock rule reference no longer resolves.
+// Dev guards: assert mock data is internally consistent (never throws).
 if (import.meta.env.DEV) {
-  import("./lib/ruleConsistencyCheck").then((m) => m.checkRuleReferences());
+  import("./lib/ruleConsistencyCheck").then((m) => {
+    m.checkRuleReferences();
+    m.checkSemanticAuditRecords();
+  });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

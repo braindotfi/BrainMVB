@@ -88,7 +88,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     ],
     linked: [
       { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
-      { kind: "proposal", label: "Invoice #BF-2026-07", refId: "prop-bright-futures" },
+      { kind: "proposal", label: "Invoice #BFS-0426", refId: "prop-bankchange" },
     ],
     anchor: {
       status: "anchored",
@@ -395,11 +395,16 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     },
   },
 
-  /* 14 ─ Auto-approved ─ pending (anchor still pending) ─────────────── */
+  /* 14 ─ Flagged ─ Bright Futures bank-detail change (held for review) ───────────────
+     This record is the audit twin of AUD-7K2M (flagged) and the proposal
+     prop-bankchange. Bright Futures is the canonical bank-detail-change
+     fraud example everywhere in the demo — it must NEVER have an
+     auto_approved record, because the always-on bank-detail-change guard
+     holds it for human review. */
   {
     id: "AUD-7N2S",
-    eventType: "auto_approved",
-    summary: "Bright Futures Studio cleared automatically — pending anchoring",
+    eventType: "flagged",
+    summary: "Payment held — bank details changed",
     counterparty: "Bright Futures Studio",
     amount: 3200,
     actor: "system",
@@ -407,13 +412,13 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     occurredAtMs: 1782902867451,
     rowSubtitle: "$3,200 · system · AUD-7N2S",
     lifecycle: [
-      { label: "Invoice Agent detected monthly retainer", timestamp: "Jul 6, 8:12 AM ET", kind: "ok" },
-      { label: "Auto-approved by standing rule", timestamp: "Jul 6, 8:13 AM ET", kind: "ok" },
-      { label: "ACH settled", timestamp: "Jul 6, 8:15 AM ET", kind: "ok" },
+      { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 8:12 AM ET", kind: "ok" },
+      { label: "Escalated to human — routing number changed", timestamp: "Jul 6, 8:13 AM ET", note: "policy/ap.fraud.v2", kind: "alert" },
+      { label: "Payment held pending verification", timestamp: "Jul 6, 8:15 AM ET", kind: "alert" },
     ],
     linked: [
       { kind: "vendor", label: "Bright Futures Studio", refId: "bright-futures" },
-      { kind: "rule", label: "Auto-clear fixed rent & lease", refId: "lease" },
+      { kind: "proposal", label: "Invoice #BFS-0426", refId: "prop-bankchange" },
     ],
     anchor: {
       status: "pending_next_batch",

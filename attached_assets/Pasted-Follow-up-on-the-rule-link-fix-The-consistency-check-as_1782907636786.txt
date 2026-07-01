@@ -1,0 +1,32 @@
+Follow-up on the rule-link fix. The consistency check asserts every rule ref RESOLVES, but not
+that each link is SEMANTICALLY correct. Audit the three repointed records for meaning, not just
+resolution. Work on a branch; update CLAUDE.md with findings.
+
+CHECK EACH:
+1. AUD-7N2S (Bright Futures, currently event_type auto_approved → rule 'lease'):
+   - Bright Futures is the canonical under_review vendor (bank-detail-change flag); its demo
+     narrative is that the payment was HELD FOR REVIEW, not auto-approved. An auto_approved
+     record for this vendor CONTRADICTS that.
+   - Also: 'lease' is "fixed rent & lease"; Bright Futures is a contractor/studio — category
+     mismatch.
+   - DECIDE the right fix: most likely this record's event_type should be "flagged" (payment
+     held, escalated by policy/ap.fraud.v2) with NO rule link, consistent with the Bright
+     Futures fraud story everywhere else. Only keep it auto_approved+lease if there is a
+     coherent reason (there probably isn't). Report your decision and apply it.
+2. AUD-0C4U ("new rule created" → 'sweep'): confirm the record's summary text and the 'sweep'
+   rule name/narrative actually agree. Fix the summary or the target if they don't.
+3. AUD-9H4X (trust_revoked, link removed): confirm removal is correct and the record reads
+   coherently with no rule link. (Likely fine — just confirm.)
+
+CROSS-CHECK CONSISTENCY ACROSS SURFACES for Bright Futures specifically: its vendor card
+(under_review), any proposal/receipt, and every audit record about it must tell ONE story —
+held/flagged for a bank-detail change, not auto-approved. List every Bright Futures reference
+across mock data and confirm they agree; fix any that don't.
+
+OPTIONAL GUARD: extend ruleConsistencyCheck (or add a sibling) with a few semantic asserts,
+e.g. a vendor with trustStatus "under_review" must not have an "auto_approved" audit record;
+an "auto_approved" record's linked rule category should match the vendor category. Log loudly
+in dev. Keep it lightweight — don't over-engineer.
+
+Return findings per record, fixes applied, the Bright Futures cross-surface check, and any
+guard added. Update CLAUDE.md.

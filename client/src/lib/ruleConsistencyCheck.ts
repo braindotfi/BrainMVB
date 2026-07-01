@@ -1,8 +1,83 @@
 import { MOCK_AUDIT_RECORDS } from "./mockAuditRecords";
 import { AUTO_HANDLED_PROPOSALS } from "./mockProposals";
 import { getRule } from "./rulesStore";
+import { UNTRUSTED_VENDORS } from "./mockRules";
 
-/* ── Dev-time rule-reference consistency guard ────────────────────────────────
+/* ── Semantic audit-record consistency (lightweight) ───────────────────────────
+   These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
+   in mock audit records is internally consistent with the vendor trust model and
+   rule categories. This is the guard that would have caught AUD-7N2S originally
+   claiming Bright Futures was auto_approved (it should be flagged for bank-detail
+   change). It never throws; it only console.error's.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+export type SemanticIssue = { source: string; message: string };
+
+/* Asserts that every auto_approved audit record has a linked rule whose category
+   semantically matches the counterparty's line of business.  This is deliberately
+   lightweight: we only flag category/counterparty mismatches that are OBVIOUSLY
+   wrong (e.g. a contractor auto-approved under a "rent & lease" rule).  */
+export function checkSemanticAuditRecords(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    // 1 — An untrusted vendor must never have an auto_approved record.
+    if (
+      rec.eventType === "auto_approved" &&
+      rec.counterparty &&
+      UNTRUSTED_VENDORS.includes(rec.counterparty)
+    ) {
+      issues.push({
+        source: `audit ${rec.id}`,
+        message: `Untrusted vendor "${rec.counterparty}" must not have an auto_approved record (trust revoked; always_on guards or human review required)`,
+      });
+    }
+
+    // 2 — An auto_approved record with a linked rule must match on category.
+    if (rec.eventType === "auto_approved" && rec.counterparty) {
+      const ruleLink = rec.linked.find((l) => l.kind === "rule");
+      if (ruleLink) {
+        const rule = getRule(ruleLink.refId);
+        if (rule) {
+          const vendor = rec.counterparty.toLowerCase();
+          // Known category/counterparty mismatches that are always wrong:
+          const isContractorLike =
+            /studio|consulting|contractor|design|creative/.test(vendor);
+          const isLease =
+            /lease|rent|property|landlord/.test(rule.category || "");
+          const isPayroll = /payroll|gusto|benefits/.test(rule.category || "");
+          if (isContractorLike && isLease) {
+            issues.push({
+              source: `audit ${rec.id}`,
+              message: `Category mismatch: vendor "${rec.counterparty}" looks like a contractor/studio but was auto_approved under a "${rule.category}" rule ("${rule.name}")`,
+            });
+          }
+          if (/gusto/.test(vendor) && !isPayroll) {
+            issues.push({
+              source: `audit ${rec.id}`,
+              message: `Category mismatch: Gusto is a payroll provider but auto_approved under a non-payroll rule ("${rule.name}")`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[semantic-consistency] ${issues.length} semantic issue(s) in mock audit records:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[semantic-consistency] OK — every auto_approved record's vendor + rule category is coherent.",
+    );
+  }
+
+  return issues;
+}
+
+/* ── Dev-time rule-reference consistency guard ────────────────────────────
    Asserts that EVERY ruleId referenced anywhere in mock data resolves to a real
    rule in the store (seeded from mockRules). This is the guard that would have
    caught the original dangling-refId bug (audit records pointing at rules that
