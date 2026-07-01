@@ -16,7 +16,12 @@ import {
 } from "./wirex";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
-import { askWikiQuestion, listLedgerAccounts, type WikiEvidence } from "./brain/client";
+import {
+  listLedgerAccounts,
+  listLedgerTransactions,
+  listLedgerCounterparties,
+  type WikiEvidence,
+} from "./brain/client";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -198,46 +203,125 @@ You can explain concepts and surface general guidance, but do not give regulated
       .max(50),
   });
 
+  /**
+   * Build deterministic grounding from the ledger (accounts, recent txs,
+   * counterparties).  This replaces the fuzzy Wiki Q&A which misread "accounts"
+   * and caused hallucinated balances.  Falls back to Wiki only for purely conceptual
+   * questions where no ledger data is expected.
+   */
+  async function buildGrounding(token: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
+    // Run all ledger reads in parallel — deterministic, same source the UI uses.
+    const [accounts, txs, cps] = await Promise.allSettled([
+      listLedgerAccounts(token, { limit: 50 }),
+      listLedgerTransactions(token, { limit: 20 }),
+      listLedgerCounterparties(token),
+    ]);
+
+    let text = "";
+    const sources: WikiEvidence[] = [];
+
+    // ─── Accounts (deterministic) ───
+    if (accounts.status === "fulfilled" && accounts.value.accounts.length > 0) {
+      const lines = accounts.value.accounts.map((a) => {
+        const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
+        return `  • ${a.name} (${a.currency}) — balance ${bal} — status: ${a.status} — id: ${a.id}`;
+      });
+      const usdTotal = accounts.value.accounts
+        .filter((a) => a.currency === "USD" && a.current_balance != null)
+        .reduce((s, a) => s + (Number(a.current_balance) || 0), 0);
+      text += `Accounts (source of truth):\n${lines.join("\n")}\nTotal USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD.\n\n`;
+      for (const a of accounts.value.accounts) {
+        sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} — ${a.currency} ${a.current_balance ?? "n/a"}` });
+      }
+    }
+
+    // ─── Transactions (deterministic) ───
+    if (txs.status === "fulfilled" && txs.value.transactions.length > 0) {
+      const recent = txs.value.transactions.slice(0, 10);
+      const lines = recent.map((t) => {
+        const dir = t.direction;
+        const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+        const date = t.transaction_date;
+        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
+      });
+      text += `Recent transactions (last ${recent.length}):\n${lines.join("\n")}\n\n`;
+      for (const t of recent) {
+        sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
+      }
+    }
+
+    // ─── Counterparties (for name resolution in answers) ───
+    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0) {
+      const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} — id: ${c.id}`);
+      text += `Counterparties:\n${lines.join("\n")}\n\n`;
+    }
+
+    const hasLedgerData = text.trim().length > 0;
+    if (!hasLedgerData) {
+      return { text: "", sources: [], available: false };
+    }
+
+    return { text: text.trim(), sources, available: true };
+  }
+
+  /**
+   * Returns true if the question is about concrete financial data (balances,
+   * accounts, transactions, amounts).  When no ledger data is available the
+   * assistant must refuse rather than hallucinate.
+   */
+  function isDataQuestion(q: string): boolean {
+    const dataWords = /\b(balance|account|transaction|how much|spending|income|revenue|expense|cash|usd|crypto|btc|eth|wire|transfer|paid|received|deposit|withdraw)\b/i;
+    return dataWords.test(q);
+  }
+
   app.post("/api/assistant/chat", requireAuth, async (req, res) => {
     const parsed = assistantChatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "invalid_messages" });
     }
 
-    // Best-effort: ground the answer in brain-core's Wiki (the user's real
-    // Ledger). If brain-core is unreachable/unconfigured we silently proceed
-    // ungrounded, so the assistant never breaks on the integration.
+    // ─── Deterministic ledger grounding (no more fuzzy Wiki for balances) ───
     let grounding = "";
     let sources: WikiEvidence[] = [];
+    let dataAvailable = false;
     try {
-      const lastUser = [...parsed.data.messages].reverse().find((m) => m.role === "user");
-      if (lastUser) {
-        const { token } = await getBrainSession(req.session.userId!);
-        const wiki = await askWikiQuestion(token, lastUser.content);
-        if (wiki.raw) {
-          grounding = wiki.raw;
-          sources = wiki.evidence;
-        }
-      }
+      const { token } = await getBrainSession(req.session.userId!);
+      const built = await buildGrounding(token, parsed.data.messages[parsed.data.messages.length - 1].content);
+      grounding = built.text;
+      sources = built.sources;
+      dataAvailable = built.available;
     } catch (e) {
-      console.warn("[Assistant] wiki grounding skipped:", (e as Error)?.message);
+      console.warn("[Assistant] ledger grounding failed:", (e as Error)?.message);
     }
 
+    const lastUser = [...parsed.data.messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const dataUnavailable = !dataAvailable && isDataQuestion(lastUser);
+
+    const system = grounding
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts and transactions — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
+      : ASSISTANT_SYSTEM;
+
     if (!process.env.ANTHROPIC_API_KEY) {
-      // No LLM to phrase the answer — return the grounded data directly if we have it.
       if (grounding) {
-        return res.json({ reply: grounding, sources });
+        return res.json({ reply: grounding, sources, grounded: true });
       }
       return res.status(503).json({
         error: "assistant_unconfigured",
         reply:
           "I'm not connected to my brain yet — an ANTHROPIC_API_KEY needs to be configured before I can answer live.",
+        sources: [],
       });
     }
 
-    const system = grounding
-      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts and transactions — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
-      : ASSISTANT_SYSTEM;
+    // ─── Data-specific question + no data = refuse, don't hallucinate ───
+    if (dataUnavailable) {
+      return res.json({
+        reply: "I can't access your live account data right now. This usually means your brain-core session is still initializing or the connection is warming up. Try again in a moment, or check your Finances page to confirm your accounts are connected.",
+        sources: [],
+        grounded: false,
+        ungrounded: true,
+      });
+    }
 
     try {
       const message = await anthropic.messages.create({
@@ -249,7 +333,11 @@ You can explain concepts and surface general guidance, but do not give regulated
       const reply = (message.content.find((b) => b.type === "text") as
         | Anthropic.TextBlock
         | undefined)?.text?.trim();
-      return res.json({ reply: reply || "Sorry, I couldn't generate a response. Please try again.", sources });
+      return res.json({
+        reply: reply || "Sorry, I couldn't generate a response. Please try again.",
+        sources,
+        grounded: grounding.length > 0,
+      });
     } catch (err) {
       console.error("[Assistant] chat failed:", err);
       const status = (err as { status?: number })?.status;
@@ -264,11 +352,13 @@ You can explain concepts and surface general guidance, but do not give regulated
           error: "assistant_no_credit",
           reply:
             "I can't answer right now — the Anthropic API key has no available credit. Please add credits or billing at console.anthropic.com to enable live answers.",
+          sources: [],
         });
       }
       return res.status(500).json({
         error: "assistant_failed",
         reply: "Something went wrong reaching the assistant. Please try again.",
+        sources: [],
       });
     }
   });

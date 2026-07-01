@@ -109,6 +109,48 @@ export function listLedgerAccounts(token: string, query?: { status?: string; lim
   return brainRequest<ListAccountsResponse>("/ledger/accounts", { token, query });
 }
 
+// ─── Ledger transactions (deterministic grounding for the assistant) ──────────
+
+/** Subset of brain-core's Transaction schema. */
+export interface BrainTransaction {
+  id: string;
+  amount: string;
+  currency: string;
+  direction: "inflow" | "outflow" | "transfer" | "adjustment";
+  transaction_date: string;
+  counterparty_id?: string | null;
+  description_normalized?: string | null;
+  description_raw?: string | null;
+  status?: string | null;
+}
+
+export interface ListTransactionsResponse {
+  transactions: BrainTransaction[];
+  next_cursor: string | null;
+}
+
+/** GET /ledger/transactions */
+export function listLedgerTransactions(
+  token: string,
+  query?: { limit?: number; direction?: string; status?: string },
+): Promise<ListTransactionsResponse> {
+  return brainRequest<ListTransactionsResponse>("/ledger/transactions", { token, query });
+}
+
+/** GET /ledger/counterparties (minimal slice for name resolution). */
+export interface CounterpartyLite {
+  id: string;
+  name: string;
+}
+
+export interface ListCounterpartiesResponse {
+  counterparties: CounterpartyLite[];
+}
+
+export function listLedgerCounterparties(token: string): Promise<ListCounterpartiesResponse> {
+  return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token });
+}
+
 /** GET /wiki/schema */
 export function getWikiSchema(token: string): Promise<WikiSchemaResponse> {
   return brainRequest<WikiSchemaResponse>("/wiki/schema", { token });

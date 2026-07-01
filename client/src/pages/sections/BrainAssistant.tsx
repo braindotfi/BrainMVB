@@ -40,6 +40,8 @@ interface ChatMessage {
   dateTag?: string;
   /** Evidence records (ledger rows / raw artifacts) backing a grounded answer. */
   sources?: EvidenceRecord[];
+  /** True when the assistant answered without access to live ledger data. */
+  ungrounded?: boolean;
 }
 
 interface ChatSession {
@@ -268,6 +270,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       });
       const data = await res.json().catch(() => null);
       const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
+      const isUngrounded = data?.ungrounded === true;
       // Tolerate both the structured `{entityId,entityType,excerpt}` shape and the
       // legacy bare-string-id shape.
       const sources: EvidenceRecord[] = Array.isArray(data?.sources)
@@ -291,7 +294,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
-            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply, sources } : m)) }
+            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply, sources, ungrounded: isUngrounded } : m)) }
             : s,
         ),
       );
@@ -584,6 +587,16 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     )}
                   </div>
                 </div>
+                {msg.role === "assistant" && msg.ungrounded && (
+                  <div className="flex items-center gap-[4px] px-[4px] w-full">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px] tracking-[-0.4px]">
+                      Data unavailable
+                    </span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px] tracking-[-0.4px]">
+                      — live ledger connection not ready
+                    </span>
+                  </div>
+                )}
                 {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
                   <div className="flex flex-col items-start gap-[6px] w-full">
                     <button
