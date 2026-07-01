@@ -18,3 +18,9 @@ id = "AFh-_68zee5u0mDhFAO4R"
 uri = "file://CLAUDE.md"
 type = "text"
 title = "CLAUDE.md"
+
+[[outputs]]
+id = "I0xNp8HuIM02xKbulgEWL"
+uri = "file://.local/exports/linked-references-diagnosis.md"
+type = "text"
+title = "Linked References — Diagnosis & Proposed Fix"
