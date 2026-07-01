@@ -474,8 +474,8 @@ type BuilderState = {
 
 const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
 
-type RuleTab = "Your Rules" | "Automations" | "Guardrails" | "Always On" | "Suggested";
-const RULE_TABS: RuleTab[] = ["Your Rules", "Automations", "Guardrails", "Always On", "Suggested"];
+type RuleTab = "Automations" | "Guardrails" | "Always On" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Automations", "Guardrails", "Always On", "Suggested"];
 
 export function RulesPage() {
   const { format } = useCurrency();
@@ -484,7 +484,7 @@ export function RulesPage() {
   const rules = useRules();
   const suggestions = useRuleSuggestions();
 
-  const [activeTab, setActiveTab] = useState<RuleTab>("Your Rules");
+  const [activeTab, setActiveTab] = useState<RuleTab>("Automations");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
   const [openChip, setOpenChip] = useState<null | "category" | "vendor" | "action">(null);
@@ -494,12 +494,6 @@ export function RulesPage() {
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
   const alwaysOn = rules.filter((r) => r.kind === "always_on");
-
-  // "Your Rules" shows ONLY rules the user authored in the creator (persisted
-  // per tenant). The category tabs below still show the full system + user set.
-  const userRules = rules.filter((r) => r.userCreated);
-  const userAutomations = userRules.filter((r) => (r.kind ?? "automation") === "automation");
-  const userGuardrails = userRules.filter((r) => r.kind === "guardrail");
 
   const resetBuilder = () => {
     setBuilder(EMPTY_BUILDER);
@@ -600,7 +594,6 @@ export function RulesPage() {
   };
 
   const ruleTabCount = (tab: RuleTab) => {
-    if (tab === "Your Rules") return userRules.length;
     if (tab === "Automations") return automations.length;
     if (tab === "Guardrails") return guardrails.length;
     if (tab === "Always On") return alwaysOn.length;
@@ -615,7 +608,7 @@ export function RulesPage() {
           {/* Header + tab bar */}
           <div className="flex flex-col gap-[16px] items-start w-full">
             <div className="flex flex-col items-start gap-[4px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Rules</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Rules</p>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
                 Manage the rules that guide Brain's reviews, recommendations, and actions.
@@ -658,8 +651,8 @@ export function RulesPage() {
             </div>
           </div>
 
-          {/* Create-rule confirmation — only on Your Rules tab */}
-          {activeTab === "Your Rules" && pendingCreate && (
+          {/* Create-rule confirmation — on Automations and Guardrails tabs */}
+          {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
             <div
               className="w-full rounded-[16px] border p-[16px] flex flex-col gap-[12px]"
               style={{ background: "#240757", borderColor: "rgba(118,49,238,0.35)" }}
@@ -698,11 +691,14 @@ export function RulesPage() {
             </div>
           )}
 
-          {/* New rule — sentence builder — only on Your Rules tab */}
-          {activeTab === "Your Rules" && (!builderOpen ? (
+          {/* New rule — sentence builder — on Automations and Guardrails tabs */}
+          {(activeTab === "Automations" || activeTab === "Guardrails") && (!builderOpen ? (
             <button
               type="button"
-              onClick={() => setBuilderOpen(true)}
+              onClick={() => {
+                setBuilder((b) => ({ ...b, action: activeTab === "Guardrails" ? "ask" : "pay" }));
+                setBuilderOpen(true);
+              }}
               data-testid="button-new-rule"
               className="w-full rounded-[16px] border border-dashed border-[#414965] hover:border-[rgba(118,49,238,0.6)] transition-colors p-[16px] flex items-center gap-[10px]"
             >
@@ -863,37 +859,6 @@ export function RulesPage() {
           ))}
 
           {/* Tab content — each tab shows its own section */}
-
-          {/* YOUR RULES: only the rules this account authored in the creator */}
-          {activeTab === "Your Rules" && (
-            <div className="flex flex-col gap-[28px] w-full">
-              {userAutomations.length > 0 && (
-                <Section count={userAutomations.length}>
-                  {userAutomations.map((r) => (
-                    <AutomationRow key={r.id} rule={r} format={format} />
-                  ))}
-                </Section>
-              )}
-              {userGuardrails.length > 0 && (
-                <Section
-                  eyebrow="Guardrails · pull you back in"
-                  sub="Brain stops and asks you above these limits."
-                  count={userGuardrails.length}
-                >
-                  {userGuardrails.map((r) => (
-                    <GuardrailRow key={r.id} rule={r} format={format} />
-                  ))}
-                </Section>
-              )}
-              {userRules.length === 0 && (
-                <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                    You haven't created any rules yet. Use "New rule" above to write one in plain English — it'll be saved to your account.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
 
           {activeTab === "Automations" && (
             <Section
