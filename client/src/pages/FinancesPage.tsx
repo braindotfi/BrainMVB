@@ -440,6 +440,10 @@ export function FinancesPage() {
   // Which transaction the detail sheet is showing (null = closed).
   const [openTxId, setOpenTxId] = useState<string | null>(null);
 
+  type FinanceTab = "Accounts" | "Recent" | "Bills" | "Income" | "Expenses" | "Liabilities";
+  const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
+  const [activeTab, setActiveTab] = useState<FinanceTab>("Accounts");
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -454,101 +458,125 @@ export function FinancesPage() {
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
 
-            {/* Accounts */}
-            <WidgetCard title="Accounts">
-              {accounts.map((acc, idx) => (
-                <div key={acc.name} className="flex flex-col gap-[8px] w-full">
-                  <div
-                    data-testid={`row-account-${idx}`}
-                    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+            {/* Tab bar — active tab is ORANGE */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+              {FINANCE_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                    style={{ background: isActive ? "#4a2300" : "transparent" }}
+                    data-testid={`tab-finance-${tab.toLowerCase().replace(/\s+/g, "-")}`}
                   >
-                    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
-                      <div className="flex gap-[4px] items-center relative shrink-0">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
-                        {acc.sub2 && (
-                          <>
-                            <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end justify-center relative shrink-0">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(acc.balance)}</p>
-                    </div>
-                  </div>
-                  {idx < accounts.length - 1 && <Divider />}
-                </div>
-              ))}
-            </WidgetCard>
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                      style={{ color: isActive ? "#ff9500" : "#414965" }}
+                    >
+                      {tab}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* Recent transactions (brain-core Ledger) — only shown when present */}
-            {transactions.length > 0 && (
-              <WidgetCard title="Recent transactions">
-                {transactions.map((t, idx) => (
-                  <div key={t.id} className="flex flex-col gap-[8px] w-full">
+            {/* ACCOUNTS */}
+            {activeTab === "Accounts" && (
+              <WidgetCard title="Accounts">
+                {accounts.map((acc, idx) => (
+                  <div key={acc.name} className="flex flex-col gap-[8px] w-full">
                     <div
-                      data-testid={`row-tx-${idx}`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setOpenTxId(t.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setOpenTxId(t.id);
-                        }
-                      }}
+                      data-testid={`row-account-${idx}`}
                       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
                     >
                       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
+                        <div className="flex gap-[4px] items-center relative shrink-0">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
+                          {acc.sub2 && (
+                            <>
+                              <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
+                              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-col items-end justify-center relative shrink-0">
-                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(acc.balance)}</p>
                       </div>
                     </div>
-                    {idx < transactions.length - 1 && <Divider />}
+                    {idx < accounts.length - 1 && <Divider />}
                   </div>
                 ))}
               </WidgetCard>
             )}
 
-            {/* Bills — Brain proposes, the §6 policy gate decides (brain-core) */}
-            <BrainBillsInbox />
+            {/* RECENT */}
+            {activeTab === "Recent" && (
+              transactions.length > 0 ? (
+                <WidgetCard title="Recent transactions">
+                  {transactions.map((t, idx) => (
+                    <div key={t.id} className="flex flex-col gap-[8px] w-full">
+                      <div
+                        data-testid={`row-tx-${idx}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setOpenTxId(t.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setOpenTxId(t.id);
+                          }
+                        }}
+                        className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+                      >
+                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                        </div>
+                        <div className="flex flex-col items-end justify-center relative shrink-0">
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                        </div>
+                      </div>
+                      {idx < transactions.length - 1 && <Divider />}
+                    </div>
+                  ))}
+                </WidgetCard>
+              ) : (
+                <div className="bg-[#0a0c10] rounded-[16px] p-[16px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">No recent transactions yet.</p>
+                </div>
+              )
+            )}
 
-            {/* Income (live — monthly inflow + top customers from the Ledger) */}
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Income" />
-              <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                <IncomeSummary format={format} />
-                <Divider />
-                <OverdueInvoicesBanner format={format} />
-              </div>
-            </div>
+            {/* BILLS */}
+            {activeTab === "Bills" && <BrainBillsInbox />}
 
-            {/* Expenses (live — outflow transactions from the Ledger; empty until seeded) */}
-            <ExpensesWidget format={format} />
-
-            {/* Liabilities (live — outstanding accounts-payable from the Ledger) */}
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Liabilities" />
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                <LiabilitiesSummary format={format} />
-              </div>
-            </div>
-
-            {/* Tip */}
-            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <div className="flex flex-1 items-start min-w-px relative">
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px] w-full">
-                    Would you like to view the transactions, invoices, or details behind any of the information above? Tap any line above for more information.
-                  </p>
+            {/* INCOME */}
+            {activeTab === "Income" && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Income" />
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  <IncomeSummary format={format} />
+                  <Divider />
+                  <OverdueInvoicesBanner format={format} />
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* EXPENSES */}
+            {activeTab === "Expenses" && <ExpensesWidget format={format} />}
+
+            {/* LIABILITIES */}
+            {activeTab === "Liabilities" && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Liabilities" />
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  <LiabilitiesSummary format={format} />
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
