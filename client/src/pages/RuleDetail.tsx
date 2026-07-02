@@ -11,8 +11,9 @@ import {
   ChevronDown,
   ReceiptText,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
-import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, deleteRule } from "@/lib/rulesStore";
+import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport } from "@/lib/proposalTypes";
@@ -32,6 +33,8 @@ export function RuleDetail() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showCapEditor, setShowCapEditor] = useState(false);
   const [capDraft, setCapDraft] = useState("");
+  const [showAmountEditor, setShowAmountEditor] = useState(false);
+  const [amountDraft, setAmountDraft] = useState("");
 
   if (!rule) {
     return (
@@ -78,6 +81,18 @@ export function RuleDetail() {
       setCapDraft("");
     }
   };
+  const onSaveAmount = () => {
+    const next = Number(amountDraft.replace(/[^0-9.]/g, ""));
+    if (Number.isFinite(next) && next > 0) {
+      setThreshold(rule.id, Math.round(next));
+      setShowAmountEditor(false);
+      setAmountDraft("");
+    }
+  };
+  const amountMeta =
+    rule.kind === "guardrail"
+      ? { label: "Approval threshold", help: "Brain checks with you before any payment over this amount." }
+      : { label: "Trigger amount", help: "Brain acts when the balance crosses this amount." };
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -230,6 +245,71 @@ export function RuleDetail() {
               </div>
             )}
           </div>
+
+          {/* Amount editor — the guardrail approval threshold / automation trigger
+              amount. Moved here from the inline row pill so the amount is edited on
+              the rule's own page. */}
+          {typeof rule.threshold === "number" && (
+            <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex flex-col gap-[12px]">
+              <div className="flex items-start justify-between gap-[12px]">
+                <div className="flex flex-col gap-[2px] min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
+                    {amountMeta.label}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
+                    {amountMeta.help}
+                  </p>
+                </div>
+                <span
+                  className="[font-family:'JetBrains_Mono',monospace] text-[15px] text-[#a8b9f4] shrink-0"
+                  data-testid="text-rule-threshold"
+                >
+                  {format(rule.threshold)}
+                </span>
+              </div>
+              {!showAmountEditor ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowAmountEditor(true); setAmountDraft(String(rule.threshold)); }}
+                  data-testid="button-edit-amount"
+                  className="self-start flex items-center gap-[6px] px-[12px] py-[7px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                >
+                  <Pencil size={13} /> Edit amount
+                </button>
+              ) : (
+                <div className="flex gap-[8px] items-center">
+                  <input
+                    value={amountDraft}
+                    autoFocus
+                    inputMode="numeric"
+                    onChange={(e) => setAmountDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onSaveAmount();
+                      if (e.key === "Escape") { setShowAmountEditor(false); setAmountDraft(""); }
+                    }}
+                    data-testid="input-amount"
+                    className="flex-1 rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setShowAmountEditor(false); setAmountDraft(""); }}
+                    data-testid="button-amount-cancel"
+                    className="px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onSaveAmount}
+                    data-testid="button-amount-save"
+                    className="px-[12px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-white"
+                  >
+                    Save
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Remediations — narrow the rule instead of nuking it. */}
           <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex flex-col gap-[14px]">

@@ -93,8 +93,8 @@ export interface AutoRule {
   agent?: Agent;
   category?: string; // e.g. "utility", "software subscription"
   cap?: number; // amount ceiling this rule auto-clears under
-  threshold?: number; // guardrail trip point / sweep amount (inline-editable)
-  thresholdEditable?: boolean; // whether the threshold pill is editable inline
+  threshold?: number; // guardrail trip point / sweep amount (edited on RuleDetail)
+  thresholdEditable?: boolean; // retained for schema/persistence; editing now lives on RuleDetail, not the row pill
   allowlist?: string[]; // trusted vendor names
   scopeSummary?: string; // plain-language scope, e.g. "trusted utility vendors under $1,000"
   problemReports?: ProblemReport[];

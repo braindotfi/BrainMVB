@@ -9,7 +9,6 @@ import {
   Plus,
   Sparkles,
   Check,
-  X,
   Pencil,
   ArrowRight,
   Flag,
@@ -18,7 +17,6 @@ import {
   useRules,
   pauseRule,
   resumeRule,
-  setThreshold as setRuleThreshold,
   createRule,
   consumeRuleDraft,
   hydrateUserRules,
@@ -68,82 +66,6 @@ function finalizeDraft(draft: Partial<AutoRule>): AutoRule {
     allowlist: draft.allowlist,
     scopeSummary: draft.scopeSummary,
   };
-}
-
-/* ── Inline-editable bordered mono threshold pill ───────────────────────────── */
-function ThresholdPill({
-  value,
-  onSave,
-  format,
-  editable = true,
-  testId,
-}: {
-  value: number;
-  onSave: (n: number) => void;
-  format: Fmt;
-  editable?: boolean;
-  testId?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  const commit = () => {
-    const n = Number(draft.replace(/[^0-9.]/g, ""));
-    if (Number.isFinite(n) && n > 0) onSave(Math.round(n));
-    setEditing(false);
-  };
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        disabled={!editable}
-        onClick={() => {
-          setDraft(String(value));
-          setEditing(true);
-        }}
-        data-testid={testId}
-        className="inline-flex items-center gap-[6px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[4px] transition-colors enabled:hover:border-[rgba(118,49,238,0.5)] disabled:cursor-default"
-      >
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]">
-          {format(value)}
-        </span>
-        {editable && <Pencil size={11} className="text-[#6c779d]" />}
-      </button>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-[6px]">
-      <input
-        value={draft}
-        autoFocus
-        inputMode="numeric"
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        data-testid={testId ? `${testId}-input` : undefined}
-        className="w-[92px] rounded-[8px] border border-[rgba(118,49,238,0.5)] bg-[#06070a] px-[10px] py-[4px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none"
-      />
-      <button
-        type="button"
-        onClick={commit}
-        data-testid={testId ? `${testId}-save` : undefined}
-        className="flex size-[26px] items-center justify-center rounded-[8px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors"
-      >
-        <Check size={14} className="text-white" />
-      </button>
-      <button
-        type="button"
-        onClick={() => setEditing(false)}
-        className="flex size-[26px] items-center justify-center rounded-[8px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors"
-      >
-        <X size={14} className="text-[#a8b9f4]" />
-      </button>
-    </span>
-  );
 }
 
 /* ── Pause/resume toggle ────────────────────────────────────────────────────── */
@@ -206,7 +128,7 @@ function AutomationRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
   const pausedFromReport = !rule.active && openReports.length > 0;
   const open = () => navigate(`/rules/${rule.id}`);
-  const hasInlineThreshold = rule.thresholdEditable && typeof rule.threshold === "number";
+  const hasThreshold = typeof rule.threshold === "number";
 
   return (
     <div
@@ -232,14 +154,12 @@ function AutomationRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
         </span>
         <span className="flex flex-wrap items-center gap-[6px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] text-[#6c779d]">
           {rule.scopeSummary ?? rule.summary}
-          {hasInlineThreshold && (
-            <span onClick={(e) => e.stopPropagation()} className="inline-flex">
-              <ThresholdPill
-                value={rule.threshold!}
-                onSave={(n) => setRuleThreshold(rule.id, n)}
-                format={format}
-                testId={`pill-threshold-${rule.id}`}
-              />
+          {hasThreshold && (
+            <span
+              className="inline-flex items-center gap-[6px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[4px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]"
+              data-testid={`pill-threshold-${rule.id}`}
+            >
+              {format(rule.threshold!)}
             </span>
           )}
         </span>
@@ -300,13 +220,12 @@ function GuardrailRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
       </button>
 
       {typeof rule.threshold === "number" && (
-        <ThresholdPill
-          value={rule.threshold}
-          onSave={(n) => setRuleThreshold(rule.id, n)}
-          format={format}
-          editable={rule.thresholdEditable ?? true}
-          testId={`pill-threshold-${rule.id}`}
-        />
+        <span
+          className="inline-flex items-center gap-[6px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[4px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0"
+          data-testid={`pill-threshold-${rule.id}`}
+        >
+          {format(rule.threshold)}
+        </span>
       )}
       <Toggle
         active={rule.active}
