@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useSessionTimeout } from "@/lib/sessionTimeoutContext";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
@@ -30,7 +30,7 @@ import { IntentsProvider } from "@/lib/intentsStore";
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const { timeoutMin } = useSessionTimeout();
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
@@ -41,10 +41,10 @@ function AppLayout() {
   // re-bind window listeners every render.
   const logoutRef = useRef(logout);
   const navigateRef = useRef(navigate);
-  const toastRef = useRef(toast);
+  const alertRef = useRef(alert);
   useEffect(() => { logoutRef.current = logout; }, [logout]);
   useEffect(() => { navigateRef.current = navigate; }, [navigate]);
-  useEffect(() => { toastRef.current = toast; }, [toast]);
+  useEffect(() => { alertRef.current = alert; }, [alert]);
 
   // Inactivity-based auto-logout. Resets on any user interaction.
   useEffect(() => {
@@ -54,10 +54,11 @@ function AppLayout() {
     const triggerLogout = () => {
       logoutRef.current();
       navigateRef.current("/");
-      toastRef.current({
-        title: "Session expired",
-        description: `You have been logged out after ${timeoutMin} minute${timeoutMin === 1 ? "" : "s"} of inactivity.`,
-      });
+      alertRef.current.info(
+        "Session Expired",
+        `You were logged out due to inactivity to help protect your financial data.`,
+        /* durationMs */ 0,
+      );
     };
 
     const reset = () => {
