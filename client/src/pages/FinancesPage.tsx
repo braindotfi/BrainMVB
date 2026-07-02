@@ -4,8 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
-import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
-import { AccountDetailSheet } from "@/components/AccountDetailSheet";
+import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
+import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -71,7 +71,7 @@ type AccountRow = { id?: string; name: string; sub: string; sub2: string; balanc
 /** Render a balance honestly: USD (and other fiat) through the currency
  *  formatter; a non-fiat token balance (ETH) in its native units — never run a
  *  token amount through the USD→display-currency converter. Mirrors
- *  AccountDetailSheet.balanceLabel. Rows with no currency (e.g. the mixed
+ *  AccountDetailPopup.balanceLabel. Rows with no currency (e.g. the mixed
  *  totals row) fall back to the formatter. */
 function rowBalanceLabel(row: AccountRow, format: (n: string | number) => string): string {
   if (!row.currency || row.currency === "USD") return format(row.balance);
@@ -537,9 +537,9 @@ export function FinancesPage() {
   });
   const transactions: TxRow[] = brainTx?.transactions ? mapBrainTransactions(brainTx.transactions.slice(0, 6)) : [];
 
-  // Which transaction the detail sheet is showing (null = closed).
+  // Which transaction the detail popup is showing (null = closed).
   const [openTxId, setOpenTxId] = useState<string | null>(null);
-  // Which account the detail sheet is showing (null = closed).
+  // Which account the detail popup is showing (null = closed).
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
 
   type FinanceTab = "Accounts" | "Recent" | "Bills" | "Income" | "Expenses" | "Liabilities";
@@ -709,8 +709,8 @@ export function FinancesPage() {
           </div>
         </div>
       </ScrollArea>
-      <TransactionDetailSheet txId={openTxId} onClose={() => setOpenTxId(null)} />
-      <AccountDetailSheet
+      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} />
+      <AccountDetailPopup
         accountId={openAccountId}
         onClose={() => setOpenAccountId(null)}
         onOpenTransaction={(id) => { setOpenAccountId(null); setOpenTxId(id); }}

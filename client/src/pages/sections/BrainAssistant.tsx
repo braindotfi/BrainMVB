@@ -7,7 +7,7 @@ import {
   Search,
   SquarePen,
 } from "lucide-react";
-import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
+import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -693,7 +693,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           </div>
         </div>
       </div>
-      <TransactionDetailSheet txId={openTxId} onClose={() => setOpenTxId(null)} />
+      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} />
     </div>
   );
 }
