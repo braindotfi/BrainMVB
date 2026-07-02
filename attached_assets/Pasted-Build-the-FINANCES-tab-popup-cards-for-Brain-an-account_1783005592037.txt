@@ -1,0 +1,123 @@
+Build the FINANCES tab popup cards for Brain: an account detail card, a bill card with the
+bill→proposal bridge, and category drill-downs for Income/Expenses/Liabilities. Most taps on
+this page REUSE existing surfaces — build only what's listed; do not invent new popups for
+transactions or categories.
+
+PROCESS (per project conventions):
+- git fetch + git pull first; ensure main is current before branching.
+- Work on a NEW feature branch: feature/finances-detail-cards
+- Keep a running done/pending checklist against this plan; update as you complete each section.
+- Update CLAUDE.md at the end (notes listed below).
+
+STYLING — MATCH THE CURRENT APP EXACTLY. Existing tokens/fonts/spacing/radii, the standard
+popup shell (header + close X), standard list rows, monospace for amounts/accounts/ids/dates.
+Orange is the active-tab color app-wide (as on the Finances tabs) — but ONLY for active tabs,
+never buttons/chips/accents. #D20344 for alerts/flags only; success/green for inflows and
+clean states; purple interactive. Currency via Intl.NumberFormat.
+
+=========================================================================
+1) ACCOUNT DETAIL CARD (new — opens from any row on the Accounts tab)
+=========================================================================
+An account is a SOURCE the user inspects, not a thing they approve. Read-only; NO action
+buttons (no transfer, no rename, no disconnect in this pass).
+- Header: bank icon + account name (e.g. "Operating"), close X.
+- Balance: label "Balance" + the amount large in mono.
+- Provenance mono block: source ("Mercury · bank checking"), account ··last4, synced
+  ("just now · CONNECTOR_SYNC" — or the source's provenance enum), role ("primary operating" /
+  "reserve" / "on-chain smart account").
+- For the Brain Smart Account (ETH) row: provenance reads the chain ("Base Sepolia ·
+  on-chain balance") and the address truncated in mono; same card, no special casing beyond
+  the provenance fields.
+- "Recent activity": the 3-5 most recent transactions for THIS account (title + signed mono
+  amount, inflows in success color), each row opening the transaction record via
+  openDocumentDetail(txnId) (kind "bank_transaction"). "View all" link → the Recent tab
+  filtered to this account.
+- Data: account detail renders from the SAME canonical source the rest of the app reads —
+  balances must reconcile (see guard below).
+
+=========================================================================
+2) BILL CARD (opens from any row on the Bills tab — reuses the invoice viewer + adds the
+   bridge)
+=========================================================================
+A bill is an ingested, not-yet-paid invoice. The card is a summary + link to the document +
+an HONEST "what happens next" bridge.
+- Header: a due-state chip (warning-tinted "Due in N days"; #D20344 "Overdue N days"; muted
+  "Due {date}" when far out), close X.
+- Body: vendor name; amount (mono) · due date; a mono facts block (invoice id, source e.g.
+  "email ingest" / "QuickBooks sync", pay-to account ··last4).
+- "View invoice document" button → openDocumentDetail(invoiceId) (kind "invoice"). Do NOT
+  rebuild any document rendering here — the viewer owns it.
+- THE BRIDGE ("What happens next"), strictly honest about proposal existence:
+  * If NO proposal exists yet for this bill: an info block "Brain will propose this on its due
+    date. You approve before anything moves." — NO review button (there is nothing to review
+    yet; do not pre-create proposals from this card).
+  * If a proposal EXISTS (bill.proposalId set): the block reads "Brain has proposed this
+    payment." with a "Review proposal" button → openProposalDetail(proposalId).
+  * If the linked proposal is flagged/held (e.g. the Bright Futures bank-detail case): the
+    block is #D20344-tinted, "This payment is held for review — bank details changed." with
+    "Review now" → the flagged proposal.
+- Data: add proposalId?: string to the bill type; derive the three bridge states purely from
+  data (no timers, no auto-creation).
+
+=========================================================================
+3) CATEGORY DRILL-DOWNS (Income / Expenses / Liabilities — NO popup cards)
+=========================================================================
+Categories are lenses, not entities. Tapping a category row ("Software · $12,400") does NOT
+open a popup — it drills into a filtered transaction list (the Recent list scoped to that
+category and period), with a back affordance and the category + period as the list header.
+Each transaction row opens the transaction record via openDocumentDetail. Build the filtered-
+list route/state; build no category detail card.
+
+=========================================================================
+4) REUSE CONFIRMATION (wire, don't build)
+=========================================================================
+- Recent tab rows → openDocumentDetail(txnId) (kind "bank_transaction"). If any Recent row
+  currently opens nothing or a bespoke popup, re-point it to the shared viewer.
+- All vendor names shown on bills/transactions resolve via openVendorDetail where a vendorId
+  exists; otherwise plain text (per the existing non-vendor counterparty rule).
+
+=========================================================================
+GUARD — extend the unified dev consistency check (extend, don't fork):
+=========================================================================
+- RECONCILIATION: each account's displayed balance equals the canonical ledger balance for
+  that account, and the Account Totals row equals the sum of account balances. The Operating
+  balance shown here must equal the balance the treasury-sweep proposal reasons over — one
+  number, everywhere.
+- BILL COHERENCE: every bill.proposalId resolves to a real proposal; a bill whose linked
+  proposal is flagged renders the flagged bridge state (assert the Bright Futures bill does);
+  bill amount == linked invoice amount == linked proposal amount.
+- ACTIVITY: every transaction shown in an account card's recent activity resolves in the
+  documents store and belongs to that account.
+Log loudly in dev (console.error "source → mismatch"); never throw.
+
+CONSTRAINTS:
+- Read-only cards; no mutation from Finances in this pass.
+- All state derived from data; no setTimeout/auto-advance; the bill bridge states come from
+  proposalId presence + proposal status only.
+- No new nav items; these are popups/drill-downs within Finances.
+- Do NOT modify anything sourced from live/brain-core APIs — list anything treated as
+  API-sourced and left alone.
+
+MOCK DATA:
+- Accounts: the four from the page (Brain Smart Account ETH / Base Sepolia, Reserve · Mercury
+  savings $1,200,000, Operating · Mercury checking $1,687,200, plus the fourth) with per-
+  account recent activity drawn from existing transactions (AWS −$4,150, Stripe payout
+  +$28,400, Con Edison −$486 on Operating).
+- Bills: at least three covering all bridge states — one with no proposal yet (info state),
+  one with a live proposal (review state; tie to an existing demo proposal), and the Bright
+  Futures bill (flagged state, pay-to ··2087, linked to the held proposal).
+- Ensure every id referenced resolves against the canonical stores (rules/vendors/documents/
+  proposals) — no invented ids.
+
+CLAUDE.md — add:
+- "Finances detail cards" note: accounts are read-only source-inspection cards; bills reuse
+  the invoice viewer and bridge to proposals strictly by proposalId presence (never
+  pre-created); categories drill down, they do not open cards.
+- Note the reconciliation guard (account balances == ledger == Account Totals == sweep math
+  inputs).
+- Correct the orange rule if previously recorded as audit-only: orange = active tabs
+  app-wide, and nothing else.
+
+Return (on the feature branch): the account detail card, the bill card with all three bridge
+states, the category drill-down list, the reuse re-pointing for Recent rows, the guard
+extensions, mock data additions, done/pending checklist, and the CLAUDE.md updates.
