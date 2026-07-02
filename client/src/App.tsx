@@ -57,7 +57,7 @@ function AppLayout() {
       alertRef.current.info(
         "Session Expired",
         `You were logged out due to inactivity to help protect your financial data.`,
-        /* durationMs */ 0,
+        5000,
       );
     };
 
