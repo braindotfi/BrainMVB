@@ -210,8 +210,8 @@ const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => str
     .join(" and ");
 
   return (
-    <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-      <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+    <div className="flex flex-col items-start relative shrink-0 w-full">
+      <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
         <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
           <div className="relative shrink-0 size-[16px]">
             <div className="absolute flex items-center justify-center left-0 size-[16px] top-0">
@@ -297,7 +297,7 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   }, [count, onCount]);
 
   return (
-    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent">
       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">{text}</p>
     </div>
   );
@@ -678,14 +678,11 @@ export function FinancesPage() {
 
             {/* INCOME */}
             {activeTab === "Income" && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Income" count={incomeCount} />
-                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  <IncomeSummary format={format} onCount={setIncomeCount} />
-                  <IncomeTxList format={format} onOpen={setOpenTxId} />
-                  <OverdueInvoicesBanner format={format} />
-                </div>
-              </div>
+              <WidgetCard title="Income" count={incomeCount}>
+                <IncomeSummary format={format} onCount={setIncomeCount} />
+                <IncomeTxList format={format} onOpen={setOpenTxId} />
+                <OverdueInvoicesBanner format={format} />
+              </WidgetCard>
             )}
 
             {/* EXPENSES */}
