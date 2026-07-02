@@ -335,26 +335,28 @@ const IncomeTxList = ({
 
   return (
     <>
-      {inflows.map((t) => {
+      {inflows.map((t, idx) => {
         const label = nameOf(t.counterparty_id) ?? t.description_normalized ?? "Incoming payment";
         const amt = Number(t.amount);
         return (
-          <div
-            key={t.id}
-            role="button"
-            tabIndex={0}
-            data-testid={`income-tx-${t.id}`}
-            onClick={() => onOpen(t.id)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
-            className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-          >
-            <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{shortDate(t.transaction_date)}</p>
+          <div key={t.id} className="flex flex-col gap-[8px] w-full">
+            <div
+              role="button"
+              tabIndex={0}
+              data-testid={`income-tx-${t.id}`}
+              onClick={() => onOpen(t.id)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
+              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{shortDate(t.transaction_date)}</p>
+              </div>
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
+                +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
+              </p>
             </div>
-            <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
-              +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
-            </p>
+            {idx < inflows.length - 1 && <Divider />}
           </div>
         );
       })}

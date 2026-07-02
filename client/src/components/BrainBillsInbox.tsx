@@ -100,6 +100,10 @@ function fmtDue(iso?: string | null): string {
 
 // ─── component ───────────────────────────────────────────────────────────────
 
+const Divider = () => (
+  <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+);
+
 export function BrainBillsInbox() {
   const { format } = useCurrency();
   const { addProposed, markDeclined } = useIntents();
@@ -189,7 +193,7 @@ export function BrainBillsInbox() {
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No bills waiting for payment right now.</p>
           </div>
         )}
-        {bills.map((bill) => {
+        {bills.map((bill, idx) => {
           const result = results[bill.id];
           const isBusy = propose.isPending && activeId === bill.id;
           const outcome = result ? statusToOutcome(result.intent.status) : null;
@@ -199,8 +203,11 @@ export function BrainBillsInbox() {
           return (
             <div
               key={bill.id}
+              className="flex flex-col gap-[8px] w-full"
+            >
+            <div
               data-testid={`bill-${bill.invoice_number}`}
-              className="border border-[#1d2132] border-solid flex flex-col gap-[8px] p-[12px] relative rounded-[12px] shrink-0 w-full"
+              className="flex flex-col gap-[8px] p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
             >
               {/* Bill row */}
               <div className="flex gap-[16px] items-center w-full">
@@ -212,7 +219,7 @@ export function BrainBillsInbox() {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenBill(bill); }
                   }}
                   data-testid={`open-bill-${bill.invoice_number}`}
-                  className="flex flex-1 flex-col items-start justify-center min-w-px relative cursor-pointer rounded-[8px] -m-[4px] p-[4px] transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex flex-1 flex-col items-start justify-center min-w-px relative cursor-pointer rounded-[8px] -m-[4px] p-[4px] transition-colors hover:bg-[#11141b] hover:border-[#1d2132] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
                     {nameOf(bill.counterparty_id)}
@@ -333,6 +340,8 @@ export function BrainBillsInbox() {
                   Couldn't reach Brain to propose this payment.
                 </p>
               )}
+            </div>
+            {idx < bills.length - 1 && <Divider />}
             </div>
           );
         })}
