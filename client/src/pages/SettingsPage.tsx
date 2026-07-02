@@ -10,6 +10,7 @@ import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import legalActiveIcon from "@assets/LegalActive_1782953679878.png";
 import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
+import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import PaymentsFigma from "@/components/settings/figma/PaymentsSectionFigma";
@@ -150,8 +151,12 @@ const AccountNavIcon = ({ active }: { active: boolean }) =>
   );
 
 /* ─── Nav items definition ───────────────────────────────── */
-const BillingNavIcon = ({ active: _active }: { active: boolean }) => (
-  <FigmaNavIcon src={ICONS.settings_billing_icon} inset="20.83% 12.5%" />
+const BillingNavIcon = ({ active }: { active: boolean }) => (
+  active ? (
+    <img alt="" className="shrink-0 size-[24px]" src={billingActiveIcon} />
+  ) : (
+    <FigmaNavIcon src={ICONS.settings_billing_icon} inset="20.83% 12.5%" />
+  )
 );
 
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
