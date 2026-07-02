@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
+import vendorsActiveIcon from "@assets/VendorsActive_1782953370194.png";
+import vendorsInactiveIcon from "@assets/VendorsInactive_1782953370194.png";
 import { useIntents } from "@/lib/intentsStore";
 import { MOCK_PROPOSALS } from "@/lib/mockProposals";
 
@@ -246,18 +248,13 @@ type NavItem = {
   InactiveIcon: () => JSX.Element;
 };
 
-/* Vendors icon — shield/building motif matching trust semantics */
+/* Vendors icon — Figma-matched PNG assets (active/inactive) */
 const VendorsIconActive = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
+  <img alt="" className="shrink-0 size-[24px]" src={vendorsActiveIcon} />
 );
 
 const VendorsIconInactive = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
+  <img alt="" className="shrink-0 size-[24px]" src={vendorsInactiveIcon} />
 );
 
 const MAIN_NAV: NavItem[] = [
