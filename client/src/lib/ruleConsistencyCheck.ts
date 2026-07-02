@@ -7,6 +7,8 @@ import { resolveVendor } from "./openVendorDetail";
 import { MOCK_DOCUMENTS } from "./mockDocuments";
 import { resolveDocument } from "./openDocumentDetail";
 import { allProposals, resolveProposal } from "./openProposalDetail";
+import { actorIdentityTokens } from "./actors";
+import { linkedRelationship } from "./auditTypes";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
    These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
@@ -663,6 +665,66 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
   } else {
     console.info(
       "[agent-domain-consistency] OK — every audit record's proposing agent stays inside its catalog domain.",
+    );
+  }
+
+  return issues;
+}
+
+/* Segregation of duties: the human ACTOR who approved a payment must never be the
+   same party as the PAYEE it moves money to. Payment records surface both the
+   approver (lifecycle step `actor`) and the receiving counterparty (linked
+   vendor/employee); if those resolve to the same identity, the record fails a
+   basic four-eyes control. Gating to PAYEE rows reuses the SHARED
+   `linkedRelationship` predicate (payment event type + numeric amount + receiving
+   kind), so this guard can never drift from what the UI labels a payee — non-payment
+   governance rows, treasury destinations (protocol/ledger) and evidence
+   (rule/invoice/proposal) are all skipped. Compares actor identity tokens (raw +
+   resolved email/id) against the payee's label/refId (+ resolved vendor name).
+   Passes clean on current mock data (sarah@meridian is never a payee). */
+function norm(v?: string): string {
+  return (v ?? "").trim().toLowerCase();
+}
+export function checkActorPayeeSegregation(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+
+  for (const rec of MOCK_AUDIT_RECORDS) {
+    // Collect every human actor that acted on this record (only approval-type
+    // steps carry `actor`; system steps omit it).
+    const actorTokens = new Set<string>();
+    for (const step of rec.lifecycle) {
+      for (const t of actorIdentityTokens(step.actor)) actorTokens.add(t);
+    }
+    if (actorTokens.size === 0) continue; // no human actor → nothing to segregate
+
+    for (const link of rec.linked) {
+      // Only true payees on payment records — same derivation the UI chip uses.
+      if (linkedRelationship(rec, link) !== "PAYEE") continue;
+      const payeeTokens = new Set<string>([norm(link.label), norm(link.refId)]);
+      if (link.kind === "vendor") {
+        const vendor = resolveVendor(link.refId);
+        if (vendor) payeeTokens.add(norm(vendor.name));
+      }
+      payeeTokens.delete("");
+
+      const overlap = Array.from(actorTokens).find((t) => payeeTokens.has(t));
+      if (overlap) {
+        issues.push({
+          source: `audit ${rec.id}`,
+          message: `approver "${overlap}" is also the payee (${link.kind} "${link.label}") — an actor must never approve a payment to themselves (segregation of duties).`,
+        });
+      }
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[actor-payee-segregation] ${issues.length} record(s) where the approver is also the payee:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[actor-payee-segregation] OK — no audit record has the same party as both approver and payee.",
     );
   }
 

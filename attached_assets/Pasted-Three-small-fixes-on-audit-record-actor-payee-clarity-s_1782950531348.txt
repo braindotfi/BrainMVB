@@ -1,0 +1,41 @@
+Three small fixes on audit-record actor/payee clarity, surfaced by the payroll record
+(AUD-5J7Y) review. git fetch/pull first; work on a new feature branch (e.g.
+fix/actor-payee-clarity); track done/pending against this plan; update CLAUDE.md at the end.
+
+CONTEXT: on AUD-5J7Y, "sarah@meridian approved" (the ACTOR — who decided) and "J. Smith
+(Engineering)" in linked evidence (the PAYEE — who was paid) are different people, which is
+CORRECT (approver ≠ recipient). But the UI doesn't distinguish the two roles, so it reads
+ambiguously. Make the roles explicit and encode the segregation-of-duties principle in the
+guard.
+
+FIX 1 — ACTOR ROLE LABEL on lifecycle approval steps. Where a lifecycle step shows a human
+approval ("sarah@meridian approved"), append the actor's role in muted text:
+"sarah@meridian approved · finance admin". Drive this from data (add an actorRole field to the
+lifecycle step or resolve it from the member/actor record — whichever fits the current types);
+do not hardcode strings per record. Apply across all audit records with human-approval steps.
+(Note: this label is also the future home of the authority line from the upcoming members/
+limits spec — e.g. "within her $10K payroll limit" — so structure the field to allow an
+optional authority suffix, but do NOT build the members model in this pass.)
+
+FIX 2 — RELATIONSHIP LABEL on linked-evidence counterparty rows. The linked-evidence label
+should carry the RELATIONSHIP, not just the entity type. On payment records, the receiving
+party's row reads "PAYEE" (or "EMPLOYEE · PAID TO" for employee rows) instead of bare
+"EMPLOYEE"/"VENDOR". Concretely: AUD-5J7Y's row becomes "PAYEE · J. Smith (Engineering)";
+vendor rows on payment records become "PAYEE · {vendor}" or "VENDOR · PAID TO" per the
+existing label style — pick one convention and apply it consistently. Non-payment linked rows
+(rule, invoice, proposal) are unchanged. Drive from data (a relationship field on the linked[]
+entry or derived from record type), not per-surface hardcoding.
+
+FIX 3 — ACTOR ≠ PAYEE ASSERT in the unified dev guard (extend, don't fork). Add a
+segregation-of-duties coherence check: flag any audit record where the approving actor and the
+receiving counterparty resolve to the same identity (same member/email/entity). console.error
+"record → actor==payee (segregation-of-duties)"; never throw; runs at boot with the existing
+guard. It should pass clean on current mock data — its job is to catch the future case.
+
+VERIFY: AUD-5J7Y shows "sarah@meridian approved · finance admin" and "PAYEE · J. Smith
+(Engineering)"; other payment records show the same convention; the guard passes clean and the
+new assert is present.
+
+Return (on the feature branch): the two label changes driven from data, the actor≠payee assert,
+done/pending tracking, and the CLAUDE.md update (note the actor-vs-payee convention and the
+new assert under the coherence rules).

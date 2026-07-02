@@ -26,6 +26,15 @@ export interface LifecycleStep {
   timestamp: string;
   note?: string;
   kind: "ok" | "alert";
+  /* Identity of the human who performed this step (email / actor id), present on
+     HUMAN-approval steps only — system steps omit it. The muted role suffix
+     ("· finance admin") is resolved from the actor record (see actors.ts), never
+     hardcoded per step. */
+  actor?: string;
+  /* Optional authority line, the future home of the members/limits spec
+     ("within her $10K payroll limit"). Rendered as a second muted suffix after
+     the role. Left unset until that model lands. */
+  authority?: string;
 }
 
 /* "vendor" | "rule" | "invoice" resolve against their canonical stores and open a
@@ -46,6 +55,11 @@ export interface LinkedEntity {
   kind: LinkedEntityKind;
   label: string;
   refId: string;
+  /* Optional explicit RELATIONSHIP override for the row chip (e.g. "PAYEE"). When
+     unset, the chip falls back to the kind, or to a relationship DERIVED from the
+     record type via `linkedRelationship` (a receiving party on a payment record
+     reads "PAYEE"). Set this only when the derived value is wrong for a row. */
+  relationship?: string;
 }
 
 export interface AuditRecord {
@@ -106,4 +120,32 @@ export function auditEventChipClass(type: AuditEventType): string {
     default:
       return "bg-[#1d2132] text-[#a8b9f4]";
   }
+}
+
+/* Payment event types — records that move money to a receiving party. Trust and
+   rule-change records ALSO carry vendor rows, but those vendors are not payees. */
+const PAYMENT_EVENT_TYPES: ReadonlyArray<AuditEventType> = [
+  "approved",
+  "auto_approved",
+  "flagged",
+];
+/* Counterparty kinds that RECEIVE the money on a payment record (the payee).
+   protocol/ledger are destinations of treasury moves, not AP payees, so they keep
+   their own kind chip; rule/invoice/proposal are evidence, not counterparties. */
+const RECEIVING_KINDS: ReadonlyArray<LinkedEntityKind> = ["vendor", "employee"];
+
+/* Relationship chip for a linked-evidence row: the RELATIONSHIP (e.g. "PAYEE"),
+   not just the entity type. Explicit `link.relationship` wins; otherwise a
+   receiving party on a payment record is derived as the PAYEE. Non-payment rows
+   (trust/rule-change vendor rows, invoices, proposals) return undefined and fall
+   back to the plain kind chip. Derived from record type — no per-surface hardcode. */
+export function linkedRelationship(
+  record: AuditRecord,
+  link: LinkedEntity,
+): string | undefined {
+  if (link.relationship) return link.relationship;
+  if (typeof record.amount !== "number") return undefined;
+  if (!PAYMENT_EVENT_TYPES.includes(record.eventType)) return undefined;
+  if (!RECEIVING_KINDS.includes(link.kind)) return undefined;
+  return "PAYEE";
 }

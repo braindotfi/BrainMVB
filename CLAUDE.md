@@ -170,6 +170,36 @@ that let rules break before):
    vendor payment — which belong to the Invoice Agent. Logs
    `[agent-domain-consistency] OK ...`.
 
+8. **`checkActorPayeeSegregation()`** — segregation-of-duties guard. On a payment
+   record the human ACTOR who approved it (lifecycle step `actor`) must never be the
+   same party as the PAYEE it moves money to. The guard reuses the SHARED
+   `linkedRelationship(record, link)` predicate to decide what counts as a payee —
+   so it only fires on the exact rows the UI chips label `PAYEE` (payment event type
+   + numeric amount + receiving kind vendor/employee), and can never drift from the
+   UI. It compares actor identity tokens (raw + resolved email/id via `actors.ts`)
+   against the payee's label / refId / resolved vendor name. Passes clean today
+   (`sarah@meridian` is never a payee). Logs `[actor-payee-segregation] OK ...`.
+
+### Actor vs payee convention (audit records)
+
+Audit records surface two distinct parties and they must stay visually + semantically
+separate:
+- **ACTOR** = WHO decided. Human-approval lifecycle steps carry an `actor` field
+  (an email/id, e.g. `sarah@meridian`). The UI resolves a muted role suffix from the
+  canonical `client/src/lib/actors.ts` registry (`resolveActorRole`) and renders it
+  inline: `"sarah@meridian approved · finance admin"`. Roles are NEVER hardcoded per
+  step. `LifecycleStep.authority` is reserved for the future members/limits spec
+  (a second suffix like `· within her $10K payroll limit`) — the type + render slot
+  exist, but no members model is built yet.
+- **PAYEE** = WHO was paid. Linked-evidence rows on payment records show a
+  RELATIONSHIP chip (`PAYEE`), not the bare entity kind. This is DERIVED centrally by
+  `linkedRelationship(record, link)` in `auditTypes.ts` from record type (payment
+  event + numeric amount) and link kind (vendor/employee receive; protocol/ledger are
+  treasury destinations, not payees; rule/invoice/proposal are evidence). An explicit
+  `link.relationship` overrides the derived value. ONE convention, driven from data —
+  never per-surface. `checkActorPayeeSegregation` (guard 8) asserts these two parties
+  are never the same identity.
+
 ### History (2026-07): the "rule links don't work" bug
 
 **Phase 1 — resolution fix**

@@ -246,7 +246,16 @@ Programmable neobank on Base L2.
   agent parsed from a lifecycle label ("<X> Agent proposed|detected …") must stay inside its
   catalog domain (Invoice=AP/vendor payments incl. payroll & subscriptions, Collections=AR,
   Cash=treasury/sweep, Close=reconciliation); flags only when the action phrase clearly matches a
-  DIFFERENT domain, skips ambiguous phrases (no false positives).
+  DIFFERENT domain, skips ambiguous phrases (no false positives) — and `checkActorPayeeSegregation`
+  — the human ACTOR who approved a payment (lifecycle step `actor`) must never also be its PAYEE.
+- **Actor vs payee convention** (audit records, see CLAUDE.md): the ACTOR = who decided
+  (human-approval steps carry `actor`; UI resolves a muted role suffix "· finance admin" from the
+  canonical `client/src/lib/actors.ts` registry, never hardcoded; `LifecycleStep.authority` reserved
+  for a future members/limits suffix, not built). The PAYEE = who was paid (linked-evidence rows on
+  payment records show a "PAYEE" relationship chip instead of the bare kind, DERIVED centrally by
+  `linkedRelationship(record, link)` in `auditTypes.ts` from record type + link kind — vendor/employee
+  are payees; protocol/ledger are treasury destinations; rule/invoice/proposal are evidence). ONE
+  convention, driven from data, never per-surface.
 
 ## Secrets Needed
 - `ANTHROPIC_API_KEY` — Claude API (powers the assistant, insights, goal recommendations).

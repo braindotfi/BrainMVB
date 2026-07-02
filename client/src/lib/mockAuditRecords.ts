@@ -19,7 +19,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", kind: "ok" },
       { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
-      { label: "sarah@meridian approved", timestamp: "Jul 7, 8:55 AM ET", kind: "ok" },
+      { label: "sarah@meridian approved", timestamp: "Jul 7, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH settled", timestamp: "Jul 7, 9:02 AM ET", kind: "ok" },
     ],
     linked: [
@@ -121,7 +121,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jun 30, 6:00 PM ET", kind: "ok" },
       { label: "Escalated to human — above auto-pay limit", timestamp: "Jun 30, 6:01 PM ET", kind: "alert" },
-      { label: "sarah@meridian approved", timestamp: "Jul 1, 8:55 AM ET", kind: "ok" },
+      { label: "sarah@meridian approved", timestamp: "Jul 1, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH settled", timestamp: "Jul 1, 9:00 AM ET", kind: "ok" },
     ],
     linked: [
@@ -268,7 +268,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", kind: "ok" },
       { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", kind: "alert" },
-      { label: "sarah@meridian approved", timestamp: "Jul 2, 9:55 AM ET", kind: "ok" },
+      { label: "sarah@meridian approved", timestamp: "Jul 2, 9:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", kind: "ok" },
     ],
     linked: [
@@ -384,7 +384,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", kind: "ok" },
       { label: "Escalated to human — above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", kind: "alert" },
-      { label: "sarah@meridian approved yield move", timestamp: "Jul 4, 6:27 PM ET", kind: "ok" },
+      { label: "sarah@meridian approved yield move", timestamp: "Jul 4, 6:27 PM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", kind: "ok" },
     ],
     linked: [

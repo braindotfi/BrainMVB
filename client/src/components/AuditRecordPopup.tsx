@@ -2,7 +2,8 @@ import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
+import { auditEventLabel, auditEventChipClass, linkedRelationship } from "@/lib/auditTypes";
+import { resolveActorRole } from "@/lib/actors";
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -130,6 +131,11 @@ export function AuditRecordPopup({
                   const isLast = idx === record.lifecycle.length - 1;
                   const Icon = step.kind === "alert" ? AlertTriangle : CheckCircle;
                   const iconColor = step.kind === "alert" ? "#d20344" : "#42bf23";
+                  // Actor role (+ optional future authority line) shown as a muted
+                  // suffix on human-approval steps — resolved from the actor record,
+                  // never hardcoded. Distinguishes the ACTOR (who decided) from the
+                  // PAYEE in linked evidence (who was paid).
+                  const actorRole = resolveActorRole(step.actor);
                   return (
                     <div key={idx} className="flex gap-[12px] items-start w-full">
                       <div className="flex flex-col items-center shrink-0">
@@ -137,7 +143,15 @@ export function AuditRecordPopup({
                         {!isLast && <div className="w-px flex-1 min-h-[16px] bg-[#1d2132] mt-[4px]" />}
                       </div>
                       <div className="flex flex-col gap-[2px] flex-1 min-w-px">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4]">{step.label}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4]">
+                          {step.label}
+                          {actorRole && (
+                            <span data-testid={`text-actor-role-${idx}`} className="text-[#6c779d]"> · {actorRole}</span>
+                          )}
+                          {step.authority && (
+                            <span data-testid={`text-actor-authority-${idx}`} className="text-[#6c779d]"> · {step.authority}</span>
+                          )}
+                        </p>
                         {step.note && (
                           <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#414965]">{step.note}</p>
                         )}
@@ -167,6 +181,10 @@ export function AuditRecordPopup({
                       (link.kind === "vendor" && !vendorGone) ||
                       (link.kind === "invoice" && !invoiceGone);
 
+                    // Row chip carries the RELATIONSHIP ("PAYEE" for a receiving
+                    // party on a payment record), falling back to the entity kind.
+                    const chipLabel = linkedRelationship(record, link) ?? link.kind;
+
                     if (!tappable) {
                       return (
                         <div
@@ -174,7 +192,7 @@ export function AuditRecordPopup({
                           data-testid={`text-linked-${link.kind}-${link.refId}`}
                           className="flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#0a0c10] w-full"
                         >
-                          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
+                          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{chipLabel}</span>
                           <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{link.label}</span>
                           {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
                             <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">
@@ -193,7 +211,7 @@ export function AuditRecordPopup({
                         data-testid={`button-linked-${link.kind}-${link.refId}`}
                         className="flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#1d2132] transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                       >
-                        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{link.kind}</span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{chipLabel}</span>
                         <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{link.label}</span>
                         <ChevronRight size={14} className="text-[#414965] shrink-0" />
                       </button>

@@ -20,6 +20,7 @@ if (import.meta.env.DEV) {
     m.checkReferenceCoherence();
     m.checkAnchorUiCoherence();
     m.checkAgentDomainCoherence();
+    m.checkActorPayeeSegregation();
   });
 }
 
