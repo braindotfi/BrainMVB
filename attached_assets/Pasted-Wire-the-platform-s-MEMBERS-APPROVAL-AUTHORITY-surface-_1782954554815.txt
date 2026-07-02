@@ -1,0 +1,117 @@
+Wire the platform's MEMBERS & APPROVAL AUTHORITY surface to the REAL brain-core API, per
+docs/contracts/members-attribution.md. This replaces any mock members layer: the platform
+NEVER implements or simulates enforcement — brain-core is the sole authority. The platform
+renders core's decisions and rejection reasons; it does not re-derive them.
+
+PRECONDITION: brain-core's members implementation (contract, migration, resolveActor,
+authorizeApproval gate, /v1/members handlers, invariants) is merged and deployed to the
+environment this platform build targets. Verify the endpoints respond before building
+against them; if they don't, STOP and report — do not fall back to mocks.
+
+PROCESS (per project conventions): git fetch + pull first; work on a new feature branch
+(e.g. feature/members-authority-production); keep a running done/pending checklist against
+this plan as you execute; update CLAUDE.md at the end (including the boundary-table changes
+below).
+
+STYLING — match the current app exactly (existing tokens, page header pattern, list rows,
+popup shell; #D20344 alerts/rejections/destructive only; success for within-authority;
+purple interactive; no orange; monospace for amounts/limits/ids/dates).
+
+=========================================================================
+INTEGRATION PRINCIPLES (these define "production" here)
+=========================================================================
+1. ACTOR = SESSION. The current member is whoever is authenticated. The platform never
+   sends an actor field on session-authenticated calls (core strips it anyway, per the
+   contract). There is NO member switcher of any kind — demoing two approvers means two
+   signed-in sessions (two browsers/profiles).
+2. ENFORCEMENT LIVES IN CORE ONLY. Do not port, keep, or re-implement authorizeApproval or
+   the six checks client-side. Delete any mock gate if present. UI affordances (hiding
+   approve controls from a viewer, disabling above-limit approvals) are derived from the
+   CURRENT MEMBER'S envelope fetched from core (GET /v1/members/{self} or the session's
+   member payload) — they are conveniences, and the server's response is always the final
+   word. A user who bypasses the UI still hits core's 403.
+3. REJECTIONS ARE CORE'S. Every 403 { error, reason, detail } renders as an inline #D20344
+   notice mapping the exact contract reason string to one plain-language sentence:
+   actor_unresolved | actor_inactive | domain_not_authorized | actor_limit_exceeded |
+   second_approval_required | self_approval_blocked | last_admin_protected.
+   Unknown reason → generic "Not permitted" + the raw reason in Technical Detail. Never a
+   silent no-op, never a dead tap.
+4. STATE COMES FROM CORE. Proposal status (including "awaiting_second_approval"), the
+   approvals array, actor verification — all read from core responses/webhooks; the platform
+   holds no parallel state machine. Handle network failure gracefully: show the last known
+   state + a retry affordance; never optimistically mark approved before core confirms.
+
+=========================================================================
+API WIRING (per the contract)
+=========================================================================
+- GET /v1/members (list; filter role/domain), GET /v1/members/{id}
+- POST /v1/members, PATCH /v1/members/{id}, DELETE /v1/members/{id} (deactivate) — render
+  these mutations ONLY for admins per the current member's role, but rely on core's
+  admin-gating as the real check.
+- POST/DELETE /v1/members/{id}/identity-links
+- Approve path: existing proposal approve call, now consuming the contract response
+  { status, approvals: [{memberId, at, verification}], actor: {memberId, verification} }.
+- Webhooks/subscriptions: member.changed → refresh members views;
+  proposal.awaiting_second_approval → update the queue row live.
+- Every member mutation confirms in plain language BEFORE the call (persistent-config
+  change discipline), then reflects core's response — including surfacing
+  last_admin_protected as a disabled control with caption "At least one admin is required"
+  when core rejects, and proactively disabling it when the fetched member list shows only
+  one active admin.
+
+=========================================================================
+SURFACES (same design as specced; now fed by core)
+=========================================================================
+1) MEMBERS PAGE — Settings → Team. Kicker "Your Team", Title "Who can approve, and up to
+   how much.", Text "Authority is enforced by Brain core on every surface — this page
+   manages it." Rows: displayName, role chip, envelope in mono ("AP + payroll · up to
+   $10,000"), active state, chevron. Read-only for non-admins (derived from session member's
+   role).
+2) MEMBER DETAIL popup: role, envelope (domains chips; perItemLimit inline-editable mono →
+   PATCH on confirm), identityLinks, "Recent approvals" resolving into audit records via the
+   existing open helpers. LOCKED rows rendered from policy, not hardcoded: "Members can
+   never approve their own payments" and the tenant second-approval threshold ("Second
+   approval above $X (tenant policy)") — read the threshold from core's policy surface; do
+   not hardcode $15,000.
+3) SECOND-APPROVAL FLOW: when an approve response returns status "awaiting_second_approval",
+   the queue row enters the held state ("Awaiting second approval · 1 of 2 ·
+   {approvals[0].email} approved"). The same member re-approving surfaces core's
+   second_approval_required rejection in plain language. A distinct qualified member's
+   session completes it; the lifecycle then shows TWO approval steps, each with actorRole
+   and authority line populated from core data ("sarah@meridian approved · approver · within
+   her $10,000 limit"). Viewers see no approve controls (derived from role) and core rejects
+   them regardless.
+4) AUDIT INTEGRATION: lifecycle approval steps stamp actorRole + authority suffix from
+   core's response; actorVerification renders muted in Technical Detail ("verified via
+   session"). member_change events from core appear in the Audit Log; linked members resolve
+   via openMemberDetail — same resolver pattern as rules/vendors (canonical source is now
+   the API-backed members cache, resolve-or-warn, plain-text fallback for a
+   deactivated/unknown member: "(member inactive)" — deactivated members must still resolve
+   for historical records, per deactivate-not-delete).
+
+=========================================================================
+MIGRATION / CLEANUP
+=========================================================================
+- Remove mockMembers.ts, the mock authorizeApproval, and any member-switcher code entirely
+  (git rm, not commented out). Update the unified dev consistency guard: member-reference
+  resolution checks now run against the API-backed members source; drop asserts that
+  duplicated core enforcement (envelope/actor≠payee simulation) — core's invariants own
+  those now. Keep resolution + display-coherence asserts (every referenced memberId
+  resolves; lifecycle authority lines match the member's envelope as fetched).
+- Anything else in the app still reading mock members (e.g. the actor-role labels on
+  existing audit lifecycle steps) is re-pointed to core data in this pass; list every
+  call-site changed.
+
+=========================================================================
+CLAUDE.md — make BOTH updates:
+=========================================================================
+A) "Member references" contract note: members referenced by id, resolved via
+   openMemberDetail against the API-backed members source; deactivated members resolve for
+   historical records; enforcement is core-only — the platform never re-implements the gate.
+B) Update the boundary table per the version provided separately (members/attribution rows
+   move to CORE-BACKED; mock rows removed or restated).
+
+Return (on the feature branch): the API client wiring, the Members page + detail, the
+second-approval flow against real responses, rejection rendering for all seven reasons, the
+openMemberDetail resolver against the API source, the mock-layer removal with the list of
+re-pointed call-sites, done/pending tracking, and both CLAUDE.md updates.
