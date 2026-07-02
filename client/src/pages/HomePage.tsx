@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -344,6 +344,19 @@ function formatAmountsInText(text: string, formatFn: (amount: string | number) =
   return text.replace(symbolPattern, reformat).replace(codePattern, reformat);
 }
 
+function timeAgo(ts: number): string {
+  const diffMs = Date.now() - ts;
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 10) return "Just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.round(diffH / 24);
+  return `${diffD}d ago`;
+}
+
 /** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
   to the user's locale based on the selected currency. */
 function formatDatesInText(text: string, currency: CurrencyCode): string {
@@ -423,6 +436,14 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
+
+  // Dynamic "last updated" timestamp — refreshes every 10s
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
+    return () => window.clearInterval(id);
+  }, []);
+  const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
   const { format, currency } = useCurrency();
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -565,6 +586,9 @@ export function HomePage() {
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative shrink-0 text-[#a8b9f4] text-[32px] whitespace-nowrap">
                 Here's where your money stands today.
               </p>
+            </div>
+            <div className="flex items-center relative shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated {updatedLabel}</p>
             </div>
           </div>
 
