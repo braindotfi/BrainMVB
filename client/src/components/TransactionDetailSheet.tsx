@@ -12,11 +12,19 @@ export interface BrainTransactionDTO {
   transaction_date: string;
   description_normalized?: string | null;
   description_raw?: string | null;
+  account_id?: string | null;
+  counterparty_id?: string | null;
+  reconciliation_status?: string | null;
 }
 interface BrainTransactionsResponse {
   transactions: BrainTransactionDTO[];
   next_cursor?: string | null;
 }
+
+interface AccountLite { id: string; name?: string | null }
+interface AccountsLiteResponse { accounts: AccountLite[] }
+interface CounterpartyLite { id: string; name?: string | null }
+interface CounterpartiesLiteResponse { counterparties: CounterpartyLite[] }
 
 const DIRECTION_LABEL: Record<BrainTransactionDTO["direction"], string> = {
   inflow: "Money in",
@@ -54,12 +62,28 @@ export function TransactionDetailSheet({ txId, onClose }: { txId: string | null;
     enabled: txId != null,
     retry: false,
   });
+  const { data: acctData } = useQuery<AccountsLiteResponse>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    enabled: txId != null,
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    enabled: txId != null,
+    retry: false,
+  });
   const tx = data?.transactions?.find((t) => t.id === txId) ?? null;
   const open = txId != null;
 
   const positive = tx?.direction === "inflow";
   const amount = tx ? Number(tx.amount) : 0;
   const label = tx?.description_normalized ?? tx?.description_raw ?? "Transaction";
+  const accountName = tx?.account_id
+    ? acctData?.accounts?.find((a) => a.id === tx.account_id)?.name ?? null
+    : null;
+  const counterpartyName = tx?.counterparty_id
+    ? cpData?.counterparties?.find((c) => c.id === tx.counterparty_id)?.name ?? null
+    : null;
 
   return (
     <Sheet
@@ -92,7 +116,14 @@ export function TransactionDetailSheet({ txId, onClose }: { txId: string | null;
             </div>
             <div className="h-px w-full bg-[#1d2132]" />
             <Field label="Direction">{DIRECTION_LABEL[tx.direction] ?? tx.direction}</Field>
+            {counterpartyName && <Field label={positive ? "From" : "To"}>{counterpartyName}</Field>}
+            {accountName && <Field label="Account">{accountName}</Field>}
             <Field label="Date">{formatFullDate(tx.transaction_date)}</Field>
+            {tx.reconciliation_status && (
+              <Field label="Reconciliation">
+                {tx.reconciliation_status === "reconciled" ? "Reconciled with the bank" : "Not yet reconciled"}
+              </Field>
+            )}
             {tx.description_raw && tx.description_raw !== tx.description_normalized && (
               <Field label="Original description">{tx.description_raw}</Field>
             )}

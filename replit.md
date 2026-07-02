@@ -133,6 +133,35 @@ Programmable neobank on Base L2.
 - To add a Figma icon: download URL hash → `attached_assets/figma_icons/<subdir>/<name>.svg`,
   then add the import + map entry to the matching registry file.
 
+## Finances Tab — popup detail cards (live brain-core)
+- `client/src/pages/FinancesPage.tsx` drives the FINANCES widget tabs. Detail cards pull from
+  LIVE brain-core Ledger via BFF proxy `/api/brain/ledger/*` (accounts, transactions,
+  counterparties, invoices); mock only as fallback. Read-only, data-derived, NO setTimeout.
+- **Accounts**: rows are clickable ONLY when the brain-core account has an `id`
+  (`clickable = !!acc.id`); the mixed "Account Totals" row is NOT clickable. Clicking opens
+  `AccountDetailSheet.tsx` (provenance/confidence/status/synced + recent activity filtered by
+  `account_id`, top 5, → opens `TransactionDetailSheet`). **Currency honesty**: `rowBalanceLabel`
+  (FinancesPage) + `balanceLabel` (AccountDetailSheet) render fiat (USD) through
+  `useCurrency().format` but a non-fiat token (ETH, `currency !== "USD"`) in NATIVE units — never
+  run a token amount through the USD→display converter. Account ids are ephemeral per demo
+  provisioning — never hardcode.
+- **Bills** (`BrainBillsInbox.tsx`): bill info area is tappable (`open-bill-<n>`) → `BillDetailSheet.tsx`
+  (due-state chip, facts, flags callout, "View invoice document" builds a `DocumentRecord`
+  on-the-fly and reuses `DocumentViewerPopup`). 3-state bridge via `useIntents`:
+  flagged→`#d20344`, proposed→purple "Review proposal"→`/review`, else muted info.
+- **Recent**: rows open the shared `TransactionDetailSheet.tsx` (enriched with
+  `account_id`/`counterparty_id`/`reconciliation_status` resolved via accounts+counterparties
+  queries → From/To, Account, Reconciliation).
+- **Income**: `IncomeTxList` renders the actual inflow transactions inline (sorted desc,
+  counterparty name resolved), each row → `TransactionDetailSheet`. Demo seed is all inflows,
+  so **Expenses honestly renders empty** (never faked).
+- **Liabilities**: "View bills to pay →" button switches `activeTab` to Bills.
+- **Deviations from spec**: (1) Recent/account activity rows open the LIVE
+  `TransactionDetailSheet` rather than `openDocumentDetail` bank_transaction (that helper is
+  mock-only). (2) `ruleConsistencyCheck.ts` NOT extended — it guards mock stores and is N/A to
+  live brain-core data. (3) "Due today" bill chip uses baby blue `#a8b9f4` (NOT orange — orange
+  is reserved for active tabs).
+
 ## Other Notable UI
 - Sidebar "Rules" nav shows a notification counter badge (`client/src/lib/rule-suggestions.ts`,
   `useSyncExternalStore`-backed) when Brain has new rule suggestions.

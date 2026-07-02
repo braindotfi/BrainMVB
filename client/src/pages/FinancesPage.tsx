@@ -5,6 +5,7 @@ import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailSheet } from "@/components/TransactionDetailSheet";
+import { AccountDetailSheet } from "@/components/AccountDetailSheet";
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -65,7 +66,19 @@ const KIND_LABEL: Record<AccountKind, string> = {
   payment_processor: "Payment processor",
 };
 
-type AccountRow = { name: string; sub: string; sub2: string; balance: string | number };
+type AccountRow = { id?: string; name: string; sub: string; sub2: string; balance: string | number; currency?: string };
+
+/** Render a balance honestly: USD (and other fiat) through the currency
+ *  formatter; a non-fiat token balance (ETH) in its native units — never run a
+ *  token amount through the USD→display-currency converter. Mirrors
+ *  AccountDetailSheet.balanceLabel. Rows with no currency (e.g. the mixed
+ *  totals row) fall back to the formatter. */
+function rowBalanceLabel(row: AccountRow, format: (n: string | number) => string): string {
+  if (!row.currency || row.currency === "USD") return format(row.balance);
+  const value = Number(row.balance);
+  const trimmed = Number.isFinite(value) ? String(value) : String(row.balance);
+  return `${trimmed} ${row.currency}`;
+}
 
 /** Map brain-core Ledger accounts to the widget's row shape, appending a totals row.
  *  Balances are treated as USD (the demo tenant's source currency); useCurrency().format
@@ -75,10 +88,12 @@ function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
     const label = KIND_LABEL[a.account_type] ?? a.account_type;
     const value = a.current_balance != null ? Number(a.current_balance) : 0;
     return {
+      id: a.id,
       name: a.name,
       sub: a.institution ?? label,
       sub2: a.institution ? label : "",
       balance: Number.isFinite(value) ? value : 0,
+      currency: a.currency,
     };
   });
   const total = list.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0);
@@ -288,6 +303,65 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   );
 };
 
+// ─── Income drill-down (live) — the actual inflow transactions ───────────────
+// The "filtered transaction list" behind the Income summary: real inflow rows
+// from the Ledger, each opening the shared transaction detail. No popup — an
+// inline list, honest to what's recorded.
+const IncomeTxList = ({
+  format,
+  onOpen,
+}: {
+  format: (a: string | number) => string;
+  onOpen: (txId: string) => void;
+}) => {
+  const { data: txData } = useQuery<BrainTransactionsResponse>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+  const inflows = (txData?.transactions ?? [])
+    .filter((t) => t.direction === "inflow")
+    .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+  if (inflows.length === 0) return null;
+  const nameOf = (id?: string | null) =>
+    (id && cpData?.counterparties.find((c) => c.id === id)?.name) || null;
+  const shortDate = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  return (
+    <>
+      {inflows.map((t) => {
+        const label = nameOf(t.counterparty_id) ?? t.description_normalized ?? "Incoming payment";
+        const amt = Number(t.amount);
+        return (
+          <div
+            key={t.id}
+            role="button"
+            tabIndex={0}
+            data-testid={`income-tx-${t.id}`}
+            onClick={() => onOpen(t.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
+            className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+          >
+            <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{shortDate(t.transaction_date)}</p>
+            </div>
+            <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
+              +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
+            </p>
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
 // ─── Expenses (live) — outflow transactions grouped from the Ledger ──────────
 // Derived from brain-core ledger outflow transactions. The demo seed currently
 // carries only inflows, so this renders an honest empty state today and will
@@ -463,6 +537,8 @@ export function FinancesPage() {
 
   // Which transaction the detail sheet is showing (null = closed).
   const [openTxId, setOpenTxId] = useState<string | null>(null);
+  // Which account the detail sheet is showing (null = closed).
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
 
   type FinanceTab = "Accounts" | "Recent" | "Bills" | "Income" | "Expenses" | "Liabilities";
   const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
@@ -516,11 +592,23 @@ export function FinancesPage() {
             {/* ACCOUNTS */}
             {activeTab === "Accounts" && (
               <WidgetCard title="Accounts" count={accounts.length}>
-                {accounts.map((acc, idx) => (
+                {accounts.map((acc, idx) => {
+                  const clickable = !!acc.id;
+                  return (
                   <div key={acc.name} className="flex flex-col gap-[8px] w-full">
                     <div
                       data-testid={`row-account-${idx}`}
-                      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+                      {...(clickable
+                        ? {
+                            role: "button",
+                            tabIndex: 0,
+                            onClick: () => setOpenAccountId(acc.id!),
+                            onKeyDown: (e: React.KeyboardEvent) => {
+                              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenAccountId(acc.id!); }
+                            },
+                          }
+                        : {})}
+                      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
                     >
                       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
@@ -535,12 +623,13 @@ export function FinancesPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end justify-center relative shrink-0">
-                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(acc.balance)}</p>
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
                       </div>
                     </div>
                     {idx < accounts.length - 1 && <Divider />}
                   </div>
-                ))}
+                  );
+                })}
               </WidgetCard>
             )}
 
@@ -591,6 +680,7 @@ export function FinancesPage() {
                 <WidgetHeader title="Income" count={incomeCount} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                   <IncomeSummary format={format} onCount={setIncomeCount} />
+                  <IncomeTxList format={format} onOpen={setOpenTxId} />
                   <OverdueInvoicesBanner format={format} />
                 </div>
               </div>
@@ -603,8 +693,16 @@ export function FinancesPage() {
             {activeTab === "Liabilities" && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Liabilities" count={liabilitiesCount} />
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                   <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
+                  <button
+                    type="button"
+                    data-testid="link-liabilities-bills"
+                    onClick={() => setActiveTab("Bills")}
+                    className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631EE] hover:text-[#8f52f5] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                  >
+                    View bills to pay →
+                  </button>
                 </div>
               </div>
             )}
@@ -613,6 +711,11 @@ export function FinancesPage() {
         </div>
       </ScrollArea>
       <TransactionDetailSheet txId={openTxId} onClose={() => setOpenTxId(null)} />
+      <AccountDetailSheet
+        accountId={openAccountId}
+        onClose={() => setOpenAccountId(null)}
+        onOpenTransaction={(id) => { setOpenAccountId(null); setOpenTxId(id); }}
+      />
     </div>
   );
 }

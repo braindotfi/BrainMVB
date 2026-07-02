@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents } from "@/lib/intentsStore";
+import { BillDetailSheet, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailSheet";
 
 // ─── brain-core shapes (subset rendered here; via the BFF proxy) ─────────────
 
@@ -105,6 +106,7 @@ export function BrainBillsInbox() {
   const [results, setResults] = useState<Record<string, ProposeResponse>>({});
   const [openTrace, setOpenTrace] = useState<Record<string, boolean>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [openBill, setOpenBill] = useState<BrainInvoiceDTO | null>(null);
 
   const { data: invData } = useQuery<InvoicesResponse>({
     queryKey: ["/api/brain/ledger/invoices"],
@@ -202,7 +204,16 @@ export function BrainBillsInbox() {
             >
               {/* Bill row */}
               <div className="flex gap-[16px] items-center w-full">
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setOpenBill(bill)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenBill(bill); }
+                  }}
+                  data-testid={`open-bill-${bill.invoice_number}`}
+                  className="flex flex-1 flex-col items-start justify-center min-w-px relative cursor-pointer rounded-[8px] -m-[4px] p-[4px] transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
                     {nameOf(bill.counterparty_id)}
                   </p>
@@ -326,6 +337,12 @@ export function BrainBillsInbox() {
           );
         })}
       </div>
+
+      <BillDetailSheet
+        bill={openBill as BillDTO | null}
+        vendorName={openBill ? nameOf(openBill.counterparty_id) : ""}
+        onClose={() => setOpenBill(null)}
+      />
     </div>
   );
 }
