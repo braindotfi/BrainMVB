@@ -2,3 +2,4 @@
 - [Linked references contract](linked-references-contract.md) — rules/vendors/invoices resolve by id via one helper+store; unified dev guard; non-vendor parties (employee/protocol/ledger) are never kind:"vendor".
 - [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → warn + plain "(rule unavailable)"; shipped mock refs must all resolve (dev guard).
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
+- [Members authority integration](members-authority-integration.md) — Members/approval surface is core-only; blocked until GET /v1/members returns 200 (fresh-session probe); no mocks/workarounds.
