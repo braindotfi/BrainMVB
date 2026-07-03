@@ -20,8 +20,18 @@ If not ready, STOP and report. Do NOT fall back to mocks or special-case the 403
 ## Why it was blocked (as of 2026-07-03)
 Members deployment landed (route live, gate enforcing, exact contract reason strings),
 but tenant provisioning did NOT seed an initial admin member, so demo-provisioned tenants
-have no actor to resolve → every members call 403s `actor_unresolved`. The fix is in
-brain-core provisioning (in progress). When it ships, the fresh-session probe returns 200.
+have no actor to resolve → every members call 403s `actor_unresolved`.
+
+### Second core gap found after the bootstrap-admin fix (2026-07-03)
+The bootstrap-admin change shipped: `POST /demo/provision-run` now returns an
+`actor: user_...` (the admin member is created). BUT the session token it returns still
+has `principal_type: "agent"`, `sub: agent_...`, NO member/actor claim, NO members scope.
+So `GET /members` still 403s `actor_unresolved` — nothing links the demo session's
+PRINCIPAL (agent) to the created MEMBER (user actor). Remaining core-side fix: either
+provision an identity-link between the agent principal and the admin member, OR return a
+user-principal (member) token from provisioning. Acceptance test unchanged: a fresh
+session must get 200 from GET /members. Do NOT swap in a user-principal token or special-
+case the agent token from the platform — that's the forbidden workaround.
 
 ## Design boundary (once unblocked)
 - ACTOR = SESSION; never send an `actor` field on session-authed calls (core strips it).
