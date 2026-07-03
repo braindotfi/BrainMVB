@@ -8,7 +8,7 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { MOCK_PROPOSALS, ACCOUNT_SUMMARY, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { MOCK_PROPOSALS, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -451,8 +451,9 @@ export function ReviewPage() {
             </div>
 
             {/* Approved automatically today — derived summary (count + total from the array).
-                Stays pinned to the top for both "All" and the "Approved Automatically" tab. */}
-            {showApproved && (
+                Stays pinned to the top for both "All" and the "Approved Automatically" tab.
+                Hidden when there are no auto-handled receipts (never "Brain approved 0"). */}
+            {showApproved && autoHandled.length > 0 && (
               <div
                 className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
                 data-testid="row-auto-handled"
@@ -529,23 +530,8 @@ export function ReviewPage() {
                     />
                   </div>
                 ))}
-
-                {/* Account Totals — pendingAPTotal reconciles from the AP proposals */}
-                <Divider />
-                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]" data-testid="row-account-totals">
-                  <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">Account Totals</p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-                      {format(ACCOUNT_SUMMARY.totalCash)} cash · about {ACCOUNT_SUMMARY.runwayMonths} months runway
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end justify-center relative shrink-0">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap" data-testid="text-pending-ap">
-                      {format(ACCOUNT_SUMMARY.pendingAPTotal)}
-                    </p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] whitespace-nowrap">pending AP</p>
-                  </div>
-                </div>
+                {/* Fabricated static "Account Totals" card removed (2026-07-03) — it showed a
+                    hardcoded cash/runway/pending-AP that contradicted the live ledger on Finances. */}
               </div>
             </div>
             )}
