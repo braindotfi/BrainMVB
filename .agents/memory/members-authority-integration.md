@@ -22,16 +22,21 @@ Members deployment landed (route live, gate enforcing, exact contract reason str
 but tenant provisioning did NOT seed an initial admin member, so demo-provisioned tenants
 have no actor to resolve → every members call 403s `actor_unresolved`.
 
-### Second core gap found after the bootstrap-admin fix (2026-07-03)
+### Two-token model — confirmed intended design (2026-07-03)
 The bootstrap-admin change shipped: `POST /demo/provision-run` now returns an
-`actor: user_...` (the admin member is created). BUT the session token it returns still
-has `principal_type: "agent"`, `sub: agent_...`, NO member/actor claim, NO members scope.
-So `GET /members` still 403s `actor_unresolved` — nothing links the demo session's
-PRINCIPAL (agent) to the created MEMBER (user actor). Remaining core-side fix: either
-provision an identity-link between the agent principal and the admin member, OR return a
-user-principal (member) token from provisioning. Acceptance test unchanged: a fresh
-session must get 200 from GET /members. Do NOT swap in a user-principal token or special-
-case the agent token from the platform — that's the forbidden workaround.
+`actor: user_...` (the admin member is created) plus an AGENT token (`principal_type:
+"agent"`, `sub: agent_...`, no member claim/scope). The agent token getting **403 on
+`/v1/members` is CORRECT and PERMANENT** — agent principals are never member-resolvable
+(agents PROPOSE, humans APPROVE). The in-progress core fix will ALSO issue a
+**user-principal session bound to the bootstrap admin, alongside** the agent token.
+- Platform integration: member/approval/`/members` calls MUST use the USER-principal
+  token; the agent token stays for propose-only calls. (`server/brain/auth.ts` currently
+  caches ONE token per app user — will need to carry both once core returns both.)
+- Using the user-principal token from the provision response is the INTENDED design, not a
+  workaround. The forbidden workarounds are: BFF-minting a member token, fabricating an
+  actor, or special-casing the 403.
+- Acceptance test: re-run the probe with the USER session — 200 from GET /members with the
+  bootstrap admin member = green.
 
 ## Design boundary (once unblocked)
 - ACTOR = SESSION; never send an `actor` field on session-authed calls (core strips it).
