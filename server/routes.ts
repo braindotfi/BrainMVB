@@ -14,6 +14,7 @@ import {
   getWirexBankAccounts,
   getWirexTransactions,
 } from "./wirex";
+import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
 import {
@@ -363,16 +364,6 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  app.post("/api/account/allocate", async (req, res) => {
-    try {
-      const { agentId, amount, asset } = req.body;
-      if (!agentId || !amount) return res.status(400).json({ error: "agentId and amount required" });
-      return res.json({ success: true, agentId, amount, asset: asset ?? "USDC", message: "Capital allocated to agent sub-account." });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to allocate capital" });
-    }
-  });
-
   // ─────────────────────────────────────────────────────────────
   // SIWE AUTH
   // ─────────────────────────────────────────────────────────────
@@ -400,8 +391,33 @@ You can explain concepts and surface general guidance, but do not give regulated
       if (!address || !message || !signature) {
         return res.status(400).json({ error: "address, message, and signature required" });
       }
-      // In production: verify SIWE message with viem/siwe library
-      // For now: trust the address and upsert the user
+      // Bind the signature to the claimed address over the exact signed message (EIP-191
+      // personal_sign). Without this, anyone could authenticate as any wallet address.
+      let validSig = false;
+      try {
+        validSig = await verifyMessage({
+          address: address as `0x${string}`,
+          message,
+          signature: signature as `0x${string}`,
+        });
+      } catch {
+        validSig = false;
+      }
+      if (!validSig) return res.status(401).json({ error: "Invalid signature" });
+
+      // Single-use nonce: the message must carry a nonce we issued, not yet consumed or expired.
+      // Consume it first so a replay of the same signed message can't re-authenticate.
+      const nonce = /^Nonce: (.+)$/m.exec(message)?.[1]?.trim();
+      if (!nonce) return res.status(401).json({ error: "Missing nonce" });
+      const [nonceRecord] = await storage.getNotifications(`nonce:${nonce}`, 1);
+      if (!nonceRecord) return res.status(401).json({ error: "Unknown or already-used nonce" });
+      await storage.deleteNotification(nonceRecord.id);
+      if (nonceRecord.body && new Date(nonceRecord.body) < new Date()) {
+        return res.status(401).json({ error: "Nonce expired" });
+      }
+      // Defense-in-depth: the signed message must name this address.
+      if (!message.includes(address)) return res.status(401).json({ error: "Address mismatch" });
+
       let user = await storage.getUserByWallet(address);
       if (!user) {
         user = await storage.createUser({ username: address.slice(0, 8) + "..." + address.slice(-4), password: "", walletAddress: address });
