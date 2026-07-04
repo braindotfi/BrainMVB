@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import type { ReactNode } from "react";
-import { FileText, ChevronRight, X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents } from "@/lib/intentsStore";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import arrowIcon from "@assets/arrow_1783201262245.png";
+import documentIcon from "@assets/doc_1783202136247.png";
 
 /* ── Bill detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Bill Details"
@@ -223,7 +224,7 @@ export function BillDetailPopup({
                     className="bg-[#0a0c10] border border-[#1d2132] border-solid flex items-start rounded-[12px] w-full hover:border-[#7631ee]/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <div className="flex flex-col items-center justify-center shrink-0 size-[64px]">
-                      <FileText size={24} className="text-[#7631ee]" />
+                      <img src={documentIcon} alt="" className="size-[24px]" />
                     </div>
                     <div className="flex flex-1 flex-col items-start justify-center min-w-px self-stretch">
                       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full text-left">
