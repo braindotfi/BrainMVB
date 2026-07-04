@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 /* ─── Billing-related modals ────────────────────────────────
    - ChangePlanModal:           pick a plan, confirm.
@@ -7,9 +8,7 @@ import * as Dialog from "@radix-ui/react-dialog";
    - CancelSubscriptionModal:   logout-style confirm dialog.                 */
 
 const CloseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M11.667 4.333 4.333 11.667M4.333 4.333l7.334 7.334" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
+  <img src={closeIcon} alt="" className="size-[14px]" />
 );
 
 const CheckIcon = () => (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import closeIcon from "@assets/Close_1783208306441.png";
 import { RecordPager } from "./RecordPager";
 import {
   Receipt,
@@ -175,9 +176,7 @@ export function ProposalDetail({
               aria-label="Close"
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1L11 11M11 1L1 11" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 

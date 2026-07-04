@@ -1,7 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, useEffect } from "react";
 import {
-  X,
   ShieldCheck,
   ShieldAlert,
   Clock,
@@ -15,6 +14,8 @@ import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 // (openRuleDetail and resolveRule temporarily unused; linked-rules section removed to match Figma ordering)
+import warningIcon from "@assets/warning_1783208306441.png";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
@@ -135,7 +136,7 @@ export function VendorDetailPopup({
               className="absolute right-[12px] top-[12px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               data-testid="button-close-vendor-popup"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 
@@ -214,7 +215,7 @@ export function VendorDetailPopup({
                     className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
                   >
                     <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                      <AlertTriangle size={16} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
+                      <img src={warningIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
                       <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
                         <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
                           {flag.label}
@@ -344,7 +345,7 @@ export function VendorDetailPopup({
                         style={{ background: "#4a2300" }}
                         data-testid="button-review-change"
                       >
-                        <AlertTriangle size={24} /> Review the Change
+                        <img src={warningIcon} alt="" className="size-[24px] shrink-0" /> Review the Change
                       </button>
                     </div>
                   ) : (

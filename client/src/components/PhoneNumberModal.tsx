@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAppAlert } from "@/components/AppAlert";
 import { setUserPhone } from "@/lib/userContact";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 /* ─── Phone Number entry + Verify modals ───────────────────────────────
    Three-step flow:
@@ -25,9 +26,7 @@ const ChevronDown = ({ className = "size-[24px]" }: { className?: string }) => (
    Outer button is 32px circle, icon group is 16px inset at (8,8).
    Strokes are 1.5 × #a8b9f4, matching the Figma vector export. */
 const CloseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M11.667 4.333 4.333 11.667M4.333 4.333l7.334 7.334" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
+  <img src={closeIcon} alt="" className="size-[14px]" />
 );
 
 const BackIcon = () => (

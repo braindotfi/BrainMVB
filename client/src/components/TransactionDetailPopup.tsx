@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+// lucide-react removed — close icon uses asset
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 /** Subset of brain-core's Transaction we render (mirrors FinancesPage). */
 export interface BrainTransactionDTO {
@@ -137,7 +138,7 @@ export function TransactionDetailPopup({
               className="absolute right-[12px] top-[12px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               data-testid="button-close-transaction-popup"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 

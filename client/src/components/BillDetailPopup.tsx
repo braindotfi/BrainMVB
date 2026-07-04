@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import type { ReactNode } from "react";
-import { AlertTriangle, ChevronRight, X } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -9,6 +9,7 @@ import { useIntents } from "@/lib/intentsStore";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import documentIcon from "@assets/doc_1783202136247.png";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 /* ── Bill detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Bill Details"
@@ -161,7 +162,7 @@ export function BillDetailPopup({
                 className="absolute right-[12px] top-[12px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 data-testid="button-close-bill-popup"
               >
-                <X size={14} className="text-[#a8b9f4]" />
+                <img src={closeIcon} alt="" className="size-[14px]" />
               </DialogPrimitive.Close>
             </div>
 

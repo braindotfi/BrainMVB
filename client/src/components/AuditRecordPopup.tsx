@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
+import { ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
+import closeIcon from "@assets/Close_1783208306441.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, linkedRelationship } from "@/lib/auditTypes";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
@@ -105,7 +106,7 @@ export function AuditRecordPopup({
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-audit-popup"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 

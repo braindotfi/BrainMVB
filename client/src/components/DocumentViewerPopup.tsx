@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
-  X,
   FileText,
   Receipt,
   Landmark,
@@ -13,6 +12,7 @@ import {
   ExternalLink,
   ArrowLeftRight,
 } from "lucide-react";
+import closeIcon from "@assets/Close_1783208306441.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel } from "@/lib/documentTypes";
 import { resolveDocument } from "@/lib/openDocumentDetail";
@@ -524,7 +524,7 @@ export function DocumentViewerPopup({
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-document-viewer"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 

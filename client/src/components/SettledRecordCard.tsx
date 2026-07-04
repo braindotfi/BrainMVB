@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X, CircleCheck, ChevronRight } from "lucide-react";
+import { CircleCheck, ChevronRight } from "lucide-react";
+import closeIcon from "@assets/Close_1783208306441.png";
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -88,7 +89,7 @@ export function SettledRecordCard({
               className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-settled-card"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 

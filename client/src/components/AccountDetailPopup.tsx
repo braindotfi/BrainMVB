@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, X } from "lucide-react";
+import { Info } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";
+import closeIcon from "@assets/Close_1783208306441.png";
 
 /* ── Read-only Account detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"
@@ -182,7 +183,7 @@ export function AccountDetailPopup({
               className="absolute right-[12px] top-[12px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               data-testid="button-close-account-popup"
             >
-              <X size={14} className="text-[#a8b9f4]" />
+              <img src={closeIcon} alt="" className="size-[14px]" />
             </DialogPrimitive.Close>
           </div>
 
