@@ -614,7 +614,7 @@ export function FinancesPage() {
 
             {/* RECENT */}
             {activeTab === "Recent" && (
-              <WidgetCard title="Recent" count={transactions.length}>
+              <WidgetCard title="Recent Transactions" count={transactions.length}>
                 {transactions.length > 0 ? (
                   transactions.map((t, idx) => (
                     <div key={t.id} className="flex flex-col gap-[8px] w-full">
@@ -686,7 +686,7 @@ export function FinancesPage() {
           </div>
         </div>
       </ScrollArea>
-      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} />
+      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} onSelectTransaction={(id) => setOpenTxId(id)} />
       <AccountDetailPopup
         accountId={openAccountId}
         onClose={() => setOpenAccountId(null)}
