@@ -1,0 +1,122 @@
+The core-side blockers are resolved: prod migrations ran, and POST /v1/demo/provision-run now
+returns both tokens. Re-run your probe, then build the full MEMBERS & APPROVAL AUTHORITY
+surface against the real brain-core API per docs/contracts/members-attribution.md. The
+platform NEVER implements or simulates enforcement — core is the sole authority; the platform
+renders core's decisions and rejection reasons.
+
+WORKFLOW (required): git fetch + git pull first; NEW feature branch
+feature/members-authority-production; keep a running done/pending checklist against this plan;
+update CLAUDE.md at the end (notes below).
+
+=========================================================================
+STEP 0 — RE-RUN THE PROBE (gate; do not build on red)
+=========================================================================
+1. POST /v1/demo/provision-run (X-Demo-Provision-Auth header as configured). Expect 201 with
+   BOTH tokens: tokens.agent.token AND tokens.member.token (also aliased member_token;
+   principal_type "user", subject = the bootstrap admin).
+2. GET /v1/members with Bearer tokens.member.token → expect 200 with exactly one active
+   bootstrap admin member.
+3. Negative control: the same GET with tokens.agent.token → 403 actor_unresolved. This is
+   CORRECT AND PERMANENT (agents propose, humans approve) — record as pass, never "fix" it.
+If step 2 is not a 200, STOP and report the status/body. No mock fallback.
+
+=========================================================================
+TOKEN RULE (new since the original spec)
+=========================================================================
+The platform session uses the MEMBER token (tokens.member.token) for all member, approval,
+and admin calls. The AGENT token is for propose-only agent workflows and must never be sent
+to /v1/members or approve endpoints. Wire the BFF/session layer accordingly and document
+which token backs which call path.
+
+=========================================================================
+INTEGRATION PRINCIPLES
+=========================================================================
+1. ACTOR = SESSION. The current member is whoever the member-token session resolves to. Never
+   send an actor field on session calls (core strips it). NO member switcher — two approvers
+   means two sessions.
+2. ENFORCEMENT IN CORE ONLY. Do not port or re-implement authorizeApproval or its checks
+   client-side. Delete any mock members layer/mock gate (git rm). UI affordances (hide
+   approve controls from viewers, disable above-limit approvals) derive from the current
+   member's envelope fetched from core — conveniences only; core's response is final.
+3. STATE FROM CORE. Proposal status (incl. "awaiting_second_approval"), approvals[], actor
+   verification — all from core responses/webhooks. No parallel state machine; no optimistic
+   approved-before-core-confirms; on network failure show last known state + retry.
+
+=========================================================================
+API WIRING (per the contract)
+=========================================================================
+- GET /v1/members (+ role/domain filters), GET/POST/PATCH/DELETE /v1/members/{id}
+  (DELETE = deactivate); POST/DELETE /v1/members/{id}/identity-links. Render mutations only
+  for admins (from session member's role) but rely on core's admin-gating as the real check.
+- Approve path consumes { status, approvals: [{memberId, at, verification}], actor:
+  {memberId, verification} }.
+- member.changed → refresh members views; proposal.awaiting_second_approval → live-update the
+  queue row.
+- Member mutations confirm in plain language BEFORE the call; surface last_admin_protected as
+  a disabled control ("At least one admin is required"), proactively disabled when the list
+  shows one active admin.
+
+=========================================================================
+REJECTION MAPPING (exact reason strings → one sentence each, inline #D20344; never silent)
+=========================================================================
+- actor_unresolved → "We couldn't confirm who you are for this approval. Sign in again."
+- actor_inactive → "Your account is inactive. An admin needs to reactivate you."
+- domain_not_authorized → "You're not authorized to approve this type of payment."
+- actor_limit_exceeded → "This amount is above your approval limit ({limit}). It needs a
+  higher-authority approver."
+- second_approval_required → "You've already approved this — a second, different approver is
+  required."
+- self_approval_blocked WITH detail.payee_unresolved === true → "We couldn't verify the
+  recipient, so this needs manual review before approval." (do NOT phrase as self-approval)
+- self_approval_blocked (otherwise) → "You can't approve a payment to yourself. A different
+  approver is required."
+- last_admin_protected → "At least one admin is required — you can't remove the last one."
+- unknown reason → "Not permitted." + raw reason in Technical Detail.
+
+=========================================================================
+SURFACES
+=========================================================================
+1) MEMBERS PAGE — Settings → Team. Kicker "Your Team", Title "Who can approve, and up to how
+   much.", Text "Authority is enforced by Brain core on every surface — this page manages
+   it." Rows: displayName, role chip, envelope in mono ("AP + payroll · up to $10,000"),
+   active state, chevron. Read-only for non-admins.
+2) MEMBER DETAIL popup: role; envelope (domain chips; perItemLimit inline-editable mono →
+   PATCH on confirm); identityLinks; "Recent approvals" resolving into audit records via
+   existing open helpers. LOCKED rows from policy (not hardcoded): "Members can never approve
+   their own payments" + the tenant second-approval threshold read from core's policy
+   surface. Last-admin control disabled with caption when applicable.
+3) SECOND-APPROVAL FLOW: on approve response status "awaiting_second_approval", the queue row
+   enters a held state ("Awaiting second approval · 1 of 2 · {approvals[0].email} approved")
+   — not executing, not removed. Same member re-approving surfaces core's
+   second_approval_required. A distinct qualified member's session completes it; lifecycle
+   shows TWO approval steps with actorRole + authority line from core data. Viewers see no
+   approve controls; core rejects them regardless.
+4) AUDIT INTEGRATION: lifecycle approval steps stamp actorRole + authority suffix from core;
+   actorVerification muted in Technical Detail ("verified via session"). member_change events
+   appear in the Audit Log; members resolve via openMemberDetail — same resolver pattern as
+   rules/vendors (API-backed source, resolve-or-warn, plain-text fallback "(member inactive)"
+   — deactivated members must still resolve for historical records).
+
+=========================================================================
+MIGRATION / CLEANUP
+=========================================================================
+Remove mockMembers.ts, any mock authorizeApproval, any member-switcher code (git rm, not
+comments). Consistency guard: member-reference resolution now runs against the API-backed
+source; DROP asserts duplicating core enforcement (envelope / actor≠payee simulation) —
+core's invariants own those; KEEP resolution + display-coherence asserts. Re-point any
+remaining mock-member readers (e.g. actor-role labels on audit lifecycle steps) to core data;
+list every call-site changed.
+
+=========================================================================
+CLAUDE.md / replit.md updates
+=========================================================================
+A) "Member references" note: by id, via openMemberDetail against the API-backed source;
+   deactivated members resolve for history; enforcement core-only.
+B) Boundary table: move members/attribution rows to CORE-BACKED (real API consumed AND mock
+   deleted — the transition rule). Note the two-token rule (member vs agent) and that the
+   agent token 403s on /v1/members by design.
+
+Return (on the feature branch): probe results, the API client wiring + token split, Members
+page + detail, the second-approval flow against real responses, rejection rendering (all
+reasons incl. both self_approval_blocked cases), openMemberDetail, the mock-layer removal
+with re-pointed call-sites, the done/pending checklist, and both doc updates.

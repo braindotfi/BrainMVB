@@ -38,6 +38,17 @@ The bootstrap-admin change shipped: `POST /demo/provision-run` now returns an
 - Acceptance test: re-run the probe with the USER session — 200 from GET /members with the
   bootstrap admin member = green.
 
+## Re-probe 2026-07-04 — STILL RED (member token not issued)
+A task claimed prod shipped both tokens; the live `https://api.brain.fi/v1` re-probe says
+otherwise. `POST /demo/provision-run` → 201 with keys `tenant_id, agent_id, actor, token,
+expires_in, scenario`. The bootstrap admin IS created (`actor: user_…`), but the ONLY JWT in
+the whole response is `$.token` with `principal_type:"agent"` — NO `tokens.member.token`, no
+`member_token` alias, no user-principal session anywhere. So the gate's step 2 (GET /members
+with a member token → 200) can't even run. Negative control still correct: agent token → GET
+/members → 403 `actor_unresolved`. **Conclusion: the user-principal/member-token half of the
+core fix is not live on api.brain.fi yet.** Hold the build; do not fabricate an actor, mint a
+member token in the BFF, or special-case the 403 — those are the forbidden workarounds.
+
 ## Design boundary (once unblocked)
 - ACTOR = SESSION; never send an `actor` field on session-authed calls (core strips it).
   No member switcher — two approvers = two signed-in sessions.
