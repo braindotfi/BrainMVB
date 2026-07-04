@@ -691,6 +691,7 @@ export function FinancesPage() {
         accountId={openAccountId}
         onClose={() => setOpenAccountId(null)}
         onOpenTransaction={(id) => { setOpenAccountId(null); setOpenTxId(id); }}
+        onSelectAccount={(id) => setOpenAccountId(id)}
       />
     </div>
   );
