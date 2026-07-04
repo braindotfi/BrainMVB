@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
+import arrowIcon from "@assets/arrow_1783201262245.png";
 
 /* ── Read-only Account detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"
@@ -289,7 +290,7 @@ export function AccountDetailPopup({
                     onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
                     className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                   >
-                    <ChevronLeft size={16} className="text-[#6c779d]" />
+                    <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
                       Previous
                     </span>
@@ -304,7 +305,7 @@ export function AccountDetailPopup({
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
                       Next
                     </span>
-                    <ChevronRight size={16} className="text-[#6c779d]" />
+                    <img src={arrowIcon} alt="" className="size-[16px]" />
                   </button>
                 </div>
               </div>
