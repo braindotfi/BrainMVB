@@ -1,0 +1,78 @@
+Three fixes from the codebase review: reconcile the diverged branches into main, correct the
+replit.md headline, and pin the BFF safety invariants with tests.
+
+WORKFLOW (required): git fetch + git pull first on every branch you touch. Do the work on a
+NEW branch (fix/merge-reconciliation-and-tests) built FROM feat/ui-rework. Keep a running
+done/pending checklist against this plan in the PR description. Update replit.md and
+CLAUDE.md as part of the work (not after).
+
+=========================================================================
+TASK 1 — RECONCILE BRANCHES AND MERGE TO MAIN
+=========================================================================
+Current state: main is frozen at April 25. feat/ui-rework (the true tip, has the members
+integration) is MISSING two commits that exist only on feat/brain-core-honesty:
+  81b4d88 refactor(finance): remove fabricated money surfaces, render honest empty states
+  c6f39d4 fix(auth): verify SIWE signature + single-use nonce  ← security fix, priority
+1. Merge (or cherry-pick) those two commits from feat/brain-core-honesty into your working
+   branch. Resolve conflicts preserving BOTH the ui-rework members work AND the honesty
+   semantics (real SIWE verification, single-use nonce, honest empty states over fabricated
+   numbers). If a conflict forces a choice between a fabricated surface and an empty state,
+   the empty state wins.
+2. Verify post-merge: the members flow still works end to end against brain-core (run the
+   probe: provision → member token → GET /v1/members 200; approve path unaffected), SIWE
+   verification is active, and no fabricated money surface reappeared.
+3. Open a PR from the working branch to MAIN. Title it as the platform's catch-up merge.
+   After merge, main must contain everything: the full platform (Review, Rules, Vendors,
+   Audit Log, Finances, members integration, BFF) with the honesty fixes. Do not leave any
+   needed commit stranded on feat/brain-core-honesty or feat/ui-rework; after this lands
+   those branches are superseded (note that in the PR description).
+
+=========================================================================
+TASK 2 — FIX THE replit.md HEADLINE
+=========================================================================
+replit.md currently opens with "Programmable neobank on Base L2" — the abandoned pre-pivot
+positioning. Replace the title with EXACTLY:
+
+# Brain. Your AI Brain, built to run finance for you.
+
+Sweep the rest of replit.md and CLAUDE.md for any other neobank-era positioning remnants
+(neobank, trading caps, custody language describing the CURRENT product) and correct them.
+Do not rewrite history sections that accurately describe the past; fix only present-tense
+claims. Keep the boundary table and contracts intact. No em dashes, no ampersands, no emojis
+in any copy you write.
+
+=========================================================================
+TASK 3 — PIN THE SAFETY INVARIANTS WITH TESTS
+=========================================================================
+The BFF's safety-critical behavior is currently enforced only by comments and discipline.
+Add a test suite (vitest) covering, at minimum:
+1. TOKEN ROUTING: the /propose path sends the AGENT token and only it; members reads/writes
+   and the approve/reject paths send the MEMBER token and never the agent token.
+2. NO ACTOR FIELD: no BFF request to brain-core ever includes an actor field in the payload
+   (ACTOR = SESSION; core derives it).
+3. PROVISION FAIL-HARD: a provision-run response lacking the member token
+   (member_token / tokens.member.token) throws with the clear error; it must NOT silently
+   fall back to agent-only.
+4. REJECTION MAPPING: approvalRejections maps every reason string to its sentence, including
+   BOTH self_approval_blocked cases split by details.payee_unresolved (payee-unresolved
+   renders the "couldn't verify the recipient" message, never the "yourself" message), and
+   unknown reasons fall through to the generic message with the raw reason preserved.
+5. SECRETS BOUNDARY: BRAIN_DEMO_PROVISION_SECRET and brain-core tokens are never present in
+   any response the BFF returns to the browser.
+Mock brain-core at the HTTP boundary (intercept fetch); do not hit the live API in tests.
+Wire a "test" script into package.json so the suite runs with one command, and note in
+CLAUDE.md that these tests are the platform-side twins of core's invariants: any change to
+server/brain/* must keep them green.
+
+=========================================================================
+DOCS
+=========================================================================
+CLAUDE.md: record the branch reconciliation (main is now current; ui-rework/honesty
+superseded), the test suite's role as invariant guard, and add one line under a "Repo
+discipline" note: "The Replit workspace is the source of truth; push to GitHub and merge to
+main after each milestone so the public repo never drifts." Update the boundary table if any
+row's status changed in the merge.
+
+Return: the reconciliation PR (branch → main) with the done/pending checklist, the post-merge
+end-to-end verification results, the replit.md/CLAUDE.md updates with the new headline, and
+the passing test suite output.
