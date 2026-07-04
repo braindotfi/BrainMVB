@@ -3,7 +3,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, linkedRelationship } from "@/lib/auditTypes";
-import { resolveActorRole } from "@/lib/actors";
+import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
+import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -33,6 +34,8 @@ export function AuditRecordPopup({
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  // Subscribe to the members cache so actor labels become tappable once it primes.
+  useMembersCache();
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
 
@@ -136,6 +139,9 @@ export function AuditRecordPopup({
                   // never hardcoded. Distinguishes the ACTOR (who decided) from the
                   // PAYEE in linked evidence (who was paid).
                   const actorRole = resolveActorRole(step.actor);
+                  // Tappable ONLY when the actor maps to a real core member. Never a
+                  // client authority claim — just a link into core's member record.
+                  const actorMember = resolveMemberByTokens(actorIdentityTokens(step.actor));
                   return (
                     <div key={idx} className="flex gap-[12px] items-start w-full">
                       <div className="flex flex-col items-center shrink-0">
@@ -144,7 +150,18 @@ export function AuditRecordPopup({
                       </div>
                       <div className="flex flex-col gap-[2px] flex-1 min-w-px">
                         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4]">
-                          {step.label}
+                          {actorMember ? (
+                            <button
+                              type="button"
+                              onClick={() => openMemberDetail(actorMember.id)}
+                              data-testid={`link-actor-member-${idx}`}
+                              className="text-[#a8b9f4] underline decoration-[#414965] underline-offset-2 hover:decoration-[#a8b9f4] transition-colors"
+                            >
+                              {step.label}
+                            </button>
+                          ) : (
+                            step.label
+                          )}
                           {actorRole && (
                             <span data-testid={`text-actor-role-${idx}`} className="text-[#6c779d]"> · {actorRole}</span>
                           )}

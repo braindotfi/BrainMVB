@@ -22,7 +22,20 @@ import { brainConfig, brainTokenMode } from "./config";
 import { brainUserSubject } from "./ids";
 
 export interface BrainSession {
+  /**
+   * The MEMBER token (principal_type "user", subject = the bootstrap admin). This is the
+   * platform session token: it backs ALL reads, member/admin calls, policy reads, and the
+   * approve/reject paths (it carries policy:read, payment_intent:approve, audit:read,
+   * execution:admin). Per the token rule it is what every non-propose call uses.
+   */
   token: string;
+  /**
+   * The AGENT token (principal_type "agent", propose-only: payment_intent:propose +
+   * execution:propose). Used ONLY to create PaymentIntents on /propose. It is NOT authorized
+   * for /members or the approve path — sending it there correctly 403s (agents propose, humans
+   * approve), so it must never back those calls.
+   */
+  agentToken: string;
   tenantId: string;
 }
 
@@ -52,14 +65,14 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   const now = Math.floor(Date.now() / 1000);
   const cached = cache.get(appUserId);
   if (cached && cached.exp - REFRESH_SKEW > now) {
-    return { token: cached.token, tenantId: cached.tenantId };
+    return { token: cached.token, agentToken: cached.agentToken, tenantId: cached.tenantId };
   }
 
   // Coalesce: if a session is already being created for this user, await it.
   const pending = inflight.get(appUserId);
   if (pending) {
     const session = await pending;
-    return { token: session.token, tenantId: session.tenantId };
+    return { token: session.token, agentToken: session.agentToken, tenantId: session.tenantId };
   }
 
   const create = createSession(appUserId, now);
@@ -67,7 +80,7 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   try {
     const session = await create;
     cache.set(appUserId, session);
-    return { token: session.token, tenantId: session.tenantId };
+    return { token: session.token, agentToken: session.agentToken, tenantId: session.tenantId };
   } finally {
     inflight.delete(appUserId);
   }
@@ -98,12 +111,31 @@ async function provisionSession(): Promise<CachedSession> {
   if (!res.ok) {
     throw new Error(`brain-core /demo/provision-run → HTTP ${res.status}: ${text}`);
   }
-  const json = JSON.parse(text) as { tenant_id?: string; token?: string; expires_in?: number };
-  if (!json.token || !json.tenant_id) {
+  const json = JSON.parse(text) as {
+    tenant_id?: string;
+    token?: string;
+    agent_token?: string;
+    member_token?: string;
+    tokens?: { agent?: { token?: string }; member?: { token?: string } };
+    expires_in?: number;
+  };
+  // Two principals since the members fix landed: MEMBER (user-principal, backs the platform
+  // session) + AGENT (propose-only). Prefer the explicit aliases, fall back to tokens.*, and
+  // finally to the legacy single `token` (which is the agent token) so a partially-rolled-back
+  // core still boots reads/propose.
+  const memberToken = json.member_token ?? json.tokens?.member?.token;
+  const agentToken = json.agent_token ?? json.tokens?.agent?.token ?? json.token;
+  if (!json.tenant_id || !agentToken) {
     throw new Error("brain-core /demo/provision-run returned no token/tenant_id");
   }
+  if (!memberToken) {
+    throw new Error(
+      "brain-core /demo/provision-run returned no member token (tokens.member.token). The " +
+        "members/approval surface requires the user-principal token — cannot start the session.",
+    );
+  }
   const exp = Math.floor(Date.now() / 1000) + (json.expires_in ?? 30 * 60);
-  return { token: json.token, tenantId: json.tenant_id, exp };
+  return { token: memberToken, agentToken, tenantId: json.tenant_id, exp };
 }
 
 /** Local in-process minting — dev fallback only. Mirrors brain-core tools/dev-token. */
@@ -135,7 +167,9 @@ async function mintLocalSession(appUserId: string, now: number): Promise<CachedS
     const secret = new TextEncoder().encode(brainConfig.hs256Secret!);
     token = await builder.setProtectedHeader({ alg: "HS256" }).sign(secret);
   }
-  return { token, tenantId: brainConfig.devTenantId, exp };
+  // Local dev mints one user-principal token; it doubles as the agent token here since a
+  // self-controlled brain-core accepts it for both read/approve and propose scopes.
+  return { token, agentToken: token, tenantId: brainConfig.devTenantId, exp };
 }
 
 /** Test/maintenance hook — drop all cached sessions. */

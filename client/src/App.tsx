@@ -26,6 +26,7 @@ import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
+import { MemberDetailHost } from "@/components/MemberDetailPopup";
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -161,6 +162,7 @@ function App() {
             <AppAlertProvider>
               <Toaster />
               <AppLayout />
+              <MemberDetailHost />
             </AppAlertProvider>
           </TooltipProvider>
         </IntentsProvider>

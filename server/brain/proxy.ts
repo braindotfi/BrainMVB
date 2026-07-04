@@ -26,6 +26,11 @@ import {
   evaluatePolicy,
   proposeInvoicePayment,
   rejectPaymentIntent,
+  approvePaymentIntent,
+  createMember,
+  updateMember,
+  deactivateMember,
+  getApprovalPolicyFacts,
   askWikiQuestion,
   type PolicyAction,
 } from "./client";
@@ -62,7 +67,7 @@ export function createBrainProxyRouter(): Router {
       return res.status(400).json({ error: "invalid_request", message: "invoice_id is required" });
     }
     try {
-      const { token, tenantId } = await getBrainSession(req.session.userId!);
+      const { token, agentToken, tenantId } = await getBrainSession(req.session.userId!);
 
       // Look up the invoice server-side so the evaluate action mirrors what the
       // propose actually pays (truthful trace, not client-asserted amounts).
@@ -88,8 +93,10 @@ export function createBrainProxyRouter(): Router {
         );
       }
 
-      // Authoritative: create the §6-gated PaymentIntent (no execution).
-      const intent = await proposeInvoicePayment(token, invoiceId);
+      // Authoritative: create the §6-gated PaymentIntent (no execution). Propose is an AGENT
+      // action — the member/session token has no payment_intent:propose scope, so this MUST
+      // use the agent token (agents propose, humans approve).
+      const intent = await proposeInvoicePayment(agentToken, invoiceId);
       return res.json({ intent, decision });
     } catch (err) {
       return relayError(res, err);
@@ -147,6 +154,79 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
+  // ── Members & approval authority (MEMBER token; core is the sole enforcer) ──
+  //
+  // Reads (GET /members, GET /members/:id, GET /policy/:tenant) flow through the generic
+  // GET passthrough below on the member/session token. These are the WRITES + one derived
+  // read, added per-endpoint so an arbitrary session POST can't reach an unaudited path.
+  // We NEVER send an `actor` field — core resolves the member from the token (ACTOR=SESSION).
+
+  // POST /api/brain/members — create a member (core admin-gates; relays 403 verbatim).
+  router.post("/members", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const result = await createMember(token, req.body);
+      return res.json(result);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // PATCH /api/brain/members/:id — edit role/envelope (perItemLimit, domains, role).
+  router.patch("/members/:id", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const result = await updateMember(token, String(req.params.id), req.body);
+      return res.json(result);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // DELETE /api/brain/members/:id — DEACTIVATE (core protects the last admin → 403).
+  router.delete("/members/:id", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const result = await deactivateMember(token, String(req.params.id));
+      return res.json(result);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // POST /api/brain/payment-intents/:id/approve — human approves a pending intent.
+  // MEMBER token only; surfaces awaiting_second_approval / all rejection reasons verbatim.
+  router.post("/payment-intents/:id/approve", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    const id = String(req.params.id);
+    if (!id.startsWith("pi_")) {
+      return res.status(400).json({ error: "invalid_request", message: "payment_intent id (pi_…) required" });
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const intent = await approvePaymentIntent(token, id);
+      return res.json({ intent });
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // GET /api/brain/approval-policy — derived facts for Member Detail "locked rows"
+  // (self-approval invariant + tenant second-approval threshold), read from core's policy.
+  router.get("/approval-policy", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token, tenantId } = await getBrainSession(req.session.userId!);
+      const facts = await getApprovalPolicyFacts(token, tenantId);
+      return res.json(facts);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
   // Generic read passthrough: GET /api/brain/<brain-core path>
   router.get(/.*/, async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) {
@@ -178,6 +258,13 @@ export function createBrainProxyRouter(): Router {
   });
 
   return router;
+}
+
+function unconfigured(res: Response): Response {
+  return res.status(503).json({
+    error: "brain_unconfigured",
+    message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+  });
 }
 
 function relayError(res: Response, err: unknown): Response {

@@ -180,6 +180,14 @@ that let rules break before):
    against the payee's label / refId / resolved vendor name. Passes clean today
    (`sarah@meridian` is never a payee). Logs `[actor-payee-segregation] OK ...`.
 
+9. **`checkMemberActorCoherence()`** — member↔actor seam guard. Members are
+   CORE-BACKED (fetched at runtime, ephemeral ids) so this guard can't assert against
+   live member data at boot; what it protects is the client seam that links an audit
+   ACTOR to a core member. `resolveMemberByTokens` matches by normalized email/id, so
+   the `actors.ts` registry those tokens come from must be unambiguous — this guard
+   flags any duplicate or empty actor email/id (which would make an ACTOR resolve to
+   the wrong member, or silently fail to link). Logs `[member-actor-coherence] OK ...`.
+
 ### Actor vs payee convention (audit records)
 
 Audit records surface two distinct parties and they must stay visually + semantically
@@ -190,7 +198,15 @@ separate:
   inline: `"sarah@meridian approved · finance admin"`. Roles are NEVER hardcoded per
   step. `LifecycleStep.authority` is reserved for the future members/limits spec
   (a second suffix like `· within her $10K payroll limit`) — the type + render slot
-  exist, but no members model is built yet.
+  exist.
+  - **Actor → member link**: the ACTOR label becomes TAPPABLE (opens the member popup
+    via `openMemberDetail`) ONLY when `resolveMemberByTokens(actorIdentityTokens(step.actor))`
+    finds a real core member (matched by normalized email/id against the API-backed
+    members cache). No core match → plain text. This is a link into core's record, never
+    a client-side authority claim. `AuditRecordPopup` subscribes to `useMembersCache()`
+    so labels light up once the cache primes. Guard 9 (`checkMemberActorCoherence`) keeps
+    the `actors.ts` registry unambiguous (no dup/empty email/id) so a link never resolves
+    to the wrong member.
 - **PAYEE** = WHO was paid. Linked-evidence rows on payment records show a
   RELATIONSHIP chip (`PAYEE`), not the bare entity kind. This is DERIVED centrally by
   `linkedRelationship(record, link)` in `auditTypes.ts` from record type (payment

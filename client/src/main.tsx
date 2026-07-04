@@ -21,6 +21,7 @@ if (import.meta.env.DEV) {
     m.checkAnchorUiCoherence();
     m.checkAgentDomainCoherence();
     m.checkActorPayeeSegregation();
+    m.checkMemberActorCoherence();
   });
 }
 

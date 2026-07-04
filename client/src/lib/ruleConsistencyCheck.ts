@@ -7,7 +7,7 @@ import { resolveVendor } from "./openVendorDetail";
 import { MOCK_DOCUMENTS } from "./mockDocuments";
 import { resolveDocument } from "./openDocumentDetail";
 import { allProposals, resolveProposal } from "./openProposalDetail";
-import { actorIdentityTokens } from "./actors";
+import { actorIdentityTokens, ACTORS } from "./actors";
 import { linkedRelationship } from "./auditTypes";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
@@ -725,6 +725,54 @@ export function checkActorPayeeSegregation(): SemanticIssue[] {
   } else {
     console.info(
       "[actor-payee-segregation] OK — no audit record has the same party as both approver and payee.",
+    );
+  }
+
+  return issues;
+}
+
+/* ── Member ↔ actor seam coherence ─────────────────────────────────────────────
+   Members are CORE-BACKED (fetched at runtime, ephemeral ids) so this guard can't
+   assert against live member data at boot. What it CAN protect is the client seam
+   that links an audit ACTOR to a core member: `resolveMemberByTokens` matches by
+   normalized email/id, so the ACTORS registry those tokens come from must be
+   unambiguous. Duplicate or empty email/id would make an actor resolve to the wrong
+   member (or silently fail to link). Never throws; only console.error's.
+   ──────────────────────────────────────────────────────────────────────────── */
+export function checkMemberActorCoherence(): SemanticIssue[] {
+  const issues: SemanticIssue[] = [];
+  const seenEmail = new Map<string, string>();
+  const seenId = new Map<string, string>();
+
+  for (const a of ACTORS) {
+    const email = norm(a.email);
+    const id = norm(a.id);
+    if (!email) {
+      issues.push({ source: `actor ${a.id}`, message: `actor has an empty email — the member link resolves by email/id and would break.` });
+    }
+    if (!id) {
+      issues.push({ source: `actor ${a.email}`, message: `actor has an empty id.` });
+    }
+    if (email) {
+      const prev = seenEmail.get(email);
+      if (prev) issues.push({ source: `actor ${a.id}`, message: `duplicate actor email "${a.email}" (also on "${prev}") — an audit actor would resolve ambiguously to a member.` });
+      else seenEmail.set(email, a.id);
+    }
+    if (id) {
+      const prev = seenId.get(id);
+      if (prev) issues.push({ source: `actor ${a.id}`, message: `duplicate actor id "${a.id}" (also on "${prev}").` });
+      else seenId.set(id, a.email);
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error(
+      `[member-actor-coherence] ${issues.length} issue(s) in the actor↔member seam:\n` +
+        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+    );
+  } else {
+    console.info(
+      "[member-actor-coherence] OK — actor registry ids/emails are unambiguous for member linking.",
     );
   }
 

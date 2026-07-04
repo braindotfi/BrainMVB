@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { queryClient } from "./queryClient";
+import { clearMembers } from "./membersStore";
 
 export interface AuthUser {
   id: string;
@@ -144,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setWirexAccounts([]);
     queryClient.clear();
+    clearMembers();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -167,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setWirexAccounts([]);
     queryClient.clear();
+    clearMembers();
   }, [user]);
 
   const deleteAccountData = useCallback(async () => {

@@ -15,6 +15,7 @@ import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import PaymentsFigma from "@/components/settings/figma/PaymentsSectionFigma";
 import AgentsFigma from "@/components/settings/figma/AgentsSection";
+import TeamFigma from "@/components/settings/figma/TeamSection";
 import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
 
@@ -26,6 +27,7 @@ type Section =
   | "notifications"
   | "payments"
   | "agents"
+  | "team"
   | "legal"
   | "account";
 
@@ -159,6 +161,18 @@ const BillingNavIcon = ({ active }: { active: boolean }) => (
   )
 );
 
+const TeamNavIcon = ({ active }: { active: boolean }) => {
+  const c = active ? "#a8b9f4" : "#6c779d";
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0">
+      <circle cx="9" cy="8" r="3" stroke={c} strokeWidth="1.6" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M16 5.5a3 3 0 0 1 0 5" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M17 13.5a5.5 5.5 0 0 1 3.5 5.1" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+};
+
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
   { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
@@ -166,6 +180,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
   { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
   { id: "payments",      label: "Payments",          Icon: PaymentsNavIcon },
   { id: "agents",        label: "Agent Permissions", Icon: AgentsNavIcon   },
+  { id: "team",          label: "Team",              Icon: TeamNavIcon     },
   { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
   { id: "account",       label: "Account",           Icon: AccountNavIcon  },
 ];
@@ -788,6 +803,7 @@ export function SettingsPage() {
     notifications: <NotificationsFigma />,
     payments:      <PaymentsFigma />,
     agents:        <AgentsFigma />,
+    team:          <TeamFigma />,
     legal:         <LegalFigma />,
     account:       <AccountFigma />,
   }[section];

@@ -15,6 +15,8 @@ import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import {
   useRules,
   pauseRule as storePauseRule,
@@ -240,7 +242,7 @@ const AutoHandledRow = ({
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export function ReviewPage() {
   const { format } = useCurrency();
-  const { intents, markDeclined } = useIntents();
+  const { intents, markDeclined, setApprovalState } = useIntents();
   const [, navigate] = useLocation();
 
   /* Status overrides keyed by proposal id, held in the shared reviewStatusStore
@@ -277,9 +279,15 @@ export function ReviewPage() {
     setReturnTo(null); // an action isn't a "return" close — drop any stale target
   };
 
-  /* Live brain-core PaymentIntents flagged by the §6 gate. */
-  const liveReviews = intents.filter((i) => i.outcome === "confirm" && !i.declined).map(intentToReview);
+  /* Live brain-core PaymentIntents flagged by the §6 gate. Approved intents drop
+     out of the queue; awaiting-second-approval ones stay (still need a second sign-off). */
+  const liveReviews = intents
+    .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
+    .map(intentToReview);
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
+  const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
+  const { toast } = useToast();
+
   const reject = useMutation<unknown, Error, string>({
     mutationFn: async (intentId: string) => {
       const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
@@ -287,9 +295,56 @@ export function ReviewPage() {
     },
     onSuccess: (_d, intentId) => markDeclined(intentId),
   });
+
+  /* Approve: ask brain-core to sign the intent off. NO client gate — we always
+     call core and react to its answer. Reads the JSON body even on a non-2xx so the
+     exact refusal reason surfaces inline. */
+  const [approving, setApproving] = useState(false);
+  const handleLiveApprove = async () => {
+    if (!activeLive?.live || !activeLive.intentId) return;
+    const intentId = activeLive.intentId;
+    setApproving(true);
+    setLiveRejection(null);
+    try {
+      const res = await fetch(`/api/brain/payment-intents/${intentId}/approve`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) {
+        setLiveRejection(mapApprovalRejection(parseCoreError(body)));
+        return;
+      }
+      const status: string = body?.intent?.status ?? "";
+      if (status === "awaiting_second_approval" || status === "pending_approval") {
+        setApprovalState(intentId, "awaiting_second");
+        toast({
+          title: "Approval recorded — one more needed",
+          description: "Your approval is in. Brain core still needs a second approver before this can settle.",
+        });
+      } else {
+        setApprovalState(intentId, "approved");
+        toast({
+          title: "Payment approved",
+          description: "Brain core accepted the approval — it will settle shortly.",
+        });
+      }
+      setActiveLive(null);
+    } catch {
+      setLiveRejection({
+        reason: "network_error",
+        title: "Couldn't reach Brain core",
+        detail: "The approval didn't go through. Check your connection and try again — nothing was changed.",
+      });
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const handleLiveReject = () => {
     if (activeLive?.live && activeLive.intentId) reject.mutate(activeLive.intentId);
     setActiveLive(null);
+    setLiveRejection(null);
   };
 
   /* Auto-handled receipts — already approved + settled under standing rules.
@@ -639,13 +694,16 @@ export function ReviewPage() {
         }}
       />
 
-      {/* Legacy / live approval modal */}
+      {/* Legacy / live approval modal. For a live PaymentIntent, Confirm/Approve
+          asks brain-core to sign it off (no client gate); its refusal shows inline. */}
       <ReviewModal
         item={activeLive}
         open={activeLive !== null}
-        onOpenChange={(o) => { if (!o) setActiveLive(null); }}
-        onConfirm={() => setActiveLive(null)}
+        onOpenChange={(o) => { if (!o) { setActiveLive(null); setLiveRejection(null); } }}
+        onConfirm={() => { if (activeLive?.live) { void handleLiveApprove(); } else { setActiveLive(null); } }}
         onReject={handleLiveReject}
+        busy={approving}
+        rejection={liveRejection}
       />
     </div>
   );

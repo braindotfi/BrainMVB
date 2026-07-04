@@ -3,7 +3,7 @@
 Programmable neobank on Base L2.
 
 > **Companion doc:** `CLAUDE.md` holds the canonical, break-easily-silently contracts
-> (rule/vendor/document reference resolution, the 8 dev coherence guards, actor↔payee
+> (rule/vendor/document reference resolution, the 9 dev coherence guards, actor↔payee
 > convention). This file is the overview; it summarizes those contracts and points to
 > CLAUDE.md for the full detail. Keep both current.
 
@@ -71,7 +71,7 @@ is deleted). Current state:
 | HomePage "Brain's take" / Brain Assistant chat | CORE-BACKED (Claude, ledger-grounded); static/canned fallback |
 | Bills inbox + Review live PaymentIntents (`useIntents`) | CORE-BACKED (read + propose/reject only) |
 | Review queue proposals, Rules, Vendors, Documents, Audit Log | MOCK-ONLY (`client/src/lib/mock*.ts`) |
-| Members & approval authority (Settings → Team) | NOT BUILT — core-backed integration ON HOLD (see `.agents/memory/members-authority-integration.md`) |
+| Members & approval authority (Settings → Team) | CORE-BACKED via `/api/brain/members` + `/approval-policy` (member/user-principal token); no mock fallback (see `.agents/memory/members-authority-integration.md`) |
 
 ## brain-core BFF (`server/brain/`)
 - Token source: **demo-provision** (preferred, key-free) — the BFF POSTs
@@ -79,12 +79,17 @@ is deleted). Current state:
   returns (reads + propose, no execute, ~30 min, cached per app user). Fallback: **local-key**
   (in-process JWT mint for a brain-core you control).
 - Proxy (`proxy.ts`): requires a session, mints/attaches the token, forwards `/api/brain/<path>`
-  → `${baseUrl}/<path>` (baseUrl already includes `/v1`). Only GET is proxied generically; the
-  ONLY writes exposed are `POST /api/brain/propose` and `/reject` (both demo-safe, no execute).
-- **Two principals**: demo provisioning returns an AGENT token (propose-only; correctly gets 403
-  `actor_unresolved` on member/approval endpoints — agents propose, humans approve) and, once the
-  in-progress core fix lands, a USER-principal session bound to the bootstrap admin (for
-  member/approval calls). See the members memory note.
+  → `${baseUrl}/<path>` (baseUrl already includes `/v1`). Generic GET is proxied; the explicit
+  writes exposed are `POST /api/brain/propose` `/reject` (propose uses the AGENT token) and the
+  member/approval writes `POST /members`, `PATCH/DELETE /members/:id`,
+  `POST /payment-intents/:id/approve` (all MEMBER token). `GET /approval-policy` too.
+- **Two principals (token rule)**: demo provisioning returns a MEMBER token (user-principal,
+  bootstrap admin) AND an AGENT token (propose-only). The **MEMBER token backs ALL non-propose
+  calls** — reads, member/approval/admin, policy; the **AGENT token is propose-ONLY** and
+  correctly 403s `actor_unresolved` on member/approval endpoints (agents propose, humans approve).
+  `auth.ts` reads `member_token`/`tokens.member.token` + `agent_token`/`tokens.agent.token` (legacy
+  single `token` = agent); it THROWS if no member token (no silent agent-token fallback). See the
+  members memory note.
 
 ## API Endpoints
 - **Auth** (`server/auth.ts`): `POST /api/auth/register` `/login` `/logout` `/demo`,
@@ -93,8 +98,10 @@ is deleted). Current state:
 - **Assistant**: `POST /api/assistant/chat` (`requireAuth`) — zod-validated `messages`, Claude
   with a Brain system prompt. 503 `assistant_unconfigured`, 402 `assistant_no_credit`, 500
   `assistant_failed` — each with a user-facing `reply` string.
-- **Brain proxy**: `GET /api/brain/*` (reads), `POST /api/brain/propose` `/reject`,
-  `GET /api/brain/recommendation`.
+- **Brain proxy**: `GET /api/brain/*` (reads incl. `/members`, `/approval-policy`),
+  `POST /api/brain/propose` `/reject` (agent token); member/approval writes (member token):
+  `POST /api/brain/members`, `PATCH/DELETE /api/brain/members/:id`,
+  `POST /api/brain/payment-intents/:id/approve`; `GET /api/brain/recommendation`.
 - **WireX** (all `requireAuth`, email from session): `GET /api/wirex/accounts` `/transactions`,
   `POST /api/wirex/onboard`.
 - **Account** (`requireAuth`): `DELETE /api/account` `/account/data`.
@@ -137,8 +144,19 @@ is deleted). Current state:
 
 ## Settings UI (Figma rebuilds)
 - Subpages in `client/src/components/settings/figma/`: Security, Notifications, Payments, Agents,
-  Legal, Account. Shared primitives in `FigmaPrimitives.tsx`; `ProfileSection` inline in
+  Team, Legal, Account. Shared primitives in `FigmaPrimitives.tsx`; `ProfileSection` inline in
   `SettingsPage.tsx`.
+- **Team** (`TeamSection.tsx`) — Members & approval authority, CORE-ONLY (no mock fallback, no
+  client-side enforcement). Reads `/api/brain/members` + `/approval-policy` (react-query), primes
+  `membersStore`; rows open `MemberDetailPopup.tsx` via `openMemberDetail(id)` (`MemberDetailHost`
+  mounted once in `App.tsx`). Add-member form POSTs verbatim `{displayName,email,role,approval:{
+  domains,perItemLimit,requiresSecondApproverAbove}}`; core refusals surface inline (#d20344) via
+  `mapApprovalRejection`. Locked "Enforced by Brain core" rows (self-approval blocked, tenant
+  second-approver threshold) are READ from `/approval-policy`, never hardcoded. `membersApi.ts`
+  formatters: int64-max `perItemLimit` (~9.2e18, `UNLIMITED_FLOOR=1e15`) renders "No per-item
+  limit". Second approval in `/review`: `ReviewPage.handleLiveApprove` POSTs
+  `/payment-intents/:id/approve`, maps all rejection reasons (`self_approval_blocked` has TWO cases
+  split by `detail.payee_unresolved`), and on `awaiting_second` toasts + keeps the item in queue.
 - Figma icons: SVGs in `attached_assets/figma_icons/` (subfolders `sub/`, `nav/`, `add-money/`,
   `exchange/`) with typed registries in `client/src/assets/*-icons.ts`. To add one: download the
   URL hash → `attached_assets/figma_icons/<subdir>/<name>.svg`, then add the import + map entry to
@@ -224,8 +242,8 @@ Key rules (see CLAUDE.md for the exhaustive version):
   `linkedRelationship(record, link)` in `auditTypes.ts`). One convention, data-driven.
 - **Unified dev guard**: `client/src/lib/ruleConsistencyCheck.ts` (dev-boot in `main.tsx`, never
   throws) runs ALL resolution + coherence checks for every entity type (rule/vendor/document/
-  proposal/anchor-UI/agent-domain/actor-payee). Extend this module; don't fork it. All shipped mock
-  refs must resolve. Full breakdown of the 8 guards is in CLAUDE.md.
+  proposal/anchor-UI/agent-domain/actor-payee/member-actor). Extend this module; don't fork it. All
+  shipped mock refs must resolve. Full breakdown of the 9 guards is in CLAUDE.md.
 
 ## Other Notable UI
 - Sidebar "Rules" nav shows a suggestion-count badge (`client/src/lib/rule-suggestions.ts`).

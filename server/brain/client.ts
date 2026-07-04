@@ -313,6 +313,136 @@ export function rejectPaymentIntent(
   });
 }
 
+/**
+ * POST /payment-intents/{id}/approve — a human member approves a pending PaymentIntent.
+ *
+ * MUST be called with the MEMBER token (payment_intent:approve; the agent token is
+ * propose-only and correctly 403s here). Per ACTOR=SESSION we send NO actor field — core
+ * derives the approver from the token subject and strips any client-supplied actor. The
+ * response carries the new `status` (incl. "awaiting_second_approval") and `approvals[]`;
+ * core rejects self-approval / limit / domain / second-approver violations with its own
+ * 403 { error, reason, detail }, which we relay verbatim (enforcement is core-only).
+ */
+export function approvePaymentIntent(token: string, id: string): Promise<PaymentIntent> {
+  return brainRequest<PaymentIntent>(`/payment-intents/${id}/approve`, {
+    token,
+    method: "POST",
+    body: {},
+  });
+}
+
+// ─── Members & approval authority (MEMBER token only) ────────────────────────
+
+export type MemberRole = "admin" | "approver" | "viewer";
+export type ApprovalDomain = "ap" | "ar" | "treasury" | "payroll" | "reconciliation";
+
+/** A member's approval envelope (what they can approve, and up to how much). */
+export interface MemberApproval {
+  domains: ApprovalDomain[];
+  /** Per-item approval limit in whole currency units. A very large value ≈ unlimited. */
+  perItemLimit: number;
+  requiresSecondApproverAbove: number | null;
+}
+
+/** brain-core Member (GET /members / /members/{id}). Deactivated members still resolve. */
+export interface BrainMember {
+  id: string;
+  tenantId: string;
+  email: string;
+  displayName: string;
+  role: MemberRole;
+  active: boolean;
+  approval: MemberApproval;
+  identityLinks?: Array<{ id?: string; provider?: string; subject?: string }> | null;
+}
+
+export interface ListMembersResponse {
+  members: BrainMember[];
+}
+
+/** GET /members (+ optional role/domain filters). MEMBER token. */
+export function listMembers(
+  token: string,
+  query?: { role?: string; domain?: string },
+): Promise<ListMembersResponse> {
+  return brainRequest<ListMembersResponse>("/members", { token, query });
+}
+
+/** GET /members/{id}. MEMBER token. Deactivated members return 200 (history resolution). */
+export function getMember(token: string, id: string): Promise<BrainMember> {
+  return brainRequest<BrainMember>(`/members/${id}`, { token });
+}
+
+/** brain-core wraps member writes as { member, audit_id }. */
+export interface MemberMutationResponse {
+  member: BrainMember;
+  audit_id?: string;
+}
+
+/** POST /members — create a member (admin-gated by core). MEMBER token. */
+export function createMember(token: string, body: unknown): Promise<MemberMutationResponse> {
+  return brainRequest<MemberMutationResponse>("/members", { token, method: "POST", body });
+}
+
+/** PATCH /members/{id} — edit role/envelope (admin-gated by core). MEMBER token. */
+export function updateMember(token: string, id: string, body: unknown): Promise<MemberMutationResponse> {
+  return brainRequest<MemberMutationResponse>(`/members/${id}`, { token, method: "PATCH", body });
+}
+
+/** DELETE /members/{id} — DEACTIVATE (not hard delete). MEMBER token. */
+export function deactivateMember(token: string, id: string): Promise<MemberMutationResponse> {
+  return brainRequest<MemberMutationResponse>(`/members/${id}`, { token, method: "DELETE" });
+}
+
+// ─── Policy read (locked-rows / second-approval threshold, from core not hardcoded) ──
+
+/** One rule inside the active policy content. */
+interface PolicyContentRule {
+  id: string;
+  when?: { "amount.gt"?: { value?: string; currency?: string }; [k: string]: unknown };
+  execute?: string;
+  require?: string;
+  applies_to?: string[];
+}
+
+interface ActivePolicy {
+  id: string;
+  content?: { rules?: PolicyContentRule[] };
+}
+
+/** The approval facts the Member Detail "locked rows" render — derived from core's policy. */
+export interface ApprovalPolicyFacts {
+  /** Self-approval is a hard invariant in core; always true. */
+  selfApprovalBlocked: true;
+  /** Amount above which a second, different approver is required (tenant policy), or null. */
+  secondApprovalThreshold: { value: string; currency: string } | null;
+}
+
+/**
+ * GET /policy/{tenantId} and derive the approval facts shown as LOCKED rows in Member Detail.
+ * The second-approval threshold is read from the policy (the outbound-payment "confirm" rule
+ * that requires two distinct approvers, e.g. `require: owner_and_cfo`) — never hardcoded.
+ */
+export async function getApprovalPolicyFacts(token: string, tenantId: string): Promise<ApprovalPolicyFacts> {
+  const policy = await brainRequest<ActivePolicy>(`/policy/${tenantId}`, { token });
+  const rules = policy.content?.rules ?? [];
+  const twoApproverRequires = new Set(["owner_and_cfo", "owner_and_controller", "two_approvers"]);
+  let threshold: { value: string; currency: string } | null = null;
+  for (const r of rules) {
+    const isOutbound = (r.applies_to ?? []).includes("outbound_payment");
+    const needsTwo = r.execute === "confirm" && typeof r.require === "string" && twoApproverRequires.has(r.require);
+    const gt = r.when?.["amount.gt"];
+    if (isOutbound && needsTwo && gt?.value) {
+      const value = gt.value;
+      const currency = gt.currency ?? "USD";
+      if (threshold === null || Number(value) < Number(threshold.value)) {
+        threshold = { value, currency };
+      }
+    }
+  }
+  return { selfApprovalBlocked: true, secondApprovalThreshold: threshold };
+}
+
 /** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */
 export async function askWikiQuestion(token: string, question: string): Promise<WikiAnswer> {
   const resp = await brainRequest<WikiQuestionResponse>("/wiki/question", {

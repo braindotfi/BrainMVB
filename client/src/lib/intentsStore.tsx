@@ -18,12 +18,17 @@ export interface IntentRecord {
   requiredApprovers: string[];
   /** True once an operator declined a non-rejected proposal. */
   declined: boolean;
+  /** Human-approval progress, set from brain-core's approve response.
+      "awaiting_second" — one approval recorded, core still needs another;
+      "approved"        — core accepted it (leaves the needs-review queue). */
+  approvalState?: "awaiting_second" | "approved";
 }
 
 interface IntentsContextValue {
   intents: IntentRecord[];
   addProposed: (rec: Omit<IntentRecord, "declined">) => void;
   markDeclined: (intentId: string) => void;
+  setApprovalState: (intentId: string, state: "awaiting_second" | "approved") => void;
 }
 
 const IntentsContext = createContext<IntentsContextValue | null>(null);
@@ -50,8 +55,12 @@ export function IntentsProvider({ children }: { children: ReactNode }) {
     setIntents((prev) => prev.map((r) => (r.intentId === intentId ? { ...r, declined: true } : r)));
   }, []);
 
+  const setApprovalState = useCallback((intentId: string, state: "awaiting_second" | "approved") => {
+    setIntents((prev) => prev.map((r) => (r.intentId === intentId ? { ...r, approvalState: state } : r)));
+  }, []);
+
   return (
-    <IntentsContext.Provider value={{ intents, addProposed, markDeclined }}>
+    <IntentsContext.Provider value={{ intents, addProposed, markDeclined, setApprovalState }}>
       {children}
     </IntentsContext.Provider>
   );

@@ -154,12 +154,18 @@ export const ReviewModal = ({
   onOpenChange,
   onConfirm,
   onReject,
+  busy = false,
+  rejection = null,
 }: {
   item: ReviewItemType | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (auto: boolean) => void;
   onReject: () => void;
+  /** True while a real approve/decline call to brain-core is in flight. */
+  busy?: boolean;
+  /** brain-core's refusal, mapped to user copy. Rendered inline (danger tone). */
+  rejection?: { title: string; detail: string; reason: string } | null;
 }) => {
   const [auto, setAuto] = useState(false);
   const { format } = useCurrency();
@@ -250,30 +256,47 @@ export const ReviewModal = ({
               </label>
             </div>
 
-            {/* For a real (live) PaymentIntent, approval is gated on owner + CFO
-                quorum that the demo tenant cannot satisfy, so Confirm is disabled
-                and only the (real) Decline action is offered. */}
-            {item.live && (
+            {/* Real (live) PaymentIntent: approving asks brain-core to sign it off.
+                We do NOT pre-gate — core is the sole enforcer. If it refuses, its
+                exact reason is rendered below (danger tone); otherwise a neutral note. */}
+            {item.live && !rejection && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
-                Approval needs owner + CFO sign-off — not available in the demo tenant. You can still
-                decline it below.
+                This is a real payment. Approving asks Brain core to sign it off under your approval
+                authority — it will only settle if core accepts it.
               </p>
+            )}
+
+            {/* brain-core refusal — the honest, verbatim reason (self-approval, over
+                limit, second approver needed, signer revoked, …). Danger color only. */}
+            {rejection && (
+              <div
+                data-testid={`review-rejection-${rejection.reason}`}
+                className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[rgba(210,3,68,0.08)] p-[14px]"
+              >
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[15px]">
+                  {rejection.title}
+                </p>
+                <p className="mt-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
+                  {rejection.detail}
+                </p>
+              </div>
             )}
 
             {/* Action row — Figma 4071:65833. Confirm + Decline. */}
             <div className="flex gap-[16px] items-start w-full">
               <button
                 onClick={() => onConfirm(auto)}
-                disabled={item.live}
+                disabled={busy}
                 data-testid="button-review-confirm"
                 className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#123509]"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">{item.live ? "Approve" : "Confirm"}</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">{busy ? "Working…" : item.live ? "Approve" : "Confirm"}</span>
               </button>
               <button
                 onClick={onReject}
+                disabled={busy}
                 data-testid="button-review-reject"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Decline</span>
               </button>
