@@ -240,19 +240,22 @@ export function BillDetailPopup({
                   {isFlagged && (
                     <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bill-flags">
                       <SectionLabel>Needs a Closer Look</SectionLabel>
-                      <div className="flex flex-col gap-[8px] items-start w-full">
-                        {flags.map((f) => (
-                          <div
-                            key={f}
-                            className="flex items-center gap-[6px] px-[12px] py-[10px] rounded-[10px] w-full"
-                            style={{ background: "rgba(210,3,68,0.06)", border: "1px solid rgba(210,3,68,0.15)" }}
-                          >
-                            <AlertTriangle size={14} className="shrink-0" style={{ color: "#d20344" }} />
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]" style={{ color: "#d20344" }}>
-                              {humanizeFlag(f)}
+                      <div
+                        className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
+                      >
+                        <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                          <AlertTriangle size={16} className="shrink-0 mt-[1px]" style={{ color: "#d20344" }} />
+                          <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
+                            <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
+                              ANOMALIES DETECTED
                             </p>
+                            {flags.map((f) => (
+                              <p key={f} className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#d20344] w-full">
+                                {humanizeFlag(f)}
+                              </p>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </div>
                   )}
