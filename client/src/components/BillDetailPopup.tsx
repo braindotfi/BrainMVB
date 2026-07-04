@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import type { ReactNode } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { AlertTriangle, ChevronRight, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -240,11 +240,18 @@ export function BillDetailPopup({
                   {isFlagged && (
                     <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bill-flags">
                       <SectionLabel>Needs a Closer Look</SectionLabel>
-                      <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex flex-col gap-[6px] items-start p-[12px] rounded-[12px] w-full">
+                      <div className="flex flex-col gap-[8px] items-start w-full">
                         {flags.map((f) => (
-                          <p key={f} className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#d20344]">
-                            {humanizeFlag(f)}
-                          </p>
+                          <div
+                            key={f}
+                            className="flex items-center gap-[6px] px-[12px] py-[10px] rounded-[10px] w-full"
+                            style={{ background: "rgba(210,3,68,0.06)", border: "1px solid rgba(210,3,68,0.15)" }}
+                          >
+                            <AlertTriangle size={14} className="shrink-0" style={{ color: "#d20344" }} />
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]" style={{ color: "#d20344" }}>
+                              {humanizeFlag(f)}
+                            </p>
+                          </div>
                         ))}
                       </div>
                     </div>
