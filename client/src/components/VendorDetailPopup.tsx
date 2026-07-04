@@ -15,6 +15,7 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 // (openRuleDetail and resolveRule temporarily unused; linked-rules section removed to match Figma ordering)
 import warningIcon from "@assets/warning_1783208306441.png";
+import alertFlagIcon from "@assets/Icons_1783209453304.png";
 import closeIcon from "@assets/Close_1783208306441.png";
 
 const ALERT = "#d20344";
@@ -215,7 +216,7 @@ export function VendorDetailPopup({
                     className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
                   >
                     <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                      <img src={warningIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
+                      <img src={alertFlagIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
                       <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
                         <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
                           {flag.label}
