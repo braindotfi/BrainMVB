@@ -254,11 +254,13 @@ const SectionWidget = ({
   items,
   icon,
   testIdPrefix,
+  emptyMessage,
 }: {
   title: string;
   items: WidgetItem[];
   icon: React.ReactNode;
   testIdPrefix: string;
+  emptyMessage?: string;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasMore = items.length > DEFAULT_VISIBLE;
@@ -275,9 +277,11 @@ const SectionWidget = ({
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
         {visible.length === 0 ? (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] p-[8px]">
-            Nothing here today.
-          </p>
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              {emptyMessage ?? "Nothing here today."}
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
             {visible.map((item, idx) => (
@@ -637,6 +641,7 @@ export function HomePage() {
                   items={brainDidItems}
                   icon={<GreenCheckIcon />}
                   testIdPrefix="row-brain-did"
+                  emptyMessage="Brain hasn't taken any actions yet."
                 />
               </div>
               <div className="flex flex-1 min-w-px">
@@ -645,6 +650,7 @@ export function HomePage() {
                   items={brainDetectedItems}
                   icon={<OrangeInfoIcon />}
                   testIdPrefix="row-brain-detected"
+                  emptyMessage="Brain hasn't detected any items that require your review yet."
                 />
               </div>
             </div>

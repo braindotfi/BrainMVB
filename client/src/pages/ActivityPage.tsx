@@ -176,7 +176,6 @@ const SectionCard = ({
   registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
   onSelect?: (item: ActivityItemData) => void;
 }) => {
-  if (items.length === 0) return null;
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -190,19 +189,31 @@ const SectionCard = ({
         </div>
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-        <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-          {items.map((item, idx) => (
-            <div key={item.id} className="flex flex-col gap-[8px] w-full">
-              <ActivityItem
-                item={item}
-                highlighted={highlightedId === String(item.id)}
-                rowRef={registerRowRef(item.id)}
-                onSelect={onSelect}
-              />
-              {idx < items.length - 1 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
-            </div>
-          ))}
-        </div>
+        {items.length === 0 ? (
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              {title === "Just now"
+                ? "No items just now."
+                : title === "Today"
+                  ? "Nothing today yet."
+                  : "Nothing yesterday."}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            {items.map((item, idx) => (
+              <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                <ActivityItem
+                  item={item}
+                  highlighted={highlightedId === String(item.id)}
+                  rowRef={registerRowRef(item.id)}
+                  onSelect={onSelect}
+                />
+                {idx < items.length - 1 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -352,15 +363,6 @@ export function ActivityPage() {
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
             />
-            {liveItems.length === 0 && todayItems.length === 0 && yesterdayItems.length === 0 && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                  {activeTab === "Brain Did"
-                    ? "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here."
-                    : "No manual approvals yet. Items you personally approve will show up here."}
-                </p>
-              </div>
-            )}
           </div>
 
         </div>
