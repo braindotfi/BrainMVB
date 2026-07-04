@@ -125,6 +125,8 @@ export function BrainBillsInbox() {
       <BillDetailPopup
         bill={openBill as BillDTO | null}
         vendorName={openBill ? nameOf(openBill.counterparty_id) : ""}
+        bills={bills as BillDTO[]}
+        onSelectBill={(b) => setOpenBill(b as BrainInvoiceDTO)}
         onClose={() => setOpenBill(null)}
       />
     </div>
