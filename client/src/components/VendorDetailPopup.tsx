@@ -8,7 +8,6 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
-  Info,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
@@ -16,6 +15,7 @@ import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 // (openRuleDetail and resolveRule temporarily unused; linked-rules section removed to match Figma ordering)
 import warningIcon from "@assets/warning_1783208306441.png";
 import closeIcon from "@assets/Close_1783208306441.png";
+import infoIcon from "@assets/Icons_1783209293729.png";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
@@ -179,7 +179,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <img src={infoIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
