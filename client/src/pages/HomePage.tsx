@@ -510,8 +510,9 @@ export function HomePage() {
     brainAccounts?.accounts && brainAccounts.accounts.length > 0
       ? brainAccounts.accounts.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0)
       : null;
-  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : format("$86,993");
-  const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : ".42";
+  // No live ledger total → honest placeholder, never a fabricated figure (was "$86,993.42").
+  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "—";
+  const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : "";
 
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
   // static line when brain-core is unreachable/unconfigured.

@@ -3,3 +3,4 @@
 - [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → warn + plain "(rule unavailable)"; shipped mock refs must all resolve (dev guard).
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
 - [Members authority integration](members-authority-integration.md) — Members/approval surface is core-only (GREEN 2026-07-04); member token backs all non-propose calls, agent token propose-only; int64-max limit = unlimited.
+- [BFF vitest setup](bff-vitest-setup.md) — `npm test` pins 5 BFF invariants; dedicated vitest.config (don't extend vite.config, re-declare @/@shared aliases); vitest 2.x is firewall-blocked, use 4.x.

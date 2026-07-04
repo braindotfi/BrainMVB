@@ -282,3 +282,34 @@ unified dev guard (see guards 6 & 7 above):
 `/rules/:id` is registered before `/rules` in `App.tsx` — keep specific routes ahead
 of generic ones. `RuleDetail` reads `params.id` and must not be modified to accept a
 different key.
+
+## Branch reconciliation (state of record)
+The workspace tree is now the current, unified line. It carries the full platform
+(Review, Rules, Vendors, Audit Log, Finances, the members integration, the BFF) plus
+two honesty commits that previously lived only on a side branch:
+1. real SIWE signature verification with a single-use nonce in `server/routes.ts`
+   (the dead `/api/account/allocate` stub was dropped in the same pass), and
+2. honest empty states in place of fabricated money surfaces (the static account
+   list on Finances, the auto-handled receipts on Review, and the Account Totals card
+   are gone, so an empty or unreachable ledger reads as empty rather than inventing
+   numbers).
+The old `feat/ui-rework` and `feat/brain-core-honesty` branches are superseded by this
+state. If a conflict ever forces a choice between a fabricated surface and an empty
+state, the empty state wins.
+
+## BFF safety tests (invariant guard)
+`server/brain/bff-invariants.test.ts` plus `client/src/lib/approvalRejections.test.ts`
+are the platform-side twins of brain-core's own invariants. They pin five safety rules:
+token routing (propose uses the AGENT token only; reads, member writes, and approve or
+reject use the MEMBER token), no `actor` field in any BFF-constructed payload (ACTOR is
+the SESSION and core derives it), provision fail-hard when the member token is missing
+(never a silent agent-only fallback), the full approval-rejection mapping including both
+`self_approval_blocked` cases split by `details.payee_unresolved`, and the secrets
+boundary (the provision secret and brain-core tokens never reach the browser). brain-core
+is mocked at the fetch boundary, so the suite never touches the live API. Run it with
+`npm test`. Any change to `server/brain/*` must keep these green; if the behavior is
+meant to change, update the test in the same commit so the invariant stays explicit.
+
+## Repo discipline
+The Replit workspace is the source of truth; push to GitHub and merge to main after each
+milestone so the public repo never drifts.

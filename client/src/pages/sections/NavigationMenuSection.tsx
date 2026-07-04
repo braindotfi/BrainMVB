@@ -6,7 +6,6 @@ import vendorsInactiveIcon from "@assets/VendorsInactive_1782953370194.png";
 import auditLogActiveIcon from "@assets/AuditLogActive_1782953603161.png";
 import auditLogInactiveIcon from "@assets/AuditLogInactive_1782953603162.png";
 import { useIntents } from "@/lib/intentsStore";
-import { MOCK_PROPOSALS } from "@/lib/mockProposals";
 
 interface Props {
   collapsed: boolean;
@@ -291,8 +290,8 @@ const AddSourceIcon = () => (
 export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSource }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const liveApprovalCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
-  const reviewItemsCount = MOCK_PROPOSALS.length + liveApprovalCount;
+  // Live intents needing review only — never inflate the badge with mock proposals.
+  const reviewItemsCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";

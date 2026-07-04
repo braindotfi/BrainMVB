@@ -26,20 +26,6 @@ import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 const IMG_INVOICE_BG = INLINE_FIGMA.invoiceBg;
 const IMG_INVOICE_ICON = INLINE_FIGMA.invoiceIcon;
 
-function truncateAddress(addr: string): string {
-  return addr.length > 16 ? addr.slice(0, 6) + "..." + addr.slice(-4) : addr;
-}
-
-const STATIC_ACCOUNTS = [
-  { name: "Chase Business Checking", sub: "Your main account",            sub2: "Pays most bills from here",            balance: "$32,523" },
-  { name: "Chase Savings",           sub: "Earnings 4.2%",                 sub2: "Brains tops this up from checking",    balance: "$15,000" },
-  { name: "Bank Account",            sub: "AE07033...6789",                sub2: "USD operating account via Wirex",      balance: "$12,500" },
-  { name: "Yield Agent",             sub: "Auto-deploys idle USDC",        sub2: "Earning ~5.1% APY",                    balance: "$8,250"  },
-  { name: "TraderPro",               sub: "Active swing strategy",         sub2: "Up 3.4% this month",                   balance: "$4,180"  },
-  { name: "Treasury AI Agent",       sub: "Cash reserves and T-bills",       sub2: "Conservative, capital preservation",   balance: "$12,500" },
-  { name: "Account Totals",          sub: "Across bank, crypto and agents",sub2: "",                                     balance: "$86,993" },
-];
-
 // ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
 // Shape mirrors brain-core's Account schema (subset we render).
 type AccountKind = "bank_checking" | "bank_savings" | "card" | "loan" | "line_of_credit" | "onchain" | "payment_processor";
@@ -501,34 +487,18 @@ export function FinancesPage() {
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT — the BFF mints it server-side.
-  const { data: brainData } = useQuery<BrainAccountsResponse>({
+  const { data: brainData, isLoading: accountsLoading } = useQuery<BrainAccountsResponse>({
     queryKey: ["/api/brain/ledger/accounts"],
     retry: false,
   });
 
-  // Static fallback (kept so the page renders if brain-core is unreachable or
-  // not yet configured). See deliverables/DEAD-CODE-INVENTORY.md.
-  const staticAccounts = (() => {
-    const walletAddress = user?.walletAddress;
-    const cryptoAccount = walletAddress
-      ? { name: "Crypto Account", sub: truncateAddress(walletAddress), sub2: "On-chain USDC balance", balance: "$2,040" }
-      : { name: "Crypto Account", sub: "0x7cB5...86A8", sub2: "On-chain USDC balance", balance: "$2,040" };
-    return [
-      STATIC_ACCOUNTS[0], // Chase Business Checking
-      STATIC_ACCOUNTS[1], // Chase Savings
-      STATIC_ACCOUNTS[2], // Bank Account
-      cryptoAccount,
-      STATIC_ACCOUNTS[3], // Yield Agent
-      STATIC_ACCOUNTS[4], // TraderPro
-      STATIC_ACCOUNTS[5], // Treasury AI Agent
-      STATIC_ACCOUNTS[6], // Account Totals
-    ];
-  })();
-
+  // Accounts come straight from the live brain-core Ledger. No static fallback:
+  // fabricated accounts (the old $86,993 Chase list) contradicted the real ledger,
+  // so an empty/unreachable ledger honestly renders an empty state instead.
   const accounts: AccountRow[] =
     brainData?.accounts && brainData.accounts.length > 0
       ? mapBrainAccounts(brainData.accounts)
-      : staticAccounts;
+      : [];
 
   // Recent transactions from brain-core's Ledger (empty until provisioning seeds them).
   const { data: brainTx } = useQuery<BrainTransactionsResponse>({
@@ -632,6 +602,13 @@ export function FinancesPage() {
                   </div>
                   );
                 })}
+                {accounts.length === 0 && (
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    {accountsLoading
+                      ? "Loading your accounts from the ledger…"
+                      : "No accounts connected yet. Your ledger accounts appear here once provisioned."}
+                  </p>
+                )}
               </WidgetCard>
             )}
 

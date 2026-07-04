@@ -1,6 +1,7 @@
-# Brain Finance
+# Brain. Your AI Brain, built to run finance for you.
 
-Programmable neobank on Base L2.
+An AI that runs your finances for you. Agents propose, humans approve, and a separate
+protocol (brain-core) executes. Settlement is anchored on Base L2.
 
 > **Companion doc:** `CLAUDE.md` holds the canonical, break-easily-silently contracts
 > (rule/vendor/document reference resolution, the 9 dev coherence guards, actor↔payee

@@ -1,10 +1,6 @@
 import {
   AUTO_HANDLED_PROPOSALS,
   MOCK_PROPOSALS,
-  ADOBE_SETTLED,
-  COMCAST_SETTLED,
-  PAYROLL_SETTLED,
-  USDC_SWEEP_SETTLED,
 } from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
 
@@ -56,15 +52,12 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
   };
 }
 
-export const TODAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 1, type: "paid", title: "Paid Adobe Creative Cloud (team plan)", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$540", time: "9:14 AM", proposal: ADOBE_SETTLED },
-  { id: 2, type: "paid", title: "Paid Comcast Business Fiber", meta1: "Automatic", meta2: "15th of every month", meta3: "Chase Business checking", amount: "$240", time: "6:46 AM", proposal: COMCAST_SETTLED },
-];
+// Fabricated settled-history rows (Adobe/Comcast/USDC/payroll) REMOVED (2026-07-03
+// honesty pass) — they asserted completed money movements that never happened. Real
+// activity history comes from brain-core executed intents / audit log once Fork B lands.
+export const TODAY_ACTIVITIES: ActivityItemData[] = [];
 
-export const YESTERDAY_ACTIVITIES: ActivityItemData[] = [
-  { id: 4, type: "moved", title: "Moved idle USDC from operating to AAVE yield protocol", meta1: "Operating balance exceeded $5,000 threshold. Earning 4.5% yield now.", meta2: "", amount: "$3,500", time: "6:28 PM", proposal: USDC_SWEEP_SETTLED },
-  { id: 6, type: "approved", title: "You approved payroll run for J. Smith (Engineering)", meta1: "ACH sent to employee's bank account at Wells Fargo.", meta2: "", amount: "$5,600", time: "10:02 AM", proposal: PAYROLL_SETTLED },
-];
+export const YESTERDAY_ACTIVITIES: ActivityItemData[] = [];
 
 /** Activity types that belong under the Activity page's "Brain Did" tab. */
 export const BRAIN_DID_TYPES: ActivityType[] = ["paid", "moved"];
