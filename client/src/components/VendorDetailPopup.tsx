@@ -221,14 +221,14 @@ export function VendorDetailPopup({
                           {flag.label}
                         </p>
                         {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
-                          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] w-full">
+                          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#d20344] w-full">
                             Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
                           </p>
                         )}
                         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#d20344] w-full">
                           A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
                         </p>
-                        <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#414965] w-full">
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#d20344] w-full">
                           Raised {flag.raisedAtLabel}
                         </p>
                       </div>
