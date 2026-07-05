@@ -74,6 +74,15 @@ export interface ProblemReport {
   resolved: boolean;
 }
 
+/* A single entry in a rule's lifecycle trail — created / paused / resumed.
+   Rendered on RuleDetail's "History" table, most recent first. */
+export interface RuleHistoryEvent {
+  id: string;
+  type: "created" | "paused" | "resumed";
+  label: string; // e.g. "Rule created", "Rule paused", "Rule resumed"
+  atLabel: string; // human timestamp string
+}
+
 /* What a rule DOES, used to group the Rules page into typed sections:
    - automation: acts for you (auto-clears matching payments)
    - guardrail:  pulls you back in above a threshold (asks before acting)
@@ -98,6 +107,7 @@ export interface AutoRule {
   allowlist?: string[]; // trusted vendor names
   scopeSummary?: string; // plain-language scope, e.g. "trusted utility vendors under $1,000"
   problemReports?: ProblemReport[];
+  history?: RuleHistoryEvent[]; // created/paused/resumed trail, shown on RuleDetail's History table
   userCreated?: boolean; // authored via the "New rule" creator (persisted per tenant); the "Your Rules" tab shows only these
 }
 

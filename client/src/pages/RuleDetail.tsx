@@ -15,7 +15,7 @@ import {
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
-import type { ProblemReport } from "@/lib/proposalTypes";
+import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
 
 const ALERT = "#d20344";
 
@@ -54,6 +54,7 @@ export function RuleDetail() {
   }
 
   const reports = rule.problemReports ?? [];
+  const history = rule.history ?? [];
   const openReports = reports.filter((r) => !r.resolved);
   const pausedFromReport = !rule.active && openReports.length > 0;
   const latestOpen = openReports[openReports.length - 1];
@@ -390,6 +391,29 @@ export function RuleDetail() {
             </div>
           </div>
 
+          {/* History — created/paused/resumed trail, matches Figma's panel pattern. */}
+          <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+            <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+                History
+              </p>
+            </div>
+            <div className="flex flex-col gap-[8px] p-[8px]">
+              {history.length === 0 ? (
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] p-[8px]">
+                  No history recorded for this rule yet.
+                </p>
+              ) : (
+                [...history].reverse().map((h, i) => (
+                  <div key={h.id} className="flex flex-col gap-[8px]">
+                    {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+                    <HistoryRow event={h} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
       </ScrollArea>
     </div>
@@ -471,6 +495,22 @@ function ReportCard({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function HistoryRow({ event }: { event: RuleHistoryEvent }) {
+  return (
+    <div
+      className="flex items-center justify-between gap-[16px] p-[8px]"
+      data-testid={`row-history-${event.id}`}
+    >
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
+        {event.label}
+      </span>
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#6c779d] shrink-0">
+        {event.atLabel}
+      </span>
     </div>
   );
 }

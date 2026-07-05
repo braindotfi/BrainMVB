@@ -32,3 +32,7 @@ state. Local React state in ReviewPage couldn't reach RuleDetail.
   (e.g. "Pause rule and review" primary, Resume confirm). Amounts/dates/policyIds monospace.
 - SAAS rule is pre-seeded paused + 1 ProblemReport (proposalId `auto-figma`) for demoability;
   UTILITY stays active for the live Con Edison receipt path.
+- `AutoRule.history` (`RuleHistoryEvent[]`) is a separate lifecycle trail (created/paused/resumed),
+  distinct from `problemReports`. Seeded with one "created" event from `createdLabel`;
+  `pauseRule`/`resumeRule`/`reportProblem` append to it. Rendered on RuleDetail as its own
+  "History" panel (same Figma panel pattern — see `figma-panel-pattern.md`), most-recent-first.

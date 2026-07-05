@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { AutoRule, Agent, RuleKind } from "./proposalTypes";
+import type { AutoRule, Agent, RuleKind, RuleHistoryEvent } from "./proposalTypes";
 import { INITIAL_RULES } from "./mockRules";
 import { apiRequest } from "./queryClient";
 
@@ -16,6 +16,9 @@ function seedRule(base: AutoRule): AutoRule {
     ...base,
     allowlist: base.allowlist ? [...base.allowlist] : undefined,
     problemReports: [],
+    history: [
+      { id: `${base.id}-created`, type: "created", label: "Rule created", atLabel: base.createdLabel },
+    ],
   };
 }
 
@@ -37,6 +40,10 @@ function seedRules(): AutoRule[] {
         reportedAtLabel: "Jun 28, 2026 · 4:12 PM ET",
         resolved: false,
       },
+    ];
+    saas.history = [
+      ...(saas.history ?? []),
+      { id: "saas-paused-seed-1", type: "paused", label: "Rule paused", atLabel: "Jun 28, 2026 · 4:12 PM ET" },
     ];
   }
   return rules;
@@ -75,6 +82,17 @@ function reportedAtLabel(): string {
   }) + " ET";
 }
 
+let historyCounter = 0;
+function nextHistoryId(): string {
+  historyCounter += 1;
+  return `hist-${Date.now()}-${historyCounter}`;
+}
+
+/* Appends a lifecycle event (paused/resumed) to a rule's history trail. */
+function appendHistory(r: AutoRule, type: RuleHistoryEvent["type"], label: string): RuleHistoryEvent[] {
+  return [...(r.history ?? []), { id: nextHistoryId(), type, label, atLabel: reportedAtLabel() }];
+}
+
 function updateRule(id: string, fn: (r: AutoRule) => AutoRule) {
   rules = rules.map((r) => (r.id === id ? fn(r) : r));
   notify();
@@ -101,7 +119,9 @@ export function getRule(id: string): AutoRule | undefined {
 
 /* ── Mutations (all user-initiated) ───────────────────────────────────────────── */
 export function pauseRule(id: string) {
-  updateRule(id, (r) => (r.active ? { ...r, active: false } : r));
+  updateRule(id, (r) =>
+    r.active ? { ...r, active: false, history: appendHistory(r, "paused", "Rule paused") } : r,
+  );
 }
 
 export function resumeRule(id: string) {
@@ -110,6 +130,7 @@ export function resumeRule(id: string) {
     active: true,
     // Resuming clears the unresolved-report state that drove the paused banner.
     problemReports: (r.problemReports ?? []).map((pr) => ({ ...pr, resolved: true })),
+    history: appendHistory(r, "resumed", "Rule resumed"),
   }));
 }
 
@@ -133,6 +154,7 @@ export function reportProblem(
         resolved: false,
       },
     ],
+    history: r.active ? appendHistory(r, "paused", "Rule paused") : r.history,
   }));
 }
 
