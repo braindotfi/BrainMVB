@@ -159,8 +159,8 @@ function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void
             <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[16px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px]">
               Add member
             </DialogPrimitive.Title>
-            <DialogPrimitive.Close aria-label="Close" data-testid="button-add-member-close" className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247]">
-              <img src={closeIcon} alt="" className="size-[14px]" />
+            <DialogPrimitive.Close aria-label="Close" data-testid="button-add-member-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
+              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 

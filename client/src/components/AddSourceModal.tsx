@@ -202,9 +202,9 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
             <DialogPrimitive.Close
               data-testid="button-add-source-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <img src={closeIcon} alt="" className="size-[14px]" />
+              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 

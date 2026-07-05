@@ -8,7 +8,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
    - CancelSubscriptionModal:   logout-style confirm dialog.                 */
 
 const CloseIcon = () => (
-  <img src={closeIcon} alt="" className="size-[14px]" />
+  <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
 );
 
 const CheckIcon = () => (
@@ -23,8 +23,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
     aria-label={label}
     data-testid={testId}
     onClick={onClick}
-    className="size-[32px] rounded-full flex items-center justify-center hover-elevate"
-    style={{ background: "#1d2132" }}
+    className="size-[32px] p-0 hover:opacity-90 transition-opacity"
   >
     {children}
   </button>

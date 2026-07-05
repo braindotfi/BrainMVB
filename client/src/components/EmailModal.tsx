@@ -19,7 +19,7 @@ const VALID_CODE = "123456";
 type Step = "verify-current" | "enter" | "verify";
 
 const CloseIcon = () => (
-  <img src={closeIcon} alt="" className="size-[14px]" />
+  <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
 );
 
 const BackIcon = () => (
@@ -34,8 +34,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
     aria-label={label}
     data-testid={testId}
     onClick={onClick}
-    className="size-[32px] rounded-full flex items-center justify-center transition-colors hover-elevate"
-    style={{ background: "#1d2132" }}
+    className="size-[32px] p-0 hover:opacity-90 transition-opacity"
   >
     {children}
   </button>

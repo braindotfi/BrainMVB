@@ -7,7 +7,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
    - ChangePinModal:     3-step (current → new → confirm) PIN flow.            */
 
 const CloseIcon = () => (
-  <img src={closeIcon} alt="" className="size-[14px]" />
+  <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
 );
 
 const BackIcon = () => (
@@ -204,7 +204,7 @@ export function LoginHistoryModal({
             <Dialog.Close
               data-testid="button-close-login-history"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none"
             >
               <CloseIcon />
             </Dialog.Close>
@@ -412,7 +412,7 @@ export function ChangePinModal({
             <Dialog.Close
               data-testid="button-close-change-pin"
               aria-label="Close"
-              className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
+              className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none"
             >
               <CloseIcon />
             </Dialog.Close>

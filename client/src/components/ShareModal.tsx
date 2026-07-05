@@ -108,9 +108,9 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
           <button
             onClick={onClose}
             data-testid="close-invite-modal"
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#222737] hover:opacity-80 transition-opacity"
+            className="w-8 h-8 p-0 hover:opacity-90 transition-opacity"
           >
-            <img src={closeIcon} alt="" className="size-[14px]" />
+            <img src={closeIcon} alt="" className="w-8 h-8 rounded-full" />
           </button>
         </div>
 

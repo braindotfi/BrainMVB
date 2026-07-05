@@ -26,7 +26,7 @@ const ChevronDown = ({ className = "size-[24px]" }: { className?: string }) => (
    Outer button is 32px circle, icon group is 16px inset at (8,8).
    Strokes are 1.5 × #a8b9f4, matching the Figma vector export. */
 const CloseIcon = () => (
-  <img src={closeIcon} alt="" className="size-[14px]" />
+  <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
 );
 
 const BackIcon = () => (
@@ -57,8 +57,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
     aria-label={label}
     data-testid={testId}
     onClick={onClick}
-    className="size-[32px] rounded-full flex items-center justify-center transition-colors hover-elevate"
-    style={{ background: "#1d2132" }}
+    className="size-[32px] p-0 hover:opacity-90 transition-opacity"
   >
     {children}
   </button>

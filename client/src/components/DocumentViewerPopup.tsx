@@ -521,10 +521,10 @@ export function DocumentViewerPopup({
               )}
             </div>
             <DialogPrimitive.Close
-              className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+              className="size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
               data-testid="button-close-document-viewer"
             >
-              <img src={closeIcon} alt="" className="size-[14px]" />
+              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 
