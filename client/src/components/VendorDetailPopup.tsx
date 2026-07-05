@@ -4,8 +4,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Clock,
-  AlertTriangle,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   Info,
@@ -13,7 +11,7 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-// (openRuleDetail and resolveRule temporarily unused; linked-rules section removed to match Figma ordering)
+import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import alertFlagIcon from "@assets/Icons_1783209453304.png";
 import closeIcon from "@assets/Close_1783208306441.png";
 
@@ -129,7 +127,11 @@ export function VendorDetailPopup({
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
               <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-                {vendor.trustStatus === "new" ? "New Vendor" : "Review Vendor"}
+                {vendor.trustStatus === "new"
+                  ? "New Vendor"
+                  : vendor.trustStatus === "trusted"
+                    ? "Trusted Vendor"
+                    : "Review Vendor"}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -154,17 +156,29 @@ export function VendorDetailPopup({
                 <div
                   className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
                   style={{
-                    background: vendor.trustStatus === "under_review" ? "#350011" : meta.chipBg,
+                    background: vendor.trustStatus === "under_review"
+                      ? "#350011"
+                      : vendor.trustStatus === "trusted"
+                        ? "#123509"
+                        : meta.chipBg,
                     borderColor: vendor.trustStatus === "under_review"
                       ? "rgba(210,3,68,0.2)"
                       : vendor.trustStatus === "new"
                         ? "rgba(255,149,0,0.2)"
-                        : "transparent",
+                        : vendor.trustStatus === "trusted"
+                          ? "rgba(66,191,35,0.2)"
+                          : "transparent",
                   }}
                 >
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
-                    style={{ color: vendor.trustStatus === "under_review" ? "#d20344" : meta.chipText }}
+                    style={{
+                      color: vendor.trustStatus === "under_review"
+                        ? "#d20344"
+                        : vendor.trustStatus === "trusted"
+                          ? "#42bf23"
+                          : meta.chipText,
+                    }}
                   >
                     {vendor.trustStatus === "under_review" ? "Paused" : meta.label}
                   </p>
@@ -186,6 +200,18 @@ export function VendorDetailPopup({
                     <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {vendor.trustStatus === "trusted" && vendor.trustGrantedLabel && (
+              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+                <div className="flex items-center p-[8px] w-full">
+                  <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                      {vendor.trustGrantedLabel}
                     </p>
                   </div>
                 </div>
@@ -254,6 +280,42 @@ export function VendorDetailPopup({
               </div>
             )}
 
+            {/* Linked Rules (trusted only) */}
+            {vendor.trustStatus === "trusted" && vendor.ruleIds.length > 0 && (
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                {vendor.ruleIds.map((rid) => {
+                  const rule = resolveRule(rid);
+                  return (
+                    <div key={rid} className="bg-[#0a0c10] border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
+                      <button
+                        type="button"
+                        onClick={() => openRuleDetail(rid, navigate)}
+                        disabled={!rule}
+                        className="flex items-start w-full text-left focus:outline-none"
+                        data-testid={`vendor-linked-rule-${rid}`}
+                      >
+                        <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">
+                          <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                              Rule
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative self-stretch">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
+                            {rule ? rule.name : "Rule unavailable"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">
+                          <ChevronRight size={24} className="shrink-0 text-[#6c779d]" />
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex flex-col gap-[12px] w-full">
               {/* Trusted → Revoke */}
@@ -291,11 +353,11 @@ export function VendorDetailPopup({
                     <button
                       type="button"
                       onClick={() => setConfirmingRevoke(true)}
-                      className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#d20344] w-full"
+                      className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#d20344] w-full"
                       style={{ background: "#350011" }}
                       data-testid="button-revoke-trust"
                     >
-                      <ShieldAlert size={16} /> Revoke trust
+                      Revoke trust
                     </button>
                   )}
                 </div>
@@ -336,11 +398,11 @@ export function VendorDetailPopup({
                     <button
                       type="button"
                       onClick={() => setConfirmingGrant(true)}
-                      className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] w-full"
+                      className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] w-full"
                       style={{ background: vendor.eligibleForTrust ? PURPLE : "transparent", color: vendor.eligibleForTrust ? "#ffffff" : "#7631ee", border: vendor.eligibleForTrust ? "none" : `1px solid ${PURPLE}` }}
                       data-testid="button-grant-trust"
                     >
-                      <Sparkles size={16} /> Grant trust
+                      Grant trust
                     </button>
                   )}
                 </div>
@@ -357,7 +419,7 @@ export function VendorDetailPopup({
                       <button
                         type="button"
                         onClick={() => setReviewed(true)}
-                        className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#ff9400] w-full"
+                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#ff9400] w-full"
                         style={{ background: "#4a2300" }}
                         data-testid="button-review-change"
                       >
@@ -372,16 +434,16 @@ export function VendorDetailPopup({
                       <button
                         type="button"
                         onClick={() => { setReviewed(false); onOpenChange(false); }}
-                        className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ffffff] w-full"
+                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ffffff] w-full"
                         style={{ background: ACTIVE }}
                         data-testid="button-restore-trust"
                       >
-                        <ShieldCheck size={16} /> Restore trust
+                        Restore trust
                       </button>
                       <button
                         type="button"
                         onClick={() => setReviewed(false)}
-                        className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] w-full"
+                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] w-full"
                         style={{ background: "transparent" }}
                       >
                         Go back
