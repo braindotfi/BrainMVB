@@ -4,14 +4,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronRight,
   Lock,
-  Pause,
-  Play,
   Plus,
   Sparkles,
   Check,
   Pencil,
   ArrowRight,
   Flag,
+  AlertTriangle,
 } from "lucide-react";
 import {
   useRules,
@@ -35,11 +34,7 @@ import {
 import { useCurrency } from "@/lib/currencyContext";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 
-const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
-const PURPLE = "#7631ee";
-
-type Fmt = (a: string | number) => string;
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -123,110 +118,75 @@ function Section({
 }
 
 /* ── Automation row — acts for you ──────────────────────────────────────────── */
-function AutomationRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
+function AutomationRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
   const pausedFromReport = !rule.active && openReports.length > 0;
   const open = () => navigate(`/rules/${rule.id}`);
-  const hasThreshold = typeof rule.threshold === "number";
 
   return (
     <div
-      className="relative flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
-      style={pausedFromReport ? { boxShadow: `inset 3px 0 0 0 ${ALERT}` } : undefined}
       data-testid={`row-automation-${rule.id}`}
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full ${
+        pausedFromReport
+          ? "bg-[#11141b] border border-[#1d2132]"
+          : "bg-[#0a0c10] border border-transparent"
+      }`}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={open}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            open();
-          }
-        }}
-        className="flex flex-1 min-w-px cursor-pointer flex-col items-start gap-[3px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[6px]"
-        data-testid={`button-open-rule-${rule.id}`}
-      >
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
-          {rule.name}
-        </span>
-        <span className="flex flex-wrap items-center gap-[6px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] text-[#6c779d]">
-          {rule.scopeSummary ?? rule.summary}
-          {hasThreshold && (
-            <span
-              className="inline-flex items-center gap-[6px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[4px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]"
-              data-testid={`pill-threshold-${rule.id}`}
-            >
-              {format(rule.threshold!)}
-            </span>
-          )}
-        </span>
-        {pausedFromReport && (
-          <span
-            className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
-            style={{ color: ALERT }}
-            data-testid={`text-paused-report-${rule.id}`}
-          >
-            Paused after you reported a problem · tap to review
-          </span>
-        )}
-      </div>
-
       <button
         type="button"
         onClick={open}
-        aria-label="Open rule"
-        className="flex size-[28px] items-center justify-center rounded-[8px] hover:bg-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-        data-testid={`chevron-rule-${rule.id}`}
+        className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
+        data-testid={`button-open-rule-${rule.id}`}
       >
-        <ChevronRight size={16} className="text-[#6c779d]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+          {rule.name}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+          {rule.scopeSummary ?? rule.summary}
+        </p>
+        {pausedFromReport && (
+          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
+            <div className="flex gap-[8px] items-start relative">
+              <AlertTriangle size={16} className="text-[#d20344] shrink-0 mt-[1px]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
+                Paused after you reported a problem.
+              </p>
+            </div>
+          </div>
+        )}
       </button>
-
-      {/* Paused-from-report rows route to detail for the resume confirm; others
-          get a quick pause/resume toggle. */}
-      {!pausedFromReport && (
-        <Toggle
-          active={rule.active}
-          onChange={() => (rule.active ? pauseRule(rule.id) : resumeRule(rule.id))}
-          testId={`toggle-rule-${rule.id}`}
-        />
-      )}
+      <Toggle
+        active={rule.active}
+        onChange={() => (rule.active ? pauseRule(rule.id) : resumeRule(rule.id))}
+        testId={`toggle-rule-${rule.id}`}
+      />
     </div>
   );
 }
 
 /* ── Guardrail row — pulls you back in above a threshold ─────────────────────── */
-function GuardrailRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
+function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
+  const open = () => navigate(`/rules/${rule.id}`);
   return (
     <div
-      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
       data-testid={`row-guardrail-${rule.id}`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
     >
       <button
         type="button"
-        onClick={() => navigate(`/rules/${rule.id}`)}
-        className="flex flex-1 min-w-px flex-col items-start gap-[4px] text-left focus:outline-none"
+        onClick={open}
+        className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {rule.name}
-        </span>
-        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px]">
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
           {rule.summary}
-        </span>
+        </p>
       </button>
-
-      {typeof rule.threshold === "number" && (
-        <span
-          className="inline-flex items-center gap-[6px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[4px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0"
-          data-testid={`pill-threshold-${rule.id}`}
-        >
-          {format(rule.threshold)}
-        </span>
-      )}
       <Toggle
         active={rule.active}
         onChange={() => (rule.active ? pauseRule(rule.id) : resumeRule(rule.id))}
@@ -238,22 +198,29 @@ function GuardrailRow({ rule, format }: { rule: AutoRule; format: Fmt }) {
 
 /* ── Always-on row — locked, no toggle ──────────────────────────────────────── */
 function AlwaysOnRow({ rule }: { rule: AutoRule }) {
+  const [, navigate] = useLocation();
+  const open = () => navigate(`/rules/${rule.id}`);
   return (
     <div
-      className="flex items-center gap-[12px] rounded-[8px] p-[10px] pl-[12px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
       data-testid={`row-alwayson-${rule.id}`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
     >
       <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#1d2132]">
         <Lock size={14} className="text-[#6c779d]" />
       </div>
-      <div className="flex flex-1 min-w-px flex-col gap-[3px]">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+      <button
+        type="button"
+        onClick={open}
+        className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
+        data-testid={`button-open-rule-${rule.id}`}
+      >
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {rule.name}
-        </span>
-        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px]">
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
           {rule.summary}
-        </span>
-      </div>
+        </p>
+      </button>
       <span className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] whitespace-nowrap">
         Always on
       </span>
@@ -601,17 +568,19 @@ export function RulesPage() {
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
-              className="w-full rounded-[16px] border border-dashed border-[#414965] hover:border-[rgba(118,49,238,0.6)] transition-colors p-[16px] flex items-center gap-[10px]"
+              className="w-full rounded-[16px] border border-dashed border-[#414965] hover:border-[rgba(118,49,238,0.6)] transition-colors p-[16px] flex items-center justify-between"
             >
-              <div className="flex size-[28px] items-center justify-center rounded-[8px] bg-[#240757]">
-                <Plus size={16} className="text-[#7631ee]" />
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
+                  Write a new rule in plain English
+                </p>
               </div>
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px]">
-                New rule
-              </span>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-                Write one in plain English
-              </span>
+              <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
+                <Plus size={16} className="text-[#ff9500]" />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px]">
+                  New Rule
+                </span>
+              </div>
             </button>
           ) : (
             <div className="w-full rounded-[16px] border border-[rgba(118,49,238,0.35)] bg-[#0a0c10] p-[16px] flex flex-col gap-[14px]" data-testid="panel-builder">
@@ -765,7 +734,7 @@ export function RulesPage() {
             <Section title="Automations" count={automations.length}>
               {automations.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <AutomationRow rule={r} format={format} />
+                  <AutomationRow rule={r} />
                   {idx < automations.length - 1 && <Divider />}
                 </div>
               ))}
@@ -782,7 +751,7 @@ export function RulesPage() {
             <Section title="Guardrails" count={guardrails.length}>
               {guardrails.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <GuardrailRow rule={r} format={format} />
+                  <GuardrailRow rule={r} />
                   {idx < guardrails.length - 1 && <Divider />}
                 </div>
               ))}
