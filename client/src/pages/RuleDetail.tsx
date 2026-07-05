@@ -99,9 +99,9 @@ export function RuleDetail() {
               type="button"
               onClick={() => navigate("/rules")}
               data-testid="button-back-to-rules"
-              className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[4px] py-[2px]"
+              className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
             >
-              <ArrowLeft size={15} /> Rules
+              <ArrowLeft size={16} /> Back to Rules
             </button>
 
             <div className="flex items-start gap-[12px] w-full">
@@ -207,7 +207,7 @@ export function RuleDetail() {
                   style={
                     rule.active
                       ? { backgroundColor: "#4a2300", color: "#ff9400", ["--tw-ring-color" as string]: "#ff9400" }
-                      : { backgroundColor: "rgba(118,49,238,0.15)", color: "#7631ee", ["--tw-ring-color" as string]: "#7631EE" }
+                      : { backgroundColor: "#123509", color: "#42bf23", ["--tw-ring-color" as string]: "#42bf23" }
                   }
                 >
                   {rule.active ? <Pause size={14} /> : <Play size={14} />}
@@ -373,11 +373,6 @@ export function RuleDetail() {
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
                 Reported Problems
               </p>
-              {reports.length > 0 && (
-                <span className="min-w-[16px] p-[2px] rounded-[4px] bg-[#414965] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px]">
-                  {reports.length}
-                </span>
-              )}
             </div>
             <div className="flex flex-col gap-[8px] p-[8px]">
               {reports.length === 0 ? (
@@ -530,35 +525,39 @@ function AmountRow({
     );
   }
   return (
-    <div className="flex gap-[8px] items-center p-[8px]">
-      <input
-        value={draft}
-        autoFocus
-        inputMode="numeric"
-        onChange={(e) => onDraftChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onSave();
-          if (e.key === "Escape") onCancel();
-        }}
-        data-testid={testIdInput}
-        className="flex-1 rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
-      />
-      <button
-        type="button"
-        onClick={onCancel}
-        data-testid={testIdCancel}
-        className="px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4]"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={onSave}
-        data-testid={testIdSave}
-        className="px-[12px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-white"
-      >
-        Save
-      </button>
+    <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+      <div className="flex-1 min-w-px flex flex-col justify-center">
+        <input
+          value={draft}
+          autoFocus
+          inputMode="numeric"
+          onChange={(e) => onDraftChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSave();
+            if (e.key === "Escape") onCancel();
+          }}
+          data-testid={testIdInput}
+          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(118,49,238,0.5)]"
+        />
+      </div>
+      <div className="flex gap-[8px] items-center shrink-0">
+        <button
+          type="button"
+          onClick={onCancel}
+          data-testid={testIdCancel}
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] bg-[#11141b] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          data-testid={testIdSave}
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] bg-[#123509] hover:bg-[#173e0b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 }
