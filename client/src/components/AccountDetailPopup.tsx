@@ -212,7 +212,7 @@ export function AccountDetailPopup({
               </div>
 
               {/* Container */}
-              <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+              <div className="flex flex-col gap-[32px] items-start p-[24px] relative w-full overflow-y-auto">
                 {/* Provenance */}
                 <div className="flex flex-col gap-[16px] items-start w-full" data-testid="account-provenance">
                   <SectionLabel>Provenance</SectionLabel>

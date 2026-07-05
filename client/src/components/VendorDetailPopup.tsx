@@ -193,7 +193,7 @@ export function VendorDetailPopup({
           </div>
 
           {/* Container */}
-          <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto" data-testid="vendor-detail-popup-content">
+          <div className="flex flex-col gap-[32px] items-start p-[24px] relative w-full overflow-y-auto" data-testid="vendor-detail-popup-content">
             {/* Info callout */}
             {vendor.trustStatus === "under_review" && vendor.wasTrustedLabel && (
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">

@@ -164,7 +164,7 @@ export function TransactionDetailPopup({
               </div>
 
               {/* Container */}
-              <div className="flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto" data-testid="transaction-detail-popup-content">
+              <div className="flex flex-col gap-[16px] items-start p-[24px] relative w-full overflow-y-auto" data-testid="transaction-detail-popup-content">
                 <SectionLabel>Details</SectionLabel>
                 <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
                   <Row label="Direction" value={DIRECTION_LABEL[tx.direction] ?? tx.direction} />

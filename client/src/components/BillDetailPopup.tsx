@@ -204,7 +204,7 @@ export function BillDetailPopup({
                 </div>
 
                 {/* Container */}
-                <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto" data-testid="bill-detail-popup-content">
+                <div className="flex flex-col gap-[32px] items-start p-[24px] relative w-full overflow-y-auto" data-testid="bill-detail-popup-content">
                   {/* Details */}
                   <div className="flex flex-col gap-[16px] items-start w-full">
                     <SectionLabel>Details</SectionLabel>
