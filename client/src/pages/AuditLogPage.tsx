@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, ChevronRight, ShieldCheck, Clock } from "lucide-react";
+import { Download } from "lucide-react";
 import { MOCK_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { AUDIT_TABS, auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
+import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
 
 type Tab = (typeof AUDIT_TABS)[number];
@@ -14,7 +14,7 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approvals: "approved",
   "Auto-Approved": "auto_approved",
   "Rule Changes": "rule_change",
-  "Trust Changes": "trust_granted", // trust_granted + trust_revoked
+  "Trusted Changes": "trust_granted", // trust_granted + trust_revoked
   Flagged: "flagged",
 };
 
@@ -51,7 +51,7 @@ export function AuditLogPage() {
       return MOCK_AUDIT_RECORDS.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
     const ev = TAB_TO_EVENT[activeTab];
-    if (activeTab === "Trust Changes") {
+    if (activeTab === "Trusted Changes") {
       return MOCK_AUDIT_RECORDS.filter(
         (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
       );
@@ -76,20 +76,22 @@ export function AuditLogPage() {
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header */}
-          <div className="flex items-start justify-between w-full">
-            <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
+          <div className="flex flex-col items-start gap-[16px] w-full">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col items-start gap-[4px] relative shrink-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
+              </div>
+              <button
+                type="button"
+                className="flex gap-[6px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#222737] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                data-testid="button-export-audit-log"
+              >
+                <Download size={14} className="text-[#6c779d] shrink-0" />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] whitespace-nowrap">Export</span>
+              </button>
             </div>
-            <button
-              type="button"
-              className="flex items-center gap-[6px] px-[12px] py-[8px] rounded-[100px] bg-[#0a0c10] border border-[#1d2132] hover:bg-[#11141b] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              data-testid="button-export-audit-log"
-            >
-              <Download size={14} className="text-[#6c779d]" />
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">Export</span>
-            </button>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
@@ -121,7 +123,7 @@ export function AuditLogPage() {
                   {activeTab === "Approvals" && "No approval records yet."}
                   {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                   {activeTab === "Rule Changes" && "No rule changes recorded yet."}
-                  {activeTab === "Trust Changes" && "No trust status changes yet."}
+                  {activeTab === "Trusted Changes" && "No trust status changes yet."}
                   {activeTab === "Flagged" && "No flagged transactions yet."}
                   {activeTab === "Last 30 Days" && "No events in the last 30 days."}
                 </p>
@@ -152,34 +154,23 @@ export function AuditLogPage() {
                           style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
                         >
                           <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                            <div className="flex gap-[8px] items-center w-full">
-                              <span className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase tracking-[0.06em] shrink-0 ${auditEventChipClass(record.eventType)}`}>
-                                {auditEventLabel(record.eventType)}
-                              </span>
-                              {isAnchored ? (
-                                <ShieldCheck size={12} className="text-[#42bf23] shrink-0" />
-                              ) : (
-                                <Clock size={12} className="text-[#6c779d] shrink-0" />
-                              )}
-                            </div>
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
                               {record.summary}
                             </p>
-                            <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[12px] text-[#6c779d] truncate w-full">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap w-full">
                               {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
                             </p>
                           </div>
-                          <div className="flex items-center gap-[6px] shrink-0">
-                            <span
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] px-[6px] py-[2px] rounded-[4px]"
-                              style={{
-                                color: isAnchored ? "#42bf23" : "#414965",
-                                background: isAnchored ? "rgba(66,191,35,0.08)" : "#1d2132",
-                              }}
-                            >
+                          <div
+                            className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
+                              isAnchored
+                                ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
+                                : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
+                            }`}
+                          >
+                            <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
                               {isAnchored ? "Anchored" : "Pending"}
-                            </span>
-                            <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                            </p>
                           </div>
                         </button>
                         {idx < filtered.length - 1 && <Divider />}
@@ -190,12 +181,7 @@ export function AuditLogPage() {
               </div>
             )}
 
-            {/* Footer caption */}
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965] w-full">
-              A governance record — every entry is anchored and independently verifiable.
-            </p>
           </div>
-
         </div>
       </ScrollArea>
 
