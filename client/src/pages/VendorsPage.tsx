@@ -6,8 +6,8 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 
-type VendorTab = "Under Review" | "New" | "Trusted" | "Suggested";
-const VENDOR_TABS: VendorTab[] = ["Under Review", "New", "Trusted", "Suggested"];
+type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
+const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
 
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
@@ -55,7 +55,7 @@ export function VendorsPage() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
-  const [activeTab, setActiveTab] = useState<VendorTab>("Under Review");
+  const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
 
   /* Deep-link: ?vendor=<id> opens that vendor automatically */
   useEffect(() => {
@@ -94,7 +94,7 @@ export function VendorsPage() {
   }, []);
 
   const tabVendors: Vendor[] = useMemo(() => {
-    if (activeTab === "Under Review") return grouped.underReview;
+    if (activeTab === "Needs Review") return grouped.underReview;
     if (activeTab === "New") return grouped.newVendors;
     if (activeTab === "Trusted") return grouped.trusted;
     return grouped.known;
@@ -161,7 +161,7 @@ export function VendorsPage() {
           {tabVendors.length === 0 ? (
             <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
               <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                {activeTab === "Under Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
                 {activeTab === "New" && "No new vendors detected yet."}
                 {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
                 {activeTab === "Suggested" && "No suggested vendors yet. Brain promotes vendors here after consistent, safe payments."}
