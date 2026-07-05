@@ -568,7 +568,7 @@ export function RulesPage() {
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
-              className="w-full rounded-[16px] border border-dashed border-[#414965] hover:border-[rgba(118,49,238,0.6)] transition-colors p-[16px] flex items-center justify-between"
+              className="w-full rounded-[16px] border border-dashed border-[#414965] bg-[#11141b] p-[16px] flex items-center justify-between cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
