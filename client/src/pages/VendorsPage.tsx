@@ -7,15 +7,15 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 
-type VendorTab = "Under Review" | "New" | "Trusted" | "Known";
-const VENDOR_TABS: VendorTab[] = ["Under Review", "New", "Trusted", "Known"];
+type VendorTab = "Under Review" | "New" | "Trusted" | "Suggested";
+const VENDOR_TABS: VendorTab[] = ["Under Review", "New", "Trusted", "Suggested"];
 
 const TRUST_STATUS_META: Record<
   TrustStatus,
   { label: string; chipBg: string; chipText: string; icon: typeof ShieldCheck }
 > = {
   trusted: { label: "Trusted", chipBg: "rgba(66,191,35,0.10)", chipText: "#42bf23", icon: ShieldCheck },
-  known: { label: "Known", chipBg: "rgba(118,49,238,0.10)", chipText: "#7631ee", icon: Clock },
+  known: { label: "Suggested", chipBg: "rgba(118,49,238,0.10)", chipText: "#7631ee", icon: Clock },
   new: { label: "New", chipBg: "rgba(65,73,101,0.10)", chipText: "#414965", icon: Clock },
   under_review: { label: "Under review", chipBg: "rgba(210,3,68,0.10)", chipText: "#d20344", icon: AlertTriangle },
 };
@@ -199,7 +199,7 @@ export function VendorsPage() {
                 {activeTab === "Under Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
                 {activeTab === "New" && "No new vendors detected yet."}
                 {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                {activeTab === "Known" && "No known vendors yet. Regular payees show up here."}
+                {activeTab === "Suggested" && "No suggested vendors yet. Brain promotes vendors here after consistent, safe payments."}
               </p>
             </div>
           ) : (

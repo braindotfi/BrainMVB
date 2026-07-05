@@ -37,8 +37,8 @@ const TRUST_META: Record<
     headlineColor: ACTIVE,
   },
   known: {
-    label: "Known",
-    chipBg: "rgba(118,49,238,0.10)",
+    label: "Suggested",
+    chipBg: "#240757",
     chipText: PURPLE,
     icon: Clock,
     headlineColor: "#a8b9f4",
@@ -131,7 +131,9 @@ export function VendorDetailPopup({
                   ? "New Vendor"
                   : vendor.trustStatus === "trusted"
                     ? "Trusted Vendor"
-                    : "Review Vendor"}
+                    : vendor.trustStatus === "known"
+                      ? "Suggested Vendor"
+                      : "Review Vendor"}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -229,6 +231,23 @@ export function VendorDetailPopup({
                 </div>
               </div>
             )}
+            {vendor.trustStatus === "known" && (
+              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+                <div className="flex items-center p-[8px] w-full">
+                  <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <div className="flex flex-col gap-[8px] flex-1 min-w-px">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
+                        Brain suggests trusting this vendor.
+                      </p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                        Based on consistent payment history and no unresolved flags. You decide, trust is never auto-granted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment History */}
             <div className="flex flex-col gap-[16px] items-start w-full">
@@ -316,6 +335,52 @@ export function VendorDetailPopup({
               </div>
             )}
 
+            {/* Why Brain Suggests Trust (known / suggested only) */}
+            {vendor.trustStatus === "known" && vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                <SectionLabel>Why Brain Suggests Trust</SectionLabel>
+                <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
+                  {vendor.eligibilityEvidence.map((ev, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center w-full border-b border-[#1d2132] last:border-b-0"
+                    >
+                      <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+                          {ev.label.charAt(0).toUpperCase() + ev.label.slice(1)}
+                        </span>
+                      </div>
+                      <div className="flex flex-1 items-center gap-[8px] px-[12px] py-[8px] min-w-px">
+                        <span
+                          className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] whitespace-nowrap"
+                          style={{
+                            color:
+                              ev.severity === "warning"
+                                ? "#ff9400"
+                                : ev.severity === "danger"
+                                  ? "#d20344"
+                                  : "#a8b9f4",
+                          }}
+                        >
+                          {ev.value}
+                        </span>
+                        {ev.severity === "warning" && (
+                          <div
+                            className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 border border-solid"
+                            style={{ background: "#4a2300", borderColor: "rgba(255,149,0,0.2)" }}
+                          >
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#ff9400] text-[12px] text-center whitespace-nowrap">
+                              Resolved
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex flex-col gap-[12px] w-full">
               {/* Trusted → Revoke */}
@@ -353,17 +418,17 @@ export function VendorDetailPopup({
                     <button
                       type="button"
                       onClick={() => setConfirmingRevoke(true)}
-                      className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#d20344] w-full"
+                      className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] w-full"
                       style={{ background: "#350011" }}
                       data-testid="button-revoke-trust"
                     >
-                      Revoke trust
+                      Revoke Trust
                     </button>
                   )}
                 </div>
               )}
 
-              {/* Known → Grant */}
+              {/* Known (Suggested) → Trust Vendor */}
               {vendor.trustStatus === "known" && (
                 <div className="flex flex-col gap-[12px] w-full">
                   {confirmingGrant ? (
@@ -398,11 +463,11 @@ export function VendorDetailPopup({
                     <button
                       type="button"
                       onClick={() => setConfirmingGrant(true)}
-                      className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] w-full"
-                      style={{ background: vendor.eligibleForTrust ? PURPLE : "transparent", color: vendor.eligibleForTrust ? "#ffffff" : "#7631ee", border: vendor.eligibleForTrust ? "none" : `1px solid ${PURPLE}` }}
+                      className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] w-full"
+                      style={{ background: "#123509" }}
                       data-testid="button-grant-trust"
                     >
-                      Grant trust
+                      Trust Vendor
                     </button>
                   )}
                 </div>
