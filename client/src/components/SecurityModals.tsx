@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783271500515.png";
+import closeIcon from "@assets/Close_1783273053398.png";
 
 /* ─── Security modals ───────────────────────────────────────
    - LoginHistoryModal:  recent sign-in sessions + sign-out-others.

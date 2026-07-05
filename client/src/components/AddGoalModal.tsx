@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783271500515.png";
+import closeIcon from "@assets/Close_1783273053398.png";
 import { useQuery } from "@tanstack/react-query";
 import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
 

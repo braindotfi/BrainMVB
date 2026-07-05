@@ -1,5 +1,5 @@
 import { useState } from "react";
-import closeIcon from "@assets/Close_1783271500515.png";
+import closeIcon from "@assets/Close_1783273053398.png";
 import { SiX, SiTelegram, SiWhatsapp } from "react-icons/si";
 
 const REFERRAL_CODE = "ADAM123";

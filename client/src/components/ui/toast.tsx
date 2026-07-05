@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import closeIcon from "@assets/Close_1783271500515.png"
+import closeIcon from "@assets/Close_1783273053398.png"
 
 import { cn } from "@/lib/utils"
 

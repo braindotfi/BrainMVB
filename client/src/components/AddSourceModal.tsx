@@ -6,7 +6,7 @@ import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } fr
 import doneIcon from "@assets/Done_1781789102202.png";
 import reviewingIcon from "@assets/Reviewing_1781789102203.png";
 import warningIcon from "@assets/Warning_1781789172904.png";
-import closeIcon from "@assets/Close_1783271500515.png";
+import closeIcon from "@assets/Close_1783273053398.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source — paginated wizard for connecting data sources to Brain.

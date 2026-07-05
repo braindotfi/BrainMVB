@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronRight, CheckCircle, AlertTriangle } from "lucide-react";
-import closeIcon from "@assets/Close_1783271500515.png";
+import closeIcon from "@assets/Close_1783273053398.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, linkedRelationship } from "@/lib/auditTypes";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
