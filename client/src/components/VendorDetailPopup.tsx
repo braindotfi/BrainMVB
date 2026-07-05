@@ -14,7 +14,6 @@ import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 // (openRuleDetail and resolveRule temporarily unused; linked-rules section removed to match Figma ordering)
-import warningIcon from "@assets/warning_1783208306441.png";
 import alertFlagIcon from "@assets/Icons_1783209453304.png";
 import closeIcon from "@assets/Close_1783208306441.png";
 
@@ -362,7 +361,7 @@ export function VendorDetailPopup({
                         style={{ background: "#4a2300" }}
                         data-testid="button-review-change"
                       >
-                        <img src={warningIcon} alt="" className="size-[24px] shrink-0" /> Review the Change
+                        Review the Change
                       </button>
                     </div>
                   ) : (
@@ -435,7 +434,7 @@ export function VendorDetailPopup({
                         style={{ background: "#123509" }}
                         data-testid="button-grant-trust"
                       >
-                        <ShieldCheck size={24} /> Trust Vendor
+                        Trust Vendor
                       </button>
                     </div>
                   )}
