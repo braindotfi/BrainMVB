@@ -1,4 +1,5 @@
 import { useState } from "react";
+import closeIcon from "@assets/Close_1783271500515.png";
 import { SiX, SiTelegram, SiWhatsapp } from "react-icons/si";
 
 const REFERRAL_CODE = "ADAM123";
@@ -107,11 +108,9 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
           <button
             onClick={onClose}
             data-testid="close-invite-modal"
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#222737] text-[#6c779d] hover:opacity-80 transition-opacity"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#222737] hover:opacity-80 transition-opacity"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <img src={closeIcon} alt="" className="size-[14px]" />
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783208306441.png";
+import closeIcon from "@assets/Close_1783271500515.png";
 
 /* ─── Security modals ───────────────────────────────────────
    - LoginHistoryModal:  recent sign-in sessions + sign-out-others.
@@ -206,9 +206,7 @@ export function LoginHistoryModal({
               aria-label="Close"
               className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3.33 3.33L12.67 12.67M12.67 3.33L3.33 12.67" stroke="#6C779D" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <CloseIcon />
             </Dialog.Close>
           </div>
 
@@ -416,9 +414,7 @@ export function ChangePinModal({
               aria-label="Close"
               className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3.33 3.33L12.67 12.67M12.67 3.33L3.33 12.67" stroke="#6C779D" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <CloseIcon />
             </Dialog.Close>
           </div>
 

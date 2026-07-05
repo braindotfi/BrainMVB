@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CircleCheck, ChevronRight } from "lucide-react";
-import closeIcon from "@assets/Close_1783208306441.png";
+import closeIcon from "@assets/Close_1783271500515.png";
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";

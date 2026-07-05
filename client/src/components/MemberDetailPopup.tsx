@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783208306441.png";
+import closeIcon from "@assets/Close_1783271500515.png";
 import { useQuery } from "@tanstack/react-query";
 import {
   useOpenMemberId,
