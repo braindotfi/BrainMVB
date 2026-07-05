@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 import { RecordPager } from "./RecordPager";
 import {
   Receipt,

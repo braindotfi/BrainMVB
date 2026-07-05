@@ -13,7 +13,7 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import alertFlagIcon from "@assets/Icons_1783209453304.png";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";

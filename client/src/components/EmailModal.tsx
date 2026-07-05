@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAppAlert } from "@/components/AppAlert";
 import { setUserEmail } from "@/lib/userContact";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Email entry + Verify modals ──────────────────────────────────────
    Three-step flow:

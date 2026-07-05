@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 /** Subset of brain-core's Transaction we render (mirrors FinancesPage). */
 export interface BrainTransactionDTO {

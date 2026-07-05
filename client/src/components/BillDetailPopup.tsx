@@ -9,7 +9,7 @@ import { useIntents } from "@/lib/intentsStore";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import documentIcon from "@assets/doc_1783202136247.png";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ── Bill detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Bill Details"

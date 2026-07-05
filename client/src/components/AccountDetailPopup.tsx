@@ -3,7 +3,7 @@ import { Info } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ── Read-only Account detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"

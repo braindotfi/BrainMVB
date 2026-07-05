@@ -12,7 +12,7 @@ import {
   ExternalLink,
   ArrowLeftRight,
 } from "lucide-react";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel } from "@/lib/documentTypes";
 import { resolveDocument } from "@/lib/openDocumentDetail";

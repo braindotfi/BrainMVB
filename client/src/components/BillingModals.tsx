@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Billing-related modals ────────────────────────────────
    - ChangePlanModal:           pick a plan, confirm.

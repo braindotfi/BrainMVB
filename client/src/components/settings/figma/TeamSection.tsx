@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail, primeMembers } from "@/lib/membersStore";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
-import closeIcon from "@assets/Close_1783273053398.png";
+import closeIcon from "@assets/Close_1783293571882.png";
 import {
   ROLE_LABELS,
   envelopeLine,
