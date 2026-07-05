@@ -142,7 +142,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {rule.name}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
           {rule.scopeSummary ?? rule.summary}
         </p>
         {pausedFromReport && (
@@ -183,7 +183,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {rule.name}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
           {rule.summary}
         </p>
       </button>
@@ -217,7 +217,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {rule.name}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
           {rule.summary}
         </p>
       </button>

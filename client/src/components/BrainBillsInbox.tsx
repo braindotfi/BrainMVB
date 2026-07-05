@@ -108,9 +108,11 @@ export function BrainBillsInbox() {
                     </p>
                   </div>
                   {flags.length > 0 && (
-                    <div className="inline-flex items-center gap-[8px] bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[8px] px-[8px] py-[4px]">
-                      <img src={alertIcon} alt="" className="size-[14px] rounded-full" />
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#d20344] text-[12px]">
+                    <div className="flex items-center gap-[8px] bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] p-[8px]">
+                      <div className="relative shrink-0 size-[16px]">
+                        <img src={alertIcon} alt="" className="absolute block inset-0 max-w-none size-full" />
+                      </div>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
                         Anomalies Detected
                       </span>
                     </div>
