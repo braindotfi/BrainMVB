@@ -262,8 +262,8 @@ const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Home", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
   { path: "/finances", label: "Finances", ActiveIcon: FinancesIconActive, InactiveIcon: FinancesIconInactive },
   { path: "/review", label: "Review", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
-  { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
   { path: "/vendors", label: "Vendors", ActiveIcon: VendorsIconActive, InactiveIcon: VendorsIconInactive },
+  { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
   { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
 
