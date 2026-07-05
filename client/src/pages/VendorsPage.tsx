@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight } from "lucide-react";
 import { MOCK_VENDORS } from "@/lib/mockVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor } from "@/lib/vendorTypes";
@@ -38,13 +37,12 @@ function VendorRow({
           {vendor.category} · {vendor.history.paymentCount} payments
         </p>
       </div>
-      <div className="flex items-center gap-[6px] shrink-0">
+      <div className="flex flex-col items-end justify-center relative shrink-0">
         {typeof vendor.history.totalPaid === "number" && (
-          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] text-[#a8b9f4]">
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
             {format(vendor.history.totalPaid)}
           </span>
         )}
-        <ChevronRight size={14} className="text-[#414965] shrink-0" />
       </div>
     </button>
   );
