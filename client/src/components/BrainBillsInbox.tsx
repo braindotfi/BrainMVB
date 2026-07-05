@@ -97,7 +97,7 @@ export function BrainBillsInbox() {
                 }}
                 className="flex gap-[16px] items-center w-full p-[8px] relative rounded-[8px] shrink-0 bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               >
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
                     {nameOf(bill.counterparty_id)}
                   </p>
@@ -106,15 +106,15 @@ export function BrainBillsInbox() {
                       {bill.invoice_number}
                       {bill.due_date ? ` · due ${fmtDue(bill.due_date)}` : ""}
                     </p>
-                    {flags.length > 0 && (
-                      <span className="inline-flex items-center gap-[4px] bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[8px] px-[6px] py-[2px]">
-                        <img src={alertIcon} alt="" className="size-[12px] rounded-full" />
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#d20344] text-[11px]">
-                          Anomalies Detected
-                        </span>
-                      </span>
-                    )}
                   </div>
+                  {flags.length > 0 && (
+                    <div className="inline-flex items-center gap-[8px] bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[8px] px-[8px] py-[4px]">
+                      <img src={alertIcon} alt="" className="size-[14px] rounded-full" />
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#d20344] text-[12px]">
+                        Anomalies Detected
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
                   {format(Number(bill.amount_due))}

@@ -10,8 +10,8 @@ import {
   Pencil,
   ArrowRight,
   Flag,
-  AlertTriangle,
 } from "lucide-react";
+import alertIcon from "@assets/Icons_1783274957589.png";
 import {
   useRules,
   pauseRule,
@@ -148,7 +148,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         {pausedFromReport && (
           <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
             <div className="flex gap-[8px] items-start relative">
-              <AlertTriangle size={16} className="text-[#d20344] shrink-0 mt-[1px]" />
+              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
                 Paused after you reported a problem.
               </p>
