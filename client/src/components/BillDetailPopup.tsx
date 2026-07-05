@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import type { ReactNode } from "react";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import alertIcon from "@assets/Icons_1783274957589.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
@@ -245,7 +246,7 @@ export function BillDetailPopup({
                         className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
                       >
                         <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                          <AlertTriangle size={16} className="shrink-0 mt-[1px]" style={{ color: "#d20344" }} />
+                          <img src={alertIcon} alt="" className="shrink-0 size-[16px] rounded-full mt-[1px]" />
                           <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
                             <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
                               ANOMALIES DETECTED

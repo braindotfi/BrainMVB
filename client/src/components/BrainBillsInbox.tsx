@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/currencyContext";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
+import alertIcon from "@assets/Icons_1783274957589.png";
 
 // ─── brain-core shapes (subset rendered here; via the BFF proxy) ────────────────────────────────────────
 
@@ -106,8 +107,11 @@ export function BrainBillsInbox() {
                       {bill.due_date ? ` · due ${fmtDue(bill.due_date)}` : ""}
                     </p>
                     {flags.length > 0 && (
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#ff9500] text-[12px]">
-                        ⚠ {flags.join(", ").replace(/_/g, " ")}
+                      <span className="inline-flex items-center gap-[4px] bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[8px] px-[6px] py-[2px]">
+                        <img src={alertIcon} alt="" className="size-[12px] rounded-full" />
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#d20344] text-[11px]">
+                          Anomalies Detected
+                        </span>
                       </span>
                     )}
                   </div>
