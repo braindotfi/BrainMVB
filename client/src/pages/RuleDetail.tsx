@@ -4,14 +4,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
   Flag,
-  ShieldCheck,
   Pause,
   Play,
   Trash2,
   ChevronDown,
+  ChevronUp,
   ReceiptText,
-  AlertTriangle,
-  Pencil,
+  Info,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
@@ -89,11 +88,6 @@ export function RuleDetail() {
       setAmountDraft("");
     }
   };
-  const amountMeta =
-    rule.kind === "guardrail"
-      ? { label: "Approval threshold", help: "Brain checks with you before any payment over this amount." }
-      : { label: "Trigger amount", help: "Brain acts when the balance crosses this amount." };
-
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -179,14 +173,13 @@ export function RuleDetail() {
             </div>
           )}
 
-          {/* What changed — plain-language status line. */}
-          <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex items-start gap-[10px]" data-testid="text-what-changed">
-            <AlertTriangle
-              size={16}
-              className="shrink-0 mt-[1px]"
-              style={{ color: rule.active ? "#6c779d" : ALERT }}
-            />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
+          {/* Status banner — matches Figma's "Info Circle" info pill. */}
+          <div
+            className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
+            data-testid="text-what-changed"
+          >
+            <Info size={16} className="shrink-0" style={{ color: rule.active ? "#6c779d" : ALERT }} />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
                   This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {rule.scopeSummary ?? "matching payments"} without asking you.
@@ -199,28 +192,41 @@ export function RuleDetail() {
             </p>
           </div>
 
-          {/* Active / Paused toggle — resume needs confirm. */}
-          <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex flex-col gap-[12px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
-              Rule status
-            </p>
+          {/* Rule status — Pause/Resume + Delete, matches Figma's "Rule Status" card. */}
+          <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]">
+            <div className="flex items-center justify-between gap-[16px] flex-wrap">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
+                Rule Status
+              </p>
+              <div className="flex items-center gap-[8px]">
+                <button
+                  type="button"
+                  onClick={() => (rule.active ? pauseRule(rule.id) : setConfirmingResume(true))}
+                  data-testid="button-toggle-rule"
+                  className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  style={
+                    rule.active
+                      ? { backgroundColor: "#4a2300", color: "#ff9400", ["--tw-ring-color" as string]: "#ff9400" }
+                      : { backgroundColor: "rgba(118,49,238,0.15)", color: "#7631ee", ["--tw-ring-color" as string]: "#7631EE" }
+                  }
+                >
+                  {rule.active ? <Pause size={14} /> : <Play size={14} />}
+                  {rule.active ? "Pause Rule" : "Resume Rule"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  data-testid="button-delete-rule"
+                  className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
+                >
+                  <Trash2 size={14} /> Delete Rule
+                </button>
+              </div>
+            </div>
 
-            {!confirmingResume ? (
-              <button
-                type="button"
-                onClick={() => (rule.active ? pauseRule(rule.id) : setConfirmingResume(true))}
-                data-testid="button-toggle-rule"
-                className={`flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] focus:outline-none focus-visible:ring-2 ${
-                  rule.active
-                    ? "bg-[#1d2132] hover:bg-[#252a3d] text-[#a8b9f4] focus-visible:ring-[#414965]"
-                    : "bg-[#7631ee] hover:bg-[#8a4bf5] text-white focus-visible:ring-[#7631EE]"
-                }`}
-              >
-                {rule.active ? <Pause size={16} /> : <Play size={16} />}
-                {rule.active ? "Pause this rule" : "Resume this rule"}
-              </button>
-            ) : (
-              <div className="flex flex-col gap-[10px]">
+            {confirmingResume && (
+              <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
                   Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
                 </p>
@@ -244,220 +250,149 @@ export function RuleDetail() {
                 </div>
               </div>
             )}
+
+            {confirmingDelete && (
+              <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
+                  Deleting removes this rule entirely. Future matching payments will always wait for your approval. This can’t be undone.
+                </p>
+                <div className="flex gap-[10px] items-stretch w-full">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    data-testid="button-delete-cancel"
+                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4]"
+                  >
+                    Keep rule
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    data-testid="button-delete-confirm"
+                    className="flex-1 px-[12px] py-[9px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2"
+                    style={{ backgroundColor: ALERT, ["--tw-ring-color" as string]: ALERT }}
+                  >
+                    Delete rule
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Amount editor — the guardrail approval threshold / automation trigger
-              amount. Moved here from the inline row pill so the amount is edited on
-              the rule's own page. */}
-          {typeof rule.threshold === "number" && (
-            <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex flex-col gap-[12px]">
-              <div className="flex items-start justify-between gap-[12px]">
-                <div className="flex flex-col gap-[2px] min-w-px">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
-                    {amountMeta.label}
-                  </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
-                    {amountMeta.help}
-                  </p>
-                </div>
-                <span
-                  className="[font-family:'JetBrains_Mono',monospace] text-[15px] text-[#a8b9f4] shrink-0"
-                  data-testid="text-rule-threshold"
-                >
-                  {format(rule.threshold)}
+          {/* Trusted vendors — allowlist removal, matches Figma's "Popup - Search Results" panel. */}
+          {rule.allowlist && rule.allowlist.length > 0 && (
+            <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+              <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+                  Trusted Vendors
+                </p>
+                <span className="min-w-[16px] p-[2px] rounded-[4px] bg-[#414965] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px]">
+                  {rule.allowlist.length}
                 </span>
               </div>
-              {!showAmountEditor ? (
-                <button
-                  type="button"
-                  onClick={() => { setShowAmountEditor(true); setAmountDraft(String(rule.threshold)); }}
-                  data-testid="button-edit-amount"
-                  className="self-start flex items-center gap-[6px] px-[12px] py-[7px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-                >
-                  <Pencil size={13} /> Edit amount
-                </button>
-              ) : (
-                <div className="flex gap-[8px] items-center">
-                  <input
-                    value={amountDraft}
-                    autoFocus
-                    inputMode="numeric"
-                    onChange={(e) => setAmountDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") onSaveAmount();
-                      if (e.key === "Escape") { setShowAmountEditor(false); setAmountDraft(""); }
-                    }}
-                    data-testid="input-amount"
-                    className="flex-1 rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => { setShowAmountEditor(false); setAmountDraft(""); }}
-                    data-testid="button-amount-cancel"
-                    className="px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onSaveAmount}
-                    data-testid="button-amount-save"
-                    className="px-[12px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-white"
-                  >
-                    Save
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Remediations — narrow the rule instead of nuking it. */}
-          <div className="w-full rounded-[12px] bg-[#0a0c10] border border-[#1d2132] p-[14px] flex flex-col gap-[14px]">
-            <div className="flex items-center gap-[8px]">
-              <ShieldCheck size={16} className="text-[#7631ee] shrink-0" />
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
-                Tighten this rule
-              </p>
-            </div>
-
-            {/* Allowlist — remove a vendor */}
-            {rule.allowlist && rule.allowlist.length > 0 && (
-              <div className="flex flex-col gap-[8px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
-                  Trusted vendors
-                </p>
-                <div className="flex flex-col gap-[6px]">
-                  {rule.allowlist.map((vendor) => (
+              <div className="flex flex-col gap-[8px] p-[8px]">
+                {rule.allowlist.map((vendor, i) => (
+                  <div key={vendor} className="flex flex-col gap-[8px]">
+                    {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
                     <div
-                      key={vendor}
-                      className="flex items-center gap-[8px] rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px]"
+                      className="flex items-center gap-[16px] p-[8px] rounded-[8px]"
                       data-testid={`row-vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
                     >
-                      <span className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] truncate">
+                      <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
                         {vendor}
                       </span>
                       <button
                         type="button"
                         onClick={() => removeVendor(rule.id, vendor)}
                         data-testid={`button-remove-vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
-                        className="px-[10px] py-[5px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
-                        style={{ backgroundColor: "rgba(210,3,68,0.1)", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
+                        className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                        style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                       >
                         Remove
                       </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Cap — lower it */}
-            {typeof rule.cap === "number" && (
-              <div className="flex flex-col gap-[8px]">
-                <div className="flex items-center justify-between">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
-                    Auto-clear cap
-                  </p>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]" data-testid="text-rule-cap">
-                    {format(rule.cap)}
-                  </span>
-                </div>
-                {!showCapEditor ? (
-                  <button
-                    type="button"
-                    onClick={() => { setShowCapEditor(true); setCapDraft(String(rule.cap)); }}
-                    data-testid="button-lower-cap"
-                    className="self-start px-[12px] py-[7px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-                  >
-                    Lower the cap
-                  </button>
-                ) : (
-                  <div className="flex gap-[8px] items-center">
-                    <input
-                      value={capDraft}
-                      onChange={(e) => setCapDraft(e.target.value)}
-                      inputMode="numeric"
-                      data-testid="input-cap"
-                      className="flex-1 rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { setShowCapEditor(false); setCapDraft(""); }}
-                      data-testid="button-cap-cancel"
-                      className="px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4]"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onLowerCap}
-                      data-testid="button-cap-save"
-                      className="px-[12px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-white"
-                    >
-                      Save
-                    </button>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Delete the rule */}
-            <div className="pt-[4px] border-t border-[#1d2132]">
-              {!confirmingDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  data-testid="button-delete-rule"
-                  className="flex items-center gap-[8px] mt-[12px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
-                  style={{ backgroundColor: "rgba(210,3,68,0.08)", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
-                >
-                  <Trash2 size={15} /> Delete this rule
-                </button>
-              ) : (
-                <div className="flex flex-col gap-[10px] mt-[12px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                    Deleting removes this rule entirely. Future matching payments will always wait for your approval. This can’t be undone.
-                  </p>
-                  <div className="flex gap-[10px] items-stretch w-full">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingDelete(false)}
-                      data-testid="button-delete-cancel"
-                      className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4]"
-                    >
-                      Keep rule
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onDelete}
-                      data-testid="button-delete-confirm"
-                      className="flex-1 px-[12px] py-[9px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2"
-                      style={{ backgroundColor: ALERT, ["--tw-ring-color" as string]: ALERT }}
-                    >
-                      Delete rule
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Reported problems trail */}
-          <div className="w-full flex flex-col gap-[12px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
-              Reported problems
-            </p>
-            {reports.length === 0 ? (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                No problems reported on this rule yet.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-[8px]">
-                {[...reports].reverse().map((r) => (
-                  <ReportCard key={r.id} report={r} onOpenReceipt={openReceipt} />
                 ))}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Amount — threshold / cap edit, matches Figma's "Amount" panel. */}
+          {(typeof rule.threshold === "number" || typeof rule.cap === "number") && (
+            <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+              <div className="flex items-center px-[16px] py-[14px] border-b border-[#1d2132]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+                  Amount
+                </p>
+              </div>
+              <div className="flex flex-col gap-[8px] p-[8px]">
+                {typeof rule.threshold === "number" && (
+                  <AmountRow
+                    value={rule.threshold}
+                    format={format}
+                    editing={showAmountEditor}
+                    draft={amountDraft}
+                    onDraftChange={setAmountDraft}
+                    onEditStart={() => { setShowAmountEditor(true); setAmountDraft(String(rule.threshold)); }}
+                    onCancel={() => { setShowAmountEditor(false); setAmountDraft(""); }}
+                    onSave={onSaveAmount}
+                    testIdValue="text-rule-threshold"
+                    testIdInput="input-amount"
+                    testIdEdit="button-edit-amount"
+                    testIdCancel="button-amount-cancel"
+                    testIdSave="button-amount-save"
+                  />
+                )}
+                {typeof rule.threshold === "number" && typeof rule.cap === "number" && (
+                  <div className="h-px w-full bg-[#1d2132]" />
+                )}
+                {typeof rule.cap === "number" && (
+                  <AmountRow
+                    value={rule.cap}
+                    format={format}
+                    editing={showCapEditor}
+                    draft={capDraft}
+                    onDraftChange={setCapDraft}
+                    onEditStart={() => { setShowCapEditor(true); setCapDraft(String(rule.cap)); }}
+                    onCancel={() => { setShowCapEditor(false); setCapDraft(""); }}
+                    onSave={onLowerCap}
+                    testIdValue="text-rule-cap"
+                    testIdInput="input-cap"
+                    testIdEdit="button-lower-cap"
+                    testIdCancel="button-cap-cancel"
+                    testIdSave="button-cap-save"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reported problems — accordion trail, matches Figma's "Reported Problems" panel. */}
+          <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+            <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+                Reported Problems
+              </p>
+              {reports.length > 0 && (
+                <span className="min-w-[16px] p-[2px] rounded-[4px] bg-[#414965] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px]">
+                  {reports.length}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-[8px] p-[8px]">
+              {reports.length === 0 ? (
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] p-[8px]">
+                  No problems reported on this rule yet.
+                </p>
+              ) : (
+                [...reports].reverse().map((r, i) => (
+                  <div key={r.id} className="flex flex-col gap-[8px]">
+                    {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+                    <ReportCard report={r} onOpenReceipt={openReceipt} />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
         </div>
@@ -498,50 +433,132 @@ function ReportCard({
   const [open, setOpen] = useState(false);
   return (
     <div
-      className="w-full rounded-[10px] bg-[#0a0c10] border border-[#1d2132] overflow-hidden"
+      className={`w-full rounded-[8px] flex flex-col gap-[8px] p-[8px] ${open ? "bg-[#11141b] border border-[#1d2132]" : "bg-[#0a0c10]"}`}
       data-testid={`card-report-${report.id}`}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-[10px] w-full px-[12px] py-[10px] text-left hover:bg-[#0d1017] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+        data-testid={`button-toggle-report-${report.id}`}
+        className="flex items-center justify-between gap-[10px] w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[6px]"
       >
-        <Flag size={15} className="shrink-0" style={{ color: report.resolved ? "#6c779d" : ALERT }} />
-        <div className="flex flex-col flex-1 min-w-px">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[13px]">
+        <div className="flex flex-col gap-[4px] min-w-px">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
             {report.reason}
           </p>
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[11px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px]">
             {report.reportedAtLabel}
           </p>
         </div>
-        {report.resolved && (
-          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] text-[#6c779d] shrink-0">
-            Resolved
-          </span>
+        {open ? (
+          <ChevronUp size={24} className="shrink-0 text-[#6c779d]" />
+        ) : (
+          <ChevronDown size={24} className="shrink-0 text-[#6c779d]" />
         )}
-        <ChevronDown
-          size={15}
-          className={`shrink-0 text-[#6c779d] transition-transform ${open ? "rotate-180" : ""}`}
-        />
       </button>
       {open && (
-        <div className="px-[12px] pb-[12px] flex flex-col gap-[8px]">
-          {report.note && (
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a8b9f4] text-[13px] rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px]">
-              {report.note}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => onOpenReceipt(report.proposalId)}
-            data-testid={`button-report-receipt-${report.id}`}
-            className="self-start flex items-center gap-[6px] px-[12px] py-[7px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-          >
-            <ReceiptText size={14} /> View the receipt
-          </button>
-        </div>
+        <>
+          <div className="h-px w-full bg-[#1d2132]" />
+          <div className="flex items-center gap-[16px]">
+            {report.note && (
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px]">
+                {report.note}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => onOpenReceipt(report.proposalId)}
+              data-testid={`button-report-receipt-${report.id}`}
+              className="shrink-0 flex items-center px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+            >
+              View the Receipt
+            </button>
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+function AmountRow({
+  value,
+  format,
+  editing,
+  draft,
+  onDraftChange,
+  onEditStart,
+  onCancel,
+  onSave,
+  testIdValue,
+  testIdInput,
+  testIdEdit,
+  testIdCancel,
+  testIdSave,
+}: {
+  value: number;
+  format: (n: number) => string;
+  editing: boolean;
+  draft: string;
+  onDraftChange: (v: string) => void;
+  onEditStart: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  testIdValue: string;
+  testIdInput: string;
+  testIdEdit: string;
+  testIdCancel: string;
+  testIdSave: string;
+}) {
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-[16px] p-[8px] rounded-[8px]">
+        <span
+          className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4]"
+          data-testid={testIdValue}
+        >
+          {format(value)}
+        </span>
+        <button
+          type="button"
+          onClick={onEditStart}
+          data-testid={testIdEdit}
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-[8px] items-center p-[8px]">
+      <input
+        value={draft}
+        autoFocus
+        inputMode="numeric"
+        onChange={(e) => onDraftChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSave();
+          if (e.key === "Escape") onCancel();
+        }}
+        data-testid={testIdInput}
+        className="flex-1 rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+      />
+      <button
+        type="button"
+        onClick={onCancel}
+        data-testid={testIdCancel}
+        className="px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4]"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        data-testid={testIdSave}
+        className="px-[12px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-white"
+      >
+        Save
+      </button>
     </div>
   );
 }
