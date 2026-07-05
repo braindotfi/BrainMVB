@@ -48,8 +48,8 @@ const TRUST_META: Record<
   },
   new: {
     label: "New",
-    chipBg: "rgba(65,73,101,0.10)",
-    chipText: "#414965",
+    chipBg: "#4a2300",
+    chipText: "#ff9400",
     icon: Clock,
     headlineColor: "#a8b9f4",
   },
@@ -130,7 +130,7 @@ export function VendorDetailPopup({
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
               <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-                Review Vendor
+                {vendor.trustStatus === "new" ? "New Vendor" : "Review Vendor"}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -156,7 +156,11 @@ export function VendorDetailPopup({
                   className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
                   style={{
                     background: vendor.trustStatus === "under_review" ? "#350011" : meta.chipBg,
-                    borderColor: vendor.trustStatus === "under_review" ? "rgba(210,3,68,0.2)" : "transparent",
+                    borderColor: vendor.trustStatus === "under_review"
+                      ? "rgba(210,3,68,0.2)"
+                      : vendor.trustStatus === "new"
+                        ? "rgba(255,149,0,0.2)"
+                        : "transparent",
                   }}
                 >
                   <p
@@ -183,6 +187,18 @@ export function VendorDetailPopup({
                     <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {vendor.trustStatus === "new" && (
+              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+                <div className="flex items-center p-[8px] w-full">
+                  <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                      Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
                   </div>
                 </div>
@@ -378,8 +394,8 @@ export function VendorDetailPopup({
 
               {/* New → manual Trust */}
               {vendor.trustStatus === "new" && (
-                <div className="flex flex-col gap-[12px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
+                <div className="flex flex-col gap-[14px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
                     This vendor will be eligible for trust after a few more on-time payments with consistent amounts and no flags. You can still grant trust manually.
                   </p>
                   {confirmingGrant ? (
@@ -411,15 +427,17 @@ export function VendorDetailPopup({
                       </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingGrant(true)}
-                      className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ffffff] w-full"
-                      style={{ background: PURPLE }}
-                      data-testid="button-grant-trust"
-                    >
-                      <Sparkles size={16} /> Grant trust
-                    </button>
+                    <div className="flex items-center w-full">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingGrant(true)}
+                        className="flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23]"
+                        style={{ background: "#123509" }}
+                        data-testid="button-grant-trust"
+                      >
+                        <ShieldCheck size={24} /> Trust Vendor
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
