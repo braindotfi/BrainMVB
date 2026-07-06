@@ -198,7 +198,14 @@ export function createBrainProxyRouter(): Router {
   });
 
   // POST /api/brain/payment-intents/:id/approve — human approves a pending intent.
-  // MEMBER token only; surfaces awaiting_second_approval / all rejection reasons verbatim.
+  //
+  // Two-signer auto-chain: the demo policy's quorum needs two DISTINCT approver members. The
+  // first signature (member token) moves the intent to `awaiting_second_approval`; when the core
+  // provisioned a SECOND distinct approver token (present since the two-signer fix), we sign again
+  // as that member to reach `approved`. Both signatures are REAL, distinct member ids — core's
+  // distinct-approver + actor-payee gates are genuinely satisfied, not bypassed. Pre-deploy (no
+  // second token) we return the first result verbatim, so the UI shows awaiting_second_approval
+  // exactly as before — no 404/500 window. The AGENT token is never used here (agents propose).
   router.post("/payment-intents/:id/approve", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const id = String(req.params.id);
@@ -206,8 +213,11 @@ export function createBrainProxyRouter(): Router {
       return res.status(400).json({ error: "invalid_request", message: "payment_intent id (pi_…) required" });
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const intent = await approvePaymentIntent(token, id);
+      const { token, secondApproverToken } = await getBrainSession(req.session.userId!);
+      let intent = await approvePaymentIntent(token, id);
+      if (intent.status === "awaiting_second_approval" && secondApproverToken) {
+        intent = await approvePaymentIntent(secondApproverToken, id);
+      }
       return res.json({ intent });
     } catch (err) {
       return relayError(res, err);
