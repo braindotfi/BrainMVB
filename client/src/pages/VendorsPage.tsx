@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBrainVendors } from "@/lib/brainVendors";
+import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
@@ -56,6 +56,10 @@ export function VendorsPage() {
   const search = useSearch();
   const { vendors, isLoading, isError } = useBrainVendors();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
+  // Enrich the OPEN vendor with live payment history + refined trust (the list
+  // carries neither). Identity/pager logic stays on `activeVendor`; only the
+  // popup renders the enriched copy.
+  const detailVendor = useBrainVendorDetail(activeVendor);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
 
   /* Deep-link: ?vendor=<id> opens that vendor automatically */
@@ -210,7 +214,7 @@ export function VendorsPage() {
       </ScrollArea>
 
       <VendorDetailPopup
-        vendor={activeVendor}
+        vendor={detailVendor}
         open={activeVendor !== null}
         onOpenChange={(o) => { if (!o) handleCloseDetail(); }}
         onPrev={() => pageVendor(-1)}
