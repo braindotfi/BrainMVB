@@ -7,8 +7,6 @@ import {
   Sparkles,
   Check,
   Pencil,
-  ArrowRight,
-  Flag,
 } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import infoIcon from "@assets/Icons_1783346130548.png";
@@ -387,38 +385,51 @@ function Chip({
   open,
   onClick,
   testId,
+  compact,
 }: {
   value?: string;
   placeholder: string;
   open: boolean;
   onClick: () => void;
   testId: string;
+  compact?: boolean;
 }) {
+  const hasValue = !!value;
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`inline-flex items-center gap-[4px] rounded-[8px] border px-[10px] py-[3px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] ${
-        value
-          ? "border-[rgba(118,49,238,0.5)] bg-[#240757] text-[#a8b9f4]"
-          : "border-dashed border-[#414965] bg-transparent text-[#6c779d]"
+      className={`inline-flex items-center gap-[4px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] text-[14px] ${
+        compact ? "py-[2px] px-[8px]" : "py-[3px] px-[10px]"
+      } ${
+        hasValue
+          ? "bg-[#240757] text-[#a8b9f4] font-semibold"
+          : "bg-[#11141b] text-[#6c779d] font-medium border border-dashed border-[#414965]"
       }`}
     >
       {value ?? placeholder}
-      <ChevronRight size={13} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
     </button>
   );
 }
+
+type BuilderAction = "auto" | "queue" | "flag";
 
 type BuilderState = {
   category: string;
   vendor: string;
   amount: string;
-  action: "pay" | "ask";
+  action: BuilderAction;
 };
 
-const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
+const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "auto" };
+
+const ACTION_LABELS: Record<BuilderAction, string> = {
+  auto: "pay it automatically",
+  queue: "queue for one-click approval",
+  flag: "flag for review",
+};
 
 type RuleTab = "Default" | "Automations" | "Guardrails" | "Suggested";
 const RULE_TABS: RuleTab[] = ["Default", "Automations", "Guardrails", "Suggested"];
@@ -466,7 +477,7 @@ export function RulesPage() {
       category: draft.category && BUILDER_CATEGORIES.includes(draft.category) ? draft.category : "",
       vendor: draft.allowlist?.[0] ?? "",
       amount: String(draft.cap ?? draft.threshold ?? ""),
-      action: draft.kind === "guardrail" ? "ask" : "pay",
+      action: draft.kind === "guardrail" ? "flag" : "auto",
     });
     setOpenChip(null);
     setBuilderOpen(true);
@@ -490,7 +501,7 @@ export function RulesPage() {
   }, []);
 
   const amountNum = Number(builder.amount.replace(/[^0-9.]/g, ""));
-  const isAuto = builder.action === "pay";
+  const isAuto = builder.action === "auto" || builder.action === "queue";
   const builderValid =
     builder.category !== "" &&
     Number.isFinite(amountNum) &&
@@ -503,7 +514,7 @@ export function RulesPage() {
 
   const buildDraft = (): AutoRule => {
     const amt = Math.round(amountNum);
-    if (isAuto) {
+    if (builder.action === "auto") {
       const name = `Auto-clear ${builder.category} from ${builder.vendor}`;
       return finalizeDraft({
         kind: "automation",
@@ -517,17 +528,31 @@ export function RulesPage() {
         scopeSummary: `${builder.vendor} (${builder.category}) under ${format(amt)}`,
       });
     }
-    const name = `Ask before paying over ${format(amt)}`;
+    if (builder.action === "queue") {
+      const name = `Queue ${builder.category} from ${builder.vendor} for approval`;
+      return finalizeDraft({
+        kind: "automation",
+        name,
+        summary: `${builder.vendor} · ${builder.category} · under ${format(amt)} · queue for approval`,
+        policyId: builderPolicy,
+        agent: "invoice",
+        category: builder.category,
+        cap: amt,
+        allowlist: [builder.vendor],
+        scopeSummary: `${builder.vendor} (${builder.category}) under ${format(amt)} queued`,
+      });
+    }
+    const name = `Flag ${builder.category} over ${format(amt)} for review`;
     return finalizeDraft({
       kind: "guardrail",
       name,
-      summary: `Any payment above ${format(amt)} waits for your approval`,
+      summary: `Any ${builder.category} above ${format(amt)} gets flagged for review`,
       policyId: builderPolicy,
       agent: "invoice",
       category: "approval threshold",
       threshold: amt,
       thresholdEditable: true,
-      scopeSummary: `any payment over ${format(amt)}`,
+      scopeSummary: `any ${builder.category} over ${format(amt)}`,
     });
   };
 
@@ -638,7 +663,7 @@ export function RulesPage() {
             <button
               type="button"
               onClick={() => {
-                setBuilder((b) => ({ ...b, action: activeTab === "Guardrails" ? "ask" : "pay" }));
+                setBuilder((b) => ({ ...b, action: activeTab === "Guardrails" ? "flag" : "auto" }));
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
@@ -658,120 +683,151 @@ export function RulesPage() {
             </button>
           ) : (
             <div className="w-full rounded-[16px] border border-[rgba(118,49,238,0.35)] bg-[#0a0c10] p-[16px] flex flex-col gap-[14px]" data-testid="panel-builder">
-              {/* The sentence */}
-              <div className="flex flex-wrap items-center gap-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
-                <span>When a</span>
-                <div className="relative">
-                  <Chip
-                    value={builder.category || undefined}
-                    placeholder="kind of payment"
-                    open={openChip === "category"}
-                    onClick={() => setOpenChip(openChip === "category" ? null : "category")}
-                    testId="chip-category"
-                  />
-                  {openChip === "category" && (
-                    <div className="absolute z-10 mt-[6px] w-[200px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
-                      {BUILDER_CATEGORIES.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
-                          data-testid={`option-category-${c}`}
-                          className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
+              {/* Two-line sentence builder — matches Figma */}
+              <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
+                {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
+                <div className="flex flex-wrap items-center gap-[6px]">
+                  <span>When a</span>
+                  <div className="relative">
+                    <Chip
+                      value={builder.category || undefined}
+                      placeholder="kind of payment"
+                      open={openChip === "category"}
+                      onClick={() => setOpenChip(openChip === "category" ? null : "category")}
+                      testId="chip-category"
+                    />
+                    {openChip === "category" && (
+                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                        {BUILDER_CATEGORIES.map((c) => {
+                          const selected = builder.category === c;
+                          const label = c.charAt(0).toUpperCase() + c.slice(1);
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
+                              data-testid={`option-category-${c}`}
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                            >
+                              {label}
+                              {selected && (
+                                <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                  <Check size={10} className="text-white" strokeWidth={3} />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {isAuto && (
+                    <>
+                      <span>from</span>
+                      <div className="relative">
+                        <Chip
+                          value={builder.vendor || undefined}
+                          placeholder="a trusted vendor"
+                          open={openChip === "vendor"}
+                          onClick={() => setOpenChip(openChip === "vendor" ? null : "vendor")}
+                          testId="chip-vendor"
+                        />
+                        {openChip === "vendor" && (
+                          <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
+                            <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
+                              Trusted vendors
+                            </p>
+                            {TRUSTED_VENDORS.map((v) => {
+                              const selected = builder.vendor === v;
+                              return (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => { setBuilder((b) => ({ ...b, vendor: v })); setOpenChip(null); }}
+                                  data-testid={`option-vendor-${slugify(v)}`}
+                                  className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                                >
+                                  {v}
+                                  {selected && (
+                                    <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                      <Check size={10} className="text-white" strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                            <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
+                            <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
+                              Not Trusted Yet
+                            </p>
+                            {UNTRUSTED_VENDORS.map((v) => (
+                              <div
+                                key={v}
+                                className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
+                              >
+                                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
+                                  {v}
+                                </span>
+                                <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                                  Not Trusted
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
+                  <span>is {isAuto ? "under" : "over"}</span>
+                  <input
+                    value={builder.amount}
+                    inputMode="numeric"
+                    placeholder="$0"
+                    onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
+                    data-testid="input-builder-amount"
+                    className="w-[80px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                  />
                 </div>
-                {isAuto && (
-                  <>
-                    <span>from</span>
-                    <div className="relative">
-                      <Chip
-                        value={builder.vendor || undefined}
-                        placeholder="a trusted vendor"
-                        open={openChip === "vendor"}
-                        onClick={() => setOpenChip(openChip === "vendor" ? null : "vendor")}
-                        testId="chip-vendor"
-                      />
-                      {openChip === "vendor" && (
-                        <div className="absolute z-10 mt-[6px] w-[260px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[280px] overflow-y-auto">
-                          <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
-                            Trusted vendors
-                          </p>
-                          {TRUSTED_VENDORS.map((v) => (
+
+                {/* Line 2: "then [action]" */}
+                <div className="flex flex-wrap items-center gap-[6px]">
+                  <span>then</span>
+                  <div className="relative">
+                    <Chip
+                      value={ACTION_LABELS[builder.action]}
+                      placeholder="what happens"
+                      open={openChip === "action"}
+                      onClick={() => setOpenChip(openChip === "action" ? null : "action")}
+                      testId="chip-action"
+                    />
+                    {openChip === "action" && (
+                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                        {([
+                          { key: "auto", label: "Pay it automatically" },
+                          { key: "queue", label: "Queue for one-click approval" },
+                          { key: "flag", label: "Flag for review" },
+                        ] as const).map(({ key, label }) => {
+                          const selected = builder.action === key;
+                          return (
                             <button
-                              key={v}
+                              key={key}
                               type="button"
-                              onClick={() => { setBuilder((b) => ({ ...b, vendor: v })); setOpenChip(null); }}
-                              data-testid={`option-vendor-${slugify(v)}`}
-                              className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              onClick={() => { setBuilder((b) => ({ ...b, action: key })); setOpenChip(null); }}
+                              data-testid={`option-action-${key}`}
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
                             >
-                              {v}
+                              {label}
+                              {selected && (
+                                <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                  <Check size={10} className="text-white" strokeWidth={3} />
+                                </div>
+                              )}
                             </button>
-                          ))}
-                          <p className="px-[10px] pt-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
-                            Not trusted yet
-                          </p>
-                          {UNTRUSTED_VENDORS.map((v) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => { setOpenChip(null); navigate("/vendors"); }}
-                              data-testid={`option-untrusted-${slugify(v)}`}
-                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]"
-                            >
-                              {v}
-                              <span className="flex items-center gap-[3px] text-[#6c779d] text-[12px]">
-                                trust first <ArrowRight size={12} />
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-                <span>is {isAuto ? "under" : "over"}</span>
-                <input
-                  value={builder.amount}
-                  inputMode="numeric"
-                  placeholder="$amount"
-                  onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
-                  data-testid="input-builder-amount"
-                  className="w-[110px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
-                />
-                <span>,</span>
-                <div className="relative">
-                  <Chip
-                    value={isAuto ? "pay it automatically" : "ask me first"}
-                    placeholder="do this"
-                    open={openChip === "action"}
-                    onClick={() => setOpenChip(openChip === "action" ? null : "action")}
-                    testId="chip-action"
-                  />
-                  {openChip === "action" && (
-                    <div className="absolute z-10 mt-[6px] w-[220px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => { setBuilder((b) => ({ ...b, action: "pay" })); setOpenChip(null); }}
-                        data-testid="option-action-pay"
-                        className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                      >
-                        pay it automatically
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setBuilder((b) => ({ ...b, action: "ask" })); setOpenChip(null); }}
-                        data-testid="option-action-ask"
-                        className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                      >
-                        ask me first
-                      </button>
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -785,7 +841,7 @@ export function RulesPage() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="px-[16px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
                 >
                   Cancel
                 </button>
@@ -794,9 +850,9 @@ export function RulesPage() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                  className="flex-1 px-[16px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
-                  Create rule
+                  Create Rule
                 </button>
               </div>
             </div>
