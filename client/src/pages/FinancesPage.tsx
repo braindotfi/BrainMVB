@@ -251,7 +251,7 @@ function summarizeIncome(
 }
 
 const INCOME_FALLBACK =
-  "Nothing needs your attention right now. Brain is keeping things moving.";
+  "No income recorded yet. This populates from your ledger as money comes in.";
 
 const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: txData } = useQuery<BrainTransactionsResponse>({
@@ -390,7 +390,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
     <WidgetCard title="Expenses" count={rows.length}>
       {rows.length === 0 ? (
         <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No expenses recorded yet. This populates from your ledger as money goes out.</p>
         </div>
       ) : (
         <>
@@ -606,7 +606,7 @@ export function FinancesPage() {
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                     {accountsLoading
                       ? "Loading your accounts from the ledger…"
-                      : "Nothing needs your attention right now. Brain is keeping things moving."}
+                      : "No connected accounts yet. Link an account to see your balances here."}
                   </p>
                 )}
               </WidgetCard>
@@ -644,7 +644,7 @@ export function FinancesPage() {
                   ))
                 ) : (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No transactions yet. Activity will appear here once money starts moving.</p>
                   </div>
                 )}
               </WidgetCard>

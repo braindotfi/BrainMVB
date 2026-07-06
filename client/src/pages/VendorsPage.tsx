@@ -182,26 +182,31 @@ export function VendorsPage() {
                   </div>
                 </div>
               </div>
-              {tabVendors.length === 0 ? (
-                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    Nothing needs your attention right now. Brain is keeping things moving.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {tabVendors.map((vendor, idx) => (
-                    <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                      <VendorRow
-                        vendor={vendor}
-                        format={format}
-                        onClick={() => handleOpenVendor(vendor)}
-                      />
-                      {idx < tabVendors.length - 1 && <Divider />}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                {tabVendors.length === 0 ? (
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                      {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                      {activeTab === "New" && "No new vendors detected yet."}
+                      {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                      {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                    {tabVendors.map((vendor, idx) => (
+                      <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
+                        <VendorRow
+                          vendor={vendor}
+                          format={format}
+                          onClick={() => handleOpenVendor(vendor)}
+                        />
+                        {idx < tabVendors.length - 1 && <Divider />}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

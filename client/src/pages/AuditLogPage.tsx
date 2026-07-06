@@ -145,57 +145,59 @@ export function AuditLogPage() {
                     </div>
                   </div>
                 </div>
-                {filtered.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                      {activeTab === "Approvals" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                      {activeTab === "Auto-Approved" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                      {activeTab === "Rule Changes" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                      {activeTab === "Trusted Changes" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                      {activeTab === "Flagged" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                      {activeTab === "Last 30 Days" && "Nothing needs your attention right now. Brain is keeping things moving."}
-                    </p>
-                  </div>
-                ) : (
-                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {filtered.map((record, idx) => {
-                    const isFlagged = record.eventType === "flagged";
-                    const isAnchored = record.anchor.status === "anchored";
-                    return (
-                      <div key={record.id} className="flex flex-col gap-[8px] w-full">
-                        <button
-                          type="button"
-                          onClick={() => setActiveRecord(record)}
-                          data-testid={`row-audit-${record.id.toLowerCase()}`}
-                          className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                          style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
-                        >
-                          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-                              {record.summary}
-                            </p>
-                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
-                              {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
-                            </p>
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  {filtered.length === 0 ? (
+                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                        {activeTab === "Approvals" && "No approval records yet."}
+                        {activeTab === "Auto-Approved" && "No auto-approval records yet."}
+                        {activeTab === "Rule Changes" && "No rule changes recorded yet."}
+                        {activeTab === "Trusted Changes" && "No trust status changes yet."}
+                        {activeTab === "Flagged" && "No flagged transactions yet."}
+                        {activeTab === "Last 30 Days" && "No events in the last 30 days."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                      {filtered.map((record, idx) => {
+                        const isFlagged = record.eventType === "flagged";
+                        const isAnchored = record.anchor.status === "anchored";
+                        return (
+                          <div key={record.id} className="flex flex-col gap-[8px] w-full">
+                            <button
+                              type="button"
+                              onClick={() => setActiveRecord(record)}
+                              data-testid={`row-audit-${record.id.toLowerCase()}`}
+                              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                              style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
+                            >
+                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+                                  {record.summary}
+                                </p>
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
+                                  {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
+                                </p>
+                              </div>
+                              <div
+                                className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
+                                  isAnchored
+                                    ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
+                                    : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
+                                }`}
+                              >
+                                <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
+                                  {isAnchored ? "Anchored" : "Pending"}
+                                </p>
+                              </div>
+                            </button>
+                            {idx < filtered.length - 1 && <Divider />}
                           </div>
-                          <div
-                            className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
-                              isAnchored
-                                ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
-                                : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
-                            }`}
-                          >
-                            <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
-                              {isAnchored ? "Anchored" : "Pending"}
-                            </p>
-                          </div>
-                        </button>
-                        {idx < filtered.length - 1 && <Divider />}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
               </div>
             )}
 

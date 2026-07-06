@@ -114,7 +114,7 @@ function Section({
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
         {count === 0 && empty ? (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             {empty}
           </div>
         ) : (
@@ -798,7 +798,7 @@ export function RulesPage() {
             <Section
               title="Automations"
               count={automations.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
             >
               {automations.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -813,7 +813,7 @@ export function RulesPage() {
             <Section
               title="Guardrails"
               count={guardrails.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
             >
               {guardrails.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -828,7 +828,7 @@ export function RulesPage() {
             <Section
               title="Always On"
               count={alwaysOn.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No always-on rules active. These run in the background without human approval.</p>}
             >
               {alwaysOn.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -851,8 +851,8 @@ export function RulesPage() {
               </div>
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                 {suggestions.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
