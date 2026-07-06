@@ -9,11 +9,9 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  ReceiptText,
   Info,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
-import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
 
@@ -58,12 +56,8 @@ export function RuleDetail() {
   const openReports = reports.filter((r) => !r.resolved);
   const pausedFromReport = !rule.active && openReports.length > 0;
   const latestOpen = openReports[openReports.length - 1];
-  /* The receipt that triggered the most recent open report — the linked payment. */
-  const linkedPayment = latestOpen
-    ? AUTO_HANDLED_PROPOSALS.find((p) => p.id === latestOpen.proposalId)
-    : undefined;
 
-  const openReceipt = (proposalId: string) => navigate(`/review?receipt=${proposalId}`);
+  const openReceipt = (proposalId: string) => navigate(`/review?proposal=${proposalId}`);
 
   const onResume = () => {
     resumeRule(rule.id);
@@ -144,33 +138,6 @@ export function RuleDetail() {
                   </p>
                 </div>
               </div>
-
-              {linkedPayment && (
-                <button
-                  type="button"
-                  onClick={() => openReceipt(linkedPayment.id)}
-                  data-testid="button-linked-payment"
-                  className="flex items-center gap-[10px] w-full rounded-[10px] bg-[#0a0c10] border border-[#1d2132] px-[12px] py-[10px] hover:border-[rgba(210,3,68,0.4)] transition-colors text-left focus:outline-none focus-visible:ring-2"
-                  style={{ ["--tw-ring-color" as string]: ALERT }}
-                >
-                  <ReceiptText size={16} className="shrink-0 text-[#6c779d]" />
-                  <div className="flex flex-col flex-1 min-w-px">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[13px] truncate">
-                      {linkedPayment.counterparty ?? linkedPayment.title}
-                    </p>
-                    {linkedPayment.settledMeta && (
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[11px] truncate">
-                        {linkedPayment.settledMeta}
-                      </p>
-                    )}
-                  </div>
-                  {typeof linkedPayment.amount === "number" && (
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">
-                      {format(linkedPayment.amount)}
-                    </span>
-                  )}
-                </button>
-              )}
             </div>
           )}
 
