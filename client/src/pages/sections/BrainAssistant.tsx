@@ -545,7 +545,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         className="flex-1 min-h-0 mx-[7px] rounded-[12px] bg-[#0a0c10] overflow-y-auto"
       >
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-[8px] px-[16px]">
+          <div className="h-full flex flex-col items-center justify-center gap-[4px] px-[16px]">
             <img src={brainLogo} alt="Brain" className="size-[72px]" />
             <div className="flex flex-col items-center text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px] tracking-[-0.96px]">
