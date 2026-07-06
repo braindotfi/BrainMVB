@@ -595,6 +595,9 @@ export function RulesPage() {
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-confirm">
                 compiles to {pendingCreate.policyId}
               </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                Saved to your rules to guide Brain's reviews. Your enforced policy stays the signed Active Brain policy above until this is applied to it.
+              </p>
               <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
                 <button
                   type="button"
@@ -865,9 +868,9 @@ export function RulesPage() {
           >
             <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-              Rules are written in plain English, not code. Brain turns each one into an enforceable
-              policy for every agent you use, then keeps learning and suggesting new ones — backed by
-              the evidence behind them.
+              Rules are written in plain English, not code. The policy Brain enforces right now is the
+              signed one shown in Active Brain policy above; the automations and guardrails you set here
+              are your own boundaries that guide Brain's reviews and suggestions.
             </p>
           </div>
           </div>
