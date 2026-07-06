@@ -954,7 +954,10 @@ You can explain concepts and surface general guidance, but do not give regulated
         return res.status(502).json({
           document: updated ?? { ...doc, ...patch },
           error: "ingest_failed",
-          message: err instanceof BrainApiError ? `brain-core ${err.status}` : (err as Error).message,
+          message:
+            err instanceof BrainApiError
+              ? err.message
+              : (err as Error).message,
         });
       }
 

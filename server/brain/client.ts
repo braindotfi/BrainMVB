@@ -20,7 +20,15 @@ export class BrainApiError extends Error {
     public readonly path: string,
     public readonly body: unknown,
   ) {
-    super(`brain-core ${path} → HTTP ${status}`);
+    const bodyText =
+      typeof body === "string"
+        ? body
+        : body && typeof body === "object" && "error" in body
+          ? JSON.stringify(body)
+          : String(body ?? "");
+    super(
+      `brain-core ${path} → HTTP ${status}${bodyText ? `: ${bodyText}` : ""}`,
+    );
     this.name = "BrainApiError";
   }
 }
