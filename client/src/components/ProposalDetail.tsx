@@ -29,6 +29,7 @@ import { resolveRule } from "@/lib/openRuleDetail";
 import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { type DocumentRecord, docKindLabel } from "@/lib/documentTypes";
+import { useBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import type {
   Proposal,
   ProposalStatus,
@@ -125,6 +126,10 @@ export function ProposalDetail({
   const [showTrace, setShowTrace] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
+  // A LIVE proposal's invoiceId is a brain-core ledger id; fetch its invoice as a DocumentRecord
+  // so the source-document link opens the REAL invoice (the mock store holds only design fixtures).
+  // Returns undefined for a mock proposal's invoiceId, so we fall back to resolveDocument below.
+  const liveInvoiceDoc = useBrainInvoiceDocument(proposal?.invoiceId);
 
   if (!proposal) return null;
 
@@ -287,17 +292,27 @@ export function ProposalDetail({
               </div>
               {/* Source document — tappable link when invoiceId resolves */}
               {proposal.invoiceId && (() => {
-                const srcDoc = resolveDocument(proposal.invoiceId);
+                const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
                 if (!srcDoc) return null;
+                const openSource = () => {
+                  // A live invoice is already resolved (fetched async); open it directly. A mock id
+                  // resolves synchronously through the mock document store.
+                  if (liveInvoiceDoc) {
+                    setViewingDocument(liveInvoiceDoc);
+                    setDocumentOpen(true);
+                  } else {
+                    openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); });
+                  }
+                };
                 return (
                   <button
                     type="button"
-                    onClick={() => openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); })}
+                    onClick={openSource}
                     data-testid="button-source-invoice"
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{proposal.invoiceId}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
                     <ChevronRight size={14} className="text-[#414965] shrink-0" />
                   </button>
                 );
