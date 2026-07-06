@@ -140,9 +140,7 @@ export function RuleDetail() {
                 tab =
                   rule.kind === "guardrail"
                     ? "guardrails"
-                    : rule.kind === "always_on"
-                      ? "always-on"
-                      : "automations";
+                    : "automations";
               }
               navigate(`/rules?tab=${tab}`);
             }}

@@ -249,7 +249,7 @@ function PolicySection() {
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-            Active Brain policy
+            Default Brain Rules
           </p>
           <Lock size={13} className="text-[#6c779d]" />
         </div>
@@ -418,13 +418,12 @@ type BuilderState = {
 
 const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
 
-type RuleTab = "Default" | "Automations" | "Guardrails" | "Always On" | "Suggested";
-const RULE_TABS: RuleTab[] = ["Default", "Automations", "Guardrails", "Always On", "Suggested"];
+type RuleTab = "Default" | "Automations" | "Guardrails" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Default", "Automations", "Guardrails", "Suggested"];
 const TAB_PARAM_MAP: Record<string, RuleTab> = {
   default: "Default",
   automations: "Automations",
   guardrails: "Guardrails",
-  "always-on": "Always On",
   suggested: "Suggested",
 };
 
@@ -453,7 +452,6 @@ export function RulesPage() {
 
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
-  const alwaysOn = rules.filter((r) => r.kind === "always_on");
 
   const resetBuilder = () => {
     setBuilder(EMPTY_BUILDER);
@@ -850,21 +848,6 @@ export function RulesPage() {
             </Section>
           )}
 
-          {activeTab === "Always On" && (
-            <Section
-              title="Always On"
-              count={alwaysOn.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No always-on rules active. These run in the background without human approval.</p>}
-            >
-              {alwaysOn.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <AlwaysOnRow rule={r} />
-                  {idx < alwaysOn.length - 1 && <Divider />}
-                </div>
-              ))}
-            </Section>
-          )}
-
           {activeTab === "Suggested" && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -897,18 +880,6 @@ export function RulesPage() {
             </div>
           )}
 
-          {/* Plain-English helper banner */}
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-          >
-            <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-              Rules are written in plain English, not code. Brain turns each one into an enforceable
-              policy for every agent you use, then keeps learning and suggesting new ones — backed by
-              the evidence behind them.
-            </p>
-          </div>
           </div>
 
         </div>
