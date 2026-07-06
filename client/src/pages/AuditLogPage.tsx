@@ -146,7 +146,7 @@ export function AuditLogPage() {
                   </div>
                 </div>
                 {filtered.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full">
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {activeTab === "Approvals" && "Nothing needs your attention right now. Brain is keeping things moving."}
                       {activeTab === "Auto-Approved" && "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -157,7 +157,7 @@ export function AuditLogPage() {
                     </p>
                   </div>
                 ) : (
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                   {filtered.map((record, idx) => {
                     const isFlagged = record.eventType === "flagged";
                     const isAnchored = record.anchor.status === "anchored";
