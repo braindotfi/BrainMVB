@@ -20,6 +20,8 @@ import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 const ALERT = "#d20344";
 
@@ -34,7 +36,7 @@ export function RuleDetail() {
   const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
   const isPolicy = params?.id?.startsWith("policy-") ?? false;
 
-  const [confirmingResume, setConfirmingResume] = useState(false);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showCapEditor, setShowCapEditor] = useState(false);
   const [capDraft, setCapDraft] = useState("");
@@ -101,7 +103,7 @@ export function RuleDetail() {
   const onResume = () => {
     if (!rule) return;
     resumeRule(rule.id);
-    setConfirmingResume(false);
+    setResumeModalOpen(false);
   };
   const onDelete = () => {
     if (!rule) return;
@@ -165,8 +167,8 @@ export function RuleDetail() {
                     </p>
                     <StatusPill active={rule.active} />
                   </div>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-                    {rule.summary}
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">
+                    {rule.scopeSummary ?? rule.summary}
                   </p>
                   <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
                     {rule.policyId} · {rule.createdLabel}
@@ -259,7 +261,7 @@ export function RuleDetail() {
               <div className="flex items-center gap-[8px]">
                 <button
                   type="button"
-                  onClick={() => (rule.active ? pauseRule(rule.id) : setConfirmingResume(true))}
+                  onClick={() => (rule.active ? pauseRule(rule.id) : setResumeModalOpen(true))}
                   data-testid="button-toggle-rule"
                   className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={
@@ -282,32 +284,6 @@ export function RuleDetail() {
                 </button>
               </div>
             </div>
-
-            {confirmingResume && (
-              <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                  Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
-                </p>
-                <div className="flex gap-[10px] items-stretch w-full">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingResume(false)}
-                    data-testid="button-resume-cancel"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-                  >
-                    Keep paused
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onResume}
-                    data-testid="button-resume-confirm"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    Resume rule
-                  </button>
-                </div>
-              </div>
-            )}
 
             {confirmingDelete && (
               <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
@@ -336,6 +312,62 @@ export function RuleDetail() {
               </div>
             )}
           </div>
+
+          {/* Resume-rule confirmation — dim/blur backdrop modal, matches other popups. */}
+          <DialogPrimitive.Root open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Overlay
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                data-testid="resume-rule-backdrop"
+              />
+              <DialogPrimitive.Content
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                data-testid="resume-rule-modal"
+              >
+                {/* Title bar */}
+                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                    Resume Rule
+                  </DialogPrimitive.Title>
+                  <DialogPrimitive.Close
+                    data-testid="button-resume-modal-close"
+                    aria-label="Close"
+                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                  </DialogPrimitive.Close>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+                  <DialogPrimitive.Description
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                  >
+                    Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
+                  </DialogPrimitive.Description>
+
+                  <div className="flex gap-[10px] items-stretch w-full">
+                    <button
+                      type="button"
+                      onClick={() => setResumeModalOpen(false)}
+                      data-testid="button-resume-cancel"
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                    >
+                      Keep Paused
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onResume}
+                      data-testid="button-resume-confirm"
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          </DialogPrimitive.Root>
 
           {/* Trusted vendors — allowlist removal, matches Figma's "Popup - Search Results" panel. */}
           {rule.allowlist && rule.allowlist.length > 0 && (
@@ -485,7 +517,8 @@ function StatusPill({ active }: { active: boolean }) {
     return (
       <span
         data-testid="pill-rule-status"
-        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#123509] text-[#42bf23]"
+        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#123509] text-[#42bf23]"
+        style={{ borderColor: "rgba(66,191,35,0.2)" }}
       >
         Active
       </span>
@@ -494,8 +527,8 @@ function StatusPill({ active }: { active: boolean }) {
   return (
     <span
       data-testid="pill-rule-status"
-      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px]"
-      style={{ backgroundColor: "rgba(210,3,68,0.12)", color: ALERT }}
+      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#350011]"
+      style={{ borderColor: "rgba(210,3,68,0.2)", color: ALERT }}
     >
       Paused
     </span>

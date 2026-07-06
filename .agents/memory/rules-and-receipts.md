@@ -36,3 +36,10 @@ state. Local React state in ReviewPage couldn't reach RuleDetail.
   distinct from `problemReports`. Seeded with one "created" event from `createdLabel`;
   `pauseRule`/`resumeRule`/`reportProblem` append to it. Rendered on RuleDetail as its own
   "History" panel (same Figma panel pattern — see `figma-panel-pattern.md`), most-recent-first.
+- A "still looks hover-highlighted" bug report on a rules-list row may not be an actual `:hover`
+  class — check for a static conditional style keyed off row state (e.g. `pausedFromReport`) that
+  reuses hover-like colors (`bg-[#11141b] border-[#1d2132]`). Figma's rows keep the plain resting
+  bg even with a status banner; don't let per-state conditionals repaint the row container itself.
+- Resume-rule confirmation is a Dialog modal (matches the create-rule modal pattern: Radix
+  `DialogPrimitive`, `bg-black/60 backdrop-blur-[2px]` overlay, `#0a0c10`/`#1d2132` panel,
+  green `#42bf23`/`#123509` confirm button), not an inline expand-in-place block.

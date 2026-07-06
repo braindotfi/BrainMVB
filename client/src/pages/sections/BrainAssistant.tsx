@@ -8,7 +8,7 @@ import {
   SquarePen,
 } from "lucide-react";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
-import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
+import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
 import draftActiveIcon from "@assets/Draft_Active_1781886641614.png";

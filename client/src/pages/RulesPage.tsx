@@ -171,11 +171,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full ${
-        pausedFromReport
-          ? "bg-[#11141b] border border-[#1d2132]"
-          : "bg-[#0a0c10] border border-transparent"
-      }`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
     >
       <button
         type="button"
