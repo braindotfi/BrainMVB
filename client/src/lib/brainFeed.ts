@@ -1,14 +1,12 @@
-import {
-  AUTO_HANDLED_PROPOSALS,
-  MOCK_PROPOSALS,
-} from "@/lib/mockProposals";
 import type { Proposal } from "@/lib/proposalTypes";
 
-/* ── Shared source of truth for the Activity feed + Review queue ───────────────
-   Both the Activity page ("Brain Did" tab) and the Home page ("Brain Did"
-   widget) render off the SAME data declared here, so the two views can never
-   drift. The Review page's "Needs Review" queue and the Home page's "Brain
-   Detected" widget likewise share getNeedsReviewProposals(). */
+/* ── Shared source of truth for the Activity feed ──────────────────────────────
+   The Activity page's "Brain Did" tab renders off the data declared here.
+   (The Home page's "Brain Did" widget moved to a live brain-core read in
+   Phase 1b — see client/src/lib/brainAudit.ts's useBrainAuditRecords — and
+   the Review page's "Needs Review" queue + Home's "Brain Detected" widget
+   moved earlier in Phase 1a — see client/src/lib/brainQueue.ts. Neither
+   reads from here anymore.) */
 
 export type ActivityType = "paid" | "moved" | "approved";
 
@@ -59,23 +57,3 @@ export const TODAY_ACTIVITIES: ActivityItemData[] = [];
 
 export const YESTERDAY_ACTIVITIES: ActivityItemData[] = [];
 
-/** Activity types that belong under the Activity page's "Brain Did" tab. */
-export const BRAIN_DID_TYPES: ActivityType[] = ["paid", "moved"];
-
-/** Today's "Brain Did" activity items — the exact list shown under the Activity
-    page's "Today" section when the "Brain Did" tab is selected. Auto-handled
-    receipts merged with the static Today activities, filtered to Brain-Did
-    types, sorted newest-first. */
-export function getBrainDidTodayItems(): ActivityItemData[] {
-  return [...AUTO_HANDLED_PROPOSALS.map(autoHandledToActivity), ...TODAY_ACTIVITIES]
-    .filter((it) => BRAIN_DID_TYPES.includes(it.type))
-    .sort((a, b) => parseClockTime(b.time) - parseClockTime(a.time));
-}
-
-/** Proposals Brain is advising for human review — the base "Needs Review" queue
-    (pending + verifying) shown on the Review page, straight from MOCK_PROPOSALS.
-    (The Review page layers user-driven status overrides on top at runtime; a
-    fresh summary uses the declared statuses.) */
-export function getNeedsReviewProposals(): Proposal[] {
-  return MOCK_PROPOSALS.filter((p) => p.status === "pending" || p.status === "verifying");
-}

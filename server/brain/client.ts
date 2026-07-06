@@ -396,8 +396,8 @@ export function deactivateMember(token: string, id: string): Promise<MemberMutat
 
 // ─── Policy read (locked-rows / second-approval threshold, from core not hardcoded) ──
 
-/** One rule inside the active policy content. */
-interface PolicyContentRule {
+/** One rule inside the active policy content (services/policy/src/dsl.ts:69-81 `PolicyRule`). */
+export interface PolicyContentRule {
   id: string;
   when?: { "amount.gt"?: { value?: string; currency?: string }; [k: string]: unknown };
   execute?: string;
@@ -407,7 +407,8 @@ interface PolicyContentRule {
 
 interface ActivePolicy {
   id: string;
-  content?: { rules?: PolicyContentRule[] };
+  content?: { version?: number; rules?: PolicyContentRule[] };
+  quorum_required?: number;
 }
 
 /** The approval facts the Member Detail "locked rows" render — derived from core's policy. */
@@ -416,6 +417,16 @@ export interface ApprovalPolicyFacts {
   selfApprovalBlocked: true;
   /** Amount above which a second, different approver is required (tenant policy), or null. */
   secondApprovalThreshold: { value: string; currency: string } | null;
+  /**
+   * Phase 2a (Rules page, read-only): the full active policy document, so the
+   * client can render every clause rather than only the one derived threshold
+   * above. Same /policy/{tenantId} read this function already makes — added to
+   * the existing response instead of a new BFF route (server/brain/proxy.ts's
+   * /approval-policy). Read-only GET, member token, no new scope required.
+   */
+  version: number;
+  quorumRequired: number;
+  rules: PolicyContentRule[];
 }
 
 /**
@@ -440,7 +451,13 @@ export async function getApprovalPolicyFacts(token: string, tenantId: string): P
       }
     }
   }
-  return { selfApprovalBlocked: true, secondApprovalThreshold: threshold };
+  return {
+    selfApprovalBlocked: true,
+    secondApprovalThreshold: threshold,
+    version: policy.content?.version ?? 1,
+    quorumRequired: policy.quorum_required ?? 1,
+    rules,
+  };
 }
 
 /** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */

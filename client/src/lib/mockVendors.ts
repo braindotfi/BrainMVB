@@ -9,6 +9,13 @@ import type { Vendor } from "./vendorTypes";
 
    Every vendor tells ONE story across surfaces. Bright Futures is
    under_review everywhere — never auto_approved.
+
+   ponytail: Phase 1d (2026-07) moved VendorsPage/VendorDetailPopup off this
+   catalogue onto live brain-core counterparties (client/src/lib/brainVendors.ts).
+   This store is NOT dead — Audit Log linked refs (kind:"vendor"), documents
+   (document.vendorId), and ruleConsistencyCheck.ts guards still resolve
+   against it (Phase 1c territory). Delete only once Audit Log/documents
+   migrate to live data too.
    ────────────────────────────────────────────────────────────────────────── */
 
 export const MOCK_VENDORS: Vendor[] = [

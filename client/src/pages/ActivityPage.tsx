@@ -2,20 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
-import { useIntents, type IntentRecord } from "@/lib/intentsStore";
-import type { Proposal } from "@/lib/proposalTypes";
-import { SettledRecordCard } from "@/components/SettledRecordCard";
-import {
-  AUTO_HANDLED_PROPOSALS,
-} from "@/lib/mockProposals";
-import {
-  type ActivityType,
-  type ActivityItemData,
-  parseClockTime,
-  autoHandledToActivity,
-  TODAY_ACTIVITIES,
-  YESTERDAY_ACTIVITIES,
-} from "@/lib/brainFeed";
+import { useBrainAuditRecords } from "@/lib/brainAudit";
+import type { AuditRecord } from "@/lib/auditTypes";
+import { type ActivityType, type ActivityItemData } from "@/lib/brainFeed";
 
 /* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
 const BrainDidIcon = () => (
@@ -80,23 +69,41 @@ const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
   (Object.entries(TAB_SLUG) as [Tab, string][]).map(([t, s]) => [s, t]),
 );
 
-/** Map a live brain-core PaymentIntent onto an activity-feed item.
-    Outcomes "reject" / "confirm" (detections that need review) are intentionally
-    filtered out here because they are a duplicate of the Review page's job.
-    Only "paid" / "declined" (user action) become activity feed items. */
-function intentToActivity(rec: IntentRecord): ActivityItemData | null {
-  const amount = `$${rec.amount.toLocaleString()}`;
-  const base = { id: rec.intentId, amount, time: "Just now" };
-  if (rec.declined) {
-    return { ...base, type: "approved", title: `You declined the payment to ${rec.vendor}`, meta1: "Brain will not pay it", meta2: "" };
-  }
-  if (rec.outcome === "reject" || rec.outcome === "confirm") {
-    return null;
-  }
-  return { ...base, type: "paid", title: `Brain approved a payment to ${rec.vendor}`, meta1: "Within your auto-pay policy", meta2: "Proposed — not executed" };
+/** Map a live brain-core audit record onto an activity-feed item. */
+function auditToActivity(r: AuditRecord): ActivityItemData {
+  const isHuman = Boolean(r.actor && r.actor !== "system");
+  return {
+    id: r.id,
+    type: isHuman ? "approved" : "paid",
+    title: r.summary,
+    meta1: isHuman ? r.actor : "Automated",
+    meta2: "",
+    amount: r.amount != null ? `$${r.amount.toLocaleString()}` : "",
+    time: r.occurredAtLabel,
+    linkTo: `/audit-log?record=${r.id}`,
+  };
 }
 
-const filterNulls = <T,>(arr: (T | null)[]): T[] => arr.filter((x): x is T => x !== null);
+/** Bucket activity items by calendar day relative to now, newest-first within each. */
+function bucketByDay(records: AuditRecord[]) {
+  const startOfDay = (ms: number) => new Date(new Date(ms).setHours(0, 0, 0, 0)).getTime();
+  const today = startOfDay(Date.now());
+  const yesterday = today - 24 * 60 * 60 * 1000;
+
+  const todayItems: ActivityItemData[] = [];
+  const yesterdayItems: ActivityItemData[] = [];
+  const earlierItems: ActivityItemData[] = [];
+
+  for (const r of records) {
+    const day = startOfDay(r.occurredAtMs);
+    const item = auditToActivity(r);
+    if (day === today) todayItems.push(item);
+    else if (day === yesterday) yesterdayItems.push(item);
+    else earlierItems.push(item);
+  }
+
+  return { todayItems, yesterdayItems, earlierItems };
+}
 
 const ActivityItem = ({
   item,
@@ -196,7 +203,9 @@ const SectionCard = ({
                 ? "No items just now."
                 : title === "Today"
                   ? "Nothing today yet."
-                  : "Nothing yesterday."}
+                  : title === "Yesterday"
+                    ? "Nothing yesterday."
+                    : "Nothing earlier."}
             </p>
           </div>
         ) : (
@@ -223,7 +232,7 @@ export function ActivityPage() {
   const search = useSearch();
   const [, navigate] = useLocation();
   const params = useMemo(() => new URLSearchParams(search), [search]);
-  const { intents } = useIntents();
+  const { records } = useBrainAuditRecords();
   const resolvedInitial = SLUG_TO_TAB[params.get("tab") ?? ""] ?? "Brain Did";
   const initialTab: Tab = resolvedInitial === "All" ? "Brain Did" : resolvedInitial;
   // Row ids can be numeric (static activities) or strings (auto-handled
@@ -259,44 +268,15 @@ export function ActivityPage() {
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
 
-  const autoHandledItems = useMemo(
-    () => AUTO_HANDLED_PROPOSALS.map(autoHandledToActivity),
-    [],
-  );
-  const todayMerged = useMemo(
-    () =>
-      [...autoHandledItems, ...TODAY_ACTIVITIES].sort(
-        (a, b) => parseClockTime(b.time) - parseClockTime(a.time),
-      ),
-    [autoHandledItems],
-  );
+  const { todayItems: bucketedToday, yesterdayItems: bucketedYesterday, earlierItems: bucketedEarlier } =
+    useMemo(() => bucketByDay(records), [records]);
 
-  const liveItems = filterByTab(filterNulls(intents.map(intentToActivity)));
-  const todayItems = filterByTab(todayMerged);
-  const yesterdayItems = filterByTab(YESTERDAY_ACTIVITIES);
-
-  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const todayItems = filterByTab(bucketedToday);
+  const yesterdayItems = filterByTab(bucketedYesterday);
+  const earlierItems = filterByTab(bucketedEarlier);
 
   const handleSelect = (item: ActivityItemData) => {
-    if (item.proposal) {
-      setSelectedProposal(item.proposal);
-    } else if (item.linkTo) {
-      navigate(item.linkTo);
-    }
-  };
-
-  /* Header pager — cycle (wrap-around) through the tappable records in the active
-     tab, in display order (Just now → Today → Yesterday). Rows without a proposal
-     (link-only) are excluded since they don't open this popup. */
-  const pagerItems = [...liveItems, ...todayItems, ...yesterdayItems].filter((it) => it.proposal);
-  const pagerIdx = selectedProposal
-    ? pagerItems.findIndex((it) => it.proposal!.id === selectedProposal.id)
-    : -1;
-  const pagerDisabled = pagerIdx < 0 || pagerItems.length <= 1;
-  const pageProposal = (dir: 1 | -1) => {
-    if (pagerDisabled) return;
-    const next = pagerItems[(pagerIdx + dir + pagerItems.length) % pagerItems.length];
-    setSelectedProposal(next.proposal!);
+    if (item.linkTo) navigate(item.linkTo);
   };
 
   return (
@@ -340,14 +320,6 @@ export function ActivityPage() {
               })}
             </div>
             <SectionCard
-              title="Just now"
-              count={liveItems.length}
-              items={liveItems}
-              highlightedId={highlightedId}
-              registerRowRef={registerRowRef}
-              onSelect={handleSelect}
-            />
-            <SectionCard
               title="Today"
               count={todayItems.length}
               items={todayItems}
@@ -363,24 +335,18 @@ export function ActivityPage() {
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
             />
+            <SectionCard
+              title="Earlier"
+              count={earlierItems.length}
+              items={earlierItems}
+              highlightedId={highlightedId}
+              registerRowRef={registerRowRef}
+              onSelect={handleSelect}
+            />
           </div>
 
         </div>
       </ScrollArea>
-
-      <SettledRecordCard
-        proposal={selectedProposal}
-        open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onViewAuditLog={() => {
-          navigate(`/audit-log?record=${selectedProposal?.auditId ?? ""}`);
-          setSelectedProposal(null);
-        }}
-        anchorAuditId={selectedProposal?.auditId}
-        onPrev={() => pageProposal(-1)}
-        onNext={() => pageProposal(1)}
-        pagerDisabled={pagerDisabled}
-      />
     </div>
   );
 }

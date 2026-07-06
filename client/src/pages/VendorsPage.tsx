@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MOCK_VENDORS } from "@/lib/mockVendors";
+import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
@@ -54,6 +54,7 @@ export function VendorsPage() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
   const search = useSearch();
+  const { vendors, isLoading, isError } = useBrainVendors();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
 
@@ -65,9 +66,9 @@ export function VendorsPage() {
       setActiveVendor(null);
       return;
     }
-    const found = MOCK_VENDORS.find((v) => v.id === vendorId);
+    const found = vendors.find((v) => v.id === vendorId);
     if (found) setActiveVendor(found);
-  }, [search]);
+  }, [search, vendors]);
 
   const handleCloseDetail = () => {
     setActiveVendor(null);
@@ -86,12 +87,12 @@ export function VendorsPage() {
 
   /* Group vendors by trust status */
   const grouped = useMemo(() => {
-    const trusted = MOCK_VENDORS.filter((v) => v.trustStatus === "trusted");
-    const underReview = MOCK_VENDORS.filter((v) => v.trustStatus === "under_review");
-    const known = MOCK_VENDORS.filter((v) => v.trustStatus === "known");
-    const newVendors = MOCK_VENDORS.filter((v) => v.trustStatus === "new");
+    const trusted = vendors.filter((v) => v.trustStatus === "trusted");
+    const underReview = vendors.filter((v) => v.trustStatus === "under_review");
+    const known = vendors.filter((v) => v.trustStatus === "known");
+    const newVendors = vendors.filter((v) => v.trustStatus === "new");
     return { trusted, underReview, known, newVendors };
-  }, []);
+  }, [vendors]);
 
   const tabVendors: Vendor[] = useMemo(() => {
     if (activeTab === "Needs Review") return grouped.underReview;
@@ -158,7 +159,19 @@ export function VendorsPage() {
           </div>
 
           {/* Tab content */}
-          {tabVendors.length === 0 ? (
+          {isLoading ? (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                Loading vendors from Brain...
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
+                Couldn't reach Brain to load vendors. Try again shortly.
+              </p>
+            </div>
+          ) : tabVendors.length === 0 ? (
             <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
               <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                 {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}

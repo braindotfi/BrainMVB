@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Download } from "lucide-react";
-import { MOCK_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
+import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS } from "@/lib/auditTypes";
@@ -22,6 +22,7 @@ const Divider = () => <div className="h-px shrink-0 w-full" style={{ background:
 
 export function AuditLogPage() {
   const { format } = useCurrency();
+  const { isLoading, isError, records } = useBrainAuditRecords();
   const [activeTab, setActiveTab] = useState<Tab>("Approvals");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const search = useSearch();
@@ -32,11 +33,12 @@ export function AuditLogPage() {
     const params = new URLSearchParams(search);
     const recordId = params.get("record");
     if (!recordId) return;
-    const found = MOCK_AUDIT_RECORDS.find((r) => r.id === recordId || r.anchor.auditId === recordId);
+    const found = records.find((r) => r.id === recordId || r.anchor.auditId === recordId);
     if (found) {
       setActiveRecord(found);
     }
-  }, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, records.length]);
 
   const handleCloseRecord = () => {
     setActiveRecord(null);
@@ -48,19 +50,19 @@ export function AuditLogPage() {
 
   const filtered = useMemo(() => {
     if (activeTab === "Last 30 Days") {
-      return MOCK_AUDIT_RECORDS.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
     const ev = TAB_TO_EVENT[activeTab];
     if (activeTab === "Trusted Changes") {
-      return MOCK_AUDIT_RECORDS.filter(
+      return records.filter(
         (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
       );
     }
     if (ev) {
-      return MOCK_AUDIT_RECORDS.filter((r) => r.eventType === ev);
+      return records.filter((r) => r.eventType === ev);
     }
-    return MOCK_AUDIT_RECORDS;
-  }, [activeTab]);
+    return records;
+  }, [activeTab, records]);
 
   /* Header pager — cycle (wrap-around) through the records in the active tab. */
   const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
@@ -117,7 +119,23 @@ export function AuditLogPage() {
                 );
               })}
             </div>
-            {filtered.length === 0 && (
+            {isLoading && (
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                  Loading your audit log…
+                </p>
+              </div>
+            )}
+
+            {!isLoading && isError && (
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                  Couldn't load the audit log from Brain right now.
+                </p>
+              </div>
+            )}
+
+            {!isLoading && !isError && filtered.length === 0 && (
               <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                 <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                   {activeTab === "Approvals" && "No approval records yet."}
