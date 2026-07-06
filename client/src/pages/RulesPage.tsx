@@ -330,11 +330,11 @@ function PolicySection() {
   );
 }
 
-/* ── Evidence-backed suggestion card ────────────────────────────────────────── */
-const CONFIDENCE: Record<RuleSuggestion["confidence"], { label: string; color: string }> = {
-  high: { label: "High confidence", color: ACTIVE },
-  medium: { label: "Medium confidence", color: "#ff9500" },
-  low: { label: "Low confidence", color: "#6c779d" },
+/* ── Confidence pill style per Figma ────────────────────────────────────────── */
+const CONFIDENCE: Record<RuleSuggestion["confidence"], { label: string; bg: string; border: string; text: string }> = {
+  high: { label: "High Confidence", bg: "#123509", border: "rgba(66,191,35,0.2)", text: "#42bf23" },
+  medium: { label: "Medium Confidence", bg: "#4a2300", border: "rgba(255,148,0,0.2)", text: "#ff9500" },
+  low: { label: "Low Confidence", bg: "#222737", border: "rgba(108,119,157,0.2)", text: "#6c779d" },
 };
 
 function SuggestionCard({
@@ -351,72 +351,84 @@ function SuggestionCard({
   const conf = CONFIDENCE[suggestion.confidence];
   return (
     <div
-      className="flex flex-col gap-[12px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px]"
+      className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
       data-testid={`card-suggestion-${suggestion.id}`}
     >
-      <div className="flex items-start gap-[10px]">
-        <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#240757]">
-          <Sparkles size={15} className="text-[#7631ee]" />
-        </div>
-        <div className="flex flex-1 min-w-px flex-col gap-[2px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+      {/* Header — title + confidence pill */}
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] min-w-px text-[#a8b9f4] text-[20px]" data-testid={`text-suggestion-title-${suggestion.id}`}>
             {suggestion.title}
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px]">
-            {suggestion.description}
-          </p>
+          <span
+            className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid whitespace-nowrap"
+            style={{ backgroundColor: conf.bg, borderColor: conf.border, color: conf.text }}
+            data-testid={`text-confidence-${suggestion.id}`}
+          >
+            {conf.label}
+          </span>
         </div>
-        <span
-          className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[3px] rounded-[100px] whitespace-nowrap"
-          style={{ backgroundColor: `${conf.color}1f`, color: conf.color }}
-          data-testid={`text-confidence-${suggestion.id}`}
-        >
-          {conf.label}
-        </span>
       </div>
 
-      {/* Mono fact block — the evidence behind the suggestion. */}
-      <div className="rounded-[10px] bg-[#06070a] border border-[#1d2132] p-[12px] flex flex-col gap-[6px]">
-        {suggestion.evidence.map((fact, i) => (
-          <div key={i} className="flex items-baseline justify-between gap-[12px]">
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] whitespace-nowrap">
-              {fact.label}
-            </span>
-            <span
-              className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-right"
-              style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
+      {/* Body */}
+      <div className="flex flex-col gap-[16px] items-start p-[16px] relative shrink-0 w-full">
+        <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
+          {suggestion.description}
+        </p>
+
+        {/* Evidence table — key/value rows with fixed label column. */}
+        <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[8px] shrink-0 w-full">
+          {suggestion.evidence.map((fact, i) => (
+            <div
+              key={i}
+              className={`content-stretch flex items-start relative shrink-0 w-full ${i < suggestion.evidence.length - 1 ? "border-b border-[#1d2132]" : ""}`}
             >
-              {fact.value}
-            </span>
-          </div>
-        ))}
-      </div>
+              <div className="flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[200px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                  {fact.label.charAt(0).toUpperCase() + fact.label.slice(1)}
+                </p>
+              </div>
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] whitespace-nowrap"
+                  style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
+                >
+                  {fact.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <div className="flex flex-wrap items-center gap-[8px]">
-        <button
-          type="button"
-          onClick={onAccept}
-          data-testid={`button-accept-suggestion-${suggestion.id}`}
-          className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-        >
-          <Check size={14} /> Review &amp; accept
-        </button>
-        <button
-          type="button"
-          onClick={onTweak}
-          data-testid={`button-tweak-suggestion-${suggestion.id}`}
-          className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-        >
-          <Pencil size={13} /> Tweak first
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          data-testid={`button-dismiss-suggestion-${suggestion.id}`}
-          className="ml-auto px-[12px] py-[8px] rounded-[100px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-        >
-          Dismiss
-        </button>
+        {/* Action buttons row — Accept + Edit on left, Dismiss on right. */}
+        <div className="flex items-start justify-between relative shrink-0 w-full">
+          <div className="flex gap-[16px] items-center relative shrink-0">
+            <button
+              type="button"
+              onClick={onAccept}
+              data-testid={`button-accept-suggestion-${suggestion.id}`}
+              className="bg-[#240757] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              onClick={onTweak}
+              data-testid={`button-tweak-suggestion-${suggestion.id}`}
+              className="bg-[#222737] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+            >
+              Edit
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            data-testid={`button-dismiss-suggestion-${suggestion.id}`}
+            className="bg-[#11141b] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+          >
+            Dismiss
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -993,34 +1005,36 @@ export function RulesPage() {
           )}
 
           {activeTab === "Suggested" && (
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">Suggested</p>
-                  <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{suggestions.length}</p>
-                  </div>
+            <div className="flex flex-col gap-[16px] items-start w-full">
+              {/* Info banner — matches Figma's info strip under tabs. */}
+              <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[12px] w-full">
+                <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
+                  <img src={infoIcon} alt="" className="shrink-0 size-[16px] mt-[1px]" />
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px text-[#6c779d] text-[14px]">
+                    Rules are written in plain English, not code. Brain turns each one into an enforceable policy for every agent you use, then keeps learning and suggesting new ones, backed by the evidence behind them.
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {suggestions.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {suggestions.map((s) => (
-                      <SuggestionCard
-                        key={s.id}
-                        suggestion={s}
-                        onAccept={() => onAcceptSuggestion(s)}
-                        onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                        onDismiss={() => dismissSuggestion(s.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+
+              {suggestions.length === 0 ? (
+                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    No new suggestions from Brain right now. Check back as your patterns grow.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {suggestions.map((s) => (
+                    <SuggestionCard
+                      key={s.id}
+                      suggestion={s}
+                      onAccept={() => onAcceptSuggestion(s)}
+                      onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                      onDismiss={() => dismissSuggestion(s.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
