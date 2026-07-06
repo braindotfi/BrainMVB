@@ -11,8 +11,12 @@ import {
   ChevronUp,
   ReceiptText,
   Info,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
+import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
+import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
@@ -27,6 +31,8 @@ export function RuleDetail() {
   const [, navigate] = useLocation();
   const { format } = useCurrency();
   const rule = useRule(params?.id);
+  const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
+  const isPolicy = params?.id?.startsWith("policy-") ?? false;
 
   const [confirmingResume, setConfirmingResume] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -35,15 +41,17 @@ export function RuleDetail() {
   const [showAmountEditor, setShowAmountEditor] = useState(false);
   const [amountDraft, setAmountDraft] = useState("");
 
-  if (!rule) {
+  /* Loading state for policy rules: wait until the query resolves before
+     deciding between "not found" and the detail view. */
+  if (isPolicy && policyLoading) {
     return (
       <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px]">
-          This rule no longer exists.
+          Loading policy rule…
         </p>
         <button
           type="button"
-          onClick={() => navigate("/rules")}
+          onClick={() => navigate("/rules?tab=default")}
           data-testid="button-back-to-rules"
           className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
@@ -53,10 +61,35 @@ export function RuleDetail() {
     );
   }
 
-  const reports = rule.problemReports ?? [];
-  const history = rule.history ?? [];
+  /* Terminal "not found" — only shown when we are certain the rule doesn't exist:
+     - For policy routes: after the query has loaded (not loading) and returned no rule.
+     - For app routes: when useRule returns nothing (store is synchronous). */
+  const definitelyMissing = isPolicy
+    ? !policyLoading && !policyRule
+    : !rule;
+
+  if (definitelyMissing) {
+    return (
+      <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px]">
+          {isPolicy ? "This policy rule is not available right now." : "This rule no longer exists."}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate(isPolicy ? "/rules?tab=default" : "/rules")}
+          data-testid="button-back-to-rules"
+          className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
+        >
+          <ArrowLeft size={16} /> Back to rules
+        </button>
+      </div>
+    );
+  }
+
+  const reports = rule?.problemReports ?? [];
+  const history = rule?.history ?? [];
   const openReports = reports.filter((r) => !r.resolved);
-  const pausedFromReport = !rule.active && openReports.length > 0;
+  const pausedFromReport = !rule?.active && openReports.length > 0;
   const latestOpen = openReports[openReports.length - 1];
   /* The receipt that triggered the most recent open report — the linked payment. */
   const linkedPayment = latestOpen
@@ -66,14 +99,17 @@ export function RuleDetail() {
   const openReceipt = (proposalId: string) => navigate(`/review?receipt=${proposalId}`);
 
   const onResume = () => {
+    if (!rule) return;
     resumeRule(rule.id);
     setConfirmingResume(false);
   };
   const onDelete = () => {
+    if (!rule) return;
     deleteRule(rule.id);
     navigate("/rules");
   };
   const onLowerCap = () => {
+    if (!rule) return;
     const next = Number(capDraft.replace(/[^0-9.]/g, ""));
     if (Number.isFinite(next) && next > 0) {
       lowerCap(rule.id, Math.round(next));
@@ -82,6 +118,7 @@ export function RuleDetail() {
     }
   };
   const onSaveAmount = () => {
+    if (!rule) return;
     const next = Number(amountDraft.replace(/[^0-9.]/g, ""));
     if (Number.isFinite(next) && next > 0) {
       setThreshold(rule.id, Math.round(next));
@@ -94,37 +131,59 @@ export function RuleDetail() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[24px] items-start pb-[24px] pt-[32px] px-[16px] w-full">
 
-          {/* Back + header */}
-          <div className="flex flex-col gap-[12px] items-start w-full">
-            <button
-              type="button"
-              onClick={() => navigate("/rules")}
-              data-testid="button-back-to-rules"
-              className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
-            >
-              <ArrowLeft size={16} /> Back to Rules
-            </button>
+          {/* Back button — routes to the correct tab based on rule type */}
+          <button
+            type="button"
+            onClick={() => {
+              let tab = "default";
+              if (!isPolicy && rule) {
+                tab =
+                  rule.kind === "guardrail"
+                    ? "guardrails"
+                    : rule.kind === "always_on"
+                      ? "always-on"
+                      : "automations";
+              }
+              navigate(`/rules?tab=${tab}`);
+            }}
+            data-testid="button-back-to-rules"
+            className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
+          >
+            <ArrowLeft size={16} /> Back to Rules
+          </button>
 
-            <div className="flex items-start gap-[12px] w-full">
-              <div className="flex flex-col gap-[6px] flex-1 min-w-px">
-                <div className="flex items-center gap-[10px] flex-wrap">
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
-                    data-testid="text-rule-name"
-                  >
-                    {rule.name}
+          {isPolicy && policyRule ? (
+            <PolicyDetailHeader rule={policyRule} />
+          ) : rule ? (
+            <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex items-start gap-[12px] w-full">
+                <div className="flex flex-col gap-[6px] flex-1 min-w-px">
+                  <div className="flex items-center gap-[10px] flex-wrap">
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
+                      data-testid="text-rule-name"
+                    >
+                      {rule.name}
+                    </p>
+                    <StatusPill active={rule.active} />
+                  </div>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                    {rule.summary}
                   </p>
-                  <StatusPill active={rule.active} />
+                  <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
+                    {rule.policyId} · {rule.createdLabel}
+                  </p>
                 </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-                  {rule.summary}
-                </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
-                  {rule.policyId} · {rule.createdLabel}
-                </p>
               </div>
             </div>
-          </div>
+          ) : null}
+
+          {/* Policy rule detail body — read-only, shows all DSL fields */}
+          {isPolicy && policyRule && <PolicyDetailBody rule={policyRule} />}
+
+          {/* Everything below is ONLY for app-local rules */}
+          {!isPolicy && rule && (
+            <>
 
           {/* Paused-from-report banner — #D20344 accent, with the linked payment. */}
           {pausedFromReport && (
@@ -414,6 +473,9 @@ export function RuleDetail() {
             </div>
           </div>
 
+            </>
+          )}
+
         </div>
       </ScrollArea>
     </div>
@@ -597,6 +659,123 @@ function AmountRow({
         >
           Save
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Policy rule detail — read-only view of a brain-core policy rule ─────────
+   Shows all DSL fields: applies_to, when conditions, execute, require,
+   plus policy version + quorum metadata. No Pause/Resume/Delete. */
+
+function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
+  const rawName = rule.id.replace(/[-_]/g, " ");
+  const appliesTo = (rule.applies_to ?? [])
+    .map((a) => APPLIES_TO_LABEL[a] ?? a)
+    .join(", ") || "any action";
+  const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
+  const requireSuffix = rule.require ? ` · requires ${rule.require.replace(/_/g, " ")}` : "";
+
+  return (
+    <div className="flex flex-col gap-[12px] items-start w-full">
+      <div className="flex items-start gap-[12px] w-full">
+        <div className="flex flex-col gap-[6px] flex-1 min-w-px">
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
+              data-testid="text-rule-name"
+            >
+              {rawName}
+            </p>
+            <span
+              data-testid="pill-rule-status"
+              className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#240757] text-[#7631ee] border border-[rgba(118,49,238,0.3)]"
+            >
+              <Lock size={12} /> Read-only
+            </span>
+          </div>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+            {appliesTo} — {executeLabel}{requireSuffix}
+          </p>
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
+            {rule.id} · From your active Brain policy
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
+  const conditions = describeWhen(rule.when ?? {});
+  const appliesTo = rule.applies_to ?? [];
+  const hasRequire = !!rule.require;
+  const execute = rule.execute ?? "confirm";
+
+  return (
+    <div className="flex flex-col gap-[16px] items-start w-full">
+      {/* Info banner */}
+      <div
+        className="w-full rounded-[12px] border border-[#1d2132] p-[12px] flex items-start gap-[10px]"
+        data-testid="text-policy-info"
+      >
+        <Shield size={16} className="shrink-0 mt-[2px] text-[#6c779d]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[14px] text-[#6c779d]">
+          This rule is part of your Brain core <span className="font-semibold text-[#a8b9f4]">default policy</span>. It is enforced
+          by Brain for every action and cannot be edited or paused from this app. Changes must be made
+          through Brain core's admin layer.
+        </p>
+      </div>
+
+      {/* DSL fields panel */}
+      <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+        <div className="flex items-center px-[16px] py-[14px] border-b border-[#1d2132]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+            Rule definition
+          </p>
+        </div>
+        <div className="flex flex-col gap-[2px] p-[8px]">
+          {/* ID */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">ID</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.id}</span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* Applies to */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Applies to</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0">
+              {appliesTo.length > 0 ? appliesTo.join(", ") : "any action"}
+            </span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* When conditions */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">When</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0 max-w-[60%]">
+              {conditions.length > 0 ? conditions.join(" · ") : "always"}
+            </span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* Execute action */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Execute</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{execute}</span>
+          </div>
+
+          {hasRequire && (
+            <>
+              <div className="h-px w-full bg-[#1d2132]" />
+              <div className="flex items-center justify-between gap-[16px] p-[8px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Requires</span>
+                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.require!.replace(/_/g, " ")}</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

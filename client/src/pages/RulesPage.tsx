@@ -236,13 +236,12 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Live Brain policy — real policy document from brain-core, read-only ─────
-   Phase 2a: display only. This is the tenant's ACTUAL signed policy (thresholds,
-   quorum, approval requirements), NOT the 12 hand-authored rule cards above —
-   kept in its own section so live and mock data are never visually merged.
+/* ── Brain-core default policy — displayed under the "Default" tab ────────
+   Phase 2a: display only. The tenant's ACTUAL signed policy (thresholds,
+   quorum, approval requirements), NOT the app's mock/user rule cards.
    Mutations (pause/edit threshold) need policy:sign scope the token lacks;
    that's Phase 2b. See client/src/lib/brainPolicy.ts for the mapping. */
-function LivePolicySection() {
+function PolicySection() {
   const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
 
   return (
@@ -419,8 +418,15 @@ type BuilderState = {
 
 const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
 
-type RuleTab = "Automations" | "Guardrails" | "Always On" | "Suggested";
-const RULE_TABS: RuleTab[] = ["Automations", "Guardrails", "Always On", "Suggested"];
+type RuleTab = "Default" | "Automations" | "Guardrails" | "Always On" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Default", "Automations", "Guardrails", "Always On", "Suggested"];
+const TAB_PARAM_MAP: Record<string, RuleTab> = {
+  default: "Default",
+  automations: "Automations",
+  guardrails: "Guardrails",
+  "always-on": "Always On",
+  suggested: "Suggested",
+};
 
 export function RulesPage() {
   const { format } = useCurrency();
@@ -429,7 +435,16 @@ export function RulesPage() {
   const rules = useRules();
   const suggestions = useRuleSuggestions();
 
-  const [activeTab, setActiveTab] = useState<RuleTab>("Automations");
+  const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
+    const sp = new URLSearchParams(search);
+    const t = sp.get("tab");
+    return t ? (TAB_PARAM_MAP[t] ?? "Default") : "Default";
+  });
+  const setActiveTab = (tab: RuleTab) => {
+    setActiveTabState(tab);
+    const slug = tab.toLowerCase().replace(/\s+/g, "-");
+    navigate(`/rules?tab=${slug}`, { replace: true });
+  };
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
   const [openChip, setOpenChip] = useState<null | "category" | "vendor" | "action">(null);
@@ -553,11 +568,6 @@ export function RulesPage() {
               Manage the rules that guide Brain's reviews, recommendations, and actions.
             </p>
           </div>
-
-          {/* Live Brain policy — the tenant's real policy document, read-only,
-              always visible above the local-rules tabs so it's never mistaken
-              for one of the app's own mock/user rule cards. */}
-          <LivePolicySection />
 
           <div className="flex flex-col gap-[16px] items-start w-full">
             {/* Tab bar — active tab is ORANGE */}
@@ -793,6 +803,22 @@ export function RulesPage() {
           ))}
 
           {/* Tab content — each tab shows its own section */}
+
+          {activeTab === "Default" && (
+            <>
+              <PolicySection />
+              {/* Default-specific purple info banner */}
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
+                </p>
+              </div>
+            </>
+          )}
 
           {activeTab === "Automations" && (
             <Section
