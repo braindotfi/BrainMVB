@@ -31,6 +31,7 @@ import {
   BUILDER_CATEGORIES,
   CATEGORY_TO_POLICY,
 } from "@/lib/mockRules";
+import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useCurrency } from "@/lib/currencyContext";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 
@@ -224,6 +225,57 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
       <span className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] whitespace-nowrap">
         Always on
       </span>
+    </div>
+  );
+}
+
+/* ── Live Brain policy — real policy document from brain-core, read-only ─────
+   Phase 2a: display only. This is the tenant's ACTUAL signed policy (thresholds,
+   quorum, approval requirements), NOT the 12 hand-authored rule cards above —
+   kept in its own section so live and mock data are never visually merged.
+   Mutations (pause/edit threshold) need policy:sign scope the token lacks;
+   that's Phase 2b. See client/src/lib/brainPolicy.ts for the mapping. */
+function LivePolicySection() {
+  const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
+
+  return (
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
+            Active Brain policy
+          </p>
+          <Lock size={13} className="text-[#6c779d]" />
+        </div>
+        {!isLoading && !isError && version !== undefined && (
+          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
+            v{version} · quorum {quorum}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col items-start p-[8px] gap-[8px] relative shrink-0 w-full">
+        {isLoading && (
+          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
+            Loading your active policy from Brain…
+          </p>
+        )}
+        {!isLoading && isError && (
+          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
+            Couldn't load your active policy from Brain right now.
+          </p>
+        )}
+        {!isLoading && !isError && rules.length === 0 && (
+          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
+            No active policy found for your account yet.
+          </p>
+        )}
+        {!isLoading && !isError && rules.map((r, idx) => (
+          <div key={r.id} className="flex flex-col gap-[8px] w-full">
+            <AlwaysOnRow rule={r} />
+            {idx < rules.length - 1 && <Divider />}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -494,6 +546,11 @@ export function RulesPage() {
               Manage the rules that guide Brain's reviews, recommendations, and actions.
             </p>
           </div>
+
+          {/* Live Brain policy — the tenant's real policy document, read-only,
+              always visible above the local-rules tabs so it's never mistaken
+              for one of the app's own mock/user rule cards. */}
+          <LivePolicySection />
 
           <div className="flex flex-col gap-[16px] items-start w-full">
             {/* Tab bar — active tab is ORANGE */}

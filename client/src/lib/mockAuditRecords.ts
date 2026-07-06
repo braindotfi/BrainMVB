@@ -2,7 +2,14 @@ import type { AuditRecord } from "./auditTypes";
 
 /* ~14 records spanning every eventType and both anchor states.
    Recurring demo items are wired by proposalId so surfaces reconcile
-   with the Review/Activity flows. */
+   with the Review/Activity flows.
+
+   ponytail: AuditLogPage itself moved to live brain-core events (Phase 1c,
+   see client/src/lib/brainAudit.ts) and no longer reads this. This store is
+   RETAINED because SettledRecordCard.tsx still resolves a proposal's
+   `realAnchor` off it (fed by the still-mock AUTO_HANDLED_PROPOSALS), and
+   ruleConsistencyCheck.ts's guards still assert this mock data's internal
+   consistency. Delete once AUTO_HANDLED_PROPOSALS/mockProposals also go live. */
 
 export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
   /* 1 ─ Approved payment (AWS) ─ linked via proposalId ─────────────── */

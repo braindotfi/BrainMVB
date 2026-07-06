@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Clock, Loader, Flag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -8,12 +8,13 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { MOCK_PROPOSALS, AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
+import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -259,16 +260,55 @@ export function ReviewPage() {
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
   const setStatus = (id: string, status: ProposalStatus) => setReviewStatus(id, status);
 
-  const pending = MOCK_PROPOSALS.filter((p) => statusOf(p) === "pending");
-  const verifying = MOCK_PROPOSALS.filter((p) => statusOf(p) === "verifying");
-  const executing = MOCK_PROPOSALS.filter((p) => statusOf(p) === "executing");
-  const settled = MOCK_PROPOSALS.filter((p) =>
-    ["executed", "rejected", "postponed"].includes(statusOf(p)),
-  );
-  const queue = [...pending, ...verifying];
+  /* Durable "Needs Review" queue — live brain-core PaymentIntents awaiting a
+     human decision (replaces MOCK_PROPOSALS; see client/src/lib/brainQueue.ts
+     for why this fans out to a per-id fetch). brain-core has no client-side
+     "executing/verifying/settled" states for these — approve/reject mutate
+     the intent directly and the queue refetches, so there's nothing to hold
+     in reviewStatusStore for a live row. */
+  const { proposals: liveQueue, isLoading: liveQueueLoading } = useBrainReviewQueue();
+  // Exclude intents already tracked by the session-scoped `intentsStore` — those
+  // render in the separate "Needs your approval" widget below (liveReviews) so
+  // this durable queue doesn't show the same intent twice.
+  const sessionIntentIds = new Set(intents.map((i) => i.intentId));
+  const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
+  const executing: Proposal[] = [];
+  const settled: Proposal[] = [];
+
+  const queryClient = useQueryClient();
+  const invalidateLiveQueue = () => {
+    void queryClient.invalidateQueries({ queryKey: ["/api/brain/actions"] });
+    void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/payment-intents/") });
+  };
+  const approveLive = useMutation<unknown, Error, string>({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) throw new Error(mapApprovalRejection(parseCoreError(body)).detail);
+      return body;
+    },
+    onSuccess: () => { setActive(null); invalidateLiveQueue(); },
+    onError: (err) => toast({ title: "Couldn't approve", description: err.message, variant: "destructive" }),
+  });
+  const rejectLive = useMutation<unknown, Error, string>({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: id, reason: "Declined by operator" });
+      return res.json();
+    },
+    onSuccess: () => { setActive(null); invalidateLiveQueue(); },
+    onError: (err) => toast({ title: "Couldn't reject", description: err.message, variant: "destructive" }),
+  });
 
   const handleAction = (action: ProposalAction) => {
     if (!active) return;
+    // A live brain-core row (this durable queue only ever holds these) — ask
+    // core directly instead of flipping a client-side status.
+    if (queue.some((p) => p.id === active.id)) {
+      if (action === "approve") approveLive.mutate(active.id);
+      else if (action === "reject") rejectLive.mutate(active.id);
+      // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
+      return;
+    }
     const next: ProposalStatus =
       action === "approve" ? "executing"
         : action === "reject" ? "rejected"
@@ -544,7 +584,9 @@ export function ReviewPage() {
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
                 {queue.length === 0 && executing.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                      {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
+                    </p>
                   </div>
                 )}
 

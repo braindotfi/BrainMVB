@@ -4,6 +4,12 @@ import type { Proposal, AccountSummary, AutoRule } from "./proposalTypes";
    Brain PROPOSES only — wording for money-movers is always
    "propose / recommend / draft", never "I paid" / "I will pay". */
 
+// ponytail: ReviewPage/HomePage no longer read MOCK_PROPOSALS for the pending
+// "Needs Review" queue (Phase 1a — replaced by a live brain-core read, see
+// client/src/lib/brainQueue.ts). Kept here because mockAuditRecords.ts,
+// mockDocuments.ts, and openProposalDetail.ts's allProposals() still resolve
+// these ids for the Audit Log / document-viewer / dev consistency guards.
+// Remove once Phase 1c (Audit Log ← live /audit/events) migrates those refs.
 export const MOCK_PROPOSALS: Proposal[] = [
   /* 1 — invoice / clean routine ─────────────────────────────────────────── */
   {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
@@ -8,7 +8,10 @@ import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
-import { getBrainDidTodayItems, getNeedsReviewProposals } from "@/lib/brainFeed";
+import { useBrainReviewQueue } from "@/lib/brainQueue";
+import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { apiRequest } from "@/lib/queryClient";
+import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { SettledRecordCard } from "@/components/SettledRecordCard";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -467,8 +470,39 @@ export function HomePage() {
     return r ? !r.active : p.rule ? !p.rule.active : false;
   };
 
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const invalidateLiveQueue = () => {
+    void queryClient.invalidateQueries({ queryKey: ["/api/brain/actions"] });
+    void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/payment-intents/") });
+  };
+  const approveLive = useMutation<unknown, Error, string>({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) throw new Error(mapApprovalRejection(parseCoreError(body)).detail);
+      return body;
+    },
+    onSuccess: () => { setSelectedReview(null); invalidateLiveQueue(); },
+    onError: (err) => toast({ title: "Couldn't approve", description: err.message, variant: "destructive" }),
+  });
+  const rejectLive = useMutation<unknown, Error, string>({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: id, reason: "Declined by operator" });
+      return res.json();
+    },
+    onSuccess: () => { setSelectedReview(null); invalidateLiveQueue(); },
+    onError: (err) => toast({ title: "Couldn't reject", description: err.message, variant: "destructive" }),
+  });
+
   const handleReviewAction = (action: ProposalAction) => {
     if (!selectedReview) return;
+    // Live brain-core rows (brainDetectedItems, below) — ask core directly.
+    if (brainDetectedItems.some((it) => it.id === selectedReview.id)) {
+      if (action === "approve") approveLive.mutate(selectedReview.id);
+      else if (action === "reject") rejectLive.mutate(selectedReview.id);
+      return;
+    }
     const next: ProposalStatus =
       action === "approve" ? "executing"
         : action === "reject" ? "rejected"
@@ -478,31 +512,31 @@ export function HomePage() {
     setSelectedReview(null);
   };
 
-  /* Brain Did — the exact "Brain Did" items for today (mirrors the Activity
-     page's Today section under the "Brain Did" tab). Tapping a row opens its
-     settled record card right here, no navigation to the Activity page. */
-  const brainDidItems: WidgetItem[] = getBrainDidTodayItems().map((it) => ({
-    id: String(it.id),
-    label: it.title,
-    onClick: () => {
-      if (it.proposal) setSelectedSettled(it.proposal);
-      else navigate(`/activity?tab=brain-did&row=${it.id}`);
-    },
-  }));
+  /* Brain Did — live brain-core audit events for actions Brain has already
+     completed (approved/executed), same source as the Audit Log page
+     (useBrainAuditRecords, Phase 1c). Tapping a row deep-links to the Audit
+     Log record rather than a fabricated settled-receipt card — this widget
+     has no Proposal object to hand SettledRecordCard, only a real audit
+     event. */
+  const { records: liveAuditRecords } = useBrainAuditRecords();
+  const brainDidItems: WidgetItem[] = liveAuditRecords
+    .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
+    .map((r) => ({
+      id: r.id,
+      label: r.summary,
+      onClick: () => navigate(`/audit-log?record=${r.id}`),
+    }));
 
   /* Brain Detected — what Brain is advising for review (mirrors the Review
-     page's "Needs Review" queue). Tapping opens the proposal sheet right here,
+     page's live "Needs Review" queue: real brain-core PaymentIntents awaiting
+     approval, not MOCK_PROPOSALS). Tapping opens the proposal sheet right here,
      no navigation to the Review page. */
-  const brainDetectedItems: WidgetItem[] = getNeedsReviewProposals()
-    .filter((p) => {
-      const s = reviewStatuses[p.id] ?? p.status;
-      return s === "pending" || s === "verifying";
-    })
-    .map((p) => ({
-      id: p.id,
-      label: p.title,
-      onClick: () => setSelectedReview(p),
-    }));
+  const { proposals: liveNeedsReview } = useBrainReviewQueue();
+  const brainDetectedItems: WidgetItem[] = liveNeedsReview.map((p) => ({
+    id: p.id,
+    label: p.title,
+    onClick: () => setSelectedReview(p),
+  }));
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -667,7 +701,10 @@ export function HomePage() {
         onComplete={finishOnboarding}
       />
 
-      {/* Brain Did — settled receipt card, opened in place */}
+      {/* ponytail: Brain Did no longer opens this card (Phase 1b routes live
+          audit rows straight to /audit-log — no Proposal object to hand it);
+          left mounted/dormant since selectedSettled/setSelectedSettled are
+          harmless unused state, not because anything still sets them. */}
       <SettledRecordCard
         proposal={selectedSettled}
         open={selectedSettled !== null}
