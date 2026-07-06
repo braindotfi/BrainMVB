@@ -4,24 +4,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
   Flag,
-  Pause,
-  Play,
-  Trash2,
   ChevronDown,
   ChevronUp,
-  ReceiptText,
-  Info,
   Lock,
   Shield,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
 import type { PolicyContentRule } from "@/lib/brainPolicy";
-import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
+import infoIcon from "@assets/info_1783376644530.png";
+import playIcon from "@assets/play_1783376650313.png";
+import deleteIcon from "@assets/delete_1783376650313.png";
+import pauseIcon from "@assets/pause_1783376736546.png";
 
 const ALERT = "#d20344";
 
@@ -93,10 +91,6 @@ export function RuleDetail() {
   const openReports = reports.filter((r) => !r.resolved);
   const pausedFromReport = !rule?.active && openReports.length > 0;
   const latestOpen = openReports[openReports.length - 1];
-  /* The receipt that triggered the most recent open report — the linked payment. */
-  const linkedPayment = latestOpen
-    ? AUTO_HANDLED_PROPOSALS.find((p) => p.id === latestOpen.proposalId)
-    : undefined;
 
   const openReceipt = (proposalId: string) => navigate(`/review?receipt=${proposalId}`);
 
@@ -185,60 +179,12 @@ export function RuleDetail() {
           {!isPolicy && rule && (
             <>
 
-          {/* Paused-from-report banner — #D20344 accent, with the linked payment. */}
-          {pausedFromReport && (
-            <div
-              className="w-full rounded-[12px] p-[16px] flex flex-col gap-[12px]"
-              style={{ backgroundColor: "rgba(210,3,68,0.08)", border: `1px solid rgba(210,3,68,0.3)` }}
-              data-testid="banner-paused-from-report"
-            >
-              <div className="flex items-start gap-[10px]">
-                <Flag size={18} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
-                <div className="flex flex-col gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[15px]" style={{ color: ALERT }}>
-                    Paused after you reported a problem
-                  </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a8b9f4] text-[13px]">
-                    You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
-                  </p>
-                </div>
-              </div>
-
-              {linkedPayment && (
-                <button
-                  type="button"
-                  onClick={() => openReceipt(linkedPayment.id)}
-                  data-testid="button-linked-payment"
-                  className="flex items-center gap-[10px] w-full rounded-[10px] bg-[#0a0c10] border border-[#1d2132] px-[12px] py-[10px] hover:border-[rgba(210,3,68,0.4)] transition-colors text-left focus:outline-none focus-visible:ring-2"
-                  style={{ ["--tw-ring-color" as string]: ALERT }}
-                >
-                  <ReceiptText size={16} className="shrink-0 text-[#6c779d]" />
-                  <div className="flex flex-col flex-1 min-w-px">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[13px] truncate">
-                      {linkedPayment.counterparty ?? linkedPayment.title}
-                    </p>
-                    {linkedPayment.settledMeta && (
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[11px] truncate">
-                        {linkedPayment.settledMeta}
-                      </p>
-                    )}
-                  </div>
-                  {typeof linkedPayment.amount === "number" && (
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">
-                      {format(linkedPayment.amount)}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Status banner — matches Figma's "Info Circle" info pill. */}
           <div
             className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
             data-testid="text-what-changed"
           >
-            <Info size={16} className="shrink-0" style={{ color: rule.active ? "#6c779d" : ALERT }} />
+            <img src={infoIcon} alt="" className="shrink-0 size-[16px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
@@ -246,7 +192,7 @@ export function RuleDetail() {
                 </>
               ) : (
                 <>
-                  This rule is <span className="font-semibold" style={{ color: ALERT }}>paused</span> — payments it used to auto-clear ({rule.scopeSummary ?? "matching payments"}) will now wait for your approval in Needs Review.
+                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> — payments it used to auto-clear ({rule.scopeSummary ?? "matching payments"}) will now wait for your approval in Needs Review.
                 </>
               )}
             </p>
@@ -270,7 +216,7 @@ export function RuleDetail() {
                       : { backgroundColor: "#123509", color: "#42bf23", ["--tw-ring-color" as string]: "#42bf23" }
                   }
                 >
-                  {rule.active ? <Pause size={14} /> : <Play size={14} />}
+                  <img src={rule.active ? pauseIcon : playIcon} alt="" className="shrink-0 size-[16px]" />
                   {rule.active ? "Pause Rule" : "Resume Rule"}
                 </button>
                 <button
@@ -280,7 +226,7 @@ export function RuleDetail() {
                   className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
-                  <Trash2 size={14} /> Delete Rule
+                  <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
                 </button>
               </div>
             </div>
@@ -313,6 +259,25 @@ export function RuleDetail() {
             )}
           </div>
 
+          {/* Paused-from-report banner — orange accent, matches Figma's flagged banner under Rule Status. */}
+          {pausedFromReport && (
+            <div
+              className="w-full rounded-[12px] p-[16px] flex items-start gap-[10px]"
+              style={{ backgroundColor: "#4a2300", border: "1px solid rgba(255,148,0,0.2)" }}
+              data-testid="banner-paused-from-report"
+            >
+              <Flag size={18} className="shrink-0 mt-[1px] text-[#ff9400]" />
+              <div className="flex flex-col gap-[4px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-bold uppercase leading-[20px] text-[15px] text-[#ff9400]">
+                  Paused After You Reported a Problem
+                </p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#ff9400] text-[13px]">
+                  You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Resume-rule confirmation — dim/blur backdrop modal, matches other popups. */}
           <DialogPrimitive.Root open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
             <DialogPrimitive.Portal>
@@ -339,19 +304,19 @@ export function RuleDetail() {
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
                     className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
                   >
                     Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
                   </DialogPrimitive.Description>
 
-                  <div className="flex gap-[10px] items-stretch w-full">
+                  <div className="flex gap-[16px] items-center w-full">
                     <button
                       type="button"
                       onClick={() => setResumeModalOpen(false)}
                       data-testid="button-resume-cancel"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
                       Keep Paused
                     </button>
@@ -359,7 +324,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                     >
                       Resume
                     </button>
@@ -527,8 +492,8 @@ function StatusPill({ active }: { active: boolean }) {
   return (
     <span
       data-testid="pill-rule-status"
-      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#350011]"
-      style={{ borderColor: "rgba(210,3,68,0.2)", color: ALERT }}
+      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#4a2300] text-[#ff9400]"
+      style={{ borderColor: "rgba(255,148,0,0.2)" }}
     >
       Paused
     </span>
@@ -670,7 +635,7 @@ function AmountRow({
             if (e.key === "Escape") onCancel();
           }}
           data-testid={testIdInput}
-          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(118,49,238,0.5)]"
+          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none"
         />
       </div>
       <div className="flex gap-[8px] items-center shrink-0">

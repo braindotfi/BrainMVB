@@ -42,4 +42,12 @@ state. Local React state in ReviewPage couldn't reach RuleDetail.
   bg even with a status banner; don't let per-state conditionals repaint the row container itself.
 - Resume-rule confirmation is a Dialog modal (matches the create-rule modal pattern: Radix
   `DialogPrimitive`, `bg-black/60 backdrop-blur-[2px]` overlay, `#0a0c10`/`#1d2132` panel,
-  green `#42bf23`/`#123509` confirm button), not an inline expand-in-place block.
+  green `#42bf23`/`#123509` confirm button), not an inline expand-in-place block. Body uses
+  `p-[40px]` and `gap-[16px]` between the two full-width action buttons (`px-[24px] py-[12px]`,
+  `text-[18px]`) — not the smaller `p-[24px]`/`gap-[10px]` used by other confirm dialogs.
+- **Paused state uses ORANGE, not red** (`#d20344` stays reserved for danger/reject/delete only):
+  Paused pill/banner = `bg-[#4a2300]` border `rgba(255,148,0,0.2)` text `#ff9400`. The
+  "Paused After You Reported a Problem" banner is a plain orange info card (Flag icon, bold
+  uppercase title, no linked-payment button) placed UNDER the Rule Status card — the
+  linked-payment/receipt link lives in the Reported Problems accordion (`ReportCard` →
+  "View the Receipt"), not duplicated in this banner.

@@ -171,7 +171,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
       <button
         type="button"
