@@ -51,3 +51,15 @@ state. Local React state in ReviewPage couldn't reach RuleDetail.
   uppercase title, no linked-payment button) placed UNDER the Rule Status card — the
   linked-payment/receipt link lives in the Reported Problems accordion (`ReportCard` →
   "View the Receipt"), not duplicated in this banner.
+- The rules-LIST row-level mini banner (`AutomationRow`/`GuardrailRow` in `RulesPage.tsx`,
+  inline under the rule name when `pausedFromReport`) is a distinct, smaller inline element from
+  the RuleDetail page banner above — it intentionally kept the red `#350011`/`#d20344` treatment
+  from the original Figma list-row spec. `AutomationRow` and `GuardrailRow` must stay in parity:
+  when adding any row-level paused/report indicator to one, mirror it in the other.
+- Modal headers (Resume Rule + Create Rule) must be solid `bg-[#0a0c10] border-b border-[#1d2132]`
+  matching the body panel bg — NOT `backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)]` frosted glass
+  (that was a leftover pattern from an older modal spec and doesn't match Figma for these two).
+- `Section` wrapper (RulesPage.tsx list card used by Automations/Guardrails tabs) needs an
+  explicit `gap-[8px]` on its row-container div — without it, rows have zero vertical spacing
+  between them (only the divider) even though each row-wrapper itself has an internal gap. The
+  VendorsPage "Needs Review" list is the reference spacing to match.

@@ -108,20 +108,20 @@ function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
       : "pay it automatically";
 
   return (
-    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[26px]">
-      <span className="text-[#6c779d]">When a </span>
-      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{category}</span>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px] w-full">
+      <span>When a </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{category}</span>
       {vendor && (
         <>
-          <span className="text-[#6c779d]"> from </span>
-          <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{vendor}</span>
+          <span> from </span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{vendor}</span>
         </>
       )}
-      <span className="text-[#6c779d]"> is {isGuardrail ? "over" : "under"} </span>
-      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{amountStr}</span>
-      <span className="text-[#6c779d]"> then </span>
-      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{actionLabel}</span>
-      <span className="text-[#6c779d]">?</span>
+      <span> is {isGuardrail ? "over" : "under"} </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{amountStr}</span>
+      <span> then </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{actionLabel}</span>
+      <span>?</span>
     </p>
   );
 }
@@ -148,7 +148,7 @@ function Section({
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+      <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             {empty}
@@ -208,6 +208,8 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
 /* ── Guardrail row — pulls you back in above a threshold ─────────────────────── */
 function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
+  const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
+  const pausedFromReport = !rule.active && openReports.length > 0;
   const open = () => navigate(`/rules/${rule.id}`);
   return (
     <div
@@ -226,6 +228,16 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
           {rule.summary}
         </p>
+        {pausedFromReport && (
+          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
+            <div className="flex gap-[8px] items-start relative">
+              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
+                Paused after you reported a problem.
+              </p>
+            </div>
+          </div>
+        )}
       </button>
       <Toggle
         active={rule.active}
@@ -659,11 +671,11 @@ export function RulesPage() {
                 data-testid="create-rule-backdrop"
               />
               <DialogPrimitive.Content
-                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                 data-testid="create-rule-modal"
               >
                 {/* Title bar */}
-                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
                   <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
                     Create Rule
                   </DialogPrimitive.Title>
@@ -677,7 +689,7 @@ export function RulesPage() {
                 </div>
 
                 {/* Body — natural-language sentence with highlighted variables */}
-                <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
                   <DialogPrimitive.Description id="create-rule-description" className="sr-only">
                     Review the rule before confirming creation
                   </DialogPrimitive.Description>
@@ -685,12 +697,12 @@ export function RulesPage() {
                     <RuleConfirmSentence rule={pendingCreate} />
                   )}
 
-                  <div className="flex gap-[10px] items-stretch w-full">
+                  <div className="flex gap-[16px] items-center w-full">
                     <button
                       type="button"
                       onClick={cancelCreate}
                       data-testid="button-create-cancel"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
                       Edit
                     </button>
@@ -698,7 +710,7 @@ export function RulesPage() {
                       type="button"
                       onClick={onConfirmCreate}
                       data-testid="button-create-confirm"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#42bf23]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                     >
                       Confirm
                     </button>
