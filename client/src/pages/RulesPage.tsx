@@ -180,10 +180,10 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.scopeSummary ?? rule.summary}
+          {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
           <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
@@ -223,10 +223,10 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.summary}
+          {titleCase(rule.summary)}
         </p>
         {pausedFromReport && (
           <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
@@ -265,10 +265,10 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.summary}
+          {titleCase(rule.summary)}
         </p>
       </button>
       <span className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] whitespace-nowrap">

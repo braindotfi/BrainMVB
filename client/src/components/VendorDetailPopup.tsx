@@ -1,5 +1,10 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, useEffect } from "react";
+
+/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
 import {
   ShieldCheck,
   ShieldAlert,
@@ -322,7 +327,7 @@ export function VendorDetailPopup({
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-center min-w-px relative self-stretch">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
-                            {rule ? rule.name : "Rule unavailable"}
+                            {rule ? titleCase(rule.name) : "Rule unavailable"}
                           </p>
                         </div>
                         <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">

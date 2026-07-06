@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
+
+/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Clock, Loader, Flag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -606,7 +611,7 @@ export function ReviewPage() {
                         >
                           <Flag size={13} className="shrink-0" style={{ color: "#d20344" }} />
                           <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[12px] text-[#a8b9f4]">
-                            Waiting for you because you paused <span className="font-semibold">“{related.name}”</span> — review the rule
+                            Waiting for you because you paused <span className="font-semibold">“{titleCase(related.name)}”</span> — review the rule
                           </span>
                         </button>
                       );

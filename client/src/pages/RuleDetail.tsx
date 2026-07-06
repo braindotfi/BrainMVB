@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
+
+/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
@@ -157,12 +162,12 @@ export function RuleDetail() {
                       className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
                       data-testid="text-rule-name"
                     >
-                      {rule.name}
+                      {titleCase(rule.name)}
                     </p>
                     <StatusPill active={rule.active} />
                   </div>
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">
-                    {rule.scopeSummary ?? rule.summary}
+                    {titleCase(rule.scopeSummary ?? rule.summary)}
                   </p>
                   <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
                     {rule.policyId} · {rule.createdLabel}
@@ -188,11 +193,11 @@ export function RuleDetail() {
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
-                  This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {rule.scopeSummary ?? "matching payments"} without asking you.
+                  This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {titleCase(rule.scopeSummary ?? "matching payments")} without asking you.
                 </>
               ) : (
                 <>
-                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> — payments it used to auto-clear ({rule.scopeSummary ?? "matching payments"}) will now wait for your approval in Needs Review.
+                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> — payments it used to auto-clear ({titleCase(rule.scopeSummary ?? "matching payments")}) will now wait for your approval in Needs Review.
                 </>
               )}
             </p>
@@ -282,7 +287,7 @@ export function RuleDetail() {
                   <DialogPrimitive.Description
                     className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
                   >
-                    Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
+                    Resuming lets this rule auto-clear {titleCase(rule.scopeSummary ?? "matching payments")} again without asking. Make sure you’ve resolved what you reported first.
                   </DialogPrimitive.Description>
 
                   <div className="flex gap-[16px] items-center w-full">

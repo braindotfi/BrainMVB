@@ -1,5 +1,10 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+
+/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
 import { CircleCheck, ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AnchorStatus } from "./AnchorStatus";
@@ -151,7 +156,7 @@ export function SettledRecordCard({
                       data-testid="text-cleared-by-rule"
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] w-full"
                     >
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{proposal.rule!.name}</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] flex-1 min-w-px">{titleCase(proposal.rule!.name)}</span>
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">(rule unavailable)</span>
                     </div>
                   </div>
@@ -166,7 +171,7 @@ export function SettledRecordCard({
                     data-testid="button-cleared-by-rule"
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{proposal.rule!.name}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">{titleCase(proposal.rule!.name)}</span>
                     <ChevronRight size={14} className="text-[#414965] shrink-0" />
                   </button>
                 </div>

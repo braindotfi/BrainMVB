@@ -660,7 +660,7 @@ function AutoHandledReceipt({
           <>
             <div className="flex items-center justify-between gap-[12px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
-                {rule.name}
+                {titleCase(rule.name)}
               </p>
               <span
                 data-testid="chip-rule-status"
@@ -672,7 +672,7 @@ function AutoHandledReceipt({
               </span>
             </div>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-              {rule.summary}
+              {titleCase(rule.summary)}
             </p>
             <div className="flex flex-col gap-[2px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">
               <span>{rule.createdLabel}</span>
@@ -720,7 +720,7 @@ function AutoHandledReceipt({
             data-testid="text-rule-paused-confirm"
             className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#42bf23]"
           >
-            {rule ? `"${rule.name}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
+            {rule ? `"${titleCase(rule.name)}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
           </div>
         )}
         <div className="flex gap-[10px] items-stretch w-full">
@@ -833,7 +833,7 @@ function AutoHandledReceipt({
               Want to pause this rule while you review?
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-              Pausing{rule ? ` "${rule.name}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
+              Pausing{rule ? ` "${titleCase(rule.name)}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
             </p>
             <div className="flex flex-col gap-[8px] w-full">
               <button
@@ -872,7 +872,7 @@ function AutoHandledReceipt({
           >
             <Check size={16} className="shrink-0 mt-[1px] text-[#42bf23]" strokeWidth={2.5} />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
-              Thanks — we logged this as policy feedback{rule ? ` on "${rule.name}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
+              Thanks — we logged this as policy feedback{rule ? ` on "${titleCase(rule.name)}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
             </p>
           </div>
         )}
