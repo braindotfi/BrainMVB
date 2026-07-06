@@ -651,23 +651,23 @@ export function ReviewPage() {
             )}
 
             {/* Approved Automatically — settled receipts; tapping a row opens the record */}
-            {showApproved && autoHandled.length > 0 && (
+            {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoHandled.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {autoHandled.map((p, idx) => (
-                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                      <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
-                      {idx < autoHandled.length - 1 && <Divider />}
+                  {autoHandled.length === 0 ? (
+                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
                     </div>
-                  ))}
+                  ) : (
+                    autoHandled.map((p, idx) => (
+                      <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                        <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
+                        {idx < autoHandled.length - 1 && <Divider />}
+                      </div>
+                    ))
+                  )}
                 </div>
-              </div>
-            )}
-
-            {showApproved && autoHandled.length === 0 && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No auto-approved items yet. Brain will make them here when they happen.</p>
               </div>
             )}
 

@@ -90,17 +90,18 @@ function Toggle({ active, onChange, testId }: { active: boolean; onChange: () =>
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
-/* ── Section wrapper — card with header, collapses when empty ───────────────── */
+/* ── Section wrapper — card with header, always visible ─────────────────────── */
 function Section({
   title,
   count,
   children,
+  empty,
 }: {
   title: string;
   count: number;
   children: React.ReactNode;
+  empty?: React.ReactNode;
 }) {
-  if (count === 0) return null;
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -112,7 +113,13 @@ function Section({
         </div>
       </div>
       <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-        {children}
+        {count === 0 && empty ? (
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+            {empty}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
@@ -788,7 +795,11 @@ export function RulesPage() {
           {/* Tab content — each tab shows its own section */}
 
           {activeTab === "Automations" && (
-            <Section title="Automations" count={automations.length}>
+            <Section
+              title="Automations"
+              count={automations.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+            >
               {automations.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
                   <AutomationRow rule={r} />
@@ -798,14 +809,12 @@ export function RulesPage() {
             </Section>
           )}
 
-          {activeTab === "Automations" && automations.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>
-            </div>
-          )}
-
           {activeTab === "Guardrails" && (
-            <Section title="Guardrails" count={guardrails.length}>
+            <Section
+              title="Guardrails"
+              count={guardrails.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+            >
               {guardrails.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
                   <GuardrailRow rule={r} />
@@ -815,14 +824,12 @@ export function RulesPage() {
             </Section>
           )}
 
-          {activeTab === "Guardrails" && guardrails.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>
-            </div>
-          )}
-
           {activeTab === "Always On" && (
-            <Section title="Always On" count={alwaysOn.length}>
+            <Section
+              title="Always On"
+              count={alwaysOn.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>}
+            >
               {alwaysOn.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
                   <AlwaysOnRow rule={r} />
@@ -832,29 +839,35 @@ export function RulesPage() {
             </Section>
           )}
 
-          {activeTab === "Always On" && alwaysOn.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No always-on rules active. These run in the background without human approval.</p>
-            </div>
-          )}
-
-          {activeTab === "Suggested" && suggestions.length > 0 && (
-            <div className="flex flex-col gap-[10px] w-full">
-              {suggestions.map((s) => (
-                <SuggestionCard
-                  key={s.id}
-                  suggestion={s}
-                  onAccept={() => onAcceptSuggestion(s)}
-                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                  onDismiss={() => dismissSuggestion(s.id)}
-                />
-              ))}
-            </div>
-          )}
-
-          {activeTab === "Suggested" && suggestions.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
+          {activeTab === "Suggested" && (
+            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+                <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">Suggested</p>
+                  <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{suggestions.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                {suggestions.length === 0 ? (
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Nothing needs your attention right now. Brain is keeping things moving.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-[10px] w-full">
+                    {suggestions.map((s) => (
+                      <SuggestionCard
+                        key={s.id}
+                        suggestion={s}
+                        onAccept={() => onAcceptSuggestion(s)}
+                        onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                        onDismiss={() => dismissSuggestion(s.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

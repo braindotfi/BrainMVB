@@ -199,13 +199,7 @@ const SectionCard = ({
         {items.length === 0 ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              {title === "Just now"
-                ? "No items just now."
-                : title === "Today"
-                  ? "Nothing today yet."
-                  : title === "Yesterday"
-                    ? "Nothing yesterday."
-                    : "Nothing earlier."}
+              Nothing needs your attention right now. Brain is keeping things moving.
             </p>
           </div>
         ) : (
