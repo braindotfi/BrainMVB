@@ -12,6 +12,7 @@ import {
   Flag,
 } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
+import infoIcon from "@assets/Icons_1783346130548.png";
 import {
   useRules,
   pauseRule,
@@ -819,33 +820,59 @@ export function RulesPage() {
           )}
 
           {activeTab === "Automations" && (
-            <Section
-              title="Automations"
-              count={automations.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
-            >
-              {automations.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <AutomationRow rule={r} />
-                  {idx < automations.length - 1 && <Divider />}
-                </div>
-              ))}
-            </Section>
+            <>
+              <Section
+                title="Automations"
+                count={automations.length}
+                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
+              >
+                {automations.map((r, idx) => (
+                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                    <AutomationRow rule={r} />
+                    {idx < automations.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
+            </>
           )}
 
           {activeTab === "Guardrails" && (
-            <Section
-              title="Guardrails"
-              count={guardrails.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
-            >
-              {guardrails.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <GuardrailRow rule={r} />
-                  {idx < guardrails.length - 1 && <Divider />}
-                </div>
-              ))}
-            </Section>
+            <>
+              <Section
+                title="Guardrails"
+                count={guardrails.length}
+                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
+              >
+                {guardrails.map((r, idx) => (
+                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                    <GuardrailRow rule={r} />
+                    {idx < guardrails.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
+            </>
           )}
 
           {activeTab === "Suggested" && (
