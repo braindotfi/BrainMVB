@@ -3,7 +3,6 @@ import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronRight,
-  Lock,
   Plus,
   Sparkles,
   Check,
@@ -13,6 +12,8 @@ import {
 } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import infoIcon from "@assets/Icons_1783346130548.png";
+import defaultInfoIcon from "@assets/Icons_1783346458429.png";
+import shieldKeyIcon from "@assets/Normal_1783346551915.png";
 import {
   useRules,
   pauseRule,
@@ -215,7 +216,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
     >
       <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#1d2132]">
-        <Lock size={14} className="text-[#6c779d]" />
+        <img src={shieldKeyIcon} alt="shield" className="w-[14px] h-[14px]" />
       </div>
       <button
         type="button"
@@ -252,7 +253,9 @@ function PolicySection() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
             Default Brain Rules
           </p>
-          <Lock size={13} className="text-[#6c779d]" />
+          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{rules.length}</p>
+          </div>
         </div>
         {!isLoading && !isError && version !== undefined && (
           <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
@@ -811,7 +814,7 @@ export function RulesPage() {
                 className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
                 style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
               >
-                <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
+                <img src={defaultInfoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                   These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
                 </p>
