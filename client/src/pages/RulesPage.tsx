@@ -405,7 +405,7 @@ function Chip({
       } ${
         hasValue
           ? "bg-[#240757] text-[#a8b9f4] font-semibold"
-          : "bg-[#11141b] text-[#6c779d] font-medium border border-dashed border-[#414965]"
+          : "bg-[#11141b] text-[#6c779d] font-medium"
       }`}
     >
       {value ?? placeholder}
@@ -682,7 +682,7 @@ export function RulesPage() {
               </div>
             </button>
           ) : (
-            <div className="w-full rounded-[16px] border border-[rgba(118,49,238,0.35)] bg-[#0a0c10] p-[16px] flex flex-col gap-[14px]" data-testid="panel-builder">
+            <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
               {/* Two-line sentence builder — matches Figma */}
               <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
                 {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
@@ -835,6 +835,8 @@ export function RulesPage() {
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-line">
                 compiles to {builderPolicy}
               </p>
+
+              <div className="h-px w-full bg-[#1d2132]" />
 
               <div className="flex gap-[10px] items-stretch w-full">
                 <button
