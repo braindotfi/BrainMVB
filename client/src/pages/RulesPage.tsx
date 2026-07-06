@@ -414,7 +414,7 @@ function Chip({
   );
 }
 
-type BuilderAction = "auto" | "queue" | "flag";
+type BuilderAction = "auto" | "queue" | "flag" | "";
 
 type BuilderState = {
   category: string;
@@ -423,9 +423,9 @@ type BuilderState = {
   action: BuilderAction;
 };
 
-const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "auto" };
+const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "" };
 
-const ACTION_LABELS: Record<BuilderAction, string> = {
+const ACTION_LABELS: Record<Exclude<BuilderAction, "">, string> = {
   auto: "pay it automatically",
   queue: "queue for one-click approval",
   flag: "flag for review",
@@ -504,6 +504,7 @@ export function RulesPage() {
   const isAuto = builder.action === "auto" || builder.action === "queue";
   const builderValid =
     builder.category !== "" &&
+    builder.action !== "" &&
     Number.isFinite(amountNum) &&
     amountNum > 0 &&
     (!isAuto || builder.vendor !== "");
@@ -794,7 +795,7 @@ export function RulesPage() {
                   <span>then</span>
                   <div className="relative">
                     <Chip
-                      value={ACTION_LABELS[builder.action]}
+                      value={builder.action ? ACTION_LABELS[builder.action] : undefined}
                       placeholder="what happens"
                       open={openChip === "action"}
                       onClick={() => setOpenChip(openChip === "action" ? null : "action")}
