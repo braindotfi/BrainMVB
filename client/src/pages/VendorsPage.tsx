@@ -171,18 +171,9 @@ export function VendorsPage() {
                 Couldn't reach Brain to load vendors. Try again shortly.
               </p>
             </div>
-          ) : tabVendors.length === 0 ? (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
-                {activeTab === "New" && "No new vendors detected yet."}
-                {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                {activeTab === "Suggested" && "No suggested vendors yet. Brain promotes vendors here after consistent, safe payments."}
-              </p>
-            </div>
           ) : (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              {/* Section header matching the selected tab name */}
+              {/* Section header with tab name + count — always visible */}
               <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
                 <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
@@ -191,18 +182,29 @@ export function VendorsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {tabVendors.map((vendor, idx) => (
-                  <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                    <VendorRow
-                      vendor={vendor}
-                      format={format}
-                      onClick={() => handleOpenVendor(vendor)}
-                    />
-                    {idx < tabVendors.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </div>
+              {tabVendors.length === 0 ? (
+                <div className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                    {activeTab === "New" && "No new vendors detected yet."}
+                    {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                    {activeTab === "Suggested" && "No suggested vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  {tabVendors.map((vendor, idx) => (
+                    <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
+                      <VendorRow
+                        vendor={vendor}
+                        format={format}
+                        onClick={() => handleOpenVendor(vendor)}
+                      />
+                      {idx < tabVendors.length - 1 && <Divider />}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
