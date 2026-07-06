@@ -135,10 +135,10 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full ${
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full transition-colors cursor-pointer ${
         pausedFromReport
           ? "bg-[#11141b] border border-[#1d2132]"
-          : "bg-[#0a0c10] border border-transparent"
+          : "bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132]"
       }`}
     >
       <button
@@ -180,7 +180,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-guardrail-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
       <button
         type="button"
@@ -211,7 +211,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-alwayson-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
       <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
@@ -477,7 +477,7 @@ export function RulesPage() {
       category: draft.category && BUILDER_CATEGORIES.includes(draft.category) ? draft.category : "",
       vendor: draft.allowlist?.[0] ?? "",
       amount: String(draft.cap ?? draft.threshold ?? ""),
-      action: draft.kind === "guardrail" ? "flag" : "auto",
+      action: "",
     });
     setOpenChip(null);
     setBuilderOpen(true);
@@ -664,7 +664,7 @@ export function RulesPage() {
             <button
               type="button"
               onClick={() => {
-                setBuilder((b) => ({ ...b, action: activeTab === "Guardrails" ? "flag" : "auto" }));
+                setBuilder(EMPTY_BUILDER);
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
