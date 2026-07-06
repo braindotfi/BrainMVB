@@ -9,6 +9,8 @@ import {
   Pencil,
 } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
+import closeIcon from "@assets/Close_1783293571882.png";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import infoIcon from "@assets/Icons_1783346130548.png";
 import defaultInfoIcon from "@assets/Icons_1783346458429.png";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
@@ -90,6 +92,40 @@ function Toggle({ active, onChange, testId }: { active: boolean; onChange: () =>
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
+/* ── Rule confirmation sentence — natural-language summary with highlighted vars */
+function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
+  const { format } = useCurrency();
+  const category = rule.category || "payment";
+  const isGuardrail = rule.kind === "guardrail";
+  const vendor = rule.allowlist?.[0];
+  const amount = rule.cap ?? rule.threshold ?? 0;
+  const amountStr = format(amount);
+
+  const actionLabel = isGuardrail
+    ? "flag for review"
+    : rule.name.startsWith("Queue")
+      ? "queue for one-click approval"
+      : "pay it automatically";
+
+  return (
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[26px]">
+      <span className="text-[#6c779d]">When a </span>
+      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{category}</span>
+      {vendor && (
+        <>
+          <span className="text-[#6c779d]"> from </span>
+          <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{vendor}</span>
+        </>
+      )}
+      <span className="text-[#6c779d]"> is {isGuardrail ? "over" : "under"} </span>
+      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{amountStr}</span>
+      <span className="text-[#6c779d]"> then </span>
+      <span className="text-[#a8b9f4] underline underline-offset-2 decoration-[#a8b9f4]/30">{actionLabel}</span>
+      <span className="text-[#6c779d]">?</span>
+    </p>
+  );
+}
+
 /* ── Section wrapper — card with header, always visible ─────────────────────── */
 function Section({
   title,
@@ -135,10 +171,10 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full transition-colors cursor-pointer ${
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full ${
         pausedFromReport
           ? "bg-[#11141b] border border-[#1d2132]"
-          : "bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132]"
+          : "bg-[#0a0c10] border border-transparent"
       }`}
     >
       <button
@@ -619,45 +655,62 @@ export function RulesPage() {
               })}
             </div>
 
-          {/* Create-rule confirmation — on Automations and Guardrails tabs */}
-          {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
-            <div
-              className="w-full rounded-[16px] border p-[16px] flex flex-col gap-[12px]"
-              style={{ background: "#240757", borderColor: "rgba(118,49,238,0.35)" }}
-              data-testid="panel-create-confirm"
-            >
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[22px]">
-                Create this rule?
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[22px]">
-                {pendingCreate.name}
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
-                {pendingCreate.summary}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-confirm">
-                compiles to {pendingCreate.policyId}
-              </p>
-              <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
-                <button
-                  type="button"
-                  onClick={cancelCreate}
-                  data-testid="button-create-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
-                >
-                  Not yet
-                </button>
-                <button
-                  type="button"
-                  onClick={onConfirmCreate}
-                  data-testid="button-create-confirm"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
-                >
-                  Create rule
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Create-rule confirmation modal — dim + blur backdrop, centered */}
+          <DialogPrimitive.Root open={!!pendingCreate} onOpenChange={(open) => { if (!open) cancelCreate(); }}>
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Overlay
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                data-testid="create-rule-backdrop"
+              />
+              <DialogPrimitive.Content
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                data-testid="create-rule-modal"
+              >
+                {/* Title bar */}
+                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                    Create Rule
+                  </DialogPrimitive.Title>
+                  <DialogPrimitive.Close
+                    data-testid="button-create-close"
+                    aria-label="Close"
+                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                  </DialogPrimitive.Close>
+                </div>
+
+                {/* Body — natural-language sentence with highlighted variables */}
+                <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+                  <DialogPrimitive.Description id="create-rule-description" className="sr-only">
+                    Review the rule before confirming creation
+                  </DialogPrimitive.Description>
+                  {pendingCreate && (
+                    <RuleConfirmSentence rule={pendingCreate} />
+                  )}
+
+                  <div className="flex gap-[10px] items-stretch w-full">
+                    <button
+                      type="button"
+                      onClick={cancelCreate}
+                      data-testid="button-create-cancel"
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onConfirmCreate}
+                      data-testid="button-create-confirm"
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#42bf23]"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          </DialogPrimitive.Root>
 
           {/* New rule — sentence builder — on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && (!builderOpen ? (
