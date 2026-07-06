@@ -215,9 +215,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
       data-testid={`row-alwayson-${rule.id}`}
       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
     >
-      <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#1d2132]">
-        <img src={shieldKeyIcon} alt="shield" className="w-[14px] h-[14px]" />
-      </div>
+      <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
         type="button"
         onClick={open}
