@@ -523,3 +523,142 @@ export async function askWikiQuestion(token: string, question: string): Promise<
   const evidence = Array.from(byId.values());
   return { raw, evidence, evidenceIds: evidence.map((e) => e.entityId), confidence };
 }
+
+// ─── Document ingestion (files live in Brain, not on our box) ────────────────
+
+/** brain-core source_type for the upload (POST /raw/ingest). */
+export type RawSourceType = "pdf_upload" | "csv_upload";
+
+export interface RawIngestResult {
+  raw_id: string;
+  sha256: string | null;
+  /** brain-core dedupes by content hash; true when this file was already ingested. */
+  deduplicated: boolean;
+}
+
+/**
+ * POST /raw/ingest — upload the file bytes to Brain as multipart/form-data.
+ *
+ * We do NOT go through `brainRequest` (which forces application/json). Instead we
+ * build a native FormData (Node 20 global) with a Blob and let fetch set the
+ * multipart boundary. Auth + tracing headers mirror `brainRequest`.
+ */
+export async function ingestRawDocument(
+  token: string,
+  input: { sourceType: RawSourceType; bytes: Uint8Array; filename: string; mimeType: string },
+): Promise<RawIngestResult> {
+  const url = new URL(brainConfig.baseUrl + "/raw/ingest");
+  const form = new FormData();
+  form.set("source_type", input.sourceType);
+  form.set("mime_type", input.mimeType);
+  const blob = new Blob([input.bytes as unknown as BlobPart], { type: input.mimeType });
+  form.set("file", blob, input.filename);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Request-Id": `req_${randomUUID()}`,
+      "Idempotency-Key": randomUUID(),
+      Accept: "application/json",
+      // NB: no Content-Type — fetch sets multipart/form-data; boundary=… itself.
+    },
+    body: form,
+  });
+  const text = await res.text();
+  const parsed: unknown = text ? safeJson(text) : null;
+  if (!res.ok) {
+    throw new BrainApiError(res.status, "/raw/ingest", parsed ?? text);
+  }
+  const o = (parsed ?? {}) as Record<string, unknown>;
+  const rawId = typeof o.raw_id === "string" ? o.raw_id : typeof o.id === "string" ? o.id : null;
+  if (!rawId) {
+    throw new BrainApiError(502, "/raw/ingest", parsed ?? "no raw_id in response");
+  }
+  return {
+    raw_id: rawId,
+    sha256: typeof o.sha256 === "string" ? o.sha256 : null,
+    deduplicated: o.deduplicated === true,
+  };
+}
+
+export interface RawExtractResult {
+  parsed_id: string | null;
+  confidence: number | null;
+}
+
+/**
+ * POST /raw/{raw_id}/extract — trigger extraction. Empty body. Returns the parsed
+ * record id + a (capped) confidence. The endpoint is being built brain-side, so
+ * callers MUST handle BrainApiError 404 (not deployed yet) and 422 (unsupported
+ * file type / scanned image needing OCR) gracefully.
+ */
+export async function extractRawDocument(token: string, rawId: string): Promise<RawExtractResult> {
+  const resp = await brainRequest<Record<string, unknown>>(`/raw/${encodeURIComponent(rawId)}/extract`, {
+    token,
+    method: "POST",
+    body: {},
+  });
+  const o = resp ?? {};
+  const parsedId =
+    typeof o.parsed_id === "string" ? o.parsed_id : typeof o.id === "string" ? (o.id as string) : null;
+  const confidence = typeof o.confidence === "number" ? o.confidence : null;
+  return { parsed_id: parsedId, confidence };
+}
+
+// ─── Ledger obligations (what Brain read back out of the documents) ──────────
+
+/** Subset of brain-core's Obligation schema we render in the ingestion results. */
+export interface BrainObligation {
+  id: string;
+  /** payable = you owe; receivable = owed to you. Tolerate either field name. */
+  direction: "payable" | "receivable" | string;
+  counterparty_id: string | null;
+  amount_due: string;
+  currency: string;
+  due_date: string | null;
+  status: string;                 // upcoming | due | overdue | …
+  provenance: string | null;      // where Brain derived this (e.g. a raw artifact id)
+  confidence: number | null;      // ≤0.5 for document-derived obligations (advisory)
+}
+
+export interface ListObligationsResponse {
+  obligations: BrainObligation[];
+  next_cursor: string | null;
+}
+
+/** GET /ledger/obligations — obligations Brain derived for the tenant. */
+export async function listObligations(
+  token: string,
+  query?: { status?: string; limit?: number },
+): Promise<ListObligationsResponse> {
+  const resp = await brainRequest<Record<string, unknown>>("/ledger/obligations", {
+    token,
+    query: { status: query?.status, limit: query?.limit },
+  });
+  const rawList = Array.isArray((resp as any)?.obligations)
+    ? ((resp as any).obligations as unknown[])
+    : Array.isArray(resp)
+      ? (resp as unknown[])
+      : [];
+  const obligations: BrainObligation[] = rawList.map((r) => {
+    const o = (r ?? {}) as Record<string, unknown>;
+    const s = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+    return {
+      id: s(o.id) ?? s(o.obligation_id) ?? randomUUID(),
+      direction: s(o.direction) ?? s(o.type) ?? "payable",
+      counterparty_id: s(o.counterparty_id),
+      amount_due: s(o.amount_due) ?? s(o.amount) ?? "0",
+      currency: s(o.currency) ?? "USD",
+      due_date: s(o.due_date),
+      status: s(o.status) ?? "upcoming",
+      provenance: s(o.provenance) ?? s(o.source),
+      confidence: typeof o.confidence === "number" ? o.confidence : null,
+    };
+  });
+  return { obligations, next_cursor: s2((resp as any)?.next_cursor) };
+}
+
+function s2(v: unknown): string | null {
+  return typeof v === "string" && v ? v : null;
+}

@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
 import { setupAuth, googleEnabled, requireAuth } from "./auth";
@@ -21,8 +21,13 @@ import {
   listLedgerAccounts,
   listLedgerTransactions,
   listLedgerCounterparties,
+  ingestRawDocument,
+  extractRawDocument,
+  BrainApiError,
+  type RawSourceType,
   type WikiEvidence,
 } from "./brain/client";
+import type { ExtractStatus } from "./storage";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -845,16 +850,16 @@ You can explain concepts and surface general guidance, but do not give regulated
    *  NOTE: only file metadata is persisted here — raw bytes are not stored.
    * ────────────────────────────────────────────────────────────────────── */
 
-  app.get("/api/integrations/documents", async (_req, res) => {
+  app.get("/api/integrations/documents", requireAuth, async (req, res) => {
     try {
-      const list = await storage.listSourceDocuments(DEMO_USER);
+      const list = await storage.listSourceDocuments(req.session.userId!);
       res.json(list);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.post("/api/integrations/documents", async (req, res) => {
+  app.post("/api/integrations/documents", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         name: z.string().min(1).max(512),
@@ -864,7 +869,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       });
       const parsed = schema.parse(req.body);
       const doc = await storage.createSourceDocument({
-        userId: DEMO_USER,
+        userId: req.session.userId!,
         name: parsed.name,
         size: parsed.size,
         mimeType: parsed.mimeType ?? null,
@@ -879,9 +884,111 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  app.post("/api/integrations/documents/:id/delete", async (req, res) => {
+  /**
+   * POST /api/integrations/documents/ingest — upload a file to Brain's ingestion
+   * pipeline. The bytes stream in as the raw request body (Content-Type
+   * application/octet-stream); metadata rides on the query string. We:
+   *   1. register a local metadata record (no file bytes stored here),
+   *   2. POST the bytes to brain-core /raw/ingest → store the returned raw_id,
+   *   3. trigger /raw/{raw_id}/extract, tolerating 404 (endpoint not deployed →
+   *      "unavailable") and 422 (unsupported file type / scanned image →
+   *      "unsupported").
+   * The brain session is keyed on req.session.userId so the resulting obligations
+   * land in the SAME tenant the /api/brain/ledger/obligations read uses.
+   */
+  app.post(
+    "/api/integrations/documents/ingest",
+    requireAuth,
+    express.raw({ type: "application/octet-stream", limit: "52mb" }),
+    async (req, res) => {
+      const q = z
+        .object({
+          filename: z.string().min(1).max(512),
+          mimeType: z.string().max(256).optional(),
+          category: z.string().max(64).optional(),
+          sourceType: z.enum(["pdf_upload", "csv_upload"]),
+        })
+        .safeParse(req.query);
+      if (!q.success) {
+        return res.status(400).json({ error: "invalid_request", details: q.error.errors });
+      }
+      const bytes = req.body as Buffer;
+      if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+        return res.status(400).json({ error: "empty_file", message: "No file bytes received." });
+      }
+      const { filename, category, sourceType } = q.data;
+      const mimeType = q.data.mimeType ?? "application/octet-stream";
+
+      const userId = req.session.userId!;
+
+      // 1. Local metadata record (bytes are NOT persisted here — they live in Brain).
+      const doc = await storage.createSourceDocument({
+        userId,
+        name: filename,
+        size: bytes.length,
+        mimeType,
+        category: category ?? null,
+        sourceType,
+        extractStatus: "pending",
+      });
+
+      // 2. Ingest bytes to brain-core.
+      let rawId: string;
+      try {
+        const { token } = await getBrainSession(userId);
+        const ingest = await ingestRawDocument(token, {
+          sourceType: sourceType as RawSourceType,
+          bytes: new Uint8Array(bytes),
+          filename,
+          mimeType,
+        });
+        rawId = ingest.raw_id;
+        await storage.updateSourceDocumentExtraction(userId, doc.id, {
+          rawId: ingest.raw_id,
+          sha256: ingest.sha256,
+          extractStatus: "ingested",
+        });
+      } catch (err) {
+        const patch = { extractStatus: "failed" as ExtractStatus };
+        const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, patch);
+        return res.status(502).json({
+          document: updated ?? { ...doc, ...patch },
+          error: "ingest_failed",
+          message: err instanceof BrainApiError ? `brain-core ${err.status}` : (err as Error).message,
+        });
+      }
+
+      // 3. Trigger extraction — non-fatal; record the outcome as a status.
+      let extractStatus: ExtractStatus = "extracting";
+      let parsedId: string | null = null;
+      let confidence: string | null = null;
+      try {
+        const { token } = await getBrainSession(userId);
+        const extract = await extractRawDocument(token, rawId);
+        extractStatus = "extracted";
+        parsedId = extract.parsed_id;
+        confidence = extract.confidence !== null ? String(extract.confidence) : null;
+      } catch (err) {
+        if (err instanceof BrainApiError && err.status === 404) {
+          extractStatus = "unavailable"; // endpoint not deployed yet — self-heals when Brain ships
+        } else if (err instanceof BrainApiError && err.status === 422) {
+          extractStatus = "unsupported"; // can't read this file type yet (e.g. scanned image)
+        } else {
+          extractStatus = "failed";
+        }
+      }
+      const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, {
+        extractStatus,
+        parsedId,
+        confidence,
+      });
+      return res.json({ document: updated ?? doc });
+    },
+  );
+
+  app.post("/api/integrations/documents/:id/delete", requireAuth, async (req, res) => {
     try {
-      const ok = await storage.removeSourceDocument(DEMO_USER, req.params.id);
+      const ok = await storage.removeSourceDocument(req.session.userId!, req.params.id);
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });

@@ -164,6 +164,14 @@ export const sourceDocuments = pgTable("source_documents", {
   size: integer("size").notNull(),          // bytes
   mimeType: text("mime_type"),
   category: text("category"),               // bank | accounting | payroll | tax | payments | general
+  // ── brain-core ingestion (files live in Brain, not here) ──
+  rawId: text("raw_id"),                     // brain-core raw artifact id (POST /v1/raw/ingest)
+  sha256: text("sha256"),                    // content hash returned by ingest
+  sourceType: text("source_type"),          // pdf_upload | csv_upload
+  // pending | ingested | extracting | extracted | unsupported | unavailable | failed
+  extractStatus: text("extract_status"),
+  parsedId: text("parsed_id"),              // brain-core parsed record id (from extract)
+  confidence: text("confidence"),           // model-read confidence (≤0.5), stored as string
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 }, (t) => [
   index("source_documents_user_id_idx").on(t.userId),

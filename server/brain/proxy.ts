@@ -154,6 +154,24 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
+  // POST /api/brain/wiki/question — grounded Q&A over the tenant's Ledger (incl.
+  // obligations Brain derived from uploaded documents). Read-only despite POST, so
+  // it's safe on the MEMBER/session token. Relays upstream errors verbatim.
+  router.post("/wiki/question", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    const question = (req.body as { question?: unknown } | undefined)?.question;
+    if (typeof question !== "string" || question.trim().length === 0) {
+      return res.status(400).json({ error: "invalid_request", message: "question is required" });
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const answer = await askWikiQuestion(token, question.trim());
+      return res.json(answer);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
   // ── Members & approval authority (MEMBER token; core is the sole enforcer) ──
   //
   // Reads (GET /members, GET /members/:id, GET /policy/:tenant) flow through the generic

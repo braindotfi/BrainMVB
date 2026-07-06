@@ -1,0 +1,61 @@
+Context: Brain (brain-core) already has a real, tested document-ingestion pipeline.
+We are NOT building our own file storage, OCR, or document-to-recommendation
+pipeline. The platform is a thin client against Brain's public API. The full contract
+is in the spec doc shared with this message. Read it before starting.
+
+What to build, in order:
+
+1. Upload -> Brain, not to our own store.
+   Replace the current upload handler (which only saves file metadata) with a call to
+   POST {BASE}/v1/raw/ingest as multipart form data:
+     source_type = "pdf_upload" for PDFs, "csv_upload" for CSV/XLSX exports
+     file        = the uploaded bytes
+     mime_type   = the file's content type
+   Store the returned raw_id against the user's upload record. Stop pretending to store
+   file bytes ourselves; Brain holds them.
+   BASE is https://api.sandbox.brain.fi/v1 for now (staging). Do not point at
+   api.brain.fi until Brain confirms the document path is promoted there.
+
+2. Trigger extraction.
+   After a successful ingest, call POST {BASE}/v1/raw/{raw_id}/extract with an empty
+   body. NOTE: this endpoint is being added on the Brain side right now. Build the call
+   and gate it behind a feature flag or a graceful "extraction not available yet"
+   state, so our UI degrades cleanly until Brain ships it. Do not try to call any
+   extraction service directly; there is exactly one public entry point and it is this.
+
+3. Replace the mock reading and results screens with real data.
+   The current ReadingScreen and FoundScreen use hardcoded strings (2024_chase_
+   statements.zip, canned AWS/Anthropic/GitHub vendor lists). Delete that mock data.
+   Instead:
+     - after extraction, poll GET {BASE}/v1/ledger/obligations?status=due
+     - render the real obligations: counterparty, amount_due, currency, due_date,
+       status, and confidence
+   An obligation typically appears within ~15 seconds of extraction (Brain has an
+   async worker). Show a pending state until it does.
+
+4. Add real Q&A.
+   Wire the assistant's document questions to POST {BASE}/v1/wiki/question with
+   { question }. Render the returned answer and, if useful, the evidence rows. This
+   replaces any canned document responses.
+
+Auth: use a Brain tenant token with scopes raw:write, ledger:read, wiki:read. Get the
+staging credentials from the Brain team.
+
+IMPORTANT framing (do not skip):
+  - Extracted document data is ADVISORY. Brain caps it at 0.5 confidence and its
+    payment gate will not act on a document read alone. Present extracted obligations
+    as insight (what is owed, what is due, what is overdue), show the confidence, and
+    label them as needing confirmation.
+  - Do NOT build any path from a document straight to a payment or a rule that moves
+    money. Any payment action must go through Brain's normal approval flow. A direct
+    document-to-action path would bypass the exact safety property Brain is built on.
+
+Known limitation to handle in the UI: scanned images and photos of documents (for
+example a photographed insurance card) do not extract yet; OCR is not built. Digital
+PDFs, CSV, and XLSX work. Detect the unsupported case (Brain returns a 422 from
+extract) and show a clear "we can't read this file type yet" message rather than a
+spinner that never resolves.
+
+Deliverable: uploads flow through Brain, the reading and results screens show real
+extracted obligations from the API, and document questions are answered by Brain. No
+mock data left in that path.

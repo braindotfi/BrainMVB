@@ -131,7 +131,24 @@ is deleted). Current state:
 - `AddSourceModal.tsx` — source-agnostic connector wizard using a **screen stack** (push/back),
   not fixed steps: connected sources, categories, bank (Plaid), providers (Stripe live via
   `/api/integrations/stripe/connect`; others "Coming soon"), documents (upload). Documents:
-  `sourceDocuments` PG table — **only metadata is persisted, no file bytes / object storage.**
+  `sourceDocuments` PG table — **only metadata + ingestion state persisted locally, no file bytes /
+  object storage.** File bytes stream to brain-core (see Document Ingestion below).
+
+## Document Ingestion — thin client over brain-core (CORE-BACKED)
+- Upload (`AddSourceModal` DocumentUpload) POSTs raw bytes to `POST /api/integrations/documents/ingest`
+  (auth-gated, `express.raw` octet-stream ≤52mb, metadata in query). Server → brain-core `/raw/ingest`
+  (multipart, `source_type` = `pdf_upload|csv_upload`) → stores `raw_id`/`sha256` → triggers
+  `/raw/{raw_id}/extract`. Extract **404 → `unavailable`** ("coming soon"), **422 → `unsupported`**.
+  Doc `extractStatus`: pending→ingested→extracting→extracted (or unsupported/unavailable/failed).
+- **All document routes are `requireAuth` + session-scoped** (`req.session.userId`), NOT the app-wide
+  `DEMO_USER` used by bank/tool connections — obligations/wiki are brain-core tenant-scoped by session.
+- `ReadingScreen` reads live doc `extractStatus` (polls 15s while in progress); `FoundScreen` reads
+  live `/api/brain/ledger/obligations` (tolerant: 404/empty → [], polls 15s while empty, no infinite
+  spinner) + resolves counterparties via `/ledger/counterparties`; `WikiQuestionBox` → `POST
+  /api/brain/wiki/question`. All via MEMBER token.
+- **Extracted data is ADVISORY (conf ≤0.5)** — always shows a "needs confirmation" pill + advisory
+  banner; there is **NO document → payment path**. brain-core methods: `ingestRawDocument`,
+  `extractRawDocument`, `listObligations`, `askWikiQuestion` in `server/brain/client.ts`.
 
 ## Brain Assistant Panel
 - `client/src/pages/sections/BrainAssistant.tsx` — right-hand chat panel. Collapsed rail
