@@ -666,7 +666,8 @@ function settledTimeline(proposedAt: string, approvedAt: string, settledAt: stri
 
 /* A human-approved, executed proposal — the settled counterpart of an item that
    was escalated above threshold and signed off by a person (not a standing
-   rule). Renders in SettledRecordCard as "You approved · executed". */
+   rule). Retained as a resolution target for openProposalDetail (SettledRecordCard
+   was removed in the Phase 8 cleanup). */
 function settledApproved(p: {
   id: string;
   auditId: string;
@@ -719,18 +720,13 @@ function settledApproved(p: {
   };
 }
 
-// Fabricated "already settled" money movements REMOVED (2026-07-03 honesty pass):
-// these rendered "Paid X $Y · settled today" as fact with NO brain-core execution/
-// audit behind them. Real settled history comes from brain-core once Fork B lands a
-// production tenant; until then consumers render honest empty states. See
-// vault/reviews/brainmvb-ui-rework-full-review-2026-07-03.md + forkb-integration-plan.
-export const AUTO_HANDLED_PROPOSALS: Proposal[] = [];
-
-/* ── Settled records for the static Activity feed items ────────────────────────
-   The Adobe / Comcast / payroll / USDC rows in the Activity feed are settled
-   history, not pending decisions. Each carries the Proposal below so tapping the
-   row opens the SettledRecordCard (§4), reconciled by auditId with its twin in
-   mockAuditRecords.ts (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z). */
+/* ── Settled record twins ──────────────────────────────────────────────────────
+   The Adobe / Comcast / payroll / USDC settled proposals. No longer opened via a
+   UI row (Activity is live via useBrainAuditRecords; SettledRecordCard removed in
+   Phase 8) — RETAINED as resolution targets for openProposalDetail's allProposals()
+   so the document viewer's coherence chain and the mock audit-record proposal links
+   still resolve. Reconciled by auditId with their twins in mockAuditRecords.ts
+   (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z). */
 export const ADOBE_SETTLED: Proposal = autoHandled({
   id: "settled-adobe",
   auditId: "AUD-4E2N",
