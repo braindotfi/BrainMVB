@@ -330,6 +330,11 @@ function PolicySection() {
   );
 }
 
+/* ── Sentence case helper — used for all evidence / fact table labels ───────── */
+function sentenceCase(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 /* ── Confidence pill style per Figma ────────────────────────────────────────── */
 const CONFIDENCE: Record<RuleSuggestion["confidence"], { label: string; bg: string; border: string; text: string }> = {
   high: { label: "High Confidence", bg: "#123509", border: "rgba(66,191,35,0.2)", text: "#42bf23" },
@@ -385,7 +390,7 @@ function SuggestionCard({
             >
               <div className="flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[200px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
-                  {fact.label.charAt(0).toUpperCase() + fact.label.slice(1)}
+                  {sentenceCase(fact.label)}
                 </p>
               </div>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
@@ -1006,16 +1011,6 @@ export function RulesPage() {
 
           {activeTab === "Suggested" && (
             <div className="flex flex-col gap-[16px] items-start w-full">
-              {/* Info banner — matches Figma's info strip under tabs. */}
-              <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[12px] w-full">
-                <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
-                  <img src={infoIcon} alt="" className="shrink-0 size-[16px] mt-[1px]" />
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px text-[#6c779d] text-[14px]">
-                    Rules are written in plain English, not code. Brain turns each one into an enforceable policy for every agent you use, then keeps learning and suggesting new ones, backed by the evidence behind them.
-                  </p>
-                </div>
-              </div>
-
               {suggestions.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -1023,7 +1018,7 @@ export function RulesPage() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
                   {suggestions.map((s) => (
                     <SuggestionCard
                       key={s.id}
