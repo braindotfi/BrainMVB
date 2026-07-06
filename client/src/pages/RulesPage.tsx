@@ -330,9 +330,9 @@ function PolicySection() {
   );
 }
 
-/* ── Sentence case helper — used for all evidence / fact table labels ───────── */
-function sentenceCase(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+/* ── Title case helper — used for all evidence / fact table labels ──────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
 }
 
 /* ── Confidence pill style per Figma ────────────────────────────────────────── */
@@ -390,7 +390,7 @@ function SuggestionCard({
             >
               <div className="flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[200px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
-                  {sentenceCase(fact.label)}
+                  {titleCase(fact.label)}
                 </p>
               </div>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">

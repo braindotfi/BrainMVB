@@ -38,9 +38,9 @@ import type {
   FactRow,
 } from "@/lib/proposalTypes";
 
-/* ── Sentence case helper — used for all evidence / fact table labels ───────── */
-function sentenceCase(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+/* ── Title case helper — used for all evidence / fact table labels ──────────── */
+function titleCase(str: string) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
 }
 
 /* Brain is PROPOSE-ONLY. One component renders every scenario; sections appear
@@ -252,7 +252,7 @@ export function ProposalDetail({
                       className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
                       data-testid={`fact-${i}`}
                     >
-                      <span className="text-[#6c779d]">{sentenceCase(fact.label)}</span>
+                      <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
                       <span className="text-right" style={{ color: factColor(fact.severity) }}>
                         {fact.value}
                       </span>
@@ -640,7 +640,7 @@ function AutoHandledReceipt({
                   className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
                   data-testid={`cleared-${i}`}
                 >
-                  <span className="text-[#6c779d]">{sentenceCase(fact.label)}</span>
+                  <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
                   <span className="text-right flex items-center gap-[6px]" style={{ color: isLimit ? "#42bf23" : factColor(fact.severity) }}>
                     {fact.value}
                     {isLimit && <Check size={13} className="text-[#42bf23] shrink-0" strokeWidth={2.5} />}
