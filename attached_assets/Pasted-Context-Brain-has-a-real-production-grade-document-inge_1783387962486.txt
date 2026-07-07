@@ -1,0 +1,58 @@
+Context: Brain has a real, production-grade document-ingestion API. We are NOT building
+our own storage, OCR, or pipeline. The platform is a thin client. Read the spec doc
+shared with this message. STOP using POST /v1/demo/provision-run: it mints throwaway
+seeded demo tenants and is not production auth.
+
+Environment: build and test against staging first.
+  BRAIN_API_BASE_URL = https://api.sandbox.brain.fi/v1
+Do NOT point at https://api.brain.fi/v1 until the Brain team confirms the document path
+is promoted to production. It currently runs a behind revision.
+
+Auth model: one Brain tenant per end user. Wire the real onboarding path.
+  1. On user signup:  POST {BASE}/v1/signup { email, password }
+                      -> { tenant_id, user_id, status: "pending" }
+     Then the user verifies via email: POST {BASE}/v1/auth/verify-email
+                      { tenant_id, token }  -> { verified: true }
+     (In production Brain delivers the token by email. Handle the verify callback.)
+  2. On each session: POST {BASE}/v1/auth/login { email, password } -> { token }
+     Store this token against the user. Every document call below uses THIS user's
+     token, so their data stays isolated to their own tenant.
+  NOTE: the login token needs raw:write to upload. Brain is adding that to the owner
+  scope set. Until it lands on staging, ingest will return an insufficient-scope error.
+  Gate the upload UI behind a capability check or feature flag so it degrades cleanly.
+
+Document flow (all against {BASE}, with the logged-in user's token):
+  1. Upload:  POST /v1/raw/ingest  multipart form data:
+                source_type = "pdf_upload" (PDF) or "csv_upload" (CSV/XLSX)
+                file, mime_type
+              -> { raw_id }. Store raw_id on the user's upload record. Do not store the
+              bytes yourself; Brain holds them.
+  2. Extract: POST /v1/raw/{raw_id}/extract  {}   -> { parsed_id, confidence }
+              (This endpoint is being added on the Brain side. Build the call, gate it
+              behind an "extraction not available yet" state until it is live.)
+  3. Read:    poll GET /v1/ledger/obligations?status=due
+              Render the real obligations: counterparty, amount_due, currency, due_date,
+              status, confidence. A row typically appears within ~15s. Show a pending
+              state until it does. DELETE all mock reading/results data (the hardcoded
+              2024_chase_statements.zip and canned AWS/Anthropic/GitHub lists).
+  4. Ask:     POST /v1/wiki/question { question } -> { answer, evidence }
+              Wire the assistant's document questions to this.
+
+File types: v1 supports digital PDFs, CSV, XLSX, AND photos/scans (Brain is adding OCR).
+Accept image uploads (jpg, png, heic) and image-only PDFs. If extract returns a 422 for
+a specific file, show a clear "we could not read this file" message rather than a
+spinner that never resolves.
+
+IMPORTANT framing (do not skip):
+- Extracted document data is ADVISORY. Brain caps it at 0.5 confidence and its payment
+  gate will not act on a document read alone. Present extracted obligations as insight
+  (what is owed, what is due, what is overdue), show confidence, and label them as needing
+  confirmation.
+- Do NOT build any path from a document straight to a payment or a money-moving rule. Any
+  payment action goes through Brain's normal approval flow. A direct document-to-payment
+  path would bypass the core safety property.
+
+Deliverable: users sign up and log in as their own Brain tenant; uploads (including
+photos) flow through Brain; the reading and results screens show real extracted
+obligations from the API; document questions are answered by Brain. No mock data and no
+demo-provision calls left in the path.
