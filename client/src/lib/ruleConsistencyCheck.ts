@@ -1,5 +1,4 @@
 import { MOCK_AUDIT_RECORDS } from "./mockAuditRecords";
-import { AUTO_HANDLED_PROPOSALS } from "./mockProposals";
 import { getRule } from "./rulesStore";
 import { UNTRUSTED_VENDORS } from "./mockRules";
 import { MOCK_VENDORS } from "./mockVendors";
@@ -133,13 +132,6 @@ export function collectRuleReferences(): RuleRef[] {
       if (link.kind === "rule") {
         refs.push({ source: `audit ${rec.id}`, ruleId: link.refId });
       }
-    }
-  }
-
-  // Auto-handled receipts / settled cards — the embedded governing rule.
-  for (const p of AUTO_HANDLED_PROPOSALS) {
-    if (p.rule) {
-      refs.push({ source: `receipt ${p.id}`, ruleId: p.rule.id });
     }
   }
 

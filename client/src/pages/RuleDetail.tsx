@@ -103,7 +103,7 @@ export function RuleDetail() {
   const pausedFromReport = !rule?.active && openReports.length > 0;
   const latestOpen = openReports[openReports.length - 1];
 
-  const openReceipt = (proposalId: string) => navigate(`/review?receipt=${proposalId}`);
+  const openReceipt = (proposalId: string) => navigate(`/review?proposal=${proposalId}`);
 
   const onResume = () => {
     if (!rule) return;
@@ -160,23 +160,42 @@ export function RuleDetail() {
           {isPolicy && policyRule ? (
             <PolicyDetailHeader rule={policyRule} />
           ) : rule ? (
-            <div className="flex flex-col gap-[12px] items-start w-full">
-              <div className="flex items-start gap-[12px] w-full">
-                <div className="flex flex-col gap-[6px] flex-1 min-w-px">
-                  <div className="flex items-center gap-[10px] flex-wrap">
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
-                      data-testid="text-rule-name"
-                    >
-                      {titleCase(rule.name)}
-                    </p>
-                    <StatusPill active={rule.active} />
-                  </div>
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">
-                    {titleCase(rule.scopeSummary ?? rule.summary)}
+            <div className="flex items-start gap-[12px] w-full">
+              <div className="flex flex-col gap-[6px] flex-1 min-w-px">
+                <div className="flex items-center gap-[10px] flex-wrap">
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
+                    data-testid="text-rule-name"
+                  >
+                    {rule.name}
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
-                    {rule.policyId} · {rule.createdLabel}
+                  <StatusPill active={rule.active} />
+                </div>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                  {rule.summary}
+                </p>
+                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
+                  {rule.policyId} · {rule.createdLabel}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Paused-from-report banner — #D20344 accent, with the linked payment. */}
+          {pausedFromReport && (
+            <div
+              className="w-full rounded-[12px] p-[16px] flex flex-col gap-[12px]"
+              style={{ backgroundColor: "rgba(210,3,68,0.08)", border: `1px solid rgba(210,3,68,0.3)` }}
+              data-testid="banner-paused-from-report"
+            >
+              <div className="flex items-start gap-[10px]">
+                <Flag size={18} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
+                <div className="flex flex-col gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[15px]" style={{ color: ALERT }}>
+                    Paused after you reported a problem
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a8b9f4] text-[13px]">
+                    You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
                   </p>
                 </div>
               </div>

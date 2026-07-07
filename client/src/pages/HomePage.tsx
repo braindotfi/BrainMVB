@@ -12,7 +12,6 @@ import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
-import { SettledRecordCard } from "@/components/SettledRecordCard";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -455,10 +454,9 @@ export function HomePage() {
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  /* Records opened directly from the Home widgets — the settled receipt card
-     (Brain Did) and the proposal sheet (Brain Detected). Both mirror the exact
-     surfaces used on the Activity / Review pages, opened in place. */
-  const [selectedSettled, setSelectedSettled] = useState<Proposal | null>(null);
+  /* Record opened directly from a Home widget — the proposal sheet (Brain
+     Detected), opened in place, mirroring the Review page surface. (Brain Did
+     rows deep-link straight to /audit-log; they carry no Proposal object.) */
   const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
   const reviewStatuses = useReviewStatuses();
 
@@ -516,8 +514,7 @@ export function HomePage() {
      completed (approved/executed), same source as the Audit Log page
      (useBrainAuditRecords, Phase 1c). Tapping a row deep-links to the Audit
      Log record rather than a fabricated settled-receipt card — this widget
-     has no Proposal object to hand SettledRecordCard, only a real audit
-     event. */
+     has only a real audit event, no Proposal object. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
   const brainDidItems: WidgetItem[] = liveAuditRecords
     .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
@@ -699,21 +696,6 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
-      />
-
-      {/* ponytail: Brain Did no longer opens this card (Phase 1b routes live
-          audit rows straight to /audit-log — no Proposal object to hand it);
-          left mounted/dormant since selectedSettled/setSelectedSettled are
-          harmless unused state, not because anything still sets them. */}
-      <SettledRecordCard
-        proposal={selectedSettled}
-        open={selectedSettled !== null}
-        onOpenChange={(o) => { if (!o) setSelectedSettled(null); }}
-        onViewAuditLog={() => {
-          navigate(`/audit-log?record=${selectedSettled?.auditId ?? ""}`);
-          setSelectedSettled(null);
-        }}
-        anchorAuditId={selectedSettled?.auditId}
       />
 
       {/* Brain Detected — proposal sheet, opened in place */}

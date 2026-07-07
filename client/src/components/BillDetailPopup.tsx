@@ -7,7 +7,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents } from "@/lib/intentsStore";
-import type { DocumentRecord } from "@/lib/documentTypes";
+import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import documentIcon from "@assets/doc_1783202136247.png";
 import closeIcon from "@assets/Close_1783293571882.png";
@@ -85,26 +85,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
       <div className="flex-1 h-px bg-[#1d2132]" />
     </div>
   );
-}
-
-function toDocument(bill: BrainInvoiceDTO, vendorName: string): DocumentRecord {
-  const paid = bill.status === "paid";
-  return {
-    id: bill.invoice_number,
-    kind: "invoice",
-    title: `${vendorName} — invoice`,
-    counterparty: vendorName,
-    amount: Number(bill.amount_due),
-    dateLabel: `Due ${fmtDue(bill.due_date)}`,
-    dateCaption: "Due",
-    status: paid ? "paid" : "unpaid",
-    provenance: {
-      source: "brain-core Ledger",
-      ingestedAtLabel: bill.created_at ? `Extracted ${fmtDue(bill.created_at)}` : "Extracted from your ledger",
-      enum: "CONNECTOR_SYNC",
-      ledgerRef: bill.id,
-    },
-  };
 }
 
 export function BillDetailPopup({
@@ -335,7 +315,7 @@ export function BillDetailPopup({
 
       {bill && (
         <DocumentViewerPopup
-          document={viewingDoc ? toDocument(bill, vendorName) : null}
+          document={viewingDoc ? toBrainInvoiceDocument(bill, vendorName) : null}
           open={viewingDoc}
           onOpenChange={setViewingDoc}
         />

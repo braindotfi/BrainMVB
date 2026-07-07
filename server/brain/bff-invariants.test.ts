@@ -28,6 +28,7 @@ import { type AddressInfo } from "node:net";
 const PROVISION_SECRET = "test-provision-secret-c3-DO-NOT-LEAK";
 const MEMBER_TOKEN = "MEMBER_TOKEN_do_not_leak_a1";
 const AGENT_TOKEN = "AGENT_TOKEN_do_not_leak_b2";
+const SECOND_APPROVER_TOKEN = "SECOND_APPROVER_TOKEN_do_not_leak_c3";
 const TENANT_ID = "tenant_test_01";
 
 // Config reads env at module-eval, so set it BEFORE the dynamic imports below.
@@ -55,6 +56,12 @@ let provisionResponse: Record<string, unknown> = {
   agent_token: AGENT_TOKEN,
   expires_in: 1800,
 };
+
+// Per-test control of the /approve endpoint's returned status sequence (indexed by call count),
+// so a test can exercise the two-signer chain (awaiting_second_approval then approved). Default is
+// a single "pending_approval" so a one-shot approve never triggers the second signature.
+let approveStatuses: string[] = ["pending_approval"];
+let approveCallCount = 0;
 
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), {
@@ -84,7 +91,12 @@ function routeBrainCore(fullUrl: string, method: string): Response {
     return json({ outcome: "confirm", matched_rule_id: "r1", required_approvers: [], trace: [] });
   }
   if (url.includes("/payment-intents/") && url.endsWith("/approve")) {
-    return json({ intent: baseIntent("pending_approval") });
+    // Real brain-core returns the PaymentIntent with `status` at the top level (unwrapped),
+    // which is what the two-signer auto-chain in proxy.ts reads. Return one status per call so a
+    // test can drive awaiting_second_approval -> approved across the two signatures.
+    const s = approveStatuses[Math.min(approveCallCount, approveStatuses.length - 1)];
+    approveCallCount += 1;
+    return json(baseIntent(s));
   }
   if (url.includes("/payment-intents/") && url.endsWith("/reject")) {
     return json({ intent: baseIntent("rejected") });
@@ -97,6 +109,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   }
   if (url.endsWith("/members") && method === "POST") {
     return json({ member: { id: "m2", email: "c@d.co", displayName: "C", role: "approver", active: true } });
+  }
+  if (url.endsWith("/ledger/counterparties") && method === "POST") {
+    return json({ counterparty: { id: "cp_new", name: "Acme Supplies" }, created: true, merged: false }, 201);
   }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
@@ -198,6 +213,8 @@ beforeEach(() => {
     agent_token: AGENT_TOKEN,
     expires_in: 1800,
   };
+  approveStatuses = ["pending_approval"];
+  approveCallCount = 0;
 });
 
 describe("Invariant 1 — token routing (agent vs member)", () => {
@@ -230,6 +247,47 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
   });
 
+  it("two-signer: auto-chains to the DISTINCT second-approver token when core needs a second signature", async () => {
+    // Core provisioned a second distinct approver (present since the two-signer fix), and the
+    // first signature leaves the intent awaiting a second, distinct approval.
+    provisionResponse = {
+      tenant_id: TENANT_ID,
+      member_token: MEMBER_TOKEN,
+      agent_token: AGENT_TOKEN,
+      second_approver_token: SECOND_APPROVER_TOKEN,
+      expires_in: 1800,
+    };
+    approveStatuses = ["awaiting_second_approval", "approved"];
+
+    const { status, json: body } = await post("/api/brain/payment-intents/pi_123/approve");
+    expect(status).toBe(200);
+
+    const approve = callsEndingWith("/payment-intents/pi_123/approve");
+    expect(approve).toHaveLength(2);
+    // First signature on the member token, second on the DISTINCT second-approver token — two
+    // real member ids, so core's distinct-approver + actor-payee gates are genuinely satisfied.
+    expect(approve[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(approve[1].auth).toBe(`Bearer ${SECOND_APPROVER_TOKEN}`);
+    // The agent token is never used on the approve path (agents propose, humans approve).
+    expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+    // The two distinct signatures drove the intent all the way to approved.
+    expect((body as { intent: { status: string } }).intent.status).toBe("approved");
+  });
+
+  it("two-signer: degrades gracefully to awaiting_second_approval when no second-approver token exists (pre-deploy)", async () => {
+    // Default provision has NO second_approver_token (a not-yet-deployed core). The BFF must NOT
+    // fire a second /approve call and must surface awaiting_second_approval verbatim.
+    approveStatuses = ["awaiting_second_approval"];
+
+    const { status, json: body } = await post("/api/brain/payment-intents/pi_123/approve");
+    expect(status).toBe(200);
+
+    const approve = callsEndingWith("/payment-intents/pi_123/approve");
+    expect(approve).toHaveLength(1);
+    expect(approve[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect((body as { intent: { status: string } }).intent.status).toBe("awaiting_second_approval");
+  });
+
   it("reject sends the MEMBER token and never the agent token", async () => {
     const { status } = await post("/api/brain/reject", { payment_intent_id: "pi_123" });
     expect(status).toBe(200);
@@ -247,6 +305,15 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
     for (const c of memberCalls) expect(c.auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
   });
+
+  it("add-vendor (counterparty create) uses the MEMBER token, never the agent token", async () => {
+    const { status } = await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" });
+    expect(status).toBe(201);
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    expect(cpCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+  });
 });
 
 describe("Invariant 2 — no actor field in any BFF-constructed payload", () => {
@@ -262,6 +329,39 @@ describe("Invariant 2 — no actor field in any BFF-constructed payload", () => 
     for (const c of writes) {
       expect(Object.keys(c.body as Record<string, unknown>), `actor leaked into ${c.method} ${c.url}`).not.toContain("actor");
     }
+  });
+
+  it("add-vendor forwards only identity fields — no actor, no payment/bank/trust fields", async () => {
+    await post("/api/brain/ledger/counterparties", {
+      name: "Acme Supplies",
+      display_name: "Acme",
+      category: "Office supplies",
+      contact_email: "billing@acme.com",
+      country: "US",
+      tax_id: "12-3456789",
+      actor: "attacker@evil.co",
+      iban: "DE89370400440532013000",
+      account_number: "000123456789",
+      routing: "021000021",
+      wallet: "0xabc",
+      provenance: "trusted",
+      confidence: 0.99,
+      verified_status: "document_verified",
+      risk_level: "low",
+      unknown_field: "should not pass through",
+    });
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    const body = cpCalls[0].body as Record<string, unknown>;
+    expect(body).toEqual({
+      name: "Acme Supplies",
+      type: "vendor",
+      display_name: "Acme",
+      category: "Office supplies",
+      contact_email: "billing@acme.com",
+      country: "US",
+      tax_id: "12-3456789",
+    });
   });
 });
 
@@ -295,6 +395,7 @@ describe("Invariant 5 — secrets never returned to the browser", () => {
     responses.push((await post("/api/brain/reject", { payment_intent_id: "pi_123" })).json);
     responses.push((await get("/api/brain/members")).json);
     responses.push((await get("/api/brain/ledger/invoices")).json);
+    responses.push((await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" })).json);
 
     const blob = JSON.stringify(responses);
     expect(blob).not.toContain(PROVISION_SECRET);

@@ -19,7 +19,7 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "@/lib/mockProposals";
+import { MOCK_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -210,47 +210,6 @@ const SettledRow = ({ proposal, status }: { proposal: Proposal; status: Proposal
   );
 };
 
-/* ── Auto-handled receipt row — already settled under a standing rule.
-   Tapping opens the RECORD (not a decision). Green check + past-tense amount. ── */
-const AutoHandledRow = ({
-  proposal,
-  onClick,
-  format,
-}: {
-  proposal: Proposal;
-  onClick: () => void;
-  format: (a: string | number) => string;
-}) => (
-  <div
-    onClick={onClick}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-    data-testid={`row-auto-handled-${proposal.id}`}
-    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
-  >
-    <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
-    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
-        {proposal.title}
-      </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full text-[#6c779d]">
-        {proposal.rowSubtitle}
-      </p>
-    </div>
-    {typeof proposal.amount === "number" && (
-      <div className="flex flex-col items-end justify-center relative shrink-0">
-        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-          {format(proposal.amount)}
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#42bf23] text-[12px] text-right whitespace-nowrap">
-          Paid
-        </p>
-      </div>
-    )}
-  </div>
-);
-
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export function ReviewPage() {
   const { format } = useCurrency();
@@ -401,11 +360,6 @@ export function ReviewPage() {
     setLiveRejection(null);
   };
 
-  /* Auto-handled receipts — already approved + settled under standing rules.
-     Banner count + total are DERIVED from this array so they can never drift. */
-  const autoHandled = AUTO_HANDLED_PROPOSALS;
-  const autoHandledTotal = autoHandled.reduce((sum, p) => sum + (p.amount ?? 0), 0);
-
   /* Rule state lives in the shared rulesStore so receipts, the review queue, and
      RuleDetail all stay in sync. Pausing / reporting are the only receipt mutations. */
   const rules = useRules();
@@ -439,24 +393,11 @@ export function ReviewPage() {
     );
 
   /* Auto-open a record linked from elsewhere:
-       /review?receipt=<id>  — a settled auto-handled receipt (from RuleDetail)
        /review?proposal=<id> — any proposal by id (from the Audit Log's linked
                                evidence), resolved across every proposal source. */
   const search = useSearch();
   useEffect(() => {
     const params = new URLSearchParams(search);
-    const receiptId = params.get("receipt");
-    if (receiptId) {
-      const target = autoHandled.find((p) => p.id === receiptId);
-      if (target) {
-        // Reset the return target from this deep-link's own `?from=` (usually
-        // absent → null), so a stale target from a prior open can't linger.
-        setReturnTo(params.get("from"));
-        setActive(target);
-        navigate("/review", { replace: true });
-      }
-      return;
-    }
     const proposalId = params.get("proposal");
     if (proposalId) {
       const target = resolveProposal(proposalId);
@@ -489,16 +430,14 @@ export function ReviewPage() {
     setActive(p);
   };
 
-  /* Header pager — cycle (wrap-around) through the sibling list the open proposal
-     belongs to: the Needs Review queue or the Approved Automatically receipts. A
-     deep-linked proposal in neither list has no siblings, so the pager disables. */
+  /* Header pager — cycle (wrap-around) through the Needs Review queue when the
+     open proposal belongs to it. A deep-linked proposal outside the queue has no
+     siblings, so the pager disables. */
   const pagerList: Proposal[] | null = !active
     ? null
     : queue.some((p) => p.id === active.id)
       ? queue
-      : autoHandled.some((p) => p.id === active.id)
-        ? autoHandled
-        : null;
+      : null;
   const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
   const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
   const pageProposal = (dir: 1 | -1) => {
@@ -558,26 +497,6 @@ export function ReviewPage() {
                 );
               })}
             </div>
-
-            {/* Approved automatically today — derived summary (count + total from the array).
-                Stays pinned to the top for both "All" and the "Approved Automatically" tab.
-                Hidden when there are no auto-handled receipts (never "Brain approved 0"). */}
-            {showApproved && autoHandled.length > 0 && (
-              <div
-                className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[8px] w-full bg-[#0a0c10] border border-[#1d2132]"
-                data-testid="row-auto-handled"
-              >
-                <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] min-w-px">
-                  Brain approved{" "}
-                  <span className="text-[#a8b9f4] font-semibold">{autoHandled.length} payments automatically</span>{" "}
-                  today under a rule you set.
-                </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-[#a8b9f4] text-[14px] shrink-0" data-testid="text-auto-handled-total">
-                  {format(autoHandledTotal)}
-                </p>
-              </div>
-            )}
 
             {/* Live — real brain-core PaymentIntents flagged by §6 (only when present) */}
             {showNeedsReview && liveReviews.length > 0 && (
@@ -664,18 +583,16 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Approved Automatically — settled receipts; tapping a row opens the record */}
+            {/* Approved Automatically — honest empty state. brain-core's /actions
+                "auto" status means an intent is policy-permitted (proposed or
+                auto-approved), NOT settled — money-moved is the distinct
+                "dispatching"/"executed" state — so there is no live source for a
+                "settled auto-receipts" list without fabricating settlement. Stays
+                empty until brain-core exposes a settled-and-auto-approved signal
+                (or this surface is redesigned to show upcoming auto-executions). */}
             {showApproved && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Approved Automatically" count={autoHandled.length} />
-                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {autoHandled.map((p, idx) => (
-                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                      <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
-                      {idx < autoHandled.length - 1 && <Divider />}
-                    </div>
-                  ))}
-                </div>
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No auto-approved items yet. Brain will make them here when they happen.</p>
               </div>
             )}
 

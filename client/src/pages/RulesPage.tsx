@@ -686,62 +686,48 @@ export function RulesPage() {
               })}
             </div>
 
-          {/* Create-rule confirmation modal — dim + blur backdrop, centered */}
-          <DialogPrimitive.Root open={!!pendingCreate} onOpenChange={(open) => { if (!open) cancelCreate(); }}>
-            <DialogPrimitive.Portal>
-              <DialogPrimitive.Overlay
-                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-                data-testid="create-rule-backdrop"
-              />
-              <DialogPrimitive.Content
-                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
-                data-testid="create-rule-modal"
-              >
-                {/* Title bar */}
-                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
-                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
-                    Create Rule
-                  </DialogPrimitive.Title>
-                  <DialogPrimitive.Close
-                    data-testid="button-create-close"
-                    aria-label="Close"
-                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
-                  </DialogPrimitive.Close>
-                </div>
-
-                {/* Body — natural-language sentence with highlighted variables */}
-                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
-                  <DialogPrimitive.Description id="create-rule-description" className="sr-only">
-                    Review the rule before confirming creation
-                  </DialogPrimitive.Description>
-                  {pendingCreate && (
-                    <RuleConfirmSentence rule={pendingCreate} />
-                  )}
-
-                  <div className="flex gap-[16px] items-center w-full">
-                    <button
-                      type="button"
-                      onClick={cancelCreate}
-                      data-testid="button-create-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onConfirmCreate}
-                      data-testid="button-create-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </DialogPrimitive.Content>
-            </DialogPrimitive.Portal>
-          </DialogPrimitive.Root>
+          {/* Create-rule confirmation — on Automations and Guardrails tabs */}
+          {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
+            <div
+              className="w-full rounded-[16px] border p-[16px] flex flex-col gap-[12px]"
+              style={{ background: "#240757", borderColor: "rgba(118,49,238,0.35)" }}
+              data-testid="panel-create-confirm"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[22px]">
+                Create this rule?
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[22px]">
+                {pendingCreate.name}
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
+                {pendingCreate.summary}
+              </p>
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-confirm">
+                compiles to {pendingCreate.policyId}
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                Saved to your rules to guide Brain&apos;s reviews. Your enforced policy stays the signed Active Brain policy above until this is applied to it.
+              </p>
+              <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
+                <button
+                  type="button"
+                  onClick={cancelCreate}
+                  data-testid="button-create-cancel"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                >
+                  Not yet
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirmCreate}
+                  data-testid="button-create-confirm"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                >
+                  Create rule
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* New rule — sentence builder — on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && (!builderOpen ? (
@@ -1039,6 +1025,38 @@ export function RulesPage() {
             </div>
           )}
 
+          {activeTab === "Suggested" && suggestions.length > 0 && (
+            <div className="flex flex-col gap-[10px] w-full">
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.id}
+                  suggestion={s}
+                  onAccept={() => onAcceptSuggestion(s)}
+                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                  onDismiss={() => dismissSuggestion(s.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {activeTab === "Suggested" && suggestions.length === 0 && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
+            </div>
+          )}
+
+          {/* Plain-English helper banner */}
+          <div
+            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+          >
+            <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+              Rules are written in plain English, not code. The policy Brain enforces right now is the
+              signed one shown in Active Brain policy above; the automations and guardrails you set here
+              are your own boundaries that guide Brain's reviews and suggestions.
+            </p>
+          </div>
           </div>
 
         </div>

@@ -6,10 +6,10 @@ import type { AuditRecord } from "./auditTypes";
 
    ponytail: AuditLogPage itself moved to live brain-core events (Phase 1c,
    see client/src/lib/brainAudit.ts) and no longer reads this. This store is
-   RETAINED because SettledRecordCard.tsx still resolves a proposal's
-   `realAnchor` off it (fed by the still-mock AUTO_HANDLED_PROPOSALS), and
-   ruleConsistencyCheck.ts's guards still assert this mock data's internal
-   consistency. Delete once AUTO_HANDLED_PROPOSALS/mockProposals also go live. */
+   RETAINED only as the fixture ruleConsistencyCheck.ts's dev guards assert
+   against — it cross-checks the still-mock document/vendor/rule stores for
+   coherence. Delete once those stores also go live. (SettledRecordCard and
+   AUTO_HANDLED_PROPOSALS were removed in the Phase 8 cleanup.) */
 
 /* One fallback record per tab so AuditLogPage shows UI even when brain-core
    has no events for a category. Kept separate from the full MOCK_AUDIT_RECORDS
