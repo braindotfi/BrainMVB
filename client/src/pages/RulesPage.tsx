@@ -1026,38 +1026,6 @@ export function RulesPage() {
             </div>
           )}
 
-          {activeTab === "Suggested" && suggestions.length > 0 && (
-            <div className="flex flex-col gap-[10px] w-full">
-              {suggestions.map((s) => (
-                <SuggestionCard
-                  key={s.id}
-                  suggestion={s}
-                  onAccept={() => onAcceptSuggestion(s)}
-                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                  onDismiss={() => dismissSuggestion(s.id)}
-                />
-              ))}
-            </div>
-          )}
-
-          {activeTab === "Suggested" && suggestions.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No new suggestions from Brain right now. Check back as your patterns grow.</p>
-            </div>
-          )}
-
-          {/* Plain-English helper banner */}
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-          >
-            <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-              Rules are written in plain English, not code. The policy Brain enforces right now is the
-              signed one shown in Active Brain policy above; the automations and guardrails you set here
-              are your own boundaries that guide Brain's reviews and suggestions.
-            </p>
-          </div>
           </div>
 
         </div>
