@@ -12,6 +12,8 @@ import {
   ExternalLink,
   ArrowLeftRight,
 } from "lucide-react";
+import invoiceImg from "@assets/invoice_1783385090730.png";
+import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel } from "@/lib/documentTypes";
@@ -98,6 +100,7 @@ function DarkTableRow({ label, value }: { label: string; value: string }) {
 
 /* ── Invoice pane — Figma 5573:97699 dark-themed invoice viewer ───────────── */
 function InvoicePane({ doc }: { doc: DocumentRecord }) {
+  const [thumbHovered, setThumbHovered] = useState(false);
   const { format } = useCurrency();
   const proposal = resolveProposal(doc.proposalId);
   const match = proposal && typeof doc.amount === "number" && typeof proposal.amount === "number"
@@ -108,9 +111,23 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
     <div className="flex flex-col gap-[32px] w-full">
       {/* Top: thumbnail + invoice id + status + amount/date */}
       <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
-        {/* Thumbnail placeholder */}
-        <div className="relative shrink-0 size-[56px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] flex items-center justify-center">
-          <FileText size={24} className="text-[#6c779d]" />
+        {/* Invoice thumbnail with magnifying glass hover overlay */}
+        <div
+          className="relative shrink-0 size-[56px] rounded-[12px] overflow-hidden cursor-pointer"
+          onMouseEnter={() => setThumbHovered(true)}
+          onMouseLeave={() => setThumbHovered(false)}
+          data-testid="invoice-thumbnail"
+        >
+          <img
+            src={invoiceImg}
+            alt="Invoice"
+            className="absolute inset-0 size-full object-cover rounded-[12px]"
+          />
+          {thumbHovered && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-[12px]" style={{ background: "rgba(0,0,0,0.45)" }}>
+              <img src={magnifyingGlassImg} alt="View" className="size-[32px]" />
+            </div>
+          )}
         </div>
         <div className="content-stretch flex flex-[1_0_0] flex-col gap-[8px] items-start min-w-px relative">
           <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
@@ -213,6 +230,31 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
           </div>
         </div>
       )}
+
+      {/* Open Original in Source System */}
+      {doc.documentHref && (
+        <a
+          href={doc.documentHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="link-open-original"
+          className="flex items-center justify-center gap-[8px] px-[20px] py-[10px] rounded-[100px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] transition-opacity hover:opacity-80"
+          style={{ background: "#240757" }}
+        >
+          <ExternalLink size={14} style={{ color: "#7631ee" }} className="shrink-0" />
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px]" style={{ color: "#7631ee" }}>
+            Open Original in Source System
+          </span>
+        </a>
+      )}
+
+      {/* Viewer-not-owner caption */}
+      <div className="flex items-start gap-[8px] w-full">
+        <Package size={13} className="text-[#414965] shrink-0 mt-[2px]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-[#6c779d]">
+          Brain reads this invoice from your connected source — it's a viewer, not the system of record.
+        </p>
+      </div>
     </div>
   );
 }
@@ -636,91 +678,118 @@ export function DocumentViewerPopup({
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[560px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >
-          {/* Header */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid flex items-center gap-[12px] px-[20px] py-[14px] relative shrink-0 w-full">
-            <div className="flex items-center gap-[8px] flex-1 min-w-px">
-              <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#0d1523] shrink-0">
-                <KindIcon size={14} className="text-[#a8b9f4]" />
-              </div>
-              <div className="flex flex-col min-w-px">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
-                  {doc.id}
-                </span>
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase tracking-[0.08em] text-[#414965]">
-                  {docKindLabel(doc.kind)}
-                </span>
-              </div>
-              {doc.status && (
-                <span
-                  className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase tracking-[0.06em] shrink-0 ${STATUS_CHIP[doc.status]}`}
-                  data-testid="document-status-chip"
-                >
-                  {docStatusLabel(doc.status)}
-                </span>
-              )}
+          {/* Header — invoice uses "Invoices" centered title; other kinds show doc id + kind */}
+          {doc.kind === "invoice" ? (
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] flex items-center relative shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)]">
+                Invoices
+              </p>
+              <DialogPrimitive.Close
+                className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+                data-testid="button-close-document-viewer"
+              >
+                <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+              </DialogPrimitive.Close>
             </div>
-            <DialogPrimitive.Close
-              className="size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
-              data-testid="button-close-document-viewer"
-            >
-              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
-            </DialogPrimitive.Close>
-          </div>
+          ) : (
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid flex items-center gap-[12px] px-[20px] py-[14px] relative shrink-0 w-full">
+              <div className="flex items-center gap-[8px] flex-1 min-w-px">
+                <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#0d1523] shrink-0">
+                  <KindIcon size={14} className="text-[#a8b9f4]" />
+                </div>
+                <div className="flex flex-col min-w-px">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
+                    {doc.id}
+                  </span>
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase tracking-[0.08em] text-[#414965]">
+                    {docKindLabel(doc.kind)}
+                  </span>
+                </div>
+                {doc.status && (
+                  <span
+                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase tracking-[0.06em] shrink-0 ${STATUS_CHIP[doc.status]}`}
+                    data-testid="document-status-chip"
+                  >
+                    {docStatusLabel(doc.status)}
+                  </span>
+                )}
+              </div>
+              <DialogPrimitive.Close
+                className="size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+                data-testid="button-close-document-viewer"
+              >
+                <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+              </DialogPrimitive.Close>
+            </div>
+          )}
 
           <div className="flex flex-col gap-[20px] items-start p-[24px] w-full overflow-y-auto">
-            {/* Primary pane — invoice uses dark Figma viewer; others use paper or bank */}
-            {doc.kind === "invoice" ? <InvoicePane doc={doc} /> : isPaperKind ? <PaperPane doc={doc} /> : <BankTransactionPane doc={doc} />}
+            {/* Primary pane — invoice uses dark Figma viewer; others use paper or bank.
+                InvoicePane renders all its own sections internally (no duplicates below). */}
+            {doc.kind === "invoice" ? (
+              <InvoicePane doc={doc} />
+            ) : isPaperKind ? (
+              <>
+                <PaperPane doc={doc} />
 
-            {/* Compare toggle + columns */}
-            {prior && (
-              <div className="flex flex-col gap-[12px] w-full">
-                <button
-                  type="button"
-                  onClick={() => setComparing((c) => !c)}
-                  data-testid="button-toggle-compare"
-                  className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  <ArrowLeftRight size={14} className="text-[#7631ee] shrink-0" />
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] flex-1 min-w-px">
-                    {comparing ? "Hide comparison" : `Compare with prior (${prior.id})`}
-                  </span>
-                </button>
-                {comparing && <CompareColumns current={doc} prior={prior} />}
-              </div>
+                {/* Compare toggle + columns */}
+                {prior && (
+                  <div className="flex flex-col gap-[12px] w-full">
+                    <button
+                      type="button"
+                      onClick={() => setComparing((c) => !c)}
+                      data-testid="button-toggle-compare"
+                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      <ArrowLeftRight size={14} className="text-[#7631ee] shrink-0" />
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] flex-1 min-w-px">
+                        {comparing ? "Hide comparison" : `Compare with prior (${prior.id})`}
+                      </span>
+                    </button>
+                    {comparing && <CompareColumns current={doc} prior={prior} />}
+                  </div>
+                )}
+
+                <ExtractedBlock doc={doc} />
+                <CoherenceNote doc={doc} />
+                <ProvenanceBlock doc={doc} />
+
+                {doc.documentHref && (
+                  <a
+                    href={doc.documentHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="link-open-original"
+                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <ExternalLink size={14} className="text-[#7631ee] shrink-0" />
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] flex-1 min-w-px">
+                      Open original in source system
+                    </span>
+                  </a>
+                )}
+
+                <div className="flex items-start gap-[8px] w-full">
+                  <Package size={13} className="text-[#414965] shrink-0 mt-[2px]" />
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-[#6c779d]">
+                    {docKindCaption(doc.kind)}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <BankTransactionPane doc={doc} />
+                <CoherenceNote doc={doc} />
+                <ProvenanceBlock doc={doc} />
+
+                <div className="flex items-start gap-[8px] w-full">
+                  <Package size={13} className="text-[#414965] shrink-0 mt-[2px]" />
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-[#6c779d]">
+                    {docKindCaption(doc.kind)}
+                  </p>
+                </div>
+              </>
             )}
-
-            {/* Extracted fields — paper-doc kinds only */}
-            {isPaperKind && <ExtractedBlock doc={doc} />}
-
-            {/* Amount coherence — when the doc backs a proposal/payment */}
-            <CoherenceNote doc={doc} />
-
-            {/* Provenance */}
-            <ProvenanceBlock doc={doc} />
-
-            {/* Open original */}
-            {doc.documentHref && (
-              <a
-                href={doc.documentHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-open-original"
-                className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                <ExternalLink size={14} className="text-[#7631ee] shrink-0" />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] flex-1 min-w-px">
-                  Open original in source system
-                </span>
-              </a>
-            )}
-
-            {/* Viewer-not-owner caption */}
-            <div className="flex items-start gap-[8px] w-full">
-              <Package size={13} className="text-[#414965] shrink-0 mt-[2px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-[#6c779d]">
-                {docKindCaption(doc.kind)}
-              </p>
-            </div>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
