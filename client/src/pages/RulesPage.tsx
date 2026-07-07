@@ -960,6 +960,17 @@ export function RulesPage() {
                   </div>
                 ))}
               </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
             </>
           )}
 
@@ -977,6 +988,17 @@ export function RulesPage() {
                   </div>
                 ))}
               </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
             </>
           )}
 
