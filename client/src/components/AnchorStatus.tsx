@@ -75,9 +75,9 @@ export function AnchorStatus({
         </div>
       )}
 
-      {/* Action row */}
+      {/* Action row — 32px above button (gap-[12px] outer + mt-[20px] here) */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[6px] w-full">
+        <div className="flex flex-col gap-[6px] w-full mt-[20px]">
           <button
             type="button"
             onClick={pending ? undefined : onVerify}
