@@ -78,6 +78,145 @@ function KeyValue({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* ── Figma-style dark key-value table (140px label column) ──────────────── */
+function DarkTableRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-[#1d2132] border-b border-solid content-stretch flex items-start relative shrink-0 w-full last:border-b-0">
+      <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[140px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+          {label}
+        </p>
+      </div>
+      <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px] whitespace-nowrap">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Invoice pane — Figma 5573:97699 dark-themed invoice viewer ───────────── */
+function InvoicePane({ doc }: { doc: DocumentRecord }) {
+  const { format } = useCurrency();
+  const proposal = resolveProposal(doc.proposalId);
+  const match = proposal && typeof doc.amount === "number" && typeof proposal.amount === "number"
+    ? Math.round(doc.amount) === Math.round(proposal.amount)
+    : true;
+
+  return (
+    <div className="flex flex-col gap-[32px] w-full">
+      {/* Top: thumbnail + invoice id + status + amount/date */}
+      <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
+        {/* Thumbnail placeholder */}
+        <div className="relative shrink-0 size-[56px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] flex items-center justify-center">
+          <FileText size={24} className="text-[#6c779d]" />
+        </div>
+        <div className="content-stretch flex flex-[1_0_0] flex-col gap-[8px] items-start min-w-px relative">
+          <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
+              {doc.id}
+            </p>
+            {doc.status && (
+              <div
+                className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${STATUS_CHIP[doc.status]}`}
+                style={{ background: doc.status === "paid" ? "#123509" : doc.status === "held" ? "#350011" : "#222737", borderColor: doc.status === "paid" ? "rgba(66,191,35,0.2)" : doc.status === "held" ? "rgba(210,3,68,0.2)" : "rgba(108,119,157,0.2)" }}
+              >
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap" style={{ color: doc.status === "paid" ? "#42bf23" : doc.status === "held" ? "#d20344" : "#6c779d" }}>
+                  {docStatusLabel(doc.status)}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="content-stretch flex items-center relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+              {typeof doc.amount === "number" ? format(doc.amount) : ""}
+              {typeof doc.amount === "number" && doc.dateLabel ? " · " : ""}
+              {doc.dateLabel.replace(/^(Issued|Due|Paid|Effective|Posted)\s+/, "")}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* What Brain Extracted */}
+      <div className="relative shrink-0 w-full">
+        <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
+          <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">What Brain Extracted</p>
+            <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
+          </div>
+          <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+            <DarkTableRow label="Party" value={doc.vendorName ?? doc.counterparty ?? "—"} />
+            <DarkTableRow label="Document ID" value={doc.id} />
+            {typeof doc.amount === "number" && (
+              <DarkTableRow label="Amount" value={format(doc.amount)} />
+            )}
+            <DarkTableRow label={doc.dateCaption ?? "Date"} value={doc.dateLabel.replace(/^(Issued|Due|Paid|Effective|Posted)\s+/, "")} />
+            {doc.payeeAccountLast4 && (
+              <DarkTableRow label="Pay To" value={`••${doc.payeeAccountLast4}`} />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Amount Coherence */}
+      {proposal && typeof doc.amount === "number" && typeof proposal.amount === "number" && (
+        <div className="relative shrink-0 w-full">
+          <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
+            <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">Amount Coherence</p>
+              <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
+            </div>
+            <div className="bg-[#123509] content-stretch flex items-center px-[16px] py-[12px] relative rounded-[12px] shrink-0 w-full">
+              <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+                <CheckCircle2 size={16} className="text-[#42bf23] shrink-0" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#42bf23] text-[14px] whitespace-nowrap">
+                  {match
+                    ? `Matches the linked payment (${format(proposal.amount)})`
+                    : `Differs from the linked payment — document ${format(doc.amount)} vs payment ${format(proposal.amount)}`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Provenance */}
+      <div className="relative shrink-0 w-full">
+        <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
+          <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">Provenance</p>
+            <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
+          </div>
+          <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+            <DarkTableRow label="Source" value={doc.provenance.source} />
+            <DarkTableRow label="Ingested" value={doc.provenance.ingestedAtLabel} />
+            <DarkTableRow label="Channel" value={doc.provenance.enum.replace(/_/g, " ").toLowerCase()} />
+            <DarkTableRow label="Ledger Ref" value={doc.provenance.ledgerRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* Cleared By */}
+      {proposal?.rule && (
+        <div className="relative shrink-0 w-full">
+          <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
+            <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">Cleared By</p>
+              <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
+            </div>
+            <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+              <DarkTableRow label="Rule" value={proposal.rule.name} />
+              <DarkTableRow label="Policy" value={proposal.policy?.id ?? "—"} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Cream "paper" pane — invoice / purchase_order / prior_payment / contract ── */
 function PaperPane({ doc }: { doc: DocumentRecord }) {
   const partyName = doc.vendorName ?? doc.counterparty ?? "—";
@@ -529,8 +668,8 @@ export function DocumentViewerPopup({
           </div>
 
           <div className="flex flex-col gap-[20px] items-start p-[24px] w-full overflow-y-auto">
-            {/* Primary pane */}
-            {isPaperKind ? <PaperPane doc={doc} /> : <BankTransactionPane doc={doc} />}
+            {/* Primary pane — invoice uses dark Figma viewer; others use paper or bank */}
+            {doc.kind === "invoice" ? <InvoicePane doc={doc} /> : isPaperKind ? <PaperPane doc={doc} /> : <BankTransactionPane doc={doc} />}
 
             {/* Compare toggle + columns */}
             {prior && (

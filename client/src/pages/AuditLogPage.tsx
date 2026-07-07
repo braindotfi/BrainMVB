@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
+import { DEMO_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
 
 type Tab = (typeof AUDIT_TABS)[number];
 
@@ -49,19 +49,37 @@ export function AuditLogPage() {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
   const filtered = useMemo(() => {
+    const fromLive = () => {
+      if (activeTab === "Last 30 Days") {
+        return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      }
+      const ev = TAB_TO_EVENT[activeTab];
+      if (activeTab === "Trusted Changes") {
+        return records.filter(
+          (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
+        );
+      }
+      if (ev) {
+        return records.filter((r) => r.eventType === ev);
+      }
+      return records;
+    };
+    const live = fromLive();
+    if (live.length > 0) return live;
+    /* Fallback: show one demo record per tab so UI is testable */
     if (activeTab === "Last 30 Days") {
-      return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      return DEMO_AUDIT_RECORDS.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
     const ev = TAB_TO_EVENT[activeTab];
     if (activeTab === "Trusted Changes") {
-      return records.filter(
+      return DEMO_AUDIT_RECORDS.filter(
         (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
       );
     }
     if (ev) {
-      return records.filter((r) => r.eventType === ev);
+      return DEMO_AUDIT_RECORDS.filter((r) => r.eventType === ev);
     }
-    return records;
+    return DEMO_AUDIT_RECORDS;
   }, [activeTab, records]);
 
   /* Header pager — cycle (wrap-around) through the records in the active tab. */
@@ -85,14 +103,6 @@ export function AuditLogPage() {
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
               </div>
-              <button
-                type="button"
-                className="flex gap-[6px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#222737] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                data-testid="button-export-audit-log"
-              >
-                <Download size={14} className="text-[#6c779d] shrink-0" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] whitespace-nowrap">Export</span>
-              </button>
             </div>
           </div>
 

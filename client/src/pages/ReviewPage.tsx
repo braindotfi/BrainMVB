@@ -19,7 +19,7 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { AUTO_HANDLED_PROPOSALS, MOCK_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -283,6 +283,9 @@ export function ReviewPage() {
   // this durable queue doesn't show the same intent twice.
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
+  /* Demo fallback: when live queue is empty, show one mock proposal so the
+     "Needs Review" tab UI is testable. */
+  const demoQueue: Proposal[] = queue.length === 0 ? [MOCK_PROPOSALS[0]] : [];
   const executing: Proposal[] = [];
   const settled: Proposal[] = [];
 
@@ -591,9 +594,9 @@ export function ReviewPage() {
             {/* Needs Review — the data-driven proposal queue */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={queue.length} />
+              <WidgetHeader title="Needs Review" count={queue.length || demoQueue.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {queue.length === 0 && executing.length === 0 && (
+                {queue.length === 0 && demoQueue.length === 0 && executing.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -601,7 +604,7 @@ export function ReviewPage() {
                   </div>
                 )}
 
-                {queue.map((p, idx) => (
+                {(queue.length > 0 ? queue : demoQueue).map((p, idx, arr) => (
                   <div key={p.id} className="flex flex-col gap-[8px] w-full">
                     <ProposalRow proposal={p} status={statusOf(p)} onClick={() => openLocal(p)} format={format} />
                     {(() => {
@@ -622,7 +625,7 @@ export function ReviewPage() {
                         </button>
                       );
                     })()}
-                    {idx < queue.length - 1 && <Divider />}
+                    {idx < arr.length - 1 && <Divider />}
                   </div>
                 ))}
 
@@ -666,18 +669,12 @@ export function ReviewPage() {
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoHandled.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {autoHandled.length === 0 ? (
-                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No auto-approved items yet. Brain will make them here when they happen.</p>
+                  {autoHandled.map((p, idx) => (
+                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                      <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
+                      {idx < autoHandled.length - 1 && <Divider />}
                     </div>
-                  ) : (
-                    autoHandled.map((p, idx) => (
-                      <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                        <AutoHandledRow proposal={p} onClick={() => openLocal(p)} format={format} />
-                        {idx < autoHandled.length - 1 && <Divider />}
-                      </div>
-                    ))
-                  )}
+                  ))}
                 </div>
               </div>
             )}

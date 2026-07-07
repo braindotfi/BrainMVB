@@ -11,6 +11,116 @@ import type { AuditRecord } from "./auditTypes";
    ruleConsistencyCheck.ts's guards still assert this mock data's internal
    consistency. Delete once AUTO_HANDLED_PROPOSALS/mockProposals also go live. */
 
+/* One fallback record per tab so AuditLogPage shows UI even when brain-core
+   has no events for a category. Kept separate from the full MOCK_AUDIT_RECORDS
+   so we can drop these once the live feed covers every tab. */
+export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
+  {
+    id: "AUD-DEMO-1",
+    eventType: "approved",
+    summary: "Amazon Web Services payment approved and executed",
+    counterparty: "Amazon Web Services",
+    amount: 4150,
+    actor: "sarah@meridian",
+    occurredAtLabel: "Jul 7, 9:02 AM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 2,
+    rowSubtitle: "$4,150 · sarah@meridian · AUD-DEMO-1",
+    lifecycle: [
+      { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", kind: "ok" },
+      { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
+      { label: "sarah@meridian approved", timestamp: "Jul 7, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
+      { label: "ACH settled", timestamp: "Jul 7, 9:02 AM ET", kind: "ok" },
+    ],
+    linked: [
+      { kind: "vendor", label: "Amazon Web Services", refId: "aws" },
+      { kind: "proposal", label: "AWS payment · Jul 7", refId: "settled-aws" },
+      { kind: "invoice", label: "#AWS-2026-07", refId: "AWS-2026-07" },
+    ],
+    invoiceId: "AWS-2026-07",
+    anchor: { status: "anchored", auditId: "AUD-DEMO-1", merkleRoot: "0x9f3a…c41e", baseTx: "0x72b1…8e2d", block: 21_847_932, anchoredAtLabel: "Jul 7, 9:04 AM ET", verifyHref: "https://basescan.org/tx/0x72b1…8e2d" },
+    proposalId: "settled-aws",
+  },
+  {
+    id: "AUD-DEMO-2",
+    eventType: "auto_approved",
+    summary: "Con Edison Business cleared automatically by standing rule",
+    counterparty: "Con Edison Business",
+    amount: 486,
+    actor: "system",
+    occurredAtLabel: "Jul 3, 8:02 AM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 4,
+    rowSubtitle: "$486 · system · AUD-DEMO-2",
+    lifecycle: [
+      { label: "Invoice Agent detected monthly utility invoice", timestamp: "Jul 3, 7:55 AM ET", kind: "ok" },
+      { label: "Matched standing rule ‘Utility Bills’", timestamp: "Jul 3, 7:56 AM ET", note: "amount within cap ($1,000) · vendor on allowlist", kind: "ok" },
+      { label: "Auto-approved by system", timestamp: "Jul 3, 7:56 AM ET", kind: "ok" },
+      { label: "ACH settled", timestamp: "Jul 3, 8:02 AM ET", kind: "ok" },
+    ],
+    linked: [
+      { kind: "vendor", label: "Con Edison Business", refId: "conedison" },
+      { kind: "rule", label: "Utility Bills", refId: "utility" },
+      { kind: "invoice", label: "#CE-2026-0631", refId: "CE-2026-0631" },
+    ],
+    invoiceId: "CE-2026-0631",
+    anchor: { status: "anchored", auditId: "AUD-DEMO-2", merkleRoot: "0x7c2e…b18a", baseTx: "0x44d9…f7c1", block: 21_847_830, anchoredAtLabel: "Jul 3, 8:04 AM ET", verifyHref: "https://basescan.org/tx/0x44d9…f7c1" },
+  },
+  {
+    id: "AUD-DEMO-3",
+    eventType: "rule_change",
+    summary: "Threshold lowered on ‘SaaS Subscriptions’ rule",
+    actor: "sarah@meridian",
+    occurredAtLabel: "Jul 2, 4:22 PM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 5,
+    rowSubtitle: "sarah@meridian · AUD-DEMO-3",
+    lifecycle: [
+      { label: "sarah@meridian edited rule threshold", timestamp: "Jul 2, 4:22 PM ET", note: "$500 → $600", kind: "ok" },
+      { label: "Policy validator signed new config hash", timestamp: "Jul 2, 4:22 PM ET", kind: "ok" },
+    ],
+    linked: [{ kind: "rule", label: "SaaS Subscriptions", refId: "saas" }],
+    anchor: { status: "anchored", auditId: "AUD-DEMO-3", merkleRoot: "0x1e8a…f4b9", baseTx: "0x09c3…a7e5", block: 21_847_805, anchoredAtLabel: "Jul 2, 4:24 PM ET", verifyHref: "https://basescan.org/tx/0x09c3…a7e5" },
+  },
+  {
+    id: "AUD-DEMO-4",
+    eventType: "trust_granted",
+    summary: "Trust granted to Meridian LLC",
+    counterparty: "Meridian LLC",
+    actor: "sarah@meridian",
+    occurredAtLabel: "Jun 28, 11:47 AM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 9,
+    rowSubtitle: "sarah@meridian · AUD-DEMO-4",
+    lifecycle: [
+      { label: "Meridian LLC flagged as new vendor", timestamp: "Jun 28, 10:15 AM ET", kind: "alert" },
+      { label: "sarah@meridian verified identity and bank details", timestamp: "Jun 28, 11:30 AM ET", kind: "ok" },
+      { label: "Trust granted — vendor added to allowlist", timestamp: "Jun 28, 11:47 AM ET", kind: "ok" },
+    ],
+    linked: [{ kind: "vendor", label: "Meridian LLC", refId: "meridian" }],
+    anchor: { status: "anchored", auditId: "AUD-DEMO-4", merkleRoot: "0x4f7d…c2a6", baseTx: "0x33b8…d1f7", block: 21_847_620, anchoredAtLabel: "Jun 28, 11:49 AM ET", verifyHref: "https://basescan.org/tx/0x33b8…d1f7" },
+  },
+  {
+    id: "AUD-DEMO-5",
+    eventType: "flagged",
+    summary: "Payment held — bank details changed",
+    counterparty: "Bright Futures Studio",
+    amount: 3200,
+    actor: "system",
+    occurredAtLabel: "Jul 5, 2:11 PM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 1,
+    rowSubtitle: "$3,200 · system · AUD-DEMO-5",
+    lifecycle: [
+      { label: "Invoice Agent proposed payment", timestamp: "Jul 5, 2:08 PM ET", kind: "ok" },
+      { label: "Escalated to human — routing number changed", timestamp: "Jul 5, 2:11 PM ET", note: "policy/ap.fraud.v2", kind: "alert" },
+      { label: "Payment held pending verification", timestamp: "Jul 5, 2:11 PM ET", kind: "alert" },
+    ],
+    linked: [
+      { kind: "vendor", label: "Bright Futures Studio", refId: "brightfutures" },
+      { kind: "proposal", label: "Bright Futures payment · Jul 5", refId: "prop-bankchange" },
+      { kind: "invoice", label: "#BFS-0426", refId: "BFS-0426" },
+    ],
+    invoiceId: "BFS-0426",
+    anchor: { status: "anchored", auditId: "AUD-DEMO-5", merkleRoot: "0x3a8b…e5f2", baseTx: "0x21c7…9d4e", block: 21_847_902, anchoredAtLabel: "Jul 5, 2:15 PM ET", verifyHref: "https://basescan.org/tx/0x21c7…9d4e" },
+  },
+];
+
 export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
   /* 1 ─ Approved payment (AWS) ─ linked via proposalId ─────────────── */
   {

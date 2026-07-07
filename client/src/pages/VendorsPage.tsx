@@ -5,6 +5,7 @@ import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
+import { MOCK_VENDORS } from "@/lib/mockVendors";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
@@ -95,10 +96,20 @@ export function VendorsPage() {
   }, [vendors]);
 
   const tabVendors: Vendor[] = useMemo(() => {
-    if (activeTab === "Needs Review") return grouped.underReview;
-    if (activeTab === "New") return grouped.newVendors;
-    if (activeTab === "Trusted") return grouped.trusted;
-    return grouped.known;
+    let list: Vendor[];
+    if (activeTab === "Needs Review") list = grouped.underReview;
+    else if (activeTab === "New") list = grouped.newVendors;
+    else if (activeTab === "Trusted") list = grouped.trusted;
+    else list = grouped.known;
+    if (list.length > 0) return list;
+    /* Demo fallback: one mock vendor per tab so UI is testable */
+    const fallback = MOCK_VENDORS.filter((v) => {
+      if (activeTab === "Needs Review") return v.trustStatus === "under_review";
+      if (activeTab === "New") return v.trustStatus === "new";
+      if (activeTab === "Trusted") return v.trustStatus === "trusted";
+      return v.trustStatus === "known";
+    });
+    return fallback.length > 0 ? [fallback[0]] : [];
   }, [activeTab, grouped]);
 
   /* Header pager — cycle (wrap-around) through the vendors in the active tab.
