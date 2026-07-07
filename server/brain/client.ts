@@ -151,6 +151,39 @@ export function listLedgerCounterparties(token: string): Promise<ListCounterpart
   return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token });
 }
 
+// ─── Counterparty create (manual "Add vendor"; MEMBER token) ─────────────────
+
+/** Identity-only fields brain-core's counterparty create accepts. No payment/bank/trust
+ *  fields — core rejects those, and the BFF must not construct a payload that includes them. */
+export interface CreateCounterpartyBody {
+  name: string;
+  type: string;
+  display_name?: string;
+  category?: string;
+  contact_email?: string;
+  country?: string;
+  tax_id?: string;
+  aliases?: string[];
+}
+
+export interface CreateCounterpartyResponse {
+  counterparty: CounterpartyLite & Record<string, unknown>;
+  created: boolean;
+  merged: boolean;
+}
+
+/** POST /ledger/counterparties — upsert (created=true → 201, merged=true → 200). MEMBER token. */
+export function createCounterparty(
+  token: string,
+  body: CreateCounterpartyBody,
+): Promise<CreateCounterpartyResponse> {
+  return brainRequest<CreateCounterpartyResponse>("/ledger/counterparties", {
+    token,
+    method: "POST",
+    body,
+  });
+}
+
 /** GET /wiki/schema */
 export function getWikiSchema(token: string): Promise<WikiSchemaResponse> {
   return brainRequest<WikiSchemaResponse>("/wiki/schema", { token });

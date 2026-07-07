@@ -32,7 +32,9 @@ import {
   deactivateMember,
   getApprovalPolicyFacts,
   askWikiQuestion,
+  createCounterparty,
   type PolicyAction,
+  type CreateCounterpartyBody,
 } from "./client";
 
 /** Canned prompt for the HomePage "Brain's take" line — one specific, numeric insight. */
@@ -232,6 +234,39 @@ export function createBrainProxyRouter(): Router {
       const { token, tenantId } = await getBrainSession(req.session.userId!);
       const facts = await getApprovalPolicyFacts(token, tenantId);
       return res.json(facts);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // POST /api/brain/ledger/counterparties — manually add a vendor (counterparty).
+  //
+  // MEMBER token (a ledger write, not an agent action). Only identity fields are
+  // forwarded — never an `actor` (core derives it from the token) and never a
+  // payment/bank/trust field (core rejects those; we don't even accept them from
+  // the client). Upsert: core returns 201 (created) or 200 (merged into an
+  // existing counterparty) — relayed verbatim.
+  router.post("/ledger/counterparties", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    const raw = req.body as Record<string, unknown> | undefined;
+    const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+    if (!name) {
+      return res.status(400).json({ error: "invalid_request", message: "name is required" });
+    }
+    const body: CreateCounterpartyBody = { name, type: "vendor" };
+    const optionalStrings = ["display_name", "category", "contact_email", "country", "tax_id"] as const;
+    for (const key of optionalStrings) {
+      const v = raw?.[key];
+      if (typeof v === "string" && v.trim().length > 0) body[key] = v.trim();
+    }
+    if (Array.isArray(raw?.aliases)) {
+      const aliases = raw.aliases.filter((a): a is string => typeof a === "string" && a.trim().length > 0);
+      if (aliases.length > 0) body.aliases = aliases;
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const result = await createCounterparty(token, body);
+      return res.status(result.created ? 201 : 200).json(result);
     } catch (err) {
       return relayError(res, err);
     }

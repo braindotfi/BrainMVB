@@ -110,6 +110,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   if (url.endsWith("/members") && method === "POST") {
     return json({ member: { id: "m2", email: "c@d.co", displayName: "C", role: "approver", active: true } });
   }
+  if (url.endsWith("/ledger/counterparties") && method === "POST") {
+    return json({ counterparty: { id: "cp_new", name: "Acme Supplies" }, created: true, merged: false }, 201);
+  }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
 
@@ -302,6 +305,15 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
     for (const c of memberCalls) expect(c.auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
   });
+
+  it("add-vendor (counterparty create) uses the MEMBER token, never the agent token", async () => {
+    const { status } = await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" });
+    expect(status).toBe(201);
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    expect(cpCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+  });
 });
 
 describe("Invariant 2 — no actor field in any BFF-constructed payload", () => {
@@ -317,6 +329,39 @@ describe("Invariant 2 — no actor field in any BFF-constructed payload", () => 
     for (const c of writes) {
       expect(Object.keys(c.body as Record<string, unknown>), `actor leaked into ${c.method} ${c.url}`).not.toContain("actor");
     }
+  });
+
+  it("add-vendor forwards only identity fields — no actor, no payment/bank/trust fields", async () => {
+    await post("/api/brain/ledger/counterparties", {
+      name: "Acme Supplies",
+      display_name: "Acme",
+      category: "Office supplies",
+      contact_email: "billing@acme.com",
+      country: "US",
+      tax_id: "12-3456789",
+      actor: "attacker@evil.co",
+      iban: "DE89370400440532013000",
+      account_number: "000123456789",
+      routing: "021000021",
+      wallet: "0xabc",
+      provenance: "trusted",
+      confidence: 0.99,
+      verified_status: "document_verified",
+      risk_level: "low",
+      unknown_field: "should not pass through",
+    });
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    const body = cpCalls[0].body as Record<string, unknown>;
+    expect(body).toEqual({
+      name: "Acme Supplies",
+      type: "vendor",
+      display_name: "Acme",
+      category: "Office supplies",
+      contact_email: "billing@acme.com",
+      country: "US",
+      tax_id: "12-3456789",
+    });
   });
 });
 
@@ -350,6 +395,7 @@ describe("Invariant 5 — secrets never returned to the browser", () => {
     responses.push((await post("/api/brain/reject", { payment_intent_id: "pi_123" })).json);
     responses.push((await get("/api/brain/members")).json);
     responses.push((await get("/api/brain/ledger/invoices")).json);
+    responses.push((await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" })).json);
 
     const blob = JSON.stringify(responses);
     expect(blob).not.toContain(PROVISION_SECRET);
