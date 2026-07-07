@@ -951,13 +951,20 @@ You can explain concepts and surface general guidance, but do not give regulated
       } catch (err) {
         const patch = { extractStatus: "failed" as ExtractStatus };
         const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, patch);
+        let message = err instanceof BrainApiError ? err.message : (err as Error).message;
+        if (err instanceof BrainApiError && err.status === 403) {
+          const body = err.body as Record<string, unknown> | undefined;
+          const code = typeof body?.error === "object" && body.error && typeof (body.error as Record<string, unknown>).code === "string"
+            ? (body.error as Record<string, unknown>).code
+            : undefined;
+          if (code === "auth_scope_insufficient") {
+            message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
+          }
+        }
         return res.status(502).json({
           document: updated ?? { ...doc, ...patch },
           error: "ingest_failed",
-          message:
-            err instanceof BrainApiError
-              ? err.message
-              : (err as Error).message,
+          message,
         });
       }
 
