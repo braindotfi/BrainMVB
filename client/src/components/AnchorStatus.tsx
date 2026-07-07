@@ -87,7 +87,7 @@ export function AnchorStatus({
             className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             style={{ background: "#240757", color: "#7631ee" }}
           >
-            Verify on Chain
+            Verify On-Chain
           </button>
           {pending && (
             <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">

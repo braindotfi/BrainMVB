@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1783385199788.png";
 import warningIcon from "@assets/warning_1783385196939.png";
@@ -153,23 +153,23 @@ export function AuditRecordPopup({
                     <SectionHeader>Decision Lifecycle</SectionHeader>
                     <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
-                        <div className="content-stretch flex flex-[1_0_0] flex-col gap-[16px] items-start min-w-px relative">
+                        <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
                           {record.lifecycle.map((step, idx) => {
                             const isLast = idx === record.lifecycle.length - 1;
                             const isAlert = step.kind === "alert";
                             const actorRole = resolveActorRole(step.actor);
                             const actorMember = resolveMemberByTokens(actorIdentityTokens(step.actor));
                             return (
-                              <div key={idx} className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full">
-                                {/* Icon + solid connector column */}
-                                <div className="flex flex-col items-center shrink-0 w-[16px]">
+                              <div key={idx} className={`content-stretch flex gap-[8px] items-start relative shrink-0 w-full${!isLast ? " pb-[16px]" : ""}`}>
+                                {/* Icon + solid connector — self-stretch so line spans the pb gap to the next icon */}
+                                <div className="flex flex-col items-center self-stretch shrink-0 w-[16px]">
                                   <img
                                     src={isAlert ? warningIcon : checkIcon}
                                     alt={isAlert ? "Alert" : "Check"}
                                     className="size-[16px] shrink-0"
                                   />
                                   {!isLast && (
-                                    <div className="mt-[4px] w-[2px] flex-1 min-h-[16px] bg-[#1d2132]" />
+                                    <div className="mt-[4px] w-[2px] flex-1 bg-[#1d2132]" />
                                   )}
                                 </div>
                                 <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[4px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
@@ -293,15 +293,31 @@ export function AuditRecordPopup({
 
             </div>
 
-            {/* Bottom pager footer — prev/next to cycle through records */}
+            {/* Bottom pager footer — Figma 5573:97391 — two full-width pill buttons */}
             {hasPager && (
-              <div className="border-[#1d2132] border-t border-solid flex items-center justify-center gap-[8px] px-[24px] py-[14px] shrink-0 w-full">
-                <RecordPager
-                  onPrev={onPrev!}
-                  onNext={onNext!}
-                  disabled={pagerDisabled}
-                  testIdPrefix="audit-record"
-                />
+              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-t border-solid flex flex-col items-start p-[24px] shrink-0 w-full">
+                <div className="flex gap-[16px] items-center w-full">
+                  <button
+                    type="button"
+                    onClick={onPrev}
+                    disabled={pagerDisabled}
+                    data-testid="button-audit-record-prev"
+                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <ChevronLeft size={24} className="text-[#6c779d] shrink-0" />
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onNext}
+                    disabled={pagerDisabled}
+                    data-testid="button-audit-record-next"
+                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+                    <ChevronRight size={24} className="text-[#6c779d] shrink-0" />
+                  </button>
+                </div>
               </div>
             )}
 
