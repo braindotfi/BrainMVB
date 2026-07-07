@@ -117,8 +117,8 @@ export type BankConnection = {
   userId: string;
   itemId: string;          // Plaid item_id (unique per institution per user)
   accessToken: string;     // Plaid access_token (sensitive)
-  institutionId?: string;
-  institutionName?: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
   accounts: BankAccount[];
   connectedAt: string;     // ISO
 };
