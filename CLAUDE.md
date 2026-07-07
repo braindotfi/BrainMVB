@@ -341,3 +341,4 @@ Any change to `server/brain/*` must keep the invariant suite green or the PR can
 ## Repo discipline
 `main` is the source of truth; push to GitHub and merge to main after each milestone so the
 public repo never drifts. The CI gate above must be green before a PR merges to `main`.
+No work is complete until it is on main; branch-complete is not complete.
