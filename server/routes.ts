@@ -28,6 +28,7 @@ import {
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
+import { generateNonce } from "./nonce";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -374,7 +375,7 @@ You can explain concepts and surface general guidance, but do not give regulated
   // ─────────────────────────────────────────────────────────────
   app.get("/api/auth/nonce", async (req, res) => {
     try {
-      const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const nonce = generateNonce();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
       await storage.createNotification({
         userId: `nonce:${nonce}`,
@@ -951,13 +952,20 @@ You can explain concepts and surface general guidance, but do not give regulated
       } catch (err) {
         const patch = { extractStatus: "failed" as ExtractStatus };
         const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, patch);
+        let message = err instanceof BrainApiError ? err.message : (err as Error).message;
+        if (err instanceof BrainApiError && err.status === 403) {
+          const body = err.body as Record<string, unknown> | undefined;
+          const code = typeof body?.error === "object" && body.error && typeof (body.error as Record<string, unknown>).code === "string"
+            ? (body.error as Record<string, unknown>).code
+            : undefined;
+          if (code === "auth_scope_insufficient") {
+            message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
+          }
+        }
         return res.status(502).json({
           document: updated ?? { ...doc, ...patch },
           error: "ingest_failed",
-          message:
-            err instanceof BrainApiError
-              ? err.message
-              : (err as Error).message,
+          message,
         });
       }
 
@@ -972,12 +980,16 @@ You can explain concepts and surface general guidance, but do not give regulated
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
       } catch (err) {
-        if (err instanceof BrainApiError && err.status === 404) {
-          extractStatus = "unavailable"; // endpoint not deployed yet — self-heals when Brain ships
-        } else if (err instanceof BrainApiError && err.status === 422) {
+        if (err instanceof BrainApiError && err.status === 422) {
           extractStatus = "unsupported"; // can't read this file type yet (e.g. scanned image)
+        } else if (err instanceof BrainApiError) {
+          // 404 = not deployed; 403 = token lacks raw:write scope; 500 = under construction.
+          // All map to "unavailable" so the UI says "extraction coming soon" instead of "failed".
+          console.warn(`[document-extract] rawId=${rawId} status=${err.status} body=${JSON.stringify(err.body)}`);
+          extractStatus = "unavailable";
         } else {
-          extractStatus = "failed";
+          console.warn(`[document-extract] rawId=${rawId} network error:`, (err as Error).message);
+          extractStatus = "unavailable";
         }
       }
       const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, {

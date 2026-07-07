@@ -71,7 +71,9 @@ is deleted). Current state:
 | Finances tab (accounts, transactions, counterparties, invoices) | CORE-BACKED via `/api/brain/ledger/*`; mock only as fallback |
 | HomePage "Brain's take" / Brain Assistant chat | CORE-BACKED (Claude, ledger-grounded); static/canned fallback |
 | Bills inbox + Review live PaymentIntents (`useIntents`) | CORE-BACKED (read + propose/reject only) |
-| Review queue proposals, Rules, Vendors, Documents, Audit Log | MOCK-ONLY (`client/src/lib/mock*.ts`) |
+| Review "Needs Review" queue (`useBrainReviewQueue`) | CORE-BACKED read via `/api/brain/actions`; mock (`MOCK_PROPOSALS[0]`) fallback only when the live queue is empty — it drives the demo propose → executing → settled flow |
+| Vendors (Counterparties tab) | CORE-BACKED read via `/api/brain/ledger/counterparties`; mock (`MOCK_VENDORS`) fallback |
+| Rules, Documents (viewer/resolution), Audit Log (`/audit-log`) | MOCK-ONLY (`client/src/lib/mock*.ts` via `rulesStore`/`documentsStore`/`mockAuditRecords`). NOTE: document *ingestion* (AddSource) is CORE-BACKED — see "Document Ingestion" below — but the document *viewer/resolution* store is mock. |
 | Members & approval authority (Settings → Team) | CORE-BACKED via `/api/brain/members` + `/approval-policy` (member/user-principal token); no mock fallback (see `.agents/memory/members-authority-integration.md`) |
 
 ## brain-core BFF (`server/brain/`)
@@ -95,7 +97,8 @@ is deleted). Current state:
 ## API Endpoints
 - **Auth** (`server/auth.ts`): `POST /api/auth/register` `/login` `/logout` `/demo`,
   `GET /api/auth/user`, `GET /api/auth/google` + `/callback`. `GET /api/config` →
-  `{ googleEnabled }`. SIWE: `POST /api/auth/siwe/nonce` `/verify` `/logout`.
+  `{ googleEnabled }`. SIWE: `GET /api/auth/nonce`, `POST /api/auth/verify` (general
+  `POST /api/auth/logout` clears the session).
 - **Assistant**: `POST /api/assistant/chat` (`requireAuth`) — zod-validated `messages`, Claude
   with a Brain system prompt. 503 `assistant_unconfigured`, 402 `assistant_no_credit`, 500
   `assistant_failed` — each with a user-facing `reply` string.
@@ -122,6 +125,18 @@ is deleted). Current state:
   (Fresh shows onboarding, Existing skips it).
 - Google OAuth: button renders only when both Google secrets are set. Callback failures redirect
   to `/?auth_error=<code>`; `SignupPage.tsx` maps codes to friendly messages.
+- SIWE nonce: `/api/auth/nonce` uses a CSPRNG (`generateNonce()` in `server/nonce.ts`,
+  `crypto.randomBytes(32).toString("hex")`), never `Math.random()`. Consume-before-validate,
+  expiry, and address binding are unchanged. Pinned by `server/nonce.test.ts`.
+
+## Testing & CI
+- `npm test` runs the vitest suite (`vitest.config.ts`, dedicated — does not extend
+  `vite.config.ts`). Suites: `server/brain/bff-invariants.test.ts`, `server/nonce.test.ts`,
+  and the `client/src/lib/*.test.ts` brain suites.
+- `.github/workflows/test.yml` runs `npm test` on every pull request and on push to `main`
+  (Node 20, npm cache). It is a MERGE GATE: any change to `server/brain/*` must keep the
+  invariant suite green or the PR cannot land. Once this line lands on `main` via the
+  platform merge flow, `main` is the source of truth.
 
 ## Onboarding, Plaid & Add Source
 - `OnboardingFlow.tsx` step 1 (`StepConnectBank`) + `AddSourceModal` use Plaid Link.

@@ -1,0 +1,43 @@
+Follow-up on the merge: two tasks from the previous plan were not implemented, and the
+conflict resolution left three loose ends. Five items. Route git operations through a
+background Project Task as before; code changes on a NEW branch (fix/post-merge-hardening)
+from main. git fetch + pull first. Keep the done/pending checklist in the PR description.
+
+1. CSPRNG NONCE (previously Task 2, not done): server/routes.ts line ~377 still generates
+   the SIWE nonce with Math.random(). Replace with crypto.randomBytes(32).toString("hex")
+   (node:crypto). Do not change the consume-before-validate flow, expiry, or address
+   binding. Add one test: two generated nonces are 64 hex chars and distinct.
+
+2. CI GATE (previously Task 3, not done): add .github/workflows/test.yml — on every
+   pull_request and push to main: checkout, setup-node (version matching the project, with
+   cache), install, npm test. One job, minimal. The vitest suite must gate merges.
+
+3. SETTLED RECORD RENDERING: SettledRecordCard was git-rm'd during conflict resolution.
+   Determine whether an approved/executed proposal still gets an operational settled view
+   (past-tense "You approved · executed" headline, meta line, NO decision buttons, anchor
+   STATUS line via AnchorStatus mode="status", "View full record in Audit Log" link). If
+   ProposalDetail or another component now renders that state, document where in CLAUDE.md
+   and confirm the anchor line is status-mode (not full proof). If nothing renders it,
+   restore the surface (rebuild against the existing AnchorStatus component; match current
+   app styling). The rule stands: STATUS on operational surfaces, PROOF in the canonical
+   audit record.
+
+4. BOUNDARY TABLE RECONCILIATION: replit.md line ~74 lists Review proposals, Rules,
+   Vendors, Documents, Audit Log as MOCK-ONLY, but brainVendors/brainPolicy/brainAudit
+   tests and the "wire surfaces to live brain-core data" commit suggest some are now live.
+   Audit each of those five surfaces against the transition rule (CORE-BACKED only when the
+   real API is consumed AND the mock layer is deleted) and update the table to match
+   reality — including partial states ("core-backed read, mock fallback present") where
+   true. The table must never overstate OR understate what is real.
+
+5. HYGIENE: delete attached_assets/Pasted--workspace-git-rm-client-src-components-
+   SettledRecordCa_1783412280239.txt (a terminal log accidentally committed during conflict
+   resolution). Delete the now-merged feat/ui-rework and replit-save branches (verify
+   containment in main first with git log; replit-save is already confirmed contained).
+
+CLAUDE.md: record the CSPRNG change, the CI gate (any change to server/brain/* must keep
+the invariant suite green), the settled-record rendering location (or restoration), and the
+reconciled boundary rows.
+
+Return: the merged PR, the CI run link showing green, the settled-record disposition
+(found where / restored), the reconciled table, branch deletions, and the checklist.

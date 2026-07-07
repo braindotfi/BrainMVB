@@ -200,7 +200,7 @@ export function RuleDetail() {
                 </div>
               </div>
             </div>
-          ) : null}
+          )}
 
           {/* Policy rule detail body — read-only, shows all DSL fields */}
           {isPolicy && policyRule && <PolicyDetailBody rule={policyRule} />}
