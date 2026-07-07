@@ -28,6 +28,7 @@ import {
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
+import { generateNonce } from "./nonce";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -374,7 +375,7 @@ You can explain concepts and surface general guidance, but do not give regulated
   // ─────────────────────────────────────────────────────────────
   app.get("/api/auth/nonce", async (req, res) => {
     try {
-      const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const nonce = generateNonce();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
       await storage.createNotification({
         userId: `nonce:${nonce}`,
