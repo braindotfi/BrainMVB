@@ -209,7 +209,15 @@ export function deleteRule(id: string) {
    its section so it's visible immediately, flagged `userCreated` (so it surfaces
    on the "Your Rules" tab), and persisted to the tenant's account. */
 export function createRule(rule: AutoRule) {
-  const created: AutoRule = { ...rule, userCreated: true, problemReports: [] };
+  const created: AutoRule = {
+    ...rule,
+    userCreated: true,
+    problemReports: [],
+    history: [
+      ...(rule.history ?? []),
+      { id: nextHistoryId(), type: "created", label: "Rule created", atLabel: rule.createdLabel ?? "Just now" },
+    ],
+  };
   rules = [created, ...rules];
   notify();
   void persistCreate(created);

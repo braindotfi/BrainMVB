@@ -105,3 +105,72 @@ export function useBrainVendors() {
     vendors: (query.data?.counterparties ?? []).map(mapCounterpartyToVendor),
   };
 }
+
+/* ── Live vendor DETAIL enrichment ────────────────────────────────────────────
+   The list mapper above has no payment history (the /counterparties LIST carries
+   none). When the detail popup opens, this fills it in from the one read that DOES
+   carry it: `/ledger/transactions?counterparty_id=` (real payments), reachable via
+   the BFF's generic GET passthrough. Honest: "payments" counts ONLY outflows to
+   this counterparty (money we actually paid them) — a counterparty with only
+   inflows or no transactions reads "No payments recorded" (literally true).
+
+   Trust is deliberately NOT refined here. brain-core exposes no payment-history-
+   based trust signal, and its KYC `verified_status` is a different concept from
+   this app's user-granted trust tiers ("known" = Brain suggests trust FROM payment
+   history) — overloading a tier with a verification signal would make the "known"
+   copy ("based on consistent payment history") lie for a zero-payment vendor. So
+   trust stays exactly as the list mapper derived it (risk-only). Surfacing KYC
+   verification honestly is a separate future element, not this increment. */
+
+interface BrainTxLite {
+  amount: string;
+  direction: "inflow" | "outflow" | "transfer" | "adjustment";
+  transaction_date: string;
+}
+interface TxByCounterpartyResponse {
+  transactions: BrainTxLite[];
+}
+
+function fmtVendorDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "Unknown date"
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Enrich a list Vendor with live payment history for the detail popup. Returns the
+ *  base vendor while loading or when there are no outflows (honest zeros stay
+ *  zeros). Safe to call with null — the query disables. */
+export function useBrainVendorDetail(base: Vendor | null): Vendor | null {
+  const id = base?.id ?? "";
+  const txQuery = useQuery<TxByCounterpartyResponse>({
+    queryKey: [`/api/brain/ledger/transactions?counterparty_id=${id}&limit=100`],
+    enabled: id.length > 0,
+    retry: false,
+  });
+
+  if (!base) return null;
+
+  // Only OUTFLOWS are "payments to this vendor" — inflows are money they paid us.
+  const paid = (txQuery.data?.transactions ?? [])
+    .filter((t) => t.direction === "outflow")
+    .map((t) => ({ amount: Number(t.amount), date: t.transaction_date }))
+    .filter((p) => Number.isFinite(p.amount));
+
+  if (paid.length === 0) return base;
+
+  const totalPaid = paid.reduce((sum, p) => sum + Math.abs(p.amount), 0);
+  const dates = paid.map((p) => p.date).filter(Boolean).sort();
+
+  return {
+    ...base,
+    history: {
+      ...base.history,
+      paymentCount: paid.length,
+      totalPaid,
+      avgAmount: totalPaid / paid.length,
+      firstPaidLabel: dates.length > 0 ? fmtVendorDate(dates[0]) : base.history.firstPaidLabel,
+      lastPaidLabel: dates.length > 0 ? fmtVendorDate(dates[dates.length - 1]) : base.history.lastPaidLabel,
+    },
+  };
+}

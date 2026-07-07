@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
-import doneIcon from "@assets/Done_1781789102202.png";
-import reviewingIcon from "@assets/Reviewing_1781789102203.png";
 import warningIcon from "@assets/Warning_1781789172904.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 
@@ -72,6 +70,10 @@ type ToolConnection = {
   accountLabel?: string;
   connectedAt: string;
 };
+type ExtractStatus =
+  | "pending" | "ingested" | "extracting" | "extracted"
+  | "unsupported" | "unavailable" | "failed";
+
 type SourceDocument = {
   id: string;
   userId: string;
@@ -79,8 +81,101 @@ type SourceDocument = {
   size: number;
   mimeType: string | null;
   category: string | null;
+  rawId: string | null;
+  sha256: string | null;
+  sourceType: string | null;
+  extractStatus: ExtractStatus | null;
+  parsedId: string | null;
+  confidence: string | null;
   uploadedAt: string;
 };
+
+/** brain-core obligation Brain derived from ingested documents (GET /ledger/obligations). */
+type Obligation = {
+  id: string;
+  direction: string;            // payable | receivable
+  counterparty_id: string | null;
+  amount_due: string;
+  currency: string;
+  due_date: string | null;
+  status: string;
+  provenance: string | null;
+  confidence: number | null;    // ≤0.5 — advisory
+};
+
+type ObligationsResponse = { obligations: Obligation[]; next_cursor: string | null };
+type CounterpartyLite = { id: string; display_name?: string; name?: string };
+type CounterpartiesResponse = { counterparties: CounterpartyLite[] };
+type WikiAnswer = { raw: string; evidenceIds: string[]; confidence: number | null };
+
+/** Map a file to brain-core's source_type. */
+function sourceTypeForFile(file: File): "pdf_upload" | "csv_upload" {
+  const n = file.name.toLowerCase();
+  if (n.endsWith(".csv") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "csv_upload";
+  return "pdf_upload";
+}
+
+/** Human label + tone for an extraction status. */
+function extractStatusMeta(s: ExtractStatus | null): { label: string; tone: "ok" | "progress" | "warn" | "muted" } {
+  switch (s) {
+    case "extracted":   return { label: "Read by Brain", tone: "ok" };
+    case "extracting":  return { label: "Extracting…", tone: "progress" };
+    case "ingested":    return { label: "Stored · awaiting extraction", tone: "progress" };
+    case "pending":     return { label: "Uploading…", tone: "progress" };
+    case "unsupported": return { label: "Can't read this file type yet", tone: "warn" };
+    case "unavailable": return { label: "Stored · extraction coming soon", tone: "muted" };
+    case "failed":      return { label: "Couldn't process", tone: "warn" };
+    default:            return { label: "Stored", tone: "muted" };
+  }
+}
+
+const TONE_STYLE: Record<"ok" | "progress" | "warn" | "muted", { color: string; dot: string }> = {
+  ok:       { color: "#42bf23", dot: "#42bf23" },
+  progress: { color: "#a8b9f4", dot: "#7631ee" },
+  warn:     { color: "#ff9500", dot: "#ff9500" },
+  muted:    { color: "#6c779d", dot: "#414965" },
+};
+
+function ExtractStatusBadge({ status, testId }: { status: ExtractStatus | null; testId?: string }) {
+  const meta = extractStatusMeta(status);
+  const s = TONE_STYLE[meta.tone];
+  const spinning = meta.tone === "progress";
+  return (
+    <span className="flex items-center gap-[6px]" data-testid={testId}>
+      {spinning ? (
+        <span className="size-[10px] rounded-full border-2 border-t-transparent animate-spin shrink-0" style={{ borderColor: s.dot, borderTopColor: "transparent" }} aria-hidden />
+      ) : (
+        <span className="size-[6px] rounded-full shrink-0" style={{ background: s.dot }} aria-hidden />
+      )}
+      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px]" style={{ color: s.color }}>
+        {meta.label}
+      </span>
+    </span>
+  );
+}
+
+/** A small "advisory / needs confirmation" pill for document-derived data (conf ≤0.5). */
+function ConfidencePill({ confidence }: { confidence: number | null }) {
+  const pct = confidence !== null ? Math.round(confidence * 100) : null;
+  return (
+    <span
+      className="shrink-0 px-[8px] py-[2px] rounded-[22px] bg-[#4a2300] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-[#ff9500]"
+      title="Brain read this from a document — advisory only, please confirm."
+    >
+      {pct !== null ? `${pct}% · needs confirmation` : "Needs confirmation"}
+    </span>
+  );
+}
+
+/** Resolve a counterparty id → display name, falling back to a shortened id. */
+function counterpartyName(id: string | null, map: Map<string, string>): string {
+  if (!id) return "Unknown counterparty";
+  return map.get(id) ?? id;
+}
+
+function isReceivable(o: Obligation): boolean {
+  return o.direction.toLowerCase().startsWith("receiv");
+}
 
 /* ─── Catalog ─── */
 type Provider = { id: string; name: string; logo: string; bg: string; light?: boolean; live?: boolean };
@@ -865,13 +960,23 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
 
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
-      const res = await apiRequest("POST", "/api/integrations/documents", {
-        name: file.name,
-        size: file.size,
-        mimeType: file.type || null,
+      const params = new URLSearchParams({
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
         category,
+        sourceType: sourceTypeForFile(file),
       });
-      return res.json();
+      const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: file,
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.message || json?.error || `Upload failed (${res.status})`);
+      }
+      return json;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] }),
     onError: (err: Error) => setError(err.message.replace(/^\d+:\s*/, "")),
@@ -958,8 +1063,11 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
             </div>
           )}
           {docs.map((d) => (
-            <div key={d.id} className="flex items-center justify-between gap-[12px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]" data-testid={`doc-row-${d.id}`}>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate flex-1 min-w-0">{d.name}</span>
+            <div key={d.id} className="flex items-center justify-between gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]" data-testid={`doc-row-${d.id}`}>
+              <div className="flex flex-col gap-[2px] flex-1 min-w-0">
+                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate">{d.name}</span>
+                <ExtractStatusBadge status={d.extractStatus} testId={`doc-status-${d.id}`} />
+              </div>
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] shrink-0">{formatSize(d.size)}</span>
               <button
                 type="button"
@@ -1041,52 +1149,30 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-/* ───────────────────────────── Screen 3: Reading the sources ───────────────────────────── */
-type ReadStatus = "done" | "processing" | "warning";
-type ReadFile = { id: string; name: string; size: string; status: ReadStatus; detail: string };
-
-const READING_FILES: ReadFile[] = [
-  { id: "f1", name: "2024_chase_statements.zip", size: "8.2 MB", status: "done",       detail: "Processed · 12 statements · 1,847 transactions · 12 vendors" },
-  { id: "f2", name: "vendor_contracts.pdf",      size: "3.1 MB", status: "done",       detail: "Processed · 8 contracts, payment terms extracted" },
-  { id: "f3", name: "2023_invoices_export.csv",  size: "4.2 MB", status: "processing", detail: "Finding customers and recurring patterns" },
-  { id: "f4", name: "receipt_2142.jpg",          size: "1.2 MB", status: "warning",    detail: "Hard to read" },
-];
-
-const READ_STATUS_ICON: Record<ReadStatus, string> = {
-  done: doneIcon,
-  processing: reviewingIcon,
-  warning: warningIcon,
-};
-const READ_STATUS_ALT: Record<ReadStatus, string> = {
-  done: "Done",
-  processing: "Reviewing",
-  warning: "Needs your help",
-};
-
-function ReadStatusIcon({ status }: { status: ReadStatus }) {
-  return (
-    <img
-      src={READ_STATUS_ICON[status]}
-      alt={READ_STATUS_ALT[status]}
-      className={`size-[28px] shrink-0${status === "processing" ? " animate-spin" : ""}`}
-    />
-  );
-}
-
-function StatCell({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="bg-[#0a0c10] rounded-[12px] p-[14px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">{value}</p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{label}</p>
-    </div>
-  );
-}
+/* ───────────────────────────── Screen 3: Reading the sources ─────────────────────────────
+ * Real document extraction status from GET /api/integrations/documents (polled while any
+ * document is still being read by brain-core). No fabricated stats. */
+const IN_PROGRESS_STATUSES: ReadonlyArray<ExtractStatus> = ["pending", "ingested", "extracting"];
 
 function ReadingScreen({
   onViewWiki, onContinue, onAddMore,
 }: { onViewWiki: () => void; onContinue: () => void; onAddMore: () => void }) {
-  const doneCount = READING_FILES.filter((f) => f.status === "done").length;
-  const warningCount = READING_FILES.filter((f) => f.status === "warning").length;
+  const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
+  const docs = docsQuery.data ?? [];
+
+  const anyInProgress = docs.some((d) => IN_PROGRESS_STATUSES.includes((d.extractStatus ?? "pending") as ExtractStatus));
+
+  // Poll every 15s while any document is still being read.
+  useEffect(() => {
+    if (!anyInProgress) return;
+    const t = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
+    }, 15000);
+    return () => clearInterval(t);
+  }, [anyInProgress]);
+
+  const readCount = docs.filter((d) => d.extractStatus === "extracted").length;
+  const warnCount = docs.filter((d) => d.extractStatus === "unsupported" || d.extractStatus === "failed").length;
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -1095,58 +1181,62 @@ function ReadingScreen({
           Reading your sources
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain is reviewing your new connected sources. This usually takes a few minutes.
+          Brain is reviewing your uploaded documents. Anything it reads is advisory until you confirm it.
         </p>
       </div>
 
-      <div className="bg-[#0a0c10] rounded-[16px] overflow-hidden">
-        {READING_FILES.map((f, i) => (
-          <div
-            key={f.id}
-            data-testid={`reading-row-${f.id}`}
-            className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
-          >
-            <ReadStatusIcon status={f.status} />
-            <div className="flex-1 min-w-0">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[20px] truncate">{f.name}</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{f.detail}</p>
-            </div>
-            <span className="shrink-0 px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px]">
-              {f.size}
-            </span>
-          </div>
-        ))}
-        <div className="flex items-center justify-between px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)]">
-          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">
-            {doneCount} of {READING_FILES.length} files done{warningCount ? ` · ${warningCount} needs your help` : ""}
-          </span>
-          <button
-            type="button"
-            onClick={onAddMore}
-            data-testid="button-reading-add-more"
-            className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
-              <path d="M6 1.5V10.5M1.5 6H10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            Add More
-          </button>
+      {docsQuery.isLoading ? (
+        <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px]">
+          <span className="size-[16px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
+          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Loading your documents…</span>
         </div>
-      </div>
-
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] uppercase tracking-wide pt-[4px]">
-        What Brain Learned So Far
-      </p>
-      <div className="grid grid-cols-2 gap-[8px]">
-        <StatCell value="31"    label="Vendors Identified" />
-        <StatCell value="14"    label="Recurring Bills Found" />
-        <StatCell value="$842K" label="In Transactions Read" />
-        <StatCell value="2 Years" label="History Covered" />
-      </div>
+      ) : docs.length === 0 ? (
+        <div className="bg-[#0a0c10] rounded-[16px] p-[20px] text-center">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+            No documents uploaded yet. Add a document source and Brain will start reading it here.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-[#0a0c10] rounded-[16px] overflow-hidden">
+          {docs.map((d, i) => (
+            <div
+              key={d.id}
+              data-testid={`reading-row-${d.id}`}
+              className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[20px] truncate">{d.name}</p>
+                <div className="mt-[4px]">
+                  <ExtractStatusBadge status={d.extractStatus} testId={`reading-status-${d.id}`} />
+                </div>
+              </div>
+              <span className="shrink-0 px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px]">
+                {formatSize(d.size)}
+              </span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)]">
+            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]" data-testid="text-reading-summary">
+              {readCount} of {docs.length} read{warnCount ? ` · ${warnCount} need your help` : ""}
+            </span>
+            <button
+              type="button"
+              onClick={onAddMore}
+              data-testid="button-reading-add-more"
+              className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
+            >
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+                <path d="M6 1.5V10.5M1.5 6H10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              Add More
+            </button>
+          </div>
+        </div>
+      )}
 
       <InfoNotice
         title="Brain reads, doesn't share."
-        body="Files are encrypted, used only to understand your business, and never shown to anyone else. You can delete any file at any time."
+        body="Files are used only to understand your business and never shown to anyone else. Anything Brain reads from a document is advisory until you confirm it."
       />
 
       <div className="flex items-center gap-[12px] pt-[4px]">
@@ -1156,7 +1246,7 @@ function ReadingScreen({
           data-testid="button-reading-view-wiki"
           className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#240757] hover:bg-[#2e0a6b] text-[#7631ee]"
         >
-          View Wiki
+          Close
         </button>
         <button
           type="button"
@@ -1171,207 +1261,170 @@ function ReadingScreen({
   );
 }
 
-/* ───────────────────────────── Screen 4: Everything Brain found ───────────────────────────── */
-type FoundTab = "all" | "pay" | "customers" | "onchain" | "team";
-type FoundRow = { id: string; title: string; tag?: string; detail: string; defaultChecked: boolean; unknown?: boolean };
-type FoundSection = { tab: Exclude<FoundTab, "all">; label: string; rows: FoundRow[]; extraRows: FoundRow[]; moreCount: number };
+/* ───────────────────────────── Screen 4: Everything Brain found ─────────────────────────────
+ * Real obligations from GET /api/brain/ledger/obligations (advisory, conf ≤0.5). No pay path. */
+type FoundTab = "all" | "payable" | "receivable";
 
-const FOUND_TABS: { id: FoundTab; label: string; count: number }[] = [
-  { id: "all",       label: "All",      count: 67 },
-  { id: "pay",       label: "You Pay",  count: 14 },
-  { id: "customers", label: "Pays You", count: 38 },
-  { id: "onchain",   label: "On-Chain", count: 7 },
-  { id: "team",      label: "Team",     count: 8 },
-];
+/** Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner. */
+async function fetchObligations(): Promise<Obligation[]> {
+  const res = await fetch("/api/brain/ledger/obligations", { credentials: "include" });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()) || res.statusText}`);
+  const json = (await res.json()) as ObligationsResponse | Obligation[];
+  return Array.isArray(json) ? json : (json.obligations ?? []);
+}
 
-const FOUND_SECTIONS: FoundSection[] = [
-  {
-    tab: "pay", label: "You Pay These Vendors", moreCount: 12,
-    rows: [
-      { id: "aws",       title: "Amazon Web Services", detail: "Recurring · Hosting · ~$8K/mo",   defaultChecked: true },
-      { id: "anthropic", title: "Anthropic",           detail: "Recurring · API · ~$1.8K/mo",     defaultChecked: true },
-    ],
-    extraRows: [
-      { id: "github",   title: "GitHub",   detail: "Recurring · Dev tools · ~$420/mo", defaultChecked: true },
-      { id: "figma",    title: "Figma",    detail: "Recurring · Design · ~$180/mo",    defaultChecked: true },
-      { id: "linear",   title: "Linear",   detail: "Recurring · Project mgmt · ~$96/mo", defaultChecked: true },
-    ],
-  },
-  {
-    tab: "customers", label: "Your Customers", moreCount: 36,
-    rows: [
-      { id: "peterson",  title: "Peterson Legal Group", detail: "Top Customer · ~$240K/yr · Stripe",          defaultChecked: true },
-      { id: "northstar", title: "Northstar Design Co",  detail: "$72K/yr · Pays from Base 0x8c3a...1f9e",      defaultChecked: true },
-    ],
-    extraRows: [
-      { id: "meridian", title: "Meridian Studios", detail: "$48K/yr · Stripe",                 defaultChecked: true },
-      { id: "loomly",   title: "Loomly Inc",       detail: "$31K/yr · Pays from Base 0x91a2...4c7d", defaultChecked: true },
-    ],
-  },
-  {
-    tab: "onchain", label: "On-Chain", moreCount: 36,
-    rows: [
-      { id: "aave",     title: "Aave",          tag: "Protocol", detail: "Lending · $1M USDC Position · Earning 4.2% APY", defaultChecked: true },
-      { id: "aerodrome", title: "Aerodrome DEX", tag: "Protocol", detail: "Swapping · 8 Swaps in 90d · USDC – DAI",        defaultChecked: true },
-      { id: "unknown",  title: "0x4a7e...c812", tag: "Unknown",  detail: "Frequent Recipient · $4,880 Total",             defaultChecked: false, unknown: true },
-    ],
-    extraRows: [
-      { id: "uniswap",  title: "Uniswap",       tag: "Protocol", detail: "Swapping · 3 Swaps in 90d · ETH – USDC", defaultChecked: true },
-      { id: "morpho",   title: "Morpho",        tag: "Protocol", detail: "Lending · $120K USDC Position",          defaultChecked: true },
-    ],
-  },
-  {
-    tab: "team", label: "Your Team (Payroll)", moreCount: 7,
-    rows: [
-      { id: "jane", title: "Jane Doe", tag: "Founding Engineer", detail: "Salary · Equity · Joined Jan 2024", defaultChecked: true },
-    ],
-    extraRows: [
-      { id: "marcus", title: "Marcus Lee", tag: "Engineer",      detail: "Salary · Joined Mar 2024", defaultChecked: true },
-      { id: "priya",  title: "Priya Shah", tag: "Designer",      detail: "Salary · Joined Jun 2024", defaultChecked: true },
-    ],
-  },
-];
+async function fetchCounterparties(): Promise<Map<string, string>> {
+  const res = await fetch("/api/brain/ledger/counterparties", { credentials: "include" });
+  if (!res.ok) return new Map();
+  const json = (await res.json()) as CounterpartiesResponse | CounterpartyLite[];
+  const list = Array.isArray(json) ? json : (json.counterparties ?? []);
+  const map = new Map<string, string>();
+  for (const c of list) map.set(c.id, c.display_name ?? c.name ?? c.id);
+  return map;
+}
 
-function FoundCheckbox({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className={`size-[20px] rounded-[4px] border flex items-center justify-center shrink-0 mt-[1px] transition-colors ${
-        checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"
-      }`}
-    >
-      {checked && (
-        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <path d="M4 8L7 11L12 5" stroke="#7631EE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </span>
-  );
+function formatMoney(amount: string, currency: string): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return `${amount} ${currency}`;
+  if (currency === "USD") {
+    return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  }
+  return `${n.toLocaleString("en-US")} ${currency}`;
+}
+
+function formatDue(due: string | null): string {
+  if (!due) return "No due date";
+  const d = new Date(due);
+  if (Number.isNaN(d.getTime())) return due;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function FoundScreen({ onFinish }: { onFinish: () => void }) {
   const [activeTab, setActiveTab] = useState<FoundTab>("all");
-  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
-    FOUND_SECTIONS.forEach((s) => [...s.rows, ...s.extraRows].forEach((r) => { init[r.id] = r.defaultChecked; }));
-    return init;
-  });
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const toggle = (id: string) => setChecked((c) => ({ ...c, [id]: !c[id] }));
-  const toggleExpand = (tab: string) => setExpanded((e) => ({ ...e, [tab]: !e[tab] }));
-  const visibleSections = activeTab === "all" ? FOUND_SECTIONS : FOUND_SECTIONS.filter((s) => s.tab === activeTab);
+  const obligationsQuery = useQuery<Obligation[]>({
+    queryKey: ["/api/brain/ledger/obligations"],
+    queryFn: fetchObligations,
+    refetchInterval: (q) => ((q.state.data?.length ?? 0) === 0 ? 15000 : false),
+  });
+  const counterpartiesQuery = useQuery<Map<string, string>>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    queryFn: fetchCounterparties,
+  });
+
+  const obligations = obligationsQuery.data ?? [];
+  const cpMap = counterpartiesQuery.data ?? new Map<string, string>();
+
+  const payables = useMemo(() => obligations.filter((o) => !isReceivable(o)), [obligations]);
+  const receivables = useMemo(() => obligations.filter((o) => isReceivable(o)), [obligations]);
+
+  const tabs: { id: FoundTab; label: string; count: number }[] = [
+    { id: "all",        label: "All",      count: obligations.length },
+    { id: "payable",    label: "You Pay",  count: payables.length },
+    { id: "receivable", label: "Pays You", count: receivables.length },
+  ];
+
+  const visible = activeTab === "payable" ? payables : activeTab === "receivable" ? receivables : obligations;
 
   return (
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Here's everything Brain found.
+          Here's what Brain found.
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain reviewed your connected sources, identified what was useful, and added the most relevant information to your personal financial Wiki.
+          These obligations were read from your documents. They're advisory — please confirm before acting on them.
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] bg-[#06070a]">
-        {FOUND_TABS.map((t) => {
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              data-testid={`tab-found-${t.id}`}
-              className={`flex-1 flex items-center justify-center gap-[4px] px-[8px] py-[4px] rounded-[100px] transition-colors ${
-                active ? "bg-[#4a2300]" : "hover:bg-[#11141b]"
-              }`}
-            >
-              <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] whitespace-nowrap ${active ? "text-[#ff9500]" : "text-[#414965]"}`}>
-                {t.label}
-              </span>
-              <span className={`flex items-center justify-center min-w-[16px] px-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] ${
-                active ? "bg-[#ff9500] text-[#4a2300]" : "bg-[#222737] text-[#6c779d]"
-              }`}>
-                {t.count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Advisory banner */}
+      <div className="rounded-[12px] bg-[#4a2300] border border-[rgba(255,149,0,0.25)] p-[14px] flex items-start gap-[10px]">
+        <img src={warningIcon} alt="" className="size-[20px] shrink-0 mt-[1px]" aria-hidden />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[13px] leading-[18px]">
+          Everything below was extracted from documents and is <span className="font-semibold">advisory</span>. Brain will never pay or act on it without your confirmation.
+        </p>
       </div>
 
-      {/* Sections */}
-      {visibleSections.map((section) => {
-        const isExpanded = !!expanded[section.tab];
-        const rows = isExpanded ? [...section.rows, ...section.extraRows] : section.rows;
-        return (
-        <div key={section.tab} className="flex flex-col gap-[10px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] uppercase tracking-wide">
-            {section.label}
+      {/* Q&A over the wiki */}
+      <WikiQuestionBox />
+
+      {obligationsQuery.isLoading ? (
+        <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px]" data-testid="status-obligations-loading">
+          <span className="size-[16px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
+          <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Reading obligations from your documents…</span>
+        </div>
+      ) : obligationsQuery.isError ? (
+        <div className="bg-[#0a0c10] rounded-[16px] p-[20px] text-center" data-testid="status-obligations-error">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#fca5a5] text-[14px] leading-[20px]">
+            Couldn't load obligations right now. You can finish and check back later.
           </p>
+        </div>
+      ) : obligations.length === 0 ? (
+        <div className="bg-[#0a0c10] rounded-[16px] p-[20px] text-center" data-testid="status-obligations-empty">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[22px]">
+            Nothing to show yet.
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[4px]">
+            Brain hasn't extracted any obligations from your documents yet. This can take a few minutes, or extraction may not be available for these files.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Tabs */}
+          <div className="flex items-center gap-[2px] p-[2px] rounded-[400px] bg-[#06070a]">
+            {tabs.map((t) => {
+              const active = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  data-testid={`tab-found-${t.id}`}
+                  className={`flex-1 flex items-center justify-center gap-[4px] px-[8px] py-[6px] rounded-[100px] transition-colors ${
+                    active ? "bg-[#4a2300]" : "hover:bg-[#11141b]"
+                  }`}
+                >
+                  <span className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] whitespace-nowrap ${active ? "text-[#ff9500]" : "text-[#414965]"}`}>
+                    {t.label}
+                  </span>
+                  <span className={`flex items-center justify-center min-w-[16px] px-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] ${
+                    active ? "bg-[#ff9500] text-[#4a2300]" : "bg-[#222737] text-[#6c779d]"
+                  }`}>
+                    {t.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Obligation rows */}
           <div className="bg-[#0a0c10] rounded-[16px] overflow-hidden">
-            {rows.map((r, i) => (
+            {visible.map((o, i) => (
               <div
-                key={r.id}
+                key={o.id}
+                data-testid={`obligation-row-${o.id}`}
                 className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
               >
-                <button
-                  type="button"
-                  onClick={() => toggle(r.id)}
-                  aria-pressed={!!checked[r.id]}
-                  data-testid={`checkbox-found-${r.id}`}
-                  className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
-                >
-                  <FoundCheckbox checked={!!checked[r.id]} />
-                </button>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-[8px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px] leading-[20px] truncate">{r.title}</p>
-                    {r.tag && (
-                      <span className={`shrink-0 px-[8px] py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] ${
-                        r.unknown ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#a78bfa]"
-                      }`}>
-                        {r.tag}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-[8px] flex-wrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px] leading-[20px] truncate">
+                      {counterpartyName(o.counterparty_id, cpMap)}
+                    </p>
+                    <ConfidencePill confidence={o.confidence} />
                   </div>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{r.detail}</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">
+                    {isReceivable(o) ? "Owed to you" : "You owe"} · Due {formatDue(o.due_date)}{o.status ? ` · ${o.status}` : ""}
+                  </p>
                 </div>
-                {r.unknown && (
-                  <button
-                    type="button"
-                    data-testid={`button-add-label-${r.id}`}
-                    className="shrink-0 px-[10px] py-[5px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
-                  >
-                    Add Label
-                  </button>
-                )}
+                <span className="shrink-0 [font-family:'JetBrains_Mono',monospace] font-semibold text-[#a8b9f4] text-[14px]" data-testid={`obligation-amount-${o.id}`}>
+                  {formatMoney(o.amount_due, o.currency)}
+                </span>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => toggleExpand(section.tab)}
-              aria-expanded={isExpanded}
-              data-testid={`button-more-${section.tab}`}
-              className="flex w-full items-center justify-center gap-[6px] px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)] hover:bg-[rgba(0,0,0,0.35)] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]"
-            >
-              {isExpanded ? "Show less" : `${section.moreCount} more`}
-              <svg
-                width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden
-                className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
-              >
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
           </div>
-        </div>
-        );
-      })}
-
-      <div className="rounded-[12px] bg-[#240757] border border-[rgba(118,49,238,0.2)] p-[14px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[20px]">
-          You're always in control. Every automatic action shows up in your activity feed with a 60-second window to reverse it. You can also freeze Brain's autonomy any time with one tap.
-        </p>
-      </div>
+        </>
+      )}
 
       <button
         type="button"
@@ -1381,6 +1434,75 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
       >
         Finish
       </button>
+    </div>
+  );
+}
+
+/* Ask a question over the ingested documents (POST /api/brain/wiki/question). */
+function WikiQuestionBox() {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<WikiAnswer | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const askMut = useMutation({
+    mutationFn: async (q: string) => {
+      const res = await apiRequest("POST", "/api/brain/wiki/question", { question: q });
+      return (await res.json()) as WikiAnswer;
+    },
+    onSuccess: (data) => { setAnswer(data); setError(null); },
+    onError: (err: Error) => { setError(err.message.replace(/^\d+:\s*/, "")); setAnswer(null); },
+  });
+
+  const submit = () => {
+    const q = question.trim();
+    if (!q || askMut.isPending) return;
+    askMut.mutate(q);
+  };
+
+  return (
+    <div className="bg-[#0a0c10] rounded-[16px] p-[14px] flex flex-col gap-[10px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+        Ask about your documents
+      </p>
+      <div className="flex items-center gap-[8px]">
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          placeholder="e.g. What do I owe AWS this month?"
+          data-testid="input-wiki-question"
+          className="flex-1 min-w-0 bg-[#06070a] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] placeholder:text-[#414965] outline-none border border-[#1d2132] focus:border-[#7631ee] transition-colors"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={askMut.isPending || !question.trim()}
+          data-testid="button-wiki-ask"
+          className="shrink-0 px-[16px] py-[10px] rounded-[10px] bg-[#240757] hover:bg-[#2e0a6b] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px]"
+        >
+          {askMut.isPending ? "Asking…" : "Ask"}
+        </button>
+      </div>
+      {error && (
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#fca5a5] text-[13px] leading-[18px]" data-testid="text-wiki-error">
+          {error}
+        </p>
+      )}
+      {answer && (
+        <div className="bg-[#06070a] rounded-[10px] p-[12px] flex flex-col gap-[6px]" data-testid="text-wiki-answer">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px] whitespace-pre-wrap">
+            {answer.raw}
+          </p>
+          <div className="flex items-center gap-[8px]">
+            <ConfidencePill confidence={answer.confidence} />
+            {answer.evidenceIds.length > 0 && (
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px]">
+                {answer.evidenceIds.length} source{answer.evidenceIds.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

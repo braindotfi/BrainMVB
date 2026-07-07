@@ -1,21 +1,36 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
+
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
+function titleCase(str: string) {
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
+}
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
   Flag,
-  Pause,
-  Play,
-  Trash2,
   ChevronDown,
   ChevronUp,
-  ReceiptText,
-  Info,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
-import { AUTO_HANDLED_PROPOSALS } from "@/lib/mockProposals";
+import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
+import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import closeIcon from "@assets/Close_1783293571882.png";
+import infoIcon from "@assets/info_1783376644530.png";
+import playIcon from "@assets/play_1783376650313.png";
+import deleteIcon from "@assets/delete_1783376650313.png";
+import pauseIcon from "@assets/pause_1783376736546.png";
 
 const ALERT = "#d20344";
 
@@ -27,23 +42,27 @@ export function RuleDetail() {
   const [, navigate] = useLocation();
   const { format } = useCurrency();
   const rule = useRule(params?.id);
+  const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
+  const isPolicy = params?.id?.startsWith("policy-") ?? false;
 
-  const [confirmingResume, setConfirmingResume] = useState(false);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showCapEditor, setShowCapEditor] = useState(false);
   const [capDraft, setCapDraft] = useState("");
   const [showAmountEditor, setShowAmountEditor] = useState(false);
   const [amountDraft, setAmountDraft] = useState("");
 
-  if (!rule) {
+  /* Loading state for policy rules: wait until the query resolves before
+     deciding between "not found" and the detail view. */
+  if (isPolicy && policyLoading) {
     return (
       <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px]">
-          This rule no longer exists.
+          Loading policy rule…
         </p>
         <button
           type="button"
-          onClick={() => navigate("/rules")}
+          onClick={() => navigate("/rules?tab=default")}
           data-testid="button-back-to-rules"
           className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
@@ -53,27 +72,51 @@ export function RuleDetail() {
     );
   }
 
-  const reports = rule.problemReports ?? [];
-  const history = rule.history ?? [];
-  const openReports = reports.filter((r) => !r.resolved);
-  const pausedFromReport = !rule.active && openReports.length > 0;
-  const latestOpen = openReports[openReports.length - 1];
-  /* The receipt that triggered the most recent open report — the linked payment. */
-  const linkedPayment = latestOpen
-    ? AUTO_HANDLED_PROPOSALS.find((p) => p.id === latestOpen.proposalId)
-    : undefined;
+  /* Terminal "not found" — only shown when we are certain the rule doesn't exist:
+     - For policy routes: after the query has loaded (not loading) and returned no rule.
+     - For app routes: when useRule returns nothing (store is synchronous). */
+  const definitelyMissing = isPolicy
+    ? !policyLoading && !policyRule
+    : !rule;
 
-  const openReceipt = (proposalId: string) => navigate(`/review?receipt=${proposalId}`);
+  if (definitelyMissing) {
+    return (
+      <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px]">
+          {isPolicy ? "This policy rule is not available right now." : "This rule no longer exists."}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate(isPolicy ? "/rules?tab=default" : "/rules")}
+          data-testid="button-back-to-rules"
+          className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
+        >
+          <ArrowLeft size={16} /> Back to rules
+        </button>
+      </div>
+    );
+  }
+
+  const reports = rule?.problemReports ?? [];
+  const history = rule?.history ?? [];
+  const openReports = reports.filter((r) => !r.resolved);
+  const pausedFromReport = !rule?.active && openReports.length > 0;
+  const latestOpen = openReports[openReports.length - 1];
+
+  const openReceipt = (proposalId: string) => navigate(`/review?proposal=${proposalId}`);
 
   const onResume = () => {
+    if (!rule) return;
     resumeRule(rule.id);
-    setConfirmingResume(false);
+    setResumeModalOpen(false);
   };
   const onDelete = () => {
+    if (!rule) return;
     deleteRule(rule.id);
     navigate("/rules");
   };
   const onLowerCap = () => {
+    if (!rule) return;
     const next = Number(capDraft.replace(/[^0-9.]/g, ""));
     if (Number.isFinite(next) && next > 0) {
       lowerCap(rule.id, Math.round(next));
@@ -82,6 +125,7 @@ export function RuleDetail() {
     }
   };
   const onSaveAmount = () => {
+    if (!rule) return;
     const next = Number(amountDraft.replace(/[^0-9.]/g, ""));
     if (Number.isFinite(next) && next > 0) {
       setThreshold(rule.id, Math.round(next));
@@ -94,17 +138,28 @@ export function RuleDetail() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[24px] items-start pb-[24px] pt-[32px] px-[16px] w-full">
 
-          {/* Back + header */}
-          <div className="flex flex-col gap-[12px] items-start w-full">
-            <button
-              type="button"
-              onClick={() => navigate("/rules")}
-              data-testid="button-back-to-rules"
-              className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
-            >
-              <ArrowLeft size={16} /> Back to Rules
-            </button>
+          {/* Back button — routes to the correct tab based on rule type */}
+          <button
+            type="button"
+            onClick={() => {
+              let tab = "default";
+              if (!isPolicy && rule) {
+                tab =
+                  rule.kind === "guardrail"
+                    ? "guardrails"
+                    : "automations";
+              }
+              navigate(`/rules?tab=${tab}`);
+            }}
+            data-testid="button-back-to-rules"
+            className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
+          >
+            <ArrowLeft size={16} /> Back to Rules
+          </button>
 
+          {isPolicy && policyRule ? (
+            <PolicyDetailHeader rule={policyRule} />
+          ) : rule ? (
             <div className="flex items-start gap-[12px] w-full">
               <div className="flex flex-col gap-[6px] flex-1 min-w-px">
                 <div className="flex items-center gap-[10px] flex-wrap">
@@ -124,7 +179,7 @@ export function RuleDetail() {
                 </p>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Paused-from-report banner — #D20344 accent, with the linked payment. */}
           {pausedFromReport && (
@@ -144,50 +199,30 @@ export function RuleDetail() {
                   </p>
                 </div>
               </div>
-
-              {linkedPayment && (
-                <button
-                  type="button"
-                  onClick={() => openReceipt(linkedPayment.id)}
-                  data-testid="button-linked-payment"
-                  className="flex items-center gap-[10px] w-full rounded-[10px] bg-[#0a0c10] border border-[#1d2132] px-[12px] py-[10px] hover:border-[rgba(210,3,68,0.4)] transition-colors text-left focus:outline-none focus-visible:ring-2"
-                  style={{ ["--tw-ring-color" as string]: ALERT }}
-                >
-                  <ReceiptText size={16} className="shrink-0 text-[#6c779d]" />
-                  <div className="flex flex-col flex-1 min-w-px">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[13px] truncate">
-                      {linkedPayment.counterparty ?? linkedPayment.title}
-                    </p>
-                    {linkedPayment.settledMeta && (
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[11px] truncate">
-                        {linkedPayment.settledMeta}
-                      </p>
-                    )}
-                  </div>
-                  {typeof linkedPayment.amount === "number" && (
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">
-                      {format(linkedPayment.amount)}
-                    </span>
-                  )}
-                </button>
-              )}
             </div>
-          )}
+          ) : null}
+
+          {/* Policy rule detail body — read-only, shows all DSL fields */}
+          {isPolicy && policyRule && <PolicyDetailBody rule={policyRule} />}
+
+          {/* Everything below is ONLY for app-local rules */}
+          {!isPolicy && rule && (
+            <>
 
           {/* Status banner — matches Figma's "Info Circle" info pill. */}
           <div
             className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
             data-testid="text-what-changed"
           >
-            <Info size={16} className="shrink-0" style={{ color: rule.active ? "#6c779d" : ALERT }} />
+            <img src={infoIcon} alt="" className="shrink-0 size-[16px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
-                  This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {rule.scopeSummary ?? "matching payments"} without asking you.
+                  This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {titleCase(rule.scopeSummary ?? "matching payments")} without asking you.
                 </>
               ) : (
                 <>
-                  This rule is <span className="font-semibold" style={{ color: ALERT }}>paused</span> — payments it used to auto-clear ({rule.scopeSummary ?? "matching payments"}) will now wait for your approval in Needs Review.
+                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> — payments it used to auto-clear ({titleCase(rule.scopeSummary ?? "matching payments")}) will now wait for your approval in Needs Review.
                 </>
               )}
             </p>
@@ -202,7 +237,7 @@ export function RuleDetail() {
               <div className="flex items-center gap-[8px]">
                 <button
                   type="button"
-                  onClick={() => (rule.active ? pauseRule(rule.id) : setConfirmingResume(true))}
+                  onClick={() => (rule.active ? pauseRule(rule.id) : setResumeModalOpen(true))}
                   data-testid="button-toggle-rule"
                   className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={
@@ -211,7 +246,7 @@ export function RuleDetail() {
                       : { backgroundColor: "#123509", color: "#42bf23", ["--tw-ring-color" as string]: "#42bf23" }
                   }
                 >
-                  {rule.active ? <Pause size={14} /> : <Play size={14} />}
+                  <img src={rule.active ? pauseIcon : playIcon} alt="" className="shrink-0 size-[16px]" />
                   {rule.active ? "Pause Rule" : "Resume Rule"}
                 </button>
                 <button
@@ -221,64 +256,143 @@ export function RuleDetail() {
                   className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
-                  <Trash2 size={14} /> Delete Rule
+                  <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
                 </button>
               </div>
             </div>
 
-            {confirmingResume && (
-              <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                  Resuming lets this rule auto-clear {rule.scopeSummary ?? "matching payments"} again without asking. Make sure you’ve resolved what you reported first.
-                </p>
-                <div className="flex gap-[10px] items-stretch w-full">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingResume(false)}
-                    data-testid="button-resume-cancel"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-                  >
-                    Keep paused
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onResume}
-                    data-testid="button-resume-confirm"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    Resume rule
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {confirmingDelete && (
-              <div className="flex flex-col gap-[10px] pt-[12px] border-t border-[#1d2132]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                  Deleting removes this rule entirely. Future matching payments will always wait for your approval. This can’t be undone.
-                </p>
-                <div className="flex gap-[10px] items-stretch w-full">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(false)}
-                    data-testid="button-delete-cancel"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4]"
-                  >
-                    Keep rule
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onDelete}
-                    data-testid="button-delete-confirm"
-                    className="flex-1 px-[12px] py-[9px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2"
-                    style={{ backgroundColor: ALERT, ["--tw-ring-color" as string]: ALERT }}
-                  >
-                    Delete rule
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Paused-from-report banner — orange accent, matches Figma's flagged banner under Rule Status. */}
+          {pausedFromReport && (
+            <div
+              className="w-full rounded-[12px] p-[16px] flex items-start gap-[10px]"
+              style={{ backgroundColor: "#4a2300", border: "1px solid rgba(255,148,0,0.2)" }}
+              data-testid="banner-paused-from-report"
+            >
+              <Flag size={18} className="shrink-0 mt-[1px] text-[#ff9400]" />
+              <div className="flex flex-col gap-[4px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-bold uppercase leading-[20px] text-[15px] text-[#ff9400]">
+                  Paused After You Reported a Problem
+                </p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#ff9400] text-[13px]">
+                  You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Resume-rule confirmation — dim/blur backdrop modal, matches other popups. */}
+          <DialogPrimitive.Root open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Overlay
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                data-testid="resume-rule-backdrop"
+              />
+              <DialogPrimitive.Content
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                data-testid="resume-rule-modal"
+              >
+                {/* Title bar */}
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                    Resume Rule
+                  </DialogPrimitive.Title>
+                  <DialogPrimitive.Close
+                    data-testid="button-resume-modal-close"
+                    aria-label="Close"
+                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                  </DialogPrimitive.Close>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
+                  <DialogPrimitive.Description
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                  >
+                    Resuming lets this rule auto-clear {titleCase(rule.scopeSummary ?? "matching payments")} again without asking. Make sure you’ve resolved what you reported first.
+                  </DialogPrimitive.Description>
+
+                  <div className="flex gap-[16px] items-center w-full">
+                    <button
+                      type="button"
+                      onClick={() => setResumeModalOpen(false)}
+                      data-testid="button-resume-cancel"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                    >
+                      Keep Paused
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onResume}
+                      data-testid="button-resume-confirm"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          </DialogPrimitive.Root>
+
+          {/* Delete-rule confirmation — popup modal matching Figma node 5577:65171. */}
+          <DialogPrimitive.Root open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Overlay
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                data-testid="delete-rule-backdrop"
+              />
+              <DialogPrimitive.Content
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                data-testid="delete-rule-modal"
+              >
+                {/* Title bar */}
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                    Delete Rule
+                  </DialogPrimitive.Title>
+                  <DialogPrimitive.Close
+                    data-testid="button-delete-modal-close"
+                    aria-label="Close"
+                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                  </DialogPrimitive.Close>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
+                  <DialogPrimitive.Description
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                  >
+                    Deleting removes this rule entirely. Are you sure you want to delete this rule? This can’t be undone.
+                  </DialogPrimitive.Description>
+
+                  <div className="flex gap-[16px] items-center w-full">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(false)}
+                      data-testid="button-delete-cancel"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      data-testid="button-delete-confirm"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          </DialogPrimitive.Root>
 
           {/* Trusted vendors — allowlist removal, matches Figma's "Popup - Search Results" panel. */}
           {rule.allowlist && rule.allowlist.length > 0 && (
@@ -414,6 +528,9 @@ export function RuleDetail() {
             </div>
           </div>
 
+            </>
+          )}
+
         </div>
       </ScrollArea>
     </div>
@@ -425,7 +542,8 @@ function StatusPill({ active }: { active: boolean }) {
     return (
       <span
         data-testid="pill-rule-status"
-        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#123509] text-[#42bf23]"
+        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#123509] text-[#42bf23]"
+        style={{ borderColor: "rgba(66,191,35,0.2)" }}
       >
         Active
       </span>
@@ -434,8 +552,8 @@ function StatusPill({ active }: { active: boolean }) {
   return (
     <span
       data-testid="pill-rule-status"
-      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px]"
-      style={{ backgroundColor: "rgba(210,3,68,0.12)", color: ALERT }}
+      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-[22px] border bg-[#4a2300] text-[#ff9400]"
+      style={{ borderColor: "rgba(255,148,0,0.2)" }}
     >
       Paused
     </span>
@@ -577,7 +695,7 @@ function AmountRow({
             if (e.key === "Escape") onCancel();
           }}
           data-testid={testIdInput}
-          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(118,49,238,0.5)]"
+          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none"
         />
       </div>
       <div className="flex gap-[8px] items-center shrink-0">
@@ -597,6 +715,123 @@ function AmountRow({
         >
           Save
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Policy rule detail — read-only view of a brain-core policy rule ─────────
+   Shows all DSL fields: applies_to, when conditions, execute, require,
+   plus policy version + quorum metadata. No Pause/Resume/Delete. */
+
+function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
+  const rawName = rule.id.replace(/[-_]/g, " ");
+  const appliesTo = (rule.applies_to ?? [])
+    .map((a) => APPLIES_TO_LABEL[a] ?? a)
+    .join(", ") || "any action";
+  const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
+  const requireSuffix = rule.require ? ` · requires ${rule.require.replace(/_/g, " ")}` : "";
+
+  return (
+    <div className="flex flex-col gap-[12px] items-start w-full">
+      <div className="flex items-start gap-[12px] w-full">
+        <div className="flex flex-col gap-[6px] flex-1 min-w-px">
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
+              data-testid="text-rule-name"
+            >
+              {rawName}
+            </p>
+            <span
+              data-testid="pill-rule-status"
+              className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#240757] text-[#7631ee] border border-[rgba(118,49,238,0.3)]"
+            >
+              <Lock size={12} /> Read-only
+            </span>
+          </div>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+            {appliesTo} — {executeLabel}{requireSuffix}
+          </p>
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
+            {rule.id} · From your active Brain policy
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
+  const conditions = describeWhen(rule.when ?? {});
+  const appliesTo = rule.applies_to ?? [];
+  const hasRequire = !!rule.require;
+  const execute = rule.execute ?? "confirm";
+
+  return (
+    <div className="flex flex-col gap-[16px] items-start w-full">
+      {/* Info banner */}
+      <div
+        className="w-full rounded-[12px] border border-[#1d2132] p-[12px] flex items-start gap-[10px]"
+        data-testid="text-policy-info"
+      >
+        <Shield size={16} className="shrink-0 mt-[2px] text-[#6c779d]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[14px] text-[#6c779d]">
+          This rule is part of your Brain core <span className="font-semibold text-[#a8b9f4]">default policy</span>. It is enforced
+          by Brain for every action and cannot be edited or paused from this app. Changes must be made
+          through Brain core's admin layer.
+        </p>
+      </div>
+
+      {/* DSL fields panel */}
+      <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
+        <div className="flex items-center px-[16px] py-[14px] border-b border-[#1d2132]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
+            Rule definition
+          </p>
+        </div>
+        <div className="flex flex-col gap-[2px] p-[8px]">
+          {/* ID */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">ID</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.id}</span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* Applies to */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Applies to</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0">
+              {appliesTo.length > 0 ? appliesTo.join(", ") : "any action"}
+            </span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* When conditions */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">When</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0 max-w-[60%]">
+              {conditions.length > 0 ? conditions.join(" · ") : "always"}
+            </span>
+          </div>
+          <div className="h-px w-full bg-[#1d2132]" />
+
+          {/* Execute action */}
+          <div className="flex items-center justify-between gap-[16px] p-[8px]">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Execute</span>
+            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{execute}</span>
+          </div>
+
+          {hasRequire && (
+            <>
+              <div className="h-px w-full bg-[#1d2132]" />
+              <div className="flex items-center justify-between gap-[16px] p-[8px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Requires</span>
+                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.require!.replace(/_/g, " ")}</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

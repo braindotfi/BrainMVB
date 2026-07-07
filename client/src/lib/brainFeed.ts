@@ -21,7 +21,7 @@ export type ActivityItemData = {
   time: string;
   /** Optional in-app destination opened when the row is tapped. */
   linkTo?: string;
-  /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open a SettledRecordCard. */
+  /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open its record detail. */
   proposal?: Proposal;
 };
 

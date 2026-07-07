@@ -37,7 +37,7 @@ import type { AutoRule } from "./proposalTypes";
    `kind: "always_on"` so it renders in the read-only style, never mixed into
    the app-local Automations/Guardrails tabs. */
 
-interface PolicyContentRule {
+export interface PolicyContentRule {
   id: string;
   applies_to?: string[];
   when?: Record<string, unknown>;
@@ -52,7 +52,7 @@ export interface ApprovalPolicyFacts {
   rules: PolicyContentRule[];
 }
 
-const APPLIES_TO_LABEL: Record<string, string> = {
+export const APPLIES_TO_LABEL: Record<string, string> = {
   outbound_payment: "outbound payments",
   inbound_payment: "inbound payments",
   ledger_write: "ledger writes",
@@ -61,7 +61,7 @@ const APPLIES_TO_LABEL: Record<string, string> = {
   any: "any action",
 };
 
-const EXECUTE_LABEL: Record<string, string> = {
+export const EXECUTE_LABEL: Record<string, string> = {
   auto: "runs automatically",
   confirm: "waits for approval",
   reject: "is blocked",
@@ -69,7 +69,7 @@ const EXECUTE_LABEL: Record<string, string> = {
 
 /** Plain-English rendering of a rule's `when` clause. Only the fields
  *  brain-core's DSL actually defines (dsl.ts:48-67) — no invented conditions. */
-function describeWhen(when: Record<string, unknown>): string[] {
+export function describeWhen(when: Record<string, unknown>): string[] {
   const parts: string[] = [];
   const amountGt = when["amount.gt"] as { value?: string; currency?: string } | undefined;
   const amountLte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
@@ -132,5 +132,24 @@ export function useBrainPolicy() {
     rules: mapPolicyToRuleCards(query.data),
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
+  };
+}
+
+/** Look up a single policy rule by its app-facing `policy-{id}` card id.
+ *  Returns `{rule, isLoading, isError}` so callers can distinguish
+ *  "not loaded yet" from "not found". */
+export function usePolicyRule(cardId: string | undefined) {
+  const query = useQuery<ApprovalPolicyFacts>({
+    queryKey: ["/api/brain/approval-policy"],
+    retry: false,
+  });
+  if (!cardId || !cardId.startsWith("policy-")) {
+    return { rule: undefined, isLoading: false, isError: false };
+  }
+  const rawId = cardId.slice("policy-".length);
+  return {
+    rule: query.data?.rules.find((r) => r.id === rawId),
+    isLoading: query.isLoading,
+    isError: query.isError,
   };
 }

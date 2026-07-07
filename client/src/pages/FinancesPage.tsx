@@ -606,7 +606,7 @@ export function FinancesPage() {
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                     {accountsLoading
                       ? "Loading your accounts from the ledger…"
-                      : "No accounts connected yet. Your ledger accounts appear here once provisioned."}
+                      : "No connected accounts yet. Link an account to see your balances here."}
                   </p>
                 )}
               </WidgetCard>

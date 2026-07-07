@@ -36,3 +36,30 @@ state. Local React state in ReviewPage couldn't reach RuleDetail.
   distinct from `problemReports`. Seeded with one "created" event from `createdLabel`;
   `pauseRule`/`resumeRule`/`reportProblem` append to it. Rendered on RuleDetail as its own
   "History" panel (same Figma panel pattern — see `figma-panel-pattern.md`), most-recent-first.
+- A "still looks hover-highlighted" bug report on a rules-list row may not be an actual `:hover`
+  class — check for a static conditional style keyed off row state (e.g. `pausedFromReport`) that
+  reuses hover-like colors (`bg-[#11141b] border-[#1d2132]`). Figma's rows keep the plain resting
+  bg even with a status banner; don't let per-state conditionals repaint the row container itself.
+- Resume-rule confirmation is a Dialog modal (matches the create-rule modal pattern: Radix
+  `DialogPrimitive`, `bg-black/60 backdrop-blur-[2px]` overlay, `#0a0c10`/`#1d2132` panel,
+  green `#42bf23`/`#123509` confirm button), not an inline expand-in-place block. Body uses
+  `p-[40px]` and `gap-[16px]` between the two full-width action buttons (`px-[24px] py-[12px]`,
+  `text-[18px]`) — not the smaller `p-[24px]`/`gap-[10px]` used by other confirm dialogs.
+- **Paused state uses ORANGE, not red** (`#d20344` stays reserved for danger/reject/delete only):
+  Paused pill/banner = `bg-[#4a2300]` border `rgba(255,148,0,0.2)` text `#ff9400`. The
+  "Paused After You Reported a Problem" banner is a plain orange info card (Flag icon, bold
+  uppercase title, no linked-payment button) placed UNDER the Rule Status card — the
+  linked-payment/receipt link lives in the Reported Problems accordion (`ReportCard` →
+  "View the Receipt"), not duplicated in this banner.
+- The rules-LIST row-level mini banner (`AutomationRow`/`GuardrailRow` in `RulesPage.tsx`,
+  inline under the rule name when `pausedFromReport`) is a distinct, smaller inline element from
+  the RuleDetail page banner above — it intentionally kept the red `#350011`/`#d20344` treatment
+  from the original Figma list-row spec. `AutomationRow` and `GuardrailRow` must stay in parity:
+  when adding any row-level paused/report indicator to one, mirror it in the other.
+- Modal headers (Resume Rule + Create Rule) must be solid `bg-[#0a0c10] border-b border-[#1d2132]`
+  matching the body panel bg — NOT `backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)]` frosted glass
+  (that was a leftover pattern from an older modal spec and doesn't match Figma for these two).
+- `Section` wrapper (RulesPage.tsx list card used by Automations/Guardrails tabs) needs an
+  explicit `gap-[8px]` on its row-container div — without it, rows have zero vertical spacing
+  between them (only the divider) even though each row-wrapper itself has an internal gap. The
+  VendorsPage "Needs Review" list is the reference spacing to match.

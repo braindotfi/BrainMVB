@@ -29,6 +29,7 @@ import { resolveRule } from "@/lib/openRuleDetail";
 import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { type DocumentRecord, docKindLabel } from "@/lib/documentTypes";
+import { useBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import type {
   Proposal,
   ProposalStatus,
@@ -37,6 +38,17 @@ import type {
   EvidenceItem,
   FactRow,
 } from "@/lib/proposalTypes";
+
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
+function titleCase(str: string) {
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
+}
 
 /* Brain is PROPOSE-ONLY. One component renders every scenario; sections appear
    or collapse based on which fields are present. #D20344 is reserved for
@@ -125,6 +137,10 @@ export function ProposalDetail({
   const [showTrace, setShowTrace] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
+  // A LIVE proposal's invoiceId is a brain-core ledger id; fetch its invoice as a DocumentRecord
+  // so the source-document link opens the REAL invoice (the mock store holds only design fixtures).
+  // Returns undefined for a mock proposal's invoiceId, so we fall back to resolveDocument below.
+  const liveInvoiceDoc = useBrainInvoiceDocument(proposal?.invoiceId);
 
   if (!proposal) return null;
 
@@ -247,7 +263,7 @@ export function ProposalDetail({
                       className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
                       data-testid={`fact-${i}`}
                     >
-                      <span className="text-[#6c779d]">{fact.label}</span>
+                      <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
                       <span className="text-right" style={{ color: factColor(fact.severity) }}>
                         {fact.value}
                       </span>
@@ -287,17 +303,27 @@ export function ProposalDetail({
               </div>
               {/* Source document — tappable link when invoiceId resolves */}
               {proposal.invoiceId && (() => {
-                const srcDoc = resolveDocument(proposal.invoiceId);
+                const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
                 if (!srcDoc) return null;
+                const openSource = () => {
+                  // A live invoice is already resolved (fetched async); open it directly. A mock id
+                  // resolves synchronously through the mock document store.
+                  if (liveInvoiceDoc) {
+                    setViewingDocument(liveInvoiceDoc);
+                    setDocumentOpen(true);
+                  } else {
+                    openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); });
+                  }
+                };
                 return (
                   <button
                     type="button"
-                    onClick={() => openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); })}
+                    onClick={openSource}
                     data-testid="button-source-invoice"
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{proposal.invoiceId}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
                     <ChevronRight size={14} className="text-[#414965] shrink-0" />
                   </button>
                 );
@@ -635,7 +661,7 @@ function AutoHandledReceipt({
                   className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
                   data-testid={`cleared-${i}`}
                 >
-                  <span className="text-[#6c779d]">{fact.label}</span>
+                  <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
                   <span className="text-right flex items-center gap-[6px]" style={{ color: isLimit ? "#42bf23" : factColor(fact.severity) }}>
                     {fact.value}
                     {isLimit && <Check size={13} className="text-[#42bf23] shrink-0" strokeWidth={2.5} />}
@@ -655,7 +681,7 @@ function AutoHandledReceipt({
           <>
             <div className="flex items-center justify-between gap-[12px] w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
-                {rule.name}
+                {titleCase(rule.name)}
               </p>
               <span
                 data-testid="chip-rule-status"
@@ -667,7 +693,7 @@ function AutoHandledReceipt({
               </span>
             </div>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-              {rule.summary}
+              {titleCase(rule.summary)}
             </p>
             <div className="flex flex-col gap-[2px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">
               <span>{rule.createdLabel}</span>
@@ -715,7 +741,7 @@ function AutoHandledReceipt({
             data-testid="text-rule-paused-confirm"
             className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#42bf23]"
           >
-            {rule ? `"${rule.name}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
+            {rule ? `"${titleCase(rule.name)}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
           </div>
         )}
         <div className="flex gap-[10px] items-stretch w-full">
@@ -828,7 +854,7 @@ function AutoHandledReceipt({
               Want to pause this rule while you review?
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-              Pausing{rule ? ` "${rule.name}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
+              Pausing{rule ? ` "${titleCase(rule.name)}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
             </p>
             <div className="flex flex-col gap-[8px] w-full">
               <button
@@ -867,7 +893,7 @@ function AutoHandledReceipt({
           >
             <Check size={16} className="shrink-0 mt-[1px] text-[#42bf23]" strokeWidth={2.5} />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
-              Thanks — we logged this as policy feedback{rule ? ` on "${rule.name}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
+              Thanks — we logged this as policy feedback{rule ? ` on "${titleCase(rule.name)}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
             </p>
           </div>
         )}

@@ -1,4 +1,4 @@
-/* Members & approval-authority types + formatters (client mirror of the brain-core
+/* Members and approval-authority types + formatters (client mirror of the brain-core
    shapes the BFF relays from GET/POST/PATCH/DELETE /api/brain/members and
    /api/brain/approval-policy). Enforcement is CORE-ONLY — these are for rendering and
    admin conveniences; core's response is always the final word. */

@@ -175,6 +175,7 @@ const SectionCard = ({
   highlightedId,
   registerRowRef,
   onSelect,
+  activeTab,
 }: {
   title: string;
   count?: number;
@@ -182,7 +183,11 @@ const SectionCard = ({
   highlightedId: string | null;
   registerRowRef: (id: number | string) => (el: HTMLDivElement | null) => void;
   onSelect?: (item: ActivityItemData) => void;
+  activeTab: Tab;
 }) => {
+  const emptyText = activeTab === "You Approved"
+    ? "No manual approvals yet. Items you personally approve will show up here."
+    : "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here.";
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -199,13 +204,7 @@ const SectionCard = ({
         {items.length === 0 ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              {title === "Just now"
-                ? "No items just now."
-                : title === "Today"
-                  ? "Nothing today yet."
-                  : title === "Yesterday"
-                    ? "Nothing yesterday."
-                    : "Nothing earlier."}
+              {emptyText}
             </p>
           </div>
         ) : (
@@ -326,6 +325,7 @@ export function ActivityPage() {
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
+              activeTab={activeTab}
             />
             <SectionCard
               title="Yesterday"
@@ -334,6 +334,7 @@ export function ActivityPage() {
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
+              activeTab={activeTab}
             />
             <SectionCard
               title="Earlier"
@@ -342,6 +343,7 @@ export function ActivityPage() {
               highlightedId={highlightedId}
               registerRowRef={registerRowRef}
               onSelect={handleSelect}
+              activeTab={activeTab}
             />
           </div>
 

@@ -1,6 +1,5 @@
 import {
   ADOBE_SETTLED,
-  AUTO_HANDLED_PROPOSALS,
   AWS_SETTLED,
   COMCAST_SETTLED,
   MOCK_PROPOSALS,
@@ -14,9 +13,9 @@ import type { Proposal } from "./proposalTypes";
    Every PROPOSAL REFERENCE across the app (Audit Log record popup, and any other
    linked-evidence surface) resolves the same way: look the proposal up by id
    across every place a proposal can live — the pending review queue
-   (MOCK_PROPOSALS), auto-handled receipts (AUTO_HANDLED_PROPOSALS), and the
-   standalone settled/held records — then, only if it resolves, deep-link to the
-   ReviewPage with `?proposal=<id>` so it auto-opens that exact record. Callers
+   (MOCK_PROPOSALS) and the standalone settled/held records — then, only if it
+   resolves, deep-link to the ReviewPage with `?proposal=<id>` so it auto-opens
+   that exact record. Callers
    use `resolveProposal` to decide whether to render a tappable link or plain
    text; they never duplicate the lookup. An unresolved id is a bug (dangling
    reference) — we `console.warn` loudly rather than fail silently. Mirrors
@@ -29,7 +28,6 @@ import type { Proposal } from "./proposalTypes";
 export function allProposals(): Proposal[] {
   return [
     ...MOCK_PROPOSALS,
-    ...AUTO_HANDLED_PROPOSALS,
     ADOBE_SETTLED,
     AWS_SETTLED,
     COMCAST_SETTLED,

@@ -3,15 +3,17 @@ import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronRight,
-  Lock,
   Plus,
   Sparkles,
   Check,
   Pencil,
-  ArrowRight,
-  Flag,
 } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
+import closeIcon from "@assets/Close_1783293571882.png";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import infoIcon from "@assets/Icons_1783346130548.png";
+import defaultInfoIcon from "@assets/Icons_1783346458429.png";
+import shieldKeyIcon from "@assets/Normal_1783346551915.png";
 import {
   useRules,
   pauseRule,
@@ -90,17 +92,52 @@ function Toggle({ active, onChange, testId }: { active: boolean; onChange: () =>
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
-/* ── Section wrapper — card with header, collapses when empty ───────────────── */
+/* ── Rule confirmation sentence — natural-language summary with highlighted vars */
+function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
+  const { format } = useCurrency();
+  const category = titleCase(rule.category || "payment");
+  const isGuardrail = rule.kind === "guardrail";
+  const vendor = rule.allowlist?.[0];
+  const amount = rule.cap ?? rule.threshold ?? 0;
+  const amountStr = format(amount);
+
+  const actionLabel = isGuardrail
+    ? "flag for review"
+    : rule.name.startsWith("Queue")
+      ? "queue for one-click approval"
+      : "pay it automatically";
+
+  return (
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px] w-full">
+      <span>When a </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{category}</span>
+      {vendor && (
+        <>
+          <span> from </span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{vendor}</span>
+        </>
+      )}
+      <span> is {isGuardrail ? "over" : "under"} </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{amountStr}</span>
+      <span> then </span>
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{actionLabel}</span>
+      <span>?</span>
+    </p>
+  );
+}
+
+/* ── Section wrapper — card with header, always visible ─────────────────────── */
 function Section({
   title,
   count,
   children,
+  empty,
 }: {
   title: string;
   count: number;
   children: React.ReactNode;
+  empty?: React.ReactNode;
 }) {
-  if (count === 0) return null;
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -111,8 +148,14 @@ function Section({
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-        {children}
+      <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+        {count === 0 && empty ? (
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+            {empty}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
@@ -128,11 +171,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full ${
-        pausedFromReport
-          ? "bg-[#11141b] border border-[#1d2132]"
-          : "bg-[#0a0c10] border border-transparent"
-      }`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
       <button
         type="button"
@@ -141,10 +180,10 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.scopeSummary ?? rule.summary}
+          {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
           <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
@@ -169,11 +208,13 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
 /* ── Guardrail row — pulls you back in above a threshold ─────────────────────── */
 function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
+  const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
+  const pausedFromReport = !rule.active && openReports.length > 0;
   const open = () => navigate(`/rules/${rule.id}`);
   return (
     <div
       data-testid={`row-guardrail-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
       <button
         type="button"
@@ -182,11 +223,21 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.summary}
+          {titleCase(rule.summary)}
         </p>
+        {pausedFromReport && (
+          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
+            <div className="flex gap-[8px] items-start relative">
+              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
+                Paused after you reported a problem.
+              </p>
+            </div>
+          </div>
+        )}
       </button>
       <Toggle
         active={rule.active}
@@ -204,11 +255,9 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-alwayson-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
     >
-      <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#1d2132]">
-        <Lock size={14} className="text-[#6c779d]" />
-      </div>
+      <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
         type="button"
         onClick={open}
@@ -216,10 +265,10 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         data-testid={`button-open-rule-${rule.id}`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-          {rule.name}
+          {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {rule.summary}
+          {titleCase(rule.summary)}
         </p>
       </button>
       <span className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] whitespace-nowrap">
@@ -229,13 +278,12 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Live Brain policy — real policy document from brain-core, read-only ─────
-   Phase 2a: display only. This is the tenant's ACTUAL signed policy (thresholds,
-   quorum, approval requirements), NOT the 12 hand-authored rule cards above —
-   kept in its own section so live and mock data are never visually merged.
+/* ── Brain-core default policy — displayed under the "Default" tab ────────
+   Phase 2a: display only. The tenant's ACTUAL signed policy (thresholds,
+   quorum, approval requirements), NOT the app's mock/user rule cards.
    Mutations (pause/edit threshold) need policy:sign scope the token lacks;
    that's Phase 2b. See client/src/lib/brainPolicy.ts for the mapping. */
-function LivePolicySection() {
+function PolicySection() {
   const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
 
   return (
@@ -243,9 +291,11 @@ function LivePolicySection() {
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-            Active Brain policy
+            Default Brain Rules
           </p>
-          <Lock size={13} className="text-[#6c779d]" />
+          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{rules.length}</p>
+          </div>
         </div>
         {!isLoading && !isError && version !== undefined && (
           <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
@@ -280,11 +330,22 @@ function LivePolicySection() {
   );
 }
 
-/* ── Evidence-backed suggestion card ────────────────────────────────────────── */
-const CONFIDENCE: Record<RuleSuggestion["confidence"], { label: string; color: string }> = {
-  high: { label: "High confidence", color: ACTIVE },
-  medium: { label: "Medium confidence", color: "#ff9500" },
-  low: { label: "Low confidence", color: "#6c779d" },
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
+function titleCase(str: string) {
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
+}
+
+/* ── Confidence pill style per Figma ────────────────────────────────────────── */
+const CONFIDENCE: Record<RuleSuggestion["confidence"], { label: string; bg: string; border: string; text: string }> = {
+  high: { label: "High Confidence", bg: "#123509", border: "rgba(66,191,35,0.2)", text: "#42bf23" },
+  medium: { label: "Medium Confidence", bg: "#4a2300", border: "rgba(255,148,0,0.2)", text: "#ff9500" },
+  low: { label: "Low Confidence", bg: "#222737", border: "rgba(108,119,157,0.2)", text: "#6c779d" },
 };
 
 function SuggestionCard({
@@ -301,72 +362,84 @@ function SuggestionCard({
   const conf = CONFIDENCE[suggestion.confidence];
   return (
     <div
-      className="flex flex-col gap-[12px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[14px]"
+      className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
       data-testid={`card-suggestion-${suggestion.id}`}
     >
-      <div className="flex items-start gap-[10px]">
-        <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] bg-[#240757]">
-          <Sparkles size={15} className="text-[#7631ee]" />
-        </div>
-        <div className="flex flex-1 min-w-px flex-col gap-[2px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
-            {suggestion.title}
+      {/* Header — title + confidence pill */}
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
+        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] min-w-px text-[#a8b9f4] text-[20px]" data-testid={`text-suggestion-title-${suggestion.id}`}>
+            {titleCase(suggestion.title)}
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px]">
-            {suggestion.description}
-          </p>
+          <span
+            className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid whitespace-nowrap"
+            style={{ backgroundColor: conf.bg, borderColor: conf.border, color: conf.text }}
+            data-testid={`text-confidence-${suggestion.id}`}
+          >
+            {conf.label}
+          </span>
         </div>
-        <span
-          className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[3px] rounded-[100px] whitespace-nowrap"
-          style={{ backgroundColor: `${conf.color}1f`, color: conf.color }}
-          data-testid={`text-confidence-${suggestion.id}`}
-        >
-          {conf.label}
-        </span>
       </div>
 
-      {/* Mono fact block — the evidence behind the suggestion. */}
-      <div className="rounded-[10px] bg-[#06070a] border border-[#1d2132] p-[12px] flex flex-col gap-[6px]">
-        {suggestion.evidence.map((fact, i) => (
-          <div key={i} className="flex items-baseline justify-between gap-[12px]">
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] whitespace-nowrap">
-              {fact.label}
-            </span>
-            <span
-              className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-right"
-              style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
+      {/* Body */}
+      <div className="flex flex-col gap-[16px] items-start p-[16px] relative shrink-0 w-full">
+        <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#a8b9f4] text-[16px]">
+          {suggestion.description}
+        </p>
+
+        {/* Evidence table — key/value rows with fixed label column. */}
+        <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[8px] shrink-0 w-full">
+          {suggestion.evidence.map((fact, i) => (
+            <div
+              key={i}
+              className={`content-stretch flex items-start relative shrink-0 w-full ${i < suggestion.evidence.length - 1 ? "border-b border-[#1d2132]" : ""}`}
             >
-              {fact.value}
-            </span>
-          </div>
-        ))}
-      </div>
+              <div className="flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[200px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                  {titleCase(fact.label)}
+                </p>
+              </div>
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] whitespace-nowrap"
+                  style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
+                >
+                  {fact.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <div className="flex flex-wrap items-center gap-[8px]">
-        <button
-          type="button"
-          onClick={onAccept}
-          data-testid={`button-accept-suggestion-${suggestion.id}`}
-          className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-        >
-          <Check size={14} /> Review &amp; accept
-        </button>
-        <button
-          type="button"
-          onClick={onTweak}
-          data-testid={`button-tweak-suggestion-${suggestion.id}`}
-          className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-        >
-          <Pencil size={13} /> Tweak first
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          data-testid={`button-dismiss-suggestion-${suggestion.id}`}
-          className="ml-auto px-[12px] py-[8px] rounded-[100px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-        >
-          Dismiss
-        </button>
+        {/* Action buttons row — Accept + Edit on left, Dismiss on right. */}
+        <div className="flex items-start justify-between relative shrink-0 w-full">
+          <div className="flex gap-[16px] items-center relative shrink-0">
+            <button
+              type="button"
+              onClick={onAccept}
+              data-testid={`button-accept-suggestion-${suggestion.id}`}
+              className="bg-[#240757] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              onClick={onTweak}
+              data-testid={`button-tweak-suggestion-${suggestion.id}`}
+              className="bg-[#222737] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+            >
+              Edit
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            data-testid={`button-dismiss-suggestion-${suggestion.id}`}
+            className="bg-[#11141b] content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+          >
+            Dismiss
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -379,41 +452,60 @@ function Chip({
   open,
   onClick,
   testId,
+  compact,
 }: {
   value?: string;
   placeholder: string;
   open: boolean;
   onClick: () => void;
   testId: string;
+  compact?: boolean;
 }) {
+  const hasValue = !!value;
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`inline-flex items-center gap-[4px] rounded-[8px] border px-[10px] py-[3px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] ${
-        value
-          ? "border-[rgba(118,49,238,0.5)] bg-[#240757] text-[#a8b9f4]"
-          : "border-dashed border-[#414965] bg-transparent text-[#6c779d]"
+      className={`inline-flex items-center gap-[4px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] text-[14px] ${
+        compact ? "py-[2px] px-[8px]" : "py-[3px] px-[10px]"
+      } ${
+        hasValue
+          ? "bg-[#240757] text-[#a8b9f4] font-semibold"
+          : "bg-[#11141b] text-[#6c779d] font-medium"
       }`}
     >
       {value ?? placeholder}
-      <ChevronRight size={13} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
     </button>
   );
 }
+
+type BuilderAction = "auto" | "queue" | "flag" | "";
 
 type BuilderState = {
   category: string;
   vendor: string;
   amount: string;
-  action: "pay" | "ask";
+  action: BuilderAction;
 };
 
-const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "pay" };
+const EMPTY_BUILDER: BuilderState = { category: "", vendor: "", amount: "", action: "" };
 
-type RuleTab = "Automations" | "Guardrails" | "Always On" | "Suggested";
-const RULE_TABS: RuleTab[] = ["Automations", "Guardrails", "Always On", "Suggested"];
+const ACTION_LABELS: Record<Exclude<BuilderAction, "">, string> = {
+  auto: "pay it automatically",
+  queue: "queue for one-click approval",
+  flag: "flag for review",
+};
+
+type RuleTab = "Default" | "Automations" | "Guardrails" | "Suggested";
+const RULE_TABS: RuleTab[] = ["Default", "Automations", "Guardrails", "Suggested"];
+const TAB_PARAM_MAP: Record<string, RuleTab> = {
+  default: "Default",
+  automations: "Automations",
+  guardrails: "Guardrails",
+  suggested: "Suggested",
+};
 
 export function RulesPage() {
   const { format } = useCurrency();
@@ -422,7 +514,16 @@ export function RulesPage() {
   const rules = useRules();
   const suggestions = useRuleSuggestions();
 
-  const [activeTab, setActiveTab] = useState<RuleTab>("Automations");
+  const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
+    const sp = new URLSearchParams(search);
+    const t = sp.get("tab");
+    return t ? (TAB_PARAM_MAP[t] ?? "Default") : "Default";
+  });
+  const setActiveTab = (tab: RuleTab) => {
+    setActiveTabState(tab);
+    const slug = tab.toLowerCase().replace(/\s+/g, "-");
+    navigate(`/rules?tab=${slug}`, { replace: true });
+  };
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
   const [openChip, setOpenChip] = useState<null | "category" | "vendor" | "action">(null);
@@ -431,7 +532,6 @@ export function RulesPage() {
 
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
-  const alwaysOn = rules.filter((r) => r.kind === "always_on");
 
   const resetBuilder = () => {
     setBuilder(EMPTY_BUILDER);
@@ -444,7 +544,7 @@ export function RulesPage() {
       category: draft.category && BUILDER_CATEGORIES.includes(draft.category) ? draft.category : "",
       vendor: draft.allowlist?.[0] ?? "",
       amount: String(draft.cap ?? draft.threshold ?? ""),
-      action: draft.kind === "guardrail" ? "ask" : "pay",
+      action: "",
     });
     setOpenChip(null);
     setBuilderOpen(true);
@@ -468,9 +568,10 @@ export function RulesPage() {
   }, []);
 
   const amountNum = Number(builder.amount.replace(/[^0-9.]/g, ""));
-  const isAuto = builder.action === "pay";
+  const isAuto = builder.action === "auto" || builder.action === "queue";
   const builderValid =
     builder.category !== "" &&
+    builder.action !== "" &&
     Number.isFinite(amountNum) &&
     amountNum > 0 &&
     (!isAuto || builder.vendor !== "");
@@ -481,7 +582,7 @@ export function RulesPage() {
 
   const buildDraft = (): AutoRule => {
     const amt = Math.round(amountNum);
-    if (isAuto) {
+    if (builder.action === "auto") {
       const name = `Auto-clear ${builder.category} from ${builder.vendor}`;
       return finalizeDraft({
         kind: "automation",
@@ -495,17 +596,31 @@ export function RulesPage() {
         scopeSummary: `${builder.vendor} (${builder.category}) under ${format(amt)}`,
       });
     }
-    const name = `Ask before paying over ${format(amt)}`;
+    if (builder.action === "queue") {
+      const name = `Queue ${builder.category} from ${builder.vendor} for approval`;
+      return finalizeDraft({
+        kind: "automation",
+        name,
+        summary: `${builder.vendor} · ${builder.category} · under ${format(amt)} · queue for approval`,
+        policyId: builderPolicy,
+        agent: "invoice",
+        category: builder.category,
+        cap: amt,
+        allowlist: [builder.vendor],
+        scopeSummary: `${builder.vendor} (${builder.category}) under ${format(amt)} queued`,
+      });
+    }
+    const name = `Flag ${builder.category} over ${format(amt)} for review`;
     return finalizeDraft({
       kind: "guardrail",
       name,
-      summary: `Any payment above ${format(amt)} waits for your approval`,
+      summary: `Any ${builder.category} above ${format(amt)} gets flagged for review`,
       policyId: builderPolicy,
       agent: "invoice",
       category: "approval threshold",
       threshold: amt,
       thresholdEditable: true,
-      scopeSummary: `any payment over ${format(amt)}`,
+      scopeSummary: `any ${builder.category} over ${format(amt)}`,
     });
   };
 
@@ -546,11 +661,6 @@ export function RulesPage() {
               Manage the rules that guide Brain's reviews, recommendations, and actions.
             </p>
           </div>
-
-          {/* Live Brain policy — the tenant's real policy document, read-only,
-              always visible above the local-rules tabs so it's never mistaken
-              for one of the app's own mock/user rule cards. */}
-          <LivePolicySection />
 
           <div className="flex flex-col gap-[16px] items-start w-full">
             {/* Tab bar — active tab is ORANGE */}
@@ -595,6 +705,9 @@ export function RulesPage() {
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-confirm">
                 compiles to {pendingCreate.policyId}
               </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                Saved to your rules to guide Brain&apos;s reviews. Your enforced policy stays the signed Active Brain policy above until this is applied to it.
+              </p>
               <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
                 <button
                   type="button"
@@ -621,7 +734,7 @@ export function RulesPage() {
             <button
               type="button"
               onClick={() => {
-                setBuilder((b) => ({ ...b, action: activeTab === "Guardrails" ? "ask" : "pay" }));
+                setBuilder(EMPTY_BUILDER);
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
@@ -640,121 +753,148 @@ export function RulesPage() {
               </div>
             </button>
           ) : (
-            <div className="w-full rounded-[16px] border border-[rgba(118,49,238,0.35)] bg-[#0a0c10] p-[16px] flex flex-col gap-[14px]" data-testid="panel-builder">
-              {/* The sentence */}
-              <div className="flex flex-wrap items-center gap-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
-                <span>When a</span>
-                <div className="relative">
-                  <Chip
-                    value={builder.category || undefined}
-                    placeholder="kind of payment"
-                    open={openChip === "category"}
-                    onClick={() => setOpenChip(openChip === "category" ? null : "category")}
-                    testId="chip-category"
-                  />
-                  {openChip === "category" && (
-                    <div className="absolute z-10 mt-[6px] w-[200px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
-                      {BUILDER_CATEGORIES.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
-                          data-testid={`option-category-${c}`}
-                          className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {isAuto && (
-                  <>
-                    <span>from</span>
-                    <div className="relative">
-                      <Chip
-                        value={builder.vendor || undefined}
-                        placeholder="a trusted vendor"
-                        open={openChip === "vendor"}
-                        onClick={() => setOpenChip(openChip === "vendor" ? null : "vendor")}
-                        testId="chip-vendor"
-                      />
-                      {openChip === "vendor" && (
-                        <div className="absolute z-10 mt-[6px] w-[260px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[280px] overflow-y-auto">
-                          <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
-                            Trusted vendors
-                          </p>
-                          {TRUSTED_VENDORS.map((v) => (
+            <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
+              {/* Two-line sentence builder — matches Figma */}
+              <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
+                {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
+                <div className="flex flex-wrap items-center gap-[6px]">
+                  <span>When a</span>
+                  <div className="relative">
+                    <Chip
+                      value={builder.category || undefined}
+                      placeholder="kind of payment"
+                      open={openChip === "category"}
+                      onClick={() => setOpenChip(openChip === "category" ? null : "category")}
+                      testId="chip-category"
+                    />
+                    {openChip === "category" && (
+                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                        {BUILDER_CATEGORIES.map((c) => {
+                          const selected = builder.category === c;
+                          const label = titleCase(c);
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
+                              data-testid={`option-category-${c}`}
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                            >
+                              {label}
+                              {selected && (
+                                <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                  <Check size={10} className="text-white" strokeWidth={3} />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <span>from</span>
+                  <div className="relative">
+                    <Chip
+                      value={builder.vendor || undefined}
+                      placeholder="a trusted vendor"
+                      open={openChip === "vendor"}
+                      onClick={() => setOpenChip(openChip === "vendor" ? null : "vendor")}
+                      testId="chip-vendor"
+                    />
+                    {openChip === "vendor" && (
+                      <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
+                          Trusted vendors
+                        </p>
+                        {TRUSTED_VENDORS.map((v) => {
+                          const selected = builder.vendor === v;
+                          return (
                             <button
                               key={v}
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, vendor: v })); setOpenChip(null); }}
                               data-testid={`option-vendor-${slugify(v)}`}
-                              className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
                             >
                               {v}
+                              {selected && (
+                                <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                  <Check size={10} className="text-white" strokeWidth={3} />
+                                </div>
+                              )}
                             </button>
-                          ))}
-                          <p className="px-[10px] pt-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
-                            Not trusted yet
-                          </p>
-                          {UNTRUSTED_VENDORS.map((v) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => { setOpenChip(null); navigate("/vendors"); }}
-                              data-testid={`option-untrusted-${slugify(v)}`}
-                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]"
-                            >
+                          );
+                        })}
+                        <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
+                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
+                          Not Trusted Yet
+                        </p>
+                        {UNTRUSTED_VENDORS.map((v) => (
+                          <div
+                            key={v}
+                            className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
+                          >
+                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
                               {v}
-                              <span className="flex items-center gap-[3px] text-[#6c779d] text-[12px]">
-                                trust first <ArrowRight size={12} />
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-                <span>is {isAuto ? "under" : "over"}</span>
-                <input
-                  value={builder.amount}
-                  inputMode="numeric"
-                  placeholder="$amount"
-                  onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
-                  data-testid="input-builder-amount"
-                  className="w-[110px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
-                />
-                <span>,</span>
-                <div className="relative">
-                  <Chip
-                    value={isAuto ? "pay it automatically" : "ask me first"}
-                    placeholder="do this"
-                    open={openChip === "action"}
-                    onClick={() => setOpenChip(openChip === "action" ? null : "action")}
-                    testId="chip-action"
+                            </span>
+                            <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                              Not Trusted
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span>is {isAuto ? "under" : "over"}</span>
+                  <input
+                    value={builder.amount}
+                    inputMode="numeric"
+                    placeholder="$0"
+                    onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
+                    data-testid="input-builder-amount"
+                    className="w-[80px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
                   />
-                  {openChip === "action" && (
-                    <div className="absolute z-10 mt-[6px] w-[220px] rounded-[10px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => { setBuilder((b) => ({ ...b, action: "pay" })); setOpenChip(null); }}
-                        data-testid="option-action-pay"
-                        className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                      >
-                        pay it automatically
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setBuilder((b) => ({ ...b, action: "ask" })); setOpenChip(null); }}
-                        data-testid="option-action-ask"
-                        className="w-full text-left rounded-[8px] px-[10px] py-[7px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
-                      >
-                        ask me first
-                      </button>
-                    </div>
-                  )}
+                </div>
+
+                {/* Line 2: "then [action]" */}
+                <div className="flex flex-wrap items-center gap-[6px]">
+                  <span>then</span>
+                  <div className="relative">
+                    <Chip
+                      value={builder.action ? ACTION_LABELS[builder.action] : undefined}
+                      placeholder="what happens"
+                      open={openChip === "action"}
+                      onClick={() => setOpenChip(openChip === "action" ? null : "action")}
+                      testId="chip-action"
+                    />
+                    {openChip === "action" && (
+                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                        {([
+                          { key: "auto", label: "Pay it automatically" },
+                          { key: "queue", label: "Queue for one-click approval" },
+                          { key: "flag", label: "Flag for review" },
+                        ] as const).map(({ key, label }) => {
+                          const selected = builder.action === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => { setBuilder((b) => ({ ...b, action: key })); setOpenChip(null); }}
+                              data-testid={`option-action-${key}`}
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                            >
+                              {label}
+                              {selected && (
+                                <div className="flex items-center justify-center rounded-full bg-[#42bf23] shrink-0" style={{ width: 16, height: 16 }}>
+                                  <Check size={10} className="text-white" strokeWidth={3} />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -763,12 +903,14 @@ export function RulesPage() {
                 compiles to {builderPolicy}
               </p>
 
+              <div className="h-px w-full bg-[#1d2132]" />
+
               <div className="flex gap-[10px] items-stretch w-full">
                 <button
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="px-[16px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
                 >
                   Cancel
                 </button>
@@ -777,9 +919,9 @@ export function RulesPage() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                  className="flex-1 px-[16px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
-                  Create rule
+                  Create Rule
                 </button>
               </div>
             </div>
@@ -787,54 +929,99 @@ export function RulesPage() {
 
           {/* Tab content — each tab shows its own section */}
 
-          {activeTab === "Automations" && (
-            <Section title="Automations" count={automations.length}>
-              {automations.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <AutomationRow rule={r} />
-                  {idx < automations.length - 1 && <Divider />}
-                </div>
-              ))}
-            </Section>
+          {activeTab === "Default" && (
+            <>
+              <PolicySection />
+              {/* Default-specific purple info banner */}
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={defaultInfoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
+                </p>
+              </div>
+            </>
           )}
 
-          {activeTab === "Automations" && automations.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>
-            </div>
+          {activeTab === "Automations" && (
+            <>
+              <Section
+                title="Automations"
+                count={automations.length}
+                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
+              >
+                {automations.map((r, idx) => (
+                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                    <AutomationRow rule={r} />
+                    {idx < automations.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
+            </>
           )}
 
           {activeTab === "Guardrails" && (
-            <Section title="Guardrails" count={guardrails.length}>
-              {guardrails.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <GuardrailRow rule={r} />
-                  {idx < guardrails.length - 1 && <Divider />}
+            <>
+              <Section
+                title="Guardrails"
+                count={guardrails.length}
+                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
+              >
+                {guardrails.map((r, idx) => (
+                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                    <GuardrailRow rule={r} />
+                    {idx < guardrails.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </Section>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Rules are written in plain English, not code. Brain turns each one into an enforceable
+                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                  the evidence behind them.
+                </p>
+              </div>
+            </>
+          )}
+
+          {activeTab === "Suggested" && (
+            <div className="flex flex-col gap-[16px] items-start w-full">
+              {suggestions.length === 0 ? (
+                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    No new suggestions from Brain right now. Check back as your patterns grow.
+                  </p>
                 </div>
-              ))}
-            </Section>
-          )}
-
-          {activeTab === "Guardrails" && guardrails.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>
-            </div>
-          )}
-
-          {activeTab === "Always On" && (
-            <Section title="Always On" count={alwaysOn.length}>
-              {alwaysOn.map((r, idx) => (
-                <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                  <AlwaysOnRow rule={r} />
-                  {idx < alwaysOn.length - 1 && <Divider />}
+              ) : (
+                <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+                  {suggestions.map((s) => (
+                    <SuggestionCard
+                      key={s.id}
+                      suggestion={s}
+                      onAccept={() => onAcceptSuggestion(s)}
+                      onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                      onDismiss={() => dismissSuggestion(s.id)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </Section>
-          )}
-
-          {activeTab === "Always On" && alwaysOn.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No always-on rules active. These run in the background without human approval.</p>
+              )}
             </div>
           )}
 
@@ -865,9 +1052,9 @@ export function RulesPage() {
           >
             <Flag size={15} className="text-[#7631ee] shrink-0 mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-              Rules are written in plain English, not code. Brain turns each one into an enforceable
-              policy for every agent you use, then keeps learning and suggesting new ones — backed by
-              the evidence behind them.
+              Rules are written in plain English, not code. The policy Brain enforces right now is the
+              signed one shown in Active Brain policy above; the automations and guardrails you set here
+              are your own boundaries that guide Brain's reviews and suggestions.
             </p>
           </div>
           </div>

@@ -153,7 +153,7 @@ export const INITIAL_RULES: AutoRule[] = [
 ];
 
 /* ── Evidence-backed AI suggestions — patterns Brain noticed, with the facts.
-   Default unaccepted: the user must "Review & accept" (runs the create flow). ── */
+   Default unaccepted: the user must "Review and accept" (runs the create flow). ── */
 export const INITIAL_SUGGESTIONS: RuleSuggestion[] = [
   {
     id: "sugg-telecom",

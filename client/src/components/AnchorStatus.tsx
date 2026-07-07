@@ -1,4 +1,5 @@
-import { ShieldCheck, Clock, ExternalLink } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
+import anchoredIcon from "@assets/anchored_1783385308122.png";
 import type { AnchorProof } from "@/lib/auditTypes";
 
 /* ── Shared AnchorStatus component ───────────────────────────────────────────────────────────
@@ -20,7 +21,6 @@ export function AnchorStatus({
   const isAnchored = anchor.status === "anchored";
   const pending = !isAnchored;
 
-  const Icon = pending ? Clock : ShieldCheck;
   const iconColor = pending ? "#6c779d" : "#42bf23";
   const statusLabel = pending
     ? "Recorded · anchoring in next batch"
@@ -32,7 +32,11 @@ export function AnchorStatus({
   return (
     <div className="flex flex-col gap-[12px] w-full">
       <div className="flex items-center gap-[8px] w-full">
-        <Icon size={16} style={{ color: iconColor }} className="shrink-0" />
+        {pending ? (
+          <Clock size={16} style={{ color: iconColor }} className="shrink-0" />
+        ) : (
+          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
+        )}
         <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px]" style={{ color: iconColor }}>
           {statusLabel}
         </span>
@@ -71,23 +75,19 @@ export function AnchorStatus({
         </div>
       )}
 
-      {/* Action row: Verify button in proof mode; inline verify link in status mode.
-         Verification is only real once anchored — while pending, the affordance is
-         rendered disabled with an explicit caption and NO live link, driven purely
-         by anchor.status so every surface (audit popup, settled card, receipt) is
-         consistent. */}
+      {/* Action row — 32px above button (gap-[12px] outer + mt-[20px] here) */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[6px] w-full">
+        <div className="flex flex-col gap-[6px] w-full mt-[20px]">
           <button
             type="button"
             onClick={pending ? undefined : onVerify}
             disabled={pending}
             aria-disabled={pending}
             data-testid="button-verify-on-chain"
-            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4ef4] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#7631ee] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-white w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            style={{ background: "#240757", color: "#7631ee" }}
           >
-            Verify on-chain
-            <ExternalLink size={13} />
+            Verify On-Chain
           </button>
           {pending && (
             <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">

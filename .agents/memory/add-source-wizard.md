@@ -10,11 +10,27 @@ The "Add Source" sidebar button opens a paginated, source-agnostic connector wiz
 
 ## Constraints / decisions
 
-- **Documents persist metadata only.** The `sourceDocuments` table + `/api/integrations/documents`
-  routes store name/size/mimeType/category — never the file bytes. There is no object storage wired.
-  **Why:** the feature scope was connect/manage sources, not file hosting. **How to apply:** if a
-  future task needs file contents (preview, parsing), you must add object storage first; don't assume
-  bytes exist.
+- **Documents persist metadata only locally; bytes go to brain-core.** The `sourceDocuments` table
+  stores name/size/mimeType/category + ingestion state (rawId/sha256/sourceType/extractStatus/
+  parsedId/confidence) — never file bytes. Bytes stream to brain-core `/raw/ingest`. No local object
+  storage. **Why:** Brain is the system of record for ingestion/extraction. **How to apply:** don't
+  add OCR/storage here; treat brain-core as the pipeline.
+
+- **Document routes are session-scoped + `requireAuth`.** All `/api/integrations/documents*` routes
+  key storage on `req.session.userId` (NOT the app-wide `DEMO_USER` used by bank/tool connections),
+  because the resulting obligations/wiki data is brain-core tenant-scoped by that same session.
+  **Why:** mixing DEMO_USER local metadata with per-session brain data leaks/misaligns docs across
+  users. **How to apply:** any new document route must auth-gate and scope by session user.
+
+- **Document ingestion is a thin client over brain-core; extracted data is ADVISORY.** Upload →
+  `/raw/ingest` (multipart, source_type pdf_upload|csv_upload) → `/raw/{raw_id}/extract`. Extract
+  404 → `unavailable` ("coming soon", self-heals when Brain ships the endpoint), 422 → `unsupported`
+  (can't read this file type). ReadingScreen reads live doc extractStatus (polls 15s while in
+  progress); FoundScreen reads live `/api/brain/ledger/obligations` (tolerant: 404/empty → [], polls
+  15s while empty, never infinite spinner) + resolves counterparty ids via `/ledger/counterparties`;
+  Q&A → `/api/brain/wiki/question`. Confidence ≤0.5 → always show a "needs confirmation" pill; NEVER
+  a document→payment path. All brain calls use the MEMBER token (agent token is propose-only).
+  **How to apply:** keep extraction outputs advisory-framed; don't wire auto-pay from a document.
 
 - **Generic `:toolId/disconnect` must be registered LAST in `server/routes.ts`.** Specific integration
   routes (`/plaid/*`, `/documents/*`, `/stripe/connect`) must come before

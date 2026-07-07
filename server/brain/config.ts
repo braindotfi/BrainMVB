@@ -20,6 +20,7 @@ const DEFAULT_SCOPES = [
   "ledger:read",
   "wiki:read",
   "raw:read",
+  "raw:write",          // required by POST /raw/ingest
   "policy:read",
   "audit:read",
   "execution:read",

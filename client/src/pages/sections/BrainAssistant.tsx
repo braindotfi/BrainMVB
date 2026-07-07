@@ -8,7 +8,7 @@ import {
   SquarePen,
 } from "lucide-react";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
-import brainLogo from "@assets/figma_icons/brain/brain_assistant_logo.png";
+import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
 import draftActiveIcon from "@assets/Draft_Active_1781886641614.png";
@@ -545,8 +545,8 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         className="flex-1 min-h-0 mx-[7px] rounded-[12px] bg-[#0a0c10] overflow-y-auto"
       >
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-[16px] px-[16px]">
-            <img src={brainLogo} alt="Brain" className="size-[48px]" />
+          <div className="h-full flex flex-col items-center justify-center gap-[4px] px-[16px]">
+            <img src={brainLogo} alt="Brain" className="size-[72px]" />
             <div className="flex flex-col items-center text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px] tracking-[-0.96px]">
                 Hi, I'm Brain

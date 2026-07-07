@@ -24,9 +24,9 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     billingPeriod: "Jun 1 – Jun 30, 2026",
     lineItems: [
       { label: "EC2 compute", amount: 2480 },
-      { label: "S3 storage & transfer", amount: 910 },
+      { label: "S3 storage and transfer", amount: 910 },
       { label: "RDS (Postgres)", amount: 520 },
-      { label: "CloudWatch & support", amount: 240 },
+      { label: "CloudWatch and support", amount: 240 },
     ],
     provenance: {
       source: "QuickBooks Online",
@@ -55,7 +55,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     lineItems: [
       { label: "Delivery charges", amount: 214 },
       { label: "Supply charges", amount: 248 },
-      { label: "Taxes & surcharges", amount: 24 },
+      { label: "Taxes and surcharges", amount: 24 },
     ],
     provenance: {
       source: "Email attachment · billing@coned.com",

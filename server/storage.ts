@@ -89,6 +89,7 @@ export interface IStorage {
   // Source documents (uploaded files registered as an ingestion source)
   listSourceDocuments(userId: string): Promise<SourceDocument[]>;
   createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument>;
+  updateSourceDocumentExtraction(userId: string, id: string, patch: SourceDocumentExtractionPatch): Promise<SourceDocument | null>;
   removeSourceDocument(userId: string, id: string): Promise<boolean>;
 
   // User rules (authored via the "New rule" creator, per tenant)
@@ -117,11 +118,21 @@ export type BankConnection = {
   userId: string;
   itemId: string;          // Plaid item_id (unique per institution per user)
   accessToken: string;     // Plaid access_token (sensitive)
-  institutionId?: string;
-  institutionName?: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
   accounts: BankAccount[];
   connectedAt: string;     // ISO
 };
+
+/** Where the uploaded file is in Brain's extraction pipeline (metadata mirror). */
+export type ExtractStatus =
+  | "pending"      // record created, not yet ingested to Brain
+  | "ingested"     // bytes stored in Brain (raw_id assigned), extraction not triggered/settled
+  | "extracting"   // extraction triggered, parsed record not yet materialized
+  | "extracted"    // Brain produced a parsed record
+  | "unsupported"  // Brain can't read this file type yet (e.g. scanned image — 422)
+  | "unavailable"  // extraction endpoint not deployed yet (404)
+  | "failed";      // ingest/extract errored
 
 export type SourceDocument = {
   id: string;
@@ -130,6 +141,12 @@ export type SourceDocument = {
   size: number;            // bytes
   mimeType: string | null;
   category: string | null; // bank | accounting | payroll | tax | payments | general
+  rawId: string | null;
+  sha256: string | null;
+  sourceType: string | null;     // pdf_upload | csv_upload
+  extractStatus: ExtractStatus | null;
+  parsedId: string | null;
+  confidence: string | null;     // ≤0.5, stored as string
   uploadedAt: string;      // ISO
 };
 
@@ -139,6 +156,22 @@ export type InsertSourceDocument = {
   size: number;
   mimeType?: string | null;
   category?: string | null;
+  rawId?: string | null;
+  sha256?: string | null;
+  sourceType?: string | null;
+  extractStatus?: ExtractStatus | null;
+  parsedId?: string | null;
+  confidence?: string | null;
+};
+
+/** Patch applied after a Brain ingest/extract round-trip. */
+export type SourceDocumentExtractionPatch = {
+  rawId?: string | null;
+  sha256?: string | null;
+  sourceType?: string | null;
+  extractStatus?: ExtractStatus | null;
+  parsedId?: string | null;
+  confidence?: string | null;
 };
 
 export type UserRule = {
@@ -525,10 +558,31 @@ export class MemStorage implements IStorage {
       size: doc.size,
       mimeType: doc.mimeType ?? null,
       category: doc.category ?? null,
+      rawId: doc.rawId ?? null,
+      sha256: doc.sha256 ?? null,
+      sourceType: doc.sourceType ?? null,
+      extractStatus: doc.extractStatus ?? null,
+      parsedId: doc.parsedId ?? null,
+      confidence: doc.confidence ?? null,
       uploadedAt: new Date().toISOString(),
     };
     this.sourceDocs.set(created.id, created);
     return created;
+  }
+  async updateSourceDocumentExtraction(userId: string, id: string, patch: SourceDocumentExtractionPatch): Promise<SourceDocument | null> {
+    const existing = this.sourceDocs.get(id);
+    if (!existing || existing.userId !== userId) return null;
+    const updated: SourceDocument = {
+      ...existing,
+      rawId: patch.rawId !== undefined ? patch.rawId : existing.rawId,
+      sha256: patch.sha256 !== undefined ? patch.sha256 : existing.sha256,
+      sourceType: patch.sourceType !== undefined ? patch.sourceType : existing.sourceType,
+      extractStatus: patch.extractStatus !== undefined ? patch.extractStatus : existing.extractStatus,
+      parsedId: patch.parsedId !== undefined ? patch.parsedId : existing.parsedId,
+      confidence: patch.confidence !== undefined ? patch.confidence : existing.confidence,
+    };
+    this.sourceDocs.set(id, updated);
+    return updated;
   }
   async removeSourceDocument(userId: string, id: string): Promise<boolean> {
     const existing = this.sourceDocs.get(id);
@@ -582,6 +636,24 @@ const MARKETPLACE_SEED: Omit<MarketplaceListing, "id" | "createdAt">[] = [
   { agentId: "deal-001", name: "Deal Closer", description: "Negotiates and executes transactions between agents using on-chain escrow and dispute resolution.", category: "payments", rating: "4.4", installs: 521, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["negotiation", "escrow", "payments"] },
   { agentId: "swarm-001", name: "SwarmAlpha", description: "Coordinates multiple sub-agents to execute complex strategies that no single agent can handle alone.", category: "swarm", rating: "4.8", installs: 2891, price: "free", featured: false, trending: false, newAndNoteworthy: true, previewImages: [], capabilities: ["swarm", "multi-agent", "orchestration"] },
 ];
+
+function mapSourceDocumentRow(r: typeof sourceDocumentsTable.$inferSelect): SourceDocument {
+  return {
+    id: r.id,
+    userId: r.userId,
+    name: r.name,
+    size: r.size,
+    mimeType: r.mimeType,
+    category: r.category,
+    rawId: r.rawId,
+    sha256: r.sha256,
+    sourceType: r.sourceType,
+    extractStatus: (r.extractStatus as ExtractStatus | null) ?? null,
+    parsedId: r.parsedId,
+    confidence: r.confidence,
+    uploadedAt: r.uploadedAt.toISOString(),
+  };
+}
 
 export class DatabaseStorage implements IStorage {
   async init() {
@@ -947,15 +1019,7 @@ export class DatabaseStorage implements IStorage {
       .from(sourceDocumentsTable)
       .where(eq(sourceDocumentsTable.userId, userId))
       .orderBy(desc(sourceDocumentsTable.uploadedAt));
-    return rows.map((r) => ({
-      id: r.id,
-      userId: r.userId,
-      name: r.name,
-      size: r.size,
-      mimeType: r.mimeType,
-      category: r.category,
-      uploadedAt: r.uploadedAt.toISOString(),
-    }));
+    return rows.map((r) => mapSourceDocumentRow(r));
   }
   async createSourceDocument(doc: InsertSourceDocument): Promise<SourceDocument> {
     const [row] = await db
@@ -966,17 +1030,37 @@ export class DatabaseStorage implements IStorage {
         size: doc.size,
         mimeType: doc.mimeType ?? null,
         category: doc.category ?? null,
+        rawId: doc.rawId ?? null,
+        sha256: doc.sha256 ?? null,
+        sourceType: doc.sourceType ?? null,
+        extractStatus: doc.extractStatus ?? null,
+        parsedId: doc.parsedId ?? null,
+        confidence: doc.confidence ?? null,
       })
       .returning();
-    return {
-      id: row.id,
-      userId: row.userId,
-      name: row.name,
-      size: row.size,
-      mimeType: row.mimeType,
-      category: row.category,
-      uploadedAt: row.uploadedAt.toISOString(),
-    };
+    return mapSourceDocumentRow(row);
+  }
+  async updateSourceDocumentExtraction(userId: string, id: string, patch: SourceDocumentExtractionPatch): Promise<SourceDocument | null> {
+    const values: Record<string, unknown> = {};
+    if (patch.rawId !== undefined) values.rawId = patch.rawId;
+    if (patch.sha256 !== undefined) values.sha256 = patch.sha256;
+    if (patch.sourceType !== undefined) values.sourceType = patch.sourceType;
+    if (patch.extractStatus !== undefined) values.extractStatus = patch.extractStatus;
+    if (patch.parsedId !== undefined) values.parsedId = patch.parsedId;
+    if (patch.confidence !== undefined) values.confidence = patch.confidence;
+    if (Object.keys(values).length === 0) {
+      const [row] = await db
+        .select()
+        .from(sourceDocumentsTable)
+        .where(and(eq(sourceDocumentsTable.userId, userId), eq(sourceDocumentsTable.id, id)));
+      return row ? mapSourceDocumentRow(row) : null;
+    }
+    const [row] = await db
+      .update(sourceDocumentsTable)
+      .set(values)
+      .where(and(eq(sourceDocumentsTable.userId, userId), eq(sourceDocumentsTable.id, id)))
+      .returning();
+    return row ? mapSourceDocumentRow(row) : null;
   }
   async removeSourceDocument(userId: string, id: string): Promise<boolean> {
     const res = await db

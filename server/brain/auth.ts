@@ -36,6 +36,13 @@ export interface BrainSession {
    * approve), so it must never back those calls.
    */
   agentToken: string;
+  /**
+   * The SECOND distinct approver's MEMBER token, present on the demo path since the two-signer
+   * approval fix (a payment above the demo policy's threshold needs two distinct approvers).
+   * Optional: a not-yet-deployed core omits it, and the approve path then stays single-signer
+   * (surfaces awaiting_second_approval verbatim, exactly as before). Never reaches the browser.
+   */
+  secondApproverToken?: string;
   tenantId: string;
 }
 
@@ -65,14 +72,14 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   const now = Math.floor(Date.now() / 1000);
   const cached = cache.get(appUserId);
   if (cached && cached.exp - REFRESH_SKEW > now) {
-    return { token: cached.token, agentToken: cached.agentToken, tenantId: cached.tenantId };
+    return { token: cached.token, agentToken: cached.agentToken, secondApproverToken: cached.secondApproverToken, tenantId: cached.tenantId };
   }
 
   // Coalesce: if a session is already being created for this user, await it.
   const pending = inflight.get(appUserId);
   if (pending) {
     const session = await pending;
-    return { token: session.token, agentToken: session.agentToken, tenantId: session.tenantId };
+    return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
   }
 
   const create = createSession(appUserId, now);
@@ -80,7 +87,7 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   try {
     const session = await create;
     cache.set(appUserId, session);
-    return { token: session.token, agentToken: session.agentToken, tenantId: session.tenantId };
+    return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
   } finally {
     inflight.delete(appUserId);
   }
@@ -116,7 +123,12 @@ async function provisionSession(): Promise<CachedSession> {
     token?: string;
     agent_token?: string;
     member_token?: string;
-    tokens?: { agent?: { token?: string }; member?: { token?: string } };
+    second_approver_token?: string;
+    tokens?: {
+      agent?: { token?: string };
+      member?: { token?: string };
+      second_approver?: { token?: string };
+    };
     expires_in?: number;
   };
   // Two principals since the members fix landed: MEMBER (user-principal, backs the platform
@@ -125,6 +137,9 @@ async function provisionSession(): Promise<CachedSession> {
   // core still boots reads/propose.
   const memberToken = json.member_token ?? json.tokens?.member?.token;
   const agentToken = json.agent_token ?? json.tokens?.agent?.token ?? json.token;
+  // The SECOND distinct approver token, present only since the two-signer approval fix. Optional
+  // by design: a not-yet-deployed core omits it and the approve path degrades to single-signer.
+  const secondApproverToken = json.second_approver_token ?? json.tokens?.second_approver?.token;
   if (!json.tenant_id || !agentToken) {
     throw new Error("brain-core /demo/provision-run returned no token/tenant_id");
   }
@@ -135,7 +150,7 @@ async function provisionSession(): Promise<CachedSession> {
     );
   }
   const exp = Math.floor(Date.now() / 1000) + (json.expires_in ?? 30 * 60);
-  return { token: memberToken, agentToken, tenantId: json.tenant_id, exp };
+  return { token: memberToken, agentToken, secondApproverToken, tenantId: json.tenant_id, exp };
 }
 
 /** Local in-process minting — dev fallback only. Mirrors brain-core tools/dev-token. */

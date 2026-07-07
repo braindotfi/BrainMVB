@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
+import { DEMO_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
 
 type Tab = (typeof AUDIT_TABS)[number];
 
@@ -49,19 +49,37 @@ export function AuditLogPage() {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
   const filtered = useMemo(() => {
+    const fromLive = () => {
+      if (activeTab === "Last 30 Days") {
+        return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      }
+      const ev = TAB_TO_EVENT[activeTab];
+      if (activeTab === "Trusted Changes") {
+        return records.filter(
+          (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
+        );
+      }
+      if (ev) {
+        return records.filter((r) => r.eventType === ev);
+      }
+      return records;
+    };
+    const live = fromLive();
+    if (live.length > 0) return live;
+    /* Fallback: show one demo record per tab so UI is testable */
     if (activeTab === "Last 30 Days") {
-      return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      return DEMO_AUDIT_RECORDS.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
     const ev = TAB_TO_EVENT[activeTab];
     if (activeTab === "Trusted Changes") {
-      return records.filter(
+      return DEMO_AUDIT_RECORDS.filter(
         (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
       );
     }
     if (ev) {
-      return records.filter((r) => r.eventType === ev);
+      return DEMO_AUDIT_RECORDS.filter((r) => r.eventType === ev);
     }
-    return records;
+    return DEMO_AUDIT_RECORDS;
   }, [activeTab, records]);
 
   /* Header pager — cycle (wrap-around) through the records in the active tab. */
@@ -85,14 +103,6 @@ export function AuditLogPage() {
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
               </div>
-              <button
-                type="button"
-                className="flex gap-[6px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#222737] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                data-testid="button-export-audit-log"
-              >
-                <Download size={14} className="text-[#6c779d] shrink-0" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] whitespace-nowrap">Export</span>
-              </button>
             </div>
           </div>
 
@@ -135,20 +145,7 @@ export function AuditLogPage() {
               </div>
             )}
 
-            {!isLoading && !isError && filtered.length === 0 && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                  {activeTab === "Approvals" && "No approval records yet."}
-                  {activeTab === "Auto-Approved" && "No auto-approval records yet."}
-                  {activeTab === "Rule Changes" && "No rule changes recorded yet."}
-                  {activeTab === "Trusted Changes" && "No trust status changes yet."}
-                  {activeTab === "Flagged" && "No flagged transactions yet."}
-                  {activeTab === "Last 30 Days" && "No events in the last 30 days."}
-                </p>
-              </div>
-            )}
-
-            {filtered.length > 0 && (
+            {!isLoading && !isError && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
                   <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
@@ -159,42 +156,57 @@ export function AuditLogPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  {filtered.map((record, idx) => {
-                    const isFlagged = record.eventType === "flagged";
-                    const isAnchored = record.anchor.status === "anchored";
-                    return (
-                      <div key={record.id} className="flex flex-col gap-[8px] w-full">
-                        <button
-                          type="button"
-                          onClick={() => setActiveRecord(record)}
-                          data-testid={`row-audit-${record.id.toLowerCase()}`}
-                          className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                          style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
-                        >
-                          <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-                              {record.summary}
-                            </p>
-                            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
-                              {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
-                            </p>
+                  {filtered.length === 0 ? (
+                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                        {activeTab === "Approvals" && "No approval records yet."}
+                        {activeTab === "Auto-Approved" && "No auto-approval records yet."}
+                        {activeTab === "Rule Changes" && "No rule changes recorded yet."}
+                        {activeTab === "Trusted Changes" && "No trust status changes yet."}
+                        {activeTab === "Flagged" && "No flagged transactions yet."}
+                        {activeTab === "Last 30 Days" && "No events in the last 30 days."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                      {filtered.map((record, idx) => {
+                        const isFlagged = record.eventType === "flagged";
+                        const isAnchored = record.anchor.status === "anchored";
+                        return (
+                          <div key={record.id} className="flex flex-col gap-[8px] w-full">
+                            <button
+                              type="button"
+                              onClick={() => setActiveRecord(record)}
+                              data-testid={`row-audit-${record.id.toLowerCase()}`}
+                              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                              style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
+                            >
+                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+                                  {record.summary}
+                                </p>
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
+                                  {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
+                                </p>
+                              </div>
+                              <div
+                                className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
+                                  isAnchored
+                                    ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
+                                    : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
+                                }`}
+                              >
+                                <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
+                                  {isAnchored ? "Anchored" : "Pending"}
+                                </p>
+                              </div>
+                            </button>
+                            {idx < filtered.length - 1 && <Divider />}
                           </div>
-                          <div
-                            className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
-                              isAnchored
-                                ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
-                                : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
-                            }`}
-                          >
-                            <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
-                              {isAnchored ? "Anchored" : "Pending"}
-                            </p>
-                          </div>
-                        </button>
-                        {idx < filtered.length - 1 && <Divider />}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
