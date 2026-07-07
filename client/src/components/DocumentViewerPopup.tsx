@@ -11,6 +11,7 @@ import {
   Package,
   ExternalLink,
   ArrowLeftRight,
+  Info,
 } from "lucide-react";
 import invoiceImg from "@assets/invoice_1783385090730.png";
 import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
@@ -100,7 +101,7 @@ function DarkTableRow({ label, value }: { label: string; value: string }) {
 
 /* ── Invoice pane — Figma 5573:97699 dark-themed invoice viewer ───────────── */
 function InvoicePane({ doc }: { doc: DocumentRecord }) {
-  const [thumbHovered, setThumbHovered] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const { format } = useCurrency();
   const proposal = resolveProposal(doc.proposalId);
   const match = proposal && typeof doc.amount === "number" && typeof proposal.amount === "number"
@@ -109,13 +110,36 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
 
   return (
     <div className="flex flex-col gap-[32px] w-full">
+      {/* Fullscreen invoice preview overlay */}
+      {previewOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-[4px]"
+          onClick={() => setPreviewOpen(false)}
+          data-testid="invoice-preview-overlay"
+        >
+          <div
+            className="relative max-w-[640px] w-[90vw] rounded-[16px] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.8)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={invoiceImg} alt="Invoice preview" className="w-full block" />
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              data-testid="button-close-invoice-preview"
+              className="absolute top-[12px] right-[12px] size-[32px] flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors focus:outline-none"
+            >
+              <img src={closeIcon} alt="" className="size-[24px]" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top: thumbnail + invoice id + status + amount/date */}
       <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
-        {/* Invoice thumbnail with magnifying glass hover overlay */}
+        {/* Invoice thumbnail — click expands full preview, hover shows magnifier */}
         <div
-          className="relative shrink-0 size-[56px] rounded-[12px] overflow-hidden cursor-pointer"
-          onMouseEnter={() => setThumbHovered(true)}
-          onMouseLeave={() => setThumbHovered(false)}
+          className="group relative shrink-0 size-[56px] rounded-[12px] overflow-hidden cursor-pointer"
+          onClick={() => setPreviewOpen(true)}
           data-testid="invoice-thumbnail"
         >
           <img
@@ -123,11 +147,9 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
             alt="Invoice"
             className="absolute inset-0 size-full object-cover rounded-[12px]"
           />
-          {thumbHovered && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-[12px]" style={{ background: "rgba(0,0,0,0.45)" }}>
-              <img src={magnifyingGlassImg} alt="View" className="size-[32px]" />
-            </div>
-          )}
+          <div className="absolute inset-0 flex items-center justify-center rounded-[12px] bg-black/0 group-hover:bg-black/45 transition-all">
+            <img src={magnifyingGlassImg} alt="View" className="size-[32px] opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
         <div className="content-stretch flex flex-[1_0_0] flex-col gap-[8px] items-start min-w-px relative">
           <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
@@ -231,30 +253,31 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
         </div>
       )}
 
-      {/* Open Original in Source System */}
+      {/* Info box — Figma 5573:97923 — between provenance and Open Original */}
+      <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] w-full">
+        <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
+          <Info size={16} className="text-[#6c779d] shrink-0 mt-[1px]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+            A viewer, not an AP system — Brain reads this invoice; your accounting system owns it.
+          </p>
+        </div>
+      </div>
+
+      {/* Open Original in Source System — no icon per Figma */}
       {doc.documentHref && (
         <a
           href={doc.documentHref}
           target="_blank"
           rel="noopener noreferrer"
           data-testid="link-open-original"
-          className="flex items-center justify-center gap-[8px] px-[20px] py-[10px] rounded-[100px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] transition-opacity hover:opacity-80"
+          className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] transition-opacity hover:opacity-80"
           style={{ background: "#240757" }}
         >
-          <ExternalLink size={14} style={{ color: "#7631ee" }} className="shrink-0" />
           <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px]" style={{ color: "#7631ee" }}>
             Open Original in Source System
           </span>
         </a>
       )}
-
-      {/* Viewer-not-owner caption */}
-      <div className="flex items-start gap-[8px] w-full">
-        <Package size={13} className="text-[#414965] shrink-0 mt-[2px]" />
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-[#6c779d]">
-          Brain reads this invoice from your connected source — it's a viewer, not the system of record.
-        </p>
-      </div>
     </div>
   );
 }
@@ -678,11 +701,11 @@ export function DocumentViewerPopup({
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[560px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >
-          {/* Header — invoice uses "Invoices" centered title; other kinds show doc id + kind */}
+          {/* Header — invoice uses "Invoice Record" centred title; other kinds show doc id + kind */}
           {doc.kind === "invoice" ? (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)]">
-                Invoices
+                Invoice Record
               </p>
               <DialogPrimitive.Close
                 className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"

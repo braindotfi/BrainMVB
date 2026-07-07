@@ -106,39 +106,29 @@ export function AuditRecordPopup({
     </div>
   );
 
+  const hasPager = !!(onPrev && onNext);
+
   return (
     <>
       <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
-            {/* Header: [prev/next pager] [centered title] [close] */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] flex items-center px-[12px] relative shrink-0 w-full">
-              {/* Pager buttons — left side */}
-              {onPrev && onNext ? (
-                <RecordPager
-                  onPrev={onPrev}
-                  onNext={onNext}
-                  disabled={pagerDisabled}
-                  testIdPrefix="audit-record"
-                />
-              ) : (
-                <div className="size-[68px] shrink-0" />
-              )}
-              {/* Centered title */}
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap flex-1 min-w-px">
+
+            {/* Header — close button right, title centred */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
+              <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
                 Audit Record
               </p>
-              {/* Close — right side */}
               <DialogPrimitive.Close
-                className="size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+                className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 data-testid="button-close-audit-popup"
               >
                 <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
               </DialogPrimitive.Close>
             </div>
 
-            {/* Summary header */}
+            {/* Summary */}
             <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
@@ -153,7 +143,9 @@ export function AuditRecordPopup({
               </div>
             </div>
 
+            {/* Scrollable body */}
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
+
               {/* Decision Lifecycle */}
               {record.lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
@@ -169,7 +161,7 @@ export function AuditRecordPopup({
                             const actorMember = resolveMemberByTokens(actorIdentityTokens(step.actor));
                             return (
                               <div key={idx} className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full">
-                                {/* Icon + connector column */}
+                                {/* Icon + solid connector column */}
                                 <div className="flex flex-col items-center shrink-0 w-[16px]">
                                   <img
                                     src={isAlert ? warningIcon : checkIcon}
@@ -177,15 +169,7 @@ export function AuditRecordPopup({
                                     className="size-[16px] shrink-0"
                                   />
                                   {!isLast && (
-                                    <div
-                                      className="mt-[4px] flex-1 min-h-[16px]"
-                                      style={{
-                                        width: "2px",
-                                        borderLeft: "2px dashed #1d2132",
-                                        marginLeft: "auto",
-                                        marginRight: "auto",
-                                      }}
-                                    />
+                                    <div className="mt-[4px] w-[2px] flex-1 min-h-[16px] bg-[#1d2132]" />
                                   )}
                                 </div>
                                 <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[4px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
@@ -204,14 +188,12 @@ export function AuditRecordPopup({
                                     )}
                                     {actorRole && (
                                       <span data-testid={`text-actor-role-${idx}`} className="text-[#6c779d]">
-                                        {" "}
-                                        · {actorRole}
+                                        {" "}· {actorRole}
                                       </span>
                                     )}
                                     {step.authority && (
                                       <span data-testid={`text-actor-authority-${idx}`} className="text-[#6c779d]">
-                                        {" "}
-                                        · {step.authority}
+                                        {" "}· {step.authority}
                                       </span>
                                     )}
                                   </p>
@@ -308,10 +290,25 @@ export function AuditRecordPopup({
                   <AnchorStatus anchor={record.anchor} mode="proof" onVerify={handleVerify} />
                 </div>
               </div>
+
             </div>
+
+            {/* Bottom pager footer — prev/next to cycle through records */}
+            {hasPager && (
+              <div className="border-[#1d2132] border-t border-solid flex items-center justify-center gap-[8px] px-[24px] py-[14px] shrink-0 w-full">
+                <RecordPager
+                  onPrev={onPrev!}
+                  onNext={onNext!}
+                  disabled={pagerDisabled}
+                  testIdPrefix="audit-record"
+                />
+              </div>
+            )}
+
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
+
       <DocumentViewerPopup
         document={viewingDocument}
         open={documentOpen}
