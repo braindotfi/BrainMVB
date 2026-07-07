@@ -71,7 +71,9 @@ is deleted). Current state:
 | Finances tab (accounts, transactions, counterparties, invoices) | CORE-BACKED via `/api/brain/ledger/*`; mock only as fallback |
 | HomePage "Brain's take" / Brain Assistant chat | CORE-BACKED (Claude, ledger-grounded); static/canned fallback |
 | Bills inbox + Review live PaymentIntents (`useIntents`) | CORE-BACKED (read + propose/reject only) |
-| Review queue proposals, Rules, Vendors, Documents, Audit Log | MOCK-ONLY (`client/src/lib/mock*.ts`) |
+| Review "Needs Review" queue (`useBrainReviewQueue`) | CORE-BACKED read via `/api/brain/actions`; mock (`MOCK_PROPOSALS[0]`) fallback only when the live queue is empty — it drives the demo propose → executing → settled flow |
+| Vendors (Counterparties tab) | CORE-BACKED read via `/api/brain/ledger/counterparties`; mock (`MOCK_VENDORS`) fallback |
+| Rules, Documents (viewer/resolution), Audit Log (`/audit-log`) | MOCK-ONLY (`client/src/lib/mock*.ts` via `rulesStore`/`documentsStore`/`mockAuditRecords`). NOTE: document *ingestion* (AddSource) is CORE-BACKED — see "Document Ingestion" below — but the document *viewer/resolution* store is mock. |
 | Members & approval authority (Settings → Team) | CORE-BACKED via `/api/brain/members` + `/approval-policy` (member/user-principal token); no mock fallback (see `.agents/memory/members-authority-integration.md`) |
 
 ## brain-core BFF (`server/brain/`)

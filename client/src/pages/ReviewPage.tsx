@@ -12,13 +12,14 @@ function titleCase(str: string) {
     });
 }
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Clock, Loader, Flag } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Loader, Flag, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ReviewModal,
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
+import { SettledRecordCard } from "@/components/SettledRecordCard";
 import { MOCK_PROPOSALS } from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -190,15 +191,12 @@ const SETTLED_META: Record<string, { icon: typeof CheckCircle2; color: string; l
   postponed: { icon: Clock, color: "#6c779d", label: () => "Postponed to tomorrow" },
 };
 
-const SettledRow = ({ proposal, status }: { proposal: Proposal; status: ProposalStatus }) => {
+const SettledRow = ({ proposal, status, onClick }: { proposal: Proposal; status: ProposalStatus; onClick?: () => void }) => {
   const meta = SETTLED_META[status];
   if (!meta) return null;
   const Icon = meta.icon;
-  return (
-    <div
-      data-testid={`row-settled-${proposal.id}`}
-      className="flex gap-[10px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full"
-    >
+  const inner = (
+    <>
       <Icon size={15} style={{ color: meta.color }} className="shrink-0" />
       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] truncate flex-1 min-w-px">
         {proposal.title}
@@ -206,6 +204,29 @@ const SettledRow = ({ proposal, status }: { proposal: Proposal; status: Proposal
       <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[12px] shrink-0" style={{ color: meta.color }}>
         {meta.label(proposal)}
       </p>
+      {onClick && <ChevronRight size={14} className="text-[#414965] shrink-0" />}
+    </>
+  );
+  if (onClick) {
+    // Executed rows open the settled STATUS card (operational surface); the full
+    // cryptographic PROOF lives in the canonical Audit Log record it links to.
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        data-testid={`row-settled-${proposal.id}`}
+        className="flex gap-[10px] items-center p-[8px] rounded-[8px] w-full text-left border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <div
+      data-testid={`row-settled-${proposal.id}`}
+      className="flex gap-[10px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full"
+    >
+      {inner}
     </div>
   );
 };
@@ -221,6 +242,8 @@ export function ReviewPage() {
      Every transition is user-driven — no setTimeout / auto-settle anywhere. */
   const statuses = useReviewStatuses();
   const [active, setActive] = useState<Proposal | null>(null);
+  // Settled STATUS card — opened from an executed "Settled today" row.
+  const [settledCard, setSettledCard] = useState<Proposal | null>(null);
   // When a proposal is opened via a deep-link that carried a `?from=` return
   // target (e.g. from the Audit Log record popup), dismissing the sheet returns
   // there so that surface re-opens — mirroring the stacked invoice experience.
@@ -242,11 +265,23 @@ export function ReviewPage() {
   // this durable queue doesn't show the same intent twice.
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
-  /* Demo fallback: when live queue is empty, show one mock proposal so the
-     "Needs Review" tab UI is testable. */
-  const demoQueue: Proposal[] = queue.length === 0 ? [MOCK_PROPOSALS[0]] : [];
-  const executing: Proposal[] = [];
-  const settled: Proposal[] = [];
+  /* Demo fallback: when the live queue is empty, one mock proposal drives the
+     Needs Review -> executing -> settled flow so the surface is testable end to
+     end. Every transition is user-driven via reviewStatusStore (no setTimeout);
+     the demo proposal lives in exactly one of the three lists at a time, keyed by
+     its override status. When the live queue has real items, the demo flow is off
+     (live rows have no client-side settled state, so executing/settled stay empty). */
+  const demoBase = MOCK_PROPOSALS[0];
+  const demoStatus = statuses[demoBase.id];
+  const demoActive = queue.length === 0;
+  const demoQueue: Proposal[] =
+    demoActive && (demoStatus === undefined || demoStatus === "pending") ? [demoBase] : [];
+  const executing: Proposal[] =
+    demoActive && (demoStatus === "executing" || demoStatus === "verifying") ? [demoBase] : [];
+  const settled: Proposal[] =
+    demoActive && (demoStatus === "executed" || demoStatus === "rejected" || demoStatus === "postponed")
+      ? [demoBase]
+      : [];
 
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
@@ -577,7 +612,12 @@ export function ReviewPage() {
                 <WidgetHeader title="Settled today" count={settled.length} />
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                   {settled.map((p) => (
-                    <SettledRow key={p.id} proposal={p} status={statusOf(p)} />
+                    <SettledRow
+                      key={p.id}
+                      proposal={p}
+                      status={statusOf(p)}
+                      onClick={statusOf(p) === "executed" ? () => setSettledCard(p) : undefined}
+                    />
                   ))}
                 </div>
               </div>
@@ -646,6 +686,20 @@ export function ReviewPage() {
             storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
           }
         }}
+      />
+
+      {/* Settled STATUS card — past-tense "You approved / executed" view with the
+          anchor line in status mode (AnchorStatus mode="status"); the full PROOF
+          lives in the canonical Audit Log record this links to. */}
+      <SettledRecordCard
+        proposal={settledCard}
+        open={settledCard !== null}
+        onOpenChange={(o) => { if (!o) setSettledCard(null); }}
+        onViewAuditLog={() => {
+          navigate(`/audit-log?record=${settledCard?.auditId ?? ""}`);
+          setSettledCard(null);
+        }}
+        anchorAuditId={settledCard?.auditId}
       />
 
       {/* Legacy / live approval modal. For a live PaymentIntent, Confirm/Approve
