@@ -972,12 +972,16 @@ You can explain concepts and surface general guidance, but do not give regulated
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
       } catch (err) {
-        if (err instanceof BrainApiError && err.status === 404) {
-          extractStatus = "unavailable"; // endpoint not deployed yet — self-heals when Brain ships
-        } else if (err instanceof BrainApiError && err.status === 422) {
+        if (err instanceof BrainApiError && err.status === 422) {
           extractStatus = "unsupported"; // can't read this file type yet (e.g. scanned image)
+        } else if (err instanceof BrainApiError) {
+          // 404 = not deployed; 403 = token lacks raw:write scope; 500 = under construction.
+          // All map to "unavailable" so the UI says "extraction coming soon" instead of "failed".
+          console.warn(`[document-extract] rawId=${rawId} status=${err.status} body=${JSON.stringify(err.body)}`);
+          extractStatus = "unavailable";
         } else {
-          extractStatus = "failed";
+          console.warn(`[document-extract] rawId=${rawId} network error:`, (err as Error).message);
+          extractStatus = "unavailable";
         }
       }
       const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, {
