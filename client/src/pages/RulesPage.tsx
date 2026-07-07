@@ -95,7 +95,7 @@ const Divider = () => <div className="h-px shrink-0 w-full" style={{ background:
 /* ── Rule confirmation sentence — natural-language summary with highlighted vars */
 function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
   const { format } = useCurrency();
-  const category = rule.category || "payment";
+  const category = titleCase(rule.category || "payment");
   const isGuardrail = rule.kind === "guardrail";
   const vendor = rule.allowlist?.[0];
   const amount = rule.cap ?? rule.threshold ?? 0;
@@ -330,9 +330,15 @@ function PolicySection() {
   );
 }
 
-/* ── Title case helper — used for all evidence / fact table labels ──────────── */
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
 }
 
 /* ── Confidence pill style per Figma ────────────────────────────────────────── */
@@ -363,7 +369,7 @@ function SuggestionCard({
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] min-w-px text-[#a8b9f4] text-[20px]" data-testid={`text-suggestion-title-${suggestion.id}`}>
-            {suggestion.title}
+            {titleCase(suggestion.title)}
           </p>
           <span
             className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid whitespace-nowrap"
@@ -779,7 +785,7 @@ export function RulesPage() {
                       <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
                         {BUILDER_CATEGORIES.map((c) => {
                           const selected = builder.category === c;
-                          const label = c.charAt(0).toUpperCase() + c.slice(1);
+                          const label = titleCase(c);
                           return (
                             <button
                               key={c}

@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
-/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
 }
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {

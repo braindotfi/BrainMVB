@@ -1,9 +1,15 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-/* ── Title case helper — used for all rule labels ─────────────────────────────────────────────── */
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
 }
 import { CircleCheck, ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";

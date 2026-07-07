@@ -38,9 +38,15 @@ import type {
   FactRow,
 } from "@/lib/proposalTypes";
 
-/* ── Title case helper — used for all evidence / fact table labels ──────────── */
+/* ── Title case helper — used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  return str
+    .replace(/(^| )&($| )/g, "$1and$2")
+    .replace(/\w\S*/g, (txt) => {
+      const lower = txt.toLowerCase();
+      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
+    });
 }
 
 /* Brain is PROPOSE-ONLY. One component renders every scenario; sections appear

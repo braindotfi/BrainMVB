@@ -23,7 +23,7 @@ export type SemanticIssue = { source: string; message: string };
 /* Asserts that every auto_approved audit record has a linked rule whose category
    semantically matches the counterparty's line of business.  This is deliberately
    lightweight: we only flag category/counterparty mismatches that are OBVIOUSLY
-   wrong (e.g. a contractor auto-approved under a "rent & lease" rule).  */
+   wrong (e.g. a contractor auto-approved under a "rent and lease" rule).  */
 export function checkSemanticAuditRecords(): SemanticIssue[] {
   const issues: SemanticIssue[] = [];
 
