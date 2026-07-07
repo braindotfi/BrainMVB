@@ -1,0 +1,59 @@
+Finish the reconciliation (the PR to main never landed) plus four small hardening items from
+the latest review. The git operations require system-level git access, so set this up as a
+background Project Task immediately — do not attempt git writes as the main agent, and make
+NO code edits on the current branch outside the task.
+
+WORKFLOW (required): git fetch + git pull on every branch touched before any operation. Code
+changes go on a NEW branch (fix/main-merge-and-hardening) built from feat/ui-rework. Keep a
+running done/pending checklist against the five tasks in the PR description. Update
+replit.md and CLAUDE.md as part of the work.
+
+=========================================================================
+TASK 1 — LAND MAIN (the missing last step)
+=========================================================================
+main is still frozen at April 25; all current work lives on feat/ui-rework (tip 4368510).
+1. Complete tasks 2-5 below on the working branch first.
+2. Open a PR: working branch → main, titled as the platform catch-up merge. Merge it.
+3. Verify post-merge: main's replit.md opens with "# Brain. Your AI Brain, built to run
+   finance for you.", the members flow works end to end (provision → member token →
+   GET /v1/members 200), SIWE verification active, vitest suite green ON MAIN.
+4. Delete the superseded branches feat/brain-core-honesty and feat/brain-core-integration
+   after confirming main contains every commit they hold that matters (the reconciliation
+   commit 7e89a5b already folded them in; verify with git log before deleting).
+
+=========================================================================
+TASK 2 — CSPRNG NONCE
+=========================================================================
+server/routes.ts /api/auth/nonce currently generates the SIWE nonce with Math.random()
+(predictable, not a CSPRNG). Replace with crypto.randomBytes(32).toString("hex") from
+node:crypto. Do not change the consume-before-validate flow, expiry, or address binding —
+those are correct. Add one test: two generated nonces are 64 hex chars and distinct.
+
+=========================================================================
+TASK 3 — WIRE TESTS INTO CI
+=========================================================================
+Add .github/workflows/test.yml: on every pull_request and push to main, install deps and run
+the vitest suite (npm test). Node version matching the project. The suite must pass for the
+workflow to be green — this turns the BFF invariant tests into a merge gate instead of
+documentation. Keep it minimal: one job, checkout, setup-node with cache, install, test.
+
+=========================================================================
+TASK 4 — POSITIONING SWEEP VERIFICATION
+=========================================================================
+Grep replit.md and CLAUDE.md for any remaining PRESENT-TENSE neobank-era claims (neobank,
+custody, trading caps, "holds funds" describing the current product). Fix any found.
+History sections accurately describing the past stay untouched. Integration notes (e.g.
+WireX rows) may remain as factual records but must not describe Brain as a neobank today.
+No em dashes, no ampersands, no emojis in any copy written.
+
+=========================================================================
+TASK 5 — DOCS
+=========================================================================
+CLAUDE.md: record that main is now current and is the source of truth; superseded branches
+deleted; the CI gate exists and any change to server/brain/* must keep the invariant suite
+green; nonce generation is CSPRNG. Update the boundary table only if any row's status
+changed in the merge (none expected).
+
+Return: the merged PR link, the post-merge verification results (headline, members probe,
+SIWE, tests green on main), the CI workflow run link showing a green gate, the branch
+deletions, and the done/pending checklist.
