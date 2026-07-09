@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import { Info, ChevronRight } from "lucide-react";
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -22,9 +23,6 @@ function timeAgo(ts: number): string {
 
 import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
-import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
-const IMG_INVOICE_BG = INLINE_FIGMA.invoiceBg;
-const IMG_INVOICE_ICON = INLINE_FIGMA.invoiceIcon;
 
 // ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
 // Shape mirrors brain-core's Account schema (subset we render).
@@ -196,29 +194,16 @@ const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => str
     .join(" and ");
 
   return (
-    <div className="flex flex-col items-start relative shrink-0 w-full">
-      <div className="border border-[#1d2132] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-        <div className="flex flex-1 gap-[8px] items-start min-w-px relative">
-          <div className="relative shrink-0 size-[16px]">
-            <div className="absolute flex items-center justify-center left-0 size-[16px] top-0">
-              <div className="-rotate-90 flex-none">
-                <div className="relative size-[16px]">
-                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_BG} />
-                </div>
-              </div>
-            </div>
-            <div className="absolute left-[2px] size-[12px] top-[2px]">
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INVOICE_ICON} />
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[14px] w-full">
-              {overdue.length} invoice{overdue.length === 1 ? " is" : "s are"} overdue!
-            </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
-              {detail}.
-            </p>
-          </div>
+    <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
+      <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
+        <Info className="relative shrink-0 size-[16px] text-[#ff9400]" />
+        <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[#ff9400] text-[14px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-bold relative shrink-0 uppercase w-full">
+            {overdue.length} invoice{overdue.length === 1 ? "" : "s"} overdue!
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium relative shrink-0 w-full">
+            {detail}.
+          </p>
         </div>
       </div>
     </div>
@@ -283,8 +268,13 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   }, [count, onCount]);
 
   return (
-    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent">
-      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">{text}</p>
+    <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
+      <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
+        <Info className="relative shrink-0 size-[16px] text-[#6c779d]" />
+        <p className="[word-break:break-word] flex-[1_0_0] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
+          {text}
+        </p>
+      </div>
     </div>
   );
 };
@@ -332,13 +322,13 @@ const IncomeTxList = ({
               data-testid={`income-tx-${t.id}`}
               onClick={() => onOpen(t.id)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
-              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+              <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{shortDate(t.transaction_date)}</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
               </div>
-              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
+              <p className="[word-break:break-word] [font-family:'JetBrains_Mono',monospace] font-semibold leading-[20px] not-italic relative shrink-0 text-[#42bf23] text-[16px] text-right w-[160px]">
                 +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
               </p>
             </div>
@@ -473,8 +463,10 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
   }, [count, onCount]);
 
   return (
-    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">{text}</p>
+    <div className="flex flex-col gap-[8px] items-start justify-center p-[8px] relative shrink-0 w-full">
+      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-full not-italic relative shrink-0 text-[#6c779d] text-[16px]">
+        {text}
+      </p>
     </div>
   );
 };
@@ -655,11 +647,13 @@ export function FinancesPage() {
 
             {/* INCOME */}
             {activeTab === "Income" && (
-              <WidgetCard title="Income" count={incomeCount}>
-                <IncomeSummary format={format} onCount={setIncomeCount} />
-                <IncomeTxList format={format} onOpen={setOpenTxId} />
+              <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
                 <OverdueInvoicesBanner format={format} />
-              </WidgetCard>
+                <IncomeSummary format={format} onCount={setIncomeCount} />
+                <WidgetCard title="Income" count={incomeCount}>
+                  <IncomeTxList format={format} onOpen={setOpenTxId} />
+                </WidgetCard>
+              </div>
             )}
 
             {/* EXPENSES */}
@@ -667,20 +661,18 @@ export function FinancesPage() {
 
             {/* LIABILITIES */}
             {activeTab === "Liabilities" && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Liabilities" count={liabilitiesCount} />
-                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
-                  <button
-                    type="button"
-                    data-testid="link-liabilities-bills"
-                    onClick={() => setActiveTab("Bills")}
-                    className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631EE] hover:text-[#8f52f5] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
-                  >
-                    View bills to pay →
-                  </button>
-                </div>
-              </div>
+              <WidgetCard title="Liabilities" count={liabilitiesCount}>
+                <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
+                <button
+                  type="button"
+                  data-testid="link-liabilities-bills"
+                  onClick={() => setActiveTab("Bills")}
+                  className="bg-[#240757] content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  View Bills to Pay
+                  <ChevronRight className="relative shrink-0 size-[16px] text-[#7631ee]" />
+                </button>
+              </WidgetCard>
             )}
 
           </div>
