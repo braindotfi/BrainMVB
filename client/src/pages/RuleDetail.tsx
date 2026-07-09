@@ -736,7 +736,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
   const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
 
   return (
-    <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full mb-[16px]">
+    <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
       {/* Back button — same pill style as automations/guardrails/suggested tabs */}
       <button
         type="button"
@@ -781,7 +781,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
   const execute = rule.execute ?? "confirm";
 
   return (
-    <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+    <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
       {/* Info banner — matches Figma "Inputfields / Dropdowns" row */}
       <div
         className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full"
