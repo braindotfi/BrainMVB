@@ -11,7 +11,7 @@ import accountingIcon from "@assets/accounting_1783619257498.png";
 import payrollIcon from "@assets/payroll_1783619257499.png";
 import taxIcon from "@assets/tax_1783619257500.png";
 import paymentsIcon from "@assets/payments_1783619257499.png";
-import documentsIcon from "@assets/documents_1783619257499.png";
+import docsIcon from "@assets/docs_1783620204593.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source — paginated wizard for connecting data sources to Brain.
@@ -401,7 +401,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Sources Brain reads from
+          Sources Brain Reads From
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Everything connected to your financial memory. Remove any source any time. Brain only reads, and never writes without your approval.
@@ -581,7 +581,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          What would you like to connect?
+          What Would You Like To Connect?
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Pick a category. Brain treats every source the same way. It reads it, structures it, and adds it to your financial memory.
@@ -648,7 +648,7 @@ const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
   payroll: payrollIcon,
   tax: taxIcon,
   payments: paymentsIcon,
-  documents: documentsIcon,
+  documents: docsIcon,
 };
 
 function CategoryIcon({ cat }: { cat: CategoryId }) {
@@ -700,7 +700,7 @@ function BankConnect({ onDone }: { onDone: () => void }) {
     <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Connect your bank
+          Connect Your Bank
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Brain reads your account activity to understand what&apos;s coming in and going out. Add checking, savings, and credit cards in a minute.
@@ -899,7 +899,7 @@ function ProviderPicker({ category }: { category: CategoryId }) {
     <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Connect {CATEGORY_META[category].label.toLowerCase()}
+          Connect {CATEGORY_META[category].label}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Brain reads from each tool you connect, and never writes back without your explicit approval.
@@ -1034,7 +1034,7 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
     <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          {category === "tax" ? "Upload tax documents" : "Upload documents"}
+          {category === "tax" ? "Upload Tax Documents" : "Upload Documents"}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           {category === "tax"
@@ -1209,7 +1209,7 @@ function ReadingScreen({
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Reading your sources
+          Reading Your Sources
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Brain is reviewing your uploaded documents. Anything it reads is advisory until you confirm it.
@@ -1235,10 +1235,8 @@ function ReadingScreen({
               data-testid={`reading-row-${d.id}`}
               className={`flex items-center gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
             >
-              <div className="size-[40px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path d="M6 3h5l3 3v11H6zM11 3v3h3" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <div className="size-[40px] rounded-full shrink-0 overflow-hidden">
+                <img src={docsIcon} alt="" className="size-[40px]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[20px] truncate">{d.name}</p>
@@ -1363,7 +1361,7 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Here's what Brain found.
+          Here's What Brain Found.
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           These obligations were read from your documents. They're advisory — please confirm before acting on them.
@@ -1504,7 +1502,7 @@ function WikiQuestionBox() {
   return (
     <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
       <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px]">
-        Ask about your documents
+        Ask About Your Documents
       </p>
       <div className="flex items-center gap-[8px]">
         <input
