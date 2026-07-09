@@ -129,20 +129,20 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
     "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
 
   return (
-    <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" data-testid="add-vendor-backdrop" />
         <DialogPrimitive.Content
-          aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[16px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
+          aria-labelledby="add-vendor-title"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col overflow-hidden"
           data-testid="add-vendor-dialog"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0">
-            <DialogPrimitive.Title className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+            <p id="add-vendor-title" className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
               Add Vendor
-            </DialogPrimitive.Title>
+            </p>
             <DialogPrimitive.Close aria-label="Close" data-testid="button-add-vendor-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
-              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+              <img src={closeIcon} alt="" className="size-[32px]" />
             </DialogPrimitive.Close>
           </div>
 
@@ -225,7 +225,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-vendor"
-              className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-colors bg-[#4a2300] hover:bg-[#5a2c00] text-[#ff9500] disabled:opacity-40 disabled:cursor-not-allowed px-[20px]"
+              className="w-full bg-[#240757] flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Vendor"}
             </button>
