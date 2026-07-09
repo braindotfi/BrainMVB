@@ -32,14 +32,13 @@ const DOMAIN_TITLE: Record<ApprovalDomain, string> = {
 };
 
 function RolePill({ role }: { role: MemberRole }) {
-  const color =
-    role === "admin" ? "#7631ee" : role === "approver" ? "#a8b9f4" : "#6c779d";
-  const bg =
-    role === "admin" ? "rgba(118,49,238,0.12)" : role === "approver" ? "rgba(168,185,244,0.1)" : "rgba(108,119,157,0.1)";
+  const color = role === "admin" ? "#7631ee" : role === "approver" ? "#a8b9f4" : "#6c779d";
+  const bg = role === "admin" ? "#240757" : role === "approver" ? "rgba(168,185,244,0.1)" : "rgba(108,119,157,0.1)";
+  const border = role === "admin" ? "rgba(118,49,238,0.2)" : `${color}33`;
   return (
     <span
-      className="px-[8px] py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[13px]"
-      style={{ background: bg, color, border: `1px solid ${color}33` }}
+      className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+      style={{ background: bg, color, border: `1px solid ${border}` }}
       data-testid={`pill-role-${role}`}
     >
       {ROLE_LABELS[role]}
@@ -53,35 +52,32 @@ function MemberRow({ member }: { member: BrainMember }) {
       type="button"
       onClick={() => openMemberDetail(member.id)}
       data-testid={`row-member-${member.id}`}
-      className="flex items-center gap-[12px] px-[16px] py-[12px] w-full text-left hover:bg-[#0d1018] transition-colors"
+      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#0d1018] transition-colors"
     >
-      <div className="size-[40px] rounded-full bg-[#161b28] flex items-center justify-center shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px]">
-          {member.displayName.slice(0, 1).toUpperCase()}
-        </span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-[8px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#c8d4f0] text-[15px] leading-[20px] truncate">
+      <div className="flex-1 min-w-0 flex flex-col gap-[4px] items-start justify-center">
+        <div className="flex gap-[8px] items-start shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
             {member.displayName}
           </p>
           <RolePill role={member.role} />
           {!member.active && (
             <span
-              className="px-[8px] py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[13px]"
+              className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
               style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
             >
               Deactivated
             </span>
           )}
         </div>
-        <p className="mt-[2px] [font-family:'JetBrains_Mono',monospace] text-[#6c779d] text-[12px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
           {envelopeLine(member.approval)}
         </p>
       </div>
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
-        <path d="M5 3L9 7L5 11" stroke="#414965" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <div className="shrink-0 size-[40px] flex items-center justify-center">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M5 3L9 7L5 11" stroke="#414965" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
     </button>
   );
 }
@@ -280,17 +276,9 @@ export default function TeamSection() {
   return (
     <div className="flex flex-col gap-[20px] w-full">
       {/* Header */}
-      <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">
-          Your Team
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-          Who can approve, and up to how much.
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">
-          Authority is enforced by Brain core on every surface — this page manages it.
-        </p>
-      </div>
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+        Members
+      </p>
 
       {/* Tenant approval facts (read from core's policy) */}
       {policy?.secondApprovalThreshold && (
@@ -305,46 +293,41 @@ export default function TeamSection() {
         </div>
       )}
 
-      {/* Members list */}
-      <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-        <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
-          <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] whitespace-nowrap">Members</p>
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            data-testid="button-add-member"
-            className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-          >
-            + Add member
-          </button>
-        </div>
-        <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-
-          {isLoading && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Loading members…</p>
-            </div>
-          )}
-          {isError && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]" data-testid="text-members-error">
-                Couldn't load your team from Brain core.
-              </p>
-            </div>
-          )}
-          {!isLoading && !isError && members.length === 0 && (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No members yet.</p>
-            </div>
-          )}
-          {members.map((m, i) => (
-            <div key={m.id} className="flex flex-col gap-[8px] w-full">
-              {i > 0 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
-              <MemberRow member={m} />
-            </div>
-          ))}
-        </div>
+      {/* Members list panel */}
+      <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+        {isLoading && (
+          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">Loading members…</p>
+          </div>
+        )}
+        {isError && (
+          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#d20344] text-[16px]" data-testid="text-members-error">
+              Couldn't load your team from Brain core.
+            </p>
+          </div>
+        )}
+        {!isLoading && !isError && members.length === 0 && (
+          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">No members yet.</p>
+          </div>
+        )}
+        {members.map((m, i) => (
+          <div key={m.id} className="flex flex-col gap-[16px]">
+            {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
+            <MemberRow member={m} />
+          </div>
+        ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setAddOpen(true)}
+        data-testid="button-add-member"
+        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      >
+        + Add member
+      </button>
 
       <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
