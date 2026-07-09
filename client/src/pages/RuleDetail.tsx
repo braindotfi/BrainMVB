@@ -30,7 +30,7 @@ import infoIcon from "@assets/info_1783376644530.png";
 import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
-import infoCircleIcon from "@assets/info_circle_1783630000001.png";
+import infoCircleIcon from "@assets/Icons_1783625224759.png";
 
 const ALERT = "#d20344";
 
