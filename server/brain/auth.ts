@@ -21,6 +21,9 @@ import { randomUUID } from "node:crypto";
 import { brainConfig, brainTokenMode } from "./config";
 import { brainUserSubject } from "./ids";
 
+/** Staging demo tokens are valid 24h; used when the response omits expires_at. */
+const STAGING_DEMO_TOKEN_TTL_SECONDS = 24 * 60 * 60;
+
 export interface BrainSession {
   /**
    * The MEMBER token (principal_type "user", subject = the bootstrap admin). This is the
@@ -96,6 +99,9 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
 /** Mint a new session via the configured token source. */
 function createSession(appUserId: string, now: number): Promise<CachedSession> {
   const mode = brainTokenMode();
+  if (mode === "staging-demo-token") {
+    return provisionStagingDemoToken();
+  }
   if (mode === "demo-provision") {
     return provisionSession();
   }
@@ -106,6 +112,36 @@ function createSession(appUserId: string, now: number): Promise<CachedSession> {
     "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred — the box " +
       "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
   );
+}
+
+/**
+ * Staging demo-token flow (per the Brain staging integration guide): POST /demo/token with
+ * an empty JSON body, no auth header — no signup, no secret. Returns ONE token good for
+ * every scope the staging tenant needs (raw:read/write, ledger:read, wiki:*); staging has no
+ * member/agent token split, so it doubles as both here.
+ */
+async function provisionStagingDemoToken(): Promise<CachedSession> {
+  const res = await fetch(`${brainConfig.baseUrl}/demo/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`brain-core (staging) /demo/token → HTTP ${res.status}: ${text}`);
+  }
+  const json = JSON.parse(text) as {
+    token?: string;
+    tenant_id?: string;
+    expires_at?: string;
+  };
+  if (!json.token || !json.tenant_id) {
+    throw new Error("brain-core (staging) /demo/token returned no token/tenant_id");
+  }
+  const exp = json.expires_at
+    ? Math.floor(new Date(json.expires_at).getTime() / 1000)
+    : Math.floor(Date.now() / 1000) + STAGING_DEMO_TOKEN_TTL_SECONDS;
+  return { token: json.token, agentToken: json.token, tenantId: json.tenant_id, exp };
 }
 
 /** Ask the live demo fence to provision a tenant and hand back a scoped token. */

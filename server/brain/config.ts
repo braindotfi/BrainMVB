@@ -4,10 +4,14 @@
  * Central place that reads every BRAIN_* env var the Backend-for-Frontend uses to
  * talk to the brain-core protocol (live target: https://api.brain.fi/v1).
  *
- * Token source (see auth.ts / brainTokenMode):
- *   - "demo-provision" (preferred, key-free) — the BFF calls the already-live, fenced
- *     POST /v1/demo/provision-run with BRAIN_DEMO_PROVISION_SECRET in the
- *     X-Demo-Provision-Auth header, and uses the per-tenant token it returns. No signing
+ * Token source (see auth.ts / brainTokenMode), in priority order:
+ *   - "staging-demo-token" (staging environment only) — when BRAIN_API_BASE_URL points at
+ *     https://staging-api.brain.fi/v1, the BFF calls the key-free POST /v1/demo/token
+ *     (empty JSON body, no auth header) and uses the single 24h token it returns for every
+ *     call (staging has no member/agent token split). Per the staging integration guide.
+ *   - "demo-provision" (preferred against the live/prod box, key-free) — the BFF calls the
+ *     already-live, fenced POST /v1/demo/provision-run with BRAIN_DEMO_PROVISION_SECRET in
+ *     the X-Demo-Provision-Auth header, and uses the per-tenant token it returns. No signing
  *     key needed; this is the same path the BrainSaaS playground uses.
  *   - "local-key" (dev fallback) — mint tokens in-process with a private JWK against a
  *     brain-core you control (e.g. dev-up.sh). Never copy the prod key here.
@@ -66,9 +70,17 @@ export const brainConfig: BrainConfig = {
 };
 
 /** How the BFF obtains brain-core tokens. */
-export type BrainTokenMode = "demo-provision" | "local-key" | "unconfigured";
+export type BrainTokenMode = "staging-demo-token" | "demo-provision" | "local-key" | "unconfigured";
+
+/** True when BRAIN_API_BASE_URL points at the staging box (per the staging integration guide). */
+export function isStagingBrainTarget(): boolean {
+  return brainConfig.baseUrl.includes("staging-api.brain.fi");
+}
 
 export function brainTokenMode(): BrainTokenMode {
+  // Staging takes priority when explicitly targeted: it has its own key-free demo-token
+  // route (POST /demo/token) distinct from the live box's fenced /demo/provision-run.
+  if (isStagingBrainTarget()) return "staging-demo-token";
   if (brainConfig.demoProvisionSecret !== undefined) return "demo-provision";
   if (brainConfig.signKeyJson !== undefined || brainConfig.hs256Secret !== undefined) return "local-key";
   return "unconfigured";

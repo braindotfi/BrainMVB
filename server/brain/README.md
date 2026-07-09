@@ -14,11 +14,19 @@ browser (session cookie) ──▶ /api/brain/ledger/accounts ──▶ BFF
 ```
 
 ## How it gets a token (auth.ts → `getBrainSession`)
-- **demo-provision (preferred, key-free, default):** when `BRAIN_DEMO_PROVISION_SECRET` is set, the
-  BFF calls the already-live, fenced `POST /v1/demo/provision-run` with the
-  `X-Demo-Provision-Auth` header. brain-core creates a fresh seeded tenant and returns a scoped
-  per-tenant token (reads + propose, ~30 min). Cached per app-user. The signing key never leaves
-  the box. This is the same path the BrainSaaS playground uses.
+- **staging-demo-token (staging only):** when `BRAIN_API_BASE_URL` points at
+  `https://staging-api.brain.fi/v1`, the BFF calls the key-free `POST /v1/demo/token` (empty JSON
+  body, no auth header) per the Brain staging integration guide. Staging hands back ONE 24h token
+  (no member/agent split) which is used for every call. **Known issue (2026-07-09):** the live
+  staging box currently returns `401 auth_token_missing` on this exact route even with no body/
+  headers — i.e. the guide's own curl example 401s against the real staging server. The BFF code
+  matches the documented contract exactly; this needs to be fixed staging-side before it will work.
+- **demo-provision (preferred against the live/prod box, key-free):** when
+  `BRAIN_DEMO_PROVISION_SECRET` is set (and `BRAIN_API_BASE_URL` is not staging), the BFF calls the
+  already-live, fenced `POST /v1/demo/provision-run` with the `X-Demo-Provision-Auth` header.
+  brain-core creates a fresh seeded tenant and returns a scoped per-tenant token (reads + propose,
+  ~30 min). Cached per app-user. The signing key never leaves the box. This is the same path the
+  BrainSaaS playground uses.
 - **local-key (dev fallback only):** mint a JWT in-process with `BRAIN_AUTH_SIGN_KEY` (a private
   JWK) for `BRAIN_DEV_TENANT_ID`. Use only against a brain-core you control (e.g. `dev-up.sh`);
   never copy the prod key here.

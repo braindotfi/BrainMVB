@@ -81,6 +81,14 @@ is deleted). Current state:
   `/demo/provision-run` with `BRAIN_DEMO_PROVISION_SECRET` and uses the per-tenant token it
   returns (reads + propose, no execute, ~30 min, cached per app user). Fallback: **local-key**
   (in-process JWT mint for a brain-core you control).
+- **staging-demo-token** (added 2026-07-09, staging target only): when `BRAIN_API_BASE_URL` is
+  set to `https://staging-api.brain.fi/v1`, `getBrainSession` instead POSTs the key-free
+  `/demo/token` (empty body, no header) per Brain's staging integration guide and uses the single
+  24h token for everything (no member/agent split there). Code-complete and matches the guide's
+  own curl examples exactly, but as of 2026-07-09 the live staging box 401s
+  (`auth_token_missing`) on that exact route — a staging-side issue, not a client bug. Left
+  unset/disabled (defaults back to demo-provision against the live box) until staging is fixed;
+  flip `BRAIN_API_BASE_URL` to the staging URL to re-enable once confirmed working.
 - Proxy (`proxy.ts`): requires a session, mints/attaches the token, forwards `/api/brain/<path>`
   → `${baseUrl}/<path>` (baseUrl already includes `/v1`). Generic GET is proxied; the explicit
   writes exposed are `POST /api/brain/propose` `/reject` (propose uses the AGENT token) and the
