@@ -9,7 +9,6 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import {
   ROLE_LABELS,
   envelopeLine,
-  formatThreshold,
   type ApprovalDomain,
   type BrainMember,
   type ListMembersResponse,
@@ -279,19 +278,6 @@ export default function TeamSection() {
       <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
         Members
       </p>
-
-      {/* Tenant approval facts (read from core's policy) */}
-      {policy?.secondApprovalThreshold && (
-        <div className="rounded-[12px] border border-[#1d2132] bg-[#0a0c10] px-[16px] py-[12px]" data-testid="text-tenant-threshold">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
-            Payments over{" "}
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">
-              {formatThreshold(policy.secondApprovalThreshold)}
-            </span>{" "}
-            require a second approver, tenant-wide.
-          </p>
-        </div>
-      )}
 
       {/* Members list panel */}
       <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
