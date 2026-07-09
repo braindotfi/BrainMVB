@@ -3,7 +3,15 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
-import closeIcon from "@assets/Close_1783293571882.png";
+import closeIcon from "@assets/close_1783619312132.png";
+import backIcon from "@assets/back_1783619312133.png";
+import bankIcon from "@assets/bank_1783619257499.png";
+import cryptoIcon from "@assets/crypto_1783619257499.png";
+import accountingIcon from "@assets/accounting_1783619257498.png";
+import payrollIcon from "@assets/payroll_1783619257499.png";
+import taxIcon from "@assets/tax_1783619257500.png";
+import paymentsIcon from "@assets/payments_1783619257499.png";
+import documentsIcon from "@assets/documents_1783619257499.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source — paginated wizard for connecting data sources to Brain.
@@ -302,11 +310,9 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
                 onClick={back}
                 aria-label="Back"
                 data-testid="button-add-source-back"
-                className="absolute left-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="absolute left-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-full"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M7.5 1.5L3 6L7.5 10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <img src={backIcon} alt="" className="size-[32px] rounded-full" />
               </button>
             )}
 
@@ -635,20 +641,20 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
   );
 }
 
+const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
+  bank: bankIcon,
+  crypto: cryptoIcon,
+  accounting: accountingIcon,
+  payroll: payrollIcon,
+  tax: taxIcon,
+  payments: paymentsIcon,
+  documents: documentsIcon,
+};
+
 function CategoryIcon({ cat }: { cat: CategoryId }) {
-  const color = "#6c779d";
-  const paths: Record<CategoryId, React.ReactNode> = {
-    bank: <path d="M4 9h12M5 9v6m4-6v6m2-6v6m4-6v6M4 16h12M10 3l6 3H4l6-3Z" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    crypto: <g stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"><circle cx="10" cy="10" r="6.5" /><path d="M8 7.5h3.2a1.6 1.6 0 010 3.2H8m0 0h3.4a1.6 1.6 0 010 3.2H8M8 6v8.5M9.8 6v1.5M9.8 13v1.5" /></g>,
-    accounting: <path d="M5 4h10v12H5zM7.5 7h5M7.5 10h5M7.5 13h3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    payroll: <path d="M10 5a5 5 0 100 10 5 5 0 000-10Zm0 2v6m-1.5-4.5h2.2a1.3 1.3 0 010 2.6H8.5m0 0h2.2a1.3 1.3 0 010 2.6H8.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />,
-    tax: <path d="M6 4h8v12H6zM8 7h4M8 10h4M8 13h2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    payments: <path d="M3.5 6.5h13v7h-13zM3.5 9h13" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    documents: <path d="M6 3h5l3 3v11H6zM11 3v3h3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-  };
   return (
-    <div className="size-[40px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>{paths[cat]}</svg>
+    <div className="size-[40px] rounded-full shrink-0 overflow-hidden">
+      <img src={CATEGORY_ICON_SRC[cat]} alt="" className="size-[40px]" />
     </div>
   );
 }
