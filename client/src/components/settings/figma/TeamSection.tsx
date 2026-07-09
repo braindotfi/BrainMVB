@@ -6,6 +6,8 @@ import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail, primeMembers } from "@/lib/membersStore";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
+import memberIcon from "@assets/member_1783635675512.png";
+import { SUB } from "@/assets/sub-icons";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -53,6 +55,9 @@ function MemberRow({ member }: { member: BrainMember }) {
       data-testid={`row-member-${member.id}`}
       className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#0d1018] transition-colors"
     >
+      <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
+        <img alt="" className="size-full object-cover" src={memberIcon} />
+      </div>
       <div className="flex-1 min-w-0 flex flex-col gap-[4px] items-start justify-center">
         <div className="flex gap-[8px] items-start shrink-0">
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
@@ -72,10 +77,9 @@ function MemberRow({ member }: { member: BrainMember }) {
           {envelopeLine(member.approval)}
         </p>
       </div>
-      <div className="shrink-0 size-[40px] flex items-center justify-center">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M5 3L9 7L5 11" stroke="#414965" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+      <div className="relative rounded-[100px] shrink-0 size-[40px] flex items-center justify-center">
+        <img alt="" className="absolute inset-0 size-full" src={SUB["92cb11b2"]} />
+        <img alt="" className="relative size-[16px] -rotate-90 -scale-x-100" src={SUB["8e7d89a7"]} />
       </div>
     </button>
   );
