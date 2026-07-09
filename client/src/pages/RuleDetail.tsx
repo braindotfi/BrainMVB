@@ -17,7 +17,6 @@ import {
   Flag,
   ChevronDown,
   ChevronUp,
-  Lock,
   Shield,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
@@ -31,6 +30,7 @@ import infoIcon from "@assets/info_1783376644530.png";
 import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
+import infoCircleIcon from "@assets/info_circle_1783630000001.png";
 
 const ALERT = "#d20344";
 
@@ -138,24 +138,27 @@ export function RuleDetail() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[24px] items-start pb-[24px] pt-[32px] px-[16px] w-full">
 
-          {/* Back button — routes to the correct tab based on rule type */}
-          <button
-            type="button"
-            onClick={() => {
-              let tab = "default";
-              if (!isPolicy && rule) {
-                tab =
-                  rule.kind === "guardrail"
-                    ? "guardrails"
-                    : "automations";
-              }
-              navigate(`/rules?tab=${tab}`);
-            }}
-            data-testid="button-back-to-rules"
-            className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
-          >
-            <ArrowLeft size={16} /> Back to Rules
-          </button>
+          {/* Back button — routes to the correct tab based on rule type.
+              Policy rules render their own back pill inside PolicyDetailHeader. */}
+          {!isPolicy && (
+            <button
+              type="button"
+              onClick={() => {
+                let tab = "default";
+                if (rule) {
+                  tab =
+                    rule.kind === "guardrail"
+                      ? "guardrails"
+                      : "automations";
+                }
+                navigate(`/rules?tab=${tab}`);
+              }}
+              data-testid="button-back-to-rules"
+              className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
+            >
+              <ArrowLeft size={16} /> Back to Rules
+            </button>
+          )}
 
           {isPolicy && policyRule ? (
             <PolicyDetailHeader rule={policyRule} />
@@ -725,38 +728,50 @@ function AmountRow({
    plus policy version + quorum metadata. No Pause/Resume/Delete. */
 
 function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
+  const [, navigate] = useLocation();
   const rawName = rule.id.replace(/[-_]/g, " ");
   const appliesTo = (rule.applies_to ?? [])
     .map((a) => APPLIES_TO_LABEL[a] ?? a)
     .join(", ") || "any action";
   const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
-  const requireSuffix = rule.require ? ` · requires ${rule.require.replace(/_/g, " ")}` : "";
 
   return (
-    <div className="flex flex-col gap-[12px] items-start w-full">
-      <div className="flex items-start gap-[12px] w-full">
-        <div className="flex flex-col gap-[6px] flex-1 min-w-px">
-          <div className="flex items-center gap-[10px] flex-wrap">
-            <p
-              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
-              data-testid="text-rule-name"
-            >
-              {rawName}
-            </p>
-            <span
-              data-testid="pill-rule-status"
-              className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#240757] text-[#7631ee] border border-[rgba(118,49,238,0.3)]"
-            >
-              <Lock size={12} /> Read-only
-            </span>
-          </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-            {appliesTo} — {executeLabel}{requireSuffix}
+    <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full mb-[16px]">
+      {/* Back pill button */}
+      <button
+        type="button"
+        onClick={() => navigate("/rules?tab=default")}
+        data-testid="button-back-to-rules"
+        className="bg-[#222737] content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+      >
+        <ArrowLeft size={16} className="text-[#6c779d] shrink-0" />
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap">
+          Rules
+        </span>
+      </button>
+
+      {/* Title + Read-Only tag + subtitle + policy-id */}
+      <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+        <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap"
+            data-testid="text-rule-name"
+          >
+            {titleCase(rawName)}
           </p>
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
-            {rule.id} · From your active Brain policy
-          </p>
+          <span
+            data-testid="pill-rule-status"
+            className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[14px] text-center whitespace-nowrap"
+          >
+            Read-Only
+          </span>
         </div>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">
+          {titleCase(appliesTo)} · {titleCase(executeLabel)}
+        </p>
+        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[24px] text-[#414965] text-[12px] whitespace-nowrap">
+          {rule.id} · From your active Brain policy
+        </p>
       </div>
     </div>
   );
@@ -769,68 +784,116 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
   const execute = rule.execute ?? "confirm";
 
   return (
-    <div className="flex flex-col gap-[16px] items-start w-full">
-      {/* Info banner */}
+    <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+      {/* Info banner — matches Figma "Inputfields / Dropdowns" row */}
       <div
-        className="w-full rounded-[12px] border border-[#1d2132] p-[12px] flex items-start gap-[10px]"
+        className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full"
         data-testid="text-policy-info"
       >
-        <Shield size={16} className="shrink-0 mt-[2px] text-[#6c779d]" />
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[14px] text-[#6c779d]">
-          This rule is part of your Brain core <span className="font-semibold text-[#a8b9f4]">default policy</span>. It is enforced
-          by Brain for every action and cannot be edited or paused from this app. Changes must be made
-          through Brain core's admin layer.
-        </p>
-      </div>
-
-      {/* DSL fields panel */}
-      <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
-        <div className="flex items-center px-[16px] py-[14px] border-b border-[#1d2132]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
-            Rule definition
+        <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
+          <img src={infoCircleIcon} alt="" className="relative shrink-0 size-[16px] mt-[1px]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+            <span className="leading-[16px]">This rule is part of your Brain core </span>
+            <span className="leading-[16px] text-[#a8b9f4] font-semibold">default policy</span>
+            <span className="leading-[16px]">. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.</span>
           </p>
         </div>
-        <div className="flex flex-col gap-[2px] p-[8px]">
-          {/* ID */}
-          <div className="flex items-center justify-between gap-[16px] p-[8px]">
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">ID</span>
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.id}</span>
-          </div>
-          <div className="h-px w-full bg-[#1d2132]" />
+      </div>
 
-          {/* Applies to */}
-          <div className="flex items-center justify-between gap-[16px] p-[8px]">
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Applies to</span>
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0">
-              {appliesTo.length > 0 ? appliesTo.join(", ") : "any action"}
-            </span>
+      {/* DSL fields panel — matches Figma "Popup - Search Results" */}
+      <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+        {/* Panel header */}
+        <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+          <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
+              Rule Definition
+            </p>
           </div>
-          <div className="h-px w-full bg-[#1d2132]" />
+        </div>
 
-          {/* When conditions */}
-          <div className="flex items-center justify-between gap-[16px] p-[8px]">
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">When</span>
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right shrink-0 max-w-[60%]">
-              {conditions.length > 0 ? conditions.join(" · ") : "always"}
-            </span>
-          </div>
-          <div className="h-px w-full bg-[#1d2132]" />
-
-          {/* Execute action */}
-          <div className="flex items-center justify-between gap-[16px] p-[8px]">
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Execute</span>
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{execute}</span>
-          </div>
-
-          {hasRequire && (
-            <>
-              <div className="h-px w-full bg-[#1d2132]" />
-              <div className="flex items-center justify-between gap-[16px] p-[8px]">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]">Requires</span>
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] shrink-0">{rule.require!.replace(/_/g, " ")}</span>
+        {/* Panel body — rows with dividers */}
+        <div className="content-stretch flex flex-col items-start p-[8px] relative shrink-0 w-full">
+          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            {/* ID row */}
+            <div className="bg-[#0a0c10] content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  ID
+                </p>
               </div>
-            </>
-          )}
+              <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  {rule.id}
+                </p>
+              </div>
+            </div>
+
+            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+
+            {/* Applies To row */}
+            <div className="bg-[#0a0c10] content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  Applies To
+                </p>
+              </div>
+              <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  {appliesTo.length > 0 ? appliesTo.join(", ") : "any action"}
+                </p>
+              </div>
+            </div>
+
+            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+
+            {/* When row */}
+            <div className="bg-[#0a0c10] content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  When
+                </p>
+              </div>
+              <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  {conditions.length > 0 ? conditions.join(" · ") : "always"}
+                </p>
+              </div>
+            </div>
+
+            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+
+            {/* Execute row */}
+            <div className="bg-[#0a0c10] content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  Execute
+                </p>
+              </div>
+              <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  {execute}
+                </p>
+              </div>
+            </div>
+
+            {hasRequire && (
+              <>
+                <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+                <div className="bg-[#0a0c10] content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                      Requires
+                    </p>
+                  </div>
+                  <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                      {rule.require!.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
