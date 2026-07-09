@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
-import { RecordPager } from "./RecordPager";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
   Receipt,
   HandCoins,
@@ -163,40 +163,21 @@ export function ProposalDetail({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="proposal-detail"
         >
-          {/* Header — agent badge + auditId mono (muted) + close X */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid flex items-center gap-[12px] px-[20px] py-[14px] relative shrink-0 w-full">
-            <div className="flex items-center gap-[8px] flex-1 min-w-px">
-              <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#240757] shrink-0">
-                <AgentIcon size={16} className="text-[#7631ee]" />
-              </div>
-              <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                {agent.label}
-              </DialogPrimitive.Title>
-              <span
-                className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#414965] text-[12px] whitespace-nowrap"
-                data-testid="text-audit-id"
-              >
-                {proposal.auditId}
-              </span>
-            </div>
-            {onPrev && onNext && (
-              <RecordPager
-                onPrev={onPrev}
-                onNext={onNext}
-                disabled={pagerDisabled}
-                testIdPrefix="proposal"
-              />
-            )}
+          {/* Header — centered title only + close X (matches Figma) */}
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
+            <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
+              {agent.label}
+            </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-proposal-close"
               aria-label="Close"
-              className="size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
+          <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
           {isReceipt ? (
             <AutoHandledReceipt
               proposal={proposal}
@@ -208,6 +189,35 @@ export function ProposalDetail({
             />
           ) : (
           <>
+            {/* Info banner — action statement + policy + deadline (matches Figma) */}
+            <div className="flex flex-col gap-[16px] items-start w-full">
+              <div className="flex flex-col gap-[6px] items-start w-full">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
+                  data-testid="text-action-statement"
+                >
+                  {proposal.actionStatement}
+                </p>
+                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[13px] w-full">
+                  {proposal.actionMeta}
+                </p>
+              </div>
+              <div className="flex flex-col gap-[4px] w-full">
+                <div className="flex items-center gap-[8px] w-full">
+                  <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#240757] shrink-0">
+                    <AgentIcon size={16} className="text-[#7631ee]" />
+                  </div>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] text-[#a8b9f4]">{agent.label}</span>
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">{proposal.auditId}</span>
+                </div>
+                {proposal.whatHappensNext && (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full pl-[36px]">
+                    {proposal.whatHappensNext}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Reason chips — flags use alert red. Clean & no chips → "Looks routine" */}
             <div className="flex flex-wrap gap-[8px] items-center w-full">
               {chips.length > 0 ? (
@@ -228,22 +238,6 @@ export function ProposalDetail({
                   Looks routine
                 </span>
               )}
-            </div>
-
-            {/* Action statement (large) + meta + propose-only reassurance */}
-            <div className="flex flex-col gap-[6px] items-start w-full">
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
-                data-testid="text-action-statement"
-              >
-                {proposal.actionStatement}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[13px] w-full">
-                {proposal.actionMeta}
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[13px] w-full">
-                Brain won't move any funds until you approve.
-              </p>
             </div>
 
             {/* Why this needs your call — rationale + facts mono block */}
@@ -306,8 +300,6 @@ export function ProposalDetail({
                 const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
                 if (!srcDoc) return null;
                 const openSource = () => {
-                  // A live invoice is already resolved (fetched async); open it directly. A mock id
-                  // resolves synchronously through the mock document store.
                   if (liveInvoiceDoc) {
                     setViewingDocument(liveInvoiceDoc);
                     setDocumentOpen(true);
@@ -389,14 +381,6 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* What happens next — verbatim mechanics + cancel window */}
-            <div className="flex flex-col gap-[10px] items-start w-full">
-              <SectionLabel>What happens next</SectionLabel>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#6c779d] text-[15px] w-full" data-testid="text-what-next">
-                {proposal.whatHappensNext}
-              </p>
-            </div>
-
             {/* If this is wrong — risk in alert red + policy chip */}
             <div className="flex flex-col gap-[10px] items-start w-full">
               <SectionLabel>If this is wrong</SectionLabel>
@@ -419,21 +403,6 @@ export function ProposalDetail({
                 )}
               </div>
             </div>
-
-            {/* Surface-specific hint */}
-            {proposal.surface === "business" ? (
-              proposal.policyThreshold && (
-                <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[10px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[13px]" data-testid="text-policy-threshold">
-                    {proposal.policyThreshold}
-                  </p>
-                </div>
-              )
-            ) : (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full text-center" data-testid="text-swipe-hint">
-                Swipe right to approve · left to reject · up to postpone
-              </p>
-            )}
 
             {/* Actions footer. verifyFirst → prominent full-width fourth action ABOVE the row. */}
             <div className="flex flex-col gap-[12px] items-start w-full">
@@ -518,6 +487,34 @@ export function ProposalDetail({
               )}
             </div>
           </div>
+
+          {/* Footer — Previous/Next pill buttons (matches Figma) */}
+          {onPrev && onNext && (
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-solid border-t content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  disabled={pagerDisabled}
+                  data-testid="button-proposal-prev"
+                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <ArrowLeft size={16} className="shrink-0" />
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Previous</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={pagerDisabled}
+                  data-testid="button-proposal-next"
+                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Next</span>
+                  <ArrowRight size={16} className="shrink-0" />
+                </button>
+              </div>
+            </div>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
       <DocumentViewerPopup
