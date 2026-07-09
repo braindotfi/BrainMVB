@@ -7,7 +7,7 @@ import { openMemberDetail, primeMembers } from "@/lib/membersStore";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
 import memberIcon from "@assets/member_1783635675512.png";
-import { SUB } from "@/assets/sub-icons";
+import arrowButton from "@assets/Button_1783635877872.png";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -77,9 +77,8 @@ function MemberRow({ member }: { member: BrainMember }) {
           {envelopeLine(member.approval)}
         </p>
       </div>
-      <div className="relative rounded-[100px] shrink-0 size-[40px] flex items-center justify-center">
-        <img alt="" className="absolute inset-0 size-full" src={SUB["92cb11b2"]} />
-        <img alt="" className="relative size-[16px] -rotate-90 -scale-x-100" src={SUB["8e7d89a7"]} />
+      <div className="relative rounded-[100px] shrink-0 size-[40px] overflow-hidden">
+        <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
       </div>
     </button>
   );
