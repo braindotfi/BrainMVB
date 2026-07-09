@@ -3,7 +3,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
-import warningIcon from "@assets/Warning_1781789172904.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -150,6 +149,29 @@ function ExtractStatusBadge({ status, testId }: { status: ExtractStatus | null; 
       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px]" style={{ color: s.color }}>
         {meta.label}
       </span>
+    </span>
+  );
+}
+
+/** Pill-style extraction status tag (matches the Figma "reading" row treatment). */
+function ExtractStatusPill({ status, testId }: { status: ExtractStatus | null; testId?: string }) {
+  const meta = extractStatusMeta(status);
+  const spinning = meta.tone === "progress";
+  const toneClass: Record<"ok" | "progress" | "warn" | "muted", string> = {
+    ok: "bg-[#123509] border-[rgba(66,191,35,0.2)] text-[#42bf23]",
+    progress: "bg-[#240757] border-[rgba(118,49,238,0.2)] text-[#a8b9f4]",
+    warn: "bg-[#4a2300] border-[rgba(255,149,0,0.2)] text-[#ff9400]",
+    muted: "bg-[#222737] border-[rgba(108,119,157,0.2)] text-[#6c779d]",
+  };
+  return (
+    <span
+      data-testid={testId}
+      className={`shrink-0 flex items-center gap-[6px] px-[8px] py-[3px] rounded-[22px] border [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${toneClass[meta.tone]}`}
+    >
+      {spinning && (
+        <span className="size-[8px] rounded-full border-2 border-t-transparent animate-spin shrink-0" style={{ borderColor: "currentColor", borderTopColor: "transparent" }} aria-hidden />
+      )}
+      {meta.label}
     </span>
   );
 }
@@ -570,9 +592,9 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
               type="button"
               onClick={() => onPick(cat)}
               data-testid={`button-category-${cat}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[14px] transition-colors text-left hover:bg-[#0f1219]"
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[16px] p-[16px] transition-colors text-left hover:bg-[#0f1219]"
             >
-              <CategoryIcon cat={cat} accent={m.accent} />
+              <CategoryIcon cat={cat} />
               <div className="flex-1 min-w-0 flex flex-col">
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px] leading-[20px]">
                   {m.label}
@@ -593,8 +615,8 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
                   {count} connected
                 </span>
               )}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
-                <path d="M6 3.5L10.5 8L6 12.5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+                <path d="M9 5.5L15.5 12L9 18.5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           );
@@ -605,7 +627,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
         type="button"
         onClick={onContinue}
         data-testid="button-categories-continue"
-        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
+        className="flex flex-1 items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
       >
         Continue
       </button>
@@ -613,19 +635,20 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
   );
 }
 
-function CategoryIcon({ cat, accent }: { cat: CategoryId; accent: string }) {
+function CategoryIcon({ cat }: { cat: CategoryId }) {
+  const color = "#6c779d";
   const paths: Record<CategoryId, React.ReactNode> = {
-    bank: <path d="M4 9h12M5 9v6m4-6v6m2-6v6m4-6v6M4 16h12M10 3l6 3H4l6-3Z" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    crypto: <g stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"><circle cx="10" cy="10" r="6.5" /><path d="M8 7.5h3.2a1.6 1.6 0 010 3.2H8m0 0h3.4a1.6 1.6 0 010 3.2H8M8 6v8.5M9.8 6v1.5M9.8 13v1.5" /></g>,
-    accounting: <path d="M5 4h10v12H5zM7.5 7h5M7.5 10h5M7.5 13h3" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    payroll: <path d="M10 5a5 5 0 100 10 5 5 0 000-10Zm0 2v6m-1.5-4.5h2.2a1.3 1.3 0 010 2.6H8.5m0 0h2.2a1.3 1.3 0 010 2.6H8.5" stroke={accent} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />,
-    tax: <path d="M6 4h8v12H6zM8 7h4M8 10h4M8 13h2" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    payments: <path d="M3.5 6.5h13v7h-13zM3.5 9h13" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
-    documents: <path d="M6 3h5l3 3v11H6zM11 3v3h3" stroke={accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    bank: <path d="M4 9h12M5 9v6m4-6v6m2-6v6m4-6v6M4 16h12M10 3l6 3H4l6-3Z" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    crypto: <g stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"><circle cx="10" cy="10" r="6.5" /><path d="M8 7.5h3.2a1.6 1.6 0 010 3.2H8m0 0h3.4a1.6 1.6 0 010 3.2H8M8 6v8.5M9.8 6v1.5M9.8 13v1.5" /></g>,
+    accounting: <path d="M5 4h10v12H5zM7.5 7h5M7.5 10h5M7.5 13h3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    payroll: <path d="M10 5a5 5 0 100 10 5 5 0 000-10Zm0 2v6m-1.5-4.5h2.2a1.3 1.3 0 010 2.6H8.5m0 0h2.2a1.3 1.3 0 010 2.6H8.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />,
+    tax: <path d="M6 4h8v12H6zM8 7h4M8 10h4M8 13h2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    payments: <path d="M3.5 6.5h13v7h-13zM3.5 9h13" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+    documents: <path d="M6 3h5l3 3v11H6zM11 3v3h3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
   };
   return (
-    <div className="size-[40px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: `${accent}1a` }}>
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>{paths[cat]}</svg>
+    <div className="size-[40px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>{paths[cat]}</svg>
     </div>
   );
 }
@@ -1105,15 +1128,17 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
 }
 
 /* ───────────────────────────── Shared bits ───────────────────────────── */
-function InfoNotice({ title, body }: { title: string; body: React.ReactNode }) {
+function InfoNotice({ title, body, uppercase = true }: { title: string; body: React.ReactNode; uppercase?: boolean }) {
   return (
-    <div className="flex items-start gap-[10px] rounded-[12px] border border-[rgba(255,149,0,0.25)] bg-[rgba(74,35,0,0.25)] p-[14px]">
-      <span className="size-[18px] rounded-full bg-[#4a2300] flex items-center justify-center shrink-0 mt-[1px]">
-        <span className="[font-family:'Gilroy',sans-serif] font-bold text-[11px] text-[#ff9500] leading-none">!</span>
-      </span>
+    <div className="flex items-start gap-[8px] rounded-[12px] border border-[rgba(255,148,0,0.2)] bg-[#4a2300] p-[8px]">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
+        <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
+      </svg>
       <div className="flex-1 min-w-0">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[13px] leading-[18px]">{title}</p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[2px]">{body}</p>
+        <p className={`[font-family:'Gilroy',sans-serif] font-bold text-[#ff9400] text-[13px] leading-[18px] ${uppercase ? "uppercase" : ""}`}>{title}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[13px] leading-[18px] mt-[2px]">{body}</p>
       </div>
     </div>
   );
@@ -1202,17 +1227,18 @@ function ReadingScreen({
             <div
               key={d.id}
               data-testid={`reading-row-${d.id}`}
-              className={`flex items-start gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
+              className={`flex items-center gap-[12px] p-[16px] ${i > 0 ? "border-t border-[#1d2132]" : ""}`}
             >
+              <div className="size-[40px] rounded-full bg-[#1d2132] flex items-center justify-center shrink-0">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M6 3h5l3 3v11H6zM11 3v3h3" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[20px] truncate">{d.name}</p>
-                <div className="mt-[4px]">
-                  <ExtractStatusBadge status={d.extractStatus} testId={`reading-status-${d.id}`} />
-                </div>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px]">{formatSize(d.size)}</p>
               </div>
-              <span className="shrink-0 px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px]">
-                {formatSize(d.size)}
-              </span>
+              <ExtractStatusPill status={d.extractStatus} testId={`reading-status-${d.id}`} />
             </div>
           ))}
           <div className="flex items-center justify-between px-[16px] py-[12px] border-t border-[#1d2132] bg-[rgba(0,0,0,0.2)]">
@@ -1239,12 +1265,12 @@ function ReadingScreen({
         body="Files are used only to understand your business and never shown to anyone else. Anything Brain reads from a document is advisory until you confirm it."
       />
 
-      <div className="flex items-center gap-[12px] pt-[4px]">
+      <div className="flex items-center gap-[16px] pt-[4px]">
         <button
           type="button"
           onClick={onViewWiki}
           data-testid="button-reading-view-wiki"
-          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#240757] hover:bg-[#2e0a6b] text-[#7631ee]"
+          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#222737] hover:bg-[#2c3247] text-[#6c779d]"
         >
           Close
         </button>
@@ -1339,15 +1365,27 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
       </div>
 
       {/* Advisory banner */}
-      <div className="rounded-[12px] bg-[#4a2300] border border-[rgba(255,149,0,0.25)] p-[14px] flex items-start gap-[10px]">
-        <img src={warningIcon} alt="" className="size-[20px] shrink-0 mt-[1px]" aria-hidden />
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[13px] leading-[18px]">
-          Everything below was extracted from documents and is <span className="font-semibold">advisory</span>. Brain will never pay or act on it without your confirmation.
+      <div className="rounded-[12px] bg-[#4a2300] border border-[rgba(255,148,0,0.2)] p-[8px] flex items-start gap-[8px]">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
+          <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
+          <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
+          <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
+        </svg>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[13px] leading-[18px]">
+          Everything below was extracted from documents and is advisory. Brain will never pay or act on it without your confirmation.
         </p>
       </div>
 
       {/* Q&A over the wiki */}
       <WikiQuestionBox />
+
+      {/* Results */}
+      <div className="flex items-center gap-[10px]">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] leading-[16px] whitespace-nowrap">
+          Results
+        </span>
+        <span className="flex-1 h-px bg-[#1d2132]" aria-hidden />
+      </div>
 
       {obligationsQuery.isLoading ? (
         <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px]" data-testid="status-obligations-loading">
@@ -1361,12 +1399,10 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
           </p>
         </div>
       ) : obligations.length === 0 ? (
-        <div className="bg-[#0a0c10] rounded-[16px] p-[20px] text-center" data-testid="status-obligations-empty">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] leading-[22px]">
-            Nothing to show yet.
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[4px]">
-            Brain hasn't extracted any obligations from your documents yet. This can take a few minutes, or extraction may not be available for these files.
+        <div data-testid="status-obligations-empty">
+          <p className="[font-family:'Gilroy',sans-serif] leading-[20px] text-[14px]">
+            <span className="font-semibold text-[#a8b9f4]">Nothing to show yet.</span>{" "}
+            <span className="font-medium text-[#6c779d]">Brain hasn't extracted any obligations from your documents yet. This can take a few minutes, or extraction may not be available for these files.</span>
           </p>
         </div>
       ) : (
@@ -1460,8 +1496,8 @@ function WikiQuestionBox() {
   };
 
   return (
-    <div className="bg-[#0a0c10] rounded-[16px] p-[14px] flex flex-col gap-[10px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px]">
+    <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px]">
         Ask about your documents
       </p>
       <div className="flex items-center gap-[8px]">
@@ -1471,14 +1507,14 @@ function WikiQuestionBox() {
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
           placeholder="e.g. What do I owe AWS this month?"
           data-testid="input-wiki-question"
-          className="flex-1 min-w-0 bg-[#06070a] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] placeholder:text-[#414965] outline-none border border-[#1d2132] focus:border-[#7631ee] transition-colors"
+          className="flex-1 min-w-0 bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] placeholder:text-[#6c779d] outline-none border-none transition-colors"
         />
         <button
           type="button"
           onClick={submit}
           disabled={askMut.isPending || !question.trim()}
           data-testid="button-wiki-ask"
-          className="shrink-0 px-[16px] py-[10px] rounded-[10px] bg-[#240757] hover:bg-[#2e0a6b] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px]"
+          className="shrink-0 px-[20px] py-[10px] rounded-[100px] bg-[#240757] hover:bg-[#2e0a6b] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px]"
         >
           {askMut.isPending ? "Asking…" : "Ask"}
         </button>
