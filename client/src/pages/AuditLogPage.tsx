@@ -96,14 +96,10 @@ export function AuditLogPage() {
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header */}
-          <div className="flex flex-col items-start gap-[16px] w-full">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
-              </div>
-            </div>
+          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">

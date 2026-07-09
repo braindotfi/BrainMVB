@@ -134,7 +134,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" data-testid="add-vendor-backdrop" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[16px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
           data-testid="add-vendor-dialog"
         >
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0">
@@ -225,7 +225,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-vendor"
-              className="mt-[4px] rounded-[100px] bg-[#7631ee] hover:bg-[#8544ff] disabled:opacity-40 disabled:cursor-not-allowed px-[20px] py-[11px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] transition-colors"
+              className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-colors bg-[#4a2300] hover:bg-[#5a2c00] text-[#ff9500] disabled:opacity-40 disabled:cursor-not-allowed px-[20px]"
             >
               {busy ? "Adding…" : "Add Vendor"}
             </button>
@@ -335,29 +335,30 @@ export function VendorsPage() {
             </p>
           </div>
 
-          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-            {VENDOR_TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                  style={{ background: isActive ? "#4a2300" : "#06070a" }}
-                  data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  <p
-                    className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
-                    style={{ color: isActive ? "#ff9400" : "#414965" }}
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+              {VENDOR_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                    style={{ background: isActive ? "#4a2300" : "#06070a" }}
+                    data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
                   >
-                    {tab}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+                    <p
+                      className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
+                      style={{ color: isActive ? "#ff9400" : "#414965" }}
+                    >
+                      {tab}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Tab content */}
+            {/* Tab content */}
           {isLoading ? (
             <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
               <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -417,6 +418,7 @@ export function VendorsPage() {
               </div>
             </div>
           )}
+          </div>
 
         </div>
       </ScrollArea>
