@@ -11,6 +11,8 @@ import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import legalActiveIcon from "@assets/LegalActive_1782953679878.png";
 import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
+import teamActiveIcon from "@assets/Active_1783634473571.png";
+import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import PaymentsFigma from "@/components/settings/figma/PaymentsSectionFigma";
@@ -161,17 +163,9 @@ const BillingNavIcon = ({ active }: { active: boolean }) => (
   )
 );
 
-const TeamNavIcon = ({ active }: { active: boolean }) => {
-  const c = active ? "#a8b9f4" : "#6c779d";
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <circle cx="9" cy="8" r="3" stroke={c} strokeWidth="1.6" />
-      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M16 5.5a3 3 0 0 1 0 5" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M17 13.5a5.5 5.5 0 0 1 3.5 5.1" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-};
+const TeamNavIcon = ({ active }: { active: boolean }) => (
+  <img alt="" className="shrink-0 size-[24px]" src={active ? teamActiveIcon : teamInactiveIcon} />
+);
 
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },

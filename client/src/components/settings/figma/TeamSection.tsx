@@ -141,90 +141,104 @@ function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void
     }
   };
 
-  if (!open) return null;
-
   const fieldCls =
-    "w-full bg-[#0a0c10] border border-[#1d2132] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[15px] text-white placeholder:text-[#414965] outline-none focus:border-[#7631ee]";
+    "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
+
+  const inputLabel = (text: string) => (
+    <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">{text}</p>
+        <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+      </div>
+    </div>
+  );
 
   return (
-    <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" data-testid="add-member-backdrop" />
         <DialogPrimitive.Content
-          aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
+          aria-labelledby="add-member-title"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col overflow-hidden"
           data-testid="add-member-dialog"
         >
-          <div className="h-[56px] border-b border-[#1d2132] relative shrink-0">
-            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[16px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px]">
-              Add member
-            </DialogPrimitive.Title>
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+            <p id="add-member-title" className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              Add Member
+            </p>
             <DialogPrimitive.Close aria-label="Close" data-testid="button-add-member-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
-              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+              <img src={closeIcon} alt="" className="size-[32px]" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[14px] p-[24px] overflow-y-auto">
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Name</label>
-              <input className={fieldCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Jordan Lee" data-testid="input-member-name" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Email</label>
-              <input className={fieldCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jordan@company.com" data-testid="input-member-email" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Role</label>
-              <div className="flex gap-[8px]">
-                {(["admin", "approver", "viewer"] as MemberRole[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    data-testid={`select-role-${r}`}
-                    className="flex-1 rounded-[10px] px-[10px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors"
-                    style={{
-                      background: role === r ? "rgba(118,49,238,0.15)" : "#0a0c10",
-                      color: role === r ? "#a78bfa" : "#6c779d",
-                      border: `1px solid ${role === r ? "#7631ee" : "#1d2132"}`,
-                    }}
-                  >
-                    {ROLE_LABELS[r]}
-                  </button>
-                ))}
+          <div className="content-stretch flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+            <div className="relative shrink-0 w-full">
+              <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[24px] items-start relative size-full">
+                {/* Name */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Name")}
+                  <input className={fieldCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. John Doe" data-testid="input-member-name" />
+                </div>
+                {/* Email */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Email")}
+                  <input className={fieldCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. john@mail.com" data-testid="input-member-email" />
+                </div>
+                {/* Role */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Role")}
+                  <div className="content-stretch flex gap-[8px] items-center overflow-clip relative shrink-0 w-full">
+                    {(["admin", "approver", "viewer"] as MemberRole[]).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        data-testid={`select-role-${r}`}
+                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+                        style={{
+                          background: role === r ? "#240757" : "#0c0f14",
+                          color: role === r ? "#7631ee" : "#414965",
+                        }}
+                      >
+                        {ROLE_LABELS[r]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Domains */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Approval Domains")}
+                  <div className="content-stretch flex flex-wrap gap-[8px] items-center overflow-clip relative shrink-0 w-full">
+                    {ALL_DOMAINS.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleDomain(d)}
+                        data-testid={`toggle-domain-${d}`}
+                        className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+                        style={{
+                          background: domains.includes(d) ? "#240757" : "#0c0f14",
+                          color: domains.includes(d) ? "#7631ee" : "#414965",
+                        }}
+                      >
+                        {DOMAIN_TITLE[d]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Limit */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Per-Item Limit (USD)")}
+                  <input
+                    className={`${fieldCls} [font-family:'JetBrains_Mono',monospace]`}
+                    value={limit}
+                    inputMode="numeric"
+                    onChange={(e) => setLimit(e.target.value.replace(/[^0-9]/g, ""))}
+                    placeholder="10000"
+                    data-testid="input-member-limit"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Approval domains</label>
-              <div className="flex flex-wrap gap-[8px]">
-                {ALL_DOMAINS.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => toggleDomain(d)}
-                    data-testid={`toggle-domain-${d}`}
-                    className="rounded-[22px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors"
-                    style={{
-                      background: domains.includes(d) ? "rgba(118,49,238,0.15)" : "#0a0c10",
-                      color: domains.includes(d) ? "#a78bfa" : "#6c779d",
-                      border: `1px solid ${domains.includes(d) ? "#7631ee" : "#1d2132"}`,
-                    }}
-                  >
-                    {DOMAIN_TITLE[d]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Per-item limit (USD)</label>
-              <input
-                className={`${fieldCls} [font-family:'JetBrains_Mono',monospace]`}
-                value={limit}
-                inputMode="numeric"
-                onChange={(e) => setLimit(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="10000"
-                data-testid="input-member-limit"
-              />
             </div>
 
             {error && (
@@ -238,9 +252,9 @@ function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="mt-[4px] rounded-[100px] bg-[#7631ee] hover:bg-[#8544ff] disabled:opacity-40 disabled:cursor-not-allowed px-[20px] py-[11px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] transition-colors"
+              className="w-full bg-[#240757] flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {busy ? "Adding…" : "Add member"}
+              {busy ? "Adding…" : "Add Member"}
             </button>
           </div>
         </DialogPrimitive.Content>
@@ -266,14 +280,14 @@ export default function TeamSection() {
   return (
     <div className="flex flex-col gap-[20px] w-full">
       {/* Header */}
-      <div className="flex flex-col gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] uppercase tracking-[0.08em]">
+      <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">
           Your Team
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[22px] leading-[28px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
           Who can approve, and up to how much.
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[20px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">
           Authority is enforced by Brain core on every surface — this page manages it.
         </p>
       </div>
@@ -292,42 +306,44 @@ export default function TeamSection() {
       )}
 
       {/* Members list */}
-      <div className="rounded-[16px] border border-[#1d2132] overflow-hidden" style={{ background: "#0a0c10" }}>
-        <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#1d2132]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px]">Members</p>
+      <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
+          <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] whitespace-nowrap">Members</p>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
             data-testid="button-add-member"
-            className="rounded-[100px] bg-[rgba(118,49,238,0.15)] border border-[#7631ee] px-[14px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a78bfa] text-[14px] hover:bg-[rgba(118,49,238,0.25)] transition-colors"
+            className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             + Add member
           </button>
         </div>
+        <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
 
-        {isLoading && (
-          <div className="px-[16px] py-[24px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px]">Loading members…</p>
-          </div>
-        )}
-        {isError && (
-          <div className="px-[16px] py-[24px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[15px]" data-testid="text-members-error">
-              Couldn't load your team from Brain core.
-            </p>
-          </div>
-        )}
-        {!isLoading && !isError && members.length === 0 && (
-          <div className="px-[16px] py-[24px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px]">No members yet.</p>
-          </div>
-        )}
-        {members.map((m, i) => (
-          <div key={m.id}>
-            {i > 0 && <div className="h-px bg-[#1d2132] mx-[16px]" />}
-            <MemberRow member={m} />
-          </div>
-        ))}
+          {isLoading && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Loading members…</p>
+            </div>
+          )}
+          {isError && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]" data-testid="text-members-error">
+                Couldn't load your team from Brain core.
+              </p>
+            </div>
+          )}
+          {!isLoading && !isError && members.length === 0 && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No members yet.</p>
+            </div>
+          )}
+          {members.map((m, i) => (
+            <div key={m.id} className="flex flex-col gap-[8px] w-full">
+              {i > 0 && <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />}
+              <MemberRow member={m} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} />
