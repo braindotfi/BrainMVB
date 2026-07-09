@@ -10,6 +10,7 @@ import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { MOCK_VENDORS } from "@/lib/mockVendors";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { Plus, Info } from "lucide-react";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
@@ -32,21 +33,25 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
-      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+      <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px relative">
+        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
           {vendor.name}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-          {vendor.category} · {vendor.history.paymentCount} payments
-        </p>
+        <div className="content-stretch flex items-center relative shrink-0">
+          <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
+            <span className="leading-[20px]">{vendor.category || "Vendor"}</span>
+            <span className="leading-[20px]">{` · `}</span>
+            <span className="leading-[20px]">{vendor.history.paymentCount} payments</span>
+          </p>
+        </div>
       </div>
-      <div className="flex flex-col items-end justify-center relative shrink-0">
+      <div className="content-stretch flex flex-col items-end justify-center relative shrink-0">
         {typeof vendor.history.totalPaid === "number" && (
-          <span className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+          <p className="[word-break:break-word] [font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
             {format(vendor.history.totalPaid)}
-          </span>
+          </p>
         )}
       </div>
     </button>
@@ -120,8 +125,8 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
 
   if (!open) return null;
 
-  const fieldCls =
-    "w-full bg-[#0a0c10] border border-[#1d2132] rounded-[10px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[15px] text-white placeholder:text-[#414965] outline-none focus:border-[#7631ee]";
+  const inputCls =
+    "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
 
   return (
     <DialogPrimitive.Root open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -132,39 +137,69 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
           data-testid="add-vendor-dialog"
         >
-          <div className="h-[56px] border-b border-[#1d2132] relative shrink-0">
-            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[16px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px]">
-              Add vendor
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0">
+            <DialogPrimitive.Title className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              Add Vendor
             </DialogPrimitive.Title>
             <DialogPrimitive.Close aria-label="Close" data-testid="button-add-vendor-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[14px] p-[24px] overflow-y-auto">
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Name</label>
-              <input className={fieldCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Supplies Inc." data-testid="input-vendor-name" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Display name (optional)</label>
-              <input className={fieldCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Acme" data-testid="input-vendor-display-name" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Category (optional)</label>
-              <input className={fieldCls} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Office supplies" data-testid="input-vendor-category" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Contact email (optional)</label>
-              <input className={fieldCls} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="billing@acme.com" data-testid="input-vendor-contact-email" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Country (optional)</label>
-              <input className={fieldCls} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="US" data-testid="input-vendor-country" />
-            </div>
-            <div className="flex flex-col gap-[6px]">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Tax ID (optional)</label>
-              <input className={fieldCls} value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="12-3456789" data-testid="input-vendor-tax-id" />
+          <div className="content-stretch flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+            <div className="relative shrink-0 w-full">
+              <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[24px] items-start relative size-full">
+                {/* Name */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Name</p>
+                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+                    </div>
+                  </div>
+                  <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme Supplies Inc." data-testid="input-vendor-name" />
+                </div>
+                {/* Display Name */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Display Name (Optional)</p>
+                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+                    </div>
+                  </div>
+                  <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Acme" data-testid="input-vendor-display-name" />
+                </div>
+                {/* Category */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Category (Optional)</p>
+                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+                    </div>
+                  </div>
+                  <input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. billing@acme.com" data-testid="input-vendor-category" />
+                </div>
+                {/* Country */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Country (Optional)</p>
+                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+                    </div>
+                  </div>
+                  <input className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="US" data-testid="input-vendor-country" />
+                </div>
+                {/* Tax ID */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Tax ID (Optional)</p>
+                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+                    </div>
+                  </div>
+                  <input className={inputCls} value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="e.g. 12-34567890" data-testid="input-vendor-tax-id" />
+                </div>
+              </div>
             </div>
 
             {error && (
@@ -173,9 +208,17 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               </div>
             )}
 
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-              Added to your current Brain session — this demo tenant is temporary.
-            </p>
+            {/* Info banner */}
+            <div className="border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
+              <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex items-center p-[8px] relative size-full">
+                <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
+                  <Info className="relative shrink-0 size-[16px] text-[#6c779d]" />
+                  <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
+                    Added to your current Brain session — this demo tenant is temporary.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <button
               type="button"
@@ -184,7 +227,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               data-testid="button-submit-vendor"
               className="mt-[4px] rounded-[100px] bg-[#7631ee] hover:bg-[#8544ff] disabled:opacity-40 disabled:cursor-not-allowed px-[20px] py-[11px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] transition-colors"
             >
-              {busy ? "Adding…" : "Add vendor"}
+              {busy ? "Adding…" : "Add Vendor"}
             </button>
           </div>
         </DialogPrimitive.Content>
@@ -292,39 +335,26 @@ export function VendorsPage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Tab bar — active tab is ORANGE */}
-            <div className="flex items-center justify-between gap-[16px] w-full">
-              <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-                {VENDOR_TABS.map((tab) => {
-                  const isActive = activeTab === tab;
-                  return (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                      style={{ background: isActive ? "#4a2300" : "transparent" }}
-                      data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      <p
-                        className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                        style={{ color: isActive ? "#ff9500" : "#414965" }}
-                      >
-                        {tab}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                onClick={() => setAddOpen(true)}
-                data-testid="button-add-vendor"
-                className="rounded-[100px] bg-[rgba(118,49,238,0.15)] border border-[#7631ee] px-[14px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#a78bfa] text-[14px] hover:bg-[rgba(118,49,238,0.25)] transition-colors shrink-0"
-              >
-                + Add vendor
-              </button>
-            </div>
+          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+            {VENDOR_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                  style={{ background: isActive ? "#4a2300" : "#06070a" }}
+                  data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <p
+                    className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
+                    style={{ color: isActive ? "#ff9400" : "#414965" }}
+                  >
+                    {tab}
+                  </p>
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab content */}
@@ -342,14 +372,23 @@ export function VendorsPage() {
             </div>
           ) : (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              {/* Section header with tab name + count — always visible */}
-              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
-                  <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{tabVendors.length}</p>
+              {/* Section header with tab name + count + Add Vendor button */}
+              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
+                <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+                  <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
+                  <div className="bg-[#414965] content-stretch flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                    <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] not-italic relative shrink-0 text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{tabVendors.length}</p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  data-testid="button-add-vendor"
+                  className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+                  Add Vendor
+                </button>
               </div>
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
                 {tabVendors.length === 0 ? (
