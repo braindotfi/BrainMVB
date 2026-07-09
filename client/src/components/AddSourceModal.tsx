@@ -11,7 +11,7 @@ import accountingIcon from "@assets/accounting_1783619257498.png";
 import payrollIcon from "@assets/payroll_1783619257499.png";
 import taxIcon from "@assets/tax_1783619257500.png";
 import paymentsIcon from "@assets/payments_1783619257499.png";
-import docsIcon from "@assets/docs_1783620204593.png";
+import docsIcon from "@assets/docs_1783621224017.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source — paginated wizard for connecting data sources to Brain.
@@ -465,9 +465,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
                 <SourceRow
                   key={d.id}
                   testId={`source-doc-${d.id}`}
-                  badge="DOC"
-                  badgeBg="#4a2300"
-                  badgeColor="#ff9500"
+                  icon={docsIcon}
                   title={d.name}
                   subtitle={`${d.category ? `${capitalize(d.category)} · ` : ""}${formatSize(d.size)}`}
                   removing={removeDoc.isPending}
@@ -510,12 +508,13 @@ function SourceGroup({ label, children }: { label: string; children: React.React
 }
 
 function SourceRow({
-  testId, badge, badgeBg, badgeColor, title, subtitle, onRemove, removing, removeTestId,
+  testId, badge, badgeBg, badgeColor, icon, title, subtitle, onRemove, removing, removeTestId,
 }: {
   testId: string;
-  badge: string;
-  badgeBg: string;
-  badgeColor: string;
+  badge?: string;
+  badgeBg?: string;
+  badgeColor?: string;
+  icon?: string;
   title: string;
   subtitle: string;
   onRemove: () => void;
@@ -527,12 +526,18 @@ function SourceRow({
       data-testid={testId}
       className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px]"
     >
-      <div
-        className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[11px] [font-family:'Gilroy',sans-serif]"
-        style={{ background: badgeBg, color: badgeColor }}
-      >
-        {badge}
-      </div>
+      {icon ? (
+        <div className="size-[32px] rounded-full shrink-0 overflow-hidden">
+          <img src={icon} alt="" className="size-[32px]" />
+        </div>
+      ) : (
+        <div
+          className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[11px] [font-family:'Gilroy',sans-serif]"
+          style={{ background: badgeBg, color: badgeColor }}
+        >
+          {badge}
+        </div>
+      )}
       <div className="flex-1 min-w-0 flex flex-col">
         <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
           {title}
