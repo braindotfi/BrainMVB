@@ -747,28 +747,30 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         <ArrowLeft size={16} /> Back to Rules
       </button>
 
-      {/* Title + Read-Only tag + subtitle + policy-id */}
-      <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-        <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-          <p
-            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap"
-            data-testid="text-rule-name"
-          >
-            {titleCase(rawName)}
+      {/* Title + Read-Only tag + subtitle + policy-id — same spacing/format as automations/guardrails/suggested */}
+      <div className="flex items-start gap-[12px] w-full">
+        <div className="flex flex-col gap-[6px] flex-1 min-w-px">
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-[#a8b9f4] text-[26px]"
+              data-testid="text-rule-name"
+            >
+              {titleCase(rawName)}
+            </p>
+            <span
+              data-testid="pill-rule-status"
+              className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[14px] text-center"
+            >
+              Read-Only
+            </span>
+          </div>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+            {titleCase(appliesTo)} · {titleCase(executeLabel)}
           </p>
-          <span
-            data-testid="pill-rule-status"
-            className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[14px] text-center whitespace-nowrap"
-          >
-            Read-Only
-          </span>
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]">
+            {rule.id} · From your active Brain policy
+          </p>
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">
-          {titleCase(appliesTo)} · {titleCase(executeLabel)}
-        </p>
-        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[24px] text-[#414965] text-[12px] whitespace-nowrap">
-          {rule.id} · From your active Brain policy
-        </p>
       </div>
     </div>
   );
