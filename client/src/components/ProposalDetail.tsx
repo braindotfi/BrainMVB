@@ -95,10 +95,20 @@ export function factColor(severity?: Severity): string {
   return "#a8b9f4";
 }
 
-export const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px] uppercase tracking-[0.04em] w-full">
-    {children}
-  </p>
+export const SectionLabel = ({
+  children,
+  trailing,
+}: {
+  children: React.ReactNode;
+  trailing?: React.ReactNode;
+}) => (
+  <div className="flex gap-[8px] items-center w-full">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">
+      {children}
+    </p>
+    <div className="flex-1 h-px bg-[#1d2132]" />
+    {trailing}
+  </div>
 );
 
 export function ProposalDetail({
@@ -242,7 +252,7 @@ export function ProposalDetail({
 
             {/* Why this needs your call — rationale + facts mono block */}
             <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>Why this needs your call</SectionLabel>
+              <SectionLabel>Why This Needs Your Call</SectionLabel>
               <p
                 id="proposal-detail-rationale"
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#6c779d] text-[15px] w-full"
@@ -267,33 +277,29 @@ export function ProposalDetail({
               )}
             </div>
 
-            {/* Evidence grid — icon per kind; duplicate shows both invoices */}
+            {/* Evidence grid — no icon per kind (Figma); duplicate shows both invoices */}
             <div className="flex flex-col gap-[12px] items-start w-full">
               <SectionLabel>Evidence</SectionLabel>
-              <div className="grid grid-cols-2 gap-[8px] w-full">
-                {proposal.evidence.map((ev, i) => {
-                  const EvIcon = EVIDENCE_ICON[ev.kind];
-                  return (
-                    <div
-                      key={i}
-                      data-testid={`evidence-${i}`}
-                      className="bg-[#0a0c10] rounded-[12px] p-[12px] flex flex-col gap-[8px]"
-                    >
-                      <div className="flex items-center gap-[8px]">
-                        <EvIcon size={15} className="text-[#7631ee] shrink-0" />
-                        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] leading-[12px] text-[#414965] uppercase tracking-[0.06em]">
-                          {ev.kind.replace("_", " ")}
-                        </span>
-                      </div>
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
+              <div className="grid grid-cols-2 gap-[16px] w-full">
+                {proposal.evidence.map((ev, i) => (
+                  <div
+                    key={i}
+                    data-testid={`evidence-${i}`}
+                    className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[8px]"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#414965] text-[12px] uppercase">
+                      {ev.kind.replace("_", " ")}
+                    </span>
+                    <div className="flex flex-col gap-[8px] w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[20px] w-full">
                         {ev.title}
                       </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#414965] text-[16px] w-full">
                         {ev.subtitle}
                       </p>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
               {/* Source document — tappable link when invoiceId resolves */}
               {proposal.invoiceId && (() => {
@@ -324,19 +330,22 @@ export function ProposalDetail({
 
             {/* Confidence — band + score + bar (purple) + caveat */}
             <div className="flex flex-col gap-[10px] items-start w-full">
-              <div className="flex items-center justify-between w-full">
-                <SectionLabel>Confidence</SectionLabel>
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[16px] text-[#a8b9f4]" data-testid="text-confidence">
-                  {proposal.confidence.band} · {confidencePct}%
-                </span>
-              </div>
-              <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
+              <SectionLabel
+                trailing={
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap" data-testid="text-confidence">
+                    {proposal.confidence.band} · {confidencePct}%
+                  </span>
+                }
+              >
+                Confidence
+              </SectionLabel>
+              <div className="h-[6px] w-full rounded-full bg-[#222737] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[#7631ee] transition-all"
                   style={{ width: `${confidencePct}%` }}
                 />
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
                 {proposal.confidence.caveat}
               </p>
             </div>
@@ -344,7 +353,7 @@ export function ProposalDetail({
             {/* Sweep math — reconciling mono breakdown (only when present) */}
             {proposal.sweepMath && (
               <div className="flex flex-col gap-[12px] items-start w-full">
-                <SectionLabel>The math — your account isn't drained</SectionLabel>
+                <SectionLabel>The Math - Your Account Isn't Drained</SectionLabel>
                 <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]">
                   <div className="flex items-center justify-between gap-[12px]">
                     <span className="text-[#6c779d]">total cash</span>
@@ -381,17 +390,17 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* If this is wrong — risk in alert red + policy chip */}
+            {/* If this is wrong — risk boxed in alert-red panel + policy line */}
             <div className="flex flex-col gap-[10px] items-start w-full">
-              <SectionLabel>If this is wrong</SectionLabel>
-              <div className="flex items-start gap-[8px] w-full">
-                <ShieldAlert size={16} className="shrink-0 mt-[2px]" style={{ color: ALERT }} />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[15px] w-full" style={{ color: ALERT }}>
+              <SectionLabel>If This Is Wrong</SectionLabel>
+              <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
+                <ShieldAlert size={16} className="shrink-0" style={{ color: ALERT }} />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] w-full" style={{ color: ALERT }}>
                   {proposal.risk}
                 </p>
               </div>
-              <div className="bg-[#0a0c10] rounded-[12px] w-full p-[12px] flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
+              <div className="w-full flex flex-col gap-[4px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   Flagged by{" "}
                   <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">{proposal.policy.id}</span>
                   {" "}— {proposal.policy.explanation}.
@@ -912,28 +921,28 @@ function ActionButton({
   variant: "approve" | "reject" | "postpone";
   testId: string;
 }) {
-  /* Approve = purple accent (NOT alert red, even on danger items).
-     Reject = alert red. Postpone = neutral. */
+  /* Per Figma (node 5638:65131): Reject = dark-red bg / alert-red text,
+     Postpone = neutral gray bg / muted text, Approve = dark-green bg / green text. */
   const styles =
     variant === "approve"
-      ? "bg-[#7631ee] hover:bg-[#8a4bf5] focus-visible:ring-[#7631EE] text-white"
+      ? "bg-[#123509] hover:bg-[#194d0d] focus-visible:ring-[#42bf23] text-[#42bf23]"
       : variant === "reject"
         ? "bg-[#350011] hover:bg-[#4a0018] focus-visible:ring-[#d20344] text-[#d20344]"
-        : "bg-[#1d2132] hover:bg-[#252a3d] focus-visible:ring-[#414965] text-[#a8b9f4]";
+        : "bg-[#222737] hover:bg-[#2c3247] focus-visible:ring-[#414965] text-[#6c779d]";
   const sublabelColor =
     variant === "approve"
-      ? "text-white/70"
+      ? "text-[#42bf23]/70"
       : variant === "reject"
         ? "text-[#d20344]/70"
-        : "text-[#6c779d]";
+        : "text-[#6c779d]/70";
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`flex flex-1 flex-col items-center justify-center px-[12px] py-[10px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 ${styles}`}
+      className={`flex flex-1 flex-col items-center justify-center px-[20px] py-[10px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 ${styles}`}
     >
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] whitespace-nowrap">
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] whitespace-nowrap">
         {label}
       </span>
       {sublabel && (
