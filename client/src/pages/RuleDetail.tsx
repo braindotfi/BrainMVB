@@ -737,17 +737,14 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
 
   return (
     <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full mb-[16px]">
-      {/* Back pill button */}
+      {/* Back button — same pill style as automations/guardrails/suggested tabs */}
       <button
         type="button"
         onClick={() => navigate("/rules?tab=default")}
         data-testid="button-back-to-rules"
-        className="bg-[#222737] content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+        className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
       >
-        <ArrowLeft size={16} className="text-[#6c779d] shrink-0" />
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap">
-          Rules
-        </span>
+        <ArrowLeft size={16} /> Back to Rules
       </button>
 
       {/* Title + Read-Only tag + subtitle + policy-id */}
