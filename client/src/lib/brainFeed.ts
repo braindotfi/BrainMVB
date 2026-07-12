@@ -8,7 +8,7 @@ import type { Proposal } from "@/lib/proposalTypes";
    moved earlier in Phase 1a — see client/src/lib/brainQueue.ts. Neither
    reads from here anymore.) */
 
-export type ActivityType = "paid" | "moved" | "approved";
+export type ActivityType = "paid" | "moved" | "approved" | "rejected" | "postponed";
 
 export type ActivityItemData = {
   id: number | string;
@@ -47,6 +47,30 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
     time: settled ? settled[1] : "Today",
     linkTo: `/review?receipt=${p.id}`,
     proposal: p,
+  };
+}
+
+/** Map a client-side review-status override (executed / rejected / postponed)
+    into an activity item so the Activity page reflects user decisions made on
+    the Review surface. The time is always "Just now" because the override is
+    a local, in-session action with no brain-core timestamp. */
+export function statusOverrideToActivity(
+  proposal: Proposal,
+  status: "executed" | "rejected" | "postponed",
+): ActivityItemData {
+  const type = status === "executed" ? "approved" : status;
+  const actionLabel =
+    status === "executed" ? "You approved" : status === "rejected" ? "You rejected" : "You postponed";
+  return {
+    id: `${proposal.id}--${status}`,
+    type,
+    title: proposal.title,
+    meta1: actionLabel,
+    meta2: proposal.counterparty ?? proposal.agent,
+    amount: proposal.amount != null ? `$${proposal.amount.toLocaleString()}` : "",
+    time: "Just now",
+    linkTo: `/review?receipt=${proposal.id}`,
+    proposal,
   };
 }
 

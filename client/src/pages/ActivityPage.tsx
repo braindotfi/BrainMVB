@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ICONS } from "@/assets/figma-icons";
+import { XCircle, Clock } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
-import { type ActivityType, type ActivityItemData } from "@/lib/brainFeed";
+import { type ActivityType, type ActivityItemData, statusOverrideToActivity } from "@/lib/brainFeed";
+import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { resolveProposal } from "@/lib/openProposalDetail";
 
 /* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
 const BrainDidIcon = () => (
@@ -42,27 +45,45 @@ const ApprovedIcon = () => (
   </div>
 );
 
-type Tab = "All" | "Brain Did" | "You Approved";
+const RejectedIcon = () => (
+  <div className="relative rounded-[100px] shrink-0 size-[40px] bg-[#1a0a10] flex items-center justify-center">
+    <XCircle size={22} className="text-[#d20344]" />
+  </div>
+);
+
+const PostponedIcon = () => (
+  <div className="relative rounded-[100px] shrink-0 size-[40px] bg-[#11141b] flex items-center justify-center">
+    <Clock size={22} className="text-[#6c779d]" />
+  </div>
+);
+
+type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected" | "You Postponed";
 /* "All" is intentionally hidden for now — kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
-const TABS: Tab[] = ["Brain Did", "You Approved"];
+const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected", "You Postponed"];
 
 const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
   paid: BrainDidIcon,
   moved: BrainDidIcon,
   approved: ApprovedIcon,
+  rejected: RejectedIcon,
+  postponed: PostponedIcon,
 };
 
 const TYPE_TO_TAB: Record<ActivityType, Tab> = {
   paid: "Brain Did",
   moved: "Brain Did",
   approved: "You Approved",
+  rejected: "You Rejected",
+  postponed: "You Postponed",
 };
 
 const TAB_SLUG: Record<Tab, string> = {
   "All": "all",
   "Brain Did": "brain-did",
   "You Approved": "you-approved",
+  "You Rejected": "you-rejected",
+  "You Postponed": "you-postponed",
 };
 
 const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
@@ -185,9 +206,14 @@ const SectionCard = ({
   onSelect?: (item: ActivityItemData) => void;
   activeTab: Tab;
 }) => {
-  const emptyText = activeTab === "You Approved"
-    ? "No manual approvals yet. Items you personally approve will show up here."
-    : "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here.";
+  const emptyText =
+    activeTab === "You Approved"
+      ? "No manual approvals yet. Items you personally approve will show up here."
+      : activeTab === "You Rejected"
+        ? "No rejected items yet. Anything you reject will appear here."
+        : activeTab === "You Postponed"
+          ? "No postponed items yet. Anything you postpone will appear here."
+          : "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here.";
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -264,13 +290,29 @@ export function ActivityPage() {
     return () => window.clearTimeout(t);
   }, [highlightedId]);
 
+  /* Merge live brain-core audit records with client-side review-status overrides
+     (executed / rejected / postponed) so Activity reflects user decisions made on
+     the Review surface even before brain-core's audit log catches up. */
+  const reviewStatuses = useReviewStatuses();
+  const actionItems: ActivityItemData[] = useMemo(() => {
+    const items: ActivityItemData[] = [];
+    for (const [id, status] of Object.entries(reviewStatuses)) {
+      if (status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      const p = resolveProposal(id);
+      if (!p) continue;
+      items.push(statusOverrideToActivity(p, status));
+    }
+    return items;
+  }, [reviewStatuses]);
+
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
 
   const { todayItems: bucketedToday, yesterdayItems: bucketedYesterday, earlierItems: bucketedEarlier } =
     useMemo(() => bucketByDay(records), [records]);
 
-  const todayItems = filterByTab(bucketedToday);
+  /* Client-side actions are always "Today" because they happened in-session. */
+  const todayItems = filterByTab([...bucketedToday, ...actionItems]);
   const yesterdayItems = filterByTab(bucketedYesterday);
   const earlierItems = filterByTab(bucketedEarlier);
 

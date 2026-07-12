@@ -533,6 +533,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Matched to open invoice #MP-2026-Q3", timestamp: "Jul 6, 10:43 AM ET", note: "$8,200", kind: "ok" },
       { label: "Auto-approved by standing rule", timestamp: "Jul 6, 10:45 AM ET", kind: "ok" },
     ],
+    linked: [],
     proposalId: "settled-meridian",
     anchor: {
       status: "anchored",
@@ -560,6 +561,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       { label: "Tolerance check passed", timestamp: "Jul 6, 2:05 PM ET", note: "$0.00 / $1.00", kind: "ok" },
       { label: "Auto-approved by standing rule", timestamp: "Jul 6, 2:10 PM ET", kind: "ok" },
     ],
+    linked: [],
     proposalId: "settled-gusto-recon",
     anchor: {
       status: "anchored",

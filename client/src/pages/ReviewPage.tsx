@@ -497,7 +497,9 @@ export function ReviewPage() {
     ? null
     : queue.some((p) => p.id === active.id)
       ? queue
-      : null;
+      : demoQueue.some((p) => p.id === active.id)
+        ? demoQueue
+        : null;
   const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
   const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
   const pageProposal = (dir: 1 | -1) => {
