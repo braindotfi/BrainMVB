@@ -474,30 +474,6 @@ function ProfileSection() {
             right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" onClick={() => setPhoneModalOpen(true)} />}
             useCircleIcon
           />
-          <Divider />
-          <SettingRow
-            icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
-            label="KYC Verification"
-            right={
-              <span
-                className="px-2 py-[3px] rounded-[22px] inline-flex items-center"
-                style={{
-                  background: "#123509",
-                  color: "#42bf23",
-                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "12px",
-                  lineHeight: "14px",
-                  border: "1px solid rgba(66,191,35,0.2)",
-                  height: "20px",
-                }}
-              >
-                Verified
-              </span>
-            }
-            useCircleIcon
-          />
-          <Divider />
         </Card>
       </div>
 
