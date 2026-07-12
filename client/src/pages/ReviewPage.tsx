@@ -20,7 +20,13 @@ import {
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import { SettledRecordCard } from "@/components/SettledRecordCard";
-import { MOCK_PROPOSALS } from "@/lib/mockProposals";
+import {
+  MOCK_PROPOSALS,
+  ADOBE_SETTLED,
+  COMCAST_SETTLED,
+  MERIDIAN_RECEIVABLE_SETTLED,
+  GUSTO_RECON_SETTLED,
+} from "@/lib/mockProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -271,17 +277,36 @@ export function ReviewPage() {
      the demo proposal lives in exactly one of the three lists at a time, keyed by
      its override status. When the live queue has real items, the demo flow is off
      (live rows have no client-side settled state, so executing/settled stay empty). */
-  const demoBase = MOCK_PROPOSALS[0];
-  const demoStatus = statuses[demoBase.id];
+  /* When live queue is empty, show ALL pending mock proposals so every agent
+     type is visible in the Needs Review tab (invoice, cash, collections, close). */
+  const pendingMock = MOCK_PROPOSALS.filter((p) => p.status === "pending");
   const demoActive = queue.length === 0;
   const demoQueue: Proposal[] =
-    demoActive && (demoStatus === undefined || demoStatus === "pending") ? [demoBase] : [];
-  const executing: Proposal[] =
-    demoActive && (demoStatus === "executing" || demoStatus === "verifying") ? [demoBase] : [];
-  const settled: Proposal[] =
-    demoActive && (demoStatus === "executed" || demoStatus === "rejected" || demoStatus === "postponed")
-      ? [demoBase]
+    demoActive
+      ? pendingMock.filter((p) => (statuses[p.id] ?? "pending") === "pending")
       : [];
+  const executing: Proposal[] =
+    demoActive
+      ? pendingMock.filter((p) => {
+          const s = statuses[p.id];
+          return s === "executing" || s === "verifying";
+        })
+      : [];
+  const settled: Proposal[] =
+    demoActive
+      ? pendingMock.filter((p) => {
+          const s = statuses[p.id];
+          return s === "executed" || s === "rejected" || s === "postponed";
+        })
+      : [];
+
+  /* Approved Automatically - mock receipts for every agent (auto_handled). */
+  const autoApproved: Proposal[] = [
+    ADOBE_SETTLED,
+    COMCAST_SETTLED,
+    MERIDIAN_RECEIVABLE_SETTLED,
+    GUSTO_RECON_SETTLED,
+  ];
 
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
@@ -623,20 +648,29 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Approved Automatically — honest empty state. brain-core's /actions
-                "auto" status means an intent is policy-permitted (proposed or
-                auto-approved), NOT settled — money-moved is the distinct
-                "dispatching"/"executed" state — so there is no live source for a
-                "settled auto-receipts" list without fabricating settlement. Stays
-                empty until brain-core exposes a settled-and-auto-approved signal
-                (or this surface is redesigned to show upcoming auto-executions). */}
+            {/* Approved Automatically - mock receipts for every agent. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Approved Automatically" count={0} />
+                <WidgetHeader title="Approved Automatically" count={autoApproved.length} />
                 <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No auto-approved items yet. Brain will make them here when they happen.</p>
-                  </div>
+                  {autoApproved.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setReturnTo(null); setActive(p); }}
+                      data-testid={`row-auto-approved-${p.id}`}
+                      className="flex gap-[10px] items-center p-[8px] rounded-[8px] w-full text-left border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      <CheckCircle2 size={15} className="text-[#42bf23] shrink-0" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] truncate flex-1 min-w-px">
+                        {p.title}
+                      </p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[12px] shrink-0 text-[#42bf23]">
+                        Auto-approved - {p.auditId}
+                      </p>
+                      <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

@@ -517,4 +517,58 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
       verifyHref: "https://basescan.org/tx/0x1b7f…c8e4",
     },
   },
+
+  /* 11 — Collections Agent: auto-matched receivable —──────── */
+  {
+    id: "AUD-2R1M",
+    eventType: "auto_approved",
+    summary: "Meridian Partners deposit matched to open invoice",
+    counterparty: "Meridian Partners",
+    actor: "system",
+    occurredAtLabel: "Jul 6, 10:45 AM ET",
+    occurredAtMs: 1782902767451,
+    rowSubtitle: "$8,200 \u00b7 system \u00b7 AUD-2R1M",
+    lifecycle: [
+      { label: "Collections Agent detected incoming deposit", timestamp: "Jul 6, 10:42 AM ET", kind: "ok" },
+      { label: "Matched to open invoice #MP-2026-Q3", timestamp: "Jul 6, 10:43 AM ET", note: "$8,200", kind: "ok" },
+      { label: "Auto-approved by standing rule", timestamp: "Jul 6, 10:45 AM ET", kind: "ok" },
+    ],
+    proposalId: "settled-meridian",
+    anchor: {
+      status: "anchored",
+      auditId: "AUD-2R1M",
+      merkleRoot: "0x7a3f…e2b1",
+      baseTx: "0x9c4d…a8f7",
+      block: 21_847_915,
+      anchoredAtLabel: "Jul 6, 10:47 AM ET",
+      verifyHref: "https://basescan.org/tx/0x9c4d…a8f7",
+    },
+  },
+
+  /* 12 — Close Agent: auto-reconciled bank/ledger pair —─────── */
+  {
+    id: "AUD-7P9Q",
+    eventType: "auto_approved",
+    summary: "Gusto payroll line auto-reconciled",
+    counterparty: "Gusto",
+    actor: "system",
+    occurredAtLabel: "Jul 6, 2:10 PM ET",
+    occurredAtMs: 1782913567451,
+    rowSubtitle: "$4,200 \u00b7 system \u00b7 AUD-7P9Q",
+    lifecycle: [
+      { label: "Close Agent detected matched bank/ledger pair", timestamp: "Jul 6, 2:00 PM ET", kind: "ok" },
+      { label: "Tolerance check passed", timestamp: "Jul 6, 2:05 PM ET", note: "$0.00 / $1.00", kind: "ok" },
+      { label: "Auto-approved by standing rule", timestamp: "Jul 6, 2:10 PM ET", kind: "ok" },
+    ],
+    proposalId: "settled-gusto-recon",
+    anchor: {
+      status: "anchored",
+      auditId: "AUD-7P9Q",
+      merkleRoot: "0x4e8b…c3d2",
+      baseTx: "0x2f1a…b6e9",
+      block: 21_847_920,
+      anchoredAtLabel: "Jul 6, 2:12 PM ET",
+      verifyHref: "https://basescan.org/tx/0x2f1a…b6e9",
+    },
+  },
 ];

@@ -591,6 +591,51 @@ export const PAYROLL_RULE: AutoRule = {
   scopeSummary: "the approved payroll provider on scheduled runs under $5,000",
 };
 
+export const CASH_SWEEP_RULE: AutoRule = {
+  id: "cash-sweep",
+  kind: "automation",
+  name: "Auto-sweep idle cash to treasury",
+  summary: "Idle cash above 3-month buffer · under $50,000 · next-day settle",
+  createdLabel: "You created this Mar 15 · swept 4 times since",
+  policyId: "policy/cash.sweep.v4",
+  active: true,
+  agent: "cash",
+  category: "treasury sweep",
+  cap: 50000,
+  allowlist: ["Mercury Treasury (T-Bills)"],
+  scopeSummary: "idle operating cash above buffer under $50,000",
+};
+
+export const COLLECTIONS_RULE: AutoRule = {
+  id: "collections-match",
+  kind: "automation",
+  name: "Auto-match deposits to invoices",
+  summary: "Known customer · matched amount · open invoice · no dispute flag",
+  createdLabel: "You created this Apr 1 · matched 8 deposits since",
+  policyId: "policy/ar.match.v2",
+  active: true,
+  agent: "collections",
+  category: "receivables matching",
+  cap: 10000,
+  allowlist: ["Northstar Design", "Meridian Partners"],
+  scopeSummary: "matched customer deposits to open invoices under $10,000",
+};
+
+export const CLOSE_RULE: AutoRule = {
+  id: "close-recon",
+  kind: "automation",
+  name: "Auto-reconcile matched bank/ledger pairs",
+  summary: "Same vendor · same date · within $1 tolerance · no manual flag",
+  createdLabel: "You created this May 10 · reconciled 23 lines since",
+  policyId: "policy/close.recon.v2",
+  active: true,
+  agent: "close",
+  category: "bank reconciliation",
+  cap: 1000,
+  allowlist: ["Gusto", "Con Edison Business", "Mercury Treasury (T-Bills)"],
+  scopeSummary: "matched bank/ledger pairs within tolerance",
+};
+
 function autoHandled(p: {
   id: string;
   auditId: string;
@@ -726,7 +771,8 @@ function settledApproved(p: {
    Phase 8) — RETAINED as resolution targets for openProposalDetail's allProposals()
    so the document viewer's coherence chain and the mock audit-record proposal links
    still resolve. Reconciled by auditId with their twins in mockAuditRecords.ts
-   (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z). */
+   (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z / AUD-2R1M / AUD-7P9Q). */
+
 export const ADOBE_SETTLED: Proposal = autoHandled({
   id: "settled-adobe",
   auditId: "AUD-4E2N",
@@ -748,6 +794,52 @@ export const ADOBE_SETTLED: Proposal = autoHandled({
   ],
   rule: SAAS_RULE,
   timeline: settledTimeline("Jul 5, 9:12 AM ET", "Jul 5, 9:13 AM ET", "Jul 5, 9:14 AM ET"),
+});
+
+export const MERIDIAN_RECEIVABLE_SETTLED: Proposal = autoHandled({
+  id: "settled-meridian",
+  auditId: "AUD-2R1M",
+  agent: "collections",
+  title: "Matched deposit to Meridian Partners",
+  counterparty: "Meridian Partners",
+  amount: 8200,
+  pastTenseStatement: "Matched Meridian Partners deposit to invoice",
+  settledMeta: "Wiring Transfer ••9921 · settled Jul 6, 10:45 AM ET · you set a rule that allows this",
+  rowSubtitle: "Meridian Partners · matched 10:45 AM",
+  rationale:
+    "A deposit from a known customer matched an open invoice amount, date, and reference number exactly. Brain applied it without asking.",
+  clearedBecause: [
+    { label: "customer", value: "Meridian Partners · known" },
+    { label: "deposit", value: "$8,200" },
+    { label: "open invoice", value: "#MP-2026-Q3 · $8,200 · matched" },
+    { label: "under limit", value: "$8,200 / $10,000", severity: "clean" },
+    { label: "no dispute flag", value: "unchanged" },
+  ],
+  rule: COLLECTIONS_RULE,
+  timeline: settledTimeline("Jul 6, 10:42 AM ET", "Jul 6, 10:43 AM ET", "Jul 6, 10:45 AM ET"),
+});
+
+export const GUSTO_RECON_SETTLED: Proposal = autoHandled({
+  id: "settled-gusto-recon",
+  auditId: "AUD-7P9Q",
+  agent: "close",
+  title: "Bank/ledger pair matched for Gusto",
+  counterparty: "Gusto",
+  amount: 4200,
+  pastTenseStatement: "Reconciled Gusto payroll line",
+  settledMeta: "ACH ••4821 · settled Jul 6, 2:10 PM ET · you set a rule that allows this",
+  rowSubtitle: "Gusto · reconciled 2:10 PM",
+  rationale:
+    "The Gusto payroll ACH on Jul 6 matched the ledger entry to the penny and within the same day. Brain marked it reconciled without asking.",
+  clearedBecause: [
+    { label: "vendor", value: "Gusto · approved payroll provider" },
+    { label: "bank line", value: "$4,200.00 · Jul 6" },
+    { label: "ledger entry", value: "$4,200.00 · Jul 6 · matched" },
+    { label: "tolerance", value: "$0.00 / $1.00", severity: "clean" },
+    { label: "no manual flag", value: "unchanged" },
+  ],
+  rule: CLOSE_RULE,
+  timeline: settledTimeline("Jul 6, 2:00 PM ET", "Jul 6, 2:05 PM ET", "Jul 6, 2:10 PM ET"),
 });
 
 export const COMCAST_SETTLED: Proposal = autoHandled({
