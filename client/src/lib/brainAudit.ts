@@ -58,7 +58,7 @@ export interface BrainAnchor {
 const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: BrainAuditEvent) => string }> = {
   "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed — awaiting decision" },
   "payment_intent.approved": { eventType: "approved", summary: () => "Payment approved" },
-  "payment_intent.rejected": { eventType: "flagged", summary: () => "Payment rejected" },
+  "payment_intent.rejected": { eventType: "rejected", summary: () => "Payment rejected" },
   "execution.approve": { eventType: "approved", summary: () => "Payment approved" },
   "execution.escalate": { eventType: "flagged", summary: () => "Payment escalated for review" },
 };
@@ -141,7 +141,7 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
   const step: LifecycleStep = {
     label: summary,
     timestamp: label(createdMs),
-    kind: eventType === "flagged" ? "alert" : "ok",
+    kind: eventType === "flagged" || eventType === "rejected" ? "alert" : "ok",
     actor: event.actor !== "system" ? event.actor : undefined,
   };
 

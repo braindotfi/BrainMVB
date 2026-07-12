@@ -1,4 +1,5 @@
 import type { Proposal } from "@/lib/proposalTypes";
+import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 
 /* ── Shared source of truth for the Activity feed ──────────────────────────────
    The Activity page's "Brain Did" tab renders off the data declared here.
@@ -79,6 +80,50 @@ export function statusOverrideToActivity(
     time: "Just now",
     linkTo: `/review?receipt=${proposal.id}`,
     proposal,
+  };
+}
+
+/** Map a client-side review-status override into an AuditRecord for the
+ *  canonical Audit Log. Used when merging override-derived actions with
+ *  live brain-core records so the Audit Log reflects the full decision
+ *  history including rejections and postponements.
+ *
+ *  The record is marked pending_next_batch (not yet anchored) because
+ *  client-side overrides have no brain-core timestamp or anchor yet. */
+export function statusOverrideToAuditRecord(
+  proposal: Proposal,
+  status: "executing" | "executed" | "rejected" | "postponed",
+  actor: string,
+): AuditRecord {
+  const eventType: AuditEventType =
+    status === "executing" || status === "executed" ? "approved" : status;
+  const summary =
+    status === "executing" || status === "executed"
+      ? `Payment approved — ${proposal.counterparty ?? proposal.title}`
+      : status === "rejected"
+        ? `Payment rejected — ${proposal.counterparty ?? proposal.title}`
+        : `Payment postponed — ${proposal.counterparty ?? proposal.title}`;
+  const nowMs = Date.now();
+  const occurredAtLabel = new Date(nowMs).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }) + " ET";
+  return {
+    id: `${proposal.id}--audit-${status}`,
+    eventType,
+    summary,
+    counterparty: proposal.counterparty,
+    amount: proposal.amount,
+    actor,
+    occurredAtLabel,
+    occurredAtMs: nowMs,
+    lifecycle: [{ label: summary, timestamp: occurredAtLabel, kind: status === "rejected" ? "alert" : "ok", actor }],
+    linked: [],
+    anchor: { status: "pending_next_batch", auditId: `${proposal.id}--audit-${status}` },
+    proposalId: proposal.id,
   };
 }
 

@@ -4,6 +4,8 @@
 export type AuditEventType =
   | "approved"
   | "auto_approved"
+  | "rejected"
+  | "postponed"
   | "rule_change"
   | "trust_granted"
   | "trust_revoked"
@@ -87,6 +89,8 @@ export interface AuditRecord {
 export type AuditLogTab =
   | "Approvals"
   | "Auto-Approved"
+  | "Rejections"
+  | "Postponed"
   | "Rule Changes"
   | "Trusted Changes"
   | "Flagged"
@@ -95,6 +99,8 @@ export type AuditLogTab =
 export const AUDIT_TABS: AuditLogTab[] = [
   "Approvals",
   "Auto-Approved",
+  "Rejections",
+  "Postponed",
   "Rule Changes",
   "Trusted Changes",
   "Flagged",
@@ -106,6 +112,8 @@ export function auditEventLabel(type: AuditEventType): string {
   switch (type) {
     case "approved": return "APPROVED";
     case "auto_approved": return "AUTO-APPROVED";
+    case "rejected": return "REJECTED";
+    case "postponed": return "POSTPONED";
     case "rule_change": return "RULE CHANGE";
     case "trust_granted": return "TRUST GRANTED";
     case "trust_revoked": return "TRUST REVOKED";
@@ -117,6 +125,10 @@ export function auditEventChipClass(type: AuditEventType): string {
   switch (type) {
     case "flagged":
       return "bg-[#350011] text-[#d20344]";
+    case "rejected":
+      return "bg-[#350011] text-[#d20344]";
+    case "postponed":
+      return "bg-[#1a1c24] text-[#6c779d]";
     default:
       return "bg-[#1d2132] text-[#a8b9f4]";
   }
@@ -127,6 +139,8 @@ export function auditEventChipClass(type: AuditEventType): string {
 const PAYMENT_EVENT_TYPES: ReadonlyArray<AuditEventType> = [
   "approved",
   "auto_approved",
+  "rejected",
+  "postponed",
   "flagged",
 ];
 /* Counterparty kinds that RECEIVE the money on a payment record (the payee).

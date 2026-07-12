@@ -7,12 +7,18 @@ import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { DEMO_AUDIT_RECORDS } from "@/lib/mockAuditRecords";
+import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { resolveProposal } from "@/lib/openProposalDetail";
+import { statusOverrideToAuditRecord } from "@/lib/brainFeed";
+import { useAuth } from "@/lib/authContext";
 
 type Tab = (typeof AUDIT_TABS)[number];
 
 const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approvals: "approved",
   "Auto-Approved": "auto_approved",
+  Rejections: "rejected",
+  Postponed: "postponed",
   "Rule Changes": "rule_change",
   "Trusted Changes": "trust_granted", // trust_granted + trust_revoked
   Flagged: "flagged",
@@ -22,7 +28,32 @@ const Divider = () => <div className="h-px shrink-0 w-full" style={{ background:
 
 export function AuditLogPage() {
   const { format } = useCurrency();
-  const { isLoading, isError, records } = useBrainAuditRecords();
+  const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
+  const { user } = useAuth();
+  const reviewStatuses = useReviewStatuses();
+
+  /* Merge live brain-core audit records with client-side review-status overrides
+     so the Audit Log captures rejected and postponed actions made on the Review
+     surface even before brain-core's audit events catch up.
+
+     NOTE: de-duplication against live brain-core events is not yet possible because
+     brain-core audit events carry brain-core ids (payment_intent_id), while
+     client-side overrides use app-level proposal.id. The overrides are stored
+     in a module-global store (no localStorage) that clears on refresh, so any
+     transient duplicate only persists within a single session and is visually
+     distinguishable by its synthetic id and `pending_next_batch` anchor status.
+     This is a known gap that requires a stable cross-reference before safe dedup. */
+  const records = useMemo(() => {
+    const merged = [...brainRecords];
+    for (const [id, status] of Object.entries(reviewStatuses)) {
+      if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      const p = resolveProposal(id);
+      if (!p) continue;
+      merged.push(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
+    }
+    return merged;
+  }, [brainRecords, reviewStatuses, user]);
+
   const [activeTab, setActiveTab] = useState<Tab>("Approvals");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const search = useSearch();
@@ -157,6 +188,8 @@ export function AuditLogPage() {
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                         {activeTab === "Approvals" && "No approval records yet."}
                         {activeTab === "Auto-Approved" && "No auto-approval records yet."}
+                        {activeTab === "Rejections" && "No rejected payment records yet."}
+                        {activeTab === "Postponed" && "No postponed payment records yet."}
                         {activeTab === "Rule Changes" && "No rule changes recorded yet."}
                         {activeTab === "Trusted Changes" && "No trust status changes yet."}
                         {activeTab === "Flagged" && "No flagged transactions yet."}
@@ -167,7 +200,14 @@ export function AuditLogPage() {
                     <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                       {filtered.map((record, idx) => {
                         const isFlagged = record.eventType === "flagged";
+                        const isRejected = record.eventType === "rejected";
+                        const isPostponed = record.eventType === "postponed";
                         const isAnchored = record.anchor.status === "anchored";
+                        const borderLeft = isFlagged || isRejected
+                          ? "3px solid #d20344"
+                          : isPostponed
+                            ? "3px solid #6c779d"
+                            : undefined;
                         return (
                           <div key={record.id} className="flex flex-col gap-[8px] w-full">
                             <button
@@ -175,7 +215,7 @@ export function AuditLogPage() {
                               onClick={() => setActiveRecord(record)}
                               data-testid={`row-audit-${record.id.toLowerCase()}`}
                               className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                              style={isFlagged ? { borderLeft: "3px solid #d20344" } : undefined}
+                              style={borderLeft ? { borderLeft } : undefined}
                             >
                               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">

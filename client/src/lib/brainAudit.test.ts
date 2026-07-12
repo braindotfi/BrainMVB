@@ -64,10 +64,11 @@ describe("mapAuditEventToRecord", () => {
     expect(r.anchor.merkleRoot).toBeUndefined();
   });
 
-  it("maps a known action to its eventType/summary", () => {
+  it("maps a known action to its eventType/summary with alert lifecycle for rejected", () => {
     const r = mapAuditEventToRecord(ev({ action: "payment_intent.rejected" }), anchor());
-    expect(r.eventType).toBe("flagged");
+    expect(r.eventType).toBe("rejected");
     expect(r.summary).toBe("Payment rejected");
+    expect(r.lifecycle[0].kind).toBe("alert");
   });
 
   it("falls back to the raw action id for an unmapped action, never a fabricated category", () => {

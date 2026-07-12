@@ -70,15 +70,19 @@ export function AuditRecordPopup({
     const label = auditEventLabel(record.eventType);
     const isApproved = record.eventType === "approved";
     const isAuto = record.eventType === "auto_approved";
+    const isRejected = record.eventType === "rejected";
+    const isPostponed = record.eventType === "postponed";
     return (
       <div
         className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid"
         style={
           isApproved || isAuto
             ? { background: "#123509", borderColor: "rgba(66,191,35,0.2)" }
-            : isFlagged
+            : isFlagged || isRejected
               ? { background: "#350011", borderColor: "rgba(210,3,68,0.2)" }
-              : { background: "#222737", borderColor: "rgba(108,119,157,0.2)" }
+              : isPostponed
+                ? { background: "#1a1c24", borderColor: "rgba(108,119,157,0.2)" }
+                : { background: "#222737", borderColor: "rgba(108,119,157,0.2)" }
         }
       >
         <p
@@ -86,9 +90,11 @@ export function AuditRecordPopup({
           style={
             isApproved || isAuto
               ? { color: "#42bf23" }
-              : isFlagged
+              : isFlagged || isRejected
                 ? { color: "#d20344" }
-                : { color: "#6c779d" }
+                : isPostponed
+                  ? { color: "#6c779d" }
+                  : { color: "#6c779d" }
           }
         >
           {label}

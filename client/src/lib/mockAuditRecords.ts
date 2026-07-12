@@ -119,6 +119,39 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
     invoiceId: "BFS-0426",
     anchor: { status: "anchored", auditId: "AUD-DEMO-5", merkleRoot: "0x3a8b…e5f2", baseTx: "0x21c7…9d4e", block: 21_847_902, anchoredAtLabel: "Jul 5, 2:15 PM ET", verifyHref: "https://basescan.org/tx/0x21c7…9d4e" },
   },
+  {
+    id: "AUD-DEMO-6",
+    eventType: "rejected",
+    summary: "Payment rejected — Apex Cleaning Co",
+    counterparty: "Apex Cleaning Co",
+    amount: 1450,
+    actor: "sarah@meridian",
+    occurredAtLabel: "Jul 4, 1:18 PM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 2,
+    rowSubtitle: "$1,450 · sarah@meridian · AUD-DEMO-6",
+    lifecycle: [
+      { label: "sarah@meridian rejected payment", timestamp: "Jul 4, 1:18 PM ET", kind: "alert", actor: "sarah@meridian" },
+      { label: "Duplicate invoice detected earlier", timestamp: "Jul 4, 1:10 PM ET", kind: "alert" },
+    ],
+    linked: [{ kind: "vendor", label: "Apex Cleaning Co", refId: "apex" }],
+    anchor: { status: "anchored", auditId: "AUD-DEMO-6", merkleRoot: "0x5c2a…e8d3", baseTx: "0x41f7…b4c9", block: 21_847_881, anchoredAtLabel: "Jul 4, 1:20 PM ET", verifyHref: "https://basescan.org/tx/0x41f7…b4c9" },
+  },
+  {
+    id: "AUD-DEMO-7",
+    eventType: "postponed",
+    summary: "Payment postponed — Comcast Business",
+    counterparty: "Comcast Business",
+    amount: 228,
+    actor: "sarah@meridian",
+    occurredAtLabel: "Jul 3, 9:30 AM ET",
+    occurredAtMs: Date.now() - 1000 * 60 * 60 * 24 * 3,
+    rowSubtitle: "$228 · sarah@meridian · AUD-DEMO-7",
+    lifecycle: [
+      { label: "sarah@meridian postponed payment to tomorrow", timestamp: "Jul 3, 9:30 AM ET", kind: "ok", actor: "sarah@meridian" },
+    ],
+    linked: [{ kind: "vendor", label: "Comcast Business", refId: "comcast" }],
+    anchor: { status: "pending_next_batch", auditId: "AUD-DEMO-7" },
+  },
 ];
 
 export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
