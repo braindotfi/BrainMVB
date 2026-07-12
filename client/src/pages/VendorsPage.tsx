@@ -123,8 +123,6 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
     }
   };
 
-  if (!open) return null;
-
   const inputCls =
     "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
 
@@ -274,6 +272,7 @@ export function VendorsPage() {
   };
 
   const handleOpenVendor = (vendor: Vendor) => {
+    setActiveVendor(vendor);
     navigate(`/vendors?vendor=${vendor.id}`, { replace: true });
   };
 
