@@ -297,7 +297,7 @@ export function ActivityPage() {
   const actionItems: ActivityItemData[] = useMemo(() => {
     const items: ActivityItemData[] = [];
     for (const [id, status] of Object.entries(reviewStatuses)) {
-      if (status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
       const p = resolveProposal(id);
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));

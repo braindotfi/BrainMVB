@@ -50,17 +50,25 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
   };
 }
 
-/** Map a client-side review-status override (executed / rejected / postponed)
+/** Map a client-side review-status override (executing / executed / rejected / postponed)
     into an activity item so the Activity page reflects user decisions made on
     the Review surface. The time is always "Just now" because the override is
-    a local, in-session action with no brain-core timestamp. */
+    a local, in-session action with no brain-core timestamp.
+
+    Both "executing" (awaiting settlement) and "executed" (settled) map to the
+    "approved" activity type so the "You Approved" tab captures the full approval
+    lifecycle immediately. */
 export function statusOverrideToActivity(
   proposal: Proposal,
-  status: "executed" | "rejected" | "postponed",
+  status: "executing" | "executed" | "rejected" | "postponed",
 ): ActivityItemData {
-  const type = status === "executed" ? "approved" : status;
+  const type: ActivityType = status === "executing" || status === "executed" ? "approved" : status;
   const actionLabel =
-    status === "executed" ? "You approved" : status === "rejected" ? "You rejected" : "You postponed";
+    status === "executing" || status === "executed"
+      ? "You approved"
+      : status === "rejected"
+        ? "You rejected"
+        : "You postponed";
   return {
     id: `${proposal.id}--${status}`,
     type,
