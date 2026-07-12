@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
 import closeIcon from "@assets/close_1783619312132.png";
-import backIcon from "@assets/back_1783619312133.png";
+import backIcon from "@assets/Back_1783893317104.png";
 import bankIcon from "@assets/bank_1783619257499.png";
 import cryptoIcon from "@assets/crypto_1783619257499.png";
 import accountingIcon from "@assets/accounting_1783619257498.png";
@@ -638,7 +638,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
         type="button"
         onClick={onContinue}
         data-testid="button-categories-continue"
-        className="flex flex-1 items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
+        className="flex flex-1 items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
       >
         Continue
       </button>
@@ -1214,7 +1214,7 @@ function ReadingScreen({
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Reading Your Sources
+          Reading your sources
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Brain is reviewing your uploaded documents. Anything it reads is advisory until you confirm it.
@@ -1279,7 +1279,7 @@ function ReadingScreen({
           type="button"
           onClick={onViewWiki}
           data-testid="button-reading-view-wiki"
-          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#222737] hover:bg-[#2c3247] text-[#6c779d]"
+          className="flex-1 flex items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#222737] hover:bg-[#2c3247] text-[#6c779d]"
         >
           Close
         </button>
@@ -1287,7 +1287,7 @@ function ReadingScreen({
           type="button"
           onClick={onContinue}
           data-testid="button-reading-continue"
-          className="flex-1 flex items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
+          className="flex-1 flex items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
         >
           Continue
         </button>
@@ -1366,10 +1366,10 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Here's What Brain Found.
+          Here's what Brain found.
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          These obligations were read from your documents. They're advisory — please confirm before acting on them.
+          These are insights and recommendations based on your connected data.
         </p>
       </div>
 
@@ -1475,7 +1475,7 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
         type="button"
         onClick={onFinish}
         data-testid="button-found-finish"
-        className="flex w-full items-center justify-center px-[20px] py-[14px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#123509] hover:bg-[#173f0c] text-[#42bf23]"
+        className="flex w-full items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#123509] hover:bg-[#173f0c] text-[#42bf23]"
       >
         Finish
       </button>
