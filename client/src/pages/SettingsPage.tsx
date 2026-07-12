@@ -498,6 +498,12 @@ function ProfileSection() {
             useCircleIcon
           />
           <Divider />
+        </Card>
+      </div>
+
+      <div>
+        <SectionLabel>Currency</SectionLabel>
+        <Card noBorder>
           <SettingRow
             icon={
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
