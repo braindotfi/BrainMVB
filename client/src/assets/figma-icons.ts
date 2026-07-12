@@ -45,8 +45,6 @@ import settings_profile_active_head from "@assets/figma_icons/settings_profile_a
 import settings_profile_active_body from "@assets/figma_icons/settings_profile_active_body.svg";
 import settings_security_inactive from "@assets/figma_icons/settings_security_inactive.svg";
 import settings_notif_inactive from "@assets/figma_icons/settings_notif_inactive.svg";
-import settings_payments_inactive from "@assets/figma_icons/settings_payments_inactive.svg";
-import settings_agents_inactive from "@assets/figma_icons/settings_agents_inactive.svg";
 import settings_legal_inactive from "@assets/figma_icons/settings_legal_inactive.svg";
 import settings_account_inactive from "@assets/figma_icons/settings_account_inactive.svg";
 import settings_avatar_miles from "@assets/figma_icons/settings_avatar_miles.png";
@@ -118,8 +116,6 @@ export const ICONS = {
   settings_profile_active_body,
   settings_security_inactive,
   settings_notif_inactive,
-  settings_payments_inactive,
-  settings_agents_inactive,
   settings_legal_inactive,
   settings_account_inactive,
   settings_avatar_miles,

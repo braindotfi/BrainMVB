@@ -1,10 +1,11 @@
-import { useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { PhoneNumberModal } from "@/components/PhoneNumberModal";
 import { EmailModal } from "@/components/EmailModal";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
 import { useUserContact } from "@/lib/userContact";
+import { useCurrency } from "@/lib/currencyContext";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
@@ -15,8 +16,6 @@ import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
-import PaymentsFigma from "@/components/settings/figma/PaymentsSectionFigma";
-import AgentsFigma from "@/components/settings/figma/AgentsSection";
 import TeamFigma from "@/components/settings/figma/TeamSection";
 import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
@@ -27,8 +26,6 @@ type Section =
   | "billing"
   | "security"
   | "notifications"
-  | "payments"
-  | "agents"
   | "team"
   | "legal"
   | "account";
@@ -93,46 +90,6 @@ const NotifNavIcon = ({ active }: { active: boolean }) =>
     <FigmaNavIcon src={ICONS.settings_notif_inactive} />
   );
 
-const PaymentsNavIcon = ({ active }: { active: boolean }) =>
-  active ? (
-    <div className="relative shrink-0 size-[24px]">
-      <div className="absolute inset-[16.67%_4.17%]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.payments_subtract} />
-      </div>
-      <div className="absolute bottom-[33.33%] left-[41.67%] right-1/4 top-[33.33%]">
-        <div className="absolute inset-[-14.06%_-28.13%_-42.19%_-28.13%]">
-          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.payments_arrow} />
-        </div>
-      </div>
-      <div className="absolute bottom-[33.33%] left-1/4 right-[41.67%] top-[33.33%]">
-        <div className="absolute inset-[-14.06%_-28.13%_-42.19%_-28.13%]">
-          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.payments_arrow} />
-        </div>
-      </div>
-    </div>
-  ) : (
-    <FigmaNavIcon src={ICONS.settings_payments_inactive} inset="16.67%_4.17%" />
-  );
-
-const AgentsNavIcon = ({ active }: { active: boolean }) =>
-  active ? (
-    <div className="relative shrink-0 size-[24px]">
-      <div className="absolute inset-[4.17%_8.33%]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={NAV_ACTIVE.agents_vector} />
-      </div>
-      <div className="absolute bottom-1/4 left-1/4 right-[23.78%] top-1/4">
-        <div className="absolute inset-[-9.38%_-18.3%_-28.13%_-18.3%]">
-          <img alt="" className="block max-w-none size-full" src={NAV_ACTIVE.agents_union} />
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="relative shrink-0 size-[24px]">
-      <div className="absolute h-[22px] left-[2px] top-px w-[20px]">
-        <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_agents_inactive} />
-      </div>
-    </div>
-  );
 
 const LegalNavIcon = ({ active }: { active: boolean }) => (
   <img alt="" className="shrink-0 size-[24px]" src={active ? legalActiveIcon : legalInactiveIcon} />
@@ -172,8 +129,6 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
   { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
   { id: "security",      label: "Security",          Icon: SecurityNavIcon },
   { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
-  { id: "payments",      label: "Payments",          Icon: PaymentsNavIcon },
-  { id: "agents",        label: "Agent Permissions", Icon: AgentsNavIcon   },
   { id: "team",          label: "Team",              Icon: TeamNavIcon     },
   { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
   { id: "account",       label: "Account",           Icon: AccountNavIcon  },
@@ -383,6 +338,23 @@ function ProfileSection() {
     e.target.value = "";
   };
 
+  const { currency, setCurrency } = useCurrency();
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const currencyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!currencyOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (currencyRef.current && !currencyRef.current.contains(e.target as Node)) {
+        setCurrencyOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [currencyOpen]);
+
+  const CURRENCY_OPTIONS = ["USD", "EUR"] as const;
+
   return (
     <div className="flex flex-col gap-5">
       {/* Profile header card — borderless per Figma */}
@@ -522,6 +494,63 @@ function ProfileSection() {
               >
                 Verified
               </span>
+            }
+            useCircleIcon
+          />
+          <Divider />
+          <SettingRow
+            icon={
+              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+                <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
+                  <div className="absolute inset-[12.5%]">
+                    <div className="absolute inset-[-5.56%]">
+                      <img alt="" className="block max-w-none size-full" src={ICONS.settings_wallet_icon1} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            label="Default Currency"
+            sublabel="Used for balance display"
+            right={
+              <div ref={currencyRef} className="relative shrink-0 w-[120px]">
+                <button
+                  type="button"
+                  onClick={() => setCurrencyOpen((v) => !v)}
+                  className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
+                  data-testid="button-default-currency"
+                >
+                  <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
+                    <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                      {currency}
+                    </p>
+                  </div>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="relative shrink-0 size-[24px]">
+                    <path d="M7 10l5 5 5-5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                {currencyOpen && (
+                  <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
+                    {CURRENCY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => {
+                          setCurrency(opt);
+                          setCurrencyOpen(false);
+                        }}
+                        className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
+                          currency === opt ? "text-white" : "text-[#a8b9f4]"
+                        }`}
+                        data-testid={`option-default-currency-${opt}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             }
             useCircleIcon
           />
@@ -795,8 +824,6 @@ export function SettingsPage() {
     billing:       <BillingSection />,
     security:      <SecurityFigma />,
     notifications: <NotificationsFigma />,
-    payments:      <PaymentsFigma />,
-    agents:        <AgentsFigma />,
     team:          <TeamFigma />,
     legal:         <LegalFigma />,
     account:       <AccountFigma />,
