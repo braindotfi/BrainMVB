@@ -479,7 +479,8 @@ function ProfileSection() {
 
       <div>
         <SectionLabel>Currency</SectionLabel>
-        <Card noBorder>
+        {/* overflow-visible so the dropdown isn’t clipped by the card */}
+        <div className="rounded-[16px]" style={{ background: "#0a0c10" }}>
           <SettingRow
             icon={
               <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -536,7 +537,7 @@ function ProfileSection() {
             }
             useCircleIcon
           />
-        </Card>
+        </div>
       </div>
 
       <PhoneNumberModal open={phoneModalOpen} onOpenChange={setPhoneModalOpen} currentPhone={phone} />
