@@ -33,7 +33,7 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] hover:bg-[#0d1018] transition-colors"
     >
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px relative">
         <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
