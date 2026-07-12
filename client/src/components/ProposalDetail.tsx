@@ -7,12 +7,6 @@ import {
   HandCoins,
   Landmark,
   BookCheck,
-  FileText,
-  ArrowLeftRight,
-  History,
-  FileSignature,
-  BookOpen,
-  TrendingUp,
   ShieldAlert,
   ChevronDown,
   ChevronRight,
@@ -35,7 +29,6 @@ import type {
   ProposalStatus,
   Agent,
   Severity,
-  EvidenceItem,
   FactRow,
 } from "@/lib/proposalTypes";
 
@@ -63,15 +56,6 @@ export const AGENT_META: Record<Agent, { label: string; icon: LucideIcon }> = {
   collections: { label: "Collections Agent", icon: HandCoins },
   cash: { label: "Cash Agent", icon: Landmark },
   close: { label: "Close Agent", icon: BookCheck },
-};
-
-const EVIDENCE_ICON: Record<EvidenceItem["kind"], LucideIcon> = {
-  invoice: FileText,
-  transaction: ArrowLeftRight,
-  prior_payment: History,
-  contract: FileSignature,
-  ledger_entry: BookOpen,
-  forecast: TrendingUp,
 };
 
 /* Pills: danger → alert red; warning → gold; info → baby blue; clean → purple. */
@@ -203,7 +187,7 @@ export function ProposalDetail({
             <div className="flex flex-col gap-[16px] items-start w-full">
               <div className="flex flex-col gap-[6px] items-start w-full">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] w-full"
                   data-testid="text-action-statement"
                 >
                   {proposal.actionStatement}
@@ -250,56 +234,74 @@ export function ProposalDetail({
               )}
             </div>
 
-            {/* Why this needs your call — rationale + facts mono block */}
+            {/* Why this needs your call — rationale only (facts moved to Linked Evidence) */}
             <div className="flex flex-col gap-[12px] items-start w-full">
               <SectionLabel>Why This Needs Your Call</SectionLabel>
               <p
                 id="proposal-detail-rationale"
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#6c779d] text-[15px] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
               >
                 {proposal.rationale}
               </p>
-              {proposal.facts && proposal.facts.length > 0 && (
-                <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px]">
-                  {proposal.facts.map((fact, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
-                      data-testid={`fact-${i}`}
-                    >
-                      <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
-                      <span className="text-right" style={{ color: factColor(fact.severity) }}>
-                        {fact.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Evidence grid — no icon per kind (Figma); duplicate shows both invoices */}
+            {/* Linked Evidence — facts + evidence items in a Figma-style table */}
             <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>Evidence</SectionLabel>
-              <div className="grid grid-cols-2 gap-[16px] w-full">
-                {proposal.evidence.map((ev, i) => (
-                  <div
-                    key={i}
-                    data-testid={`evidence-${i}`}
-                    className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[8px]"
-                  >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#414965] text-[12px] uppercase">
-                      {ev.kind.replace("_", " ")}
-                    </span>
-                    <div className="flex flex-col gap-[8px] w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[20px] w-full">
-                        {ev.title}
-                      </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#414965] text-[16px] w-full">
-                        {ev.subtitle}
-                      </p>
+              <SectionLabel>Linked Evidence</SectionLabel>
+              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
+                {/* Facts rows */}
+                {proposal.facts && proposal.facts.map((fact, i) => {
+                  const totalFactRows = proposal.facts!.length;
+                  const isLast = i === totalFactRows - 1 && proposal.evidence.length === 0;
+                  return (
+                    <div
+                      key={`fact-${i}`}
+                      className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
+                      data-testid={`linked-evidence-${i}`}
+                    >
+                      <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                          {titleCase(fact.label)}
+                        </p>
+                      </div>
+                      <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
+                          {fact.value}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {/* Evidence rows */}
+                {proposal.evidence.map((ev, i) => {
+                  const factCount = proposal.facts?.length ?? 0;
+                  const totalRows = factCount + proposal.evidence.length;
+                  const rowIdx = factCount + i;
+                  const isLast = rowIdx === totalRows - 1;
+                  return (
+                    <div
+                      key={`ev-${i}`}
+                      className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
+                      data-testid={`linked-evidence-ev-${i}`}
+                    >
+                      <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                          {titleCase(ev.kind.replace("_", " "))}
+                        </p>
+                      </div>
+                      <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
+                          {ev.title}
+                        </p>
+                        {ev.subtitle && (
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[12px]">
+                            {ev.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               {/* Source document — tappable link when invoiceId resolves */}
               {proposal.invoiceId && (() => {
@@ -921,35 +923,25 @@ function ActionButton({
   variant: "approve" | "reject" | "postpone";
   testId: string;
 }) {
-  /* Per Figma (node 5638:65131): Reject = dark-red bg / alert-red text,
-     Postpone = neutral gray bg / muted text, Approve = dark-green bg / green text. */
+  /* Per Figma (node 5737:66019-21): Reject = dark-red bg / alert-red text,
+     Postpone = neutral gray bg / muted text, Approve = dark-green bg / green text.
+     All: h-[44px] px-[20px] py-[10px] rounded-[100px] SemiBold 16px. */
   const styles =
     variant === "approve"
       ? "bg-[#123509] hover:bg-[#194d0d] focus-visible:ring-[#42bf23] text-[#42bf23]"
       : variant === "reject"
         ? "bg-[#350011] hover:bg-[#4a0018] focus-visible:ring-[#d20344] text-[#d20344]"
         : "bg-[#222737] hover:bg-[#2c3247] focus-visible:ring-[#414965] text-[#6c779d]";
-  const sublabelColor =
-    variant === "approve"
-      ? "text-[#42bf23]/70"
-      : variant === "reject"
-        ? "text-[#d20344]/70"
-        : "text-[#6c779d]/70";
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`flex flex-1 flex-col items-center justify-center px-[20px] py-[10px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 ${styles}`}
+      className={`flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 ${styles}`}
     >
       <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] whitespace-nowrap">
         {label}
       </span>
-      {sublabel && (
-        <span className={`[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-[11px] text-center ${sublabelColor}`}>
-          {sublabel}
-        </span>
-      )}
     </button>
   );
 }
