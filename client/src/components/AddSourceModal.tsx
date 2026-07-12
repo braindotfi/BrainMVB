@@ -482,7 +482,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
         type="button"
         onClick={onAddNew}
         data-testid="button-connect-new-source"
-        className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-colors bg-[#4a2300] hover:bg-[#5a2c00] text-[#ff9500]"
+        className="flex w-full items-center justify-center gap-[10px] px-[20px] h-[44px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] transition-colors bg-[#4a2300] hover:bg-[#5a2c00] text-[#ff9500]"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           <path d="M9 3.75V14.25M3.75 9H14.25" stroke="#ff9500" strokeWidth="2" strokeLinecap="round" />
@@ -638,7 +638,7 @@ function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => v
         type="button"
         onClick={onContinue}
         data-testid="button-categories-continue"
-        className="flex flex-1 items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
+        className="flex w-full items-center justify-center px-[20px] h-[44px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[15px] bg-[#4a2300] hover:bg-[#5c2c00] text-[#ff9500]"
       >
         Continue
       </button>
