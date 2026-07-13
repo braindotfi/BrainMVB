@@ -25,6 +25,9 @@ export type ActivityItemData = {
   linkTo?: string;
   /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open its record detail. */
   proposal?: Proposal;
+  /** If this activity item is a decided agent proposal (the AgentProposalModal flow),
+      carry it so a tap re-opens that modal as a read-only receipt. */
+  agentProposal?: AgentProposal;
 };
 
 /** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
@@ -161,6 +164,7 @@ export function agentDecisionToActivity(
       minute: "2-digit",
       hour12: true,
     }),
+    agentProposal: p,
   };
 }
 

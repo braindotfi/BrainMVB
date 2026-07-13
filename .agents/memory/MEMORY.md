@@ -5,4 +5,5 @@
 - [Members authority integration](members-authority-integration.md) — Members/approval surface is core-only (GREEN 2026-07-04); member token backs all non-propose calls, agent token propose-only; int64-max limit = unlimited.
 - [BFF vitest setup](bff-vitest-setup.md) — `npm test` pins 5 BFF invariants; dedicated vitest.config (don't extend vite.config, re-declare @/@shared aliases); vitest 2.x is firewall-blocked, use 4.x.
 - [Figma panel pattern](figma-panel-pattern.md) — reusable "list panel" shape (header+counter badge, divider rows, pill actions) now used by AuditLogPage and RuleDetail; reuse it for future Figma-matching restyles.
+- [Activity tap convention](activity-tap-convention.md) — every Activity row opens the record it represents (audit popup / proposal sheet / agent modal receipt); decided records show read-only footers.
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.

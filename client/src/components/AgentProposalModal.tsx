@@ -461,6 +461,10 @@ export function AgentProposalModal({
      auto-approved one — so the seed status is overridden by the decision. */
   const isAutoApproved =
     proposal.status === "approved_automatically" && decisions[proposal.id] !== "undone_to_review";
+  /* The user's decision on this record (if any) — a decided needs_review record
+     opened again (e.g. as a receipt from the Activity page) renders a muted
+     decision line in the footer instead of re-offering Approve / Reject. */
+  const decided = decisions[proposal.id];
   const riskNoteColor =
     proposal.riskLevel === "high" ? "#d20344" : proposal.riskLevel === "elevated" ? "#ff9500" : "#6c779d";
   /* Inline edit form applies to propose-mode agents whose editable surface is a
@@ -796,6 +800,22 @@ export function AgentProposalModal({
                   </p>
                 );
               })()
+            ) : decided === "approved" || decided === "rejected" ? (
+              /* Already decided (opened as a receipt, e.g. from the Activity page) —
+                 show the decision instead of re-offering the action buttons. */
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full"
+                data-testid="text-agent-decided"
+              >
+                {decided === "approved" ? "You approved this proposal." : "You rejected this proposal."}
+              </p>
+            ) : isNotifyOnly && decided === "acknowledged" ? (
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full"
+                data-testid="text-agent-acknowledged"
+              >
+                You acknowledged this flag.
+              </p>
             ) : isNotifyOnly ? (
               <button
                 type="button"
