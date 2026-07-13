@@ -1191,6 +1191,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
    an auto-approved record's Undo moves it back into Needs Review. */
 export type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
 let decisions: Record<string, AgentDecision> = {};
+/* Epoch-ms timestamp of each decision, keyed by proposal id — read by the
+   Activity + Audit Log pages so a logged decision keeps its real time instead
+   of re-stamping "now" on every rerender. */
+const decisionTimes: Record<string, number> = {};
 const listeners = new Set<() => void>();
 function emit() {
   decisions = { ...decisions };
@@ -1198,11 +1202,20 @@ function emit() {
 }
 export function decideAgentProposal(id: string, decision: AgentDecision) {
   decisions[id] = decision;
+  decisionTimes[id] = Date.now();
   emit();
 }
 export function clearAgentDecision(id: string) {
   delete decisions[id];
+  delete decisionTimes[id];
   emit();
+}
+/** Epoch ms when the decision for `id` was made (falls back to now if unknown). */
+export function agentDecisionTimeMs(id: string): number {
+  return decisionTimes[id] ?? Date.now();
+}
+export function getAgentProposal(id: string): AgentProposal | undefined {
+  return AGENT_PROPOSALS.find((p) => p.id === id);
 }
 export function useAgentDecisions(): Record<string, AgentDecision> {
   return useSyncExternalStore(

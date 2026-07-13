@@ -1,5 +1,6 @@
 import type { Proposal } from "@/lib/proposalTypes";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
+import type { AgentProposal } from "@/lib/agentProposals";
 
 /* ── Shared source of truth for the Activity feed ──────────────────────────────
    The Activity page's "Brain Did" tab renders off the data declared here.
@@ -124,6 +125,78 @@ export function statusOverrideToAuditRecord(
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `${proposal.id}--audit-${status}` },
     proposalId: proposal.id,
+  };
+}
+
+/** Shared time formatter for agent-decision records ("Jul 13, 5:42 PM ET"). */
+function decisionTimeLabel(ms: number): string {
+  return (
+    new Date(ms).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }) + " ET"
+  );
+}
+
+/** Map a user decision on an agent proposal (the AgentProposalModal flow —
+    decideAgentProposal in agentProposals.ts) onto an activity item so the
+    Activity page reflects approvals/rejections made on that surface. */
+export function agentDecisionToActivity(
+  p: AgentProposal,
+  decision: "approved" | "rejected",
+  decidedAtMs: number,
+): ActivityItemData {
+  return {
+    id: `${p.id}--agent-${decision}`,
+    type: decision,
+    title: p.title,
+    meta1: decision === "approved" ? "You approved" : "You rejected",
+    meta2: `${p.agentDisplayName} agent`,
+    amount: p.amount != null ? `$${p.amount.toLocaleString()}` : "",
+    time: new Date(decidedAtMs).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }),
+  };
+}
+
+/** Map a user decision on an agent proposal into an AuditRecord for the
+    canonical Audit Log. pending_next_batch because the decision is a local,
+    in-session action with no brain-core anchor yet — same convention as
+    statusOverrideToAuditRecord above. */
+export function agentDecisionToAuditRecord(
+  p: AgentProposal,
+  decision: "approved" | "rejected",
+  actor: string,
+  decidedAtMs: number,
+): AuditRecord {
+  const summary =
+    decision === "approved"
+      ? `Proposal approved — ${p.title}`
+      : `Proposal rejected — ${p.title}`;
+  const label = decisionTimeLabel(decidedAtMs);
+  return {
+    id: `${p.id}--agent-audit-${decision}`,
+    eventType: decision,
+    summary,
+    amount: p.amount ?? undefined,
+    actor,
+    occurredAtLabel: label,
+    occurredAtMs: decidedAtMs,
+    lifecycle: [
+      {
+        label: summary,
+        timestamp: label,
+        kind: decision === "rejected" ? "alert" : "ok",
+        actor,
+      },
+    ],
+    linked: [],
+    anchor: { status: "pending_next_batch", auditId: `${p.id}--agent-audit-${decision}` },
   };
 }
 

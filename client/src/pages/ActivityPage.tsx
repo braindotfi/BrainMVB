@@ -3,7 +3,8 @@ import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
-import { type ActivityType, type ActivityItemData, statusOverrideToActivity, autoHandledToActivity } from "@/lib/brainFeed";
+import { type ActivityType, type ActivityItemData, statusOverrideToActivity, autoHandledToActivity, agentDecisionToActivity } from "@/lib/brainFeed";
+import { useAgentDecisions, agentDecisionTimeMs, getAgentProposal } from "@/lib/agentProposals";
 import {
   ADOBE_SETTLED,
   COMCAST_SETTLED,
@@ -247,6 +248,7 @@ export function ActivityPage() {
      (executed / rejected / postponed) so Activity reflects user decisions made on
      the Review surface even before brain-core's audit log catches up. */
   const reviewStatuses = useReviewStatuses();
+  const agentDecisions = useAgentDecisions();
   const actionItems: ActivityItemData[] = useMemo(() => {
     const items: ActivityItemData[] = [];
     for (const [id, status] of Object.entries(reviewStatuses)) {
@@ -255,8 +257,17 @@ export function ActivityPage() {
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
     }
+    /* Agent-proposal decisions (the AgentProposalModal flow) — approvals and
+       rejections made there live in the agentProposals decision store, not
+       reviewStatusStore, so they are layered in here. */
+    for (const [id, decision] of Object.entries(agentDecisions)) {
+      if (decision !== "approved" && decision !== "rejected") continue;
+      const p = getAgentProposal(id);
+      if (!p) continue;
+      items.push(agentDecisionToActivity(p, decision, agentDecisionTimeMs(id)));
+    }
     return items;
-  }, [reviewStatuses]);
+  }, [reviewStatuses, agentDecisions]);
 
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
@@ -280,10 +291,22 @@ export function ActivityPage() {
       .map(autoHandledToActivity);
   }, [records]);
 
+  /* De-dupe merged rows by id so a live record and a local synthetic row for
+     the same action never render twice (mirrors the Audit Log's merge guard). */
+  const dedupeById = (items: ActivityItemData[]) => {
+    const seen = new Set<string>();
+    return items.filter((it) => {
+      const key = String(it.id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   /* Client-side actions are always "Today" because they happened in-session. */
-  const todayItems = filterByTab([...bucketedToday, ...actionItems]);
-  const yesterdayItems = filterByTab(bucketedYesterday);
-  const earlierItems = filterByTab([...bucketedEarlier, ...autoHandledItems]);
+  const todayItems = filterByTab(dedupeById([...bucketedToday, ...actionItems]));
+  const yesterdayItems = filterByTab(dedupeById(bucketedYesterday));
+  const earlierItems = filterByTab(dedupeById([...bucketedEarlier, ...autoHandledItems]));
 
   /* Inline proposal detail sheet — opened when an activity row with a proposal
      (review-status override or auto-handled receipt) is tapped. */

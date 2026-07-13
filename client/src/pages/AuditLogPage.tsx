@@ -9,7 +9,8 @@ import { useCurrency } from "@/lib/currencyContext";
 import { DEMO_AUDIT_RECORDS, AUTO_APPROVED_AUDIT_RECORDS, AUTO_APPROVED_IDS } from "@/lib/mockAuditRecords";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
-import { statusOverrideToAuditRecord } from "@/lib/brainFeed";
+import { statusOverrideToAuditRecord, agentDecisionToAuditRecord } from "@/lib/brainFeed";
+import { useAgentDecisions, agentDecisionTimeMs, getAgentProposal } from "@/lib/agentProposals";
 import { useAuth } from "@/lib/authContext";
 
 type Tab = (typeof AUDIT_TABS)[number];
@@ -31,6 +32,7 @@ export function AuditLogPage() {
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
   const { user } = useAuth();
   const reviewStatuses = useReviewStatuses();
+  const agentDecisions = useAgentDecisions();
 
   /* Merge live brain-core audit records with client-side review-status overrides
      so the Audit Log captures rejected and postponed actions made on the Review
@@ -64,8 +66,16 @@ export function AuditLogPage() {
       if (!p) continue;
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
+    /* Layer in agent-proposal decisions (the AgentProposalModal flow) — these
+       live in the agentProposals decision store, not reviewStatusStore. */
+    for (const [id, decision] of Object.entries(agentDecisions)) {
+      if (decision !== "approved" && decision !== "rejected") continue;
+      const p = getAgentProposal(id);
+      if (!p) continue;
+      add(agentDecisionToAuditRecord(p, decision, user?.email ?? user?.username ?? "operator", agentDecisionTimeMs(id)));
+    }
     return merged;
-  }, [brainRecords, reviewStatuses, user]);
+  }, [brainRecords, reviewStatuses, agentDecisions, user]);
 
   const [activeTab, setActiveTab] = useState<Tab>("Approvals");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
