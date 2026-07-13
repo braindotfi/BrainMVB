@@ -1,0 +1,121 @@
+Phase 2 of transitioning BrainMVB out of demo mode: wire real company signup, login, and
+member invites to the brain-core production tenancy contract (docs/contracts/
+production-tenancy.md, shipped in brain-core PR #239). This replaces per-user demo
+provisioning with real shared tenancy — colleagues who sign up under the same company land
+in the SAME tenant as members, not separate sandboxes.
+
+PRECONDITION: verify the production tenancy endpoints are live before building. Probe
+POST /v1/tenants on production with the platform service credential; if it 404s or 500s,
+STOP and report — do not build against a route that doesn't respond, no mock fallback, same
+rule as the members work.
+
+WORKFLOW (required): git fetch + git pull first; NEW branch feature/production-tenancy-auth
+from main; done/pending checklist in the PR description; update CLAUDE.md and replit.md as
+part of the work. Definition of done: merged to main, not just branch-complete.
+
+=========================================================================
+STEP 0 — PROBE (gate)
+=========================================================================
+POST /v1/tenants with the service credential and a throwaway company/founder — expect 201
+with tenant_id, a bootstrap admin member, and a session (token + refresh_token). Confirm the
+returned session resolves via GET /v1/members to exactly that one member. If red, stop and
+report; do not proceed to the tasks below.
+
+=========================================================================
+TASK 1 — getBrainSession: ADD THE PRODUCTION STRATEGY
+=========================================================================
+getBrainSession(appUserId) currently always calls the demo-provision path. Add a second
+strategy selected by environment/build mode (BRAIN_TENANCY_MODE=production|demo), so the
+demo/playground build is unaffected and production build uses:
+1. Look up the platform's durable appUserId -> external_ref mapping (new, see Task 4).
+2. If mapped: POST /v1/sessions { external_ref }. On 200, cache token/refresh_token/
+   expires_in exactly as the demo strategy does today (reuse the existing cache/refresh
+   logic — same shape, different mint call).
+3. On 403 session_identity_unlinked: this user has no tenant yet. Do NOT auto-provision.
+   Surface a distinct state the routes can check (e.g. throw a typed
+   NoTenantError) so the caller can route to "create your company" or "enter an invite
+   code" rather than silently failing or falling back to demo.
+4. Refresh: call POST /v1/sessions/refresh before expiry; on reuse-detected rejection
+   (refresh family revoked), force full re-auth — do not retry silently.
+Keep the demo strategy byte-for-byte as is; it remains the playground's path.
+
+=========================================================================
+TASK 2 — COMPANY SIGNUP (creates a tenant)
+=========================================================================
+New signup flow (or extend the existing SignupPage): collect company_name, founder email,
+founder display name. On submit: platform creates its own local user record for the
+founder, then calls POST /v1/tenants { company_name, founder, founder_external_ref: <the
+platform's durable id for this user> } via the service credential. Store the returned
+tenant_id + external_ref mapping (Task 4). Use the returned session immediately (log the
+founder straight in) rather than making them log in again.
+Error handling: surface any 4xx/5xx from tenant creation as a plain-language failure; do not
+retry automatically (tenant creation is not idempotent per the contract — reissuing the
+same request creates a second tenant).
+
+=========================================================================
+TASK 3 — LOGIN -> SESSION EXCHANGE
+=========================================================================
+Existing login (SIWE or password) authenticates the platform-local user as it does today.
+AFTER platform auth succeeds, exchange for a brain-core session via Task 1's production
+strategy. If NoTenantError: this user has a platform account but no tenant membership —
+route them to "Create a company" or "Enter your invite link" (do not silently create a
+tenant on their behalf; membership must come from POST /v1/tenants or invite consume,
+never from login itself).
+
+=========================================================================
+TASK 4 — IDENTITY MAPPING (platform-side persistence)
+=========================================================================
+Add a durable table/column mapping platform appUserId -> brain-core external_ref (the value
+sent as founder_external_ref at tenant creation or bound at invite consume). This must be
+real Postgres persistence, not MemStorage — same rule as the rest of the honesty work.
+external_ref should be a stable platform user id (not email, which can change).
+
+=========================================================================
+TASK 5 — INVITE UI (Settings -> Team)
+=========================================================================
+1. "Invite" action on the Team page (admin-only, derived from the current member's role,
+   enforced server-side by core regardless): email, display name, role, envelope domains/
+   limit. Calls POST /v1/members with invite:true, then POST /v1/members/{id}/invites.
+2. Member row shows status: "Invited - awaiting signup" (muted) / "Active" / "Deactivated",
+   sourced from core's member.status, not inferred client-side.
+3. Resend (reissue - revokes prior per contract) and Revoke actions on an invited row.
+4. Confirm whether brain-core's invite issuance triggers the onboarding email itself, or
+   whether the platform must send it. If the platform must send it: build that email (invite
+   link containing the token, expiring per expires_at) using the existing onboarding email
+   delivery (wired 2026-07-09, commit 1b40b8e area) - do not build a second email pathway.
+
+=========================================================================
+TASK 6 — INVITE ACCEPTANCE (joining an existing tenant)
+=========================================================================
+New route/page: /invite/:token (or query-param equivalent). On load: do NOT auto-consume.
+Show the company name if resolvable, ask the invitee to confirm their identity (sign up or
+log in as themselves - do not let an already-logged-in different user silently consume
+someone else's invite; require they either create a fresh platform account or confirm it's
+really them). On confirm: platform creates/resolves its local user, then calls
+POST /v1/invites/consume { invite_token, external_ref, display_name? } via the service
+credential. Map the four rejection reasons (invite_invalid / invite_expired /
+invite_consumed / invite_revoked) to plain-language messages, same pattern as the
+approval-rejection mapping - never a silent failure. On success: log the invitee straight
+into the shared tenant with the role/envelope the admin set (never editable at this step).
+
+=========================================================================
+CLEANUP / MIGRATION
+=========================================================================
+The demo-provision strategy in getBrainSession stays exactly as is for the playground build.
+Do not delete it; do not let it run in the production build (gate by BRAIN_TENANCY_MODE, not
+by best-effort convention). List every call site that assumed one-user-one-tenant and
+confirm it still behaves correctly when multiple members share a tenant (e.g. anything
+keyed by appUserId instead of tenant_id + memberId for shared data).
+
+=========================================================================
+CLAUDE.md / replit.md
+=========================================================================
+- Note the two getBrainSession strategies and which build mode selects which.
+- Document the appUserId -> external_ref mapping and where it lives.
+- Update the boundary table: note that tenancy is now real per-company, not per-app-user, in
+  production mode.
+- Add: "Definition of done: work is not complete until merged to main."
+
+Return: the probe result, the two-strategy getBrainSession, signup + login wiring, the
+identity mapping table, the invite UI, the invite-acceptance flow with all four rejection
+messages, the demo-mode/production-mode gating, and the done/pending checklist.
