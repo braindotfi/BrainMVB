@@ -174,7 +174,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
-          Always On
+          Anchored
         </p>
       </div>
     </div>
@@ -217,7 +217,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
-          Always On
+          Anchored
         </p>
       </div>
     </div>
@@ -247,9 +247,11 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
           {titleCase(rule.summary)}
         </p>
       </button>
-      <span className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] whitespace-nowrap">
-        Always on
-      </span>
+      <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
+          Always On
+        </p>
+      </div>
     </div>
   );
 }

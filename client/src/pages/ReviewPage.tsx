@@ -114,7 +114,7 @@ const ProposalRow = ({
       {proposal.severity === "danger" && (
         <div className="w-[3px] self-stretch rounded-full bg-[#d20344] shrink-0" />
       )}
-      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
           {proposal.title}
         </p>
@@ -152,7 +152,7 @@ const ExecutingRow = ({
     <div className="flex gap-[12px] items-center w-full">
       {/* static processing affordance — no spin that implies auto-progress */}
       <Loader size={16} className="text-[#7631ee] shrink-0" />
-      <div className="flex flex-1 flex-col min-w-px">
+      <div className="flex flex-1 flex-col min-w-px gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px] truncate">
           {proposal.title}
         </p>
@@ -218,7 +218,7 @@ const SettledRow = ({
         : { "data-testid": `row-settled-${proposal.id}` })}
       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
-      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
           {proposal.title}
         </p>

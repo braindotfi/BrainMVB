@@ -123,7 +123,7 @@ const ActivityItem = ({
         clickable ? "cursor-pointer" : ""
       } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
     >
-      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
           {item.title}
         </p>

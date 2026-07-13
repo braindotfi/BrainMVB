@@ -230,7 +230,7 @@ export function AuditLogPage() {
                               className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                               style={borderLeft ? { borderLeft } : undefined}
                             >
-                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
                                   {record.summary}
                                 </p>

@@ -324,7 +324,7 @@ const IncomeTxList = ({
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
               className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
               </div>
@@ -392,7 +392,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
                 data-testid={`row-expense-${idx}`}
                 className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
               >
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{item.category}</p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0">
@@ -576,7 +576,7 @@ export function FinancesPage() {
                         : {})}
                       className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
                     >
-                      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
                         <div className="flex gap-[4px] items-center relative shrink-0">
                           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
@@ -625,7 +625,7 @@ export function FinancesPage() {
                         }}
                         className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
                       >
-                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
                           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
                         </div>
