@@ -654,24 +654,19 @@ export function ReviewPage() {
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoApproved.length} />
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  {autoApproved.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { setReturnTo(null); setActive(p); }}
-                      data-testid={`row-auto-approved-${p.id}`}
-                      className="flex gap-[10px] items-center p-[8px] rounded-[8px] w-full text-left border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    >
-                      <CheckCircle2 size={15} className="text-[#42bf23] shrink-0" />
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] truncate flex-1 min-w-px">
-                        {p.title}
-                      </p>
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[12px] shrink-0 text-[#42bf23]">
-                        Auto-approved - {p.auditId}
-                      </p>
-                      <ChevronRight size={14} className="text-[#414965] shrink-0" />
-                    </button>
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  {autoApproved.map((p, idx, arr) => (
+                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                      <ProposalRow
+                        proposal={p}
+                        status={statusOf(p)}
+                        onClick={() => { setReturnTo(null); setActive(p); }}
+                        format={format}
+                      />
+                      {idx < arr.length - 1 && (
+                        <div className="h-px w-full" style={{ background: "#1d2132" }} />
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
