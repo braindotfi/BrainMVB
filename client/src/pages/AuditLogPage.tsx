@@ -230,7 +230,7 @@ export function AuditLogPage() {
                               className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                               style={borderLeft ? { borderLeft } : undefined}
                             >
-                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
                                   {record.summary}
                                 </p>
@@ -238,16 +238,23 @@ export function AuditLogPage() {
                                   {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
                                 </p>
                               </div>
-                              <div
-                                className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
-                                  isAnchored
-                                    ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
-                                    : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
-                                }`}
-                              >
-                                <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
-                                  {isAnchored ? "Anchored" : "Pending"}
-                                </p>
+                              <div className="flex flex-col items-end justify-center relative shrink-0 gap-[4px]">
+                                {typeof record.amount === "number" && (
+                                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+                                    {format(record.amount)}
+                                  </p>
+                                )}
+                                <div
+                                  className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
+                                    isAnchored
+                                      ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
+                                      : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
+                                  }`}
+                                >
+                                  <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
+                                    {isAnchored ? "Anchored" : "Pending"}
+                                  </p>
+                                </div>
                               </div>
                             </button>
                             {idx < filtered.length - 1 && <Divider />}

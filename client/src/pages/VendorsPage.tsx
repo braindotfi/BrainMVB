@@ -33,27 +33,23 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] hover:bg-[#0d1018] transition-colors"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
-      <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px relative">
-        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
           {vendor.name}
         </p>
-        <div className="content-stretch flex items-center relative shrink-0">
-          <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[16px] whitespace-nowrap">
-            <span className="leading-[20px]">{vendor.category || "Vendor"}</span>
-            <span className="leading-[20px]">{` · `}</span>
-            <span className="leading-[20px]">{vendor.history.paymentCount} payments</span>
-          </p>
-        </div>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
+          {vendor.category || "Vendor"} · {vendor.history.paymentCount} payments
+        </p>
       </div>
-      <div className="content-stretch flex flex-col items-end justify-center relative shrink-0">
-        {typeof vendor.history.totalPaid === "number" && (
-          <p className="[word-break:break-word] [font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
+      {typeof vendor.history.totalPaid === "number" && (
+        <div className="flex flex-col items-end justify-center relative shrink-0">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
             {format(vendor.history.totalPaid)}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </button>
   );
 }

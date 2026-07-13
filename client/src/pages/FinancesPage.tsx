@@ -322,15 +322,17 @@ const IncomeTxList = ({
               data-testid={`income-tx-${t.id}`}
               onClick={() => onOpen(t.id)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
-              className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px relative">
+              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
               </div>
-              <p className="[word-break:break-word] [font-family:'JetBrains_Mono',monospace] font-semibold leading-[20px] not-italic relative shrink-0 text-[#42bf23] text-[16px] text-right w-[160px]">
-                +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
-              </p>
+              <div className="flex flex-col items-end justify-center relative shrink-0">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
+                  +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
+                </p>
+              </div>
             </div>
             {idx < inflows.length - 1 && <Divider />}
           </div>
@@ -391,9 +393,9 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
                 className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
               >
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">{item.category}</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{item.category}</p>
                 </div>
-                <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
+                <div className="flex flex-col items-end justify-center relative shrink-0">
                   <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
                 </div>
               </div>

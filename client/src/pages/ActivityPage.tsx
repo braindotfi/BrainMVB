@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ICONS } from "@/assets/figma-icons";
-import { XCircle, Clock } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
 import { type ActivityType, type ActivityItemData, statusOverrideToActivity, autoHandledToActivity } from "@/lib/brainFeed";
@@ -28,66 +26,10 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 
-/* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
-const BrainDidIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.brain_did_bg} />
-    </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 overflow-clip size-[24px] top-1/2">
-      <div className="absolute inset-[12.5%]">
-        <div className="absolute inset-[-5.56%]">
-          <img alt="" className="block max-w-none size-full" src={ICONS.brain_did_vec} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const ApprovedIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
-    <div className="absolute left-0 size-[40px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.approved_bg} />
-    </div>
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
-      <div className="absolute inset-[12.5%_12.49%_14.82%_33.33%]">
-        <div className="absolute inset-[-5.73%_-7.69%]">
-          <img alt="" className="block max-w-none size-full" src={ICONS.approved_vec} />
-        </div>
-      </div>
-      <div className="absolute inset-[41.67%_66.67%_16.67%_12.5%]">
-        <div className="absolute inset-[-10%_-20%]">
-          <img alt="" className="block max-w-none size-full" src={ICONS.approved_vec2} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const RejectedIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px] bg-[#1a0a10] flex items-center justify-center">
-    <XCircle size={22} className="text-[#d20344]" />
-  </div>
-);
-
-const PostponedIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px] bg-[#11141b] flex items-center justify-center">
-    <Clock size={22} className="text-[#6c779d]" />
-  </div>
-);
-
 type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected" | "You Postponed";
 /* "All" is intentionally hidden for now — kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
 const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected", "You Postponed"];
-
-const ICON_MAP: Record<ActivityType, () => JSX.Element> = {
-  paid: BrainDidIcon,
-  moved: BrainDidIcon,
-  approved: ApprovedIcon,
-  rejected: RejectedIcon,
-  postponed: PostponedIcon,
-};
 
 const TYPE_TO_TAB: Record<ActivityType, Tab> = {
   paid: "Brain Did",
@@ -156,8 +98,10 @@ const ActivityItem = ({
   rowRef?: (el: HTMLDivElement | null) => void;
   onSelect?: (item: ActivityItemData) => void;
 }) => {
-  const Icon = ICON_MAP[item.type];
   const clickable = Boolean(item.linkTo || item.proposal);
+  const subtitle = [item.meta1, item.meta2, item.meta3, item.time]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div
       ref={rowRef}
@@ -179,31 +123,21 @@ const ActivityItem = ({
         clickable ? "cursor-pointer" : ""
       } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
     >
-      <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-        <Icon />
-        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">{item.title}</p>
-          <div className="flex gap-[4px] items-center relative shrink-0 w-full flex-wrap">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">{item.meta1}</p>
-            {item.meta2 && (
-              <>
-                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} /></div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{item.meta2}</p>
-              </>
-            )}
-            {item.meta3 && (
-              <>
-                <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} /></div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{item.meta3}</p>
-              </>
-            )}
-          </div>
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
+          {item.title}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full">
+          {subtitle}
+        </p>
+      </div>
+      {item.amount && (
+        <div className="flex flex-col items-end justify-center relative shrink-0">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+            {item.amount}
+          </p>
         </div>
-      </div>
-      <div className="flex flex-col items-end justify-center leading-[20px] not-italic relative shrink-0 text-right w-[100px]">
-        {item.amount && <p className="[font-family:'JetBrains_Mono',monospace] font-semibold relative shrink-0 text-[#a8b9f4] text-[18px] w-full text-right">{item.amount}</p>}
-        <p className="[font-family:'Gilroy',sans-serif] font-medium relative shrink-0 text-[#414965] text-[14px] w-full text-right">{item.time}</p>
-      </div>
+      )}
     </div>
   );
 };

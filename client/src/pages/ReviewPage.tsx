@@ -12,7 +12,7 @@ function titleCase(str: string) {
     });
 }
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Clock, Loader, Flag, ChevronRight } from "lucide-react";
+import { Loader, Flag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ReviewModal,
@@ -191,49 +191,49 @@ const ExecutingRow = ({
 );
 
 /* ── Collapsed settled/rejected/postponed row ────────────────────────────── */
-const SETTLED_META: Record<string, { icon: typeof CheckCircle2; color: string; label: (p: Proposal) => string }> = {
-  executed: { icon: CheckCircle2, color: "#42bf23", label: (p) => `Executed · ${p.auditId}` },
-  rejected: { icon: XCircle, color: "#d20344", label: () => "Rejected" },
-  postponed: { icon: Clock, color: "#6c779d", label: () => "Postponed to tomorrow" },
+const SETTLED_META: Record<string, { color: string; label: (p: Proposal) => string }> = {
+  executed: { color: "#42bf23", label: (p) => `Executed · ${p.auditId}` },
+  rejected: { color: "#d20344", label: () => "Rejected" },
+  postponed: { color: "#6c779d", label: () => "Postponed to tomorrow" },
 };
 
-const SettledRow = ({ proposal, status, onClick }: { proposal: Proposal; status: ProposalStatus; onClick?: () => void }) => {
+const SettledRow = ({
+  proposal,
+  status,
+  onClick,
+  format,
+}: {
+  proposal: Proposal;
+  status: ProposalStatus;
+  onClick?: () => void;
+  format: (a: string | number) => string;
+}) => {
   const meta = SETTLED_META[status];
   if (!meta) return null;
-  const Icon = meta.icon;
-  const inner = (
-    <>
-      <Icon size={15} style={{ color: meta.color }} className="shrink-0" />
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] truncate flex-1 min-w-px">
-        {proposal.title}
-      </p>
-      <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[12px] shrink-0" style={{ color: meta.color }}>
-        {meta.label(proposal)}
-      </p>
-      {onClick && <ChevronRight size={14} className="text-[#414965] shrink-0" />}
-    </>
-  );
-  if (onClick) {
-    // Executed rows open the settled STATUS card (operational surface); the full
-    // cryptographic PROOF lives in the canonical Audit Log record it links to.
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        data-testid={`row-settled-${proposal.id}`}
-        className="flex gap-[10px] items-center p-[8px] rounded-[8px] w-full text-left border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-      >
-        {inner}
-      </button>
-    );
-  }
+  const Wrapper = onClick ? "button" : "div";
   return (
-    <div
-      data-testid={`row-settled-${proposal.id}`}
-      className="flex gap-[10px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full"
+    <Wrapper
+      {...(onClick
+        ? { type: "button", onClick, "data-testid": `row-settled-${proposal.id}` }
+        : { "data-testid": `row-settled-${proposal.id}` })}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
-      {inner}
-    </div>
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+          {proposal.title}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
+          {meta.label(proposal)}
+        </p>
+      </div>
+      {typeof proposal.amount === "number" && (
+        <div className="flex flex-col items-end justify-center relative shrink-0">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+            {format(proposal.amount)}
+          </p>
+        </div>
+      )}
+    </Wrapper>
   );
 };
 
@@ -644,6 +644,7 @@ export function ReviewPage() {
                       proposal={p}
                       status={statusOf(p)}
                       onClick={statusOf(p) === "executed" ? () => setSettledCard(p) : undefined}
+                      format={format}
                     />
                   ))}
                 </div>

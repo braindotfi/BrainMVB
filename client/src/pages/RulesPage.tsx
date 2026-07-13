@@ -17,8 +17,6 @@ import defaultInfoIcon from "@assets/Icons_1783346458429.png";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
 import {
   useRules,
-  pauseRule,
-  resumeRule,
   createRule,
   consumeRuleDraft,
   hydrateUserRules,
@@ -68,29 +66,6 @@ function finalizeDraft(draft: Partial<AutoRule>): AutoRule {
 }
 
 /* ── Pause/resume toggle ────────────────────────────────────────────────────── */
-function Toggle({ active, onChange, testId }: { active: boolean; onChange: () => void; testId?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      data-testid={testId}
-      role="switch"
-      aria-checked={active}
-      title={active ? "Pause this rule" : "Resume this rule"}
-      className="relative shrink-0 h-[24px] w-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px]"
-    >
-      <div
-        className="absolute h-[20px] left-[2px] rounded-[100px] top-[2px] w-[36px] transition-colors"
-        style={{ background: active ? "#123509" : "#222737" }}
-      />
-      <div
-        className="absolute rounded-[100px] size-[16px] top-[4px] transition-all"
-        style={{ background: active ? ACTIVE : "#06070a", left: active ? "20px" : "4px" }}
-      />
-    </button>
-  );
-}
-
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
 /* ── Rule confirmation sentence — natural-language summary with highlighted vars */
@@ -197,11 +172,11 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
           </div>
         )}
       </button>
-      <Toggle
-        active={rule.active}
-        onChange={() => (rule.active ? pauseRule(rule.id) : resumeRule(rule.id))}
-        testId={`toggle-rule-${rule.id}`}
-      />
+      <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
+          Always On
+        </p>
+      </div>
     </div>
   );
 }
@@ -240,11 +215,11 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
           </div>
         )}
       </button>
-      <Toggle
-        active={rule.active}
-        onChange={() => (rule.active ? pauseRule(rule.id) : resumeRule(rule.id))}
-        testId={`toggle-rule-${rule.id}`}
-      />
+      <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
+          Always On
+        </p>
+      </div>
     </div>
   );
 }
