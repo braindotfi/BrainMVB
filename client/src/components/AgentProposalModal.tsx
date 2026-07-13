@@ -434,12 +434,14 @@ export function AgentProposalModal({
   const [draft, setDraft] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
 
   /* Reset transient edit state whenever a different record is shown. */
   const proposalId = proposal?.id;
   useEffect(() => {
     setEditing(false);
     setViewingEvidence(null);
+    setUndoConfirmOpen(false);
     if (proposal) {
       setDraft(proposal.scenarioModule.kind === "message_preview" ? proposal.scenarioModule.draft : "");
       setEditAmount(proposal.amount !== null ? String(proposal.amount) : "");
@@ -461,10 +463,6 @@ export function AgentProposalModal({
     proposal.status === "approved_automatically" && decisions[proposal.id] !== "undone_to_review";
   const riskNoteColor =
     proposal.riskLevel === "high" ? "#d20344" : proposal.riskLevel === "elevated" ? "#ff9500" : "#6c779d";
-  const approvedOnLabel = new Date(proposal.createdAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
   /* Inline edit form applies to propose-mode agents whose editable surface is a
      field (amount / category) rather than the message preview itself. */
   const editViaModule = proposal.scenarioModule.kind === "message_preview";
@@ -517,13 +515,23 @@ export function AgentProposalModal({
               )}
             </div>
             <div className="flex items-center gap-[8px]">
-              <span
-                data-testid="pill-risk-level"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] whitespace-nowrap"
-                style={{ color: risk.color, background: risk.bg }}
-              >
-                {risk.label}
-              </span>
+              {isAutoApproved ? (
+                <span
+                  data-testid="pill-auto-approved"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] whitespace-nowrap"
+                  style={{ color: "#42bf23", background: "rgba(66,191,35,0.12)" }}
+                >
+                  Auto-approved
+                </span>
+              ) : (
+                <span
+                  data-testid="pill-risk-level"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] whitespace-nowrap"
+                  style={{ color: risk.color, background: risk.bg }}
+                >
+                  {risk.label}
+                </span>
+              )}
               <DialogPrimitive.Close
                 data-testid="button-agent-proposal-close"
                 aria-label="Close"
@@ -573,7 +581,9 @@ export function AgentProposalModal({
 
             {/* WHY BRAIN SUGGESTED THIS — trigger + tappable evidence links */}
             <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>Why Brain Suggested This</SectionLabel>
+              <SectionLabel>
+                {isAutoApproved ? "Why This Didn't Need Review" : "Why Brain Suggested This"}
+              </SectionLabel>
               <p
                 id="agent-proposal-trigger"
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full"
@@ -597,21 +607,28 @@ export function AgentProposalModal({
                   </button>
                 ))}
               </div>
-              {/* Confidence bar — fill color tracks risk_level, NOT the number */}
-              <div className="flex items-center gap-[10px] w-full" data-testid="bar-confidence">
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d] shrink-0">
-                  Confidence
-                </span>
-                <div className="flex-1 h-[6px] rounded-full bg-[#1d2132] overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${confidencePct}%`, background: risk.color }}
-                  />
+              {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full">
+                  <span className="font-semibold text-[#a8b9f4]">Auto-approved because: </span>
+                  {proposal.approvedAutomaticallyMeta.autoApprovalReason}
+                </p>
+              ) : (
+                /* Confidence bar — fill color tracks risk_level, NOT the number */
+                <div className="flex items-center gap-[10px] w-full" data-testid="bar-confidence">
+                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d] shrink-0">
+                    Confidence
+                  </span>
+                  <div className="flex-1 h-[6px] rounded-full bg-[#1d2132] overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${confidencePct}%`, background: risk.color }}
+                    />
+                  </div>
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4] shrink-0">
+                    {confidencePct}%
+                  </span>
                 </div>
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4] shrink-0">
-                  {confidencePct}%
-                </span>
-              </div>
+              )}
             </div>
 
             <HR />
@@ -663,10 +680,30 @@ export function AgentProposalModal({
 
             <HR />
 
-            {/* WHAT HAPPENS NEXT — 3 rows for propose-mode; one sentence for notify-only */}
+            {/* WHAT HAPPENS NEXT / OUTCOME — propose-mode = 3 rows; notify-only = sentence; auto-approved = Outcome */}
             <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>What Happens Next</SectionLabel>
-              {isNotifyOnly ? (
+              <SectionLabel>{isAutoApproved ? "Outcome" : "What Happens Next"}</SectionLabel>
+              {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
+                <div className="flex flex-col gap-[8px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] w-full">
+                    {proposal.approvedAutomaticallyMeta.outcome.summary}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setViewingEvidence({ text: "View record", linkedSource: proposal.approvedAutomaticallyMeta!.outcome.linkedSource })}
+                    data-testid="link-outcome-record"
+                    className="flex items-start gap-[8px] w-full text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px] px-[4px] py-[3px] -mx-[4px]"
+                  >
+                    <ArrowUpRight size={14} className="text-[#7631ee] shrink-0 mt-[2px]" />
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[#7631ee] text-[14px] group-hover:underline">
+                      View {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(/_/g, " ")} record
+                    </span>
+                  </button>
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
+                    {new Date(proposal.approvedAutomaticallyMeta.approvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </p>
+                </div>
+              ) : isNotifyOnly ? (
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid="text-notify-only-next">
                   This is a flag for your awareness — Brain doesn't take action on it automatically.
                 </p>
@@ -699,22 +736,66 @@ export function AgentProposalModal({
             </div>
           </div>
 
-          {/* Sticky footer — 3 buttons / Acknowledge / auto-approved + Undo */}
+          {/* Sticky footer — 3 buttons / Acknowledge / auto-approved variants */}
           <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[16px] w-full shrink-0">
             {isAutoApproved ? (
-              <div className="flex items-center justify-between w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d]" data-testid="text-auto-approved-footer">
-                  Approved automatically on {approvedOnLabel}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onAction("undo", proposal)}
-                  data-testid="button-agent-undo"
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#7631ee] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[4px]"
-                >
-                  Undo
-                </button>
-              </div>
+              (() => {
+                const meta = proposal.approvedAutomaticallyMeta!;
+                if (meta.reversibility === "reversible") {
+                  return (
+                    <div className="flex flex-col gap-[10px] w-full">
+                      {undoConfirmOpen ? (
+                        <div className="flex flex-col gap-[12px] w-full">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] text-center">
+                            {meta.undoAction}
+                          </p>
+                          <div className="flex gap-[8px] w-full">
+                            <button
+                              type="button"
+                              onClick={() => setUndoConfirmOpen(false)}
+                              data-testid="button-undo-cancel"
+                              className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setUndoConfirmOpen(false); onAction("undo", proposal); }}
+                              data-testid="button-undo-confirm"
+                              className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                            >
+                              Undo
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center w-full">
+                          <button
+                            type="button"
+                            onClick={() => setUndoConfirmOpen(true)}
+                            data-testid="button-agent-undo"
+                            className="px-[16px] py-[10px] rounded-[100px] border border-[#1d2132] hover:border-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                          >
+                            Undo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                if (meta.reversibility === "irreversible") {
+                  return (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full" data-testid="text-irreversible">
+                      This action can&apos;t be undone.
+                    </p>
+                  );
+                }
+                return (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full" data-testid="text-informational">
+                    No action was taken — this is for your records.
+                  </p>
+                );
+              })()
             ) : isNotifyOnly ? (
               <button
                 type="button"

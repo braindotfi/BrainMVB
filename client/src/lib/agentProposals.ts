@@ -101,6 +101,16 @@ export interface AgentProposal {
   riskNote: string;
   source: string;
   createdAt: string; // ISO
+  approvedAutomaticallyMeta?: {
+    approvedAt: string;
+    autoApprovalReason: string;
+    outcome: {
+      summary: string;
+      linkedSource: LinkedSource;
+    };
+    reversibility: "reversible" | "irreversible" | "informational";
+    undoAction: string | null;
+  };
 }
 
 /* ── Risk styling — pill + note + confidence-bar color track risk_level ─── */
@@ -322,6 +332,16 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskNote: "None — this is an informational update with no funds movement.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
     createdAt: "2026-07-11T06:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T06:00:00Z",
+      autoApprovalReason: "All checks passed — no shortfall risk, variance under 4%",
+      outcome: {
+        summary: "Forecast published to dashboard as the current view.",
+        linkedSource: ls("forecast", "forecast_pr_005_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
+    },
   },
   {
     id: "pr_005b",
@@ -480,6 +500,16 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskNote: "None — informational only.",
     source: "ledger_receivables, wiki_subscriptions",
     createdAt: "2026-07-11T05:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T05:00:00Z",
+      autoApprovalReason: "Positive revenue change exceeds notification threshold",
+      outcome: {
+        summary: "Insight surfaced on dashboard automatically.",
+        linkedSource: ls("subscription", "subscription_pr_008_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
+    },
   },
   {
     id: "pr_008b",
@@ -657,11 +687,11 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     source: "ledger_counterparties",
     createdAt: "2026-07-09T20:45:00Z",
   },
-  /* ── Auto-approved twins — one per agent so the Approved Automatically tab
-     shows every agent's UX (11 total, per user request). These are historical
-     records Brain cleared on its own; titles reflect the past-tense outcome. */
+  /* ── Auto-approved records — one per agent (11 total) with full
+     approvedAutomaticallyMeta per the v2 modal spec. These answer "what
+     happened, and can I undo it?" rather than "should I approve this?" */
   {
-    id: "pr_a001",
+    id: "aa_001",
     agentKey: "vendor_risk",
     agentDisplayName: "Vendor Risk",
     category: "business",
@@ -671,47 +701,55 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     title: "Bank details verified with vendor",
     subtitle: "Bright Futures Studio · change confirmed",
     amount: 3200,
-    confidence: 0.94,
+    confidence: 0.97,
     whySuggested: {
-      trigger: "Vendor confirmed the new account via a signed change-of-details form.",
+      trigger: "The flagged bank account change was confirmed directly with the vendor's known contact.",
       evidence: [
-        { text: "Signed form received and matched to vendor contact", linkedSource: ls("counterparty", "counterparty_pr_a001_1") },
-        { text: "New account details now on file as primary", linkedSource: ls("counterparty", "counterparty_pr_a001_2") },
-        { text: "No fraud indicators on the new routing number", linkedSource: ls("counterparty", "counterparty_pr_a001_3") },
+        { text: "Vendor confirmed new account by phone using the number on file, not the number from the invoice", linkedSource: ls("counterparty", "counterparty_aa_001_1") },
+        { text: "Confirmation logged before the payment's scheduled send time", linkedSource: ls("payment", "payment_aa_001_2") },
       ],
     },
     scenarioModule: {
       kind: "account_comparison",
       old: {
-        label: "Previous account",
+        label: "Account on file (last 6 payments)",
         fields: [
           { label: "bank", value: "Chase" },
           { label: "account", value: "••7742" },
           { label: "routing", value: "021000021" },
+          { label: "name", value: "Bright Futures Studio LLC" },
+          { label: "email", value: "billing@brightfutures.studio" },
         ],
       },
       next: {
-        label: "Verified new account",
+        label: "Account on this invoice",
         fields: [
-          { label: "bank", value: "Regions" },
-          { label: "account", value: "••9963" },
-          { label: "routing", value: "062005690" },
-          { label: "verified on", value: "Jul 9" },
+          { label: "bank", value: "Regions", differs: true },
+          { label: "account", value: "••9963", differs: true },
+          { label: "routing", value: "062005690", differs: true },
+          { label: "name", value: "Bright Futures Studio LLC" },
+          { label: "email", value: "billing@brightfutures-studio.co", differs: true },
         ],
       },
     },
-    recommendedAction: "No action needed — Brain auto-approved after vendor verification.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already approved.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
+    recommendedAction: "Release the held payment now that the new account is verified.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Verification closed the loop that made this look risky.",
+    source: "ledger_payments, ledger_counterparties",
+    createdAt: "2026-07-11T14:02:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T16:40:00Z",
+      autoApprovalReason: "Vendor verification completed via a contact method independent of the flagged invoice, matching policy for auto-release.",
+      outcome: {
+        summary: "Payment released and sent to the newly verified account.",
+        linkedSource: ls("payment", "payment_aa_001_release"),
+      },
+      reversibility: "irreversible",
+      undoAction: null,
     },
-    riskNote: "None — verification form reduced risk to low.",
-    source: "ledger_counterparties",
-    createdAt: "2026-07-09T10:00:00Z",
   },
   {
-    id: "pr_a002",
+    id: "aa_002",
     agentKey: "payment",
     agentDisplayName: "Payment",
     category: "business",
@@ -719,37 +757,42 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskLevel: "low",
     status: "approved_automatically",
     title: "3 vendor invoices batched and scheduled",
-    subtitle: "Due within 5 days · no exceptions found",
+    subtitle: "Payment · due within 5 days · no exceptions found",
     amount: 14850,
-    confidence: 0.96,
+    confidence: 0.93,
     whySuggested: {
-      trigger: "Invoices matched to approved POs and within normal payment terms are due soon.",
+      trigger: "Invoices matched 1:1 to approved purchase orders with no amount or vendor mismatches.",
       evidence: [
-        { text: "All 3 invoices matched 1:1 to open purchase orders", linkedSource: ls("invoice", "invoice_pr_a002_1") },
-        { text: "Combined batch fits within this week's operating cash buffer", linkedSource: ls("invoice", "invoice_pr_a002_2") },
-        { text: "No vendor or amount anomalies detected", linkedSource: ls("invoice", "invoice_pr_a002_3") },
+        { text: "All 3 invoices matched to open purchase orders", linkedSource: ls("invoice", "invoice_aa_002_1") },
+        { text: "Combined batch fits within this week's operating cash buffer", linkedSource: ls("account", "account_aa_002_2") },
       ],
     },
     scenarioModule: {
       kind: "document_stack",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · paid Jul 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · paid Jul 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · paid Jul 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · due Jul 17" },
       ],
     },
-    recommendedAction: "No action needed — payments were auto-scheduled on their due dates.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already approved and scheduled.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — routine batch with no flagged exceptions.",
+    recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Routine batch, no flagged exceptions.",
     source: "ledger_invoices, ledger_purchase_orders",
-    createdAt: "2026-07-08T09:00:00Z",
+    createdAt: "2026-07-11T09:15:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T09:15:30Z",
+      autoApprovalReason: "Under the auto-pay threshold: matched PO, no exceptions, confidence above 90%.",
+      outcome: {
+        summary: "Payments scheduled for Jul 14, Jul 15, and Jul 16.",
+        linkedSource: ls("payment", "payment_batch_aa_002"),
+      },
+      reversibility: "reversible",
+      undoAction: "Cancel any of the 3 scheduled payments that haven't settled yet.",
+    },
   },
   {
-    id: "pr_a003",
+    id: "aa_003",
     agentKey: "collections",
     agentDisplayName: "Collections",
     category: "business",
@@ -757,15 +800,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskLevel: "low",
     status: "approved_automatically",
     title: "Overdue invoice reminder sent",
-    subtitle: "Northstar Design · reminder delivered",
+    subtitle: "Collections · Northstar Design · reminder delivered",
     amount: 6200,
-    confidence: 0.91,
+    confidence: 0.88,
     whySuggested: {
-      trigger: "Invoice passed its net-30 due date; a friendly reminder was auto-sent.",
+      trigger: "Invoice passed net-30 due date with no payment or dispute logged.",
       evidence: [
-        { text: "Reminder email delivered and opened by customer", linkedSource: ls("receivable", "receivable_pr_a003_1") },
-        { text: "No dispute or credit memo on file", linkedSource: ls("receivable", "receivable_pr_a003_2") },
-        { text: "Customer has historically paid within 5 days of reminder", linkedSource: ls("receivable", "receivable_pr_a003_3") },
+        { text: "No partial payment or dispute on file", linkedSource: ls("receivable", "receivable_aa_003_1") },
       ],
     },
     scenarioModule: {
@@ -773,34 +814,38 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       draft:
         "Hi Northstar team,\n\nJust a friendly note that invoice INV-2026-041 for $6,200.00, due June 25, is now past due. Could you let us know when we can expect payment, or flag anything that's holding it up?\n\nThanks,\nAccounts Receivable",
     },
-    recommendedAction: "No action needed — reminder was auto-sent and customer opened it.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already sent.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — low-risk reminder with no funds movement.",
+    recommendedAction: "Send a first reminder referencing the invoice number and due date.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Low risk — a message, not a fund movement.",
     source: "ledger_receivables",
-    createdAt: "2026-07-07T18:00:00Z",
+    createdAt: "2026-07-10T18:40:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-10T18:40:05Z",
+      autoApprovalReason: "First reminders under standard tone are pre-approved by policy — no dollar or relationship risk.",
+      outcome: {
+        summary: "Reminder email delivered to Northstar Design's billing contact.",
+        linkedSource: ls("receivable", "receivable_aa_003_sent"),
+      },
+      reversibility: "irreversible",
+      undoAction: null,
+    },
   },
   {
-    id: "pr_a004",
+    id: "aa_004",
     agentKey: "treasury",
     agentDisplayName: "Treasury",
     category: "business",
     executionMode: "propose",
-    riskLevel: "low",
+    riskLevel: "standard",
     status: "approved_automatically",
     title: "Idle cash swept to treasury yield",
-    subtitle: "Operating ••4821 → Treasury (T-Bills)",
+    subtitle: "Treasury · Operating ••4821 → Treasury (T-Bills)",
     amount: 100000,
-    confidence: 0.92,
+    confidence: 0.9,
     whySuggested: {
-      trigger: "Operating balance stayed above the working-capital floor for 21 days; Brain proposed a sweep.",
+      trigger: "Operating balance stayed above the working-capital floor for 21 straight days.",
       evidence: [
-        { text: "Sweep executed after 48-hour hold with no override", linkedSource: ls("account", "account_pr_a004_1") },
-        { text: "T-Bill maturity aligns with next payroll cycle", linkedSource: ls("account", "account_pr_a004_2") },
-        { text: "Working-capital floor left untouched", linkedSource: ls("account", "account_pr_a004_3") },
+        { text: "Balance exceeded 60-day average obligations by $118,000", linkedSource: ls("account", "account_aa_004_1") },
       ],
     },
     scenarioModule: {
@@ -809,18 +854,24 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       to: { name: "Treasury (T-Bills)", before: 0, after: 100000 },
       amount: 100000,
     },
-    recommendedAction: "No action needed — sweep completed and yield is accruing.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already executed.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — funds remain inside the same custodian; maturity matches payroll.",
+    recommendedAction: "Sweep $100,000 into short-duration T-Bills.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Within pre-approved sweep policy for this account.",
     source: "ledger_balances, wiki_cash_policy",
-    createdAt: "2026-07-06T07:00:00Z",
+    createdAt: "2026-07-11T07:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T07:00:20Z",
+      autoApprovalReason: "Sweep amount and duration fall within the standing treasury policy pre-authorized for this account.",
+      outcome: {
+        summary: "Transfer initiated with the banking partner; settlement expected within 1 business day.",
+        linkedSource: ls("account", "account_aa_004_transfer"),
+      },
+      reversibility: "reversible",
+      undoAction: "Recall the transfer if it hasn't settled with the banking partner yet.",
+    },
   },
   {
-    id: "pr_a005",
+    id: "aa_005",
     agentKey: "cash_forecast",
     agentDisplayName: "Cash Forecasting",
     category: "business",
@@ -828,15 +879,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskLevel: "low",
     status: "approved_automatically",
     title: "13-week cash forecast refreshed",
-    subtitle: "No shortfall risk · variance under 4%",
+    subtitle: "Cash Forecasting · no shortfall risk · variance under 4%",
     amount: null,
-    confidence: 0.93,
+    confidence: 0.9,
     whySuggested: {
-      trigger: "Weekly forecast refresh ran on schedule using latest ledger and payroll data.",
+      trigger: "Weekly forecast refresh ran on schedule.",
       evidence: [
-        { text: "Payroll and recurring vendor payments projected against current balance", linkedSource: ls("forecast", "forecast_pr_a005_1") },
-        { text: "No week in the 13-week window dips below the working-capital floor", linkedSource: ls("forecast", "forecast_pr_a005_2") },
-        { text: "Forecast variance from last week's actuals was under 4%", linkedSource: ls("forecast", "forecast_pr_a005_3") },
+        { text: "No week in the 13-week window dips below the working-capital floor", linkedSource: ls("forecast", "forecast_aa_005_1") },
       ],
     },
     scenarioModule: {
@@ -845,34 +894,38 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       floor: 174,
       note: "13-week projected balance ($k) · working-capital floor $174k",
     },
-    recommendedAction: "No action needed — forecast published to the dashboard.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already published.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — informational update with no funds movement.",
+    recommendedAction: "No action needed — informational.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "None.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
-    createdAt: "2026-07-05T06:00:00Z",
+    createdAt: "2026-07-11T06:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T06:00:00Z",
+      autoApprovalReason: "Read-only informational update — nothing to approve.",
+      outcome: {
+        summary: "Forecast published to your dashboard as the current view.",
+        linkedSource: ls("forecast", "forecast_aa_005_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
+    },
   },
   {
-    id: "pr_a006",
+    id: "aa_006",
     agentKey: "dispute",
     agentDisplayName: "Dispute",
     category: "business",
     executionMode: "propose",
-    riskLevel: "low",
+    riskLevel: "standard",
     status: "approved_automatically",
     title: "Chargeback evidence submitted",
-    subtitle: "Response filed · $840 · deadline met",
+    subtitle: "Dispute · response filed · deadline met",
     amount: 840,
-    confidence: 0.89,
+    confidence: 0.9,
     whySuggested: {
-      trigger: "Chargeback response deadline was met with a matched evidence package.",
+      trigger: "Chargeback notification ingested with a response deadline; matching evidence was found.",
       evidence: [
-        { text: "Invoice and delivery confirmation submitted to processor", linkedSource: ls("payment", "payment_pr_a006_1") },
-        { text: "No prior dispute history from this customer", linkedSource: ls("payment", "payment_pr_a006_2") },
-        { text: "Response filed 3 days before deadline", linkedSource: ls("payment", "payment_pr_a006_3") },
+        { text: "Matching invoice and delivery confirmation found", linkedSource: ls("invoice", "invoice_aa_006_1") },
       ],
     },
     scenarioModule: {
@@ -880,21 +933,27 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       docs: [
         { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2" },
         { label: "Delivery confirmation", meta: "signed · Jun 6 · tracking 1Z999AA1" },
-        { label: "Chargeback response", meta: "submitted Jul 13 · awaiting ruling" },
+        { label: "Chargeback notice", meta: "reason: 'item not received' · respond by Jul 19" },
       ],
     },
-    recommendedAction: "No action needed — evidence was auto-submitted before the deadline.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already submitted.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — processor is reviewing; response was complete and on time.",
+    recommendedAction: "Submit matched invoice and delivery confirmation as dispute evidence.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Missing the window would have meant an automatic loss.",
     source: "ledger_payments, wiki_fulfillment_records",
-    createdAt: "2026-07-04T11:00:00Z",
+    createdAt: "2026-07-09T11:20:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-09T11:20:10Z",
+      autoApprovalReason: "Complete, unambiguous evidence match found before the response deadline — standard auto-file policy.",
+      outcome: {
+        summary: "Evidence package submitted to the payment processor's dispute portal.",
+        linkedSource: ls("payment", "payment_aa_006_dispute"),
+      },
+      reversibility: "irreversible",
+      undoAction: null,
+    },
   },
   {
-    id: "pr_a007",
+    id: "aa_007",
     agentKey: "compliance",
     agentDisplayName: "Compliance",
     category: "business",
@@ -902,15 +961,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskLevel: "low",
     status: "approved_automatically",
     title: "W-9 received and filed",
-    subtitle: "Vendor now compliant · tax form on file",
+    subtitle: "Compliance · vendor now compliant · tax form on file",
     amount: null,
-    confidence: 0.97,
+    confidence: 0.98,
     whySuggested: {
-      trigger: "A signed W-9 was uploaded and matched to the vendor record.",
+      trigger: "Vendor submitted the previously missing W-9.",
       evidence: [
-        { text: "W-9 document tagged and stored in vendor file", linkedSource: ls("vendor_document", "vendor_document_pr_a007_1") },
-        { text: "TIN and name match the vendor's contract on file", linkedSource: ls("vendor_document", "vendor_document_pr_a007_2") },
-        { text: "Year-end 1099 filing requirement now satisfied", linkedSource: ls("vendor_document", "vendor_document_pr_a007_3") },
+        { text: "Signed W-9 received and matched to the vendor record", linkedSource: ls("vendor_document", "vendor_document_aa_007_1") },
       ],
     },
     scenarioModule: {
@@ -922,18 +979,24 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Certificate of insurance", present: true },
       ],
     },
-    recommendedAction: "No action needed — vendor is now fully compliant.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already filed.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
+    recommendedAction: "No action needed — informational.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "None.",
+    source: "wiki_vendor_documents",
+    createdAt: "2026-07-08T16:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-12T10:00:00Z",
+      autoApprovalReason: "Notify-only agent — this closes the earlier flag automatically once the document is on file.",
+      outcome: {
+        summary: "Vendor file updated to compliant; earlier flag cleared.",
+        linkedSource: ls("vendor_document", "vendor_document_aa_007_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
     },
-    riskNote: "None — all required documents are present and verified.",
-    source: "wiki_vendor_documents, ledger_payments",
-    createdAt: "2026-07-03T16:00:00Z",
   },
   {
-    id: "pr_a008",
+    id: "aa_008",
     agentKey: "revenue_intel",
     agentDisplayName: "Revenue Intelligence",
     category: "business",
@@ -941,15 +1004,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     riskLevel: "low",
     status: "approved_automatically",
     title: "Revenue segment analysis published",
-    subtitle: "Enterprise +12% MoM · 2 upsells, no churn",
+    subtitle: "Revenue Intelligence · enterprise +12% MoM · 2 upsells, no churn",
     amount: null,
-    confidence: 0.9,
+    confidence: 0.87,
     whySuggested: {
       trigger: "Monthly revenue rollup flagged a notable segment-level change.",
       evidence: [
-        { text: "Two existing accounts upgraded tier this month", linkedSource: ls("subscription", "subscription_pr_a008_1") },
-        { text: "No cancellations recorded in the enterprise segment", linkedSource: ls("subscription", "subscription_pr_a008_2") },
-        { text: "Change exceeds the 10% month-over-month notification threshold", linkedSource: ls("subscription", "subscription_pr_a008_3") },
+        { text: "Two existing accounts upgraded tier this month", linkedSource: ls("subscription", "subscription_aa_008_1") },
       ],
     },
     scenarioModule: {
@@ -965,34 +1026,38 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       unit: "$k",
       note: "Enterprise segment monthly revenue ($k) · +12% MoM",
     },
-    recommendedAction: "No action needed — insight surfaced on the dashboard automatically.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already published.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — informational only.",
+    recommendedAction: "No action needed — informational.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "None.",
     source: "ledger_receivables, wiki_subscriptions",
-    createdAt: "2026-07-02T05:00:00Z",
+    createdAt: "2026-07-11T05:00:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T05:00:00Z",
+      autoApprovalReason: "Read-only informational insight — nothing to approve.",
+      outcome: {
+        summary: "Analysis published to your dashboard.",
+        linkedSource: ls("subscription", "subscription_aa_008_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
+    },
   },
   {
-    id: "pr_a009",
+    id: "aa_009",
     agentKey: "reconciliation",
     agentDisplayName: "Reconciliation",
     category: "agnostic",
     executionMode: "propose",
     riskLevel: "low",
     status: "approved_automatically",
-    title: "Unmatched line reconciled",
-    subtitle: "$184 merchant fee · correcting entry posted",
+    title: "Bank fee auto-matched and posted",
+    subtitle: "Reconciliation · correcting entry posted",
     amount: 184,
-    confidence: 0.93,
+    confidence: 0.9,
     whySuggested: {
-      trigger: "The unmatched bank line was matched to a recurring merchant fee pattern and posted.",
+      trigger: "Unmatched bank line closely matched a recurring merchant-fee pattern.",
       evidence: [
-        { text: "Amount and date closely match prior-month merchant fees", linkedSource: ls("bank_feed", "bank_feed_pr_a009_1") },
-        { text: "Correcting entry posted to the ledger under merchant fees", linkedSource: ls("bank_feed", "bank_feed_pr_a009_2") },
-        { text: "Period now marked reconciled", linkedSource: ls("bank_feed", "bank_feed_pr_a009_3") },
+        { text: "Amount and date matched a merchant fee pattern seen in prior months", linkedSource: ls("bank_feed", "bank_feed_aa_009_1") },
       ],
     },
     scenarioModule: {
@@ -1005,34 +1070,38 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "category", a: "—", b: "merchant fees (posted)" },
       ],
     },
-    recommendedAction: "No action needed — entry was auto-posted and period is reconciled.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already posted.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — small amount, clear pattern, period closed cleanly.",
+    recommendedAction: "Post a correcting entry for the unmatched $184 merchant fee.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Very low risk — small, recurring, well-matched pattern.",
     source: "ledger_bank_feed, ledger_gl",
-    createdAt: "2026-07-01T12:00:00Z",
+    createdAt: "2026-07-11T12:10:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-11T12:10:05Z",
+      autoApprovalReason: "Under $200 with a high-confidence recurring pattern match — within auto-post policy.",
+      outcome: {
+        summary: "Correcting entry posted; period marked reconciled.",
+        linkedSource: ls("bank_feed", "bank_feed_aa_009_posted"),
+      },
+      reversibility: "reversible",
+      undoAction: "Reverse the posted entry and reopen the period.",
+    },
   },
   {
-    id: "pr_a010",
+    id: "aa_010",
     agentKey: "subscription",
     agentDisplayName: "Subscription",
     category: "agnostic",
     executionMode: "propose",
     riskLevel: "low",
     status: "approved_automatically",
-    title: "Unused seat cancelled before renewal",
-    subtitle: "Figma · 1 of 8 seats removed · $180 saved",
+    title: "Unused Figma seat cancelled before renewal",
+    subtitle: "Subscription · saved $180",
     amount: 180,
-    confidence: 0.91,
+    confidence: 0.85,
     whySuggested: {
-      trigger: "An inactive seat was flagged and cancelled before the renewal charge.",
+      trigger: "Seat showed no login activity for 60+ days with renewal approaching.",
       evidence: [
-        { text: "Seat showed no login in 63 days", linkedSource: ls("app_usage", "app_usage_pr_a010_1") },
-        { text: "Cancellation executed 2 days before renewal", linkedSource: ls("app_usage", "app_usage_pr_a010_2") },
-        { text: "$180 annual charge avoided", linkedSource: ls("app_usage", "app_usage_pr_a010_3") },
+        { text: "No login recorded in 63 days", linkedSource: ls("app_usage", "app_usage_aa_010_1") },
       ],
     },
     scenarioModule: {
@@ -1041,96 +1110,100 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       renewalInDays: 0,
       note: "Seat cancelled Jul 13 · $180 saved",
     },
-    recommendedAction: "No action needed — seat was auto-cancelled and charge was avoided.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already cancelled.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — seat can be re-added later if needed.",
+    recommendedAction: "Cancel the unused seat before renewal.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Low risk — the seat can be re-added later if needed.",
     source: "wiki_subscriptions, wiki_app_usage",
-    createdAt: "2026-07-01T09:30:00Z",
+    createdAt: "2026-07-10T09:30:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-10T09:30:15Z",
+      autoApprovalReason: "Under $250/mo and 60+ days inactive — within auto-cancel policy for unused seats.",
+      outcome: {
+        summary: "Cancellation request submitted to Figma's billing portal.",
+        linkedSource: ls("subscription", "subscription_aa_010_cancelled"),
+      },
+      reversibility: "reversible",
+      undoAction: "Re-add the seat before the plan's renewal date.",
+    },
   },
   {
-    id: "pr_a011",
+    id: "aa_011",
     agentKey: "fraud_anomaly",
     agentDisplayName: "Fraud & Anomaly",
     category: "agnostic",
     executionMode: "notify_only",
-    riskLevel: "low",
+    riskLevel: "elevated",
     status: "approved_automatically",
-    title: "Vendor phone number verified",
-    subtitle: "Halton & Meridian · shared line is a branch office",
+    title: "Vendor contact overlap logged for audit",
+    subtitle: "Fraud & Anomaly · reviewed, no further action taken",
     amount: null,
-    confidence: 0.95,
+    confidence: 0.68,
     whySuggested: {
-      trigger: "Contact overlap was investigated and resolved as a shared branch-office line.",
+      trigger: "Two vendors shared a phone number on file.",
       evidence: [
-        { text: "Both vendors confirmed the same front-desk number at a shared coworking space", linkedSource: ls("counterparty", "counterparty_pr_a011_1") },
-        { text: "Separate tax IDs, contracts, and banking details verified", linkedSource: ls("counterparty", "counterparty_pr_a011_2") },
-        { text: "No further payments flagged", linkedSource: ls("counterparty", "counterparty_pr_a011_3") },
+        { text: "Same phone number listed on both vendor records", linkedSource: ls("counterparty", "counterparty_aa_011_1") },
       ],
     },
     scenarioModule: {
       kind: "entity_comparison",
-      sharedNote: "Shared line explained: both vendors use the same coworking front desk",
+      sharedNote: "Shared field highlighted in both records",
       entities: [
         {
           label: "Halton Creative Co.",
           fields: [
-            { label: "tax id", value: "XX-XXXXXXX" },
-            { label: "phone", value: "(415) 555-0182" },
+            { label: "added", value: "Jun 28" },
+            { label: "phone", value: "(415) 555-0182", differs: true },
             { label: "billed to date", value: "$5,600" },
-            { label: "verified", value: "Jul 10" },
+            { label: "email", value: "ap@haltoncreative.co" },
           ],
         },
         {
           label: "Meridian Studio Labs",
           fields: [
-            { label: "tax id", value: "YY-YYYYYYY" },
-            { label: "phone", value: "(415) 555-0182" },
+            { label: "added", value: "Jul 6" },
+            { label: "phone", value: "(415) 555-0182", differs: true },
             { label: "billed to date", value: "$3,800" },
-            { label: "verified", value: "Jul 10" },
+            { label: "email", value: "billing@meridianstudiolabs.com" },
           ],
         },
       ],
     },
-    recommendedAction: "No action needed — vendors are legitimate; anomaly cleared.",
-    whatHappensNext: {
-      ifApproved: "Not applicable — already cleared.",
-      ifEdited: "Not applicable.",
-      ifRejected: "Not applicable.",
-    },
-    riskNote: "None — investigation reduced risk to low; both vendors are separate, verified businesses.",
+    recommendedAction: "Manually verify both vendors are legitimate.",
+    whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
+    riskNote: "Moderate confidence — logged for the audit trail rather than acted on automatically.",
     source: "ledger_counterparties",
-    createdAt: "2026-06-30T20:45:00Z",
+    createdAt: "2026-07-09T20:45:00Z",
+    approvedAutomaticallyMeta: {
+      approvedAt: "2026-07-10T08:00:00Z",
+      autoApprovalReason: "Notify-only agents never execute — this entry auto-closes into the audit log after the review window passes with no manual action.",
+      outcome: {
+        summary: "Logged to the audit trail; no payments were blocked or vendors changed.",
+        linkedSource: ls("counterparty", "counterparty_aa_011_1"),
+      },
+      reversibility: "informational",
+      undoAction: null,
+    },
   },
 ];
 
 /* ── Decision store — user-driven status overrides, shared app-wide ──────
    approved / rejected / acknowledged records drop out of Needs Review;
    an auto-approved record's Undo moves it back into Needs Review. */
-
 export type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
-
 let decisions: Record<string, AgentDecision> = {};
 const listeners = new Set<() => void>();
-
 function emit() {
   decisions = { ...decisions };
   listeners.forEach((l) => l());
 }
-
 export function decideAgentProposal(id: string, decision: AgentDecision) {
   decisions[id] = decision;
   emit();
 }
-
 export function clearAgentDecision(id: string) {
   delete decisions[id];
   emit();
 }
-
 export function useAgentDecisions(): Record<string, AgentDecision> {
   return useSyncExternalStore(
     (cb) => {
@@ -1140,8 +1213,6 @@ export function useAgentDecisions(): Record<string, AgentDecision> {
     () => decisions,
   );
 }
-
-/* List helpers — apply decisions on top of the seeded status. */
 export function needsReviewList(d: Record<string, AgentDecision>): AgentProposal[] {
   return AGENT_PROPOSALS.filter((p) => {
     const dec = d[p.id];
@@ -1149,7 +1220,6 @@ export function needsReviewList(d: Record<string, AgentDecision>): AgentProposal
     return dec === "undone_to_review";
   });
 }
-
 export function autoApprovedList(d: Record<string, AgentDecision>): AgentProposal[] {
   return AGENT_PROPOSALS.filter(
     (p) => p.status === "approved_automatically" && d[p.id] === undefined,
