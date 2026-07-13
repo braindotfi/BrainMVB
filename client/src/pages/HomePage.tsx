@@ -11,6 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  ADOBE_SETTLED,
+  COMCAST_SETTLED,
+  MERIDIAN_RECEIVABLE_SETTLED,
+  GUSTO_RECON_SETTLED,
+  MOCK_PROPOSALS,
+} from "@/lib/mockProposals";
+import { AUTO_APPROVED_IDS } from "@/lib/mockAuditRecords";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -510,30 +518,55 @@ export function HomePage() {
     setSelectedReview(null);
   };
 
-  /* Brain Did — live brain-core audit events for actions Brain has already
-     completed (approved/executed), same source as the Audit Log page
-     (useBrainAuditRecords, Phase 1c). Tapping a row deep-links to the Audit
-     Log record rather than a fabricated settled-receipt card — this widget
-     has only a real audit event, no Proposal object. */
+  /* Brain Did — live brain-core audit events + the 4 static auto-approved mock
+     proposals (Adobe, Comcast, Meridian, Gusto). Live records come first; the
+     static ones fill in regardless of what brain-core returns. De-duped by id
+     so a live brain-core event for the same record never produces a duplicate. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
-  const brainDidItems: WidgetItem[] = liveAuditRecords
-    .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
-    .map((r) => ({
-      id: r.id,
-      label: r.summary,
-      onClick: () => navigate(`/audit-log?record=${r.id}`),
-    }));
+  const brainDidItems: WidgetItem[] = useMemo(() => {
+    const seen = new Set<string>();
+    const items: WidgetItem[] = [];
+    const add = (id: string, label: string, go: () => void) => {
+      if (!seen.has(id)) { seen.add(id); items.push({ id, label, onClick: go }); }
+    };
+    liveAuditRecords
+      .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
+      .forEach((r) => add(r.id, r.summary, () => navigate(`/audit-log?record=${r.id}`)));
+    /* Static auto-approved proposals — skip any whose audit id was already
+       returned by the live feed (unlikely in demo but correct to de-dupe). */
+    const liveAuditIds = new Set(liveAuditRecords.map((r) => r.id));
+    const AUTO_APPROVED_PROPOSALS = [ADOBE_SETTLED, COMCAST_SETTLED, MERIDIAN_RECEIVABLE_SETTLED, GUSTO_RECON_SETTLED];
+    AUTO_APPROVED_PROPOSALS.forEach((p) => {
+      const auditId = p.auditId ?? p.id;
+      if (!AUTO_APPROVED_IDS.has(auditId) || liveAuditIds.has(auditId)) return;
+      add(auditId, p.pastTenseStatement ?? p.title, () => navigate(`/audit-log?record=${auditId}`));
+    });
+    return items;
+  }, [liveAuditRecords, navigate]);
 
-  /* Brain Detected — what Brain is advising for review (mirrors the Review
-     page's live "Needs Review" queue: real brain-core PaymentIntents awaiting
-     approval, not MOCK_PROPOSALS). Tapping opens the proposal sheet right here,
-     no navigation to the Review page. */
+  /* Brain Detected — what Brain is advising for review. Mirrors the Review
+     page: live brain-core PaymentIntents (primary), falling back to pending
+     mock proposals when the live queue is empty. Tapping opens the proposal
+     sheet in place. */
   const { proposals: liveNeedsReview } = useBrainReviewQueue();
-  const brainDetectedItems: WidgetItem[] = liveNeedsReview.map((p) => ({
-    id: p.id,
-    label: p.title,
-    onClick: () => setSelectedReview(p),
-  }));
+  const brainDetectedItems: WidgetItem[] = useMemo(() => {
+    if (liveNeedsReview.length > 0) {
+      return liveNeedsReview.map((p) => ({
+        id: p.id,
+        label: p.title,
+        onClick: () => setSelectedReview(p),
+      }));
+    }
+    /* Demo fallback: all pending mock proposals that haven't been acted on yet
+       (mirrors ReviewPage's demoQueue). */
+    return MOCK_PROPOSALS
+      .filter((p) => p.status === "pending" && (reviewStatuses[p.id] ?? "pending") === "pending")
+      .map((p) => ({
+        id: p.id,
+        label: p.title,
+        onClick: () => setSelectedReview(p),
+      }));
+  }, [liveNeedsReview, reviewStatuses]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -664,17 +697,8 @@ export function HomePage() {
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Middle row: Brain Did (left) + Brain Detected (right) */}
+            {/* Middle row: Brain Detected (left) + Brain Did (right) */}
             <div className="flex gap-[16px] items-start relative shrink-0 w-full">
-              <div className="flex flex-1 min-w-px">
-                <SectionWidget
-                  title="Brain Did"
-                  items={brainDidItems}
-                  icon={<GreenCheckIcon />}
-                  testIdPrefix="row-brain-did"
-                  emptyMessage="Brain hasn't taken any actions yet."
-                />
-              </div>
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Detected"
@@ -682,6 +706,15 @@ export function HomePage() {
                   icon={<OrangeInfoIcon />}
                   testIdPrefix="row-brain-detected"
                   emptyMessage="Brain hasn't detected any items that require your review yet."
+                />
+              </div>
+              <div className="flex flex-1 min-w-px">
+                <SectionWidget
+                  title="Brain Did"
+                  items={brainDidItems}
+                  icon={<GreenCheckIcon />}
+                  testIdPrefix="row-brain-did"
+                  emptyMessage="Brain hasn't taken any actions yet."
                 />
               </div>
             </div>
