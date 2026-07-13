@@ -346,6 +346,26 @@ export function ActivityPage() {
     if (item.linkTo) navigate(item.linkTo);
   };
 
+  /* Header pager — cycle through all activity items that carry a proposal
+     (review overrides + auto-handled receipts) in the current filtered view. */
+  const allProposalItems = useMemo(
+    () =>
+      [...todayItems, ...yesterdayItems, ...earlierItems].filter(
+        (it) => it.proposal,
+      ),
+    [todayItems, yesterdayItems, earlierItems],
+  );
+  const pagerIdx = activeProposal
+    ? allProposalItems.findIndex((it) => it.proposal!.id === activeProposal.id)
+    : -1;
+  const pagerDisabled = allProposalItems.length <= 1 || pagerIdx < 0;
+  const pageProposal = (dir: 1 | -1) => {
+    if (pagerDisabled || !activeProposal) return;
+    const next =
+      allProposalItems[(pagerIdx + dir + allProposalItems.length) % allProposalItems.length];
+    if (next.proposal) setActiveProposal(next.proposal);
+  };
+
   const handleAction = (action: ProposalAction) => {
     if (!activeProposal) return;
     const next: ProposalStatus =
@@ -444,6 +464,9 @@ export function ActivityPage() {
         currentStatus={activeProposal ? statusOf(activeProposal) : undefined}
         open={activeProposal !== null}
         onOpenChange={(o) => { if (!o) setActiveProposal(null); }}
+        onPrev={() => pageProposal(-1)}
+        onNext={() => pageProposal(1)}
+        pagerDisabled={pagerDisabled}
         onAction={handleAction}
         rulePaused={activeProposal ? isRulePaused(activeProposal) : undefined}
         onPauseRule={pauseRule}
