@@ -432,6 +432,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
         kind: "transaction",
         title: "Bank transaction",
         subtitle: "Jun 21 · $1,024.00 · Operating ••4821",
+        documentId: "TXN-2026-0621",
       },
       {
         kind: "ledger_entry",

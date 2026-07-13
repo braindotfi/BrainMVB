@@ -277,13 +277,21 @@ export function ReviewPage() {
      the demo proposal lives in exactly one of the three lists at a time, keyed by
      its override status. When the live queue has real items, the demo flow is off
      (live rows have no client-side settled state, so executing/settled stay empty). */
-  /* When live queue is empty, show ALL pending mock proposals so every agent
-     type is visible in the Needs Review tab (invoice, cash, collections, close). */
+  /* When live queue is empty, show ONE pending mock proposal per agent type
+     (invoice, cash, collections, close) so the Needs Review tab has no duplicates. */
   const pendingMock = MOCK_PROPOSALS.filter((p) => p.status === "pending");
   const demoActive = queue.length === 0;
+  const DEMO_QUEUE_ORDER = [
+    "prop-bankchange", // invoice (fraud warning — most distinctive)
+    "prop-sweep",      // cash
+    "prop-collections",// collections
+    "prop-recon",      // close
+  ];
   const demoQueue: Proposal[] =
     demoActive
-      ? pendingMock.filter((p) => (statuses[p.id] ?? "pending") === "pending")
+      ? DEMO_QUEUE_ORDER
+          .map((id) => pendingMock.find((p) => p.id === id))
+          .filter((p): p is Proposal => !!p && (statuses[p.id] ?? "pending") === "pending")
       : [];
   const executing: Proposal[] =
     demoActive
@@ -490,16 +498,16 @@ export function ReviewPage() {
     setActive(p);
   };
 
-  /* Header pager — cycle (wrap-around) through the Needs Review queue when the
-     open proposal belongs to it. A deep-linked proposal outside the queue has no
-     siblings, so the pager disables. */
+  /* Header pager — cycle (wrap-around) through the active tab's list. */
   const pagerList: Proposal[] | null = !active
     ? null
     : queue.some((p) => p.id === active.id)
       ? queue
       : demoQueue.some((p) => p.id === active.id)
         ? demoQueue
-        : null;
+        : autoApproved.some((p) => p.id === active.id)
+          ? autoApproved
+          : null;
   const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
   const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
   const pageProposal = (dir: 1 | -1) => {

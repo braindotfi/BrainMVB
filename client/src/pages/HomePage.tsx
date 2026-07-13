@@ -557,10 +557,11 @@ export function HomePage() {
         onClick: () => setSelectedReview(p),
       }));
     }
-    /* Demo fallback: all pending mock proposals that haven't been acted on yet
+    /* Demo fallback: one pending mock proposal per agent type
        (mirrors ReviewPage's demoQueue). */
+    const DEMO_IDS = ["prop-bankchange", "prop-sweep", "prop-collections", "prop-recon"];
     return MOCK_PROPOSALS
-      .filter((p) => p.status === "pending" && (reviewStatuses[p.id] ?? "pending") === "pending")
+      .filter((p) => DEMO_IDS.includes(p.id) && p.status === "pending" && (reviewStatuses[p.id] ?? "pending") === "pending")
       .map((p) => ({
         id: p.id,
         label: p.title,
