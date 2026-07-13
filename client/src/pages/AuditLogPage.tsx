@@ -215,7 +215,6 @@ export function AuditLogPage() {
                         const isFlagged = record.eventType === "flagged";
                         const isRejected = record.eventType === "rejected";
                         const isPostponed = record.eventType === "postponed";
-                        const isAnchored = record.anchor.status === "anchored";
                         const borderLeft = isFlagged || isRejected
                           ? "3px solid #d20344"
                           : isPostponed
@@ -244,17 +243,6 @@ export function AuditLogPage() {
                                     {format(record.amount)}
                                   </p>
                                 )}
-                                <div
-                                  className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${
-                                    isAnchored
-                                      ? "bg-[#123509] border-[rgba(66,191,35,0.2)]"
-                                      : "bg-[#222737] border-[rgba(108,119,157,0.2)]"
-                                  }`}
-                                >
-                                  <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${isAnchored ? "text-[#42bf23]" : "text-[#6c779d]"}`}>
-                                    {isAnchored ? "Anchored" : "Pending"}
-                                  </p>
-                                </div>
                               </div>
                             </button>
                             {idx < filtered.length - 1 && <Divider />}
