@@ -41,6 +41,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
         kind: "invoice",
         title: "Invoice #CE-2026-0702",
         subtitle: "Billing period Jun 1 – Jun 30 · $486.00",
+        documentId: "CE-2026-0631",
       },
       {
         kind: "prior_payment",
@@ -102,11 +103,13 @@ export const MOCK_PROPOSALS: Proposal[] = [
         kind: "invoice",
         title: "Invoice #APX-3391 (new)",
         subtitle: "Issued Jun 29 · $1,450.00",
+        documentId: "APX-3391",
       },
       {
         kind: "invoice",
         title: "Invoice #APX-3382 (paid)",
         subtitle: "Issued Jun 17 · $1,448.00 · paid Jun 19",
+        documentId: "APX-3382",
       },
     ],
     confidence: {
@@ -167,11 +170,13 @@ export const MOCK_PROPOSALS: Proposal[] = [
         kind: "invoice",
         title: "Invoice #BFS-0426",
         subtitle: "April retainer · $3,200.00 · new payout ••2087",
+        documentId: "BFS-0426",
       },
       {
         kind: "prior_payment",
         title: "Established payout history",
         subtitle: "11 payments to Wells Fargo ••6610",
+        documentId: "BFS-PRIOR-0326",
       },
       {
         kind: "contract",
@@ -485,6 +490,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
         kind: "invoice",
         title: "Invoice #AWS-2026-08",
         subtitle: "Jul usage · $4,150.00 · committed-use discount applied",
+        documentId: "AWS-2026-07",
       },
       {
         kind: "prior_payment",

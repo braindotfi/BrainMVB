@@ -245,90 +245,99 @@ export function ProposalDetail({
               </p>
             </div>
 
-            {/* Linked Evidence — facts + evidence items in a Figma-style table */}
-            <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>Linked Evidence</SectionLabel>
-              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
-                {/* Facts rows */}
-                {proposal.facts && proposal.facts.map((fact, i) => {
-                  const totalFactRows = proposal.facts!.length;
-                  const isLast = i === totalFactRows - 1 && proposal.evidence.length === 0;
-                  return (
-                    <div
-                      key={`fact-${i}`}
-                      className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
-                      data-testid={`linked-evidence-${i}`}
-                    >
-                      <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
-                          {titleCase(fact.label)}
-                        </p>
-                      </div>
-                      <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
-                          {fact.value}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {/* Evidence rows */}
-                {proposal.evidence.map((ev, i) => {
-                  const factCount = proposal.facts?.length ?? 0;
-                  const totalRows = factCount + proposal.evidence.length;
-                  const rowIdx = factCount + i;
-                  const isLast = rowIdx === totalRows - 1;
-                  return (
-                    <div
-                      key={`ev-${i}`}
-                      className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
-                      data-testid={`linked-evidence-ev-${i}`}
-                    >
-                      <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
-                          {titleCase(ev.kind.replace("_", " "))}
-                        </p>
-                      </div>
-                      <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
-                          {ev.title}
-                        </p>
-                        {ev.subtitle && (
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[12px]">
-                            {ev.subtitle}
+            {/* What Brain Found — facts in a Figma-style table */}
+            {proposal.facts && proposal.facts.length > 0 && (
+              <div className="flex flex-col gap-[12px] items-start w-full">
+                <SectionLabel>What Brain Found</SectionLabel>
+                <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
+                  {proposal.facts.map((fact, i) => {
+                    const isLast = i === proposal.facts!.length - 1;
+                    return (
+                      <div
+                        key={`fact-${i}`}
+                        className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
+                        data-testid={`brain-found-${i}`}
+                      >
+                        <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                            {titleCase(fact.label)}
                           </p>
-                        )}
+                        </div>
+                        <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
+                            {fact.value}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-              {/* Source document — tappable link when invoiceId resolves */}
-              {proposal.invoiceId && (() => {
-                const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
-                if (!srcDoc) return null;
-                const openSource = () => {
-                  if (liveInvoiceDoc) {
-                    setViewingDocument(liveInvoiceDoc);
-                    setDocumentOpen(true);
-                  } else {
-                    openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); });
-                  }
-                };
-                return (
-                  <button
-                    type="button"
-                    onClick={openSource}
-                    data-testid="button-source-invoice"
-                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
-                    <ChevronRight size={14} className="text-[#414965] shrink-0" />
-                  </button>
-                );
-              })()}
-            </div>
+            )}
+
+            {/* Linked Evidence — evidence items as tappable cards per Figma */}
+            {proposal.evidence.length > 0 && (
+              <div className="flex flex-col gap-[12px] items-start w-full">
+                <SectionLabel>Linked Evidence</SectionLabel>
+                <div className="flex flex-col gap-[8px] w-full">
+                  {proposal.evidence.map((ev, i) => {
+                    const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
+                    const clickable = !!doc;
+                    const onClick = () => {
+                      if (doc) {
+                        setViewingDocument(doc);
+                        setDocumentOpen(true);
+                      }
+                    };
+                    const Wrapper = clickable ? "button" : "div";
+                    return (
+                      <Wrapper
+                        key={`ev-${i}`}
+                        type={clickable ? "button" : undefined}
+                        onClick={clickable ? onClick : undefined}
+                        data-testid={`linked-evidence-${i}`}
+                        className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
+                      >
+                        <div className="flex flex-1 gap-[16px] items-center min-w-px">
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
+                            {titleCase(ev.kind.replace("_", " "))}
+                          </span>
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                            {ev.title}
+                          </p>
+                        </div>
+                        {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
+                      </Wrapper>
+                    );
+                  })}
+                </div>
+                {/* Source document — tappable link when invoiceId resolves (legacy fallback) */}
+                {proposal.invoiceId && (() => {
+                  const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
+                  if (!srcDoc) return null;
+                  const openSource = () => {
+                    if (liveInvoiceDoc) {
+                      setViewingDocument(liveInvoiceDoc);
+                      setDocumentOpen(true);
+                    } else {
+                      openDocumentDetail(proposal.invoiceId, (d) => { setViewingDocument(d); setDocumentOpen(true); });
+                    }
+                  };
+                  return (
+                    <button
+                      type="button"
+                      onClick={openSource}
+                      data-testid="button-source-invoice"
+                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
+                      <ChevronRight size={14} className="text-[#414965] shrink-0" />
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Confidence — band + score + bar (purple) + caveat */}
             <div className="flex flex-col gap-[10px] items-start w-full">

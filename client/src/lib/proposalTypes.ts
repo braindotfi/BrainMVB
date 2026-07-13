@@ -30,6 +30,7 @@ export interface EvidenceItem {
   title: string;
   subtitle: string;
   href?: string;
+  documentId?: string; // resolves to a DocumentRecord in the viewer on tap
 }
 
 export interface FactRow {
