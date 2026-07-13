@@ -6,8 +6,21 @@ import { XCircle, Clock } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
 import { type ActivityType, type ActivityItemData, statusOverrideToActivity } from "@/lib/brainFeed";
-import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
+import { openRuleDetail } from "@/lib/openRuleDetail";
+import {
+  ProposalDetail,
+  type ProposalAction,
+} from "@/components/ProposalDetail";
+import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
+import {
+  useRules,
+  pauseRule as storePauseRule,
+  reportProblem as storeReportProblem,
+  sendFeedback as storeSendFeedback,
+  setRuleDraft,
+} from "@/lib/rulesStore";
 
 /* "Brain Did" icon — Figma 3943:42552 (purple circle + AI badge vector) */
 const BrainDidIcon = () => (
@@ -316,8 +329,41 @@ export function ActivityPage() {
   const yesterdayItems = filterByTab(bucketedYesterday);
   const earlierItems = filterByTab(bucketedEarlier);
 
+  /* Inline proposal detail sheet — opened when an activity row with a proposal
+     (review-status override or auto-handled receipt) is tapped. */
+  const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
+  const statuses = useReviewStatuses();
+  const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
+  const rules = useRules();
+  const ruleOf = (p: Proposal) =>
+    p.rule ? rules.find((r) => r.id === p.rule!.id || r.policyId === p.rule!.policyId) : undefined;
+
   const handleSelect = (item: ActivityItemData) => {
+    if (item.proposal) {
+      setActiveProposal(item.proposal);
+      return;
+    }
     if (item.linkTo) navigate(item.linkTo);
+  };
+
+  const handleAction = (action: ProposalAction) => {
+    if (!activeProposal) return;
+    const next: ProposalStatus =
+      action === "approve" ? "executing"
+        : action === "reject" ? "rejected"
+          : action === "postpone" ? "postponed"
+            : "verifying";
+    setReviewStatus(activeProposal.id, next);
+    setActiveProposal(null);
+  };
+
+  const pauseRule = (p: Proposal) => {
+    const r = ruleOf(p);
+    if (r) storePauseRule(r.id);
+  };
+  const isRulePaused = (p: Proposal): boolean => {
+    const r = ruleOf(p);
+    return r ? !r.active : p.rule ? !p.rule.active : false;
   };
 
   return (
@@ -391,6 +437,45 @@ export function ActivityPage() {
 
         </div>
       </ScrollArea>
+
+      {/* Inline proposal detail sheet — same experience as Review / Audit record popup */}
+      <ProposalDetail
+        proposal={activeProposal}
+        currentStatus={activeProposal ? statusOf(activeProposal) : undefined}
+        open={activeProposal !== null}
+        onOpenChange={(o) => { if (!o) setActiveProposal(null); }}
+        onAction={handleAction}
+        rulePaused={activeProposal ? isRulePaused(activeProposal) : undefined}
+        onPauseRule={pauseRule}
+        onReviewRule={(p) => {
+          setActiveProposal(null);
+          openRuleDetail(p.rule?.id, navigate);
+        }}
+        onReportProblem={(p, report) => {
+          const r = ruleOf(p);
+          if (!r) return;
+          if (report.pause) {
+            storeReportProblem(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+            setActiveProposal(null);
+            openRuleDetail(r.id, navigate);
+          } else {
+            storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
+            setActiveProposal(null);
+          }
+        }}
+        onAlwaysHandle={(p) => {
+          setRuleDraft({
+            kind: "automation",
+            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            category: "bill",
+            agent: p.agent,
+            cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
+            allowlist: p.counterparty ? [p.counterparty] : [],
+          });
+          setActiveProposal(null);
+          navigate("/rules?create=1");
+        }}
+      />
     </div>
   );
 }
