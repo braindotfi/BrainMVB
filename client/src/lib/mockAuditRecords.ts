@@ -14,6 +14,11 @@ import type { AuditRecord } from "./auditTypes";
 /* One fallback record per tab so AuditLogPage shows UI even when brain-core
    has no events for a category. Kept separate from the full MOCK_AUDIT_RECORDS
    so we can drop these once the live feed covers every tab. */
+/** The 4 auto-approved mock proposals as audit records — merged into
+ *  AuditLogPage and ActivityPage so they appear in "Auto-Approved" / "Brain Did"
+ *  regardless of what brain-core returns. De-duped by id at merge time. */
+export const AUTO_APPROVED_IDS = new Set(["AUD-4E2N", "AUD-1B3T", "AUD-2R1M", "AUD-7P9Q"]);
+
 export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-DEMO-1",
@@ -607,3 +612,11 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     },
   },
 ];
+
+/** The 4 auto-approved mock records (Adobe, Comcast, Meridian, Gusto) extracted
+ *  from MOCK_AUDIT_RECORDS. These are always merged into AuditLogPage and used
+ *  to derive Activity "Brain Did" items so they appear in both surfaces
+ *  regardless of what brain-core returns. */
+export const AUTO_APPROVED_AUDIT_RECORDS: AuditRecord[] = MOCK_AUDIT_RECORDS.filter(
+  (r) => AUTO_APPROVED_IDS.has(r.id),
+);

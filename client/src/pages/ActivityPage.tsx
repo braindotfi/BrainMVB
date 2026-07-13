@@ -5,7 +5,13 @@ import { ICONS } from "@/assets/figma-icons";
 import { XCircle, Clock } from "lucide-react";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
-import { type ActivityType, type ActivityItemData, statusOverrideToActivity } from "@/lib/brainFeed";
+import { type ActivityType, type ActivityItemData, statusOverrideToActivity, autoHandledToActivity } from "@/lib/brainFeed";
+import {
+  ADOBE_SETTLED,
+  COMCAST_SETTLED,
+  MERIDIAN_RECEIVABLE_SETTLED,
+  GUSTO_RECON_SETTLED,
+} from "@/lib/mockProposals";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -324,10 +330,26 @@ export function ActivityPage() {
   const { todayItems: bucketedToday, yesterdayItems: bucketedYesterday, earlierItems: bucketedEarlier } =
     useMemo(() => bucketByDay(records), [records]);
 
+  /* Static auto-approved items (Adobe, Comcast, Meridian, Gusto) — these are
+     mock proposals that were approved automatically by standing rules on Jul 5–6.
+     They live in "Earlier" and always appear in the "Brain Did" tab regardless
+     of what brain-core returns. De-duped against live records by proposal id. */
+  const autoHandledItems: ActivityItemData[] = useMemo(() => {
+    const liveIds = new Set(records.map((r) => r.proposalId).filter(Boolean));
+    return [
+      ADOBE_SETTLED,
+      COMCAST_SETTLED,
+      MERIDIAN_RECEIVABLE_SETTLED,
+      GUSTO_RECON_SETTLED,
+    ]
+      .filter((p) => !liveIds.has(p.id))
+      .map(autoHandledToActivity);
+  }, [records]);
+
   /* Client-side actions are always "Today" because they happened in-session. */
   const todayItems = filterByTab([...bucketedToday, ...actionItems]);
   const yesterdayItems = filterByTab(bucketedYesterday);
-  const earlierItems = filterByTab(bucketedEarlier);
+  const earlierItems = filterByTab([...bucketedEarlier, ...autoHandledItems]);
 
   /* Inline proposal detail sheet — opened when an activity row with a proposal
      (review-status override or auto-handled receipt) is tapped. */
