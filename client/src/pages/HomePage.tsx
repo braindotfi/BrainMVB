@@ -16,12 +16,18 @@ import {
   COMCAST_SETTLED,
   MERIDIAN_RECEIVABLE_SETTLED,
   GUSTO_RECON_SETTLED,
-  MOCK_PROPOSALS,
 } from "@/lib/mockProposals";
+import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import {
+  useAgentDecisions,
+  decideAgentProposal,
+  needsReviewList,
+  type AgentProposal,
+} from "@/lib/agentProposals";
 import { AUTO_APPROVED_IDS } from "@/lib/mockAuditRecords";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
+import type { Proposal } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import {
   useRules,
@@ -30,7 +36,7 @@ import {
   sendFeedback as storeSendFeedback,
   setRuleDraft,
 } from "@/lib/rulesStore";
-import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
+import { useReviewStatuses } from "@/lib/reviewStatusStore";
 
 /* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
@@ -503,19 +509,12 @@ export function HomePage() {
 
   const handleReviewAction = (action: ProposalAction) => {
     if (!selectedReview) return;
-    // Live brain-core rows (brainDetectedItems, below) — ask core directly.
-    if (brainDetectedItems.some((it) => it.id === selectedReview.id)) {
-      if (action === "approve") approveLive.mutate(selectedReview.id);
-      else if (action === "reject") rejectLive.mutate(selectedReview.id);
-      return;
-    }
-    const next: ProposalStatus =
-      action === "approve" ? "executing"
-        : action === "reject" ? "rejected"
-          : action === "postpone" ? "postponed"
-            : "verifying";
-    setReviewStatus(selectedReview.id, next);
-    setSelectedReview(null);
+    /* selectedReview is only ever set from the LIVE brain-core queue (the seeded
+       agent records open AgentProposalModal instead) — always ask core directly,
+       never flip a client-side status for a live intent. */
+    if (action === "approve") approveLive.mutate(selectedReview.id);
+    else if (action === "reject") rejectLive.mutate(selectedReview.id);
+    // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
   };
 
   /* Brain Did — live brain-core audit events + the 4 static auto-approved mock
@@ -545,10 +544,28 @@ export function HomePage() {
   }, [liveAuditRecords, navigate]);
 
   /* Brain Detected — what Brain is advising for review. Mirrors the Review
-     page: live brain-core PaymentIntents (primary), falling back to pending
-     mock proposals when the live queue is empty. Tapping opens the proposal
-     sheet in place. */
+     page: live brain-core PaymentIntents (primary), falling back to the seeded
+     agent proposal records when the live queue is empty. Tapping opens the
+     matching detail sheet in place. */
   const { proposals: liveNeedsReview } = useBrainReviewQueue();
+  const agentDecisions = useAgentDecisions();
+  const [homeAgent, setHomeAgent] = useState<AgentProposal | null>(null);
+  const handleHomeAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+    if (action === "approve") {
+      decideAgentProposal(p.id, "approved");
+      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
+    } else if (action === "reject") {
+      decideAgentProposal(p.id, "rejected");
+      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
+    } else if (action === "acknowledge") {
+      decideAgentProposal(p.id, "acknowledged");
+      toast({ title: "Acknowledged", description: "Logged — Brain won't re-raise this flag." });
+    } else if (action === "undo") {
+      decideAgentProposal(p.id, "undone_to_review");
+      toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
+    }
+    setHomeAgent(null);
+  };
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
     if (liveNeedsReview.length > 0) {
       return liveNeedsReview.map((p) => ({
@@ -557,17 +574,14 @@ export function HomePage() {
         onClick: () => setSelectedReview(p),
       }));
     }
-    /* Demo fallback: one pending mock proposal per agent type
-       (mirrors ReviewPage's demoQueue). */
-    const DEMO_IDS = ["prop-bankchange", "prop-sweep", "prop-collections", "prop-recon"];
-    return MOCK_PROPOSALS
-      .filter((p) => DEMO_IDS.includes(p.id) && p.status === "pending" && (reviewStatuses[p.id] ?? "pending") === "pending")
-      .map((p) => ({
-        id: p.id,
-        label: p.title,
-        onClick: () => setSelectedReview(p),
-      }));
-  }, [liveNeedsReview, reviewStatuses]);
+    /* Fallback: the seeded agent proposal records still awaiting a decision
+       (mirrors ReviewPage's Needs Review list). */
+    return needsReviewList(agentDecisions).map((p) => ({
+      id: p.id,
+      label: p.title,
+      onClick: () => setHomeAgent(p),
+    }));
+  }, [liveNeedsReview, agentDecisions]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -730,6 +744,15 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
+      />
+
+      {/* Brain Detected — seeded agent proposal sheet, opened in place */}
+      <AgentProposalModal
+        proposal={homeAgent}
+        open={homeAgent !== null}
+        onOpenChange={(o) => { if (!o) setHomeAgent(null); }}
+        onAction={handleHomeAgentAction}
+        pagerDisabled
       />
 
       {/* Brain Detected — proposal sheet, opened in place */}

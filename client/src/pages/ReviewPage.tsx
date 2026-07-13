@@ -12,21 +12,22 @@ function titleCase(str: string) {
     });
 }
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader, Flag } from "lucide-react";
+import { Flag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ReviewModal,
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { SettledRecordCard } from "@/components/SettledRecordCard";
+import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
 import {
-  MOCK_PROPOSALS,
-  ADOBE_SETTLED,
-  COMCAST_SETTLED,
-  MERIDIAN_RECEIVABLE_SETTLED,
-  GUSTO_RECON_SETTLED,
-} from "@/lib/mockProposals";
+  useAgentDecisions,
+  decideAgentProposal,
+  needsReviewList,
+  autoApprovedList,
+  RISK_META,
+  type AgentProposal,
+} from "@/lib/agentProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -133,107 +134,55 @@ const ProposalRow = ({
   );
 };
 
-/* ── Executing row — HELD confirmation state with manual Cancel / Mark settled ── */
-const ExecutingRow = ({
+/* ── Agent proposal row — the 11 spec records (tappable → AgentProposalModal) ── */
+const AgentRow = ({
   proposal,
-  onCancel,
-  onSettle,
-  format,
-}: {
-  proposal: Proposal;
-  onCancel: () => void;
-  onSettle: () => void;
-  format: (a: string | number) => string;
-}) => (
-  <div
-    data-testid={`row-executing-${proposal.id}`}
-    className="flex flex-col gap-[10px] p-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-[#1d2132]"
-  >
-    <div className="flex gap-[12px] items-center w-full">
-      {/* static processing affordance — no spin that implies auto-progress */}
-      <Loader size={16} className="text-[#7631ee] shrink-0" />
-      <div className="flex flex-1 flex-col min-w-px gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px] truncate">
-          {proposal.title}
-        </p>
-        <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#7631ee] text-[12px] truncate">
-          Sent to execution · {proposal.cancelDeadlineLabel}
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
-          {proposal.executionLabel}
-        </p>
-      </div>
-      {typeof proposal.amount === "number" && (
-        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[16px] shrink-0">
-          {format(proposal.amount)}
-        </p>
-      )}
-    </div>
-    <div className="flex gap-[8px] w-full">
-      <button
-        type="button"
-        onClick={onCancel}
-        data-testid={`button-cancel-${proposal.id}`}
-        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={onSettle}
-        data-testid={`button-settle-${proposal.id}`}
-        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.3)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-      >
-        Mark settled
-      </button>
-    </div>
-  </div>
-);
-
-/* ── Collapsed settled/rejected/postponed row ────────────────────────────── */
-const SETTLED_META: Record<string, { color: string; label: (p: Proposal) => string }> = {
-  executed: { color: "#42bf23", label: (p) => `Executed · ${p.auditId}` },
-  rejected: { color: "#d20344", label: () => "Rejected" },
-  postponed: { color: "#6c779d", label: () => "Postponed to tomorrow" },
-};
-
-const SettledRow = ({
-  proposal,
-  status,
   onClick,
   format,
 }: {
-  proposal: Proposal;
-  status: ProposalStatus;
-  onClick?: () => void;
+  proposal: AgentProposal;
+  onClick: () => void;
   format: (a: string | number) => string;
 }) => {
-  const meta = SETTLED_META[status];
-  if (!meta) return null;
-  const Wrapper = onClick ? "button" : "div";
+  const risk = RISK_META[proposal.riskLevel];
   return (
-    <Wrapper
-      {...(onClick
-        ? { type: "button", onClick, "data-testid": `row-settled-${proposal.id}` }
-        : { "data-testid": `row-settled-${proposal.id}` })}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      data-testid={`row-agent-proposal-${proposal.id}`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
     >
+      {proposal.riskLevel === "high" && (
+        <div className="w-[3px] self-stretch rounded-full bg-[#d20344] shrink-0" />
+      )}
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
-          {proposal.title}
-        </p>
+        <div className="flex items-center gap-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+            {proposal.title}
+          </p>
+          {(proposal.riskLevel === "elevated" || proposal.riskLevel === "high") && (
+            <span
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+              style={{ color: risk.color, background: risk.bg }}
+            >
+              {risk.label}
+            </span>
+          )}
+        </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
-          {meta.label(proposal)}
+          {proposal.agentDisplayName} · {proposal.subtitle}
         </p>
       </div>
-      {typeof proposal.amount === "number" && (
+      {proposal.amount !== null && (
         <div className="flex flex-col items-end justify-center relative shrink-0">
           <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
             {format(proposal.amount)}
           </p>
         </div>
       )}
-    </Wrapper>
+    </div>
   );
 };
 
@@ -248,8 +197,10 @@ export function ReviewPage() {
      Every transition is user-driven — no setTimeout / auto-settle anywhere. */
   const statuses = useReviewStatuses();
   const [active, setActive] = useState<Proposal | null>(null);
-  // Settled STATUS card — opened from an executed "Settled today" row.
-  const [settledCard, setSettledCard] = useState<Proposal | null>(null);
+  /* Provenance of the open proposal, captured AT OPEN TIME so an action can't
+     be misrouted if list membership changes while the sheet is open: live
+     brain-core rows mutate core; deep-linked mock records flip local status. */
+  const [activeIsLive, setActiveIsLive] = useState(false);
   // When a proposal is opened via a deep-link that carried a `?from=` return
   // target (e.g. from the Audit Log record popup), dismissing the sheet returns
   // there so that surface re-opens — mirroring the stacked invoice experience.
@@ -271,50 +222,15 @@ export function ReviewPage() {
   // this durable queue doesn't show the same intent twice.
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
-  /* Demo fallback: when the live queue is empty, one mock proposal drives the
-     Needs Review -> executing -> settled flow so the surface is testable end to
-     end. Every transition is user-driven via reviewStatusStore (no setTimeout);
-     the demo proposal lives in exactly one of the three lists at a time, keyed by
-     its override status. When the live queue has real items, the demo flow is off
-     (live rows have no client-side settled state, so executing/settled stay empty). */
-  /* When live queue is empty, show ONE pending mock proposal per agent type
-     (invoice, cash, collections, close) so the Needs Review tab has no duplicates. */
-  const pendingMock = MOCK_PROPOSALS.filter((p) => p.status === "pending");
-  const demoActive = queue.length === 0;
-  const DEMO_QUEUE_ORDER = [
-    "prop-bankchange", // invoice (fraud warning — most distinctive)
-    "prop-sweep",      // cash
-    "prop-collections",// collections
-    "prop-recon",      // close
-  ];
-  const demoQueue: Proposal[] =
-    demoActive
-      ? DEMO_QUEUE_ORDER
-          .map((id) => pendingMock.find((p) => p.id === id))
-          .filter((p): p is Proposal => !!p && (statuses[p.id] ?? "pending") === "pending")
-      : [];
-  const executing: Proposal[] =
-    demoActive
-      ? pendingMock.filter((p) => {
-          const s = statuses[p.id];
-          return s === "executing" || s === "verifying";
-        })
-      : [];
-  const settled: Proposal[] =
-    demoActive
-      ? pendingMock.filter((p) => {
-          const s = statuses[p.id];
-          return s === "executed" || s === "rejected" || s === "postponed";
-        })
-      : [];
-
-  /* Approved Automatically - mock receipts for every agent (auto_handled). */
-  const autoApproved: Proposal[] = [
-    ADOBE_SETTLED,
-    COMCAST_SETTLED,
-    MERIDIAN_RECEIVABLE_SETTLED,
-    GUSTO_RECON_SETTLED,
-  ];
+  /* Agent proposal records (one per Brain agent, per the proposal-detail-modal
+     spec) seed the Needs Review + Approved Automatically tabs. Decisions are
+     user-driven via the shared agentProposals decision store (no setTimeout):
+     approve / reject / acknowledge drops a record out of the queue; Undo on an
+     auto-approved record moves it back into Needs Review. */
+  const agentDecisions = useAgentDecisions();
+  const agentQueue: AgentProposal[] = needsReviewList(agentDecisions);
+  const autoApproved: AgentProposal[] = autoApprovedList(agentDecisions);
+  const [activeAgent, setActiveAgent] = useState<AgentProposal | null>(null);
 
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
@@ -342,9 +258,9 @@ export function ReviewPage() {
 
   const handleAction = (action: ProposalAction) => {
     if (!active) return;
-    // A live brain-core row (this durable queue only ever holds these) — ask
+    // A live brain-core row (provenance captured when the sheet opened) — ask
     // core directly instead of flipping a client-side status.
-    if (queue.some((p) => p.id === active.id)) {
+    if (activeIsLive) {
       if (action === "approve") approveLive.mutate(active.id);
       else if (action === "reject") rejectLive.mutate(active.id);
       // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
@@ -473,6 +389,7 @@ export function ReviewPage() {
         // Capture any `?from=` return target BEFORE we strip the query, so
         // dismissing the sheet can navigate back there (re-opening that surface).
         setReturnTo(params.get("from"));
+        setActiveIsLive(false); // deep-linked mock record — local status only
         setActive(target);
         navigate("/review", { replace: true });
       }
@@ -495,6 +412,7 @@ export function ReviewPage() {
      target so a later dismiss doesn't wrongly navigate away. */
   const openLocal = (p: Proposal) => {
     setReturnTo(null);
+    setActiveIsLive(true); // only live brain-core queue rows call openLocal
     setActive(p);
   };
 
@@ -503,17 +421,48 @@ export function ReviewPage() {
     ? null
     : queue.some((p) => p.id === active.id)
       ? queue
-      : demoQueue.some((p) => p.id === active.id)
-        ? demoQueue
-        : autoApproved.some((p) => p.id === active.id)
-          ? autoApproved
-          : null;
+      : null;
   const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
   const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
   const pageProposal = (dir: 1 | -1) => {
     if (!pagerList || proposalPagerDisabled) return;
     setReturnTo(null);
+    setActiveIsLive(true); // pager only cycles the live queue
     setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
+  };
+
+  /* Agent-proposal pager — cycle within whichever tab list holds the open record. */
+  const agentPagerList: AgentProposal[] | null = !activeAgent
+    ? null
+    : agentQueue.some((p) => p.id === activeAgent.id)
+      ? agentQueue
+      : autoApproved.some((p) => p.id === activeAgent.id)
+        ? autoApproved
+        : null;
+  const agentPagerIdx = activeAgent && agentPagerList ? agentPagerList.findIndex((p) => p.id === activeAgent.id) : -1;
+  const agentPagerDisabled = !agentPagerList || agentPagerList.length <= 1 || agentPagerIdx < 0;
+  const pageAgent = (dir: 1 | -1) => {
+    if (!agentPagerList || agentPagerDisabled) return;
+    setActiveAgent(agentPagerList[(agentPagerIdx + dir + agentPagerList.length) % agentPagerList.length]);
+  };
+
+  /* Decide on an agent proposal — user-driven, logged via toast; the modal
+     closes and the record drops out of (or returns to) the queue. */
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+    if (action === "approve") {
+      decideAgentProposal(p.id, "approved");
+      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
+    } else if (action === "reject") {
+      decideAgentProposal(p.id, "rejected");
+      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
+    } else if (action === "acknowledge") {
+      decideAgentProposal(p.id, "acknowledged");
+      toast({ title: "Acknowledged", description: "Logged — Brain won't re-raise this flag." });
+    } else if (action === "undo") {
+      decideAgentProposal(p.id, "undone_to_review");
+      toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
+    }
+    setActiveAgent(null);
   };
 
   /* Tab visibility — "All" shows everything; the other tabs filter the view. */
@@ -580,12 +529,12 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Needs Review — the data-driven proposal queue */}
+            {/* Needs Review — live brain-core queue first, then the seeded agent records */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={queue.length || demoQueue.length} />
+              <WidgetHeader title="Needs Review" count={queue.length + agentQueue.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {queue.length === 0 && demoQueue.length === 0 && executing.length === 0 && (
+                {queue.length === 0 && agentQueue.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -593,7 +542,7 @@ export function ReviewPage() {
                   </div>
                 )}
 
-                {(queue.length > 0 ? queue : demoQueue).map((p, idx, arr) => (
+                {queue.map((p, idx, arr) => (
                   <div key={p.id} className="flex flex-col gap-[8px] w-full">
                     <ProposalRow proposal={p} status={statusOf(p)} onClick={() => openLocal(p)} format={format} />
                     {(() => {
@@ -614,25 +563,17 @@ export function ReviewPage() {
                         </button>
                       );
                     })()}
+                    {(idx < arr.length - 1 || agentQueue.length > 0) && <Divider />}
+                  </div>
+                ))}
+
+                {/* Agent proposal records — one per Brain agent (spec-seeded) */}
+                {agentQueue.map((p, idx, arr) => (
+                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                    <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
                     {idx < arr.length - 1 && <Divider />}
                   </div>
                 ))}
-
-                {/* Executing — held confirmation rows */}
-                {executing.map((p) => (
-                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                    {queue.length > 0 && <Divider />}
-                    <ExecutingRow
-                      proposal={p}
-                      onCancel={() => setStatus(p.id, "pending")}
-                      onSettle={() => setStatus(p.id, "executed")}
-                      format={format}
-                    />
-                  </div>
-                ))}
-
-                {/* Fabricated static "Account Totals" card removed (2026-07-03) — it showed a
-                    hardcoded cash/runway/pending-AP that contradicted the live ledger on Finances. */}
               </div>
             </div>
             )}
@@ -641,37 +582,21 @@ export function ReviewPage() {
                 tab renders it at the very bottom of the page instead. */}
             {activeTab === "All" && <HelperBanner />}
 
-            {/* Settled today — collapsed executed/rejected/postponed */}
-            {showNeedsReview && settled.length > 0 && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Settled today" count={settled.length} />
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  {settled.map((p) => (
-                    <SettledRow
-                      key={p.id}
-                      proposal={p}
-                      status={statusOf(p)}
-                      onClick={statusOf(p) === "executed" ? () => setSettledCard(p) : undefined}
-                      format={format}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Approved Automatically - mock receipts for every agent. */}
+            {/* Approved Automatically — agent records Brain cleared on its own. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoApproved.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  {autoApproved.length === 0 && (
+                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                        Nothing was approved automatically recently.
+                      </p>
+                    </div>
+                  )}
                   {autoApproved.map((p, idx, arr) => (
                     <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                      <ProposalRow
-                        proposal={p}
-                        status={statusOf(p)}
-                        onClick={() => { setReturnTo(null); setActive(p); }}
-                        format={format}
-                      />
+                      <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
                       {idx < arr.length - 1 && (
                         <div className="h-px w-full" style={{ background: "#1d2132" }} />
                       )}
@@ -733,18 +658,15 @@ export function ReviewPage() {
         }}
       />
 
-      {/* Settled STATUS card — past-tense "You approved / executed" view with the
-          anchor line in status mode (AnchorStatus mode="status"); the full PROOF
-          lives in the canonical Audit Log record this links to. */}
-      <SettledRecordCard
-        proposal={settledCard}
-        open={settledCard !== null}
-        onOpenChange={(o) => { if (!o) setSettledCard(null); }}
-        onViewAuditLog={() => {
-          navigate(`/audit-log?record=${settledCard?.auditId ?? ""}`);
-          setSettledCard(null);
-        }}
-        anchorAuditId={settledCard?.auditId}
+      {/* Agent proposal detail — the spec-driven modal for the 11 agent records */}
+      <AgentProposalModal
+        proposal={activeAgent}
+        open={activeAgent !== null}
+        onOpenChange={(o) => { if (!o) setActiveAgent(null); }}
+        onAction={handleAgentAction}
+        onPrev={() => pageAgent(-1)}
+        onNext={() => pageAgent(1)}
+        pagerDisabled={agentPagerDisabled}
       />
 
       {/* Legacy / live approval modal. For a live PaymentIntent, Confirm/Approve
