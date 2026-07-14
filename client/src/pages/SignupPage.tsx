@@ -150,21 +150,6 @@ export function SignupPage() {
     setUsername("");
   };
 
-  const handleDemo = async (fresh: boolean) => {
-    if (submitting) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await loginDemo(fresh);
-      navigate("/");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Demo login failed.";
-      setError(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       {/* Ambient glow */}
@@ -324,37 +309,6 @@ export function SignupPage() {
               {mode === "login" ? "Sign in" : "Create account"}
             </button>
           </form>
-
-          {/* Demo access — explore the app without creating an account */}
-          <div className="flex items-center gap-3 w-full my-5">
-            <div className="flex-1 h-px bg-[#1d2132]" />
-            <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
-            <div className="flex-1 h-px bg-[#1d2132]" />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              data-testid="button-demo-login-existing"
-              onClick={() => handleDemo(false)}
-              disabled={submitting}
-              className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
-            >
-              Continue with Demo - Existing User
-            </button>
-            <button
-              type="button"
-              data-testid="button-demo-login-fresh"
-              onClick={() => handleDemo(true)}
-              disabled={submitting}
-              className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
-            >
-              Continue with Demo - Fresh User
-            </button>
-            <p className="text-center text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">
-              No account required.
-            </p>
-          </div>
 
           <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
             {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
