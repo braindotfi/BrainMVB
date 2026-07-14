@@ -20,6 +20,7 @@ import {
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import { ActionConfirmModal, useActionConfirm, type ConfirmAction } from "@/components/ActionConfirmModal";
 import {
   useAgentDecisions,
   decideAgentProposal,
@@ -232,6 +233,9 @@ export function ReviewPage() {
   const autoApproved: AgentProposal[] = autoApprovedList(agentDecisions);
   const [activeAgent, setActiveAgent] = useState<AgentProposal | null>(null);
 
+  /* Figma-styled action-confirmation pop-up (auto-dismisses 2 s) */
+  const { confirm, showConfirm, onCancel } = useActionConfirm();
+
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
     void queryClient.invalidateQueries({ queryKey: ["/api/brain/actions"] });
@@ -258,22 +262,34 @@ export function ReviewPage() {
 
   const handleAction = (action: ProposalAction) => {
     if (!active) return;
-    // A live brain-core row (provenance captured when the sheet opened) — ask
-    // core directly instead of flipping a client-side status.
+    // A live brain-core row — show Figma confirmation, then mutate core.
     if (activeIsLive) {
-      if (action === "approve") approveLive.mutate(active.id);
-      else if (action === "reject") rejectLive.mutate(active.id);
+      if (action === "approve" || action === "reject") {
+        showConfirm(action as ConfirmAction, () => {
+          if (action === "approve") approveLive.mutate(active.id);
+          else rejectLive.mutate(active.id);
+        });
+      }
       // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
       return;
     }
+    // Mock / deep-linked proposal — show confirmation, then flip local status.
     const next: ProposalStatus =
       action === "approve" ? "executing"
         : action === "reject" ? "rejected"
           : action === "postpone" ? "postponed"
             : "verifying";
-    setStatus(active.id, next);
-    setActive(null); // sheet closes on any action
-    setReturnTo(null); // an action isn't a "return" close — drop any stale target
+    if (action === "approve" || action === "reject" || action === "postpone") {
+      showConfirm(action as ConfirmAction, () => {
+        setStatus(active.id, next);
+        setActive(null);
+        setReturnTo(null);
+      });
+    } else {
+      setStatus(active.id, next);
+      setActive(null);
+      setReturnTo(null);
+    }
   };
 
   /* Live brain-core PaymentIntents flagged by the §6 gate. Approved intents drop
@@ -297,7 +313,7 @@ export function ReviewPage() {
      call core and react to its answer. Reads the JSON body even on a non-2xx so the
      exact refusal reason surfaces inline. */
   const [approving, setApproving] = useState(false);
-  const handleLiveApprove = async () => {
+  const doLiveApprove = async () => {
     if (!activeLive?.live || !activeLive.intentId) return;
     const intentId = activeLive.intentId;
     setApproving(true);
@@ -337,12 +353,14 @@ export function ReviewPage() {
       setApproving(false);
     }
   };
+  const handleLiveApprove = () => showConfirm("approve", doLiveApprove);
 
-  const handleLiveReject = () => {
+  const doLiveReject = () => {
     if (activeLive?.live && activeLive.intentId) reject.mutate(activeLive.intentId);
     setActiveLive(null);
     setLiveRejection(null);
   };
+  const handleLiveReject = () => showConfirm("reject", doLiveReject);
 
   /* Rule state lives in the shared rulesStore so receipts, the review queue, and
      RuleDetail all stay in sync. Pausing / reporting are the only receipt mutations. */
@@ -450,19 +468,26 @@ export function ReviewPage() {
      closes and the record drops out of (or returns to) the queue. */
   const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
     if (action === "approve") {
-      decideAgentProposal(p.id, "approved");
-      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
+      showConfirm("approve", () => {
+        decideAgentProposal(p.id, "approved");
+        toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
+        setActiveAgent(null);
+      });
     } else if (action === "reject") {
-      decideAgentProposal(p.id, "rejected");
-      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
+      showConfirm("reject", () => {
+        decideAgentProposal(p.id, "rejected");
+        toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
+        setActiveAgent(null);
+      });
     } else if (action === "acknowledge") {
       decideAgentProposal(p.id, "acknowledged");
       toast({ title: "Acknowledged", description: "Logged — Brain won't re-raise this flag." });
+      setActiveAgent(null);
     } else if (action === "undo") {
       decideAgentProposal(p.id, "undone_to_review");
       toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
+      setActiveAgent(null);
     }
-    setActiveAgent(null);
   };
 
   /* Tab visibility — "All" shows everything; the other tabs filter the view. */
@@ -679,6 +704,13 @@ export function ReviewPage() {
         onReject={handleLiveReject}
         busy={approving}
         rejection={liveRejection}
+      />
+
+      {/* Figma-styled action confirmation (approve / postpone / reject) */}
+      <ActionConfirmModal
+        action={confirm?.action ?? "approve"}
+        open={confirm !== null}
+        onOpenChange={(o) => { if (!o) onCancel(); }}
       />
     </div>
   );
