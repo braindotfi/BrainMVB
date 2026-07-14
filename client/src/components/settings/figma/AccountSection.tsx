@@ -10,7 +10,7 @@ function parseBalance(raw?: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type ModalKind = null | "confirm" | "blocked" | "deleteData";
+type ModalKind = null | "confirm" | "deleteData";
 
 function Backdrop({ onClick }: { onClick: () => void }) {
   return (
@@ -128,38 +128,8 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
   );
 }
 
-function BlockedCloseModal({ onCancel }: { onCancel: () => void }) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="close-account-blocked-title"
-      className={POPUP_CONTAINER}
-      data-testid="modal-close-account-blocked"
-    >
-      <div className={POPUP_HEADER}>
-        <p id="close-account-blocked-title" className={POPUP_TITLE}>
-          Close Account
-        </p>
-        <p className={POPUP_BODY}>
-          You can only delete your account once your crypto and bank balances are below $1.
-        </p>
-      </div>
-      <div className={POPUP_BUTTON_ROW}>
-        <button
-          onClick={onCancel}
-          data-testid="button-close-account-blocked-cancel"
-          className={POPUP_BUTTON_NEUTRAL}
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function AccountSection() {
-  const { wirexAccounts, deleteAccount, deleteAccountData } = useAuth();
+  const { deleteAccount, deleteAccountData } = useAuth();
   const { toast } = useToast();
   const appAlert = useAppAlert();
   const [modal, setModal] = useState<ModalKind>(null);
@@ -185,15 +155,7 @@ export default function AccountSection() {
   }, [modal, isDeleting]);
 
   const handleCloseAccountClick = () => {
-    const wallet = wirexAccounts.find(a => a.type === "wallet");
-    const bank   = wirexAccounts.find(a => a.type === "bank");
-    const cryptoBal = parseBalance(wallet?.balance);
-    const bankBal   = parseBalance(bank?.balance);
-    if (cryptoBal < 1 && bankBal < 1) {
-      setModal("confirm");
-    } else {
-      setModal("blocked");
-    }
+    setModal("confirm");
   };
 
   const handleConfirm = async () => {
@@ -404,7 +366,6 @@ export default function AccountSection() {
 
       {modal && <Backdrop onClick={() => { if (!isDeleting) setModal(null); }} />}
       {modal === "confirm" && <ConfirmCloseModal onCancel={() => setModal(null)} onConfirm={handleConfirm} isDeleting={isDeleting} />}
-      {modal === "blocked" && <BlockedCloseModal onCancel={() => setModal(null)} />}
       {modal === "deleteData" && <ConfirmDeleteDataModal onCancel={() => setModal(null)} onConfirm={handleConfirmDeleteData} isDeleting={isDeleting} />}
     </div>
   );

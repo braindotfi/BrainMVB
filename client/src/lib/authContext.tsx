@@ -10,25 +10,10 @@ export interface AuthUser {
   walletAddress?: string | null;
 }
 
-export interface WirexAccount {
-  id: string;
-  type: "wallet" | "debit" | "bank";
-  address?: string;
-  iban?: string;
-  cardNumber?: string;
-  cardExpiry?: string;
-  cardCvv?: string;
-  nameOnAccount?: string;
-  balance?: string;
-  currency?: string;
-}
-
 interface AuthContextType {
   user: AuthUser | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  wirexAccounts: WirexAccount[];
-  wirexLoading: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginDemo: () => Promise<void>;
@@ -36,7 +21,6 @@ interface AuthContextType {
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   deleteAccountData: () => Promise<void>;
-  refreshWirexAccounts: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -44,8 +28,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [wirexAccounts, setWirexAccounts] = useState<WirexAccount[]>([]);
-  const [wirexLoading, setWirexLoading] = useState(false);
 
   // Bootstrap the session from the server cookie on mount.
   useEffect(() => {
@@ -65,26 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, []);
-
-  const refreshWirexAccounts = useCallback(async () => {
-    if (!user?.email) return;
-    setWirexLoading(true);
-    try {
-      const res = await fetch("/api/wirex/accounts", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setWirexAccounts(data.accounts ?? []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch WireX accounts:", e);
-    } finally {
-      setWirexLoading(false);
-    }
-  }, [user?.email]);
-
-  useEffect(() => {
-    if (user?.email) refreshWirexAccounts();
-  }, [user?.email, refreshWirexAccounts]);
 
   const loginWithPassword = useCallback(async (identifier: string, password: string) => {
     const res = await fetch("/api/auth/login", {
@@ -141,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setUser(null);
-    setWirexAccounts([]);
     queryClient.clear();
     clearMembers();
   }, []);
@@ -165,7 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try { await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } catch {}
     setUser(null);
-    setWirexAccounts([]);
     queryClient.clear();
     clearMembers();
   }, [user]);
@@ -188,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(err?.error || `Data deletion failed (${res.status})`);
     }
     queryClient.clear();
-    setWirexAccounts([]);
   }, [user]);
 
   return (
@@ -196,8 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoggedIn: !!user,
       isLoading,
-      wirexAccounts,
-      wirexLoading,
       loginWithPassword,
       register,
       loginDemo,
@@ -205,7 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       deleteAccount,
       deleteAccountData,
-      refreshWirexAccounts,
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/authContext";
 import { ADD_MONEY_ICONS as ICON } from "@/assets/add-money-icons";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -263,7 +262,6 @@ interface Props {
 }
 
 export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep = "select" }: Props): JSX.Element | null => {
-  const { wirexAccounts } = useAuth();
   const [step, setStep]               = useState<Step>(initialStep);
   const [selected, setSelected]       = useState<Account | null>(null);
 
@@ -296,17 +294,6 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState("");
   const [iban, setIban]               = useState("");
-
-  // Auto-populate bank fields from the logged-in user's bank account
-  useEffect(() => {
-    if (step === "bank") {
-      const bankAcc = wirexAccounts.find((a) => a.type === "bank");
-      if (bankAcc) {
-        setRecipientName(bankAcc.nameOnAccount ?? "");
-        setIban(bankAcc.iban ?? "");
-      }
-    }
-  }, [step, wirexAccounts]);
 
   if (!open) return null;
 
