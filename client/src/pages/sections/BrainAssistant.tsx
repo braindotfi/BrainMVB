@@ -59,6 +59,29 @@ const SUGGESTED_QUESTIONS = [
   "Show last 10 transactions",
 ];
 
+/** Post-process assistant reply text so dollar-prefixed amounts get thousands separators.
+ *  Only matches $-prefixed numbers (e.g. $180000, $62359.24) to avoid reformatting
+ *  bare integers like "11 months" or abbreviated amounts like "$42k". */
+function formatMessageText(text: string): string {
+  const amountPattern = /\$(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?\b/g;
+
+  return text.replace(amountPattern, (match) => {
+    // Already comma-formatted — leave it alone.
+    if (match.includes(",")) return match;
+
+    const raw = match.slice(1); // strip leading $
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return match;
+
+    const hasDecimals = raw.includes(".");
+    const formatted = num.toLocaleString("en-US", {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: hasDecimals ? 2 : 0,
+    });
+    return `$${formatted}`;
+  });
+}
+
 const CANNED_REPLY =
   "I'm Brain, your finance assistant. Live answers are coming soon — for now this is a preview of how I'll help.";
 
@@ -583,7 +606,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
                       </span>
                     ) : (
-                      msg.text
+                      formatMessageText(msg.text)
                     )}
                   </div>
                 </div>
