@@ -217,49 +217,77 @@ You can explain concepts and surface general guidance, but do not give regulated
    * and caused hallucinated balances.  Falls back to Wiki only for purely conceptual
    * questions where no ledger data is expected.
    */
-  async function buildGrounding(token: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
+  async function buildGrounding(token: string, question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
+    const q = question.toLowerCase();
+
     // Run all ledger reads in parallel — deterministic, same source the UI uses.
     const [accounts, txs, cps] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
-      listLedgerTransactions(token, { limit: 20 }),
+      listLedgerTransactions(token, { limit: 50 }), // fetch more so we can filter by relevance
       listLedgerCounterparties(token),
     ]);
 
     let text = "";
     const sources: WikiEvidence[] = [];
 
-    // ─── Accounts (deterministic) ───
-    if (accounts.status === "fulfilled" && accounts.value.accounts.length > 0) {
-      const lines = accounts.value.accounts.map((a) => {
+    const wantsAccounts = /\b(balance|account|cash|reserve|operating|crypto|btc|eth)\b/i.test(q);
+    const wantsTransactions = /\b(transaction|inflow|outflow|spend|spent|paid|received|deposit|withdraw|wire|transfer)\b/i.test(q);
+    const wantsVendors = /\b(vendor|counterparty|merchant|supplier|client|customer|who)\b/i.test(q);
+
+    // ─── Accounts (deterministic, only when relevant) ───
+    const allAccounts = accounts.status === "fulfilled" ? accounts.value.accounts : [];
+    if (allAccounts.length > 0 && (wantsAccounts || !wantsTransactions)) {
+      const lines = allAccounts.map((a) => {
         const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
         return `  • ${a.name} (${a.currency}) — balance ${bal} — status: ${a.status} — id: ${a.id}`;
       });
-      const usdTotal = accounts.value.accounts
+      const usdTotal = allAccounts
         .filter((a) => a.currency === "USD" && a.current_balance != null)
         .reduce((s, a) => s + (Number(a.current_balance) || 0), 0);
       text += `Accounts (source of truth):\n${lines.join("\n")}\nTotal USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD.\n\n`;
-      for (const a of accounts.value.accounts) {
+      for (const a of allAccounts) {
         sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} — ${a.currency} ${a.current_balance ?? "n/a"}` });
       }
     }
 
-    // ─── Transactions (deterministic) ───
-    if (txs.status === "fulfilled" && txs.value.transactions.length > 0) {
-      const recent = txs.value.transactions.slice(0, 10);
-      const lines = recent.map((t) => {
-        const dir = t.direction;
-        const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
-        const date = t.transaction_date;
-        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
-      });
-      text += `Recent transactions (last ${recent.length}):\n${lines.join("\n")}\n\n`;
-      for (const t of recent) {
-        sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
+    // ─── Transactions (filtered by relevance to question) ───
+    const allTxs = txs.status === "fulfilled" ? txs.value.transactions : [];
+    if (allTxs.length > 0 && wantsTransactions) {
+      // Try to find vendor names mentioned in the question to narrow txns
+      const cpNames = cps.status === "fulfilled" ? cps.value.counterparties.map((c) => c.name.toLowerCase()) : [];
+      const mentionedVendor = cpNames.find((name) => q.includes(name));
+
+      let filtered = allTxs;
+      if (mentionedVendor && mentionedVendor.length > 2) {
+        filtered = allTxs.filter((t) =>
+          t.description_normalized?.toLowerCase().includes(mentionedVendor)
+        );
+      }
+      // Also filter by direction keywords
+      if (/\binflow\b/i.test(q) && !/\boutflow\b/i.test(q)) {
+        filtered = filtered.filter((t) => t.direction === "inflow");
+      } else if (/\boutflow\b/i.test(q) && !/\binflow\b/i.test(q)) {
+        filtered = filtered.filter((t) => t.direction === "outflow");
+      }
+
+      // Cap at most relevant 10
+      const recent = filtered.slice(0, 10);
+      if (recent.length > 0) {
+        const lines = recent.map((t) => {
+          const dir = t.direction;
+          const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+          const date = t.transaction_date;
+          return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
+        });
+        text += `Relevant transactions (${recent.length}):\n${lines.join("\n")}\n\n`;
+        for (const t of recent) {
+          sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
+        }
       }
     }
 
-    // ─── Counterparties (for name resolution in answers) ───
-    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0) {
+    // ─── Counterparties (for name resolution, only when relevant) ───
+    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0 && wantsVendors) {
       const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} — id: ${c.id}`);
       text += `Counterparties:\n${lines.join("\n")}\n\n`;
     }

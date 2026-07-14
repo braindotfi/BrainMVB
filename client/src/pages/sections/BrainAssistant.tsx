@@ -116,57 +116,147 @@ function formatAmountsInText(text: string, symbol: string): string {
 
 /**
  * Lightweight markdown-to-JSX for assistant replies.
- * Converts **bold**, bullet lists (- / *), newlines, and dollar-amount formatting.
- * Returns a React fragment of styled spans/blocks.
+ * Handles:
+ *   - **bold**
+ *   - bullet lists (- / *)
+ *   - numbered lists (1. / 2.)
+ *   - inline code `` `code` ``
+ *   - headers (# ## ###)
+ *   - paragraph breaks and single-newline line-breaks
+ *   - currency amount formatting
  */
 function renderRichText(text: string, symbol: string): React.ReactNode {
   const formatted = formatAmountsInText(text, symbol);
+  const lines = formatted.split("\n");
 
-  // Split by double-newlines to get paragraphs/blocks
-  const blocks = formatted.split(/\n\n+/);
+  const elements: React.ReactNode[] = [];
+  let i = 0;
 
-  return (
-    <>
-      {blocks.map((block, bIdx) => {
-        const lines = block.split("\n");
-        const isListBlock = lines.every((l) => l.trim().startsWith("- ") || l.trim().startsWith("* ") || l.trim() === "");
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
 
-        if (isListBlock) {
-          return (
-            <ul key={bIdx} className="list-disc pl-4 my-1 space-y-0.5">
-              {lines
-                .filter((l) => l.trim())
-                .map((line, lIdx) => (
-                  <li key={lIdx} className="text-inherit">
-                    {renderInlineBold(line.replace(/^\s*[-*]\s+/, ""))}
-                  </li>
-                ))}
-            </ul>
-          );
-        }
+    // Blank line -> skip
+    if (!trimmed) {
+      i++;
+      continue;
+    }
 
-        return (
-          <span key={bIdx} className="block mb-1 last:mb-0">
-            {renderInlineBold(block)}
-          </span>
-        );
-      })}
-    </>
-  );
+    // Header (# ## ###)
+    const headerMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const sizes = ["text-[15px]", "text-[14px]", "text-[13px]"];
+      elements.push(
+        <h3 key={i} className={`${sizes[level - 1]} font-semibold text-inherit mt-2 mb-1 [font-family:'Gilroy',sans-serif]`}>
+          {renderInlineRich(headerMatch[2])}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+
+    // Numbered list start
+    const numListMatch = trimmed.match(/^(\d+)\.\s+/);
+    if (numListMatch) {
+      const items: string[] = [];
+      while (i < lines.length) {
+        const l = lines[i].trim();
+        if (!l) { i++; continue; }
+        if (!/^\d+\.\s+/.test(l)) break;
+        items.push(l.replace(/^\d+\.\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ol key={`num-${i}`} className="list-decimal pl-4 my-1 space-y-0.5">
+          {items.map((item, idx) => (
+            <li key={idx} className="text-inherit">
+              {renderInlineRich(item)}
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
+    // Bullet list start
+    const bulletMatch = trimmed.match(/^[-*]\s+/);
+    if (bulletMatch) {
+      const items: string[] = [];
+      while (i < lines.length) {
+        const l = lines[i].trim();
+        if (!l) { i++; continue; }
+        if (!/^[-*]\s+/.test(l)) break;
+        items.push(l.replace(/^[-*]\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="list-disc pl-4 my-1 space-y-0.5">
+          {items.map((item, idx) => (
+            <li key={idx} className="text-inherit">
+              {renderInlineRich(item)}
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    // Mixed paragraph that may contain inline bullet-like lines
+    // Collect consecutive non-list, non-header lines
+    const paraLines: string[] = [];
+    while (i < lines.length) {
+      const l = lines[i].trim();
+      if (!l) break;
+      if (/^#{1,3}\s+/.test(l)) break;
+      if (/^\d+\.\s+/.test(l)) break;
+      if (/^[-*]\s+/.test(l)) break;
+      paraLines.push(l);
+      i++;
+    }
+
+    if (paraLines.length > 0) {
+      const content = paraLines.join(" ");
+      elements.push(
+        <p key={`p-${i}`} className="mb-1 last:mb-0 text-inherit">
+          {renderInlineRich(content)}
+        </p>
+      );
+    }
+  }
+
+  return <>{elements}</>;
+}
+
+/** Inline rich text: bold, inline code, no block-level processing. */
+function renderInlineRich(text: string): React.ReactNode {
+  // Process inline code first so `**` inside code isn't treated as bold
+  const codeParts = text.split(/(`[^`]+`)/g);
+  return codeParts.map((part, i) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={i} className="bg-[#1a1e2e] px-1 py-[1px] rounded-[4px] text-[#a8b9f4] text-[12px] [font-family:'JetBrains_Mono',monospace]">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return renderInlineBold(part, i);
+  });
 }
 
 /** Convert **bold** segments to <strong> elements. */
-function renderInlineBold(text: string): React.ReactNode {
+function renderInlineBold(text: string, keyBase = 0): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
+    const key = `${keyBase}-${i}`;
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={i} className="font-semibold text-inherit">
+        <strong key={key} className="font-semibold text-inherit">
           {part.slice(2, -2)}
         </strong>
       );
     }
-    return <span key={i}>{part}</span>;
+    return <span key={key}>{part}</span>;
   });
 }
 
