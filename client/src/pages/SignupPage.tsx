@@ -342,9 +342,6 @@ export function SignupPage() {
             >
               Continue with Demo
             </button>
-            <p className="text-center text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">
-              No account required.
-            </p>
           </div>
 
           <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
