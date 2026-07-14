@@ -221,35 +221,25 @@ You can explain concepts and surface general guidance, but do not give regulated
    * and caused hallucinated balances.  Falls back to Wiki only for purely conceptual
    * questions where no ledger data is expected.
    */
-  async function buildGrounding(token: string, tenantId: string, question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
-    const q = question.toLowerCase();
-
-    const wantsAccounts = /\b(balance|account|cash|reserve|operating|crypto|btc|eth)\b/i.test(q);
-    const wantsTransactions = /\b(transaction|inflow|outflow|spend|spent|paid|received|deposit|withdraw|wire|transfer|history)\b/i.test(q);
-    const wantsVendors = /\b(vendor|counterparty|merchant|supplier|client|customer|who)\b/i.test(q);
-    const wantsInvoices = /\b(invoice|bill|payable|receivable|ap|ar|due|overdue|unpaid)\b/i.test(q);
-    const wantsObligations = /\b(upcoming|scheduled|expected|owe|owed|obligation|commitment)\b/i.test(q);
-    const wantsTeam = /\b(team|member|user|approval|approver|policy|rule|threshold|who can|who approved)\b/i.test(q);
-    const wantsAnyData = wantsAccounts || wantsTransactions || wantsVendors || wantsInvoices || wantsObligations || wantsTeam;
-
-    // Run all ledger reads in parallel — deterministic, same source the UI uses.
-    // Only fetch what the question asks for to keep the prompt lean.
+  async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
+    // Fetch ALL tenant data in parallel — the assistant should have the full
+    // picture, not just what matches keywords in the current question.
     const [accounts, txs, cps, invoices, obligations, members, policy] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
-      listLedgerTransactions(token, { limit: wantsTransactions ? 50 : 10 }),
+      listLedgerTransactions(token, { limit: 50 }),
       listLedgerCounterparties(token),
-      wantsInvoices ? listLedgerInvoices(token, { limit: 20 }) : Promise.resolve(null),
-      wantsObligations ? listObligations(token, { limit: 20 }) : Promise.resolve(null),
-      wantsTeam ? listMembers(token) : Promise.resolve(null),
-      wantsTeam ? getApprovalPolicyFacts(token, tenantId) : Promise.resolve(null),
+      listLedgerInvoices(token, { limit: 20 }),
+      listObligations(token, { limit: 20 }),
+      listMembers(token),
+      getApprovalPolicyFacts(token, tenantId),
     ]);
 
     let text = "";
     const sources: WikiEvidence[] = [];
 
-    // ─── Accounts (deterministic, only when relevant) ───
+    // ─── Accounts ───
     const allAccounts = accounts.status === "fulfilled" ? accounts.value.accounts : [];
-    if (allAccounts.length > 0 && (wantsAccounts || wantsAnyData)) {
+    if (allAccounts.length > 0) {
       const lines = allAccounts.map((a) => {
         const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
         return `  • ${a.name} (${a.currency}) — balance ${bal} — status: ${a.status} — id: ${a.id}`;
@@ -263,41 +253,24 @@ You can explain concepts and surface general guidance, but do not give regulated
       }
     }
 
-    // ─── Transactions (filtered by relevance to question) ───
+    // ─── Transactions ───
     const allTxs = txs.status === "fulfilled" ? txs.value.transactions : [];
-    if (allTxs.length > 0 && (wantsTransactions || wantsAnyData)) {
-      const cpNames = cps.status === "fulfilled" ? cps.value.counterparties.map((c) => c.name.toLowerCase()) : [];
-      const mentionedVendor = cpNames.find((name) => q.includes(name));
-
-      let filtered = allTxs;
-      if (mentionedVendor && mentionedVendor.length > 2) {
-        filtered = allTxs.filter((t) =>
-          t.description_normalized?.toLowerCase().includes(mentionedVendor)
-        );
-      }
-      if (/\binflow\b/i.test(q) && !/\boutflow\b/i.test(q)) {
-        filtered = filtered.filter((t) => t.direction === "inflow");
-      } else if (/\boutflow\b/i.test(q) && !/\binflow\b/i.test(q)) {
-        filtered = filtered.filter((t) => t.direction === "outflow");
-      }
-
-      const recent = filtered.slice(0, 10);
-      if (recent.length > 0) {
-        const lines = recent.map((t) => {
-          const dir = t.direction;
-          const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
-          const date = t.transaction_date;
-          return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
-        });
-        text += `Relevant transactions (${recent.length}):\n${lines.join("\n")}\n\n`;
-        for (const t of recent) {
-          sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
-        }
+    if (allTxs.length > 0) {
+      const recent = allTxs.slice(0, 10);
+      const lines = recent.map((t) => {
+        const dir = t.direction;
+        const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+        const date = t.transaction_date;
+        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
+      });
+      text += `Recent transactions (last ${recent.length}):\n${lines.join("\n")}\n\n`;
+      for (const t of recent) {
+        sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
       }
     }
 
-    // ─── Counterparties (for name resolution, only when relevant) ───
-    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0 && (wantsVendors || wantsAnyData)) {
+    // ─── Counterparties ───
+    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0) {
       const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} — id: ${c.id}`);
       text += `Counterparties:\n${lines.join("\n")}\n\n`;
     }
@@ -314,7 +287,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       }
     }
 
-    // ─── Obligations (bills, upcoming payables) ───
+    // ─── Obligations ───
     if (obligations.status === "fulfilled" && obligations.value && obligations.value.obligations.length > 0) {
       const lines = obligations.value.obligations.slice(0, 10).map((o) => {
         const amt = Number(o.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
@@ -326,7 +299,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       }
     }
 
-    // ─── Team members & policy ───
+    // ─── Team members ───
     if (members.status === "fulfilled" && members.value && members.value.members.length > 0) {
       const lines = members.value.members.map((m) =>
         `  • ${m.displayName} (${m.email}) — role: ${m.role} — ${m.active ? "active" : "inactive"} — id: ${m.id}`
@@ -337,6 +310,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       }
     }
 
+    // ─── Approval policy ───
     if (policy.status === "fulfilled" && policy.value) {
       const p = policy.value;
       text += `Approval policy (v${p.version}):\n  • quorum required: ${p.quorumRequired}\n  • second-approval threshold: ${p.secondApprovalThreshold?.value ?? "none"} ${p.secondApprovalThreshold?.currency ?? ""}\n  • rules:\n`;
