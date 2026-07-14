@@ -150,12 +150,12 @@ export function SignupPage() {
     setUsername("");
   };
 
-  const handleDemo = async (fresh: boolean) => {
+  const handleDemo = async () => {
     if (submitting) return;
     setError(null);
     setSubmitting(true);
     try {
-      await loginDemo(fresh);
+      await loginDemo();
       navigate("/");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Demo login failed.";
@@ -335,21 +335,12 @@ export function SignupPage() {
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              data-testid="button-demo-login-existing"
-              onClick={() => handleDemo(false)}
+              data-testid="button-demo-login"
+              onClick={handleDemo}
               disabled={submitting}
               className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
             >
-              Continue with Demo - Existing User
-            </button>
-            <button
-              type="button"
-              data-testid="button-demo-login-fresh"
-              onClick={() => handleDemo(true)}
-              disabled={submitting}
-              className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
-            >
-              Continue with Demo - Fresh User
+              Continue with Demo
             </button>
             <p className="text-center text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">
               No account required.

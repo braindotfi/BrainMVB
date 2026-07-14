@@ -31,7 +31,7 @@ interface AuthContextType {
   wirexLoading: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
-  loginDemo: (fresh: boolean) => Promise<void>;
+  loginDemo: () => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const loginDemo = useCallback(async (fresh: boolean) => {
+  const loginDemo = useCallback(async () => {
     const res = await fetch("/api/auth/demo", {
       method: "POST",
       credentials: "include",
@@ -121,11 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Demo login failed");
     const u = data.user;
-    // Fresh user → see the onboarding flow; existing user → skip it.
+    // Demo login always skips the onboarding flow.
     try {
-      const key = `brain_onboarding_complete_${u.id}`;
-      if (fresh) localStorage.removeItem(key);
-      else localStorage.setItem(key, "1");
+      localStorage.setItem(`brain_onboarding_complete_${u.id}`, "1");
     } catch {
       /* ignore storage errors */
     }

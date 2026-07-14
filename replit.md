@@ -87,8 +87,8 @@ MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/
 - Auth: `POST /api/auth/register|login|logout|demo`, `GET /api/auth/user`, Google OAuth +
   `/callback`, SIWE `GET /api/auth/nonce` (CSPRNG, pinned by `server/nonce.test.ts`) +
   `POST /api/auth/verify`. `GET /api/config`. Login accepts `{identifier, password}`.
-  `POST /api/auth/demo` = shared demo account; SignupPage Fresh/Existing toggles a
-  `brain_onboarding_complete_<userId>` localStorage flag.
+  `POST /api/auth/demo` = shared demo account; the single "Continue with Demo" button always
+  sets the `brain_onboarding_complete_<userId>` localStorage flag (skips onboarding).
 - Assistant: `POST /api/assistant/chat` — zod-validated, Claude; 503/402/500 errors each carry
   a user-facing `reply`.
 - Brain proxy: see BFF above; also `GET /api/brain/recommendation`, `/approval-policy`.
