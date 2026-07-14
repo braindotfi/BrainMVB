@@ -64,15 +64,17 @@ const SUGGESTED_QUESTIONS = [
 
 /** Post-process text so amounts get thousands separators and the active currency symbol.
  *  Matches:
- *    - $-prefixed or €-prefixed numbers
- *    - "USD " or "EUR " + number (common in ledger excerpts like "inflow USD 48000.00000000")
- *  Always formats with exactly 2 decimal places. */
+ *    - $-prefixed or €-prefixed numbers (strips trailing .00000000 garbage)
+ *    - "USD " or "EUR " + number (common in ledger excerpts)
+ *    - "ETH " + number (native crypto units, trailing zeros stripped)
+ *  Always fiat with exactly 2 decimal places; ETH left in native units. */
 function formatAmountsInText(text: string, symbol: string): string {
-  const prefixPattern = /(?:\$|€)(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\b/g;
-  const codePattern = /(?:USD|EUR)\s+(\d{1,3}(?:,\d{3})*\.?\d*)\b/g;
+  // 1. $/€-prefixed amounts (no \b — consume all trailing decimal digits).
+  const prefixPattern = /(?:\$|€)(?:\d+(?:,\d{3})*|\d+)(?:\.\d+)?/g;
 
   let out = text.replace(prefixPattern, (match) => {
-    if (match.includes(",")) return match; // already formatted
+    // Already comma-formatted and clean — leave it alone.
+    if (match.includes(",")) return match;
     const raw = match.slice(1); // strip leading $ or €
     const num = Number(raw);
     if (!Number.isFinite(num)) return match;
@@ -83,8 +85,10 @@ function formatAmountsInText(text: string, symbol: string): string {
     return `${symbol}${formatted}`;
   });
 
-  out = out.replace(codePattern, (_, rawNum: string) => {
-    if (rawNum.includes(",")) return `${symbol}${rawNum}`; // already formatted
+  // 2. USD / EUR code amounts → convert to active symbol.
+  const fiatCodePattern = /(?:USD|EUR)\s+(\d+(?:,\d{3})*\.?\d*)/g;
+  out = out.replace(fiatCodePattern, (_, rawNum: string) => {
+    if (rawNum.includes(",")) return `${symbol}${rawNum}`;
     const num = Number(rawNum);
     if (!Number.isFinite(num)) return `${symbol}${rawNum}`;
     const formatted = num.toLocaleString("en-US", {
@@ -92,6 +96,19 @@ function formatAmountsInText(text: string, symbol: string): string {
       maximumFractionDigits: 2,
     });
     return `${symbol}${formatted}`;
+  });
+
+  // 3. ETH amounts → strip trailing zeros, keep as ETH (native units).
+  const ethPattern = /ETH\s+(\d+\.?\d*)/g;
+  out = out.replace(ethPattern, (_, rawNum: string) => {
+    const num = Number(rawNum);
+    if (!Number.isFinite(num)) return `ETH ${rawNum}`;
+    // Trim trailing zeros beyond 2 places, keep at least 2 if there's a decimal
+    const formatted = num.toLocaleString("en-US", {
+      minimumFractionDigits: rawNum.includes(".") ? 2 : 0,
+      maximumFractionDigits: 8,
+    });
+    return `ETH ${formatted}`;
   });
 
   return out;
