@@ -62,7 +62,7 @@ const SUGGESTED_QUESTIONS = [
 /** Post-process assistant reply text so dollar-prefixed amounts get thousands separators.
  *  Only matches $-prefixed numbers (e.g. $180000, $62359.24) to avoid reformatting
  *  bare integers like "11 months" or abbreviated amounts like "$42k". */
-function formatMessageText(text: string): string {
+function formatAmountsInText(text: string): string {
   const amountPattern = /\$(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?\b/g;
 
   return text.replace(amountPattern, (match) => {
@@ -79,6 +79,62 @@ function formatMessageText(text: string): string {
       maximumFractionDigits: hasDecimals ? 2 : 0,
     });
     return `$${formatted}`;
+  });
+}
+
+/**
+ * Lightweight markdown-to-JSX for assistant replies.
+ * Converts **bold**, bullet lists (- / *), newlines, and dollar-amount formatting.
+ * Returns a React fragment of styled spans/blocks.
+ */
+function renderRichText(text: string): React.ReactNode {
+  const formatted = formatAmountsInText(text);
+
+  // Split by double-newlines to get paragraphs/blocks
+  const blocks = formatted.split(/\n\n+/);
+
+  return (
+    <>
+      {blocks.map((block, bIdx) => {
+        const lines = block.split("\n");
+        const isListBlock = lines.every((l) => l.trim().startsWith("- ") || l.trim().startsWith("* ") || l.trim() === "");
+
+        if (isListBlock) {
+          return (
+            <ul key={bIdx} className="list-disc pl-4 my-1 space-y-0.5">
+              {lines
+                .filter((l) => l.trim())
+                .map((line, lIdx) => (
+                  <li key={lIdx} className="text-inherit">
+                    {renderInlineBold(line.replace(/^\s*[-*]\s+/, ""))}
+                  </li>
+                ))}
+            </ul>
+          );
+        }
+
+        return (
+          <span key={bIdx} className="block mb-1 last:mb-0">
+            {renderInlineBold(block)}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** Convert **bold** segments to <strong> elements. */
+function renderInlineBold(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="font-semibold text-inherit">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={i}>{part}</span>;
   });
 }
 
@@ -606,7 +662,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
                       </span>
                     ) : (
-                      formatMessageText(msg.text)
+                      renderRichText(msg.text)
                     )}
                   </div>
                 </div>
@@ -634,7 +690,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     {openEvidenceFor === msg.id && (
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
-                          const text = s.excerpt ?? s.entityId;
+                          const text = formatAmountsInText(s.excerpt ?? s.entityId);
                           return txIds.has(s.entityId) ? (
                             <button
                               key={`${s.entityId}-${i}`}
