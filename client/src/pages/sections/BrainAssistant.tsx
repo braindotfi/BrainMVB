@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus,
   ArrowUp,
@@ -8,6 +8,8 @@ import {
   SquarePen,
 } from "lucide-react";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -59,20 +61,22 @@ const SUGGESTED_QUESTIONS = [
   "Show last 10 transactions",
 ];
 
-/** Post-process assistant reply text so dollar-prefixed amounts get thousands separators.
- *  Only matches $-prefixed numbers (e.g. $180000, $62359.24) to avoid reformatting
- *  bare integers like "11 months" or abbreviated amounts like "$42k". */
+/** Post-process text so amounts get thousands separators.
+ *  Matches:
+ *    - $-prefixed numbers (e.g. $180000, $62,359.24)
+ *    - "USD " + number (e.g. "USD 48000.00000000") — trailing zeros stripped
+ *  Leaves already-formatted amounts and bare integers untouched. */
 function formatAmountsInText(text: string): string {
-  const amountPattern = /\$(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?\b/g;
+  // Pattern 1: $-prefixed amounts
+  const dollarPattern = /\$(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?\b/g;
+  // Pattern 2: USD + number (common in ledger excerpts like "inflow USD 48000.00000000")
+  const usdCodePattern = /USD\s+(\d{1,3}(?:,\d{3})*\.?\d*)\b/g;
 
-  return text.replace(amountPattern, (match) => {
-    // Already comma-formatted — leave it alone.
-    if (match.includes(",")) return match;
-
-    const raw = match.slice(1); // strip leading $
+  let out = text.replace(dollarPattern, (match) => {
+    if (match.includes(",")) return match; // already formatted
+    const raw = match.slice(1);
     const num = Number(raw);
     if (!Number.isFinite(num)) return match;
-
     const hasDecimals = raw.includes(".");
     const formatted = num.toLocaleString("en-US", {
       minimumFractionDigits: hasDecimals ? 2 : 0,
@@ -80,6 +84,24 @@ function formatAmountsInText(text: string): string {
     });
     return `$${formatted}`;
   });
+
+  out = out.replace(usdCodePattern, (_, rawNum: string) => {
+    if (rawNum.includes(",")) return `USD ${rawNum}`; // already formatted
+    const num = Number(rawNum);
+    if (!Number.isFinite(num)) return `USD ${rawNum}`;
+    // Strip trailing zeros after decimal, keep 2 places if there was a decimal
+    const hasDecimal = rawNum.includes(".");
+    const decimals = hasDecimal
+      ? Math.max(2, rawNum.split(".")[1]?.length ?? 2)
+      : 0;
+    const formatted = num.toLocaleString("en-US", {
+      minimumFractionDigits: hasDecimal ? 2 : 0,
+      maximumFractionDigits: decimals,
+    });
+    return `USD ${formatted}`;
+  });
+
+  return out;
 }
 
 /**
@@ -244,6 +266,41 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const uploadDoc = useMutation({
+    mutationFn: async (file: File) => {
+      const params = new URLSearchParams({
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        category: "general",
+        sourceType: "pdf_upload",
+      });
+      const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: file,
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.message || json?.error || `Upload failed (${res.status})`);
+      }
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
+      toast({ title: "Document uploaded", description: "Brain will read it and extract what it can." });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Upload failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
   const messages = activeSession?.messages ?? [];
@@ -752,10 +809,23 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] tracking-[-0.64px]"
         />
         <div className="flex items-center justify-between">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.zip"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadDoc.mutate(file);
+              e.target.value = "";
+            }}
+          />
           <button
             data-testid="button-assistant-attach"
-            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145]"
-            title="Attach"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadDoc.isPending}
+            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-50"
+            title="Attach a document"
           >
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
           </button>
