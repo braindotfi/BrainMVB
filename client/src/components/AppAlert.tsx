@@ -3,10 +3,14 @@ import { createPortal } from "react-dom";
 import infoIcon from "@assets/info_1779540800272.png";
 import errorIcon from "@assets/errors_1779540800271.png";
 import successIcon from "@assets/success_1779540800270.png";
+import approvedIcon from "@assets/approved_1784058164235.png";
+import rejectedIcon from "@assets/rejected_1784058164236.png";
+import postponedIcon from "@assets/postpone_1784058164236.png";
 
-/* ─── Pop-up alerts (Figma 4086:66890 / 4086:66991 / 4086:67000) ───
-   Three visual variants used as drop-in replacements for plain toasts
-   when a Settings link (or any other trigger) needs a richer treatment.
+/* ─── Pop-up alerts (Figma 4086:66890 / 4086:66991 / 4086:67000 +
+   action confirmations 5773:66469 / 5734:82359 / 5787:65369) ───
+   Rich bottom-right toasts used as drop-in replacements for plain
+   shadcn toasts. Three core + three action variants.
 
    Shape across variants:
      - bg #0a0c10, border #1d2132, rounded-16, drop-shadow stack
@@ -15,7 +19,7 @@ import successIcon from "@assets/success_1779540800270.png";
      - Body : 16px / 20px line-height, color = #6c779d, supports an
               inline anchor that lights up #a8b9f4 + underline.        */
 
-export type AlertVariant = "info" | "error" | "success";
+export type AlertVariant = "info" | "error" | "success" | "approved" | "postponed" | "rejected";
 
 export type AppAlertOptions = {
   variant: AlertVariant;
@@ -35,15 +39,21 @@ type AlertContextValue = {
 const AppAlertContext = createContext<AlertContextValue | null>(null);
 
 const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> = {
-  info:    { ring: "#a8b9f4", bg: "#1d2132", title: "#a8b9f4" },
-  error:   { ring: "#d20344", bg: "#350011", title: "#d20344" },
-  success: { ring: "#42bf23", bg: "#123509", title: "#42bf23" },
+  info:      { ring: "#a8b9f4", bg: "#1d2132", title: "#a8b9f4" },
+  error:     { ring: "#d20344", bg: "#350011", title: "#d20344" },
+  success:   { ring: "#42bf23", bg: "#123509", title: "#42bf23" },
+  approved:  { ring: "#42bf23", bg: "#123509", title: "#42bf23" },
+  postponed: { ring: "#a8b9f4", bg: "#222737", title: "#a8b9f4" },
+  rejected:  { ring: "#d20344", bg: "#350011", title: "#d20344" },
 };
 
 const ICONS: Record<AlertVariant, string> = {
-  info:    infoIcon,
-  error:   errorIcon,
-  success: successIcon,
+  info:      infoIcon,
+  error:     errorIcon,
+  success:   successIcon,
+  approved:  approvedIcon,
+  postponed: postponedIcon,
+  rejected:  rejectedIcon,
 };
 
 const Glyph = ({ variant }: { variant: AlertVariant }) => (
@@ -193,20 +203,29 @@ export const useAppAlert = () => {
         return -1;
       };
       return {
-        info:    warn("info"),
-        error:   warn("error"),
-        success: warn("success"),
-        dismiss: warn("dismiss"),
+        info:       warn("info"),
+        error:      warn("error"),
+        success:    warn("success"),
+        approved:   warn("approved"),
+        postponed:  warn("postponed"),
+        rejected:   warn("rejected"),
+        dismiss:    warn("dismiss"),
       };
     }
     return {
-      info:    (title: string, description?: ReactNode, durationMs?: number) =>
+      info:       (title: string, description?: ReactNode, durationMs?: number) =>
         ctx.showAlert({ variant: "info", title, description, durationMs }),
-      error:   (title: string, description?: ReactNode, durationMs?: number) =>
+      error:      (title: string, description?: ReactNode, durationMs?: number) =>
         ctx.showAlert({ variant: "error", title, description, durationMs }),
-      success: (title: string, description?: ReactNode, durationMs?: number) =>
+      success:    (title: string, description?: ReactNode, durationMs?: number) =>
         ctx.showAlert({ variant: "success", title, description, durationMs }),
-      dismiss: (id: number) => ctx.dismissAlert(id),
+      approved:   (title: string, description?: ReactNode, durationMs?: number) =>
+        ctx.showAlert({ variant: "approved", title, description, durationMs }),
+      postponed:  (title: string, description?: ReactNode, durationMs?: number) =>
+        ctx.showAlert({ variant: "postponed", title, description, durationMs }),
+      rejected:   (title: string, description?: ReactNode, durationMs?: number) =>
+        ctx.showAlert({ variant: "rejected", title, description, durationMs }),
+      dismiss:    (id: number) => ctx.dismissAlert(id),
     };
   }, [ctx]);
 };
