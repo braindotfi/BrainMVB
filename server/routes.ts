@@ -22,6 +22,10 @@ import {
   listLedgerAccounts,
   listLedgerTransactions,
   listLedgerCounterparties,
+  listLedgerInvoices,
+  listObligations,
+  listMembers,
+  getApprovalPolicyFacts,
   ingestRawDocument,
   extractRawDocument,
   BrainApiError,
@@ -217,26 +221,35 @@ You can explain concepts and surface general guidance, but do not give regulated
    * and caused hallucinated balances.  Falls back to Wiki only for purely conceptual
    * questions where no ledger data is expected.
    */
-  async function buildGrounding(token: string, question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
+  async function buildGrounding(token: string, tenantId: string, question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
     const q = question.toLowerCase();
 
+    const wantsAccounts = /\b(balance|account|cash|reserve|operating|crypto|btc|eth)\b/i.test(q);
+    const wantsTransactions = /\b(transaction|inflow|outflow|spend|spent|paid|received|deposit|withdraw|wire|transfer|history)\b/i.test(q);
+    const wantsVendors = /\b(vendor|counterparty|merchant|supplier|client|customer|who)\b/i.test(q);
+    const wantsInvoices = /\b(invoice|bill|payable|receivable|ap|ar|due|overdue|unpaid)\b/i.test(q);
+    const wantsObligations = /\b(upcoming|scheduled|expected|owe|owed|obligation|commitment)\b/i.test(q);
+    const wantsTeam = /\b(team|member|user|approval|approver|policy|rule|threshold|who can|who approved)\b/i.test(q);
+    const wantsAnyData = wantsAccounts || wantsTransactions || wantsVendors || wantsInvoices || wantsObligations || wantsTeam;
+
     // Run all ledger reads in parallel — deterministic, same source the UI uses.
-    const [accounts, txs, cps] = await Promise.allSettled([
+    // Only fetch what the question asks for to keep the prompt lean.
+    const [accounts, txs, cps, invoices, obligations, members, policy] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
-      listLedgerTransactions(token, { limit: 50 }), // fetch more so we can filter by relevance
+      listLedgerTransactions(token, { limit: wantsTransactions ? 50 : 10 }),
       listLedgerCounterparties(token),
+      wantsInvoices ? listLedgerInvoices(token, { limit: 20 }) : Promise.resolve(null),
+      wantsObligations ? listObligations(token, { limit: 20 }) : Promise.resolve(null),
+      wantsTeam ? listMembers(token) : Promise.resolve(null),
+      wantsTeam ? getApprovalPolicyFacts(token, tenantId) : Promise.resolve(null),
     ]);
 
     let text = "";
     const sources: WikiEvidence[] = [];
 
-    const wantsAccounts = /\b(balance|account|cash|reserve|operating|crypto|btc|eth)\b/i.test(q);
-    const wantsTransactions = /\b(transaction|inflow|outflow|spend|spent|paid|received|deposit|withdraw|wire|transfer)\b/i.test(q);
-    const wantsVendors = /\b(vendor|counterparty|merchant|supplier|client|customer|who)\b/i.test(q);
-
     // ─── Accounts (deterministic, only when relevant) ───
     const allAccounts = accounts.status === "fulfilled" ? accounts.value.accounts : [];
-    if (allAccounts.length > 0 && (wantsAccounts || !wantsTransactions)) {
+    if (allAccounts.length > 0 && (wantsAccounts || wantsAnyData)) {
       const lines = allAccounts.map((a) => {
         const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
         return `  • ${a.name} (${a.currency}) — balance ${bal} — status: ${a.status} — id: ${a.id}`;
@@ -252,8 +265,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     // ─── Transactions (filtered by relevance to question) ───
     const allTxs = txs.status === "fulfilled" ? txs.value.transactions : [];
-    if (allTxs.length > 0 && wantsTransactions) {
-      // Try to find vendor names mentioned in the question to narrow txns
+    if (allTxs.length > 0 && (wantsTransactions || wantsAnyData)) {
       const cpNames = cps.status === "fulfilled" ? cps.value.counterparties.map((c) => c.name.toLowerCase()) : [];
       const mentionedVendor = cpNames.find((name) => q.includes(name));
 
@@ -263,14 +275,12 @@ You can explain concepts and surface general guidance, but do not give regulated
           t.description_normalized?.toLowerCase().includes(mentionedVendor)
         );
       }
-      // Also filter by direction keywords
       if (/\binflow\b/i.test(q) && !/\boutflow\b/i.test(q)) {
         filtered = filtered.filter((t) => t.direction === "inflow");
       } else if (/\boutflow\b/i.test(q) && !/\binflow\b/i.test(q)) {
         filtered = filtered.filter((t) => t.direction === "outflow");
       }
 
-      // Cap at most relevant 10
       const recent = filtered.slice(0, 10);
       if (recent.length > 0) {
         const lines = recent.map((t) => {
@@ -287,9 +297,53 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
 
     // ─── Counterparties (for name resolution, only when relevant) ───
-    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0 && wantsVendors) {
+    if (cps.status === "fulfilled" && cps.value.counterparties.length > 0 && (wantsVendors || wantsAnyData)) {
       const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} — id: ${c.id}`);
       text += `Counterparties:\n${lines.join("\n")}\n\n`;
+    }
+
+    // ─── Invoices ───
+    if (invoices.status === "fulfilled" && invoices.value && invoices.value.invoices.length > 0) {
+      const lines = invoices.value.invoices.slice(0, 10).map((inv) => {
+        const amt = Number(inv.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
+        return `  • Invoice #${inv.invoice_number} — ${inv.currency} ${amt} — due ${inv.due_date ?? "unknown"} — status: ${inv.status} — id: ${inv.id}`;
+      });
+      text += `Invoices:\n${lines.join("\n")}\n\n`;
+      for (const inv of invoices.value.invoices.slice(0, 10)) {
+        sources.push({ entityId: inv.id, entityType: "invoice", excerpt: `Invoice #${inv.invoice_number} — ${inv.currency} ${inv.amount_due}` });
+      }
+    }
+
+    // ─── Obligations (bills, upcoming payables) ───
+    if (obligations.status === "fulfilled" && obligations.value && obligations.value.obligations.length > 0) {
+      const lines = obligations.value.obligations.slice(0, 10).map((o) => {
+        const amt = Number(o.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
+        return `  • ${o.direction} ${o.currency} ${amt} — due ${o.due_date ?? "unknown"} — status: ${o.status} — id: ${o.id}`;
+      });
+      text += `Upcoming obligations:\n${lines.join("\n")}\n\n`;
+      for (const o of obligations.value.obligations.slice(0, 10)) {
+        sources.push({ entityId: o.id, entityType: "obligation", excerpt: `${o.direction} ${o.currency} ${o.amount_due}` });
+      }
+    }
+
+    // ─── Team members & policy ───
+    if (members.status === "fulfilled" && members.value && members.value.members.length > 0) {
+      const lines = members.value.members.map((m) =>
+        `  • ${m.displayName} (${m.email}) — role: ${m.role} — ${m.active ? "active" : "inactive"} — id: ${m.id}`
+      );
+      text += `Team members:\n${lines.join("\n")}\n\n`;
+      for (const m of members.value.members) {
+        sources.push({ entityId: m.id, entityType: "member", excerpt: `${m.displayName} — ${m.role}` });
+      }
+    }
+
+    if (policy.status === "fulfilled" && policy.value) {
+      const p = policy.value;
+      text += `Approval policy (v${p.version}):\n  • quorum required: ${p.quorumRequired}\n  • second-approval threshold: ${p.secondApprovalThreshold?.value ?? "none"} ${p.secondApprovalThreshold?.currency ?? ""}\n  • rules:\n`;
+      for (const r of p.rules.slice(0, 5)) {
+        text += `    - rule ${r.id}: execute=${r.execute ?? "none"}${r.require ? ` require=${r.require}` : ""}${r.when?.["amount.gt"] ? ` when amount.gt ${r.when["amount.gt"].value} ${r.when["amount.gt"].currency ?? "USD"}` : ""}\n`;
+      }
+      text += "\n";
     }
 
     const hasLedgerData = text.trim().length > 0;
@@ -306,7 +360,7 @@ You can explain concepts and surface general guidance, but do not give regulated
    * assistant must refuse rather than hallucinate.
    */
   function isDataQuestion(q: string): boolean {
-    const dataWords = /\b(balance|account|transaction|how much|spending|income|revenue|expense|cash|usd|crypto|btc|eth|wire|transfer|paid|received|deposit|withdraw)\b/i;
+    const dataWords = /\b(balance|account|transaction|how much|spending|income|revenue|expense|cash|usd|crypto|btc|eth|wire|transfer|paid|received|deposit|withdraw|invoice|bill|payable|receivable|ap|ar|due|overdue|unpaid|upcoming|scheduled|owe|owed|obligation|commitment|team|member|user|approval|approver|policy|rule|threshold)\b/i;
     return dataWords.test(q);
   }
 
@@ -321,8 +375,8 @@ You can explain concepts and surface general guidance, but do not give regulated
     let sources: WikiEvidence[] = [];
     let dataAvailable = false;
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const built = await buildGrounding(token, parsed.data.messages[parsed.data.messages.length - 1].content);
+      const { token, tenantId } = await getBrainSession(req.session.userId!);
+      const built = await buildGrounding(token, tenantId, parsed.data.messages[parsed.data.messages.length - 1].content);
       grounding = built.text;
       sources = built.sources;
       dataAvailable = built.available;
@@ -334,7 +388,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     const dataUnavailable = !dataAvailable && isDataQuestion(lastUser);
 
     const system = grounding
-      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts and transactions — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, and approval policy — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
       : ASSISTANT_SYSTEM;
 
     if (!process.env.ANTHROPIC_API_KEY) {
