@@ -785,10 +785,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           <div className="h-full flex flex-col items-center justify-center gap-[4px] px-[16px]">
             <img src={brainLogo} alt="Brain" className="size-[72px]" />
             <div className="flex flex-col items-center text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px] tracking-[-0.96px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px]">
                 Hi, I'm Brain
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[18px] leading-[24px] tracking-[-0.72px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[18px] leading-[24px]">
                 What can I help you with today?
               </p>
             </div>
@@ -800,14 +800,14 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 {msg.dateTag && (
                   <div className="flex items-center justify-center gap-[4px] py-[2px]">
                     <img src={timeIcon} alt="" className="size-[12px] block" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] tracking-[-0.48px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px]">
                       {msg.dateTag}
                     </span>
                   </div>
                 )}
                 <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[247px] px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] tracking-[-0.56px] ${
+                    className={`max-w-[247px] px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
                         ? "bg-[#7631ee] text-white text-right"
                         : "bg-[#222737] text-[#6c779d] text-left"
@@ -826,10 +826,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 </div>
                 {msg.role === "assistant" && msg.ungrounded && (
                   <div className="flex items-center gap-[4px] px-[4px] w-full">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px] tracking-[-0.4px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
                       Data unavailable
                     </span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px] tracking-[-0.4px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
                       — live ledger connection not ready
                     </span>
                   </div>
@@ -840,7 +840,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       type="button"
                       data-testid="assistant-sources"
                       onClick={() => setOpenEvidenceFor((cur) => (cur === msg.id ? null : msg.id))}
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px] tracking-[-0.4px] px-[4px] cursor-pointer hover:underline text-left"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
                     >
                       Grounded in {msg.sources.length} record{msg.sources.length === 1 ? "" : "s"} from your ledger
                       {openEvidenceFor === msg.id ? " ▾" : " ▸"}
@@ -907,7 +907,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             }
           }}
           placeholder="Ask me a question..."
-          className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] tracking-[-0.64px]"
+          className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
         />
         <div className="flex items-center justify-between">
           <input
