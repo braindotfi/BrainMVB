@@ -44,6 +44,9 @@ export interface BrainConfig {
   /** PREFERRED (key-free): shared secret for the fenced POST /v1/demo/provision-run.
    *  Sent as the X-Demo-Provision-Auth header. */
   demoProvisionSecret: string | undefined;
+  /** PRODUCTION TENANCY: platform service credential for POST /v1/tenants,
+   *  POST /v1/sessions and POST /v1/invites/consume. Sent as X-Platform-Service-Auth. */
+  platformServiceSecret: string | undefined;
   /** FALLBACK (local dev only): private signing JWK (JSON) to mint tokens in-process. */
   signKeyJson: string | undefined;
   /** FALLBACK (local dev only): HS256 secret — valid only against a non-prod verifier. */
@@ -60,6 +63,7 @@ export interface BrainConfig {
 export const brainConfig: BrainConfig = {
   baseUrl: (env("BRAIN_API_BASE_URL") ?? "https://api.brain.fi/v1").replace(/\/+$/, ""),
   demoProvisionSecret: env("BRAIN_DEMO_PROVISION_SECRET"),
+  platformServiceSecret: env("BRAIN_PLATFORM_SERVICE_SECRET"),
   signKeyJson: env("BRAIN_AUTH_SIGN_KEY"),
   hs256Secret: env("BRAIN_AUTH_JWT_SECRET"),
   issuer: env("BRAIN_AUTH_ISSUER") ?? "https://auth.brain.fi",
@@ -88,5 +92,27 @@ export function brainTokenMode(): BrainTokenMode {
 
 /** True when the BFF has a way to obtain a token brain-core will accept. */
 export function brainAuthConfigured(): boolean {
-  return brainTokenMode() !== "unconfigured";
+  return brainTenancyMode() === "production"
+    ? brainConfig.platformServiceSecret !== undefined
+    : brainTokenMode() !== "unconfigured";
+}
+
+/**
+ * Production tenancy gate (Phase 2). "production" ONLY when BRAIN_TENANCY_MODE=production
+ * AND the platform service credential is present; anything else stays on the demo
+ * strategies above, so the demo/playground build is byte-for-byte unaffected.
+ */
+export type BrainTenancyMode = "production" | "demo";
+
+export function brainTenancyMode(): BrainTenancyMode {
+  if (env("BRAIN_TENANCY_MODE") === "production" && brainConfig.platformServiceSecret !== undefined) {
+    return "production";
+  }
+  return "demo";
+}
+
+/** True when the platform service credential is configured (signup/invite consume need it
+ *  even while BRAIN_TENANCY_MODE is still demo). */
+export function platformServiceConfigured(): boolean {
+  return brainConfig.platformServiceSecret !== undefined;
 }

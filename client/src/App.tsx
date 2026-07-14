@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useRoute } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAlertProvider } from "@/components/AppAlert";
@@ -10,8 +10,10 @@ import { useLocation } from "wouter";
 import { useSessionTimeout } from "@/lib/sessionTimeoutContext";
 import { useAppAlert } from "@/components/AppAlert";
 
+import { useQuery } from "@tanstack/react-query";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
+import { CompanySetupPage } from "@/pages/CompanySetupPage";
 import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
 import { ReviewPage } from "@/pages/ReviewPage";
@@ -32,9 +34,6 @@ function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const { timeoutMin } = useSessionTimeout();
   const alert = useAppAlert();
-  const [navCollapsed, setNavCollapsed] = useState(false);
-  const [accountCollapsed, setAccountCollapsed] = useState(false);
-  const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [, navigate] = useLocation();
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Refs hold the latest function/value references so the listener-binding
@@ -94,10 +93,44 @@ function AppLayout() {
     return <SignupPage />;
   }
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+  return <TenancyGate onLogout={() => { logout(); navigate("/"); }} />;
+}
+
+/* Production tenancy gate (Phase 2): once platform auth succeeds, check whether this
+   user is linked to a brain-core tenant. In production mode an unlinked user is routed
+   to "Create a company / Enter your invite link" — never auto-provisioned. In demo mode
+   this is a no-op (linked:true). */
+function TenancyGate({ onLogout }: { onLogout: () => void }) {
+  const { data, isLoading } = useQuery<{ mode: string; linked: boolean }>({
+    queryKey: ["/api/brain/tenancy"],
+    staleTime: 60_000,
+  });
+  const [onInviteRoute] = useRoute("/invite/:token");
+
+  if (isLoading) {
+    return (
+      <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-[#1d2132] border-t-[#7631ee] animate-spin" />
+      </div>
+    );
+  }
+
+  // Production only: unlinked users always land on setup; an invite link also opens it
+  // explicitly (already-linked users get core's honest "already belongs" refusal if they
+  // try to consume — never a silent no-op). Demo mode is untouched, including /invite/*.
+  if (data?.mode === "production" && (!data.linked || onInviteRoute)) {
+    return <CompanySetupPage />;
+  }
+
+  return <MainShell onLogout={onLogout} />;
+}
+
+function MainShell({ onLogout }: { onLogout: () => void }) {
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [accountCollapsed, setAccountCollapsed] = useState(false);
+  const [addSourceOpen, setAddSourceOpen] = useState(false);
+
+  const handleLogout = onLogout;
 
   return (
     <NavContext.Provider value={{

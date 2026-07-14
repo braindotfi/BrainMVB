@@ -11,12 +11,20 @@ import arrowButton from "@assets/Button_1783635877872.png";
 import {
   ROLE_LABELS,
   envelopeLine,
+  isInvitedPending,
   type ApprovalDomain,
   type BrainMember,
   type ListMembersResponse,
   type MemberRole,
   type ApprovalPolicyFacts,
 } from "@/lib/membersApi";
+
+/** Production-tenancy gate for the invite UI (mode + linked flag from the BFF). */
+interface TenancyStatus {
+  mode: "production" | "demo";
+  linked: boolean;
+  tenantId?: string;
+}
 
 /* Settings → Team. Members & approval authority, backed by the REAL brain-core API
    through the BFF (member/user-principal token). This page never enforces anything
@@ -47,44 +55,113 @@ function RolePill({ role }: { role: MemberRole }) {
   );
 }
 
-function MemberRow({ member }: { member: BrainMember }) {
+function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActions: boolean }) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState<null | "resend" | "revoke">(null);
+  const invited = isInvitedPending(member);
+
+  const inviteCall = async (action: "resend" | "revoke") => {
+    setBusy(action);
+    try {
+      const res = await fetch(`/api/brain/members/${encodeURIComponent(member.id)}/invites`, {
+        method: action === "resend" ? "POST" : "DELETE",
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) {
+        toast({
+          title: action === "resend" ? "Couldn't resend invite" : "Couldn't revoke invite",
+          description: mapApprovalRejection(parseCoreError(body)).detail,
+          variant: "destructive",
+        });
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/members"] });
+      toast({
+        title: action === "resend" ? "Invite reissued" : "Invite revoked",
+        description:
+          action === "resend"
+            ? `A new invite link was issued for ${member.displayName}; the previous one no longer works.`
+            : `${member.displayName}'s invite link no longer works.`,
+      });
+    } catch {
+      toast({ title: "Couldn't reach Brain core", description: "Nothing was changed.", variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => openMemberDetail(member.id)}
-      data-testid={`row-member-${member.id}`}
-      className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#0d1018] transition-colors"
-    >
-      <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
-        <img alt="" className="size-full object-cover" src={memberIcon} />
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col gap-[4px] items-start justify-center">
-        <div className="flex gap-[8px] items-start shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
-            {member.displayName}
-          </p>
-          <RolePill role={member.role} />
-          {!member.active && (
-            <span
-              className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
-              style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
-            >
-              Deactivated
-            </span>
-          )}
+    <div className="flex flex-col gap-[8px]">
+      <button
+        type="button"
+        onClick={() => openMemberDetail(member.id)}
+        data-testid={`row-member-${member.id}`}
+        className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#0d1018] transition-colors"
+      >
+        <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
+          <img alt="" className="size-full object-cover" src={memberIcon} />
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
-          {envelopeLine(member.approval)}
-        </p>
-      </div>
-      <div className="relative rounded-[100px] shrink-0 size-[40px] overflow-hidden">
-        <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
-      </div>
-    </button>
+        <div className="flex-1 min-w-0 flex flex-col gap-[4px] items-start justify-center">
+          <div className="flex gap-[8px] items-start shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+              {member.displayName}
+            </p>
+            <RolePill role={member.role} />
+            {invited && (
+              <span
+                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                style={{ background: "rgba(108,119,157,0.1)", color: "#6c779d", border: "1px solid rgba(108,119,157,0.3)" }}
+                data-testid={`pill-invited-${member.id}`}
+              >
+                Invited — awaiting signup
+              </span>
+            )}
+            {!member.active && (
+              <span
+                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
+              >
+                Deactivated
+              </span>
+            )}
+          </div>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+            {envelopeLine(member.approval)}
+          </p>
+        </div>
+        <div className="relative rounded-[100px] shrink-0 size-[40px] overflow-hidden">
+          <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
+        </div>
+      </button>
+      {invited && inviteActions && (
+        <div className="flex gap-[8px] items-center pl-[64px]">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => inviteCall("resend")}
+            data-testid={`button-resend-invite-${member.id}`}
+            className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40"
+          >
+            {busy === "resend" ? "Resending…" : "Resend invite"}
+          </button>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => inviteCall("revoke")}
+            data-testid={`button-revoke-invite-${member.id}`}
+            className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40"
+            style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
+          >
+            {busy === "revoke" ? "Revoking…" : "Revoke invite"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
-function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose: () => void; production: boolean }) {
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -122,6 +199,9 @@ function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void
           email: email.trim(),
           role,
           approval: { domains, perItemLimit, requiresSecondApproverAbove: null },
+          // Production tenancy: mark the membership as invite-pending so core issues it
+          // in the "invited" state (the invite link itself is issued right after).
+          ...(production ? { invite: true } : {}),
         }),
       });
       const body = await res.json().catch(() => undefined);
@@ -129,8 +209,33 @@ function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void
         setError(mapApprovalRejection(parseCoreError(body)).detail);
         return;
       }
+      // Production tenancy: issue the invite link for the new member. If this second
+      // call fails, the member exists but has no invite — say exactly that, loudly.
+      if (production) {
+        const memberId: string | undefined = (body as { member?: { id?: string } })?.member?.id;
+        if (memberId) {
+          const inviteRes = await fetch(`/api/brain/members/${encodeURIComponent(memberId)}/invites`, {
+            method: "POST",
+            credentials: "include",
+          });
+          const inviteBody = await inviteRes.json().catch(() => undefined);
+          if (!inviteRes.ok) {
+            await queryClient.invalidateQueries({ queryKey: ["/api/brain/members"] });
+            setError(
+              `${displayName.trim()} was added, but the invite couldn't be issued: ` +
+                `${mapApprovalRejection(parseCoreError(inviteBody)).detail} Use "Resend invite" on their row to retry.`,
+            );
+            return;
+          }
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/members"] });
-      toast({ title: "Member added", description: `${displayName.trim()} can now approve within their authority.` });
+      toast({
+        title: production ? "Invite sent" : "Member added",
+        description: production
+          ? `${displayName.trim()} was invited — they'll appear as Active once they accept.`
+          : `${displayName.trim()} can now approve within their authority.`,
+      });
       onClose();
     } catch {
       setError("Couldn't reach Brain core. Nothing was changed.");
@@ -268,6 +373,10 @@ export default function TeamSection() {
   const { data: policy } = useQuery<ApprovalPolicyFacts>({
     queryKey: ["/api/brain/approval-policy"],
   });
+  const { data: tenancy } = useQuery<TenancyStatus>({
+    queryKey: ["/api/brain/tenancy"],
+  });
+  const production = tenancy?.mode === "production";
   const [addOpen, setAddOpen] = useState(false);
 
   const members = data?.members ?? [];
@@ -304,7 +413,7 @@ export default function TeamSection() {
         {members.map((m, i) => (
           <div key={m.id} className="flex flex-col gap-[16px]">
             {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
-            <MemberRow member={m} />
+            <MemberRow member={m} inviteActions={production} />
           </div>
         ))}
       </div>
@@ -315,10 +424,10 @@ export default function TeamSection() {
         data-testid="button-add-member"
         className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       >
-        + Add member
+        {production ? "+ Invite member" : "+ Add member"}
       </button>
 
-      <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} production={production} />
     </div>
   );
 }

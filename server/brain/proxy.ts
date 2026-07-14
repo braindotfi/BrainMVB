@@ -17,8 +17,10 @@
 
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
-import { brainAuthConfigured } from "./config";
-import { getBrainSession } from "./auth";
+import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from "./config";
+import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
+import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
+import { storage } from "../storage";
 import {
   brainRequest,
   BrainApiError,
@@ -169,6 +171,159 @@ export function createBrainProxyRouter(): Router {
       const { token } = await getBrainSession(req.session.userId!);
       const answer = await askWikiQuestion(token, question.trim());
       return res.json(answer);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // ── Production tenancy (Phase 2): company creation, invites, tenancy status ──
+
+  // GET /api/brain/tenancy — tells the client which tenancy mode is active and whether
+  // the current user is linked to a tenant (drives the "Create a company / Enter your
+  // invite link" gate after login). Cheap: one local DB read, no brain-core call.
+  router.get("/tenancy", async (req: Request, res: Response) => {
+    const mode = brainTenancyMode();
+    if (mode !== "production") return res.json({ mode, linked: true });
+    const identity = await storage.getBrainIdentity(req.session.userId!);
+    return res.json({ mode, linked: !!identity, tenantId: identity?.tenantId });
+  });
+
+  // POST /api/brain/tenants — create a company tenant for the CURRENT logged-in user
+  // (they become the bootstrap admin). Explicit user action only — never called
+  // automatically. NOT idempotent upstream, so we hard-guard on an existing mapping and
+  // never retry: a failure surfaces verbatim for the user to decide.
+  router.post("/tenants", async (req: Request, res: Response) => {
+    if (!platformServiceConfigured()) {
+      return res.status(503).json({
+        error: "tenancy_unconfigured",
+        message: "Company signup isn't available: BRAIN_PLATFORM_SERVICE_SECRET is not set.",
+      });
+    }
+    const companyName = typeof (req.body as { company_name?: unknown })?.company_name === "string"
+      ? (req.body.company_name as string).trim()
+      : "";
+    if (!companyName) {
+      return res.status(400).json({ error: "invalid_request", message: "company_name is required" });
+    }
+    const userId = req.session.userId!;
+    const existing = await storage.getBrainIdentity(userId);
+    if (existing) {
+      return res.status(409).json({
+        error: "already_linked",
+        message: "This account already belongs to a company.",
+        tenantId: existing.tenantId,
+      });
+    }
+    const user = await storage.getUser(userId);
+    if (!user?.email) {
+      return res.status(400).json({ error: "invalid_request", message: "Your account needs an email before creating a company." });
+    }
+    try {
+      const result = await createTenant({
+        companyName,
+        founderEmail: user.email,
+        founderDisplayName: user.name || user.username || user.email,
+        founderExternalRef: userId, // external_ref = stable platform user id, never an email
+      });
+      await storage.createBrainIdentity({
+        userId,
+        externalRef: userId,
+        tenantId: result.tenant_id,
+        memberId: result.member?.id ?? null,
+      });
+      registerBrainSession(userId, result.session, result.tenant_id);
+      return res.status(201).json({ tenantId: result.tenant_id, member: result.member });
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // POST /api/brain/invites/consume — accept an invite for the CURRENT logged-in user.
+  // Never auto-consumed on page load; the client calls this only after an explicit
+  // confirm. Uses the platform service credential; binds external_ref = app user id.
+  router.post("/invites/consume", async (req: Request, res: Response) => {
+    if (!platformServiceConfigured()) {
+      return res.status(503).json({
+        error: "tenancy_unconfigured",
+        message: "Invite acceptance isn't available: BRAIN_PLATFORM_SERVICE_SECRET is not set.",
+      });
+    }
+    const inviteToken = typeof (req.body as { invite_token?: unknown })?.invite_token === "string"
+      ? (req.body.invite_token as string).trim()
+      : "";
+    if (!inviteToken) {
+      return res.status(400).json({ error: "invalid_request", message: "invite_token is required" });
+    }
+    const userId = req.session.userId!;
+    const existing = await storage.getBrainIdentity(userId);
+    if (existing) {
+      return res.status(409).json({
+        error: "already_linked",
+        message: "This account already belongs to a company. Invites can only be accepted from a fresh account.",
+      });
+    }
+    const user = await storage.getUser(userId);
+    try {
+      const result = await consumeInvite({
+        inviteToken,
+        externalRef: userId,
+        displayName: user?.name || undefined,
+      });
+      const tenantId = result.member?.tenantId ?? result.tenant_id;
+      if (!tenantId) throw new Error("brain-core invite consume returned no tenant id");
+      await storage.createBrainIdentity({
+        userId,
+        externalRef: userId,
+        tenantId,
+        memberId: result.member?.id ?? null,
+      });
+      if (result.session) registerBrainSession(userId, result.session, tenantId);
+      return res.json({ tenantId, member: result.member });
+    } catch (err) {
+      if (err instanceof TenancyApiError) {
+        // Map the four contract rejection reasons to plain language — never silent.
+        const messages: Record<string, string> = {
+          invite_invalid: "That invite link isn't valid. Ask your admin to send a new one.",
+          invite_expired: "That invite has expired. Ask your admin to resend it.",
+          invite_consumed: "That invite was already used. If that wasn't you, tell your admin.",
+          invite_revoked: "That invite was revoked. Ask your admin for a new one.",
+        };
+        const reason = err.reason;
+        if (reason && messages[reason]) {
+          return res.status(err.status).json({ error: reason, message: messages[reason] });
+        }
+      }
+      return relayError(res, err);
+    }
+  });
+
+  // POST /api/brain/members/:id/invites — issue (or REISSUE, which revokes the prior
+  // token per contract) an invite for a member. MEMBER token; core admin-gates.
+  router.post("/members/:id/invites", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const data = await brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
+        method: "POST",
+        token,
+        body: {},
+      });
+      return res.json(data);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // DELETE /api/brain/members/:id/invites — revoke a member's outstanding invite.
+  router.delete("/members/:id/invites", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const data = await brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
+        method: "DELETE",
+        token,
+      });
+      return res.json(data);
     } catch (err) {
       return relayError(res, err);
     }
@@ -331,6 +486,14 @@ function unconfigured(res: Response): Response {
 }
 
 function relayError(res: Response, err: unknown): Response {
+  if (err instanceof NoTenantError) {
+    // Production tenancy: this app user isn't linked to any tenant. The client must route
+    // to "Create a company" or "Enter your invite link" — nothing is auto-provisioned.
+    return res.status(403).json({ error: "no_tenant", message: "This account isn't part of a company yet." });
+  }
+  if (err instanceof TenancyApiError) {
+    return res.status(err.status).json({ error: "brain_upstream_error", status: err.status, body: err.body });
+  }
   if (err instanceof BrainApiError) {
     // Relay brain-core's status + body so the UI can react (e.g. 401/403/404).
     return res.status(err.status).json({ error: "brain_upstream_error", status: err.status, body: err.body });

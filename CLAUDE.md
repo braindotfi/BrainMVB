@@ -342,3 +342,30 @@ Any change to `server/brain/*` must keep the invariant suite green or the PR can
 `main` is the source of truth; push to GitHub and merge to main after each milestone so the
 public repo never drifts. The CI gate above must be green before a PR merges to `main`.
 No work is complete until it is on main; branch-complete is not complete.
+
+## Production tenancy (Phase 2, gated by BRAIN_TENANCY_MODE=production)
+Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
+`{mode:"demo", linked:true}` and nothing else changes. In production mode:
+- **Identity mapping** `brain_identities` (app userId → tenantId/userPrincipalId) is the ONLY
+  link between platform accounts and brain-core tenants. `external_ref` sent to core is ALWAYS
+  the app userId, never an email.
+- **Platform-service calls** (`server/brain/tenancy.ts`) use `X-Platform-Service-Auth:
+  BRAIN_PLATFORM_SERVICE_SECRET`: `createTenant`, `exchangeSession`, `refreshSession`,
+  `consumeInvite`. Everything else stays on the member/agent tokens as before.
+- **Session strategy** (`auth.ts` `createProductionSession`): identity lookup → no identity =
+  `NoTenantError` (relayed as 403 `no_tenant`, NEVER auto-provision); session exchange on login;
+  refresh-token first, full re-exchange on rejection. In production the member token also backs
+  propose (no agent split).
+- **Tenant creation is NOT idempotent** — never auto-retry `POST /api/brain/tenants`; surface
+  the failure and let the human resubmit. 409 `already_linked` is honest, not a no-op.
+- **Invites**: issue/revoke via member token (`POST/DELETE /api/brain/members/:id/invites`);
+  consume via platform-service (`POST /api/brain/invites/consume`), only after the explicit
+  "Join company" confirm on `CompanySetupPage` (`/invite/:token` keeps the token in the URL
+  through login). Invite refusals (`invite_invalid|expired|consumed|revoked`, `already_linked`)
+  map to plain language, never silently swallowed.
+- **Client gate**: `App.tsx` `TenancyGate` queries `/api/brain/tenancy`; production + unlinked →
+  `CompanySetupPage` (create company / join with invite). Signup collects Company name when
+  `/api/config.tenancyProduction` is true and creates the tenant right after registering; a
+  failure hands the error to `CompanySetupPage` via sessionStorage so it is never dropped.
+- **Team UI**: production shows "Invited — awaiting signup" pill + Resend/Revoke; add-member
+  sends `invite:true`.

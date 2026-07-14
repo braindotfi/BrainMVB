@@ -200,6 +200,26 @@ export const userRules = pgTable("user_rules", {
   index("user_rules_user_id_idx").on(t.userId),
 ]);
 
+/* ─── Brain Identities (production tenancy: app user → brain-core external_ref) ───
+ * One row per app user linked to a brain-core tenant. `externalRef` is the stable
+ * platform-side identifier sent as founder_external_ref at tenant creation or bound at
+ * invite consume — it is the app user's id (never an email). The mapping is durable and
+ * survives restarts; without a row here, production mode has NO tenant for the user
+ * (NoTenantError) and must route them to "create a company" or "enter an invite link". */
+export const brainIdentities = pgTable("brain_identities", {
+  userId: text("user_id").primaryKey(),               // app users.id
+  externalRef: text("external_ref").notNull().unique(), // sent to brain-core; = userId today
+  tenantId: text("tenant_id").notNull(),               // brain-core tnt_… id
+  memberId: text("member_id"),                         // brain-core user_… member id
+  linkedAt: timestamp("linked_at").defaultNow().notNull(),
+}, (t) => [
+  index("brain_identities_tenant_id_idx").on(t.tenantId),
+]);
+
+export const insertBrainIdentitySchema = createInsertSchema(brainIdentities).omit({ linkedAt: true });
+export type InsertBrainIdentity = z.infer<typeof insertBrainIdentitySchema>;
+export type BrainIdentity = typeof brainIdentities.$inferSelect;
+
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),

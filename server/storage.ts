@@ -16,6 +16,8 @@ import {
   bankConnections as bankConnectionsTable,
   sourceDocuments as sourceDocumentsTable,
   userRules as userRulesTable,
+  brainIdentities as brainIdentitiesTable,
+  type BrainIdentity, type InsertBrainIdentity,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -96,6 +98,10 @@ export interface IStorage {
   listUserRules(userId: string): Promise<UserRule[]>;
   createUserRule(rule: InsertUserRule): Promise<UserRule>;
   removeUserRule(userId: string, id: string): Promise<boolean>;
+
+  // Brain identities (production tenancy: durable appUserId → external_ref/tenant mapping)
+  getBrainIdentity(userId: string): Promise<BrainIdentity | undefined>;
+  createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity>;
 }
 
 export type ToolConnection = {
@@ -618,6 +624,23 @@ export class MemStorage implements IStorage {
   async removeUserRule(userId: string, id: string): Promise<boolean> {
     return this.userRulesStore.delete(`${userId}::${id}`);
   }
+
+  // ─── Brain identities ───
+  private brainIdentitiesStore = new Map<string, BrainIdentity>();
+  async getBrainIdentity(userId: string): Promise<BrainIdentity | undefined> {
+    return this.brainIdentitiesStore.get(userId);
+  }
+  async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
+    const row: BrainIdentity = {
+      userId: identity.userId,
+      externalRef: identity.externalRef,
+      tenantId: identity.tenantId,
+      memberId: identity.memberId ?? null,
+      linkedAt: new Date(),
+    };
+    this.brainIdentitiesStore.set(row.userId, row);
+    return row;
+  }
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -1126,6 +1149,20 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(userRulesTable.userId, userId), eq(userRulesTable.id, id)))
       .returning({ id: userRulesTable.id });
     return res.length > 0;
+  }
+
+  // ─── Brain identities ───
+  async getBrainIdentity(userId: string): Promise<BrainIdentity | undefined> {
+    const [row] = await db
+      .select()
+      .from(brainIdentitiesTable)
+      .where(eq(brainIdentitiesTable.userId, userId))
+      .limit(1);
+    return row ?? undefined;
+  }
+  async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
+    const [row] = await db.insert(brainIdentitiesTable).values(identity).returning();
+    return row;
   }
 }
 

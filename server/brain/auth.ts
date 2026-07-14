@@ -18,8 +18,23 @@
 
 import { SignJWT, importJWK, type JWK } from "jose";
 import { randomUUID } from "node:crypto";
-import { brainConfig, brainTokenMode } from "./config";
+import { brainConfig, brainTokenMode, brainTenancyMode } from "./config";
 import { brainUserSubject } from "./ids";
+import { exchangeSession, refreshSession, TenancyApiError, type TenantSessionShape } from "./tenancy";
+import { storage } from "../storage";
+
+/**
+ * Thrown by the PRODUCTION strategy when the app user has no durable
+ * appUserId → external_ref mapping (or brain-core answers 403
+ * session_identity_unlinked). The caller must route the user to
+ * "Create a company" or "Enter your invite link" — NEVER auto-provision.
+ */
+export class NoTenantError extends Error {
+  constructor(appUserId: string) {
+    super(`app user ${appUserId} is not linked to a brain-core tenant`);
+    this.name = "NoTenantError";
+  }
+}
 
 /** Staging demo tokens are valid 24h; used when the response omits expires_at. */
 const STAGING_DEMO_TOKEN_TTL_SECONDS = 24 * 60 * 60;
@@ -52,6 +67,8 @@ export interface BrainSession {
 interface CachedSession extends BrainSession {
   /** epoch seconds when the token expires */
   exp: number;
+  /** PRODUCTION strategy only: rotating refresh token for POST /sessions/refresh. */
+  refreshToken?: string;
 }
 
 const cache = new Map<string, CachedSession>();
@@ -85,7 +102,7 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
     return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
   }
 
-  const create = createSession(appUserId, now);
+  const create = createSession(appUserId, now, cached);
   inflight.set(appUserId, create);
   try {
     const session = await create;
@@ -97,7 +114,12 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
 }
 
 /** Mint a new session via the configured token source. */
-function createSession(appUserId: string, now: number): Promise<CachedSession> {
+function createSession(appUserId: string, now: number, prior?: CachedSession): Promise<CachedSession> {
+  // PRODUCTION TENANCY (Phase 2): real shared tenants, selected by BRAIN_TENANCY_MODE.
+  // The demo strategies below are untouched — the playground build never enters here.
+  if (brainTenancyMode() === "production") {
+    return createProductionSession(appUserId, prior);
+  }
   const mode = brainTokenMode();
   if (mode === "staging-demo-token") {
     return provisionStagingDemoToken();
@@ -112,6 +134,71 @@ function createSession(appUserId: string, now: number): Promise<CachedSession> {
     "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred — the box " +
       "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
   );
+}
+
+/**
+ * PRODUCTION strategy (docs/contracts/production-tenancy.md):
+ *  1. Look up the durable appUserId → external_ref mapping (brain_identities). No row →
+ *     NoTenantError (route to "Create a company" / "Enter your invite link"; NEVER
+ *     auto-provision — membership only comes from POST /v1/tenants or invite consume).
+ *  2. If a prior session holds a refresh_token, rotate via POST /v1/sessions/refresh first.
+ *     A reuse-detected/invalid-refresh rejection means the family is revoked: fall through
+ *     to a FULL re-auth via POST /v1/sessions (service credential) — never a silent retry
+ *     of the same refresh token.
+ *  3. Otherwise POST /v1/sessions { external_ref }. 403 session_identity_unlinked →
+ *     NoTenantError.
+ *
+ * Production sessions are MEMBER sessions (one principal). There is no agent token in this
+ * strategy, so `agentToken` mirrors the member token; the propose path correctly 403s until
+ * agent principals ship for production tenants (agents propose, humans approve — a member
+ * token has no propose scope, and we don't fake one).
+ */
+async function createProductionSession(appUserId: string, prior?: CachedSession): Promise<CachedSession> {
+  const identity = await storage.getBrainIdentity(appUserId);
+  if (!identity) throw new NoTenantError(appUserId);
+
+  // Rotate the existing session when we still hold its refresh token.
+  if (prior?.refreshToken) {
+    try {
+      const rotated = await refreshSession(prior.refreshToken);
+      return toProductionCached(rotated, identity.tenantId);
+    } catch (err) {
+      // Revoked/reused/expired refresh family (or a core-side failure): fall through to a
+      // full re-auth via POST /v1/sessions. Loud, not silent — log the reason.
+      const reason = err instanceof TenancyApiError ? (err.reason ?? `HTTP ${err.status}`) : String(err);
+      console.warn(`[brain-auth] session refresh rejected (${reason}) — full re-auth via /sessions`);
+    }
+  }
+
+  try {
+    const session = await exchangeSession(identity.externalRef);
+    return toProductionCached(session, identity.tenantId);
+  } catch (err) {
+    if (err instanceof TenancyApiError && err.status === 403 && err.reason === "session_identity_unlinked") {
+      throw new NoTenantError(appUserId);
+    }
+    throw err;
+  }
+}
+
+function toProductionCached(session: TenantSessionShape, fallbackTenantId: string): CachedSession {
+  if (!session.token) throw new Error("brain-core session response had no token");
+  return {
+    token: session.token,
+    agentToken: session.token, // no agent principal in production sessions (propose 403s honestly)
+    tenantId: session.member?.tenantId ?? fallbackTenantId,
+    refreshToken: session.refresh_token,
+    exp: Math.floor(Date.now() / 1000) + (session.expires_in ?? 900),
+  };
+}
+
+/**
+ * Seed the session cache with a session brain-core just returned out-of-band (tenant
+ * creation at signup, invite consume). Saves an immediate round-trip and makes the very
+ * first authenticated page load work without a second /sessions call.
+ */
+export function registerBrainSession(appUserId: string, session: TenantSessionShape, tenantId: string): void {
+  cache.set(appUserId, toProductionCached(session, tenantId));
 }
 
 /**

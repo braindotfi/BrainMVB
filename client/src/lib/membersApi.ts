@@ -22,6 +22,15 @@ export interface BrainMember {
   active: boolean;
   approval: MemberApproval;
   identityLinks?: Array<{ id?: string; provider?: string; subject?: string }> | null;
+  /** Production tenancy: "invited" until the invitee consumes their invite; then "active". */
+  status?: "invited" | "active" | "deactivated" | string;
+}
+
+/** True while a member has been invited but hasn't accepted yet (production tenancy).
+ *  Explicit core status ONLY — no heuristics (demo-tenant members often carry no
+ *  identityLinks and must never render as "Invited"). */
+export function isInvitedPending(m: BrainMember): boolean {
+  return m.status === "invited";
 }
 
 export interface ListMembersResponse {

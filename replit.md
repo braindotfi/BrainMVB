@@ -76,6 +76,18 @@ is deleted). Current state:
 | Rules, Documents (viewer/resolution), Audit Log (`/audit-log`) | MOCK-ONLY (`client/src/lib/mock*.ts` via `rulesStore`/`documentsStore`/`mockAuditRecords`). NOTE: document *ingestion* (AddSource) is CORE-BACKED — see "Document Ingestion" below — but the document *viewer/resolution* store is mock. |
 | Members & approval authority (Settings → Team) | CORE-BACKED via `/api/brain/members` + `/approval-policy` (member/user-principal token); no mock fallback (see `.agents/memory/members-authority-integration.md`) |
 
+## Production tenancy (Phase 2, `BRAIN_TENANCY_MODE=production`)
+Demo mode (default) is byte-identical to before (`/api/brain/tenancy` → `{mode:"demo",
+linked:true}`). Production: `brain_identities` table maps app userId → tenantId/userPrincipalId
+(`external_ref` = app userId, never email); platform-service calls (`server/brain/tenancy.ts`,
+`X-Platform-Service-Auth: BRAIN_PLATFORM_SERVICE_SECRET`) do createTenant/exchangeSession/
+refreshSession/consumeInvite; `createProductionSession` in `auth.ts` (no identity → 403
+`no_tenant`, never auto-provision; refresh-then-reauth; member token also backs propose).
+Tenant creation is NOT idempotent — never auto-retry. Client: `TenancyGate` in `App.tsx` →
+`CompanySetupPage` (create company / join with invite, `/invite/:token`); SignupPage adds a
+Company name field when `/api/config.tenancyProduction`; Team UI gets invite pill +
+Resend/Revoke. Full contract in CLAUDE.md "Production tenancy".
+
 ## brain-core BFF (`server/brain/`)
 - Token source: **demo-provision** (preferred, key-free) — the BFF POSTs
   `/demo/provision-run` with `BRAIN_DEMO_PROVISION_SECRET` and uses the per-tenant token it

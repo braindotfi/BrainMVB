@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/authContext";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { SiGoogle } from "react-icons/si";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 
@@ -12,6 +12,8 @@ export function SignupPage() {
 
   const [mode, setMode] = useState<Mode>("login");
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [tenancyProduction, setTenancyProduction] = useState(false);
+  const [companyName, setCompanyName] = useState("");
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState(""); // login: username OR email
   const [username, setUsername] = useState(""); // register
@@ -20,14 +22,21 @@ export function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Invite deep-link: stay on /invite/:token through auth so TenancyGate can hand the
+  // token to CompanySetupPage. Everywhere else, land on home after auth.
+  const [onInviteRoute] = useRoute("/invite/:token");
+
   useEffect(() => {
-    if (isLoggedIn) navigate("/");
-  }, [isLoggedIn, navigate]);
+    if (isLoggedIn && !onInviteRoute) navigate("/");
+  }, [isLoggedIn, onInviteRoute, navigate]);
 
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
-      .then((d) => setGoogleEnabled(!!d.googleEnabled))
+      .then((d) => {
+        setGoogleEnabled(!!d.googleEnabled);
+        setTenancyProduction(!!d.tenancyProduction);
+      })
       .catch(() => setGoogleEnabled(false));
   }, []);
 
@@ -74,6 +83,10 @@ export function SignupPage() {
         setError("Password must be at least 8 characters.");
         return;
       }
+      if (tenancyProduction && !companyName.trim()) {
+        setError("Company name is required.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -87,8 +100,40 @@ export function SignupPage() {
           password,
           name: name.trim() || undefined,
         });
+        // Production tenancy: create the company right after the local account.
+        // NOT retried automatically (tenant creation is not idempotent). If it fails,
+        // the user is logged in but unlinked — the Company Setup screen takes over and
+        // shows the failure so THEY decide whether to submit again.
+        if (tenancyProduction) {
+          try {
+            const res = await fetch("/api/brain/tenants", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ company_name: companyName.trim() }),
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              const msg = typeof data?.message === "string" && data.message
+                ? data.message
+                : "Your account was created, but the company couldn't be set up.";
+              try {
+                sessionStorage.setItem("brain_company_setup_error", msg);
+                sessionStorage.setItem("brain_company_setup_name", companyName.trim());
+              } catch { /* ignore storage errors */ }
+            }
+          } catch {
+            try {
+              sessionStorage.setItem(
+                "brain_company_setup_error",
+                "Your account was created, but we couldn't reach the server to set up the company.",
+              );
+              sessionStorage.setItem("brain_company_setup_name", companyName.trim());
+            } catch { /* ignore storage errors */ }
+          }
+        }
       }
-      navigate("/");
+      if (!onInviteRoute) navigate("/");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       setError(msg);
@@ -164,6 +209,22 @@ export function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {mode === "register" && tenancyProduction && (
+              <div className="flex flex-col gap-1.5">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                  Company name
+                </label>
+                <input
+                  data-testid="input-signup-company"
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  autoComplete="organization"
+                  placeholder="Acme Inc."
+                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                />
+              </div>
+            )}
             {mode === "register" && (
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">

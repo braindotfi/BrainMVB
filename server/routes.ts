@@ -17,6 +17,7 @@ import {
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession } from "./brain/auth";
+import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
   listLedgerTransactions,
@@ -441,6 +442,9 @@ You can explain concepts and surface general guidance, but do not give regulated
   app.get("/api/config", (_req, res) => {
     return res.json({
       googleEnabled,
+      // Production tenancy gate (Phase 2): tells SignupPage to run the company-signup
+      // flow (register → create tenant) instead of the demo playground flow.
+      tenancyProduction: brainTenancyMode() === "production",
     });
   });
 
