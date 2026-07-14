@@ -26,6 +26,9 @@ import {
   listObligations,
   listMembers,
   getApprovalPolicyFacts,
+  listActions,
+  getPaymentIntent,
+  listAuditEvents,
   ingestRawDocument,
   extractRawDocument,
   BrainApiError,
@@ -222,9 +225,8 @@ You can explain concepts and surface general guidance, but do not give regulated
    * questions where no ledger data is expected.
    */
   async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
-    // Fetch ALL tenant data in parallel — the assistant should have the full
-    // picture, not just what matches keywords in the current question.
-    const [accounts, txs, cps, invoices, obligations, members, policy] = await Promise.allSettled([
+    // Fetch ALL tenant data in parallel — the assistant should have the full picture.
+    const [accounts, txs, cps, invoices, obligations, members, policy, actions, auditEvents] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
       listLedgerTransactions(token, { limit: 50 }),
       listLedgerCounterparties(token),
@@ -232,6 +234,8 @@ You can explain concepts and surface general guidance, but do not give regulated
       listObligations(token, { limit: 20 }),
       listMembers(token),
       getApprovalPolicyFacts(token, tenantId),
+      listActions(token),
+      listAuditEvents(token, { limit: 20 }),
     ]);
 
     let text = "";
@@ -320,6 +324,47 @@ You can explain concepts and surface general guidance, but do not give regulated
       text += "\n";
     }
 
+    // ─── Pending approvals (Needs Review queue) ───
+    if (actions.status === "fulfilled" && actions.value && actions.value.data.length > 0) {
+      const pending = actions.value.data.filter((a) => a.status === "needs_approval" || a.status === "pending_approval").slice(0, 5);
+      if (pending.length > 0) {
+        // Fan out to full PaymentIntent details (bounded by the slice above).
+        const piResults = await Promise.allSettled(
+          pending.map((a) => getPaymentIntent(token, a.id)),
+        );
+        const piLines: string[] = [];
+        for (let i = 0; i < pending.length; i++) {
+          const a = pending[i];
+          const pi = piResults[i];
+          if (pi.status === "fulfilled" && pi.value) {
+            const p = pi.value;
+            const amt = Number(p.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+            const cpNote = p.destination_counterparty_id ? ` to counterparty ${p.destination_counterparty_id}` : "";
+            const invNote = p.invoice_id ? ` (invoice ${p.invoice_id})` : "";
+            piLines.push(`  • PaymentIntent ${p.id} — ${p.action_type} — ${p.currency} ${amt}${cpNote}${invNote} — status: ${p.status}`);
+            sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${p.currency} ${p.amount} — ${p.status}` });
+          } else {
+            piLines.push(`  • PaymentIntent ${a.id} — status: ${a.status}`);
+            sources.push({ entityId: a.id, entityType: "payment_intent", excerpt: `PaymentIntent ${a.id} — ${a.status}` });
+          }
+        }
+        text += `Pending approvals (${pending.length} items in review queue):\n${piLines.join("\n")}\n\n`;
+      }
+    }
+
+    // ─── Recent audit trail ───
+    if (auditEvents.status === "fulfilled" && auditEvents.value && auditEvents.value.events.length > 0) {
+      const recent = auditEvents.value.events.slice(0, 10);
+      const lines = recent.map((e) => {
+        const actor = e.actor ?? "system";
+        return `  • ${e.action} by ${actor} at ${e.created_at} (layer: ${e.layer}, hash: ${e.event_hash.slice(0, 8)}…)`;
+      });
+      text += `Recent audit trail (last ${recent.length} events):\n${lines.join("\n")}\n\n`;
+      for (const e of recent) {
+        sources.push({ entityId: e.id, entityType: "audit_event", excerpt: `${e.action} by ${e.actor ?? "system"}` });
+      }
+    }
+
     const hasLedgerData = text.trim().length > 0;
     if (!hasLedgerData) {
       return { text: "", sources: [], available: false };
@@ -334,7 +379,7 @@ You can explain concepts and surface general guidance, but do not give regulated
    * assistant must refuse rather than hallucinate.
    */
   function isDataQuestion(q: string): boolean {
-    const dataWords = /\b(balance|account|transaction|how much|spending|income|revenue|expense|cash|usd|crypto|btc|eth|wire|transfer|paid|received|deposit|withdraw|invoice|bill|payable|receivable|ap|ar|due|overdue|unpaid|upcoming|scheduled|owe|owed|obligation|commitment|team|member|user|approval|approver|policy|rule|threshold)\b/i;
+    const dataWords = /\b(balance|account|transaction|how much|spending|income|revenue|expense|cash|usd|crypto|btc|eth|wire|transfer|paid|received|deposit|withdraw|invoice|bill|payable|receivable|ap|ar|due|overdue|unpaid|upcoming|scheduled|owe|owed|obligation|commitment|team|member|user|approval|approver|policy|rule|threshold|pending|payment|intent|review|audit|activity|log|trail)\b/i;
     return dataWords.test(q);
   }
 
@@ -362,7 +407,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     const dataUnavailable = !dataAvailable && isDataQuestion(lastUser);
 
     const system = grounding
-      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, and approval policy — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, approval policy, pending approvals / payment intents, and recent audit trail — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
       : ASSISTANT_SYSTEM;
 
     if (!process.env.ANTHROPIC_API_KEY) {

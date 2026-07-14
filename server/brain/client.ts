@@ -703,3 +703,55 @@ export async function listObligations(
 function s2(v: unknown): string | null {
   return typeof v === "string" && v ? v : null;
 }
+
+// ─── PaymentIntents / Approval queue ───
+
+/** Action summary from brain-core /actions (approval-queue IDs + status). */
+export interface BrainActionSummary {
+  id: string;
+  status: string;
+}
+
+export interface ListActionsResponse {
+  data: BrainActionSummary[];
+}
+
+/** GET /actions — approval-queue summaries (MEMBER token, execution:read). */
+export function listActions(token: string): Promise<ListActionsResponse> {
+  return brainRequest<ListActionsResponse>("/actions", { token });
+}
+
+/** GET /payment-intents/{id} — full PaymentIntent detail. */
+export function getPaymentIntent(token: string, id: string): Promise<PaymentIntent> {
+  return brainRequest<PaymentIntent>(`/payment-intents/${id}`, { token });
+}
+
+// ─── Audit events ───
+
+export interface BrainAuditEvent {
+  id: string;
+  tenant_id: string;
+  layer: string;
+  actor: string;
+  action: string;
+  inputs: unknown;
+  outputs: unknown;
+  policy_version: number | null;
+  policy_decision_id?: string | null;
+  event_hash: string;
+  prev_event_hash: string | null;
+  created_at: string;
+}
+
+export interface ListAuditEventsResponse {
+  events: BrainAuditEvent[];
+  next_cursor?: string | null;
+}
+
+/** GET /audit/events — audit trail (MEMBER token, audit:read). */
+export function listAuditEvents(
+  token: string,
+  query?: { limit?: number; after?: string },
+): Promise<ListAuditEventsResponse> {
+  return brainRequest<ListAuditEventsResponse>("/audit/events", { token, query });
+}
