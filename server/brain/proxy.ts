@@ -231,7 +231,17 @@ export function createBrainProxyRouter(): Router {
         tenantId: result.tenant_id,
         memberId: result.member?.id ?? null,
       });
-      registerBrainSession(userId, result.session, result.tenant_id);
+      // Capture the agent token core mints at tenant creation (production-agents contract)
+      // — never discarded, never sent to the browser. Older cores omit `agent`; the token
+      // is then backfilled idempotently on first session use.
+      if (result.agent?.token) {
+        await storage.upsertBrainAgentToken(
+          result.tenant_id,
+          result.agent.token,
+          new Date(Date.now() + (result.agent.expires_in ?? 900) * 1000),
+        );
+      }
+      await registerBrainSession(userId, result.session, result.tenant_id, result.agent?.token);
       return res.status(201).json({ tenantId: result.tenant_id, member: result.member });
     } catch (err) {
       return relayError(res, err);
@@ -277,7 +287,7 @@ export function createBrainProxyRouter(): Router {
         tenantId,
         memberId: result.member?.id ?? null,
       });
-      if (result.session) registerBrainSession(userId, result.session, tenantId);
+      if (result.session) await registerBrainSession(userId, result.session, tenantId);
       return res.json({ tenantId, member: result.member });
     } catch (err) {
       if (err instanceof TenancyApiError) {

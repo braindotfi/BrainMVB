@@ -20,7 +20,7 @@ import { SignJWT, importJWK, type JWK } from "jose";
 import { randomUUID } from "node:crypto";
 import { brainConfig, brainTokenMode, brainTenancyMode } from "./config";
 import { brainUserSubject } from "./ids";
-import { exchangeSession, refreshSession, TenancyApiError, type TenantSessionShape } from "./tenancy";
+import { exchangeSession, refreshSession, mintAgentToken, TenancyApiError, type TenantSessionShape } from "./tenancy";
 import { storage } from "../storage";
 
 /**
@@ -148,10 +148,12 @@ function createSession(appUserId: string, now: number, prior?: CachedSession): P
  *  3. Otherwise POST /v1/sessions { external_ref }. 403 session_identity_unlinked →
  *     NoTenantError.
  *
- * Production sessions are MEMBER sessions (one principal). There is no agent token in this
- * strategy, so `agentToken` mirrors the member token; the propose path correctly 403s until
- * agent principals ship for production tenants (agents propose, humans approve — a member
- * token has no propose scope, and we don't fake one).
+ * Production sessions are MEMBER sessions plus a per-TENANT agent principal
+ * (docs/contracts/production-agents.md): core mints a real agent token at tenant creation,
+ * and POST /v1/tenants/{id}/agent-token re-issues it idempotently. The agent token is stored
+ * per tenant (brain_agent_tokens), refreshed before expiry, and backfilled on first use for
+ * tenants created before the contract existed. Agents propose, humans approve — the member
+ * token still backs everything else.
  */
 async function createProductionSession(appUserId: string, prior?: CachedSession): Promise<CachedSession> {
   const identity = await storage.getBrainIdentity(appUserId);
@@ -161,7 +163,7 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
   if (prior?.refreshToken) {
     try {
       const rotated = await refreshSession(prior.refreshToken);
-      return toProductionCached(rotated, identity.tenantId);
+      return toProductionCached(rotated, identity.tenantId, await getProductionAgentToken(identity.tenantId));
     } catch (err) {
       // Revoked/reused/expired refresh family (or a core-side failure): fall through to a
       // full re-auth via POST /v1/sessions. Loud, not silent — log the reason.
@@ -172,7 +174,7 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
 
   try {
     const session = await exchangeSession(identity.externalRef);
-    return toProductionCached(session, identity.tenantId);
+    return toProductionCached(session, identity.tenantId, await getProductionAgentToken(identity.tenantId));
   } catch (err) {
     if (err instanceof TenancyApiError && err.status === 403 && err.reason === "session_identity_unlinked") {
       throw new NoTenantError(appUserId);
@@ -181,11 +183,51 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
   }
 }
 
-function toProductionCached(session: TenantSessionShape, fallbackTenantId: string): CachedSession {
+/** Refresh the stored agent token this many seconds before it expires. */
+const AGENT_TOKEN_REFRESH_SKEW = 120;
+
+/**
+ * The tenant's AGENT token (propose-only principal). Reads the durable per-tenant row;
+ * mints via POST /v1/tenants/{id}/agent-token when missing (backfill for pre-contract
+ * tenants — the route is idempotent, so this is safe even if a token already exists via
+ * another path) or when within the refresh skew of expiry (mirrors the member-session
+ * refresh pattern; also idempotent — an unexpired token is simply returned again).
+ *
+ * Returns null when brain-core does not (yet) serve the agent-token contract — verified
+ * live 2026-07-14: POST /tenants/{id}/agent-token answers 401 auth_token_missing to the
+ * platform-service header, i.e. the production-agents route isn't deployed. In that case
+ * the session must NOT fail: the caller falls back to the member token so reads keep
+ * working and propose 403s honestly, and a loud warning is logged. A mint failure while a
+ * (possibly stale) stored token exists returns the stored token rather than nothing.
+ */
+async function getProductionAgentToken(tenantId: string): Promise<string | null> {
+  const stored = await storage.getBrainAgentToken(tenantId);
+  const now = Date.now();
+  if (stored && stored.expiresAt.getTime() - AGENT_TOKEN_REFRESH_SKEW * 1000 > now) {
+    return stored.token;
+  }
+  try {
+    const minted = await mintAgentToken(tenantId);
+    if (!minted?.token) throw new Error("agent-token mint returned no token");
+    await storage.upsertBrainAgentToken(tenantId, minted.token, new Date(now + (minted.expires_in ?? 900) * 1000));
+    return minted.token;
+  } catch (err) {
+    const reason = err instanceof TenancyApiError ? (err.reason ?? `HTTP ${err.status}`) : String(err);
+    console.warn(
+      `[brain-auth] agent-token mint for ${tenantId} failed (${reason}) — ` +
+        (stored ? "using stored (possibly stale) agent token" : "no agent token; propose will 403 until core ships the agent contract"),
+    );
+    return stored?.token ?? null;
+  }
+}
+
+function toProductionCached(session: TenantSessionShape, fallbackTenantId: string, agentToken: string | null): CachedSession {
   if (!session.token) throw new Error("brain-core session response had no token");
   return {
     token: session.token,
-    agentToken: session.token, // no agent principal in production sessions (propose 403s honestly)
+    // Real per-tenant agent principal (production-agents contract). When core can't mint
+    // one yet, mirror the member token — reads work, propose 403s honestly (never faked).
+    agentToken: agentToken ?? session.token,
     tenantId: session.member?.tenantId ?? fallbackTenantId,
     refreshToken: session.refresh_token,
     exp: Math.floor(Date.now() / 1000) + (session.expires_in ?? 900),
@@ -197,8 +239,16 @@ function toProductionCached(session: TenantSessionShape, fallbackTenantId: strin
  * creation at signup, invite consume). Saves an immediate round-trip and makes the very
  * first authenticated page load work without a second /sessions call.
  */
-export function registerBrainSession(appUserId: string, session: TenantSessionShape, tenantId: string): void {
-  cache.set(appUserId, toProductionCached(session, tenantId));
+export async function registerBrainSession(
+  appUserId: string,
+  session: TenantSessionShape,
+  tenantId: string,
+  agentToken?: string,
+): Promise<void> {
+  // Tenant creation hands the agent token in directly; invite-consume (no agent in that
+  // response) resolves the tenant's stored token — minting it idempotently if missing.
+  const agent = agentToken ?? (await getProductionAgentToken(tenantId));
+  cache.set(appUserId, toProductionCached(session, tenantId, agent));
 }
 
 /**

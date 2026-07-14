@@ -351,11 +351,28 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
   the app userId, never an email.
 - **Platform-service calls** (`server/brain/tenancy.ts`) use `X-Platform-Service-Auth:
   BRAIN_PLATFORM_SERVICE_SECRET`: `createTenant`, `exchangeSession`, `refreshSession`,
-  `consumeInvite`. Everything else stays on the member/agent tokens as before.
+  `consumeInvite`, `mintAgentToken`. Everything else stays on the member/agent tokens as before.
 - **Session strategy** (`auth.ts` `createProductionSession`): identity lookup → no identity =
   `NoTenantError` (relayed as 403 `no_tenant`, NEVER auto-provision); session exchange on login;
-  refresh-token first, full re-exchange on rejection. In production the member token also backs
-  propose (no agent split).
+  refresh-token first, full re-exchange on rejection.
+- **Production agent token** (docs/contracts/production-agents.md, core PR #250): core mints a
+  real per-TENANT agent principal at tenant creation (`POST /v1/tenants` returns
+  `agent:{id,token,expires_in}`) and re-issues it idempotently via
+  `POST /v1/tenants/{tenantId}/agent-token` (platform-service credential). The BFF:
+  - persists the creation-time token in `brain_agent_tokens` (tenantId PK, token, expiresAt) —
+    `proxy.ts` tenant-create stores it before seeding the session cache; never sent to browser.
+  - `auth.ts getProductionAgentToken(tenantId)`: stored row if >120s from expiry; else mint +
+    upsert. Backfill for pre-contract tenants is the same path (mint on next session use — the
+    route is idempotent, no data migration).
+  - `registerBrainSession` is async; tenant-create passes the fresh agent token, invite-consume
+    resolves/mints the tenant's stored one.
+  - **Graceful degradation** (verified live 2026-07-14): the production core does NOT yet serve
+    the agent-token contract — `POST /tenants/{id}/agent-token` answers 401 `auth_token_missing`
+    to the service header, and tenant creation returns no `agent`. Mint failure must NOT break
+    sessions: `getProductionAgentToken` logs a loud warning and returns the stored token or null;
+    `toProductionCached` then mirrors the member token so reads work and propose 403s honestly
+    (never faked). The moment core ships the route, the real agent split activates with no code
+    change.
 - **Tenant creation is NOT idempotent** — never auto-retry `POST /api/brain/tenants`; surface
   the failure and let the human resubmit. 409 `already_linked` is honest, not a no-op.
 - **Invites**: issue/revoke via member token (`POST/DELETE /api/brain/members/:id/invites`);

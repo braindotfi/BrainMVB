@@ -18,6 +18,8 @@ import {
   userRules as userRulesTable,
   brainIdentities as brainIdentitiesTable,
   type BrainIdentity, type InsertBrainIdentity,
+  brainAgentTokens as brainAgentTokensTable,
+  type BrainAgentToken,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
@@ -102,6 +104,10 @@ export interface IStorage {
   // Brain identities (production tenancy: durable appUserId → external_ref/tenant mapping)
   getBrainIdentity(userId: string): Promise<BrainIdentity | undefined>;
   createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity>;
+
+  // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
+  getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
+  upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
 }
 
 export type ToolConnection = {
@@ -641,6 +647,17 @@ export class MemStorage implements IStorage {
     this.brainIdentitiesStore.set(row.userId, row);
     return row;
   }
+
+  // ─── Brain agent tokens ───
+  private brainAgentTokensStore = new Map<string, BrainAgentToken>();
+  async getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined> {
+    return this.brainAgentTokensStore.get(tenantId);
+  }
+  async upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken> {
+    const row: BrainAgentToken = { tenantId, token, expiresAt, updatedAt: new Date() };
+    this.brainAgentTokensStore.set(tenantId, row);
+    return row;
+  }
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -1162,6 +1179,27 @@ export class DatabaseStorage implements IStorage {
   }
   async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
     const [row] = await db.insert(brainIdentitiesTable).values(identity).returning();
+    return row;
+  }
+
+  // ─── Brain agent tokens ───
+  async getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined> {
+    const [row] = await db
+      .select()
+      .from(brainAgentTokensTable)
+      .where(eq(brainAgentTokensTable.tenantId, tenantId))
+      .limit(1);
+    return row ?? undefined;
+  }
+  async upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken> {
+    const [row] = await db
+      .insert(brainAgentTokensTable)
+      .values({ tenantId, token, expiresAt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: brainAgentTokensTable.tenantId,
+        set: { token, expiresAt, updatedAt: new Date() },
+      })
+      .returning();
     return row;
   }
 }

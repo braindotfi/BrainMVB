@@ -36,6 +36,13 @@ export interface TenantSessionShape {
   member?: BrainMemberShape;
 }
 
+/** Agent principal minted at tenant creation (docs/contracts/production-agents.md). */
+export interface AgentTokenShape {
+  id?: string;
+  token: string;
+  expires_in: number;
+}
+
 export class TenancyApiError extends Error {
   constructor(
     public readonly status: number,
@@ -88,7 +95,7 @@ export function createTenant(params: {
   founderEmail: string;
   founderDisplayName: string;
   founderExternalRef: string;
-}): Promise<{ tenant_id: string; member: BrainMemberShape; session: TenantSessionShape }> {
+}): Promise<{ tenant_id: string; member: BrainMemberShape; session: TenantSessionShape; agent?: AgentTokenShape }> {
   return serviceCall("/tenants", {
     company_name: params.companyName,
     founder: { email: params.founderEmail, display_name: params.founderDisplayName },
@@ -104,6 +111,16 @@ export function exchangeSession(externalRef: string): Promise<TenantSessionShape
 /** Rotate a session. Reuse-detected rejections mean the refresh family is revoked. */
 export function refreshSession(refreshToken: string): Promise<TenantSessionShape> {
   return serviceCall("/sessions/refresh", { refresh_token: refreshToken });
+}
+
+/**
+ * Mint (or re-fetch) the tenant's agent token — POST /v1/tenants/{tenantId}/agent-token
+ * (docs/contracts/production-agents.md). IDEMPOTENT: safe to call before expiry or for a
+ * tenant that already has one via another path — core returns the existing token. Used for
+ * refresh AND for backfilling tenants created before the agent contract existed.
+ */
+export function mintAgentToken(tenantId: string): Promise<AgentTokenShape> {
+  return serviceCall(`/tenants/${encodeURIComponent(tenantId)}/agent-token`, {});
 }
 
 /** Bind an invitee's external_ref to the inviting tenant's membership. */

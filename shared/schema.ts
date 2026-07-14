@@ -220,6 +220,21 @@ export const insertBrainIdentitySchema = createInsertSchema(brainIdentities).omi
 export type InsertBrainIdentity = z.infer<typeof insertBrainIdentitySchema>;
 export type BrainIdentity = typeof brainIdentities.$inferSelect;
 
+/* ─── Brain Agent Tokens (production tenancy: per-TENANT agent principal) ───
+ * brain-core mints a real agent token at tenant creation (production-agents contract) and
+ * re-issues it idempotently via POST /v1/tenants/{tenantId}/agent-token. One row per tenant
+ * (shared by every member of that tenant); refreshed server-side before expiry. The token
+ * NEVER reaches the browser. Tenants created before this contract have no row — the next
+ * session use mints one (idempotent backfill, no data migration). */
+export const brainAgentTokens = pgTable("brain_agent_tokens", {
+  tenantId: text("tenant_id").primaryKey(),            // brain-core tnt_… id
+  token: text("token").notNull(),                      // agent principal token (propose-only)
+  expiresAt: timestamp("expires_at").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type BrainAgentToken = typeof brainAgentTokens.$inferSelect;
+
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),

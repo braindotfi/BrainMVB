@@ -81,8 +81,12 @@ Demo mode (default) is byte-identical to before (`/api/brain/tenancy` → `{mode
 linked:true}`). Production: `brain_identities` table maps app userId → tenantId/userPrincipalId
 (`external_ref` = app userId, never email); platform-service calls (`server/brain/tenancy.ts`,
 `X-Platform-Service-Auth: BRAIN_PLATFORM_SERVICE_SECRET`) do createTenant/exchangeSession/
-refreshSession/consumeInvite; `createProductionSession` in `auth.ts` (no identity → 403
-`no_tenant`, never auto-provision; refresh-then-reauth; member token also backs propose).
+refreshSession/consumeInvite/mintAgentToken; `createProductionSession` in `auth.ts` (no identity
+→ 403 `no_tenant`, never auto-provision; refresh-then-reauth). Production AGENT token
+(production-agents contract): per-tenant, stored in `brain_agent_tokens`, captured at tenant
+creation, refreshed/backfilled idempotently via `POST /tenants/{id}/agent-token`; if core
+doesn't serve the route yet (true on live core as of 2026-07-14 — 401 `auth_token_missing`),
+sessions degrade to the member token (reads work, propose 403s honestly, loud warning).
 Tenant creation is NOT idempotent — never auto-retry. Client: `TenancyGate` in `App.tsx` →
 `CompanySetupPage` (create company / join with invite, `/invite/:token`); SignupPage adds a
 Company name field when `/api/config.tenancyProduction`; Team UI gets invite pill +
@@ -151,8 +155,10 @@ Resend/Revoke. Full contract in CLAUDE.md "Production tenancy".
 
 ## Testing & CI
 - `npm test` runs the vitest suite (`vitest.config.ts`, dedicated — does not extend
-  `vite.config.ts`). Suites: `server/brain/bff-invariants.test.ts`, `server/nonce.test.ts`,
-  and the `client/src/lib/*.test.ts` brain suites.
+  `vite.config.ts`). Suites: `server/brain/bff-invariants.test.ts`,
+  `server/brain/production-agent-token.test.ts` (pins agent-token persist/fallback/backfill +
+  secrets boundary in production mode), `server/nonce.test.ts`, and the
+  `client/src/lib/*.test.ts` brain suites.
 - `.github/workflows/test.yml` runs `npm test` on every pull request and on push to `main`
   (Node 20, npm cache). It is a MERGE GATE: any change to `server/brain/*` must keep the
   invariant suite green or the PR cannot land. Once this line lands on `main` via the
