@@ -34,7 +34,7 @@ export function useUserContact() {
   const { user } = useAuth();
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
-    email: emailOverride ?? user?.email ?? "treasury@acme.com",
+    email: emailOverride ?? user?.email ?? "demo@brain.fi",
     phone,
   };
 }
