@@ -366,13 +366,15 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
     route is idempotent, no data migration).
   - `registerBrainSession` is async; tenant-create passes the fresh agent token, invite-consume
     resolves/mints the tenant's stored one.
-  - **Graceful degradation** (verified live 2026-07-14): the production core does NOT yet serve
-    the agent-token contract — `POST /tenants/{id}/agent-token` answers 401 `auth_token_missing`
-    to the service header, and tenant creation returns no `agent`. Mint failure must NOT break
-    sessions: `getProductionAgentToken` logs a loud warning and returns the stored token or null;
-    `toProductionCached` then mirrors the member token so reads work and propose 403s honestly
-    (never faked). The moment core ships the route, the real agent split activates with no code
-    change.
+  - **Contract CONFIRMED LIVE on api.brain.fi 2026-07-14** (core merge 0821e60): tenant creation
+    returns `agent` (expires_in 3600), the mint route returns 200 with the same token
+    (idempotent), the agent token passes propose auth (a bad invoice fails with 400
+    `invoice_shortcut_invalid` — business validation, past auth) while the member token is
+    correctly blocked at 403 `auth_scope_insufficient`, and the agent token 403s on member reads.
+  - **Graceful degradation** (kept for outages/rollbacks): a mint failure must NOT break
+    sessions — `getProductionAgentToken` logs a loud warning and returns the stored token or
+    null; `toProductionCached` then mirrors the member token so reads work and propose 403s
+    honestly (never faked).
 - **Tenant creation is NOT idempotent** — never auto-retry `POST /api/brain/tenants`; surface
   the failure and let the human resubmit. 409 `already_linked` is honest, not a no-op.
 - **Invites**: issue/revoke via member token (`POST/DELETE /api/brain/members/:id/invites`);

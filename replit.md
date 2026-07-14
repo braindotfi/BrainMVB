@@ -84,9 +84,11 @@ linked:true}`). Production: `brain_identities` table maps app userId → tenantI
 refreshSession/consumeInvite/mintAgentToken; `createProductionSession` in `auth.ts` (no identity
 → 403 `no_tenant`, never auto-provision; refresh-then-reauth). Production AGENT token
 (production-agents contract): per-tenant, stored in `brain_agent_tokens`, captured at tenant
-creation, refreshed/backfilled idempotently via `POST /tenants/{id}/agent-token`; if core
-doesn't serve the route yet (true on live core as of 2026-07-14 — 401 `auth_token_missing`),
-sessions degrade to the member token (reads work, propose 403s honestly, loud warning).
+creation, refreshed/backfilled idempotently via `POST /tenants/{id}/agent-token`. Contract
+CONFIRMED LIVE on api.brain.fi 2026-07-14 (agent at creation, mint 200 idempotent, agent token
+passes propose auth, member token 403 `auth_scope_insufficient` on propose). If minting ever
+fails (outage/rollback), sessions degrade to the member token (reads work, propose 403s
+honestly, loud warning).
 Tenant creation is NOT idempotent — never auto-retry. Client: `TenancyGate` in `App.tsx` →
 `CompanySetupPage` (create company / join with invite, `/invite/:token`); SignupPage adds a
 Company name field when `/api/config.tenancyProduction`; Team UI gets invite pill +
