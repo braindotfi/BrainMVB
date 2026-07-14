@@ -148,7 +148,7 @@ import { useUserContact } from "@/lib/userContact";
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    When your agents execute actions
+                    When Brain proposes actions
                   </p>
                 </div>
               </div>

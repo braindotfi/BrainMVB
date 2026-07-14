@@ -230,7 +230,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
             </label>
             <div className="flex items-center gap-[8px]">
               <button
-                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — the AI agent marketplace for DeFi! ${REFERRAL_URL}`)}`)}
+                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — let AI handle your money. ${REFERRAL_URL}`)}`)}
                 className="bg-black rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-x"
                 title="Share on X"
