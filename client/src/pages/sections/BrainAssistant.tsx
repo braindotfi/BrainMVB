@@ -8,9 +8,12 @@ import {
   SquarePen,
 } from "lucide-react";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
+import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currencyContext";
 import { queryClient } from "@/lib/queryClient";
+import { openMemberDetail } from "@/lib/membersStore";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -350,11 +353,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   // Evidence-trail UI: which message has its evidence list expanded, and which
-  // ledger transaction the detail sheet is showing (null = closed).
+  // record popup is open (null = closed).
   const [openEvidenceFor, setOpenEvidenceFor] = useState<string | null>(null);
   const [openTxId, setOpenTxId] = useState<string | null>(null);
-  // Recent ledger transactions (same cache as Finances) — lets an evidence record
-  // whose id is a known transaction deep-link into the detail sheet.
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
+  const [openBillId, setOpenBillId] = useState<string | null>(null);
+
+  // Recent ledger data caches (shared with Finances/Bills) for resolving ids.
   const { data: txData } = useQuery<{ transactions: { id: string }[] }>({
     queryKey: ["/api/brain/ledger/transactions"],
     retry: false,
@@ -362,6 +367,22 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const txIds = useMemo(
     () => new Set((txData?.transactions ?? []).map((t) => t.id)),
     [txData],
+  );
+  const { data: acctData } = useQuery<{ accounts: { id: string; name: string }[] }>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    retry: false,
+  });
+  const acctIds = useMemo(
+    () => new Set((acctData?.accounts ?? []).map((a) => a.id)),
+    [acctData],
+  );
+  const { data: invData } = useQuery<{ invoices: BrainInvoiceDTO[] }>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    retry: false,
+  });
+  const invIds = useMemo(
+    () => new Set((invData?.invoices ?? []).map((i) => i.id)),
+    [invData],
   );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -849,12 +870,22 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
                           const text = formatAmountsInText(s.excerpt ?? s.entityId, symbol);
-                          return txIds.has(s.entityId) ? (
+                          const isClickable =
+                            (s.entityType === "account" && acctIds.has(s.entityId)) ||
+                            (s.entityType === "transaction" && txIds.has(s.entityId)) ||
+                            (s.entityType === "invoice" && invIds.has(s.entityId)) ||
+                            s.entityType === "member";
+                          return isClickable ? (
                             <button
                               key={`${s.entityId}-${i}`}
                               type="button"
                               data-testid={`evidence-link-${i}`}
-                              onClick={() => setOpenTxId(s.entityId)}
+                              onClick={() => {
+                                if (s.entityType === "account") setOpenAccountId(s.entityId);
+                                else if (s.entityType === "transaction") setOpenTxId(s.entityId);
+                                else if (s.entityType === "invoice") setOpenBillId(s.entityId);
+                                else if (s.entityType === "member") openMemberDetail(s.entityId);
+                              }}
                               title={s.entityId}
                               className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
                             >
@@ -943,7 +974,19 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           </div>
         </div>
       </div>
-      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} />
+      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} hidePager />
+      <AccountDetailPopup
+        accountId={openAccountId}
+        onClose={() => setOpenAccountId(null)}
+        onOpenTransaction={(txId) => setOpenTxId(txId)}
+        hidePager
+      />
+      <BillDetailPopup
+        bill={invData?.invoices.find((i) => i.id === openBillId) ?? null}
+        vendorName="Unknown vendor"
+        onClose={() => setOpenBillId(null)}
+        hidePager
+      />
     </div>
   );
 }

@@ -581,35 +581,36 @@ export function VendorDetailPopup({
             </div>
           </div>
 
-          {/* Previous / Next */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
-            <div className="flex gap-[16px] items-center w-full">
-              <button
-                type="button"
-                disabled={pagerDisabled || !onPrev}
-                data-testid="button-vendor-previous"
-                onClick={onPrev}
-                className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-              >
-                <ChevronLeft size={16} className="text-[#6c779d] shrink-0" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
-                  Previous
-                </span>
-              </button>
-              <button
-                type="button"
-                disabled={pagerDisabled || !onNext}
-                data-testid="button-vendor-next"
-                onClick={onNext}
-                className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-              >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
-                  Next
-                </span>
-                <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
-              </button>
+          {(onPrev || onNext) && (
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="flex gap-[16px] items-center w-full">
+                <button
+                  type="button"
+                  disabled={pagerDisabled || !onPrev}
+                  data-testid="button-vendor-previous"
+                  onClick={onPrev}
+                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                >
+                  <ChevronLeft size={16} className="text-[#6c779d] shrink-0" />
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                    Previous
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={pagerDisabled || !onNext}
+                  data-testid="button-vendor-next"
+                  onClick={onNext}
+                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                    Next
+                  </span>
+                  <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

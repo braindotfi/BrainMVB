@@ -136,11 +136,13 @@ export function AccountDetailPopup({
   onClose,
   onOpenTransaction,
   onSelectAccount,
+  hidePager,
 }: {
   accountId: string | null;
   onClose: () => void;
   onOpenTransaction: (txId: string) => void;
   onSelectAccount?: (id: string) => void;
+  hidePager?: boolean;
 }) {
   const { format } = useCurrency();
   const { data: acctData } = useQuery<BrainAccountsResponse>({
@@ -281,35 +283,36 @@ export function AccountDetailPopup({
                 </div>
               </div>
 
-              {/* Previous / Next */}
-              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
-                <div className="flex gap-[16px] items-center w-full">
-                  <button
-                    type="button"
-                    disabled={!prevAccount}
-                    data-testid="button-account-previous"
-                    onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
-                    className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                  >
-                    <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
-                      Previous
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!nextAccount}
-                    data-testid="button-account-next"
-                    onClick={() => nextAccount && onSelectAccount?.(nextAccount.id)}
-                    className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                  >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
-                      Next
-                    </span>
-                    <img src={arrowIcon} alt="" className="size-[16px]" />
-                  </button>
+              {!hidePager && (
+                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+                  <div className="flex gap-[16px] items-center w-full">
+                    <button
+                      type="button"
+                      disabled={!prevAccount}
+                      data-testid="button-account-previous"
+                      onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                        Previous
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!nextAccount}
+                      data-testid="button-account-next"
+                      onClick={() => nextAccount && onSelectAccount?.(nextAccount.id)}
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                        Next
+                      </span>
+                      <img src={arrowIcon} alt="" className="size-[16px]" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
