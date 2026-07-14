@@ -877,7 +877,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
   app.post("/api/integrations/documents/:id/delete", requireAuth, async (req, res) => {
     try {
-      const ok = await storage.removeSourceDocument(req.session.userId!, req.params.id);
+      const ok = await storage.removeSourceDocument(req.session.userId!, req.params.id as string);
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
