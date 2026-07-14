@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/lib/currencyContext";
 import { queryClient } from "@/lib/queryClient";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -61,44 +62,36 @@ const SUGGESTED_QUESTIONS = [
   "Show last 10 transactions",
 ];
 
-/** Post-process text so amounts get thousands separators.
+/** Post-process text so amounts get thousands separators and the active currency symbol.
  *  Matches:
- *    - $-prefixed numbers (e.g. $180000, $62,359.24)
- *    - "USD " + number (e.g. "USD 48000.00000000") — trailing zeros stripped
- *  Leaves already-formatted amounts and bare integers untouched. */
-function formatAmountsInText(text: string): string {
-  // Pattern 1: $-prefixed amounts
-  const dollarPattern = /\$(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?\b/g;
-  // Pattern 2: USD + number (common in ledger excerpts like "inflow USD 48000.00000000")
-  const usdCodePattern = /USD\s+(\d{1,3}(?:,\d{3})*\.?\d*)\b/g;
+ *    - $-prefixed or €-prefixed numbers
+ *    - "USD " or "EUR " + number (common in ledger excerpts like "inflow USD 48000.00000000")
+ *  Always formats with exactly 2 decimal places. */
+function formatAmountsInText(text: string, symbol: string): string {
+  const prefixPattern = /(?:\$|€)(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\b/g;
+  const codePattern = /(?:USD|EUR)\s+(\d{1,3}(?:,\d{3})*\.?\d*)\b/g;
 
-  let out = text.replace(dollarPattern, (match) => {
+  let out = text.replace(prefixPattern, (match) => {
     if (match.includes(",")) return match; // already formatted
-    const raw = match.slice(1);
+    const raw = match.slice(1); // strip leading $ or €
     const num = Number(raw);
     if (!Number.isFinite(num)) return match;
-    const hasDecimals = raw.includes(".");
     const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: hasDecimals ? 2 : 0,
-      maximumFractionDigits: hasDecimals ? 2 : 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
-    return `$${formatted}`;
+    return `${symbol}${formatted}`;
   });
 
-  out = out.replace(usdCodePattern, (_, rawNum: string) => {
-    if (rawNum.includes(",")) return `USD ${rawNum}`; // already formatted
+  out = out.replace(codePattern, (_, rawNum: string) => {
+    if (rawNum.includes(",")) return `${symbol}${rawNum}`; // already formatted
     const num = Number(rawNum);
-    if (!Number.isFinite(num)) return `USD ${rawNum}`;
-    // Strip trailing zeros after decimal, keep 2 places if there was a decimal
-    const hasDecimal = rawNum.includes(".");
-    const decimals = hasDecimal
-      ? Math.max(2, rawNum.split(".")[1]?.length ?? 2)
-      : 0;
+    if (!Number.isFinite(num)) return `${symbol}${rawNum}`;
     const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: hasDecimal ? 2 : 0,
-      maximumFractionDigits: decimals,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
-    return `USD ${formatted}`;
+    return `${symbol}${formatted}`;
   });
 
   return out;
@@ -109,8 +102,8 @@ function formatAmountsInText(text: string): string {
  * Converts **bold**, bullet lists (- / *), newlines, and dollar-amount formatting.
  * Returns a React fragment of styled spans/blocks.
  */
-function renderRichText(text: string): React.ReactNode {
-  const formatted = formatAmountsInText(text);
+function renderRichText(text: string, symbol: string): React.ReactNode {
+  const formatted = formatAmountsInText(text, symbol);
 
   // Split by double-newlines to get paragraphs/blocks
   const blocks = formatted.split(/\n\n+/);
@@ -268,6 +261,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { symbol } = useCurrency();
 
   const uploadDoc = useMutation({
     mutationFn: async (file: File) => {
@@ -719,7 +713,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
                       </span>
                     ) : (
-                      renderRichText(msg.text)
+                      renderRichText(msg.text, symbol)
                     )}
                   </div>
                 </div>
@@ -747,7 +741,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     {openEvidenceFor === msg.id && (
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
-                          const text = formatAmountsInText(s.excerpt ?? s.entityId);
+                          const text = formatAmountsInText(s.excerpt ?? s.entityId, symbol);
                           return txIds.has(s.entityId) ? (
                             <button
                               key={`${s.entityId}-${i}`}
