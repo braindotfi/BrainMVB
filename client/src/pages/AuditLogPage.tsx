@@ -6,7 +6,6 @@ import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
-import { DEMO_AUDIT_RECORDS, AUTO_APPROVED_AUDIT_RECORDS, AUTO_APPROVED_IDS } from "@/lib/mockAuditRecords";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { statusOverrideToAuditRecord, agentDecisionToAuditRecord } from "@/lib/brainFeed";
@@ -46,19 +45,15 @@ export function AuditLogPage() {
      distinguishable by its synthetic id and `pending_next_batch` anchor status.
      This is a known gap that requires a stable cross-reference before safe dedup. */
   const records = useMemo(() => {
-    /* Start with live brain-core records, then layer in client-side overrides
-       and the static auto-approved mock records. De-dupe by id so a live
-       brain-core event for the same record doesn't produce a duplicate. */
+    /* Start with live brain-core records, then layer in client-side overrides.
+       De-dupe by id so a live brain-core event for the same record doesn't
+       produce a duplicate. */
     const seen = new Set<string>();
     const merged: AuditRecord[] = [];
     const add = (r: AuditRecord) => {
       if (!seen.has(r.id)) { seen.add(r.id); merged.push(r); }
     };
     brainRecords.forEach(add);
-    /* Always include the 4 static auto-approved records (Adobe, Comcast,
-       Meridian, Gusto) — they originate from mock proposals, not brain-core,
-       so they never arrive via the live feed. */
-    AUTO_APPROVED_AUDIT_RECORDS.forEach(add);
     /* Layer in client-side review-status overrides (reject / postpone / approve). */
     for (const [id, status] of Object.entries(reviewStatuses)) {
       if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
@@ -67,7 +62,10 @@ export function AuditLogPage() {
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
     /* Layer in agent-proposal decisions (the AgentProposalModal flow) — these
-       live in the agentProposals decision store, not reviewStatusStore. */
+       live in the agentProposals decision store, not reviewStatusStore. Records
+       a decision made on the still-present labeled demo surface (the "Demo
+       scenario" pill), NOT a live brain-core event; the id-continuity gap this
+       creates is documented in deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
     for (const [id, decision] of Object.entries(agentDecisions)) {
       if (decision !== "approved" && decision !== "rejected") continue;
       const p = getAgentProposal(id);
@@ -103,37 +101,19 @@ export function AuditLogPage() {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
   const filtered = useMemo(() => {
-    const fromLive = () => {
-      if (activeTab === "Last 30 Days") {
-        return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
-      }
-      const ev = TAB_TO_EVENT[activeTab];
-      if (activeTab === "Trusted Changes") {
-        return records.filter(
-          (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
-        );
-      }
-      if (ev) {
-        return records.filter((r) => r.eventType === ev);
-      }
-      return records;
-    };
-    const live = fromLive();
-    if (live.length > 0) return live;
-    /* Fallback: show one demo record per tab so UI is testable */
     if (activeTab === "Last 30 Days") {
-      return DEMO_AUDIT_RECORDS.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+      return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
-    const ev = TAB_TO_EVENT[activeTab];
     if (activeTab === "Trusted Changes") {
-      return DEMO_AUDIT_RECORDS.filter(
+      return records.filter(
         (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
       );
     }
+    const ev = TAB_TO_EVENT[activeTab];
     if (ev) {
-      return DEMO_AUDIT_RECORDS.filter((r) => r.eventType === ev);
+      return records.filter((r) => r.eventType === ev);
     }
-    return DEMO_AUDIT_RECORDS;
+    return records;
   }, [activeTab, records]);
 
   /* Header pager — cycle (wrap-around) through the records in the active tab. */
