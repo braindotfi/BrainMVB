@@ -35,7 +35,8 @@ specifies the concrete API brain-core would need to ship to make this real.
 | `subscription` | Subscription | agnostic | propose | "Unused software seat renewing in 4 days" |
 | `fraud_anomaly` | Fraud & Anomaly | agnostic | notify_only | "Two invoices from different vendors share a phone number" |
 
-24 total records: 11 `needs_review` (`pr_001`–`pr_011`, one per agent) + 13
+24 total records: 11 `needs_review` (9 of `pr_001`–`pr_011`, excluding `pr_005`/
+`pr_008`, plus the escalation variants `pr_005b`/`pr_008b`) + 13
 `approved_automatically` (`aa_001`–`aa_011`, one per agent, plus `pr_005` and
 `pr_008` themselves, which are `approved_automatically` rather than
 `needs_review`). Every agent has an `pr_00N`/`aa_00N` pair — a live-decision
