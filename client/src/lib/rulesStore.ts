@@ -1,55 +1,18 @@
 import { useSyncExternalStore } from "react";
 import type { AutoRule, Agent, RuleKind, RuleHistoryEvent } from "./proposalTypes";
-import { INITIAL_RULES } from "./mockRules";
 import { apiRequest } from "./queryClient";
 
 /* ── Shared rules store ───────────────────────────────────────────────────────
    Single source of truth for the standing auto-clear rules: live active state,
    scope (cap / allowlist), and the ProblemReport trail. The receipt report flow,
    the review page (related-item flagging), and RuleDetail all read/write here.
-   No backend, no localStorage — module state behind useSyncExternalStore, the
-   same pattern as rule-suggestions.ts. Every write is user-initiated.
+   Starts empty — `hydrateUserRules` below populates it from the tenant's
+   persisted rules (GET /api/rules). No seeded/demo automations. Module state
+   behind useSyncExternalStore, the same pattern as rule-suggestions.ts. Every
+   write is user-initiated.
    ──────────────────────────────────────────────────────────────────────────── */
 
-function seedRule(base: AutoRule): AutoRule {
-  return {
-    ...base,
-    allowlist: base.allowlist ? [...base.allowlist] : undefined,
-    problemReports: [],
-    history: [
-      { id: `${base.id}-created`, type: "created", label: "Rule created", atLabel: base.createdLabel },
-    ],
-  };
-}
-
-/* SAAS is pre-seeded paused with one ProblemReport so the paused-from-report
-   RuleDetail state is demoable without triggering it live. UTILITY stays active
-   for the live Con Edison path. */
-function seedRules(): AutoRule[] {
-  const rules = INITIAL_RULES.map(seedRule);
-  const saas = rules.find((r) => r.id === "saas");
-  if (saas) {
-    saas.active = false;
-    saas.problemReports = [
-      {
-        id: "pr-seed-1",
-        ruleId: "saas",
-        proposalId: "auto-figma",
-        reason: "Wrong amount",
-        note: "Figma jumped from our usual $288 to $360 — I want to check this before it keeps clearing.",
-        reportedAtLabel: "Jun 28, 2026 · 4:12 PM ET",
-        resolved: false,
-      },
-    ];
-    saas.history = [
-      ...(saas.history ?? []),
-      { id: "saas-paused-seed-1", type: "paused", label: "Rule paused", atLabel: "Jun 28, 2026 · 4:12 PM ET" },
-    ];
-  }
-  return rules;
-}
-
-let rules: AutoRule[] = seedRules();
+let rules: AutoRule[] = [];
 const listeners = new Set<() => void>();
 
 function subscribe(cb: () => void) {

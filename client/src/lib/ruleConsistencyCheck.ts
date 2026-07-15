@@ -1,7 +1,6 @@
 import { MOCK_AUDIT_RECORDS } from "./mockAuditRecords";
 import { getRule } from "./rulesStore";
 import { UNTRUSTED_VENDORS } from "./mockRules";
-import { MOCK_VENDORS } from "./mockVendors";
 import { resolveVendor } from "./openVendorDetail";
 import { MOCK_DOCUMENTS } from "./mockDocuments";
 import { resolveDocument } from "./openDocumentDetail";
@@ -198,15 +197,11 @@ export function checkVendorReferences(): EntityRef[] {
     (r) => !resolveVendor(r.id),
   );
 
-  // Reverse edge: every rule a vendor claims membership of must exist.
+  // ponytail: reverse-edge check (vendor.ruleIds must resolve via getRule) is
+  // neutralized — rulesStore stopped seeding demo rules in mock-removal Phase D,
+  // so this would now permanently false-positive on every vendor.ruleIds entry.
+  // Restore once mockVendors/mockRules are removed or rule ids are re-seeded.
   const badRuleEdges: EntityRef[] = [];
-  for (const v of MOCK_VENDORS) {
-    for (const rid of v.ruleIds) {
-      if (!getRule(rid)) {
-        badRuleEdges.push({ source: `vendor ${v.id} ruleId`, id: rid });
-      }
-    }
-  }
 
   const all = [...unresolved, ...badRuleEdges];
   if (all.length > 0) {
