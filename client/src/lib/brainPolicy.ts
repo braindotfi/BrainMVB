@@ -121,15 +121,23 @@ export function mapPolicyToRuleCards(facts: ApprovalPolicyFacts | undefined): Au
   return (facts?.rules ?? []).map(mapPolicyRuleToCard);
 }
 
+/** brain-core returns 404 `policy_not_found` for a tenant with no policy document
+ *  activated yet (e.g. fresh production tenant) — that's an honest empty set, not a
+ *  load failure. Real network/5xx errors still surface as errors. */
+function isPolicyNotFound(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("policy_not_found");
+}
+
 export function useBrainPolicy() {
   const query = useQuery<ApprovalPolicyFacts>({
     queryKey: ["/api/brain/approval-policy"],
     retry: false,
   });
+  const notFound = isPolicyNotFound(query.error);
   return {
     isLoading: query.isLoading,
-    isError: query.isError,
-    rules: mapPolicyToRuleCards(query.data),
+    isError: query.isError && !notFound,
+    rules: notFound ? [] : mapPolicyToRuleCards(query.data),
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
   };
@@ -150,6 +158,6 @@ export function usePolicyRule(cardId: string | undefined) {
   return {
     rule: query.data?.rules.find((r) => r.id === rawId),
     isLoading: query.isLoading,
-    isError: query.isError,
+    isError: query.isError && !isPolicyNotFound(query.error),
   };
 }
