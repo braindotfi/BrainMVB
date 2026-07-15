@@ -25,6 +25,7 @@ import {
   useRuleSuggestions,
   acceptSuggestion,
   dismissSuggestion,
+  hydrateSuggestions,
 } from "@/lib/rule-suggestions";
 import {
   TRUSTED_VENDORS,
@@ -528,9 +529,10 @@ export function RulesPage() {
     setBuilderOpen(true);
   };
 
-  /* Load this account's persisted user-created rules into the store on mount. */
+  /* Load this account's persisted user-created rules + live suggestions on mount. */
   useEffect(() => {
     void hydrateUserRules();
+    void hydrateSuggestions();
   }, []);
 
   /* "Always handle this" handoff: consume the draft + open the builder pre-filled. */
@@ -984,7 +986,7 @@ export function RulesPage() {
               {suggestions.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    No new suggestions from Brain right now. Check back as your patterns grow.
+                    Brain suggests policies as it sees patterns in your activity — nothing yet.
                   </p>
                 </div>
               ) : (
