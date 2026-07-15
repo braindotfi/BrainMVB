@@ -283,7 +283,7 @@ let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const storageKey = `brain.chat.${user?.id ?? "anon"}`;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -367,23 +367,27 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const messages = activeSession?.messages ?? [];
 
   // Hydrate from localStorage whenever the per-user key changes (e.g. login resolves).
+  // Gated on auth settling so this never reads/writes the "anon" key mid-resolve and
+  // orphans a session created during the auth window (Opus review finding).
   useEffect(() => {
+    if (authLoading) return;
     try {
       const raw = localStorage.getItem(storageKey);
       setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
     } catch {
       setSessions([]);
     }
-  }, [storageKey]);
+  }, [storageKey, authLoading]);
 
   // ponytail: localStorage per-device history; move to DB when cross-device history is asked for
   useEffect(() => {
+    if (authLoading) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(sessions));
     } catch (err) {
       console.warn("Failed to persist chat sessions", err);
     }
-  }, [storageKey, sessions]);
+  }, [storageKey, sessions, authLoading]);
 
   useEffect(() => {
     if (bodyRef.current) {
