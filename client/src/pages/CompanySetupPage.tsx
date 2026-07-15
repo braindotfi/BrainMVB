@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
@@ -67,6 +67,14 @@ export function CompanySetupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(handoff.err);
 
+  // The gate (App.tsx) may still be holding a stale "unlinked" tenancy query from before
+  // signup created the tenant. Re-check on mount so an already-linked account resolves
+  // straight into the app instead of showing this page and letting the user hit "Create
+  // company" into a 409 they can't act on.
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/brain/tenancy"] });
+  }, []);
+
   const finish = async () => {
     await queryClient.invalidateQueries({ queryKey: ["/api/brain/tenancy"] });
     await queryClient.invalidateQueries();
@@ -85,6 +93,13 @@ export function CompanySetupPage() {
     try {
       const { ok, data } = await postJson("/api/brain/tenants", { company_name: companyName.trim() });
       if (!ok) {
+        if (data?.error === "already_linked") {
+          // The account is already linked (e.g. signup's own tenant-create beat this
+          // one) — re-check tenancy and let the gate route in, instead of stranding the
+          // user on an error they can't act on.
+          await finish();
+          return;
+        }
         // Tenant creation is NOT idempotent — never auto-retry; surface it and let the
         // user decide whether to submit again.
         setError(upstreamMessage(data, "Couldn't create your company. Nothing was set up — you can try again."));
