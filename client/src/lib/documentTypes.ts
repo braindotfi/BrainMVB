@@ -121,15 +121,30 @@ export async function openDocumentOriginal(doc: DocumentRecord): Promise<void> {
     return;
   }
   if (!doc.rawId) return;
+  // Open synchronously on the click so browsers don't treat the post-await
+  // window.open as a popup and block it (Safari always, Chrome often).
+  const w = window.open("about:blank", "_blank", "noopener,noreferrer");
+  if (!w) {
+    console.warn("[openDocumentOriginal] window.open blocked; cannot resolve raw artifact URL");
+    return;
+  }
   try {
     const res = await fetch(`/api/brain/raw/${encodeURIComponent(doc.rawId)}`, {
       credentials: "include",
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      w.close();
+      return;
+    }
     const body: { signed_url?: string } = await res.json();
-    if (body.signed_url) window.open(body.signed_url, "_blank", "noopener,noreferrer");
+    if (body.signed_url) {
+      w.location.href = body.signed_url;
+    } else {
+      w.close();
+    }
   } catch (err) {
     console.warn("[openDocumentOriginal] failed to resolve raw artifact URL", err);
+    w.close();
   }
 }
 
