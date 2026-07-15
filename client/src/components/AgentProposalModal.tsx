@@ -120,12 +120,12 @@ function AccountTable({
 }) {
   return (
     <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full">
-      <div className="border-b border-[#1d2132] flex gap-[16px] items-center px-[12px] py-[8px]">
+      <div className="border-b border-[#1d2132] flex gap-[8px] items-center px-[12px] py-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] flex-1 min-w-0">
           {label}
         </p>
         {badge && (
-          <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
+          <div className="inline-flex items-center justify-center bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
             <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] whitespace-nowrap">
               {badge}
             </span>
@@ -166,18 +166,13 @@ function renderScenarioModule(
 ) {
   switch (module.kind) {
     case "account_comparison": {
+      const toTitleCase = (s: string) =>
+        s.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
       const oldBadgeMatch = module.old.label.match(/\((.*?)\)/);
-      const oldBadge = oldBadgeMatch
-        ? oldBadgeMatch[1]
-            .split(" ")
-            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(" ")
-        : undefined;
+      const oldBadge = oldBadgeMatch ? toTitleCase(oldBadgeMatch[1]) : undefined;
       const oldTitle = module.old.label.replace(/\s*\(.*?\)/, "").trim();
-      const oldTitleFormatted =
-        oldTitle.charAt(0).toUpperCase() + oldTitle.slice(1);
-      const nextTitle =
-        module.next.label.charAt(0).toUpperCase() + module.next.label.slice(1);
+      const oldTitleFormatted = toTitleCase(oldTitle);
+      const nextTitle = toTitleCase(module.next.label);
       return (
         <div className="flex flex-col gap-[8px] w-full" data-testid="module-account-comparison">
           <AccountTable
@@ -310,25 +305,24 @@ function renderScenarioModule(
       );
     case "forecast_chart": {
       const max = Math.max(...module.weeks);
+      const CHART_H = 88;
       return (
         <div
-          className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[8px]"
+          className="flex flex-col gap-[16px] items-start w-full"
           data-testid="module-forecast-chart"
         >
-          <div className="relative flex items-end gap-[3px] h-[72px] w-full">
-            <div
-              className="absolute left-0 right-0 border-t border-dashed border-[#ff9500]/60"
-              style={{ bottom: `${(module.floor / max) * 100}%` }}
-            />
+          <SectionLabel>{module.title}</SectionLabel>
+          <div className="flex gap-[4px] items-end w-full">
             {module.weeks.map((v, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t-[2px] bg-[#7631ee]/70"
-                style={{ height: `${(v / max) * 100}%` }}
-              />
+              <div key={i} className="flex-1 min-w-0">
+                <div
+                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)]"
+                  style={{ height: `${Math.max(4, Math.round((v / max) * CHART_H))}px` }}
+                />
+              </div>
             ))}
           </div>
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#6c779d]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] w-full">
             {module.note}
           </p>
         </div>
@@ -440,28 +434,27 @@ function renderScenarioModule(
       );
     case "trend_chart": {
       const max = Math.max(...module.points.map((p) => p.value));
+      const CHART_H = 88;
       return (
         <div
-          className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[8px]"
+          className="flex flex-col gap-[16px] items-start w-full"
           data-testid="module-trend-chart"
         >
-          <div className="flex items-end gap-[8px] h-[72px] w-full">
-            {module.points.map((p, i) => (
-              <div
-                key={p.label}
-                className="flex-1 flex flex-col items-center gap-[4px] h-full justify-end"
-              >
+          <SectionLabel>{module.title}</SectionLabel>
+          <div className="flex gap-[8px] items-end w-full">
+            {module.points.map((p) => (
+              <div key={p.label} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
                 <div
-                  className={`w-full rounded-t-[3px] ${i === module.points.length - 1 ? "bg-[#7631ee]" : "bg-[#414965]"}`}
-                  style={{ height: `${(p.value / max) * 80}%` }}
+                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)] min-h-[4px]"
+                  style={{ height: `${Math.max(4, Math.round((p.value / max) * CHART_H))}px` }}
                 />
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] leading-[12px] text-[#414965]">
+                <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] leading-[14px] text-[#6c779d] text-center w-full">
                   {p.label}
                 </span>
               </div>
             ))}
           </div>
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#6c779d]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] w-full">
             {module.note}
           </p>
         </div>
@@ -773,9 +766,9 @@ export function AgentProposalModal({
               )}
             </div>
 
-            {/* CONFIDENCE (needs_review only) — HR always sits directly below bar */}
+            {/* CONFIDENCE (needs_review only) — wrapped so HR hugs bar with no body gap */}
             {!isAutoApproved ? (
-              <>
+              <div className="flex flex-col gap-[12px] w-full">
                 <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
                   <SectionLabel
                     right={
@@ -794,7 +787,7 @@ export function AgentProposalModal({
                   </div>
                 </div>
                 <HR />
-              </>
+              </div>
             ) : (
               <HR />
             )}
@@ -871,39 +864,41 @@ export function AgentProposalModal({
                 {isAutoApproved ? "Outcome" : "What Happens Next"}
               </SectionLabel>
               {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
-                <div className="flex flex-col gap-[8px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] w-full">
+                <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[14px] flex flex-col gap-[10px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[15px] w-full">
                     {proposal.approvedAutomaticallyMeta.outcome.summary}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setViewingEvidence({
-                        text: "View record",
-                        linkedSource: proposal.approvedAutomaticallyMeta!.outcome.linkedSource,
-                      })
-                    }
-                    data-testid="link-outcome-record"
-                    className="inline-flex items-center gap-[8px] px-[14px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    <ArrowUpRight size={14} className="text-[#a8b9f4] shrink-0" />
-                    View{" "}
-                    {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(
-                      /_/g,
-                      " ",
-                    )}{" "}
-                    record
-                  </button>
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
-                    {new Date(
-                      proposal.approvedAutomaticallyMeta.approvedAt,
-                    ).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <div className="flex items-center gap-[10px] flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setViewingEvidence({
+                          text: "View record",
+                          linkedSource: proposal.approvedAutomaticallyMeta!.outcome.linkedSource,
+                        })
+                      }
+                      data-testid="link-outcome-record"
+                      className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+                    >
+                      <ArrowUpRight size={13} className="text-[#6c779d] shrink-0" />
+                      View{" "}
+                      {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(
+                        /_/g,
+                        " ",
+                      )}{" "}
+                      record
+                    </button>
+                    <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
+                      {new Date(
+                        proposal.approvedAutomaticallyMeta.approvedAt,
+                      ).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
                 </div>
               ) : isNotifyOnly ? (
                 <p
@@ -934,17 +929,22 @@ export function AgentProposalModal({
                   ))}
                 </div>
               )}
-              {/* Risk note — text color tracks risk_level, no icon */}
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] w-full"
-                style={{ color: riskNoteColor }}
-                data-testid="text-risk-note"
+              {/* Info box: risk note + source — styled card for all states */}
+              <div
+                className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[6px] w-full"
+                data-testid="box-risk-info"
               >
-                {proposal.riskNote}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
-                source: {proposal.source}
-              </p>
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] w-full"
+                  style={{ color: riskNoteColor }}
+                  data-testid="text-risk-note"
+                >
+                  {proposal.riskNote}
+                </p>
+                <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
+                  source: {proposal.source}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -984,16 +984,14 @@ export function AgentProposalModal({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center w-full">
-                          <button
-                            type="button"
-                            onClick={() => setUndoConfirmOpen(true)}
-                            data-testid="button-agent-undo"
-                            className="px-[20px] py-[10px] rounded-[100px] border border-[#1d2132] hover:border-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                          >
-                            Undo
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUndoConfirmOpen(true)}
+                          data-testid="button-agent-undo"
+                          className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        >
+                          Undo
+                        </button>
                       )}
                     </div>
                   );

@@ -65,7 +65,7 @@ export type ScenarioModule =
       to: { name: string; before: number; after: number };
       amount: number;
     }
-  | { kind: "forecast_chart"; weeks: number[]; floor: number; note: string }
+  | { kind: "forecast_chart"; title: string; weeks: number[]; floor: number; note: string }
   | {
       kind: "line_diff";
       columns: [string, string];
@@ -73,7 +73,7 @@ export type ScenarioModule =
     }
   | { kind: "usage_timeline"; lastActivityDaysAgo: number; renewalInDays: number; note: string }
   | { kind: "document_checklist"; items: { label: string; present: boolean }[] }
-  | { kind: "trend_chart"; points: { label: string; value: number }[]; unit: string; note: string };
+  | { kind: "trend_chart"; title: string; points: { label: string; value: number }[]; unit: string; note: string };
 
 export interface AgentProposal {
   id: string;
@@ -319,9 +319,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 249, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · working-capital floor $174k",
+      note: "Working Capital Floor $174k.",
     },
     recommendedAction: "No action needed. Forecast is informational this cycle.",
     whatHappensNext: {
@@ -365,9 +366,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 142, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · week 9 drops below $174k floor",
+      note: "Week 9 shortfall · $142k vs. $174k floor",
     },
     recommendedAction: "Review the BigCo receivable timing or move a vendor payment to avoid the shortfall.",
     whatHappensNext: {
@@ -489,7 +491,8 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 83 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · +12% MoM",
+      note: "+12% MoM · no churn this month",
+      title: "Enterprise Segment Monthly Revenue ($k)",
     },
     recommendedAction: "No action needed. Informational insight only.",
     whatHappensNext: {
@@ -542,7 +545,8 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 68 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · -8% MoM · 1 churn",
+      note: "-8% MoM · 1 churn",
+      title: "Enterprise Segment Monthly Revenue ($k)",
     },
     recommendedAction: "Review the churn reason and check if the account is salvageable before the end of the grace period.",
     whatHappensNext: {
