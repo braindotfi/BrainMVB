@@ -55,6 +55,7 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
     time: settled ? settled[1] : "Today",
     linkTo: `/review?receipt=${p.id}`,
     proposal: p,
+    demo: true,
   };
 }
 
