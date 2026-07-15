@@ -12,6 +12,7 @@ import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currencyContext";
+import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
@@ -53,9 +54,21 @@ interface ChatMessage {
 interface ChatSession {
   id: string;
   title: string;
-  group: string;
+  createdAt: number;
   status?: "complete" | "fail";
   messages: ChatMessage[];
+}
+
+/** Derive the sidebar's grouping label from a session's creation time. */
+function sessionGroup(createdAt: number): string {
+  const now = new Date();
+  const date = new Date(createdAt);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (date >= startOfToday) return "Today";
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfToday.getDay());
+  if (date >= startOfWeek) return "This week";
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -269,84 +282,10 @@ const CANNED_REPLY =
 let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
-const SEED_SESSIONS: ChatSession[] = [
-  {
-    id: "balance-inquiry",
-    title: "Balance Inquiry",
-    group: "Today",
-    messages: [
-      { id: nextId(), role: "user", text: "What's was my balance three days ago?", dateTag: "Wed, 11 Sep" },
-      { id: nextId(), role: "assistant", text: "Your balance on Wed, 8 Sept was $62,359.24" },
-      { id: nextId(), role: "user", text: "Brain, can we afford to hire two more engineers this quarter?", dateTag: "Today" },
-      {
-        id: nextId(),
-        role: "assistant",
-        text: "Yes, but only if you keep monthly cloud spend under $42k and collect the $180k in overdue invoices by July 15. Otherwise, hiring both would shorten your runway from 11 months to 7 months. I recommend hiring one employee now, delaying the second hire by 45 days, and sending invoice follow-ups today.",
-      },
-    ],
-  },
-  {
-    id: "explain-crypto",
-    title: "Explain crypto currency in simple terms",
-    group: "Today",
-    status: "complete",
-    messages: [
-      { id: nextId(), role: "user", text: "Explain crypto currency in simple terms", dateTag: "Today" },
-      { id: nextId(), role: "assistant", text: "Cryptocurrency is digital money secured by cryptography and recorded on a shared public ledger (the blockchain), so no single bank controls it." },
-    ],
-  },
-  {
-    id: "last-10-tx",
-    title: "Show last 10 transactions",
-    group: "Jun 2026",
-    messages: [
-      { id: nextId(), role: "user", text: "Show last 10 transactions", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "Here are your last 10 transactions across all connected accounts." },
-    ],
-  },
-  {
-    id: "send-btc",
-    title: "Send 0.0012 BTC to @Jane9245",
-    group: "Jun 2026",
-    status: "fail",
-    messages: [
-      { id: nextId(), role: "user", text: "Send 0.0012 BTC to @Jane9245", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "That transfer could not be completed — the recipient handle could not be verified." },
-    ],
-  },
-  {
-    id: "market-today",
-    title: "Whats the market looking like today, also ...",
-    group: "Jun 2026",
-    messages: [
-      { id: nextId(), role: "user", text: "What's the market looking like today?", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "Markets are mixed today. BTC is up 1.2% and ETH is flat over the last 24 hours." },
-    ],
-  },
-  {
-    id: "assets-to-buy",
-    title: "Which assets should I consider buying?",
-    group: "Jun 2026",
-    messages: [
-      { id: nextId(), role: "user", text: "Which assets should I consider buying?", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "I can't give financial advice, but I can show you trending assets and your watchlist performance." },
-    ],
-  },
-  {
-    id: "meme-coins",
-    title: "What are meme coins?",
-    group: "Jun 2026",
-    messages: [
-      { id: nextId(), role: "user", text: "What are meme coins?", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "Meme coins are cryptocurrencies inspired by internet memes or jokes. They're highly volatile and largely driven by community hype." },
-    ],
-  },
-];
-
-const GROUP_ORDER = ["Today", "Jun 2026"];
-
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
-  const [sessions, setSessions] = useState<ChatSession[]>(SEED_SESSIONS);
+  const { user } = useAuth();
+  const storageKey = `brain.chat.${user?.id ?? "anon"}`;
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -427,6 +366,25 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
   const messages = activeSession?.messages ?? [];
 
+  // Hydrate from localStorage whenever the per-user key changes (e.g. login resolves).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
+    } catch {
+      setSessions([]);
+    }
+  }, [storageKey]);
+
+  // ponytail: localStorage per-device history; move to DB when cross-device history is asked for
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(sessions));
+    } catch (err) {
+      console.warn("Failed to persist chat sessions", err);
+    }
+  }, [storageKey, sessions]);
+
   useEffect(() => {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -500,7 +458,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       const newSession: ChatSession = {
         id: `session-${nextId()}`,
         title: trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed,
-        group: "Today",
+        createdAt: Date.now(),
         messages: [{ ...userMsg, dateTag: "Today" }],
       };
       sessionId = newSession.id;
@@ -595,10 +553,18 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     if (q) {
       return [{ label: "Search Results", items: matched }];
     }
-    return GROUP_ORDER.map((label) => ({
+    // Sessions are prepended newest-first, so labels are naturally encountered
+    // in the right display order (Today, This week, then months descending).
+    const order: string[] = [];
+    const seen = new Set<string>();
+    for (const s of matched) {
+      const label = sessionGroup(s.createdAt);
+      if (!seen.has(label)) { seen.add(label); order.push(label); }
+    }
+    return order.map((label) => ({
       label,
-      items: matched.filter((s) => s.group === label),
-    })).filter((g) => g.items.length > 0);
+      items: matched.filter((s) => sessionGroup(s.createdAt) === label),
+    }));
   }, [sessions, search]);
 
   const triggerLabel = activeSession ? activeSession.title : "New Chat Session";
@@ -737,7 +703,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               {/* Grouped sessions */}
               {filteredGroups.length === 0 && (
                 <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-                  No conversations found
+                  {sessions.length === 0 ? "No conversations yet" : "No conversations found"}
                 </div>
               )}
               {filteredGroups.map((group) => (
