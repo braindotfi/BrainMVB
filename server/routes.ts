@@ -543,20 +543,16 @@ You can explain concepts and surface general guidance, but do not give regulated
    *  Tool integrations  (Stripe wired; others coming soon)
    * ────────────────────────────────────────────────────────────────────── */
 
-  // For this prototype every browser session is treated as the same demo
-  // user.  When a real auth model is added, swap this for the session uid.
-  const DEMO_USER = "demo-user";
-
-  app.get("/api/integrations/connections", async (_req, res) => {
+  app.get("/api/integrations/connections", requireAuth, async (req, res) => {
     try {
-      const list = await storage.listToolConnections(DEMO_USER);
+      const list = await storage.listToolConnections(req.session.userId!);
       res.json(list);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.post("/api/integrations/stripe/connect", async (_req, res) => {
+  app.post("/api/integrations/stripe/connect", requireAuth, async (req, res) => {
     try {
       // Dynamic + untyped: server/stripe.ts is generated after the user
       // authorizes Stripe via the integrations flow.
@@ -584,7 +580,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         account.id;
 
       const conn = await storage.upsertToolConnection({
-        userId: DEMO_USER,
+        userId: req.session.userId!,
         toolId: "stripe",
         status: "connected",
         accountLabel: label,
@@ -609,9 +605,9 @@ You can explain concepts and surface general guidance, but do not give regulated
     });
   });
 
-  app.get("/api/integrations/plaid/connections", async (_req, res) => {
+  app.get("/api/integrations/plaid/connections", requireAuth, async (req, res) => {
     try {
-      const list = await storage.listBankConnections(DEMO_USER);
+      const list = await storage.listBankConnections(req.session.userId!);
       // Strip access_token before returning to the client
       res.json(list.map(({ accessToken: _t, ...rest }) => rest));
     } catch (err) {
@@ -619,12 +615,12 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  app.post("/api/integrations/plaid/link-token", async (_req, res) => {
+  app.post("/api/integrations/plaid/link-token", requireAuth, async (req, res) => {
     try {
       const { getPlaidClient, PLAID_PRODUCTS, PLAID_COUNTRIES } = await import("./plaid");
       const client = getPlaidClient();
       const result = await client.linkTokenCreate({
-        user: { client_user_id: DEMO_USER },
+        user: { client_user_id: req.session.userId! },
         client_name: "Brain Finance",
         products: PLAID_PRODUCTS,
         country_codes: PLAID_COUNTRIES,
@@ -641,7 +637,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  app.post("/api/integrations/plaid/exchange", async (req, res) => {
+  app.post("/api/integrations/plaid/exchange", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         public_token: z.string().min(1),
@@ -674,7 +670,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         : null;
 
       const conn = await storage.createBankConnection({
-        userId: DEMO_USER,
+        userId: req.session.userId!,
         itemId,
         accessToken,
         institutionId: inst?.institution_id ?? institution?.id ?? null,
@@ -693,17 +689,18 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  app.post("/api/integrations/plaid/disconnect", async (req, res) => {
+  app.post("/api/integrations/plaid/disconnect", requireAuth, async (req, res) => {
     try {
       const parsed = z.object({ itemId: z.string().min(1) }).safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: "itemId required" });
       }
       const { itemId } = parsed.data;
+      const userId = req.session.userId!;
 
       // Best-effort revoke at Plaid; even if it fails we still drop our copy
       try {
-        const conns = await storage.listBankConnections(DEMO_USER);
+        const conns = await storage.listBankConnections(userId);
         const target = conns.find(c => c.itemId === itemId);
         if (target) {
           const { getPlaidClient } = await import("./plaid");
@@ -713,7 +710,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         console.warn("[plaid] item revoke failed:", (revokeErr as Error).message);
       }
 
-      const ok = await storage.removeBankConnection(DEMO_USER, itemId);
+      const ok = await storage.removeBankConnection(userId, itemId);
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -938,9 +935,9 @@ You can explain concepts and surface general guidance, but do not give regulated
   });
 
   /* Generic tool disconnect — registered LAST so specific routes (e.g. plaid) win */
-  app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
+  app.post("/api/integrations/:toolId/disconnect", requireAuth, async (req, res) => {
     try {
-      const ok = await storage.removeToolConnection(DEMO_USER, req.params.toolId);
+      const ok = await storage.removeToolConnection(req.session.userId!, String(req.params.toolId));
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
