@@ -99,7 +99,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
       return {
         reason: "second_approver_required",
         title: "Second approver required",
-        detail: "This amount needs a second approver. Your approval is recorded - one more is needed.",
+        detail: "This amount needs a second approver. Your approval is recorded. One more is needed.",
       };
     case "actor_unresolved":
       return {
@@ -118,7 +118,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
         reason: "approval_signer_revoked",
         title: "Approval can't be completed",
         detail:
-          "Brain core no longer recognizes an active approval signer for this tenant, so the payment can't be signed off. (Demo environments hit this - the authority is real, the signer isn't provisioned.)",
+          "Brain core no longer recognizes an active approval signer for this tenant, so the payment can't be signed off. (Demo environments hit this. The authority is real, the signer isn't provisioned.)",
       };
     case "last_admin_protected":
       return {

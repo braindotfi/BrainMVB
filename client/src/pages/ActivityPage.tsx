@@ -36,7 +36,7 @@ import {
 } from "@/lib/rulesStore";
 
 type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected" | "You Postponed";
-/* "All" is intentionally hidden for now - kept in the type/logic (filterByTab
+/* "All" is intentionally hidden for now. Kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
 const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected", "You Postponed"];
 
@@ -265,7 +265,7 @@ export function ActivityPage() {
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
     }
-    /* Agent-proposal decisions (the AgentProposalModal flow) - approvals and
+    /* Agent-proposal decisions (the AgentProposalModal flow). Approvals and
        rejections made there live in the agentProposals decision store, not
        reviewStatusStore, so they are layered in here. */
     for (const [id, decision] of Object.entries(agentDecisions)) {
@@ -283,7 +283,7 @@ export function ActivityPage() {
   const { todayItems: bucketedToday, yesterdayItems: bucketedYesterday, earlierItems: bucketedEarlier } =
     useMemo(() => bucketByDay(records), [records]);
 
-  /* Static auto-approved items (Adobe, Comcast, Meridian, Gusto) - these are
+  /* Static auto-approved items (Adobe, Comcast, Meridian, Gusto). These are
      mock proposals that were approved automatically by standing rules on Jul 5–6.
      They live in "Earlier" and always appear in the "Brain Did" tab regardless
      of what brain-core returns. De-duped against live records by proposal id. */
@@ -316,7 +316,7 @@ export function ActivityPage() {
   const yesterdayItems = filterByTab(dedupeById(bucketedYesterday));
   const earlierItems = filterByTab(dedupeById([...bucketedEarlier, ...autoHandledItems]));
 
-  /* Inline proposal detail sheet - opened when an activity row with a proposal
+  /* Inline proposal detail sheet. Opened when an activity row with a proposal
      (review-status override or auto-handled receipt) is tapped. */
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const statuses = useReviewStatuses();
@@ -352,7 +352,7 @@ export function ActivityPage() {
       toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
     } else if (action === "acknowledge") {
       decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged - Brain won't re-raise this flag." });
+      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
     } else if (action === "undo") {
       decideAgentProposal(p.id, "undone_to_review");
       toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
@@ -360,7 +360,7 @@ export function ActivityPage() {
     setActiveAgentRecord(null);
   };
 
-  /* Header pager - cycle through all activity items that carry a proposal
+  /* Header pager. Cycle through all activity items that carry a proposal
      (review overrides + auto-handled receipts) in the current filtered view. */
   const allProposalItems = useMemo(
     () =>
@@ -503,7 +503,7 @@ export function ActivityPage() {
         onAlwaysHandle={(p) => {
           setRuleDraft({
             kind: "automation",
-            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            name: p.counterparty ? `Auto clear ${p.counterparty}` : "Auto clear this payment",
             category: "bill",
             agent: p.agent,
             cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,

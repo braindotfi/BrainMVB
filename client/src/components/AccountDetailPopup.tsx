@@ -277,7 +277,7 @@ export function AccountDetailPopup({
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
                     <Info size={16} className="text-[#6c779d] shrink-0 mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
-                      A read-only view. Brain reads this balance from your ledger; your bank owns the account.
+                      A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
                   </div>
                 </div>

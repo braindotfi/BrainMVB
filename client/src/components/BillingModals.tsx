@@ -3,9 +3,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Billing-related modals ────────────────────────────────
-   - ChangePlanModal:           pick a plan, confirm.
-   - UpdateCardModal:           edit card number / expiry / CVC / name.
-   - CancelSubscriptionModal:   logout-style confirm dialog.                 */
+   ChangePlanModal: pick a plan, confirm.
+   UpdateCardModal: edit card number, expiry, CVC, name.
+   CancelSubscriptionModal: logout-style confirm dialog. */
 
 const CloseIcon = () => (
   <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -86,7 +86,7 @@ const ModalShell = ({ open, onOpenChange, title, testId, description, children }
 export type PlanId = "free" | "pro" | "business";
 
 const PLANS: { id: PlanId; name: string; price: string; cadence: string; tagline: string }[] = [
-  { id: "free",     name: "Free",     price: "$0",   cadence: "/mo", tagline: "Try Brain - 1 agent, $10k monthly cap." },
+  { id: "free",     name: "Free",     price: "$0",   cadence: "/mo", tagline: "Try Brain: 1 agent, $10k monthly cap." },
   { id: "pro",      name: "Pro",      price: "$24",  cadence: "/mo", tagline: "Unlimited agents, $5M monthly cap, priority support." },
   { id: "business", name: "Business", price: "$199", cadence: "/mo", tagline: "Dedicated infra, SLAs, custom policy signers." },
 ];

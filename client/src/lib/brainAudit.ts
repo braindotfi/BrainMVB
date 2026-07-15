@@ -56,7 +56,7 @@ export interface BrainAnchor {
 /** action → (eventType, plain-language summary prefix). Anything not listed
  *  here falls back to a generic "system event" reading - no invented eventType. */
 const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: BrainAuditEvent) => string }> = {
-  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed - awaiting decision" },
+  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed, awaiting decision" },
   "payment_intent.approved": { eventType: "approved", summary: () => "Payment approved" },
   "payment_intent.rejected": { eventType: "rejected", summary: () => "Payment rejected" },
   "execution.approve": { eventType: "approved", summary: () => "Payment approved" },

@@ -36,7 +36,7 @@ function seedRules(): AutoRule[] {
         ruleId: "saas",
         proposalId: "auto-figma",
         reason: "Wrong amount",
-        note: "Figma jumped from our usual $288 to $360 - I want to check this before it keeps clearing.",
+        note: "Figma jumped from our usual $288 to $360. I want to check this before it keeps clearing.",
         reportedAtLabel: "Jun 28, 2026 · 4:12 PM ET",
         resolved: false,
       },

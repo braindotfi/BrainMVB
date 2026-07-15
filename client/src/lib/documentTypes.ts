@@ -1,5 +1,5 @@
 /* ── Generalized document / record EVIDENCE model ─────────────────────────────
-   ONE data model for every read-only piece of evidence Brain surfaces behind a
+   ONE data model for every read only piece of evidence Brain surfaces behind a
    proposal, audit record, or settled receipt - keyed off a `kind` discriminator.
    The viewer (DocumentViewerPopup) renders ALL kinds from this one shape; there
    is no per-kind type. Brain READS these documents - it never owns them; the
@@ -119,15 +119,15 @@ export function docKindLabel(kind: DocKind): string {
 export function docKindCaption(kind: DocKind): string {
   switch (kind) {
     case "invoice":
-      return "A viewer, not an AP system - Brain reads this invoice; your accounting system owns it.";
+      return "A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.";
     case "prior_payment":
-      return "A viewer, not a payments ledger - Brain reads this past payment; your bank and AP system own it.";
+      return "A viewer, not a payments ledger. Brain reads this past payment; your bank and AP system own it.";
     case "bank_transaction":
-      return "A viewer, not a banking system - Brain reads this bank-feed line; your bank owns it.";
+      return "A viewer, not a banking system. Brain reads this bank-feed line; your bank owns it.";
     case "contract":
-      return "A viewer, not a contract system - Brain reads this agreement; your CLM owns it.";
+      return "A viewer, not a contract system. Brain reads this agreement; your CLM owns it.";
     case "purchase_order":
-      return "A viewer, not a procurement system - Brain reads this PO; your ERP owns it.";
+      return "A viewer, not a procurement system. Brain reads this PO; your ERP owns it.";
   }
 }
 

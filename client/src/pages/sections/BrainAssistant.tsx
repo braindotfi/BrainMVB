@@ -264,7 +264,7 @@ function renderInlineBold(text: string, keyBase = 0): React.ReactNode {
 }
 
 const CANNED_REPLY =
-  "I'm Brain, your finance assistant. Live answers are coming soon - for now this is a preview of how I'll help.";
+  "I'm Brain, your finance assistant. Live answers are coming soon. For now this is a preview of how I'll help.";
 
 let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
@@ -311,7 +311,7 @@ const SEED_SESSIONS: ChatSession[] = [
     status: "fail",
     messages: [
       { id: nextId(), role: "user", text: "Send 0.0012 BTC to @Jane9245", dateTag: "Jun 2026" },
-      { id: nextId(), role: "assistant", text: "That transfer could not be completed - the recipient handle could not be verified." },
+      { id: nextId(), role: "assistant", text: "That transfer could not be completed. The recipient handle could not be verified." },
     ],
   },
   {
@@ -851,7 +851,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       Data unavailable
                     </span>
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
-                      - live ledger connection not ready
+                      live ledger connection not ready
                     </span>
                   </div>
                 )}

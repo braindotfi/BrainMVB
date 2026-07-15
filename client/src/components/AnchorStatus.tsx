@@ -4,8 +4,8 @@ import type { AnchorProof } from "@/lib/auditTypes";
 
 /* ── Shared AnchorStatus component ───────────────────────────────────────────────────────────
    One component, two modes, honest batched-anchoring progression.
-   - mode="status" → quiet status line for operational surfaces
-   - mode="proof"  → full merkle/tx/block block for the canonical audit record */
+   mode="status" means quiet status line for operational surfaces
+   mode="proof" means full merkle/tx/block block for the canonical audit record */
 
 export function AnchorStatus({
   anchor,

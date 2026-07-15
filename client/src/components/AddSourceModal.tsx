@@ -107,7 +107,7 @@ type Obligation = {
   due_date: string | null;
   status: string;
   provenance: string | null;
-  confidence: number | null;    // ≤0.5 - advisory
+  confidence: number | null;    // ≤0.5, advisory
 };
 
 type ObligationsResponse = { obligations: Obligation[]; next_cursor: string | null };
@@ -190,7 +190,7 @@ function ConfidencePill({ confidence }: { confidence: number | null }) {
   return (
     <span
       className="shrink-0 px-[8px] py-[2px] rounded-[22px] bg-[#4a2300] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-[#ff9500]"
-      title="Brain read this from a document - advisory only, please confirm."
+      title="Brain read this from a document. Advisory only, please confirm."
     >
       {pct !== null ? `${pct}% · needs confirmation` : "Needs confirmation"}
     </span>
@@ -302,7 +302,7 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="add-source-modal"
         >
-          {/* Header - back, title, close */}
+          {/* Header: back, title, close */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
             {stack.length > 1 && (
               <button
@@ -784,7 +784,7 @@ function BankConnect({ onDone }: { onDone: () => void }) {
 
       <InfoNotice
         title="Secure by Default"
-        body="Brain never sees or stores your bank password. We connect through Plaid - trusted by Venmo, Robinhood, and American Express. Brain only reads with your permission."
+        body="Brain never sees or stores your bank password. We connect through Plaid, trusted by Venmo, Robinhood, and American Express. Brain only reads with your permission."
       />
 
       {connections.length > 0 && (

@@ -3,8 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Security modals ───────────────────────────────────────
-   - LoginHistoryModal:  recent sign-in sessions + sign-out-others.
-   - ChangePinModal:     3-step (current → new → confirm) PIN flow.            */
+   LoginHistoryModal:  recent sign-in sessions + sign-out-others.
+   ChangePinModal:     3-step (current, new, confirm) PIN flow.            */
 
 const CloseIcon = () => (
   <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -290,7 +290,7 @@ function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: 
             ref={(el) => { refs.current[i] = el; }}
             type="password"
             inputMode="numeric"
-            autoComplete="one-time-code"
+            autoComplete="one time code"
             maxLength={1}
             value={ch}
             data-testid={`${testIdPrefix}-${i}`}

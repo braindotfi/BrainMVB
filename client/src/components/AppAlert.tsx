@@ -81,7 +81,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
     <div
       role={isError ? "alert" : "status"}
       aria-live={isError ? "assertive" : "polite"}
-      aria-label={`${alert.title} - press Escape to dismiss`}
+      aria-label={`${alert.title}. Press Escape to dismiss`}
       tabIndex={0}
       data-testid={`alert-${alert.variant}`}
       onClick={onDismiss}
@@ -114,7 +114,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
   );
 };
 
-/* Stacked viewport - bottom-right floating column, shared with the shadcn
+/* Stacked viewport: bottom-right floating column, shared with the shadcn
    toaster so info / warning / confirmation pop-ups all stack in the same
    area. New alerts slide in from the right and append to the bottom. */
 const AppAlertViewport = ({
@@ -230,7 +230,7 @@ export const useAppAlert = () => {
   }, [ctx]);
 };
 
-/* Inline link helper for use inside an alert description - matches the
+/* Inline link helper for use inside an alert description. Matches the
    Figma error variant where "Visit this page to recover your password"
    has the word "page" rendered as a clickable underlined link. */
 export const AppAlertLink = ({

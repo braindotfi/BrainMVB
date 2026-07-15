@@ -1,6 +1,6 @@
 import type { Vendor } from "./vendorTypes";
 
-/* ── Mock vendor catalogue ──────────────────────────────────────────────────
+/* Mock vendor catalogue
    Covers all four trustStatus variants:
    - trusted: Con Edison, Notion - wired to real rules via ruleIds
    - known + eligible: Apex Cleaning - Brain suggests trust
@@ -19,7 +19,7 @@ import type { Vendor } from "./vendorTypes";
    ────────────────────────────────────────────────────────────────────────── */
 
 export const MOCK_VENDORS: Vendor[] = [
-  /* ── Trusted ────────────────────────────────────────────────── */
+  /* Trusted */
   {
     id: "conedison",
     name: "Con Edison Business",
@@ -61,7 +61,7 @@ export const MOCK_VENDORS: Vendor[] = [
     eligibleForTrust: false,
   },
 
-  /* ── Known ───────────────────────────────────────────────────── */
+  /* Known */
   {
     id: "apex",
     name: "Apex Cleaning Co",
@@ -97,7 +97,7 @@ export const MOCK_VENDORS: Vendor[] = [
     ruleIds: [],
   },
 
-  /* ── New ───────────────────────────────────────────────────── */
+  /* New */
   {
     id: "northstar",
     name: "Northstar Design",
@@ -117,7 +117,7 @@ export const MOCK_VENDORS: Vendor[] = [
     ruleIds: [],
   },
 
-  /* ── Under review ───────────────────────────────────────────── */
+  /* Under review */
   {
     id: "brightfutures",
     name: "Bright Futures Studio",

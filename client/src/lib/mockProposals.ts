@@ -1,7 +1,7 @@
 import type { Proposal, AccountSummary, AutoRule } from "./proposalTypes";
 
 /* One Proposal per scenario so every UI branch is exercised by real data.
-   Brain PROPOSES only - wording for money-movers is always
+   Brain PROPOSES only. Wording for money-movers is always
    "propose / recommend / draft", never "I paid" / "I will pay". */
 
 // ponytail: ReviewPage/HomePage no longer read MOCK_PROPOSALS for the pending
@@ -29,7 +29,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "clean",
     reasonChips: [],
     rationale:
-      "This is your usual monthly electricity bill for the headquarters. The amount is in line with the last six months and the vendor, account, and due cadence all match prior payments.",
+      "Your monthly electricity bill for headquarters. The amount lines up with the last six months, and the vendor, account, and due date all match past payments.",
     facts: [
       { label: "vendor", value: "Con Edison Business" },
       { label: "trailing avg (6mo)", value: "$472" },
@@ -52,11 +52,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
     confidence: {
       score: 0.97,
       band: "high",
-      caveat: "Matches an established monthly pattern with no anomalies.",
+      caveat: "Matches an established monthly pattern.",
     },
     whatHappensNext:
-      "On approval, Brain sends this to the execution service. ACH initiates Thursday PM and settles next business day. You can cancel until 5:00 PM ET Thursday from this queue.",
-    risk: "If this is wrong, the office electricity account could go past due and incur a late reconnection fee.",
+      "Once approved, this goes to the execution service. ACH starts Thursday afternoon and settles the next business day. You can cancel until 5 PM ET Thursday.",
+    risk: "If this is a mistake, the office electricity could go past due and trigger a late reconnection fee.",
     policy: {
       id: "ap.routine.v3",
       explanation: "recurring vendor under your auto-pay threshold",
@@ -88,10 +88,10 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "warning",
     reasonChips: [
       { label: "Possible duplicate", severity: "warning" },
-      { label: "Near-identical amount", severity: "info" },
+      { label: "Nearly identical amount", severity: "info" },
     ],
     rationale:
-      "A near-identical invoice from the same vendor was paid about 10 days ago. The amounts differ by a few dollars and the invoice numbers are sequential, which can happen with re-issued bills - but it can also mean you're being asked to pay twice.",
+      "A nearly identical invoice from the same vendor was paid about 10 days ago. The amounts differ by a few dollars and the invoice numbers are sequential. That can happen with reissued bills, but it can also mean you are being asked to pay twice.",
     facts: [
       { label: "this invoice", value: "$1,450.00 · #APX-3391" },
       { label: "paid Jun 19", value: "$1,448.00 · #APX-3382", severity: "warning" },
@@ -116,11 +116,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
       score: 0.58,
       band: "medium",
       caveat:
-        "Could be a legitimate re-issue or a second billing cycle - worth a human glance before paying.",
+        "Could be a legitimate re-issue or a second billing cycle. Worth a human glance before paying.",
     },
     whatHappensNext:
-      "On approval, Brain sends this to the execution service and ACH initiates the same day. If it is a duplicate, reject it and Brain will note the vendor for closer matching next time.",
-    risk: "If this is wrong, you pay Apex Cleaning twice for the same service and have to claw back $1,450.",
+      "Once approved, this goes to the execution service and ACH starts the same day. If it is a duplicate, reject it and the vendor will be flagged for closer matching next time.",
+    risk: "If this is a mistake, you pay Apex Cleaning twice and have to recover $1,450.",
     policy: {
       id: "ap.dedupe.v2",
       explanation: "second near-identical invoice within 14 days",
@@ -128,7 +128,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     },
     actions: {
       approve: { label: "Approve anyway", sublabel: "not a duplicate" },
-      reject: { label: "Reject", sublabel: "not a duplicate - already paid" },
+      reject: { label: "Reject", sublabel: "not a duplicate, already paid" },
       postpone: { label: "Postpone", sublabel: "check with vendor" },
     },
     status: "pending",
@@ -145,7 +145,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     rowSubtitle: "Bright Futures Studio · new account flagged",
     actionStatement: "Propose paying Bright Futures Studio $3,200",
     actionMeta: "from Operating ••4821 · due Mon Jul 6",
-    executionLabel: "ACH held - not initiated",
+    executionLabel: "ACH held, not initiated",
     cancelDeadlineLabel: "nothing scheduled until you decide",
     amount: 3200,
     counterparty: "Bright Futures Studio",
@@ -157,7 +157,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       { label: "Fraud check", severity: "warning" },
     ],
     rationale:
-      "The April design retainer matches your usual contractor payment, but the destination bank account is different from every prior payment to this vendor and was first seen on the invoice today. Changed payout details are the most common vector for invoice-redirect fraud.",
+      "The April design retainer matches your usual contractor payment, but the destination bank account differs from every prior payment to this vendor and showed up for the first time today. Changed payout details are the most common way invoice fraud happens.",
     facts: [
       { label: "vendor", value: "Bright Futures Studio" },
       { label: "prior account", value: "Wells Fargo ••6610" },
@@ -188,11 +188,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
       score: 0.34,
       band: "low",
       caveat:
-        "Brain cannot confirm the new account is genuine - verify with the vendor through a known contact before paying.",
+        "We cannot confirm the new account is genuine. Verify with the vendor through a known contact before paying.",
     },
     whatHappensNext:
-      "Nothing is scheduled. If you verify first, Brain drafts a confirmation to the vendor's on-file contact and parks the payment until you resolve it - no funds move. If you approve, the execution service pays the NEW account.",
-    risk: "If this is wrong, $3,200 goes to a fraudster's account and is effectively unrecoverable.",
+      "Nothing is scheduled yet. If you verify first, a confirmation draft goes to the vendor's on-file contact and the payment stays parked until you resolve it. No funds move. If you approve, the execution service pays the new account.",
+    risk: "If this is a mistake, $3,200 goes to a fraudster's account and is basically unrecoverable.",
     policy: {
       id: "ap.fraud.v2",
       explanation: "payout bank details changed since last payment",
@@ -204,7 +204,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       postpone: { label: "Postpone", sublabel: "decide tomorrow" },
       verifyFirst: {
         label: "Verify with vendor first",
-        sublabel: "draft a confirmation - no funds move",
+        sublabel: "draft a confirmation. No funds move",
       },
     },
     status: "pending",
@@ -231,7 +231,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       { label: "+38% vs trailing avg", severity: "warning" },
     ],
     rationale:
-      "This month's Comcast Business bill is 38% above the trailing 12-month average. It may be a one-time equipment or overage charge, or a billing error. The vendor and account are unchanged.",
+      "This month's Comcast Business bill is 38% above the trailing 12 month average. It may be a one time equipment or overage charge, or a billing error. The vendor and account are the same as always.",
     facts: [
       { label: "trailing avg (12mo)", value: "$890" },
       { label: "this invoice", value: "$1,228", severity: "warning" },
@@ -253,11 +253,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
     confidence: {
       score: 0.71,
       band: "medium",
-      caveat: "The extra charge looks like a one-time equipment line, but Brain can't confirm it was authorized.",
+      caveat: "The extra charge looks like a one time equipment line, but we can't confirm it was authorized.",
     },
     whatHappensNext:
-      "On approval, Brain sends this to the execution service and ACH initiates the same day. If the overage is unexpected, reject it and Brain will draft a billing dispute for your review.",
-    risk: "If this is wrong, you overpay $338 on a billing error that's tedious to recover.",
+      "Once approved, this goes to the execution service and ACH starts the same day. If the overage is unexpected, reject it and a billing dispute will be drafted for your review.",
+    risk: "If this is a mistake, you overpay $338 on a billing error that is a pain to recover.",
     policy: {
       id: "ap.variance.v1",
       explanation: "amount exceeds 25% above trailing average",
@@ -289,7 +289,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "info",
     reasonChips: [{ label: "Idle cash above target", severity: "info" }],
     rationale:
-      "Your operating balance is well above the 3-month buffer you set, even after covering everything currently pending. Sweeping the excess into short-term treasuries earns yield while leaving a comfortable cushion. The account is not drained.",
+      "Your operating balance sits well above the 3-month buffer you set, even after covering everything pending. Sweeping the excess into short-term treasuries earns yield while leaving a comfortable cushion. The account is not drained.",
     facts: [
       { label: "total cash", value: "$192,000" },
       { label: "3-month buffer", value: "$72,000" },
@@ -314,8 +314,8 @@ export const MOCK_PROPOSALS: Proposal[] = [
       caveat: "Forecast assumes no large unplanned outflow in the next 90 days.",
     },
     whatHappensNext:
-      "On approval, Brain sends the sweep to the execution service; the transfer initiates next business day. You can cancel until 4:00 PM ET. Funds remain in your name at Mercury Treasury.",
-    risk: "If this is wrong and a large bill lands unexpectedly, you may need to pull funds back from treasury, which can take 1–2 business days.",
+      "Once approved, the sweep goes to the execution service and the transfer starts the next business day. You can cancel until 4 PM ET. Funds stay in your name at Mercury Treasury.",
+    risk: "If this is a mistake and a large bill lands unexpectedly, you may need to pull funds back from treasury, which can take one to two business days.",
     policy: {
       id: "cash.sweep.v4",
       explanation: "discretionary cash movement always needs sign-off",
@@ -356,10 +356,10 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "warning",
     reasonChips: [
       { label: "18 days overdue", severity: "warning" },
-      { label: "Reminder only - won't send", severity: "info" },
+      { label: "Reminder only, won't send", severity: "info" },
     ],
     rationale:
-      "Northstar Design's invoice passed net-30 eighteen days ago with no payment and no reply to the last statement. A gentle reminder usually recovers these without escalation. This is money owed TO you - nothing leaves your account.",
+      "Northstar Design's invoice passed net-30 eighteen days ago with no payment and no reply to the last statement. A gentle reminder usually recovers these without escalation. This is money owed to you. Nothing leaves your account.",
     facts: [
       { label: "invoice", value: "#INV-2026-041 · $6,200" },
       { label: "terms", value: "Net 30" },
@@ -381,11 +381,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
     confidence: {
       score: 0.8,
       band: "high",
-      caveat: "A first reminder typically resolves overdue receivables of this size.",
+      caveat: "A first reminder usually resolves overdue receivables of this size.",
     },
     whatHappensNext:
-      "Brain drafts a reminder for your review and does not send it. You read it, edit if you like, and choose whether to send - no message goes out automatically.",
-    risk: "If this is wrong (e.g. payment already arrived), the reminder could annoy a paying customer - which is why it stays a draft until you send it.",
+      "A reminder is drafted for your review and not sent automatically. You read it, edit if you like, and choose whether to send. No message goes out automatically.",
+    risk: "If this is a mistake (for example, payment already arrived), the reminder could annoy a paying customer. That is why it stays a draft until you send it.",
     policy: {
       id: "ar.dunning.v1",
       explanation: "outbound customer messages always need review",
@@ -417,10 +417,10 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "warning",
     reasonChips: [
       { label: "Out of tolerance", severity: "warning" },
-      { label: "Draft entry - won't post", severity: "info" },
+      { label: "Draft entry, won't post", severity: "info" },
     ],
     rationale:
-      "A bank transaction of $1,024.00 doesn't match the ledger entry of $1,208.00 recorded against the same vendor, a $184.00 gap that's outside your $5 close tolerance. It looks like a partial refund that wasn't booked. Brain proposes a correcting entry for your review.",
+      "A bank transaction of $1,024.00 does not match the ledger entry of $1,208.00 recorded against the same vendor, a $184.00 gap outside your $5 close tolerance. It looks like a partial refund that was not booked. A correcting entry is proposed for your review.",
     facts: [
       { label: "bank line", value: "$1,024.00 · Jun 21" },
       { label: "ledger entry", value: "$1,208.00 · Jun 20" },
@@ -443,11 +443,11 @@ export const MOCK_PROPOSALS: Proposal[] = [
     confidence: {
       score: 0.66,
       band: "medium",
-      caveat: "The $184 gap matches a likely partial refund, but the original credit memo isn't attached.",
+      caveat: "The $184 gap matches a likely partial refund, but the original credit memo is not attached.",
     },
     whatHappensNext:
-      "Brain drafts the correcting journal entry for your review and does not post it. You approve it into the close, or reject it if the original figure was right.",
-    risk: "If this is wrong, posting an incorrect adjustment would misstate the June close and have to be reversed.",
+      "The correcting journal entry is drafted for your review and not posted automatically. You approve it into the close, or reject it if the original figure was right.",
+    risk: "If this is a mistake, posting an incorrect adjustment would misstate the June close and have to be reversed.",
     policy: {
       id: "close.recon.v2",
       explanation: "ledger adjustments always need sign-off",
@@ -479,7 +479,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "clean",
     reasonChips: [],
     rationale:
-      "Your monthly cloud infrastructure bill, in line with the trailing average and committed-use pricing. Vendor, account, and cadence all match prior payments. It clears for batch approval with the rest of your routine AP.",
+      "Your monthly cloud infrastructure bill, in line with the trailing average and committed-use pricing. Vendor, account, and cadence all match past payments. It clears for batch approval with the rest of your routine AP.",
     facts: [
       { label: "vendor", value: "Amazon Web Services" },
       { label: "trailing avg (6mo)", value: "$4,090" },
@@ -505,8 +505,8 @@ export const MOCK_PROPOSALS: Proposal[] = [
       caveat: "Routine cloud spend within your committed-use envelope.",
     },
     whatHappensNext:
-      "On approval, Brain sends this to the execution service and ACH initiates Monday AM. You can cancel until 9:00 AM ET Monday, or batch-approve it with your other routine AP.",
-    risk: "If this is wrong, an unpaid AWS bill could throttle or suspend production infrastructure.",
+      "Once approved, this goes to the execution service and ACH starts Monday morning. You can cancel until 9 AM ET Monday, or batch-approve it with the rest of your routine AP.",
+    risk: "If this is a mistake, an unpaid AWS bill could throttle or suspend production infrastructure.",
     policy: {
       id: "ap.routine.v3",
       explanation: "recurring vendor above your batch threshold",
@@ -519,7 +519,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     },
     status: "pending",
     batchApprovable: true,
-    policyThreshold: "Auto-clears under $2,500 · this is above your batch threshold",
+    policyThreshold: "Clears automatically under $2,500 · this is above your batch threshold",
   },
 ];
 
@@ -541,7 +541,7 @@ export const ACCOUNT_SUMMARY: AccountSummary = {
 export const UTILITY_RULE: AutoRule = {
   id: "utility",
   kind: "automation",
-  name: "Auto-clear utility bills",
+  name: "Clear utility bills automatically",
   summary: "Trusted vendors · utilities · under $1,000 · no bank-detail change",
   createdLabel: "You created this Jun 12 · cleared 7 payments since",
   policyId: "policy/ap.tolerance.v3",
@@ -556,7 +556,7 @@ export const UTILITY_RULE: AutoRule = {
 export const SAAS_RULE: AutoRule = {
   id: "saas",
   kind: "automation",
-  name: "Auto-clear software subscriptions",
+  name: "Clear software subscriptions automatically",
   summary: "Known SaaS vendors · recurring · under $500 · matched prior charge",
   createdLabel: "You created this May 3 · cleared 19 payments since",
   policyId: "policy/ap.saas.v2",
@@ -571,7 +571,7 @@ export const SAAS_RULE: AutoRule = {
 export const LEASE_RULE: AutoRule = {
   id: "lease",
   kind: "automation",
-  name: "Auto-clear fixed rent and lease",
+  name: "Clear fixed rent and lease automatically",
   summary: "Contracted amount · same payee · same account · monthly cadence",
   createdLabel: "You created this Feb 1 · cleared 5 payments since",
   policyId: "policy/ap.fixed.v1",
@@ -586,7 +586,7 @@ export const LEASE_RULE: AutoRule = {
 export const PAYROLL_RULE: AutoRule = {
   id: "payroll",
   kind: "automation",
-  name: "Auto-clear payroll and benefits",
+  name: "Clear payroll and benefits automatically",
   summary: "Approved provider · scheduled run · matched headcount · under cap",
   createdLabel: "You created this Jan 8 · cleared 12 payments since",
   policyId: "policy/ap.payroll.v4",
@@ -601,7 +601,7 @@ export const PAYROLL_RULE: AutoRule = {
 export const CASH_SWEEP_RULE: AutoRule = {
   id: "cash-sweep",
   kind: "automation",
-  name: "Auto-sweep idle cash to treasury",
+  name: "Sweep idle cash to treasury automatically",
   summary: "Idle cash above 3-month buffer · under $50,000 · next-day settle",
   createdLabel: "You created this Mar 15 · swept 4 times since",
   policyId: "policy/cash.sweep.v4",
@@ -616,7 +616,7 @@ export const CASH_SWEEP_RULE: AutoRule = {
 export const COLLECTIONS_RULE: AutoRule = {
   id: "collections-match",
   kind: "automation",
-  name: "Auto-match deposits to invoices",
+  name: "Match deposits to invoices automatically",
   summary: "Known customer · matched amount · open invoice · no dispute flag",
   createdLabel: "You created this Apr 1 · matched 8 deposits since",
   policyId: "policy/ar.match.v2",
@@ -631,7 +631,7 @@ export const COLLECTIONS_RULE: AutoRule = {
 export const CLOSE_RULE: AutoRule = {
   id: "close-recon",
   kind: "automation",
-  name: "Auto-reconcile matched bank/ledger pairs",
+  name: "Reconcile matched bank/ledger pairs automatically",
   summary: "Same vendor · same date · within $1 tolerance · no manual flag",
   createdLabel: "You created this May 10 · reconciled 23 lines since",
   policyId: "policy/close.recon.v2",
@@ -676,8 +676,8 @@ function autoHandled(p: {
     reasonChips: [],
     rationale: p.rationale,
     evidence: [],
-    confidence: { score: 0.99, band: "high", caveat: "Matched your standing rule with no anomalies." },
-    whatHappensNext: "Already settled - nothing further to do.",
+    confidence: { score: 0.99, band: "high", caveat: "Matched your standing rule." },
+    whatHappensNext: "Already settled. Nothing further to do.",
     risk: "",
     policy: {
       id: p.rule!.policyId,
@@ -753,7 +753,7 @@ function settledApproved(p: {
     facts: p.facts,
     evidence: [],
     confidence: { score: 1, band: "high", caveat: "You reviewed and approved this before it settled." },
-    whatHappensNext: "Already settled - nothing further to do.",
+    whatHappensNext: "Already settled. Nothing further to do.",
     risk: "",
     policy: {
       id: "manual.human_approval",
@@ -791,7 +791,7 @@ export const ADOBE_SETTLED: Proposal = autoHandled({
   settledMeta: "on card ••4821 · settled Jul 5, 9:14 AM ET · you set a rule that allows this",
   rowSubtitle: "Adobe · settled 9:14 AM",
   rationale:
-    "Your recurring Creative Cloud team subscription. Vendor and charge matched the prior month exactly, so your software-subscriptions rule cleared it without asking.",
+    "Your recurring Creative Cloud team subscription. Vendor and charge matched the prior month exactly, so your software-subscriptions rule cleared it automatically.",
   clearedBecause: [
     { label: "vendor", value: "Adobe · known SaaS" },
     { label: "this charge", value: "$540" },
@@ -814,7 +814,7 @@ export const MERIDIAN_RECEIVABLE_SETTLED: Proposal = autoHandled({
   settledMeta: "Wiring Transfer ••9921 · settled Jul 6, 10:45 AM ET · you set a rule that allows this",
   rowSubtitle: "Meridian Partners · matched 10:45 AM",
   rationale:
-    "A deposit from a known customer matched an open invoice amount, date, and reference number exactly. Brain applied it without asking.",
+    "A deposit from a known customer matched an open invoice amount, date, and reference number exactly. It was applied automatically.",
   clearedBecause: [
     { label: "customer", value: "Meridian Partners · known" },
     { label: "deposit", value: "$8,200" },
@@ -837,7 +837,7 @@ export const GUSTO_RECON_SETTLED: Proposal = autoHandled({
   settledMeta: "ACH ••4821 · settled Jul 6, 2:10 PM ET · you set a rule that allows this",
   rowSubtitle: "Gusto · reconciled 2:10 PM",
   rationale:
-    "The Gusto payroll ACH on Jul 6 matched the ledger entry to the penny and within the same day. Brain marked it reconciled without asking.",
+    "The Gusto payroll ACH on Jul 6 matched the ledger entry to the penny and within the same day. It was marked reconciled automatically.",
   clearedBecause: [
     { label: "vendor", value: "Gusto · approved payroll provider" },
     { label: "bank line", value: "$4,200.00 · Jul 6" },
@@ -876,14 +876,14 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
   id: "settled-payroll",
   auditId: "AUD-5J7Y",
   agent: "invoice",
-  title: "Payroll run - J. Smith (Engineering)",
+  title: "Payroll run, J. Smith (Engineering)",
   counterparty: "J. Smith (Engineering)",
   amount: 5600,
   pastTenseStatement: "Ran payroll for J. Smith (Engineering)",
   settledMeta: "ACH to Wells Fargo · you approved Jul 2, 9:55 AM · settled Jul 2, 10:02 AM ET",
   rowSubtitle: "J. Smith (Engineering) · settled 10:02 AM",
   rationale:
-    "Scheduled engineering payroll run. It exceeded your auto-approval threshold, so Brain escalated it for your sign-off before the execution service sent the ACH.",
+    "Scheduled engineering payroll run. It exceeded your auto-approval threshold, so it was escalated for your sign-off before the execution service sent the ACH.",
   facts: [
     { label: "employee", value: "J. Smith (Engineering)" },
     { label: "amount", value: "$5,600" },
@@ -892,7 +892,7 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
   ],
   timeline: [
     { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
-    { label: "Escalated to human - above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
+    { label: "Escalated to human, above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
     { label: "You approved", timestamp: "Jul 2, 9:55 AM ET", done: true },
     { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "Brain never held the funds", done: true },
   ],
@@ -909,7 +909,7 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
   settledMeta: "from Operating ••4821 · you approved Jul 4, 6:27 PM · settled Jul 4, 6:28 PM ET",
   rowSubtitle: "AAVE v3 · settled 6:28 PM",
   rationale:
-    "Your operating balance sat above the idle-cash threshold. Brain proposed moving the excess into AAVE v3 to earn yield; because it was above your sweep limit, it asked you first.",
+    "Your operating balance sat above the idle-cash threshold. The excess was proposed for AAVE v3 to earn yield. Because it was above your sweep limit, you were asked first.",
   facts: [
     { label: "protocol", value: "AAVE v3" },
     { label: "amount", value: "$3,500" },
@@ -918,7 +918,7 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
   ],
   timeline: [
     { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", done: true },
-    { label: "Escalated to human - above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
+    { label: "Escalated to human, above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
     { label: "You approved yield move", timestamp: "Jul 4, 6:27 PM ET", done: true },
     { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
   ],
@@ -936,14 +936,14 @@ export const AWS_SETTLED: Proposal = {
     id: "settled-aws",
     auditId: "AUD-3308FE",
     agent: "invoice",
-    title: "Amazon Web Services - monthly cloud bill",
+    title: "Amazon Web Services, monthly cloud bill",
     counterparty: "Amazon Web Services",
     amount: 4150,
     pastTenseStatement: "Paid Amazon Web Services $4,150",
     settledMeta: "from Operating ••4821 · you approved Jul 7, 8:55 AM · settled Jul 7, 9:02 AM ET",
     rowSubtitle: "Amazon Web Services · settled 9:02 AM",
     rationale:
-      "Your monthly cloud infrastructure bill. It exceeded the business-surface batch auto-approval limit, so Brain escalated it for your sign-off before the execution service sent the ACH.",
+      "Your monthly cloud infrastructure bill. It exceeded the business-surface batch auto-approval limit, so it was escalated for your sign-off before the execution service sent the ACH.",
     facts: [
       { label: "vendor", value: "Amazon Web Services" },
       { label: "amount", value: "$4,150" },
@@ -952,7 +952,7 @@ export const AWS_SETTLED: Proposal = {
     ],
     timeline: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", done: true },
-      { label: "Escalated to human - above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
+      { label: "Escalated to human, above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
       { label: "You approved", timestamp: "Jul 7, 8:55 AM ET", done: true },
       { label: "Execution service settled the ACH", timestamp: "Jul 7, 9:02 AM ET", note: "Brain never held the funds", done: true },
     ],
@@ -976,7 +976,7 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
   rowSubtitle: "Notion Team · higher seat count flagged",
   actionStatement: "Propose paying Notion Team $240",
   actionMeta: "on card ••4821 · renewal due Mon Jun 30",
-  executionLabel: "charge held - not initiated",
+  executionLabel: "charge held, not initiated",
   cancelDeadlineLabel: "nothing scheduled until you decide",
   amount: 240,
   counterparty: "Notion Team",
@@ -987,7 +987,7 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
     { label: "Above monthly threshold", severity: "warning" },
   ],
   rationale:
-    "Your Notion workspace renewed with more seats than last cycle, pushing the monthly charge above the threshold Brain holds new or changed subscriptions at. The vendor and card on file are unchanged - only the seat count, and therefore the amount, moved.",
+    "Your Notion workspace renewed with more seats than last cycle, pushing the monthly charge above the threshold for new or changed subscriptions. The vendor and card on file are unchanged. Only the seat count, and therefore the amount, changed.",
   facts: [
     { label: "vendor", value: "Notion Team" },
     { label: "prior charge", value: "$180 · 12 seats" },
@@ -1011,11 +1011,11 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
     score: 0.72,
     band: "medium",
     caveat:
-      "The increase looks like normal team growth, but the seat jump crossed your review threshold - confirm the new seats are intended.",
+      "The increase looks like normal team growth, but the seat jump crossed your review threshold. Confirm the new seats are intended.",
   },
   whatHappensNext:
-    "Nothing is scheduled. If you approve, the execution service charges the card for the new seat count. If you reject, the renewal is held and Brain follows up with the workspace owner about the added seats.",
-  risk: "If this is wrong, you pay every month for seats nobody uses - a recurring overcharge until someone notices.",
+    "Nothing is scheduled yet. If you approve, the execution service charges the card for the new seat count. If you reject, the renewal is held and the workspace owner is followed up with about the added seats.",
+  risk: "If this is a mistake, you pay every month for seats nobody uses. A recurring overcharge until someone notices.",
   policy: {
     id: "ap.threshold.v2",
     explanation: "recurring charge rose above the new/changed-subscription threshold",

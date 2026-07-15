@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AutoRule } from "./proposalTypes";
 
-/* ── Live brain-core policy → read-only rule cards ────────────────────────────
+/* ── Live brain-core policy → read only rule cards ────────────────────────────
    Surfaces the tenant's ACTUAL signed policy document on the Rules page via
    the EXISTING `GET /api/brain/approval-policy` route (server/brain/proxy.ts,
    backed by server/brain/client.ts's `getApprovalPolicyFacts`) - no new BFF
@@ -11,7 +11,7 @@ import type { AutoRule } from "./proposalTypes";
    to also include `version`, `quorumRequired`, and the full `rules[]` array
    (server/brain/client.ts's `ApprovalPolicyFacts` + `PolicyContentRule`, now
    exported) so the Rules page can render every clause, not just one number.
-   Still a read-only GET on the member token - no new scope, no new write path,
+   Still a read only GET on the member token - no new scope, no new write path,
    same shape `bff-invariants.test.ts` already covers (that suite never calls
    this route, so it stays green, but per CLAUDE.md this touch to
    server/brain/* must be flagged for the Replit-side test run.
@@ -34,7 +34,7 @@ import type { AutoRule } from "./proposalTypes";
    this mapper as a plain-English rendering of the DSL fields (applies_to +
    when + execute/require), never copied from mock data. Every mapped card is
    `locked: true` (no pause/resume - Phase 2b, blocked on policy:sign scope) and
-   `kind: "always_on"` so it renders in the read-only style, never mixed into
+   `kind: "always_on"` so it renders in the read only style, never mixed into
    the app-local Automations/Guardrails tabs. */
 
 export interface PolicyContentRule {
@@ -88,7 +88,7 @@ export function describeWhen(when: Record<string, unknown>): string[] {
   return parts;
 }
 
-/** Map one brain-core policy rule to the app's read-only rule-card shape.
+/** Map one brain-core policy rule to the app's read only rule-card shape.
  *  Always `locked: true` - Phase 2a is display-only; mutation needs the
  *  policy-sign scope the token lacks (Phase 2b). */
 export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {

@@ -105,7 +105,7 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[semantic-consistency] OK - every auto_approved record's vendor + rule category is coherent.",
+      "[semantic-consistency] OK. Every auto_approved record's vendor + rule category is coherent.",
     );
   }
 
@@ -151,7 +151,7 @@ export function checkRuleReferences(): RuleRef[] {
     );
   } else {
     console.info(
-      "[rule-consistency] OK - every rule reference in mock data resolves.",
+      "[rule-consistency] OK. Every rule reference in mock data resolves.",
     );
   }
 
@@ -217,7 +217,7 @@ export function checkVendorReferences(): EntityRef[] {
     );
   } else {
     console.info(
-      "[vendor-consistency] OK - every vendor reference (linked refs, invoice.vendorId, vendor.ruleIds) resolves.",
+      "[vendor-consistency] OK. Every vendor reference (linked refs, invoice.vendorId, vendor.ruleIds) resolves.",
     );
   }
 
@@ -266,7 +266,7 @@ export function checkDocumentReferences(): EntityRef[] {
     );
   } else {
     console.info(
-      "[document-consistency] OK - every document reference (linked evidence, proposal.invoiceId) resolves.",
+      "[document-consistency] OK. Every document reference (linked evidence, proposal.invoiceId) resolves.",
     );
   }
 
@@ -308,7 +308,7 @@ export function checkProposalReferences(): EntityRef[] {
     );
   } else {
     console.info(
-      "[proposal-consistency] OK - every proposal reference in mock data resolves.",
+      "[proposal-consistency] OK. Every proposal reference in mock data resolves.",
     );
   }
 
@@ -550,7 +550,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[coherence] OK - linked document amounts/vendors/status match their records, compare pairs are coherent, and no vendor contradicts its paid documents.",
+      "[coherence] OK. Linked document amounts/vendors/status match their records, compare pairs are coherent, and no vendor contradicts its paid documents.",
     );
   }
 
@@ -590,7 +590,7 @@ export function checkAnchorUiCoherence(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[anchor-ui-consistency] OK - no pending_next_batch record advertises hashes or a verify link.",
+      "[anchor-ui-consistency] OK. No pending_next_batch record advertises hashes or a verify link.",
     );
   }
 
@@ -644,7 +644,7 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
 
       issues.push({
         source: `audit ${rec.id}`,
-        message: `${m[1]} Agent proposed/detected "${m[2]}" - that action is in the ${matchedDomains.join("/")} domain, not the ${agent} agent's. An agent must not act outside its catalog domain.`,
+        message: `${m[1]} Agent proposed/detected "${m[2]}". That action is in the ${matchedDomains.join("/")} domain, not the ${agent} agent's. An agent must not act outside its catalog domain.`,
       });
     }
   }
@@ -656,7 +656,7 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[agent-domain-consistency] OK - every audit record's proposing agent stays inside its catalog domain.",
+      "[agent-domain-consistency] OK. Every audit record's proposing agent stays inside its catalog domain.",
     );
   }
 
@@ -669,7 +669,7 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
    vendor/employee); if those resolve to the same identity, the record fails a
    basic four-eyes control. Gating to PAYEE rows reuses the SHARED
    `linkedRelationship` predicate (payment event type + numeric amount + receiving
-   kind), so this guard can never drift from what the UI labels a payee - non-payment
+   kind), so this guard can never drift from what the UI labels a payee. Non-payment
    governance rows, treasury destinations (protocol/ledger) and evidence
    (rule/invoice/proposal) are all skipped. Compares actor identity tokens (raw +
    resolved email/id) against the payee's label/refId (+ resolved vendor name).
@@ -716,7 +716,7 @@ export function checkActorPayeeSegregation(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[actor-payee-segregation] OK - no audit record has the same party as both approver and payee.",
+      "[actor-payee-segregation] OK. No audit record has the same party as both approver and payee.",
     );
   }
 
@@ -764,7 +764,7 @@ export function checkMemberActorCoherence(): SemanticIssue[] {
     );
   } else {
     console.info(
-      "[member-actor-coherence] OK - actor registry ids/emails are unambiguous for member linking.",
+      "[member-actor-coherence] OK. Actor registry ids/emails are unambiguous for member linking.",
     );
   }
 

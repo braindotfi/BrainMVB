@@ -23,7 +23,7 @@ export function WalletButton() {
         "Brain Finance wants you to sign in with your Ethereum account:",
         address,
         "",
-        "Sign in to Brain Finance - AI Agent Marketplace on Base.",
+        "Sign in to Brain Finance, AI Agent Marketplace on Base.",
         "",
         `URI: ${window.location.origin}`,
         "Version: 1",

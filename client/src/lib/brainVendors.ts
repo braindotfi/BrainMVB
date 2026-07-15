@@ -83,7 +83,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
               kind: "reported_problem",
               label:
                 cp.risk_level === "sanctioned"
-                  ? "Sanctioned counterparty - payments blocked by policy"
+                  ? "Sanctioned counterparty. Payments blocked by policy"
                   : "High risk counterparty",
               raisedAtLabel: "brain-core risk assessment",
             },

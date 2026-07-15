@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { DocumentRecord } from "./documentTypes";
 
 /* ── Live brain-core invoice → evidence-viewer DocumentRecord ──────────────────
-   The read-only document viewer renders an invoice-kind DocumentRecord. This is the
+   The read only document viewer renders an invoice-kind DocumentRecord. This is the
    ONE place a live brain-core invoice (from `/ledger/invoices`) becomes that record,
    reused by BillDetailPopup (the Bills inbox) and ProposalDetail (a live proposal's
    source invoice). Honest: only fields brain-core's Invoice actually carries. It has
@@ -45,7 +45,7 @@ export function toBrainInvoiceDocument(invoice: LedgerInvoice, vendorName: strin
   return {
     id: invoice.invoice_number,
     kind: "invoice",
-    title: `${vendorName} - invoice`,
+    title: `${vendorName} invoice`,
     counterparty: vendorName,
     amount: Number(invoice.amount_due),
     dateLabel: `Due ${fmtInvoiceDate(invoice.due_date)}`,

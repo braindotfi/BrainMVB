@@ -1,6 +1,6 @@
 import type { DocumentRecord } from "./documentTypes";
 
-/* ── Seeded evidence documents ────────────────────────────────────────────────
+/* Seeded evidence documents
    Every record here is tied to an EXISTING demo item (a proposal, audit record,
    vendor, or settled receipt) - no invented ids. This is the canonical catalogue
    the documentsStore serves and the viewer renders from. Coherence with the
@@ -8,12 +8,12 @@ import type { DocumentRecord } from "./documentTypes";
    by ruleConsistencyCheck. */
 
 export const MOCK_DOCUMENTS: DocumentRecord[] = [
-  /* ── invoice: AWS June usage (executed prior cycle) ─────────────────────────
+  /* invoice: AWS June usage (executed prior cycle)
      Backs the settled twin `settled-aws` (AUD-3308FE). Vendor "aws", paid. */
   {
     id: "AWS-2026-07",
     kind: "invoice",
-    title: "AWS - June usage",
+    title: "AWS, June usage",
     vendorId: "aws",
     vendorName: "Amazon Web Services",
     amount: 4150,
@@ -38,12 +38,12 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     documentHref: "#",
   },
 
-  /* ── invoice: Con Edison electricity (auto-cleared) ─────────────────────────
+  /* invoice: Con Edison electricity (auto-cleared)
      Backs the auto-handled receipt `auto-conedison` (AUD-3F9P). Vendor paid. */
   {
     id: "CE-2026-0631",
     kind: "invoice",
-    title: "Con Edison - electricity",
+    title: "Con Edison, electricity",
     vendorId: "conedison",
     vendorName: "Con Edison Business",
     amount: 486,
@@ -67,13 +67,13 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     documentHref: "#",
   },
 
-  /* ── invoice: Bright Futures retainer (bank details CHANGED, held) ──────────
+  /* invoice: Bright Futures retainer (bank details CHANGED, held)
      Backs the pending `prop-bankchange` (AUD-7K2M, flagged). New payout account
      ••2087 vs the established ••6610 - compare against the prior payment below. */
   {
     id: "BFS-0426",
     kind: "invoice",
-    title: "Bright Futures - April design retainer",
+    title: "Bright Futures, April design retainer",
     vendorId: "brightfutures",
     vendorName: "Bright Futures Studio",
     amount: 3200,
@@ -94,13 +94,13 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     documentHref: "#",
   },
 
-  /* ── prior_payment: established Bright Futures payment on the OLD account ────
+  /* prior_payment: established Bright Futures payment on the OLD account
      The historical twin BFS-0426 is compared against - same vendor, same amount,
      DIFFERENT payout account (••6610). Not tied to a proposal (it's history). */
   {
     id: "BFS-PRIOR-0326",
     kind: "prior_payment",
-    title: "Bright Futures - March retainer (paid)",
+    title: "Bright Futures, March retainer (paid)",
     vendorId: "brightfutures",
     vendorName: "Bright Futures Studio",
     amount: 3200,
@@ -122,7 +122,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
   {
     id: "APX-3391",
     kind: "invoice",
-    title: "Apex Cleaning - July service",
+    title: "Apex Cleaning, July service",
     vendorId: "apex",
     vendorName: "Apex Cleaning Co",
     amount: 1450,
@@ -148,7 +148,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
   {
     id: "APX-3382",
     kind: "prior_payment",
-    title: "Apex Cleaning - June service (paid)",
+    title: "Apex Cleaning, June service (paid)",
     vendorId: "apex",
     vendorName: "Apex Cleaning Co",
     amount: 1448,

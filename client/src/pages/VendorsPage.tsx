@@ -57,9 +57,9 @@ function VendorRow({
 
 /* ── Add vendor dialog ────────────────────────────────────────────────────────
    Manually creates a counterparty in live brain-core (POST /api/brain/ledger/counterparties,
-   MEMBER token, identity fields only - mirrors AddMemberDialog in TeamSection.tsx).
+   MEMBER token, identity fields only. Mirrors AddMemberDialog in TeamSection.tsx).
    Honesty: this runs on the app's ephemeral per-session demo tenant, so we don't
-   imply permanence - copy stays neutral ("Add vendor"), no persistence claims. */
+   imply permanence. Copy stays neutral ("Add vendor"), no persistence claims. */
 function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -208,7 +208,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
                 <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
                   <Info className="relative shrink-0 size-[16px] text-[#6c779d]" />
                   <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
-                    Added to your current Brain session - this demo tenant is temporary.
+                    Added to your current Brain session. This demo tenant is temporary.
                   </p>
                 </div>
               </div>
@@ -260,7 +260,7 @@ export function VendorsPage() {
     setActiveVendor(null);
     // If we arrived here via a deep-link that carried a `?from=` return target
     // (e.g. from the Audit Log record popup), go back there so that surface
-    // re-opens - mirroring the stacked invoice-viewer experience. Otherwise
+    // re-opens, mirroring the stacked invoice-viewer experience. Otherwise
     // just drop the ?vendor= param.
     const params = new URLSearchParams(search);
     const from = params.get("from");
@@ -305,14 +305,14 @@ export function VendorsPage() {
   const pageVendor = (dir: 1 | -1) => {
     if (vendorPagerDisabled) return;
     const next = tabVendors[(vendorIdx + dir + tabVendors.length) % tabVendors.length];
-    // Preserve any existing params (e.g. `from` return-to-audit target) - only
+    // Preserve any existing params (e.g. `from` return-to-audit target). Only
     // swap the vendor, so closing after paging still returns to the origin.
     const params = new URLSearchParams(search);
     params.set("vendor", next.id);
     navigate(`/vendors?${params.toString()}`, { replace: true });
   };
 
-  // tab counts removed - shown in table header instead
+  // tab counts removed. Shown in table header instead
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
