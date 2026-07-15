@@ -402,7 +402,12 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     if (!process.env.ANTHROPIC_API_KEY) {
       if (grounding) {
-        return res.json({ reply: grounding, sources, grounded: true });
+        return res.json({
+          reply: `Assistant is offline (no API key configured) — here is your live data snapshot instead:\n\n${grounding}`,
+          sources,
+          grounded: true,
+          assistantOffline: true,
+        });
       }
       return res.status(503).json({
         error: "assistant_unconfigured",
