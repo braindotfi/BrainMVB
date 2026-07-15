@@ -1,0 +1,45 @@
+You are implementing the Tier 2 platform fixes for the BrainMVB reference client (the
+Next.js/React + server app). The findings are recorded in the brain-core repo's
+BRAIN_REVIEW.md under "## Tier 2: Workflows + Platform" (findings T2-27..T2-31); the
+paths below are in BrainMVB. Follow BrainMVB's own CLAUDE.md conventions and copy rules
+(no em dashes, no ampersands outside brand names, no emojis).
+
+- Branch off the default branch: fix/tier-2-platform. TDD where the app has tests;
+  otherwise add coverage for the auth change. Run the app's typecheck/lint/build.
+- Fail closed; do not weaken auth.
+
+P1 (HIGH) - T2-27: the Plaid/Stripe integration routes in server/routes.ts
+   (/api/integrations/connections, /stripe/connect, /plaid/status|connections|
+   link-token|exchange|disconnect, and /api/integrations/:toolId/disconnect at
+   lines ~550-696,941) have NO auth and scope all data to a hardcoded
+   `const DEMO_USER = "demo-user"`. Add `requireAuth` to every one of these routes and
+   scope by `req.session.userId` (as the document/rules routes already do). Remove the
+   DEMO_USER constant. Test that an unauthenticated request is rejected and that one
+   user cannot see or disconnect another user's connections.
+
+P2 (HIGH) - T2-28: client/src/pages/ActivityPage.tsx (~lines 286-300) unconditionally
+   injects fabricated "settled payment" rows (ADOBE_SETTLED, COMCAST_SETTLED,
+   MERIDIAN_RECEIVABLE_SETTLED, GUSTO_RECON_SETTLED from mockProposals.ts) into the live
+   "Brain Did" feed. Gate them behind an explicit demo-mode check (e.g. tenancy mode !=
+   production) AND render a visible "Example" badge, or remove them. A real tenant must
+   never see fabricated payments as real.
+
+P3 (MEDIUM) - T2-29 / T2-30: stop silently backfilling empty live tabs with fake data.
+   client/src/pages/AuditLogPage.tsx (~121-136) falls back to DEMO_AUDIT_RECORDS and
+   client/src/pages/VendorsPage.tsx (~284-298) falls back to a MOCK_VENDORS card when a
+   category is empty. Replace with a real empty state (the compliance-facing audit log
+   especially must not show fabricated records). If demo data is desired, gate it behind
+   the demo-mode flag with a visible marker.
+
+P4 (LOW-MEDIUM) - T2-31: client/src/components/BillingModals.tsx (~188-295) collects a
+   full card number + CVC via a custom, non-tokenizing form whose "Save Card" currently
+   no-ops. Until it is wired to a real processor, remove the raw PAN/CVC capture (or
+   replace it with a tokenizing widget such as Stripe Elements) so the app never holds a
+   raw PAN in component state. LOW: confirm VITE_ALCHEMY_API_KEY is domain-restricted in
+   the Alchemy dashboard (client/src/lib/web3.ts), and set a stable SESSION_SECRET in
+   deploy config rather than relying on the boot-time random fallback (server/auth.ts).
+
+DELIVERABLE
+- One PR from fix/tier-2-platform, green on the app's checks. P1 (auth) and P2
+  (fabricated activity) are the mergeable core. Note in the PR that P1 changes the auth
+  boundary on the integration routes.

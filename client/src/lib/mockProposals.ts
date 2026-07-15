@@ -655,6 +655,8 @@ function autoHandled(p: {
   settledMeta: string;
   rowSubtitle: string;
   rationale: string;
+  bullets?: string[];
+  recommendedAction?: string;
   clearedBecause: Proposal["clearedBecause"];
   rule: Proposal["rule"];
   timeline: Proposal["handoffTimeline"];
@@ -675,6 +677,8 @@ function autoHandled(p: {
     severity: "clean",
     reasonChips: [],
     rationale: p.rationale,
+    bullets: p.bullets,
+    recommendedAction: p.recommendedAction,
     evidence: [],
     confidence: { score: 0.99, band: "high", caveat: "Matched your standing rule." },
     whatHappensNext: "Already settled. Nothing further to do.",
@@ -1025,6 +1029,814 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
     approve: { label: "Approve renewal", sublabel: "charge the new amount" },
     reject: { label: "Reject", sublabel: "keep the prior plan" },
     postpone: { label: "Postpone", sublabel: "decide tomorrow" },
+  },
+  status: "pending",
+};
+
+/* ── Figma design demo proposals ──────────────────────────────────────────────
+   One NR (Needs Review) and one Auto per agent type, matching the 22 Figma
+   frames pixel-for-pixel. NOT in MOCK_PROPOSALS to preserve the AP-total
+   invariant. Access by id via openProposalDetail or direct import.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+const VENDOR_RISK_RULE: AutoRule = {
+  id: "vendor-risk-bank-change",
+  name: "Bank detail change review",
+  summary: "holds any payment when the vendor's bank account changes until a human confirms",
+  createdLabel: "Created Jun 1",
+  policyId: "ap.vendor_risk.bank_change.v1",
+  active: true,
+  kind: "guardrail",
+  agent: "vendor_risk",
+  scopeSummary: "all vendor bank account changes",
+};
+
+const PAYMENT_BATCH_RULE: AutoRule = {
+  id: "payment-batch-auto",
+  name: "Routine batch auto-pay",
+  summary: "auto-pays batches where all invoices match open POs with no exceptions",
+  createdLabel: "Created May 15",
+  policyId: "ap.payment.batch.v1",
+  active: true,
+  kind: "automation",
+  agent: "payment",
+  cap: 20000,
+  scopeSummary: "clean-matched invoice batches under $20,000",
+};
+
+const SUBSCRIPTION_RULE: AutoRule = {
+  id: "subscription-unchanged",
+  name: "Unchanged subscription auto-renew",
+  summary: "auto-renews software subscriptions where seat count and amount are unchanged",
+  createdLabel: "Created Apr 10",
+  policyId: "ap.subscription.unchanged.v1",
+  active: true,
+  kind: "automation",
+  agent: "subscription",
+  cap: 1000,
+  scopeSummary: "recurring SaaS renewals with no seat or price change",
+};
+
+const REVENUE_INTEL_RULE: AutoRule = {
+  id: "revenue-intel-auto",
+  name: "Revenue pattern auto-tag",
+  summary: "auto-tags and records revenue patterns with no action required",
+  createdLabel: "Created Jun 20",
+  policyId: "ap.revenue_intel.auto.v1",
+  active: true,
+  kind: "automation",
+  agent: "revenue_intelligence",
+  scopeSummary: "revenue pattern observations below alert threshold",
+};
+
+/* ── Vendor Risk ─────────────────────────────────────────────────────────── */
+
+export const VENDOR_RISK_FLAGGED: Proposal = {
+  id: "prop-vendor-risk-bank-change",
+  auditId: "AUD-VR001",
+  agent: "vendor_risk",
+  surface: "business",
+  title: "Bank details changed on a contractor invoice",
+  rowSubtitle: "Bright Futures Studio · New Account Flagged",
+  actionStatement: "Hold payment to Bright Futures Studio until verified",
+  actionMeta: "from Operating ••4821 · payment held",
+  executionLabel: "payment held until you decide",
+  cancelDeadlineLabel: "nothing scheduled until you decide",
+  amount: 3200,
+  counterparty: "Bright Futures Studio",
+  severity: "danger",
+  reasonChips: [
+    { label: "New bank account", severity: "danger" },
+    { label: "First seen 2 days ago", severity: "danger" },
+  ],
+  rationale:
+    "Bright Futures Studio submitted an invoice with a new bank account number Brain has never seen before. The timing and email domain shift match a pattern common in vendor impersonation fraud.",
+  bullets: [
+    "New account number first seen 2 days ago",
+    "Vendor has no prior record of changing banking details",
+    "Invoice was submitted from a new email domain variant",
+  ],
+  recommendedAction:
+    "Hold payment and confirm new bank details directly with the vendor before paying.",
+  facts: [
+    { label: "vendor", value: "Bright Futures Studio" },
+    { label: "invoice", value: "#BFS-2026-114 · $3,200" },
+    { label: "prior account", value: "••7742 · on file 18 months" },
+    { label: "new account", value: "••3301 · first seen Jul 13", severity: "danger" },
+    { label: "email domain", value: "brightfutures-studio.co (new)", severity: "danger" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Invoice #BFS-2026-114", subtitle: "Jul 13 · $3,200 · new bank" },
+    { kind: "prior_payment", title: "Last payment", subtitle: "Jun 15 · $3,200 · account ••7742" },
+  ],
+  confidence: {
+    score: 0.95,
+    band: "high",
+    caveat:
+      "Strong signal. Both the new account and domain shift appeared within 48 hours of the invoice submission.",
+  },
+  whatHappensNext:
+    "If you approve, payment routes to the new account. If you hold, Brain keeps the invoice in the queue and sends a verification request to your primary contact at Bright Futures Studio.",
+  risk: "If this is fraud, approving sends $3,200 to an attacker. Recovery from misdirected wire transfers is rare.",
+  policy: {
+    id: "ap.vendor_risk.bank_change.v1",
+    explanation: "vendor bank details changed within 48 hours of invoice submission",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Approve", sublabel: "pay to new account" },
+    reject: { label: "Hold payment", sublabel: "keep in queue" },
+    postpone: { label: "Verify first", sublabel: "ask vendor directly" },
+  },
+  status: "pending",
+};
+
+export const VENDOR_RISK_AUTO: Proposal = autoHandled({
+  id: "settled-vendor-risk-verified",
+  auditId: "AUD-VR002",
+  agent: "vendor_risk",
+  title: "Bank details verified with vendor",
+  counterparty: "Bright Futures Studio",
+  amount: 3200,
+  pastTenseStatement: "Bank details verified with vendor",
+  settledMeta: "Verification call logged · Jul 11, 8:40 PM · payment released",
+  rowSubtitle: "Bright Futures Studio · Change Confirmed",
+  rationale:
+    "Vendor confirmed the new bank details via a verified phone call to their registered number. The account change was legitimate and the payment was released.",
+  bullets: [
+    "Vendor confirmed account change via registered phone number",
+    "New account verified against business registration records",
+    "No further risk signals detected after confirmation",
+  ],
+  clearedBecause: [
+    { label: "vendor", value: "Bright Futures Studio · verified" },
+    { label: "verification", value: "phone call · registered number", severity: "clean" },
+    { label: "new account", value: "••3301 · confirmed legitimate" },
+    { label: "payment", value: "$3,200 · released Jul 11" },
+  ],
+  rule: VENDOR_RISK_RULE,
+  timeline: [
+    { label: "Vendor risk agent flagged bank detail change", timestamp: "Jul 11, 8:00 PM ET", done: true },
+    { label: "Verification request sent to vendor", timestamp: "Jul 11, 8:05 PM ET", done: true },
+    { label: "Vendor confirmed via registered phone", timestamp: "Jul 11, 8:38 PM ET", done: true },
+    { label: "Payment released to new account", timestamp: "Jul 11, 8:40 PM ET", note: "Brain never held the funds", done: true },
+  ],
+});
+
+/* ── Payment ─────────────────────────────────────────────────────────────── */
+
+export const PAYMENT_BATCH_NR: Proposal = {
+  id: "prop-payment-batch",
+  auditId: "AUD-PAY001",
+  agent: "payment",
+  surface: "business",
+  title: "3 vendor invoices ready to batch and pay",
+  rowSubtitle: "Due within 5 days · No Exceptions Found",
+  actionStatement: "Propose batching 3 vendor invoices for payment",
+  actionMeta: "from Operating ••4821 · due within 5 days",
+  executionLabel: "ACH batch initiates next business day",
+  cancelDeadlineLabel: "cancel until 5:00 PM ET today",
+  amount: 14850,
+  counterparty: "Multiple vendors",
+  severity: "clean",
+  reasonChips: [
+    { label: "All POs matched", severity: "clean" },
+    { label: "No exceptions", severity: "clean" },
+  ],
+  rationale:
+    "Three invoices are due within 5 days, all matched 1:1 to open purchase orders with no discrepancies. Batching them reduces ACH fees and keeps vendors on schedule.",
+  bullets: [
+    "All 3 invoices matched 1:1 to open purchase orders",
+    "No amount, quantity, or vendor mismatches found",
+    "Combined batch fits within this week's operating cash buffer",
+  ],
+  recommendedAction:
+    "Approve to batch and schedule payment for all 3 invoices on their due dates.",
+  facts: [
+    { label: "invoice 1", value: "Apex Supplies · $1,450 · due Jul 17" },
+    { label: "invoice 2", value: "Con Edison · $486 · due Jul 18" },
+    { label: "invoice 3", value: "Comcast Biz · $1,228 · due Jul 19" },
+    { label: "total batch", value: "$3,164" },
+    { label: "PO match", value: "3 of 3 · exact match", severity: "clean" },
+    { label: "cash buffer", value: "$42,000 available · safe", severity: "clean" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Apex Supplies invoice", subtitle: "Jul 17 · $1,450 · PO matched" },
+    { kind: "invoice", title: "Con Edison invoice", subtitle: "Jul 18 · $486 · PO matched" },
+    { kind: "invoice", title: "Comcast invoice", subtitle: "Jul 19 · $1,228 · PO matched" },
+  ],
+  confidence: {
+    score: 0.97,
+    band: "high",
+    caveat: "All invoices match purchase orders exactly. No manual review signals detected.",
+  },
+  whatHappensNext:
+    "Approving schedules an ACH batch for the next business morning. Each vendor receives a payment notification. You can cancel until 5 PM today.",
+  risk: "",
+  policy: {
+    id: "ap.payment.batch.v1",
+    explanation: "all invoices matched open POs with no exceptions",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Approve batch", sublabel: "schedule all 3" },
+    reject: { label: "Reject", sublabel: "hold all invoices" },
+    postpone: { label: "Postpone", sublabel: "decide tomorrow" },
+  },
+  status: "pending",
+  batchApprovable: true,
+};
+
+export const PAYMENT_BATCH_AUTO: Proposal = autoHandled({
+  id: "settled-payment-batch",
+  auditId: "AUD-PAY002",
+  agent: "payment",
+  title: "3 vendor invoices batched and paid",
+  counterparty: "Multiple vendors",
+  amount: 14850,
+  pastTenseStatement: "Batched and paid 3 vendor invoices",
+  settledMeta: "ACH batch · settled Jul 10, 9:15 AM ET · you set a rule that allows this",
+  rowSubtitle: "Due within 5 days · No Exceptions Found",
+  rationale:
+    "All three invoices matched open purchase orders exactly. Under your routine batch auto-pay rule, the payment was scheduled and settled without escalation.",
+  bullets: [
+    "All 3 invoices matched 1:1 to open purchase orders",
+    "Batch total within your auto-pay limit",
+    "ACH settled next business morning as scheduled",
+  ],
+  clearedBecause: [
+    { label: "invoices", value: "3 · all PO-matched", severity: "clean" },
+    { label: "total", value: "$14,850" },
+    { label: "under limit", value: "$14,850 / $20,000", severity: "clean" },
+    { label: "exceptions", value: "none", severity: "clean" },
+  ],
+  rule: PAYMENT_BATCH_RULE,
+  timeline: [
+    { label: "Payment agent matched all invoices to POs", timestamp: "Jul 9, 5:00 PM ET", done: true },
+    { label: "Approved automatically by routine batch rule", timestamp: "Jul 9, 5:01 PM ET", note: "no human step", done: true },
+    { label: "ACH batch settled", timestamp: "Jul 10, 9:15 AM ET", note: "Brain never held the funds", done: true },
+  ],
+});
+
+/* ── Collections ─────────────────────────────────────────────────────────── */
+
+export const COLLECTIONS_OVERDUE_NR: Proposal = {
+  id: "prop-collections-overdue",
+  auditId: "AUD-COL001",
+  agent: "collections",
+  surface: "business",
+  title: "Northstar Design invoice is 18 days overdue",
+  rowSubtitle: "Receivable · Draft a Reminder",
+  actionStatement: "Send a payment reminder to Northstar Design",
+  actionMeta: "invoice #ND-2026-88 · due Jun 27 · $6,200",
+  executionLabel: "reminder sent via email on approval",
+  cancelDeadlineLabel: "nothing sent until you approve",
+  amount: 6200,
+  counterparty: "Northstar Design",
+  severity: "warning",
+  reasonChips: [
+    { label: "18 days overdue", severity: "warning" },
+    { label: "No response yet", severity: "warning" },
+  ],
+  rationale:
+    "Invoice #ND-2026-88 for $6,200 was due June 27 and remains unpaid with no payment response from Northstar Design. A first reminder is overdue.",
+  bullets: [
+    "Invoice due Jun 27 · 18 days past due",
+    "No payment or dispute response received",
+    "Northstar Design has a clean payment history (avg 8 days to pay)",
+  ],
+  recommendedAction:
+    "Send a first reminder referencing the invoice number and due date. Northstar's track record suggests this is likely an oversight.",
+  facts: [
+    { label: "customer", value: "Northstar Design" },
+    { label: "invoice", value: "#ND-2026-88 · $6,200" },
+    { label: "due date", value: "Jun 27, 2026", severity: "warning" },
+    { label: "days overdue", value: "18 days", severity: "warning" },
+    { label: "prior avg", value: "8 days to pay · clean history" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Invoice #ND-2026-88", subtitle: "Jun 27 · $6,200 · unpaid" },
+    { kind: "prior_payment", title: "Last payment", subtitle: "Apr 10 · $4,800 · paid in 6 days" },
+  ],
+  confidence: {
+    score: 0.88,
+    band: "high",
+    caveat:
+      "Clean payment history suggests oversight rather than dispute. A reminder is the appropriate first step.",
+  },
+  whatHappensNext:
+    "Approving sends a professional reminder email to Northstar Design referencing the invoice and due date. No payment is initiated; this is a collections follow-up only.",
+  risk: "",
+  policy: {
+    id: "ar.collections.overdue.v1",
+    explanation: "receivable more than 15 days overdue with no response",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Send reminder", sublabel: "email Northstar Design" },
+    reject: { label: "Skip", sublabel: "leave it for now" },
+    postpone: { label: "Postpone", sublabel: "remind me tomorrow" },
+  },
+  status: "pending",
+};
+
+/* ── Treasury ────────────────────────────────────────────────────────────── */
+
+export const TREASURY_SWEEP_NR: Proposal = {
+  id: "prop-treasury-sweep",
+  auditId: "AUD-TRE001",
+  agent: "treasury",
+  surface: "business",
+  title: "Idle operating cash above sweep threshold",
+  rowSubtitle: "Operating ••4821 · $18,500 sweepable",
+  actionStatement: "Move idle cash to T-Bill money market fund",
+  actionMeta: "from Operating ••4821 · Mercury Treasury (T-Bills)",
+  executionLabel: "transfer initiates next business morning",
+  cancelDeadlineLabel: "cancel until 5:00 PM ET today",
+  amount: 18500,
+  counterparty: "Mercury Treasury (T-Bills)",
+  severity: "clean",
+  reasonChips: [
+    { label: "Cash above threshold", severity: "clean" },
+    { label: "3-month runway safe", severity: "clean" },
+  ],
+  rationale:
+    "Your operating balance has stayed $18,500 above the 3-month runway buffer for 4 consecutive days. Moving the excess to your T-Bill money market fund earns yield with same-day liquidity.",
+  bullets: [
+    "Operating balance $18,500 above your 3-month buffer",
+    "Cash idle for 4 consecutive days above threshold",
+    "T-Bill fund offers 5.1% APY with same-day redemption",
+  ],
+  recommendedAction:
+    "Approve to move the idle balance. Funds remain liquid and can be recalled same-day if needed.",
+  facts: [
+    { label: "operating balance", value: "$62,014" },
+    { label: "3-month buffer", value: "$43,514 · 3 months burn" },
+    { label: "sweepable", value: "$18,500", severity: "clean" },
+    { label: "destination", value: "Mercury Treasury (T-Bills)" },
+    { label: "current APY", value: "5.1% · same-day liquidity" },
+  ],
+  evidence: [
+    { kind: "ledger_entry", title: "Operating balance trend", subtitle: "4 days above threshold · $62,014" },
+    { kind: "forecast", title: "Cash forecast", subtitle: "3-month burn · $43,514" },
+  ],
+  confidence: {
+    score: 0.94,
+    band: "high",
+    caveat: "Runway is safe post-sweep. Funds remain liquid if an urgent need arises.",
+  },
+  whatHappensNext:
+    "Approving initiates a transfer of $18,500 to your Mercury Treasury fund next business morning. You keep $43,514 in operating for 3 months of runway. The transfer is reversible same-day.",
+  risk: "",
+  policy: {
+    id: "treasury.idle_cash.v1",
+    explanation: "operating balance exceeded 3-month buffer for 4 consecutive days",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Approve sweep", sublabel: "move $18,500 to T-Bills" },
+    reject: { label: "Keep in operating", sublabel: "no sweep" },
+    postpone: { label: "Postpone", sublabel: "ask me tomorrow" },
+  },
+  status: "pending",
+  sweepMath: {
+    totalCash: 62014,
+    pendingAP: 10514,
+    bufferMonths: 3,
+    bufferAmount: 33000,
+    sweepAmount: 18500,
+    operatingAfter: 43514,
+    runwayAfterMonths: 3.9,
+  },
+};
+
+/* ── Cash Forecast ───────────────────────────────────────────────────────── */
+
+export const CASH_FORECAST_NR: Proposal = {
+  id: "prop-cash-forecast",
+  auditId: "AUD-CF001",
+  agent: "cash_forecast",
+  surface: "business",
+  title: "Cash runway drops below 2 months in 18 days",
+  rowSubtitle: "Forecast Alert · Payroll due Jul 30",
+  actionStatement: "Review projected cash shortfall before payroll",
+  actionMeta: "forecast horizon: 18 days · payroll $38,000 due Jul 30",
+  executionLabel: "no payment initiated · review only",
+  cancelDeadlineLabel: "no action until you decide",
+  severity: "warning",
+  reasonChips: [
+    { label: "Runway below 2 months", severity: "warning" },
+    { label: "Large payroll upcoming", severity: "warning" },
+  ],
+  rationale:
+    "Based on current burn rate and confirmed AP obligations, your operating cash drops below a 2-month runway buffer 18 days from now. Payroll on July 30 is the largest single trigger.",
+  bullets: [
+    "Current operating balance: $62,014",
+    "Confirmed AP due in next 18 days: $24,300",
+    "Payroll Jul 30: $38,000 · brings balance to $-286 before inflows",
+  ],
+  recommendedAction:
+    "Accelerate a receivable collection or draw on your credit line before July 30 to maintain the runway buffer.",
+  facts: [
+    { label: "current balance", value: "$62,014" },
+    { label: "AP due 18 days", value: "$24,300" },
+    { label: "payroll Jul 30", value: "$38,000", severity: "warning" },
+    { label: "projected balance", value: "$-286 before inflows", severity: "danger" },
+    { label: "expected inflows", value: "$48,000 · BigCo (unconfirmed)" },
+  ],
+  evidence: [
+    { kind: "forecast", title: "18-day cash forecast", subtitle: "runway drops to 1.9 months" },
+    { kind: "ledger_entry", title: "Payroll obligation", subtitle: "Jul 30 · $38,000 · confirmed" },
+  ],
+  confidence: {
+    score: 0.81,
+    band: "medium",
+    caveat:
+      "BigCo inflow is expected but unconfirmed. If it arrives on schedule the shortfall clears automatically.",
+  },
+  whatHappensNext:
+    "This is a forecast alert, not a payment proposal. No funds move until you take action. Brain will resurface this if the BigCo inflow does not clear by July 25.",
+  risk: "If payroll cannot clear on July 30, employees receive a delayed payment. This carries legal and reputational risk.",
+  policy: {
+    id: "forecast.runway.below_2mo.v1",
+    explanation: "projected runway drops below 2-month buffer within 18 days",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Acknowledge", sublabel: "I will take action" },
+    reject: { label: "Dismiss", sublabel: "not a concern now" },
+    postpone: { label: "Remind me", sublabel: "resurface Jul 25" },
+  },
+  status: "pending",
+};
+
+/* ── Dispute ─────────────────────────────────────────────────────────────── */
+
+export const DISPUTE_NR: Proposal = {
+  id: "prop-dispute",
+  auditId: "AUD-DIS001",
+  agent: "dispute",
+  surface: "business",
+  title: "AWS billed $620 more than the contract rate",
+  rowSubtitle: "AWS Invoice · $4,770 billed vs $4,150 contracted",
+  actionStatement: "File a billing dispute with Amazon Web Services",
+  actionMeta: "invoice AWS-2026-08 · overbilled by $620",
+  executionLabel: "dispute filed on approval · payment held",
+  cancelDeadlineLabel: "payment held until dispute resolves",
+  amount: 620,
+  counterparty: "Amazon Web Services",
+  severity: "warning",
+  reasonChips: [
+    { label: "Overbilled $620", severity: "warning" },
+    { label: "Exceeds contract rate", severity: "warning" },
+  ],
+  rationale:
+    "AWS invoice AWS-2026-08 charges $4,770 for cloud infrastructure. Your contract locks the rate at $4,150 for the current tier. The $620 overage has no corresponding usage event or tier change.",
+  bullets: [
+    "Contract rate: $4,150 for current usage tier",
+    "Billed amount: $4,770 · $620 above contract",
+    "No tier upgrade, new service, or usage spike to explain the difference",
+  ],
+  recommendedAction:
+    "File a billing dispute with AWS referencing the contract rate and invoice number. Hold payment until the dispute resolves.",
+  facts: [
+    { label: "vendor", value: "Amazon Web Services" },
+    { label: "invoice", value: "AWS-2026-08 · $4,770" },
+    { label: "contract rate", value: "$4,150 · current tier" },
+    { label: "overage", value: "$620 · unexplained", severity: "warning" },
+    { label: "usage change", value: "none detected", severity: "clean" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Invoice AWS-2026-08", subtitle: "Jul 1 · $4,770 billed" },
+    { kind: "contract", title: "AWS contract rate", subtitle: "$4,150 / mo · current tier" },
+  ],
+  confidence: {
+    score: 0.93,
+    band: "high",
+    caveat:
+      "No usage event or tier change found. The overage is not explainable from available data.",
+  },
+  whatHappensNext:
+    "Approving files a formal billing dispute with AWS via their API and holds the invoice. Brain tracks the dispute and resurfaces when AWS responds. If the dispute resolves in your favor, the corrected invoice clears automatically.",
+  risk: "Paying without disputing waives your right to recover the $620 overage.",
+  policy: {
+    id: "dispute.overbilling.v1",
+    explanation: "invoice amount exceeds contract rate with no usage event to explain the delta",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "File dispute", sublabel: "hold payment" },
+    reject: { label: "Pay anyway", sublabel: "waive the overage" },
+    postpone: { label: "Postpone", sublabel: "review contract first" },
+  },
+  status: "pending",
+};
+
+/* ── Compliance ──────────────────────────────────────────────────────────── */
+
+export const COMPLIANCE_NR: Proposal = {
+  id: "prop-compliance",
+  auditId: "AUD-CMP001",
+  agent: "compliance",
+  surface: "business",
+  title: "Payment to new vendor missing W-9 on file",
+  rowSubtitle: "IRS 1099 compliance · Apex Consulting",
+  actionStatement: "Collect W-9 before paying Apex Consulting",
+  actionMeta: "invoice #AC-2026-07 · $8,500 · W-9 required",
+  executionLabel: "payment held until W-9 received",
+  cancelDeadlineLabel: "nothing sent until you decide",
+  amount: 8500,
+  counterparty: "Apex Consulting",
+  severity: "warning",
+  reasonChips: [
+    { label: "No W-9 on file", severity: "warning" },
+    { label: "1099 threshold exceeded", severity: "warning" },
+  ],
+  rationale:
+    "Apex Consulting is a new vendor with cumulative payments this year of $8,500, exceeding the $600 IRS 1099 threshold. No W-9 is on file. Paying without it creates a compliance gap.",
+  bullets: [
+    "New vendor added Jun 30 · no W-9 collected at onboarding",
+    "Cumulative payments YTD: $8,500 · exceeds $600 1099 threshold",
+    "IRS requires W-9 before issuing 1099-NEC at year end",
+  ],
+  recommendedAction:
+    "Request a W-9 from Apex Consulting before releasing payment. Brain can send the request automatically on approval.",
+  facts: [
+    { label: "vendor", value: "Apex Consulting" },
+    { label: "invoice", value: "#AC-2026-07 · $8,500" },
+    { label: "W-9 on file", value: "none", severity: "warning" },
+    { label: "YTD payments", value: "$8,500 · above $600 threshold", severity: "warning" },
+    { label: "1099 required", value: "yes · NEC form", severity: "warning" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Invoice #AC-2026-07", subtitle: "Jul 15 · $8,500 · pending" },
+    { kind: "ledger_entry", title: "YTD payment total", subtitle: "$8,500 · first payment this year" },
+  ],
+  confidence: {
+    score: 0.98,
+    band: "high",
+    caveat: "IRS rule is deterministic. Above $600 and no W-9 is a clear compliance gap.",
+  },
+  whatHappensNext:
+    "Approving sends a W-9 request to Apex Consulting via email and holds the invoice. Once they return the completed form, the invoice auto-clears for payment. Dismissing logs a compliance waiver.",
+  risk: "Paying without a W-9 on file may result in a penalty of up to $310 per missing form at year end.",
+  policy: {
+    id: "compliance.1099.w9_required.v1",
+    explanation: "new vendor payment exceeds IRS 1099 threshold with no W-9 on file",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Request W-9", sublabel: "hold invoice" },
+    reject: { label: "Pay anyway", sublabel: "log compliance waiver" },
+    postpone: { label: "Postpone", sublabel: "follow up manually" },
+  },
+  status: "pending",
+};
+
+/* ── Revenue Intelligence ─────────────────────────────────────────────────── */
+
+export const REVENUE_INTEL_AUTO: Proposal = autoHandled({
+  id: "settled-revenue-intel",
+  auditId: "AUD-REV001",
+  agent: "revenue_intelligence",
+  title: "BigCo revenue pattern tagged and recorded",
+  counterparty: "BigCo Industries",
+  amount: 48000,
+  pastTenseStatement: "BigCo revenue pattern tagged and recorded",
+  settledMeta: "No action required · tagged Jul 14, 9:00 AM",
+  rowSubtitle: "Monthly Inflow · Pattern Confirmed",
+  rationale:
+    "BigCo Industries has paid $48,000 on the 26th of each month for 5 consecutive months. The pattern is statistically significant and has been tagged as a confirmed recurring revenue stream.",
+  bullets: [
+    "5 consecutive monthly payments of $48,000",
+    "Payment date variance: 0 days (always the 26th)",
+    "Pattern confidence: 99% · tagged as recurring revenue",
+  ],
+  clearedBecause: [
+    { label: "customer", value: "BigCo Industries" },
+    { label: "pattern", value: "$48,000 / month · 5 months", severity: "clean" },
+    { label: "date variance", value: "0 days · always 26th", severity: "clean" },
+    { label: "confidence", value: "99% · confirmed recurring" },
+  ],
+  rule: REVENUE_INTEL_RULE,
+  timeline: [
+    { label: "Revenue pattern detected over 5 months", timestamp: "Jul 14, 9:00 AM ET", done: true },
+    { label: "Pattern tagged as confirmed recurring revenue", timestamp: "Jul 14, 9:01 AM ET", note: "no human step", done: true },
+  ],
+});
+
+/* ── Reconciliation ──────────────────────────────────────────────────────── */
+
+export const RECONCILIATION_NR: Proposal = {
+  id: "prop-reconciliation-mismatch",
+  auditId: "AUD-REC001",
+  agent: "reconciliation",
+  surface: "business",
+  title: "Bank line and ledger entry differ by $14",
+  rowSubtitle: "Chase ••4821 · Jul 12 · Gusto payroll",
+  actionStatement: "Resolve a $14 discrepancy between bank and ledger",
+  actionMeta: "Chase ••4821 · Jul 12 · Gusto payroll ACH",
+  executionLabel: "reconciliation logged on approval",
+  cancelDeadlineLabel: "no action until you decide",
+  amount: 14,
+  counterparty: "Gusto",
+  severity: "info",
+  reasonChips: [
+    { label: "$14 discrepancy", severity: "info" },
+    { label: "Outside tolerance", severity: "info" },
+  ],
+  rationale:
+    "The Gusto payroll ACH on July 12 appears as $4,214.00 in the Chase bank feed but $4,200.00 in your ledger. The $14 difference exceeds your $1.00 reconciliation tolerance.",
+  bullets: [
+    "Bank line: $4,214.00 · Chase ••4821 · Jul 12",
+    "Ledger entry: $4,200.00 · Gusto payroll · Jul 12",
+    "Difference: $14.00 · exceeds $1.00 tolerance",
+  ],
+  recommendedAction:
+    "Check if a payroll adjustment or tax withholding change accounts for the $14 difference. Approve to accept the bank amount as correct and update the ledger.",
+  facts: [
+    { label: "bank line", value: "$4,214.00 · Chase ••4821 · Jul 12" },
+    { label: "ledger entry", value: "$4,200.00 · Gusto payroll · Jul 12" },
+    { label: "difference", value: "$14.00", severity: "info" },
+    { label: "tolerance", value: "$14.00 / $1.00 · exceeds", severity: "warning" },
+    { label: "payroll run", value: "Gusto · 14 employees · Jul 12" },
+  ],
+  evidence: [
+    { kind: "transaction", title: "Chase bank line", subtitle: "Jul 12 · $4,214.00 · Gusto ACH" },
+    { kind: "ledger_entry", title: "Ledger entry", subtitle: "Jul 12 · $4,200.00 · Gusto payroll" },
+  ],
+  confidence: {
+    score: 0.87,
+    band: "high",
+    caveat:
+      "The discrepancy is small but outside tolerance. Most likely a payroll tax adjustment. Check Gusto payroll detail to confirm.",
+  },
+  whatHappensNext:
+    "Approving accepts the bank amount as the authoritative figure and updates the ledger with a $14 adjustment note. Rejecting holds it open for manual review.",
+  risk: "",
+  policy: {
+    id: "recon.tolerance.v1",
+    explanation: "bank/ledger discrepancy exceeds the $1.00 auto-reconciliation tolerance",
+    autoClearedOtherwise: true,
+  },
+  actions: {
+    approve: { label: "Accept bank figure", sublabel: "update ledger +$14" },
+    reject: { label: "Hold open", sublabel: "manual review" },
+    postpone: { label: "Postpone", sublabel: "check Gusto first" },
+  },
+  status: "pending",
+};
+
+/* ── Subscription ────────────────────────────────────────────────────────── */
+
+export const SUBSCRIPTION_UNUSED_NR: Proposal = {
+  id: "prop-subscription-unused",
+  auditId: "AUD-SUB001",
+  agent: "subscription",
+  surface: "business",
+  title: "Unused software seat renewing in 4 days",
+  rowSubtitle: "Figma · 1 of 8 seats inactive 60+ days",
+  actionStatement: "Cancel 1 inactive Figma seat before renewal",
+  actionMeta: "Figma Pro · renews Jul 19 · $180 / seat",
+  executionLabel: "cancellation sent on approval",
+  cancelDeadlineLabel: "must cancel before Jul 19 to avoid charge",
+  amount: 180,
+  counterparty: "Figma",
+  severity: "clean",
+  reasonChips: [
+    { label: "Seat inactive 60+ days", severity: "info" },
+    { label: "Renewal in 4 days", severity: "warning" },
+  ],
+  rationale:
+    "One of your 8 Figma Pro seats has had no activity in over 60 days. The plan renews in 4 days. Canceling the inactive seat saves $180 per month with no impact on active users.",
+  bullets: [
+    "Seat assigned to a user with no login in 63 days",
+    "Renewed charge scheduled in 4 days",
+    "7 other seats on the same plan show regular weekly use",
+  ],
+  recommendedAction:
+    "Cancel the unused seat before renewal to avoid the charge. The seat can be reassigned to a new hire at any time.",
+  facts: [
+    { label: "vendor", value: "Figma" },
+    { label: "plan", value: "Figma Pro · 8 seats" },
+    { label: "inactive seat", value: "1 seat · last login May 13", severity: "info" },
+    { label: "renewal date", value: "Jul 19, 2026", severity: "warning" },
+    { label: "monthly savings", value: "$180 / month if cancelled" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Upcoming renewal", subtitle: "Jul 19 · $180 / inactive seat" },
+    { kind: "ledger_entry", title: "Last 3 renewals", subtitle: "8 seats · $1,440 / month" },
+  ],
+  confidence: {
+    score: 0.92,
+    band: "high",
+    caveat:
+      "63 days of inactivity is well above the 30-day threshold. The seat is functionally unused.",
+  },
+  whatHappensNext:
+    "Approving sends a cancellation request to Figma for the inactive seat before the Jul 19 renewal. The other 7 seats are unaffected. You can add a new seat at any time.",
+  risk: "",
+  policy: {
+    id: "subscription.unused_seat.v1",
+    explanation: "seat inactive for 60+ days with a renewal due within 7 days",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Cancel seat", sublabel: "save $180 / mo" },
+    reject: { label: "Keep seat", sublabel: "renew as usual" },
+    postpone: { label: "Postpone", sublabel: "decide tomorrow" },
+  },
+  status: "pending",
+};
+
+export const SUBSCRIPTION_AUTO: Proposal = autoHandled({
+  id: "settled-subscription-auto",
+  auditId: "AUD-SUB002",
+  agent: "subscription",
+  title: "Slack Pro renewal cleared automatically",
+  counterparty: "Slack Technologies",
+  amount: 624,
+  pastTenseStatement: "Slack Pro renewed automatically",
+  settledMeta: "on card ••4821 · settled Jul 7, 8:00 AM ET · you set a rule that allows this",
+  rowSubtitle: "Slack Pro · 12 seats · Amount Unchanged",
+  rationale:
+    "Your Slack Pro subscription renewed with the same seat count and monthly price as the prior month. Under your unchanged-subscription auto-renew rule, it cleared without escalation.",
+  bullets: [
+    "Same 12 seats as prior month",
+    "Same $52/seat price · total $624 unchanged",
+    "Within auto-renew cap · no human step needed",
+  ],
+  clearedBecause: [
+    { label: "vendor", value: "Slack Technologies · trusted" },
+    { label: "seats", value: "12 · unchanged", severity: "clean" },
+    { label: "this charge", value: "$624", severity: "clean" },
+    { label: "prior charge", value: "$624 · matched" },
+    { label: "under cap", value: "$624 / $1,000", severity: "clean" },
+  ],
+  rule: SUBSCRIPTION_RULE,
+  timeline: [
+    { label: "Subscription agent detected Slack renewal", timestamp: "Jul 7, 7:58 AM ET", done: true },
+    { label: "Approved automatically by unchanged-subscription rule", timestamp: "Jul 7, 7:59 AM ET", note: "no human step", done: true },
+    { label: "Execution service charged card ••4821", timestamp: "Jul 7, 8:00 AM ET", note: "Brain never held the funds", done: true },
+  ],
+});
+
+/* ── Fraud and Anomaly ───────────────────────────────────────────────────── */
+
+export const FRAUD_ANOMALY_NR: Proposal = {
+  id: "prop-fraud-anomaly-shared-phone",
+  auditId: "AUD-FRD001",
+  agent: "fraud_anomaly",
+  surface: "business",
+  title: "Two invoices from different vendors share a phone number",
+  rowSubtitle: "Cross-Vendor Pattern · Possible Shell Company",
+  actionStatement: "Hold both invoices pending fraud review",
+  actionMeta: "Apex Supplies · $1,450 and BlueSky Freight · $7,950 · both held",
+  executionLabel: "both payments held until you decide",
+  cancelDeadlineLabel: "nothing sent until you decide",
+  severity: "danger",
+  reasonChips: [
+    { label: "Shared phone number", severity: "danger" },
+    { label: "Both added 10 days apart", severity: "danger" },
+  ],
+  rationale:
+    "Brain detected that Apex Supplies and BlueSky Freight, two vendors added in the same 10-day window, share an identical phone number on their invoices. This is a known pattern in shell-company fraud.",
+  bullets: [
+    "Same phone number listed on both vendor records",
+    "Both vendors added within the same 10-day window",
+    "Combined billing to date across both vendors: $9,400",
+  ],
+  recommendedAction:
+    "Hold both invoices and verify independently that Apex Supplies and BlueSky Freight are distinct, legitimate companies with separate ownership before paying either.",
+  facts: [
+    { label: "vendor 1", value: "Apex Supplies · added Jul 3" },
+    { label: "vendor 2", value: "BlueSky Freight · added Jul 12" },
+    { label: "shared phone", value: "+1 (555) 204-7731 · identical", severity: "danger" },
+    { label: "invoices held", value: "$1,450 + $7,950 · $9,400 total", severity: "danger" },
+    { label: "prior payments", value: "$0 to either vendor", severity: "info" },
+  ],
+  evidence: [
+    { kind: "invoice", title: "Apex Supplies #AS-001", subtitle: "Jul 14 · $1,450 · held" },
+    { kind: "invoice", title: "BlueSky Freight #BF-007", subtitle: "Jul 15 · $7,950 · held" },
+  ],
+  confidence: {
+    score: 0.91,
+    band: "high",
+    caveat:
+      "Shared contact details between vendors are a high-specificity fraud signal. Both vendors are new with no payment history to establish trust.",
+  },
+  whatHappensNext:
+    "Both invoices are held. Approving flags them for your accounts-payable team to verify independently. Rejecting cancels both invoices and blocks both vendors from future auto-approval. Postponing keeps them held for 48 hours.",
+  risk: "If this is a shell-company scheme, approving either invoice sends money to the same fraudulent entity. Combined exposure: $9,400.",
+  policy: {
+    id: "fraud.cross_vendor.shared_contact.v1",
+    explanation: "two vendor records share identical contact details and were added within the same short window",
+    autoClearedOtherwise: false,
+  },
+  actions: {
+    approve: { label: "Flag for AP review", sublabel: "hold both invoices" },
+    reject: { label: "Block both vendors", sublabel: "cancel invoices" },
+    postpone: { label: "Hold 48 hours", sublabel: "investigate first" },
   },
   status: "pending",
 };

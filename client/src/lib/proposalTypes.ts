@@ -2,7 +2,12 @@
    Brain is PROPOSE-ONLY: it analyses and proposes, a human approves, then a
    SEPARATE execution service settles. Nothing here moves money. */
 
-export type Agent = "invoice" | "collections" | "cash" | "close";
+export type Agent =
+  | "invoice" | "collections" | "cash" | "close"
+  | "vendor_risk" | "payment" | "treasury" | "cash_forecast"
+  | "dispute" | "compliance" | "revenue_intelligence" | "reconciliation"
+  | "subscription" | "fraud_anomaly";
+
 export type Surface = "business" | "individual";
 export type Severity = "clean" | "info" | "warning" | "danger";
 export type ProposalStatus =
@@ -153,6 +158,8 @@ export interface Proposal {
   severity: Severity;
   reasonChips: ReasonChip[];
   rationale: string;
+  bullets?: string[]; // narrative bullet points shown under the rationale
+  recommendedAction?: string; // "Recommended Action" section text
   facts?: FactRow[];
   evidence: EvidenceItem[];
   confidence: ConfidenceInfo;
@@ -167,7 +174,7 @@ export interface Proposal {
   /* Present only for status === "auto_handled" - a settled receipt, not a decision. */
   pastTenseStatement?: string; // "Paid Con Edison $486"
   settledMeta?: string; // "from Operating ••4821 · settled today 8:02 AM ET · you set a rule that allows this"
-  handoffTimeline?: HandoffStep[]; // proposed → approved automatically by rule → execution settled
+  handoffTimeline?: HandoffStep[]; // proposed -> approved automatically by rule -> execution settled
   clearedBecause?: FactRow[]; // positive evidence: why it qualified
   rule?: AutoRule; // the standing rule that authorized it
   /* Link to the source invoice document (if this proposal was generated from one). */
