@@ -1,4 +1,4 @@
-/* Audit Log data model — types for canonical governance records and
+/* Audit Log data model - types for canonical governance records and
    the shared AnchorStatus component used across the app. */
 
 export type AuditEventType =
@@ -29,7 +29,7 @@ export interface LifecycleStep {
   note?: string;
   kind: "ok" | "alert";
   /* Identity of the human who performed this step (email / actor id), present on
-     HUMAN-approval steps only — system steps omit it. The muted role suffix
+     HUMAN-approval steps only - system steps omit it. The muted role suffix
      ("· finance admin") is resolved from the actor record (see actors.ts), never
      hardcoded per step. */
   actor?: string;
@@ -42,7 +42,7 @@ export interface LifecycleStep {
 /* "vendor" | "rule" | "invoice" resolve against their canonical stores and open a
    detail surface. "proposal" deep-links to /review. "employee" | "protocol" |
    "ledger" are NON-VENDOR counterparties (payroll employees, DeFi protocols,
-   internal accounts) that are NOT in the trust/allowlist model — they render as
+   internal accounts) that are NOT in the trust/allowlist model - they render as
    accurate plain, non-tappable text with no detail surface. */
 export type LinkedEntityKind =
   | "vendor"
@@ -134,7 +134,7 @@ export function auditEventChipClass(type: AuditEventType): string {
   }
 }
 
-/* Payment event types — records that move money to a receiving party. Trust and
+/* Payment event types - records that move money to a receiving party. Trust and
    rule-change records ALSO carry vendor rows, but those vendors are not payees. */
 const PAYMENT_EVENT_TYPES: ReadonlyArray<AuditEventType> = [
   "approved",
@@ -152,7 +152,7 @@ const RECEIVING_KINDS: ReadonlyArray<LinkedEntityKind> = ["vendor", "employee"];
    not just the entity type. Explicit `link.relationship` wins; otherwise a
    receiving party on a payment record is derived as the PAYEE. Non-payment rows
    (trust/rule-change vendor rows, invoices, proposals) return undefined and fall
-   back to the plain kind chip. Derived from record type — no per-surface hardcode. */
+   back to the plain kind chip. Derived from record type - no per-surface hardcode. */
 export function linkedRelationship(
   record: AuditRecord,
   link: LinkedEntity,

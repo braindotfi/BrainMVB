@@ -6,7 +6,7 @@ import { mapAuditEventToRecord, type BrainAuditEvent, type BrainAnchor } from ".
  * the action id, and anchor status derived ONLY from whether created_at falls
  * inside the latest anchor's [period_start, period_end] window. This pins the
  * honesty invariant: a record never claims "anchored" (with hashes/href)
- * unless brain-core's own anchor window actually covers it — guard 6
+ * unless brain-core's own anchor window actually covers it - guard 6
  * (checkAnchorUiCoherence) would catch a violation of this at the data level.
  */
 
@@ -76,7 +76,7 @@ describe("mapAuditEventToRecord", () => {
     expect(r.summary).toBe("ledger.reconciliation.matched");
   });
 
-  it("never fabricates linked evidence — linked[] is always empty from a live event", () => {
+  it("never fabricates linked evidence - linked[] is always empty from a live event", () => {
     const r = mapAuditEventToRecord(ev(), anchor());
     expect(r.linked).toEqual([]);
   });

@@ -2,17 +2,17 @@ import type { Vendor } from "./vendorTypes";
 
 /* ── Mock vendor catalogue ──────────────────────────────────────────────────
    Covers all four trustStatus variants:
-   - trusted: Con Edison, Notion — wired to real rules via ruleIds
-   - known + eligible: Apex Cleaning — Brain suggests trust
-   - new: Northstar Design — sparse history, no suggestion
-   - under_review: Bright Futures — bank-detail-change flag, was trusted before
+   - trusted: Con Edison, Notion - wired to real rules via ruleIds
+   - known + eligible: Apex Cleaning - Brain suggests trust
+   - new: Northstar Design - sparse history, no suggestion
+   - under_review: Bright Futures - bank-detail-change flag, was trusted before
 
    Every vendor tells ONE story across surfaces. Bright Futures is
-   under_review everywhere — never auto_approved.
+   under_review everywhere - never auto_approved.
 
    ponytail: Phase 1d (2026-07) moved VendorsPage/VendorDetailPopup off this
    catalogue onto live brain-core counterparties (client/src/lib/brainVendors.ts).
-   This store is NOT dead — Audit Log linked refs (kind:"vendor"), documents
+   This store is NOT dead - Audit Log linked refs (kind:"vendor"), documents
    (document.vendorId), and ruleConsistencyCheck.ts guards still resolve
    against it (Phase 1c territory). Delete only once Audit Log/documents
    migrate to live data too.
@@ -147,12 +147,12 @@ export const MOCK_VENDORS: Vendor[] = [
   },
 
   /* ── Referenced by audit records / invoices / proposals ──────────────────
-     Each history below is reconciled with the record(s) that reference it —
+     Each history below is reconciled with the record(s) that reference it -
      amounts, dates, tier, and rule membership all match how those records
      actually behaved. NOT stubs.
      ──────────────────────────────────────────────────────────────────────── */
 
-  /* aws — one human-approved payment above the auto-pay limit (AUD-3308FE,
+  /* aws - one human-approved payment above the auto-pay limit (AUD-3308FE,
      $4,150, settled Jul 7; invoice AWS-2026-07). Single recent payment ⇒ "new"
      tier; it required human approval precisely because it is not yet trusted. */
   {
@@ -174,7 +174,7 @@ export const MOCK_VENDORS: Vendor[] = [
     ruleIds: [],
   },
 
-  /* adobe — auto-cleared SaaS subscription (AUD-4E2N, $540, Jul 5) by the
+  /* adobe - auto-cleared SaaS subscription (AUD-4E2N, $540, Jul 5) by the
      "SaaS Subscriptions" rule ⇒ trusted + on the saas allowlist. Recurring
      monthly history at the referenced $540. */
   {
@@ -198,7 +198,7 @@ export const MOCK_VENDORS: Vendor[] = [
     eligibleForTrust: false,
   },
 
-  /* comcast — auto-cleared utility bill (AUD-1B3T, $240, Jul 5) by the
+  /* comcast - auto-cleared utility bill (AUD-1B3T, $240, Jul 5) by the
      "Utility Bills" rule ⇒ trusted + on the utility allowlist. Recurring
      monthly history at the referenced $240. */
   {
@@ -222,7 +222,7 @@ export const MOCK_VENDORS: Vendor[] = [
     eligibleForTrust: false,
   },
 
-  /* brookside — recurring office lease, human-approved above the auto-pay
+  /* brookside - recurring office lease, human-approved above the auto-pay
      limit each cycle (AUD-8A1R, $8,400, Jul 1). Established but not auto-clear
      ⇒ "known" tier (large amounts always escalate to human review). */
   {
@@ -244,7 +244,7 @@ export const MOCK_VENDORS: Vendor[] = [
     ruleIds: [],
   },
 
-  /* meridian — trust just granted after identity + bank-detail verification
+  /* meridian - trust just granted after identity + bank-detail verification
      (AUD-6G3W, Jun 28). No payments have run yet, so history is empty by
      design; the record carries no amount. */
   {
@@ -256,8 +256,8 @@ export const MOCK_VENDORS: Vendor[] = [
     history: {
       paymentCount: 0,
       totalPaid: 0,
-      firstPaidLabel: "—",
-      lastPaidLabel: "—",
+      firstPaidLabel: "-",
+      lastPaidLabel: "-",
       avgAmount: 0,
       flagCount: 0,
     },

@@ -7,7 +7,7 @@ import { INITIAL_SUGGESTIONS } from "./mockRules";
    the facts behind it + a confidence band, and is default unaccepted. Accepting
    runs the create-rule flow; dismissing hides it. The sidebar "Rules" badge
    counts the live (non-dismissed) suggestions via `.length`.
-   No backend, no localStorage — module state behind useSyncExternalStore. ──── */
+   No backend, no localStorage - module state behind useSyncExternalStore. ──── */
 
 function seed(): RuleSuggestion[] {
   return INITIAL_SUGGESTIONS.map((s) => ({

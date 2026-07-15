@@ -3,7 +3,7 @@
    Sans, Outfit, Space Grotesk, and Inter are loaded from Google Fonts via
    the <link> tag in client/index.html. */
 
-/* Gilroy — primary UI font */
+/* Gilroy - primary UI font */
 @font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 100; font-display: swap; src: url('/fonts/Gilroy-Thin.woff2') format('woff2'); }
 @font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 200; font-display: swap; src: url('/fonts/Gilroy-UltraLight.woff2') format('woff2'); }
 @font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 300; font-display: swap; src: url('/fonts/Gilroy-Light.woff2') format('woff2'); }
@@ -16,7 +16,7 @@
 @font-face { font-family: 'Gilroy'; font-style: normal; font-weight: 900; font-display: swap; src: url('/fonts/Gilroy-Black.woff2') format('woff2'); }
 @font-face { font-family: 'Gilroy'; font-style: italic; font-weight: 900; font-display: swap; src: url('/fonts/Gilroy-BlackItalic.woff2') format('woff2'); }
 
-/* Gridular — used for the "brain" wordmark */
+/* Gridular - used for the "brain" wordmark */
 @font-face {
   font-family: 'Gridular';
   font-style: normal;
@@ -25,7 +25,7 @@
   src: url('/fonts/Gridular-Regular.ttf') format('truetype');
 }
 
-/* JetBrains Mono — full weight range, regular + italic */
+/* JetBrains Mono - full weight range, regular + italic */
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 100; font-display: swap; src: url('/fonts/JetBrainsMono-Thin.woff2') format('woff2'); }
 @font-face { font-family: 'JetBrains Mono'; font-style: italic; font-weight: 100; font-display: swap; src: url('/fonts/JetBrainsMono-ThinItalic.woff2') format('woff2'); }
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 200; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraLight.woff2') format('woff2'); }

@@ -7,14 +7,14 @@ import type { AuditRecord } from "./auditTypes";
    ponytail: AuditLogPage itself moved to live brain-core events (Phase 1c,
    see client/src/lib/brainAudit.ts) and no longer reads this. This store is
    RETAINED only as the fixture ruleConsistencyCheck.ts's dev guards assert
-   against — it cross-checks the still-mock document/vendor/rule stores for
+   against - it cross-checks the still-mock document/vendor/rule stores for
    coherence. Delete once those stores also go live. (SettledRecordCard and
    AUTO_HANDLED_PROPOSALS were removed in the Phase 8 cleanup.) */
 
 /* One fallback record per tab so AuditLogPage shows UI even when brain-core
    has no events for a category. Kept separate from the full MOCK_AUDIT_RECORDS
    so we can drop these once the live feed covers every tab. */
-/** The 4 auto-approved mock proposals as audit records — merged into
+/** The 4 auto-approved mock proposals as audit records - merged into
  *  AuditLogPage and ActivityPage so they appear in "Auto-Approved" / "Brain Did"
  *  regardless of what brain-core returns. De-duped by id at merge time. */
 export const AUTO_APPROVED_IDS = new Set(["AUD-4E2N", "AUD-1B3T", "AUD-2R1M", "AUD-7P9Q"]);
@@ -32,7 +32,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$4,150 · sarah@meridian · AUD-DEMO-1",
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", kind: "ok" },
-      { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
+      { label: "Escalated to human - above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 7, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH settled", timestamp: "Jul 7, 9:02 AM ET", kind: "ok" },
     ],
@@ -96,7 +96,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Meridian LLC flagged as new vendor", timestamp: "Jun 28, 10:15 AM ET", kind: "alert" },
       { label: "sarah@meridian verified identity and bank details", timestamp: "Jun 28, 11:30 AM ET", kind: "ok" },
-      { label: "Trust granted — vendor added to allowlist", timestamp: "Jun 28, 11:47 AM ET", kind: "ok" },
+      { label: "Trust granted - vendor added to allowlist", timestamp: "Jun 28, 11:47 AM ET", kind: "ok" },
     ],
     linked: [{ kind: "vendor", label: "Meridian LLC", refId: "meridian" }],
     anchor: { status: "anchored", auditId: "AUD-DEMO-4", merkleRoot: "0x4f7d…c2a6", baseTx: "0x33b8…d1f7", block: 21_847_620, anchoredAtLabel: "Jun 28, 11:49 AM ET", verifyHref: "https://basescan.org/tx/0x33b8…d1f7" },
@@ -104,7 +104,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-DEMO-5",
     eventType: "flagged",
-    summary: "Payment held — bank details changed",
+    summary: "Payment held - bank details changed",
     counterparty: "Bright Futures Studio",
     amount: 3200,
     actor: "system",
@@ -113,7 +113,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$3,200 · system · AUD-DEMO-5",
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 5, 2:08 PM ET", kind: "ok" },
-      { label: "Escalated to human — routing number changed", timestamp: "Jul 5, 2:11 PM ET", note: "policy/ap.fraud.v2", kind: "alert" },
+      { label: "Escalated to human - routing number changed", timestamp: "Jul 5, 2:11 PM ET", note: "policy/ap.fraud.v2", kind: "alert" },
       { label: "Payment held pending verification", timestamp: "Jul 5, 2:11 PM ET", kind: "alert" },
     ],
     linked: [
@@ -127,7 +127,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-DEMO-6",
     eventType: "rejected",
-    summary: "Payment rejected — Apex Cleaning Co",
+    summary: "Payment rejected - Apex Cleaning Co",
     counterparty: "Apex Cleaning Co",
     amount: 1450,
     actor: "sarah@meridian",
@@ -144,7 +144,7 @@ export const DEMO_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-DEMO-7",
     eventType: "postponed",
-    summary: "Payment postponed — Comcast Business",
+    summary: "Payment postponed - Comcast Business",
     counterparty: "Comcast Business",
     amount: 228,
     actor: "sarah@meridian",
@@ -173,7 +173,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$4,150 · sarah@meridian · AUD-3308FE",
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", kind: "ok" },
-      { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
+      { label: "Escalated to human - above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", note: "policy/ap.routine.v3", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 7, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH settled", timestamp: "Jul 7, 9:02 AM ET", kind: "ok" },
     ],
@@ -233,7 +233,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-7K2M",
     eventType: "flagged",
-    summary: "Payment held — bank details changed",
+    summary: "Payment held - bank details changed",
     counterparty: "Bright Futures Studio",
     amount: 3200,
     actor: "system",
@@ -242,7 +242,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$3,200 · system · AUD-7K2M",
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 5, 2:08 PM ET", kind: "ok" },
-      { label: "Escalated to human — routing number changed", timestamp: "Jul 5, 2:11 PM ET", note: "policy/ap.fraud.v2", kind: "alert" },
+      { label: "Escalated to human - routing number changed", timestamp: "Jul 5, 2:11 PM ET", note: "policy/ap.fraud.v2", kind: "alert" },
       { label: "Payment held pending verification", timestamp: "Jul 5, 2:11 PM ET", kind: "alert" },
     ],
     linked: [
@@ -275,7 +275,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$8,400 · sarah@meridian · AUD-8A1R",
     lifecycle: [
       { label: "Invoice Agent proposed payment", timestamp: "Jun 30, 6:00 PM ET", kind: "ok" },
-      { label: "Escalated to human — above auto-pay limit", timestamp: "Jun 30, 6:01 PM ET", kind: "alert" },
+      { label: "Escalated to human - above auto-pay limit", timestamp: "Jun 30, 6:01 PM ET", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 1, 8:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH settled", timestamp: "Jul 1, 9:00 AM ET", kind: "ok" },
     ],
@@ -364,7 +364,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Meridian LLC flagged as new vendor", timestamp: "Jun 28, 10:15 AM ET", kind: "alert" },
       { label: "sarah@meridian verified identity and bank details", timestamp: "Jun 28, 11:30 AM ET", kind: "ok" },
-      { label: "Trust granted — vendor added to allowlist", timestamp: "Jun 28, 11:47 AM ET", kind: "ok" },
+      { label: "Trust granted - vendor added to allowlist", timestamp: "Jun 28, 11:47 AM ET", kind: "ok" },
     ],
     linked: [
       { kind: "vendor", label: "Meridian LLC", refId: "meridian" },
@@ -393,7 +393,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     lifecycle: [
       { label: "Duplicate invoice detected", timestamp: "Jul 4, 1:10 PM ET", kind: "alert" },
       { label: "sarah@meridian paused rule and reviewed", timestamp: "Jul 4, 1:12 PM ET", kind: "ok" },
-      { label: "Trust revoked — vendor removed from allowlist", timestamp: "Jul 4, 1:15 PM ET", kind: "alert" },
+      { label: "Trust revoked - vendor removed from allowlist", timestamp: "Jul 4, 1:15 PM ET", kind: "alert" },
     ],
     linked: [
       { kind: "vendor", label: "Apex Cleaning Co", refId: "apex" },
@@ -422,7 +422,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$5,600 · sarah@meridian · AUD-5J7Y",
     lifecycle: [
       { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", kind: "ok" },
-      { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", kind: "alert" },
+      { label: "Escalated to human - above threshold", timestamp: "Jul 2, 9:01 AM ET", kind: "alert" },
       { label: "sarah@meridian approved", timestamp: "Jul 2, 9:55 AM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", kind: "ok" },
     ],
@@ -498,7 +498,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
   {
     id: "AUD-3K8Q",
     eventType: "flagged",
-    summary: "Payment held — new vendor exceeds threshold",
+    summary: "Payment held - new vendor exceeds threshold",
     counterparty: "Notion Team",
     amount: 240,
     actor: "system",
@@ -507,7 +507,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$240 · system · AUD-3K8Q",
     lifecycle: [
       { label: "Invoice Agent detected renewal", timestamp: "Jun 30, 12:55 PM ET", kind: "ok" },
-      { label: "Escalated to human — new seat count raised monthly cost", timestamp: "Jun 30, 1:00 PM ET", note: "policy/ap.threshold.v2", kind: "alert" },
+      { label: "Escalated to human - new seat count raised monthly cost", timestamp: "Jun 30, 1:00 PM ET", note: "policy/ap.threshold.v2", kind: "alert" },
       { label: "Payment held pending review", timestamp: "Jun 30, 1:00 PM ET", kind: "alert" },
     ],
     linked: [
@@ -538,7 +538,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     rowSubtitle: "$3,500 · sarah@meridian · AUD-4M6Z",
     lifecycle: [
       { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", kind: "ok" },
-      { label: "Escalated to human — above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", kind: "alert" },
+      { label: "Escalated to human - above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", kind: "alert" },
       { label: "sarah@meridian approved yield move", timestamp: "Jul 4, 6:27 PM ET", kind: "ok", actor: "sarah@meridian" },
       { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", kind: "ok" },
     ],
@@ -556,7 +556,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     },
   },
 
-  /* 11 — Collections Agent: auto-matched receivable —──────── */
+  /* 11 - Collections Agent: auto-matched receivable -──────── */
   {
     id: "AUD-2R1M",
     eventType: "auto_approved",
@@ -584,7 +584,7 @@ export const MOCK_AUDIT_RECORDS: AuditRecord[] = [
     },
   },
 
-  /* 12 — Close Agent: auto-reconciled bank/ledger pair —─────── */
+  /* 12 - Close Agent: auto-reconciled bank/ledger pair -─────── */
   {
     id: "AUD-7P9Q",
     eventType: "auto_approved",

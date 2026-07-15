@@ -10,7 +10,7 @@ import { actorIdentityTokens, ACTORS } from "./actors";
 import { linkedRelationship } from "./auditTypes";
 
 /* ── Semantic audit-record consistency (lightweight) ───────────────────────────
-   These checks go beyond "does the id resolve?" — they assert that the NARRATIVE
+   These checks go beyond "does the id resolve?" - they assert that the NARRATIVE
    in mock audit records is internally consistent with the vendor trust model and
    rule categories. This is the guard that would have caught AUD-7N2S originally
    claiming Bright Futures was auto_approved (it should be flagged for bank-detail
@@ -41,7 +41,7 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
   }
 
   for (const rec of MOCK_AUDIT_RECORDS) {
-    // 1 — An under-review vendor (flagged or trust_revoked) must never have an
+    // 1 - An under-review vendor (flagged or trust_revoked) must never have an
     //     auto_approved record.  A held/escalated payment was NOT cleared.
     if (
       rec.eventType === "auto_approved" &&
@@ -54,7 +54,7 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
       });
     }
 
-    // 1b — An explicitly untrusted vendor must also never have an auto_approved
+    // 1b - An explicitly untrusted vendor must also never have an auto_approved
     //      record (catches vendors that are permanently untrusted but never
     //      got a flagged record in the demo data).
     if (
@@ -68,7 +68,7 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
       });
     }
 
-    // 2 — An auto_approved record with a linked rule must match on category.
+    // 2 - An auto_approved record with a linked rule must match on category.
     if (rec.eventType === "auto_approved" && rec.counterparty) {
       const ruleLink = rec.linked.find((l) => l.kind === "rule");
       if (ruleLink) {
@@ -101,11 +101,11 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[semantic-consistency] ${issues.length} semantic issue(s) in mock audit records:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[semantic-consistency] OK — every auto_approved record's vendor + rule category is coherent.",
+      "[semantic-consistency] OK - every auto_approved record's vendor + rule category is coherent.",
     );
   }
 
@@ -116,7 +116,7 @@ export function checkSemanticAuditRecords(): SemanticIssue[] {
    Asserts that EVERY ruleId referenced anywhere in mock data resolves to a real
    rule in the store (seeded from mockRules). This is the guard that would have
    caught the original dangling-refId bug (audit records pointing at rules that
-   don't exist). It runs once in dev on boot and logs loudly — it never throws,
+   don't exist). It runs once in dev on boot and logs loudly - it never throws,
    so it can't break the app; it just makes drift impossible to miss.
    ──────────────────────────────────────────────────────────────────────────── */
 
@@ -126,7 +126,7 @@ export type RuleRef = { source: string; ruleId: string };
 export function collectRuleReferences(): RuleRef[] {
   const refs: RuleRef[] = [];
 
-  // Audit records — linked entities of kind "rule".
+  // Audit records - linked entities of kind "rule".
   for (const rec of MOCK_AUDIT_RECORDS) {
     for (const link of rec.linked) {
       if (link.kind === "rule") {
@@ -146,12 +146,12 @@ export function checkRuleReferences(): RuleRef[] {
   if (unresolved.length > 0) {
     console.error(
       `[rule-consistency] ${unresolved.length} rule reference(s) do not resolve ` +
-        `to any rule in mockRules — dangling refs will render as "(rule unavailable)":\n` +
+        `to any rule in mockRules - dangling refs will render as "(rule unavailable)":\n` +
         unresolved.map((r) => `  • ${r.source} → '${r.ruleId}'`).join("\n"),
     );
   } else {
     console.info(
-      "[rule-consistency] OK — every rule reference in mock data resolves.",
+      "[rule-consistency] OK - every rule reference in mock data resolves.",
     );
   }
 
@@ -173,7 +173,7 @@ export type EntityRef = { source: string; id: string };
 export function collectVendorReferences(): EntityRef[] {
   const refs: EntityRef[] = [];
 
-  // Audit records — linked entities of kind "vendor".
+  // Audit records - linked entities of kind "vendor".
   for (const rec of MOCK_AUDIT_RECORDS) {
     for (const link of rec.linked) {
       if (link.kind === "vendor") {
@@ -182,7 +182,7 @@ export function collectVendorReferences(): EntityRef[] {
     }
   }
 
-  // Documents — the vendor they belong to (when they have a KNOWN vendor;
+  // Documents - the vendor they belong to (when they have a KNOWN vendor;
   // non-vendor counterparties like landlords/ledgers carry no vendorId).
   for (const doc of MOCK_DOCUMENTS) {
     if (doc.vendorId) {
@@ -217,7 +217,7 @@ export function checkVendorReferences(): EntityRef[] {
     );
   } else {
     console.info(
-      "[vendor-consistency] OK — every vendor reference (linked refs, invoice.vendorId, vendor.ruleIds) resolves.",
+      "[vendor-consistency] OK - every vendor reference (linked refs, invoice.vendorId, vendor.ruleIds) resolves.",
     );
   }
 
@@ -232,7 +232,7 @@ export function checkVendorReferences(): EntityRef[] {
 export function collectDocumentReferences(): EntityRef[] {
   const refs: EntityRef[] = [];
 
-  // Audit records — linked evidence (kind "invoice" routes to the doc viewer).
+  // Audit records - linked evidence (kind "invoice" routes to the doc viewer).
   for (const rec of MOCK_AUDIT_RECORDS) {
     for (const link of rec.linked) {
       if (link.kind === "invoice") {
@@ -241,7 +241,7 @@ export function collectDocumentReferences(): EntityRef[] {
     }
   }
 
-  // Proposals (queue + receipts + standalone settled/held twins via allProposals) —
+  // Proposals (queue + receipts + standalone settled/held twins via allProposals) -
   // the source document they clear. Scope matches the lifecycle coherence check so a
   // dangling invoiceId on a standalone twin can't evade resolution.
   for (const p of allProposals()) {
@@ -261,12 +261,12 @@ export function checkDocumentReferences(): EntityRef[] {
   if (unresolved.length > 0) {
     console.error(
       `[document-consistency] ${unresolved.length} document reference(s) do not resolve ` +
-        `to any document in mockDocuments — dangling refs will render as "(document unavailable)":\n` +
+        `to any document in mockDocuments - dangling refs will render as "(document unavailable)":\n` +
         unresolved.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
     );
   } else {
     console.info(
-      "[document-consistency] OK — every document reference (linked evidence, proposal.invoiceId) resolves.",
+      "[document-consistency] OK - every document reference (linked evidence, proposal.invoiceId) resolves.",
     );
   }
 
@@ -277,7 +277,7 @@ export function checkDocumentReferences(): EntityRef[] {
 export function collectProposalReferences(): EntityRef[] {
   const refs: EntityRef[] = [];
 
-  // Audit records — linked entities of kind "proposal" AND the top-level
+  // Audit records - linked entities of kind "proposal" AND the top-level
   // `proposalId` wiring (used to deep-link the record's own proposal). Both are
   // live references, so both must resolve or they dangle.
   for (const rec of MOCK_AUDIT_RECORDS) {
@@ -302,13 +302,13 @@ export function checkProposalReferences(): EntityRef[] {
   if (unresolved.length > 0) {
     console.error(
       `[proposal-consistency] ${unresolved.length} proposal reference(s) do not resolve ` +
-        `to any proposal (queue, receipts, or standalone records) — dangling refs will ` +
+        `to any proposal (queue, receipts, or standalone records) - dangling refs will ` +
         `render as "(proposal unavailable)":\n` +
         unresolved.map((r) => `  • ${r.source} → '${r.id}'`).join("\n"),
     );
   } else {
     console.info(
-      "[proposal-consistency] OK — every proposal reference in mock data resolves.",
+      "[proposal-consistency] OK - every proposal reference in mock data resolves.",
     );
   }
 
@@ -316,13 +316,13 @@ export function checkProposalReferences(): EntityRef[] {
 }
 
 /* ── Cross-entity COHERENCE guard ─────────────────────────────────────────
-   Resolution is necessary but not sufficient — the reference can resolve yet
+   Resolution is necessary but not sufficient - the reference can resolve yet
    still LIE. This is the gap that let rules break before (an id that resolved
    to the wrong thing). Beyond resolution, assert that:
      • a linked invoice's total == the linking audit record's amount;
      • a linked invoice's vendorId == the record's linked vendor;
      • every kind:"vendor" linked ref points at an ACTUAL vendor (catches the
-       j-smith/aave misfiling class — a payroll employee or DeFi protocol
+       j-smith/aave misfiling class - a payroll employee or DeFi protocol
        masquerading as a vendor);
      • a vendor with a linked PAID invoice is not contradicted by zero payment
        history (paymentCount === 0).
@@ -330,19 +330,19 @@ export function checkProposalReferences(): EntityRef[] {
    proposal → invoice → audit → anchor chain (a reference that resolves to the
    WRONG lifecycle state):
      • a SETTLED audit record (approved / auto_approved) must not link a proposal
-       that is still pending/verifying/postponed — a settled/anchored event can't
+       that is still pending/verifying/postponed - a settled/anchored event can't
        point at an un-acted proposal (catches the AUD-3308FE → prop-aws(pending)
        class);
      • a linked invoice's status must match the record's event type
        (approved/auto_approved ⇒ paid; flagged ⇒ held);
-     • a proposal's invoiceId must match its own lifecycle — a pending/verifying/
+     • a proposal's invoiceId must match its own lifecycle - a pending/verifying/
        postponed proposal must not OWN a paid invoice, and a settled proposal
        (executed/auto_handled) must own a paid one (catches the pending-proposal-
        owns-settled-invoice class);
      • an invoice's vendorName must equal its resolved vendor.name (catches the
        vendor-rename drift where the invoice and the catalogue disagree).
    NOTE: a FLAGGED record CAN link a pending proposal and CAN be anchored (a hold
-   is itself an auditable event) — see AUD-3K8Q — so neither is treated as a lie.
+   is itself an auditable event) - see AUD-3K8Q - so neither is treated as a lie.
    Display labels (linked-ref label, counterparty) are allowed to differ from a
    vendor's canonical name (e.g. "Notion Team" vs "Notion Labs"), so labels are
    NOT equality-checked.
@@ -351,10 +351,10 @@ export function checkProposalReferences(): EntityRef[] {
    ──────────────────────────────────────────────────────────────────────────── */
 // Lifecycle buckets over ProposalStatus. `executing` is deliberately in NEITHER:
 // it's an in-flight, approved-but-not-yet-settled state, so its invoice can
-// legitimately still be unpaid/held — asserting either way would misfire.
-//   UNSETTLED — never acted on / declined: must NOT own a paid invoice, and a
+// legitimately still be unpaid/held - asserting either way would misfire.
+//   UNSETTLED - never acted on / declined: must NOT own a paid invoice, and a
 //               settled (approved/auto_approved) audit record must NOT link one.
-//   SETTLED   — actually paid out: MUST own a paid invoice.
+//   SETTLED   - actually paid out: MUST own a paid invoice.
 const UNSETTLED_STATUSES: ReadonlyArray<string> = [
   "pending",
   "verifying",
@@ -377,7 +377,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
     if (venLink && !resolveVendor(venLink.refId)) {
       issues.push({
         source: `audit ${rec.id}`,
-        message: `linked vendor '${venLink.refId}' is not an actual vendor — a non-vendor counterparty (employee/protocol/ledger) is misfiled as kind:"vendor"`,
+        message: `linked vendor '${venLink.refId}' is not an actual vendor - a non-vendor counterparty (employee/protocol/ledger) is misfiled as kind:"vendor"`,
       });
     }
 
@@ -387,7 +387,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
       if (prop && UNSETTLED_STATUSES.includes(prop.status)) {
         issues.push({
           source: `audit ${rec.id}`,
-          message: `is a settled ${rec.eventType} record but its linked proposal '${prop.id}' is still ${prop.status} — a settled/anchored event cannot point at an un-acted proposal`,
+          message: `is a settled ${rec.eventType} record but its linked proposal '${prop.id}' is still ${prop.status} - a settled/anchored event cannot point at an un-acted proposal`,
         });
       }
     }
@@ -403,7 +403,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
           });
         }
         // Vendor coherence: document.vendorId must match the record's vendor.
-        // (Only when the document names a KNOWN vendor — non-vendor
+        // (Only when the document names a KNOWN vendor - non-vendor
         // counterparties carry no vendorId and are checked below.)
         if (venLink && doc.vendorId && doc.vendorId !== venLink.refId) {
           issues.push({
@@ -432,7 +432,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
   }
 
   // Proposal ↔ invoice lifecycle coherence over EVERY proposal source (queue,
-  // receipts, AND standalone settled/held twins via allProposals) — otherwise
+  // receipts, AND standalone settled/held twins via allProposals) - otherwise
   // exactly the twins this guard exists to protect (e.g. settled-aws) escape it.
   // An unsettled proposal must not own a paid invoice; a settled one must.
   for (const p of allProposals()) {
@@ -458,7 +458,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
       if (UNSETTLED_STATUSES.includes(p.status) && doc.status === "paid") {
         issues.push({
           source: `proposal ${p.id}`,
-          message: `is ${p.status} but its linked document ${doc.id} is already 'paid' — an unsettled proposal cannot own a settled document`,
+          message: `is ${p.status} but its linked document ${doc.id} is already 'paid' - an unsettled proposal cannot own a settled document`,
         });
       }
       if (SETTLED_STATUSES.includes(p.status) && doc.status !== "paid") {
@@ -488,7 +488,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
       if (v && doc.vendorName && doc.vendorName !== v.name) {
         issues.push({
           source: `document ${doc.id}`,
-          message: `vendorName '${doc.vendorName}' ≠ resolved vendor.name '${v.name}' (vendorId '${doc.vendorId}') — document names its vendor differently from the catalogue`,
+          message: `vendorName '${doc.vendorName}' ≠ resolved vendor.name '${v.name}' (vendorId '${doc.vendorId}') - document names its vendor differently from the catalogue`,
         });
       }
     }
@@ -500,7 +500,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
         message: `has vendorId '${doc.vendorId}' but no vendorName`,
       });
     }
-    // bank_transaction records ARE the reconciliation evidence — they must
+    // bank_transaction records ARE the reconciliation evidence - they must
     // carry a reconciliation block or the viewer has nothing to render.
     if (doc.kind === "bank_transaction" && !doc.reconciliation) {
       issues.push({
@@ -510,7 +510,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
     }
     // Compare pair coherence: a document's compareToId twin must resolve, name
     // the SAME vendor (when both are known vendors), and sit within a small
-    // amount band — the pair exists to surface a duplicate / bank-detail change,
+    // amount band - the pair exists to surface a duplicate / bank-detail change,
     // so a wildly different vendor or amount would be an incoherent comparison.
     if (doc.compareToId) {
       const twin = resolveDocument(doc.compareToId);
@@ -523,7 +523,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
         if (doc.vendorId && twin.vendorId && doc.vendorId !== twin.vendorId) {
           issues.push({
             source: `document ${doc.id}`,
-            message: `compare twin ${twin.id} names a different vendor ('${twin.vendorId}' ≠ '${doc.vendorId}') — the comparison is incoherent`,
+            message: `compare twin ${twin.id} names a different vendor ('${twin.vendorId}' ≠ '${doc.vendorId}') - the comparison is incoherent`,
           });
         }
         if (
@@ -535,7 +535,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
           if (delta > 0.05) {
             issues.push({
               source: `document ${doc.id}`,
-              message: `compare twin ${twin.id} amount (${twin.amount}) differs from ${doc.amount} by ${(delta * 100).toFixed(1)}% (> 5%) — too far apart to be a duplicate/bank-change pair`,
+              message: `compare twin ${twin.id} amount (${twin.amount}) differs from ${doc.amount} by ${(delta * 100).toFixed(1)}% (> 5%) - too far apart to be a duplicate/bank-change pair`,
             });
           }
         }
@@ -546,11 +546,11 @@ export function checkReferenceCoherence(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[coherence] ${issues.length} cross-entity coherence issue(s) in mock data:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[coherence] OK — linked document amounts/vendors/status match their records, compare pairs are coherent, and no vendor contradicts its paid documents.",
+      "[coherence] OK - linked document amounts/vendors/status match their records, compare pairs are coherent, and no vendor contradicts its paid documents.",
     );
   }
 
@@ -562,7 +562,7 @@ export function checkReferenceCoherence(): SemanticIssue[] {
    "pending_next_batch" must NOT advertise a verifiable state at the DATA level:
    no merkleRoot / baseTx / verifyHref may be present (there is nothing to link
    to yet). Asserting at the data level is what keeps the ONE shared AnchorStatus
-   component honest across every surface (audit popup, settled card, receipt) —
+   component honest across every surface (audit popup, settled card, receipt) -
    the UI renders Verify disabled purely from anchor.status, so a pending record
    that carried hashes/href would be a lie waiting to leak into the UI.
    ──────────────────────────────────────────────────────────────────────────── */
@@ -578,7 +578,7 @@ export function checkAnchorUiCoherence(): SemanticIssue[] {
     if (leaked.length > 0) {
       issues.push({
         source: `audit ${rec.id}`,
-        message: `is anchor.status "pending_next_batch" but carries ${leaked.join(", ")} — a not-yet-anchored record must not present a verifiable/linkable proof`,
+        message: `is anchor.status "pending_next_batch" but carries ${leaked.join(", ")} - a not-yet-anchored record must not present a verifiable/linkable proof`,
       });
     }
   }
@@ -586,11 +586,11 @@ export function checkAnchorUiCoherence(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[anchor-ui-consistency] ${issues.length} anchor-state issue(s) in mock data:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[anchor-ui-consistency] OK — no pending_next_batch record advertises hashes or a verify link.",
+      "[anchor-ui-consistency] OK - no pending_next_batch record advertises hashes or a verify link.",
     );
   }
 
@@ -602,23 +602,23 @@ export function checkAnchorUiCoherence(): SemanticIssue[] {
    canonical agent catalog: Invoice = AP / vendor payments (incl. payroll runs &
    subscriptions), Collections = AR, Cash = treasury / sweep, Close =
    reconciliation. This catches the class where an agent proposes outside its lane
-   (e.g. the Close Agent — reconciliation — "proposing a payroll run" or a vendor
+   (e.g. the Close Agent - reconciliation - "proposing a payroll run" or a vendor
    payment, which belongs to the Invoice Agent).
    The proposing agent lives only in the lifecycle label ("<X> Agent proposed |
    detected …"), so we parse it, then match the ACTION PHRASE against per-domain
    keywords. We flag ONLY when the phrase clearly belongs to a different agent's
-   domain and NOT the proposing agent's — an ambiguous phrase (no keyword match)
+   domain and NOT the proposing agent's - an ambiguous phrase (no keyword match)
    is skipped, so the guard never fires false positives on future copy. Never
    throws; only console.error's.
    ──────────────────────────────────────────────────────────────────────────── */
 const AGENT_DOMAIN_KEYWORDS: Record<string, RegExp> = {
-  // Invoice Agent — accounts payable: vendor payments, payroll, subscriptions, bills.
+  // Invoice Agent - accounts payable: vendor payments, payroll, subscriptions, bills.
   invoice: /payment|payroll|invoice|subscription|renewal|utility|bill|vendor|ach to/,
-  // Collections Agent — accounts receivable: chasing money owed TO the business.
+  // Collections Agent - accounts receivable: chasing money owed TO the business.
   collections: /receivable|overdue|reminder|dunning|collection|past due/,
-  // Cash Agent — treasury: idle-balance sweeps, yield moves.
+  // Cash Agent - treasury: idle-balance sweeps, yield moves.
   cash: /sweep|yield|idle|treasury|savings|operating balance|deposit to/,
-  // Close Agent — reconciliation: ledger/close discrepancies, correcting entries.
+  // Close Agent - reconciliation: ledger/close discrepancies, correcting entries.
   close: /reconcil|ledger|correcting entry|close period|month-end|journal entry/,
 };
 
@@ -644,7 +644,7 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
 
       issues.push({
         source: `audit ${rec.id}`,
-        message: `${m[1]} Agent proposed/detected "${m[2]}" — that action is in the ${matchedDomains.join("/")} domain, not the ${agent} agent's. An agent must not act outside its catalog domain.`,
+        message: `${m[1]} Agent proposed/detected "${m[2]}" - that action is in the ${matchedDomains.join("/")} domain, not the ${agent} agent's. An agent must not act outside its catalog domain.`,
       });
     }
   }
@@ -652,11 +652,11 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[agent-domain-consistency] ${issues.length} record → agent mismatch(es) in mock data:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[agent-domain-consistency] OK — every audit record's proposing agent stays inside its catalog domain.",
+      "[agent-domain-consistency] OK - every audit record's proposing agent stays inside its catalog domain.",
     );
   }
 
@@ -669,7 +669,7 @@ export function checkAgentDomainCoherence(): SemanticIssue[] {
    vendor/employee); if those resolve to the same identity, the record fails a
    basic four-eyes control. Gating to PAYEE rows reuses the SHARED
    `linkedRelationship` predicate (payment event type + numeric amount + receiving
-   kind), so this guard can never drift from what the UI labels a payee — non-payment
+   kind), so this guard can never drift from what the UI labels a payee - non-payment
    governance rows, treasury destinations (protocol/ledger) and evidence
    (rule/invoice/proposal) are all skipped. Compares actor identity tokens (raw +
    resolved email/id) against the payee's label/refId (+ resolved vendor name).
@@ -690,7 +690,7 @@ export function checkActorPayeeSegregation(): SemanticIssue[] {
     if (actorTokens.size === 0) continue; // no human actor → nothing to segregate
 
     for (const link of rec.linked) {
-      // Only true payees on payment records — same derivation the UI chip uses.
+      // Only true payees on payment records - same derivation the UI chip uses.
       if (linkedRelationship(rec, link) !== "PAYEE") continue;
       const payeeTokens = new Set<string>([norm(link.label), norm(link.refId)]);
       if (link.kind === "vendor") {
@@ -703,7 +703,7 @@ export function checkActorPayeeSegregation(): SemanticIssue[] {
       if (overlap) {
         issues.push({
           source: `audit ${rec.id}`,
-          message: `approver "${overlap}" is also the payee (${link.kind} "${link.label}") — an actor must never approve a payment to themselves (segregation of duties).`,
+          message: `approver "${overlap}" is also the payee (${link.kind} "${link.label}") - an actor must never approve a payment to themselves (segregation of duties).`,
         });
       }
     }
@@ -712,11 +712,11 @@ export function checkActorPayeeSegregation(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[actor-payee-segregation] ${issues.length} record(s) where the approver is also the payee:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[actor-payee-segregation] OK — no audit record has the same party as both approver and payee.",
+      "[actor-payee-segregation] OK - no audit record has the same party as both approver and payee.",
     );
   }
 
@@ -740,14 +740,14 @@ export function checkMemberActorCoherence(): SemanticIssue[] {
     const email = norm(a.email);
     const id = norm(a.id);
     if (!email) {
-      issues.push({ source: `actor ${a.id}`, message: `actor has an empty email — the member link resolves by email/id and would break.` });
+      issues.push({ source: `actor ${a.id}`, message: `actor has an empty email - the member link resolves by email/id and would break.` });
     }
     if (!id) {
       issues.push({ source: `actor ${a.email}`, message: `actor has an empty id.` });
     }
     if (email) {
       const prev = seenEmail.get(email);
-      if (prev) issues.push({ source: `actor ${a.id}`, message: `duplicate actor email "${a.email}" (also on "${prev}") — an audit actor would resolve ambiguously to a member.` });
+      if (prev) issues.push({ source: `actor ${a.id}`, message: `duplicate actor email "${a.email}" (also on "${prev}") - an audit actor would resolve ambiguously to a member.` });
       else seenEmail.set(email, a.id);
     }
     if (id) {
@@ -760,11 +760,11 @@ export function checkMemberActorCoherence(): SemanticIssue[] {
   if (issues.length > 0) {
     console.error(
       `[member-actor-coherence] ${issues.length} issue(s) in the actor↔member seam:\n` +
-        issues.map((i) => `  • ${i.source} — ${i.message}`).join("\n"),
+        issues.map((i) => `  • ${i.source} - ${i.message}`).join("\n"),
     );
   } else {
     console.info(
-      "[member-actor-coherence] OK — actor registry ids/emails are unambiguous for member linking.",
+      "[member-actor-coherence] OK - actor registry ids/emails are unambiguous for member linking.",
     );
   }
 

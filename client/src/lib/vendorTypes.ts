@@ -1,4 +1,4 @@
-/* Vendor trust model — the spine of the allowlist picker and automation eligibility.
+/* Vendor trust model - the spine of the allowlist picker and automation eligibility.
    Trust is a status granted by the user, informed by Brain, and it gates auto-clear. */
 
 export type TrustStatus = "new" | "known" | "trusted" | "under_review";
@@ -39,7 +39,7 @@ export interface Vendor {
   ruleIds: string[]; // rules whose allowlist includes this vendor
 }
 
-/* FactRow — local definition so vendorTypes has no external dep. */
+/* FactRow - local definition so vendorTypes has no external dep. */
 export interface FactRow {
   label: string;
   value: string;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* ── Title case helper - used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
@@ -45,7 +45,7 @@ export function SettledRecordCard({
   onOpenChange: (open: boolean) => void;
   onViewAuditLog?: () => void;
   anchorAuditId?: string;
-  /* header pager — cycle through the other records in the active tab */
+  /* header pager - cycle through the other records in the active tab */
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
@@ -111,7 +111,7 @@ export function SettledRecordCard({
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">{meta}</p>
             </div>
 
-            {/* Reasoning — condensed (rationale only, no full confidence band) */}
+            {/* Reasoning - condensed (rationale only, no full confidence band) */}
             <div className="flex flex-col gap-[8px] w-full">
               <SectionLabel>Why Brain proposed this</SectionLabel>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-[#6c779d]">{proposal.rationale}</p>
@@ -150,7 +150,7 @@ export function SettledRecordCard({
               </div>
             )}
 
-            {/* Cleared by rule — links to RuleDetail when the governing rule
+            {/* Cleared by rule - links to RuleDetail when the governing rule
                 still resolves; a deleted rule shows a muted "(rule unavailable)". */}
             {proposal.rule && (() => {
               const ruleGone = !resolveRule(proposal.rule!.id);
@@ -184,7 +184,7 @@ export function SettledRecordCard({
               );
             })()}
 
-            {/* Source document — tappable when invoiceId resolves */}
+            {/* Source document - tappable when invoiceId resolves */}
             {proposal.invoiceId && (() => {
               const srcDoc = resolveDocument(proposal.invoiceId);
               if (!srcDoc) {
@@ -218,7 +218,7 @@ export function SettledRecordCard({
               );
             })()}
 
-            {/* Anchor Status — status mode */}
+            {/* Anchor Status - status mode */}
             <div className="h-px w-full bg-[#1d2132]" />
             <div className="flex flex-col gap-[8px] w-full">
               <SectionLabel>Governance record</SectionLabel>

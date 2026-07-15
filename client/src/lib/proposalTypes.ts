@@ -75,7 +75,7 @@ export interface ProblemReport {
   resolved: boolean;
 }
 
-/* A single entry in a rule's lifecycle trail — created / paused / resumed.
+/* A single entry in a rule's lifecycle trail - created / paused / resumed.
    Rendered on RuleDetail's "History" table, most recent first. */
 export interface RuleHistoryEvent {
   id: string;
@@ -91,15 +91,15 @@ export interface RuleHistoryEvent {
 export type RuleKind = "automation" | "guardrail" | "always_on";
 
 export interface AutoRule {
-  id: string; // URL-safe slug, e.g. "utility" — used by the /rules/:id route
+  id: string; // URL-safe slug, e.g. "utility" - used by the /rules/:id route
   name: string;
   summary: string;
   createdLabel: string;
   policyId: string;
   active: boolean;
   kind?: RuleKind; // section the rule belongs to (defaults to "automation")
-  locked?: boolean; // always_on rules — no pause/delete toggle
-  /* Scope — drives remediations + "related pending item" flagging. */
+  locked?: boolean; // always_on rules - no pause/delete toggle
+  /* Scope - drives remediations + "related pending item" flagging. */
   agent?: Agent;
   category?: string; // e.g. "utility", "software subscription"
   cap?: number; // amount ceiling this rule auto-clears under
@@ -113,7 +113,7 @@ export interface AutoRule {
 }
 
 /* Evidence-backed AI suggestion: a proposed rule Brain noticed a pattern for,
-   shown with the facts behind it. Default OFF/unaccepted — the user must
+   shown with the facts behind it. Default OFF/unaccepted - the user must
    explicitly accept (which runs the create-rule flow). */
 export interface RuleSuggestion {
   id: string;
@@ -164,7 +164,7 @@ export interface Proposal {
   sweepMath?: SweepMath;
   batchApprovable?: boolean;
   policyThreshold?: string;
-  /* Present only for status === "auto_handled" — a settled receipt, not a decision. */
+  /* Present only for status === "auto_handled" - a settled receipt, not a decision. */
   pastTenseStatement?: string; // "Paid Con Edison $486"
   settledMeta?: string; // "from Operating ••4821 · settled today 8:02 AM ET · you set a rule that allows this"
   handoffTimeline?: HandoffStep[]; // proposed → approved automatically by rule → execution settled

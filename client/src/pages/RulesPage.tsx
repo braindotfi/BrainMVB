@@ -68,7 +68,7 @@ function finalizeDraft(draft: Partial<AutoRule>): AutoRule {
 /* ── Pause/resume toggle ────────────────────────────────────────────────────── */
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
-/* ── Rule confirmation sentence — natural-language summary with highlighted vars */
+/* ── Rule confirmation sentence - natural-language summary with highlighted vars */
 function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
   const { format } = useCurrency();
   const category = titleCase(rule.category || "payment");
@@ -102,7 +102,7 @@ function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Section wrapper — card with header, always visible ─────────────────────── */
+/* ── Section wrapper - card with header, always visible ─────────────────────── */
 function Section({
   title,
   count,
@@ -137,7 +137,7 @@ function Section({
   );
 }
 
-/* ── Automation row — acts for you ──────────────────────────────────────────── */
+/* ── Automation row - acts for you ──────────────────────────────────────────── */
 function AutomationRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
@@ -181,7 +181,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Guardrail row — pulls you back in above a threshold ─────────────────────── */
+/* ── Guardrail row - pulls you back in above a threshold ─────────────────────── */
 function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
@@ -224,7 +224,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Always-on row — locked, no toggle ──────────────────────────────────────── */
+/* ── Always-on row - locked, no toggle ──────────────────────────────────────── */
 function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const open = () => navigate(`/rules/${rule.id}`);
@@ -256,7 +256,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Brain-core default policy — displayed under the "Default" tab ────────
+/* ── Brain-core default policy - displayed under the "Default" tab ────────
    Phase 2a: display only. The tenant's ACTUAL signed policy (thresholds,
    quorum, approval requirements), NOT the app's mock/user rule cards.
    Mutations (pause/edit threshold) need policy:sign scope the token lacks;
@@ -308,7 +308,7 @@ function PolicySection() {
   );
 }
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* ── Title case helper - used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
@@ -343,7 +343,7 @@ function SuggestionCard({
       className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
       data-testid={`card-suggestion-${suggestion.id}`}
     >
-      {/* Header — title + confidence pill */}
+      {/* Header - title + confidence pill */}
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] min-w-px text-[#a8b9f4] text-[20px]" data-testid={`text-suggestion-title-${suggestion.id}`}>
@@ -365,7 +365,7 @@ function SuggestionCard({
           {suggestion.description}
         </p>
 
-        {/* Evidence table — key/value rows with fixed label column. */}
+        {/* Evidence table - key/value rows with fixed label column. */}
         <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[8px] shrink-0 w-full">
           {suggestion.evidence.map((fact, i) => (
             <div
@@ -389,7 +389,7 @@ function SuggestionCard({
           ))}
         </div>
 
-        {/* Action buttons row — Accept + Edit on left, Dismiss on right. */}
+        {/* Action buttons row - Accept + Edit on left, Dismiss on right. */}
         <div className="flex items-start justify-between relative shrink-0 w-full">
           <div className="flex gap-[16px] items-center relative shrink-0">
             <button
@@ -614,7 +614,7 @@ export function RulesPage() {
   };
 
   const cancelCreate = () => {
-    // Leave the suggestion in the list — accept is not final until confirmed.
+    // Leave the suggestion in the list - accept is not final until confirmed.
     setPendingSuggestionId(null);
     setPendingCreate(null);
   };
@@ -624,7 +624,7 @@ export function RulesPage() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
-  // tab counts removed — shown in table header instead
+  // tab counts removed - shown in table header instead
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
@@ -641,7 +641,7 @@ export function RulesPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start w-full">
-            {/* Tab bar — active tab is ORANGE */}
+            {/* Tab bar - active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {RULE_TABS.map((tab) => {
                 const isActive = activeTab === tab;
@@ -664,7 +664,7 @@ export function RulesPage() {
               })}
             </div>
 
-          {/* Create-rule confirmation — on Automations and Guardrails tabs */}
+          {/* Create-rule confirmation - on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
             <div
               className="w-full rounded-[16px] border p-[16px] flex flex-col gap-[12px]"
@@ -707,7 +707,7 @@ export function RulesPage() {
             </div>
           )}
 
-          {/* New rule — sentence builder — on Automations and Guardrails tabs */}
+          {/* New rule - sentence builder - on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && (!builderOpen ? (
             <button
               type="button"
@@ -732,7 +732,7 @@ export function RulesPage() {
             </button>
           ) : (
             <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
-              {/* Two-line sentence builder — matches Figma */}
+              {/* Two-line sentence builder - matches Figma */}
               <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
                 {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
                 <div className="flex flex-wrap items-center gap-[6px]">
@@ -876,7 +876,7 @@ export function RulesPage() {
                 </div>
               </div>
 
-              {/* Compile line — what the sentence becomes */}
+              {/* Compile line - what the sentence becomes */}
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-line">
                 compiles to {builderPolicy}
               </p>
@@ -905,7 +905,7 @@ export function RulesPage() {
             </div>
           ))}
 
-          {/* Tab content — each tab shows its own section */}
+          {/* Tab content - each tab shows its own section */}
 
           {activeTab === "Default" && (
             <>

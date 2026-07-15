@@ -4,16 +4,16 @@ import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
    Replaces MOCK_AUDIT_RECORDS as the AuditLogPage data source with
    `GET /audit/events` + `GET /audit/anchor/latest` (both proxied verbatim by
-   the BFF's generic GET passthrough — no new route needed; see
+   the BFF's generic GET passthrough - no new route needed; see
    server/brain/proxy.ts). `audit:read` is on the session/member token.
 
    Shape verified against brain-core source, not docs:
    - services/api/assets/openapi.yaml:2646 (`/audit/events`) and :2746
      (`/audit/anchor/latest`).
-   - services/audit/src/repository.ts (AuditEventRow — id, tenant_id, layer,
+   - services/audit/src/repository.ts (AuditEventRow - id, tenant_id, layer,
      actor, action, inputs, outputs, policy_version, event_hash,
      prev_event_hash, created_at). No per-event anchor/proof field.
-   - services/execution/src/payment-intents/PaymentIntentService.ts — real
+   - services/execution/src/payment-intents/PaymentIntentService.ts - real
      `action` strings + inputs/outputs shapes for the events this queue will
      actually see: `payment_intent.created` (inputs: action_type,
      source_account_id, destination_counterparty_id, amount, currency),
@@ -22,7 +22,7 @@ import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./
 
    Honesty: brain-core's event list carries NO audit-record id in the app's
    "AUD-xxxx" format, no rich lifecycle narrative, and no mock-store cross-refs
-   (rule/vendor/document/proposal ids). We do not fabricate any of that — see
+   (rule/vendor/document/proposal ids). We do not fabricate any of that - see
    mapAuditEventToRecord below for exactly what is real vs honestly omitted. */
 
 export interface BrainAuditEvent {
@@ -54,9 +54,9 @@ export interface BrainAnchor {
 }
 
 /** action → (eventType, plain-language summary prefix). Anything not listed
- *  here falls back to a generic "system event" reading — no invented eventType. */
+ *  here falls back to a generic "system event" reading - no invented eventType. */
 const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: BrainAuditEvent) => string }> = {
-  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed — awaiting decision" },
+  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed - awaiting decision" },
   "payment_intent.approved": { eventType: "approved", summary: () => "Payment approved" },
   "payment_intent.rejected": { eventType: "rejected", summary: () => "Payment rejected" },
   "execution.approve": { eventType: "approved", summary: () => "Payment approved" },
@@ -68,7 +68,7 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
 function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   const known = ACTION_MAP[e.action];
   if (known) return { eventType: known.eventType, summary: known.summary(e) };
-  // ponytail: no fabricated category for unmapped actions — the raw action id
+  // ponytail: no fabricated category for unmapped actions - the raw action id
   // is the honest label until this map grows to cover more of brain-core's
   // action vocabulary.
   return { eventType: "flagged", summary: e.action };
@@ -85,7 +85,7 @@ function label(ms: number): string {
 }
 
 /** A record is anchored iff its created_at falls within the latest anchor's
- *  period (the only per-record signal brain-core's anchor endpoint gives us —
+ *  period (the only per-record signal brain-core's anchor endpoint gives us -
  *  no per-record merkle proof from this list; that requires the separate
  *  GET /audit/event/{id} inclusion-proof endpoint, out of scope for a list view). */
 function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): AnchorProof {
@@ -119,11 +119,11 @@ function amountFrom(e: BrainAuditEvent): number | undefined {
 
 /** Map a live brain-core AuditEvent to the app's AuditRecord shape. Honest,
  *  no fabrication:
- *  - lifecycle is a SINGLE step (the event itself) — brain-core's list gives
+ *  - lifecycle is a SINGLE step (the event itself) - brain-core's list gives
  *    one row per event, not a pre-assembled multi-step narrative per record;
  *    a richer lifecycle would require stitching multiple events by
  *    payment_intent_id, which is a follow-up (see ponytail note below).
- *  - linked[] is always empty — brain-core's event carries no rule/vendor/
+ *  - linked[] is always empty - brain-core's event carries no rule/vendor/
  *    document/proposal id in this app's mock id space, and inputs/outputs
  *    only carry brain-core's OWN ids (payment_intent_id, counterparty_id,
  *    approval_id), which don't resolve against the still-mock rule/vendor/
@@ -154,11 +154,11 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
     actor: event.actor,
     occurredAtLabel: label(createdMs),
     occurredAtMs: createdMs,
-    // rowSubtitle left unset — AuditLogPage's own fallback formats amount
+    // rowSubtitle left unset - AuditLogPage's own fallback formats amount
     // through useCurrency(), which this module has no access to.
     lifecycle: [step],
     // ponytail: rich linked-evidence (documents/vendors/rules resolved from a
-    // live audit event) stays a follow-up until those stores are also live —
+    // live audit event) stays a follow-up until those stores are also live -
     // see BrainMVB-data-integration/CLAUDE.md's linked-evidence contract.
     linked: [],
     anchor: anchorFor(event, latestAnchor),

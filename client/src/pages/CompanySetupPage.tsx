@@ -7,7 +7,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
 /* Production tenancy (Phase 2). Shown when the logged-in user has a platform account but
    no brain-core tenant membership (NoTenantError / linked:false). Membership must come
    from creating a company (POST /api/brain/tenants) or accepting an invite
-   (POST /api/brain/invites/consume) — NOTHING is auto-provisioned, and an invite is only
+   (POST /api/brain/invites/consume) - NOTHING is auto-provisioned, and an invite is only
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
@@ -85,14 +85,14 @@ export function CompanySetupPage() {
     try {
       const { ok, data } = await postJson("/api/brain/tenants", { company_name: companyName.trim() });
       if (!ok) {
-        // Tenant creation is NOT idempotent — never auto-retry; surface it and let the
+        // Tenant creation is NOT idempotent - never auto-retry; surface it and let the
         // user decide whether to submit again.
-        setError(upstreamMessage(data, "Couldn't create your company. Nothing was set up — you can try again."));
+        setError(upstreamMessage(data, "Couldn't create your company. Nothing was set up - you can try again."));
         return;
       }
       await finish();
     } catch {
-      setError("Couldn't reach the server. Nothing was set up — you can try again.");
+      setError("Couldn't reach the server. Nothing was set up - you can try again.");
     } finally {
       setBusy(false);
     }
@@ -116,7 +116,7 @@ export function CompanySetupPage() {
       }
       await finish();
     } catch {
-      setError("Couldn't reach the server. The invite was not used — you can try again.");
+      setError("Couldn't reach the server. The invite was not used - you can try again.");
     } finally {
       setBusy(false);
     }
@@ -151,7 +151,7 @@ export function CompanySetupPage() {
               Set Up Your Company
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
-              {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet —
+              {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet -
               create one, or join with an invite from your admin.
             </p>
           </div>
@@ -205,7 +205,7 @@ export function CompanySetupPage() {
                 />
               </div>
               <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[13px] px-1">
-                Joining links this account{user?.email ? ` (${user.email})` : ""} to your company — make sure this
+                Joining links this account{user?.email ? ` (${user.email})` : ""} to your company - make sure this
                 invite was meant for you.
               </p>
               {error && (

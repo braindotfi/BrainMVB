@@ -56,7 +56,7 @@ export function AuditLogPage() {
     };
     brainRecords.forEach(add);
     /* Always include the 4 static auto-approved records (Adobe, Comcast,
-       Meridian, Gusto) — they originate from mock proposals, not brain-core,
+       Meridian, Gusto) - they originate from mock proposals, not brain-core,
        so they never arrive via the live feed. */
     AUTO_APPROVED_AUDIT_RECORDS.forEach(add);
     /* Layer in client-side review-status overrides (reject / postpone / approve). */
@@ -66,7 +66,7 @@ export function AuditLogPage() {
       if (!p) continue;
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
-    /* Layer in agent-proposal decisions (the AgentProposalModal flow) — these
+    /* Layer in agent-proposal decisions (the AgentProposalModal flow) - these
        live in the agentProposals decision store, not reviewStatusStore. */
     for (const [id, decision] of Object.entries(agentDecisions)) {
       if (decision !== "approved" && decision !== "rejected") continue;
@@ -136,7 +136,7 @@ export function AuditLogPage() {
     return DEMO_AUDIT_RECORDS;
   }, [activeTab, records]);
 
-  /* Header pager — cycle (wrap-around) through the records in the active tab. */
+  /* Header pager - cycle (wrap-around) through the records in the active tab. */
   const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
   const pagerDisabled = activeIdx < 0 || filtered.length <= 1;
   const pageRecord = (dir: 1 | -1) => {
@@ -157,7 +157,7 @@ export function AuditLogPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Tab bar — active tab is ORANGE */}
+            {/* Tab bar - active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {AUDIT_TABS.map((tab) => {
                 const isActive = activeTab === tab;

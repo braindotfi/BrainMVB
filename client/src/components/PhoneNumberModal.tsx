@@ -6,11 +6,11 @@ import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Phone Number entry + Verify modals ───────────────────────────────
    Three-step flow:
-   1) verify-current — verify ownership of current phone (Figma 4582:59986)
-   2) enter — enter new phone number
-   3) verify — enter 6-digit code sent to new phone
+   1) verify-current - verify ownership of current phone (Figma 4582:59986)
+   2) enter - enter new phone number
+   3) verify - enter 6-digit code sent to new phone
    On success update the shared user-contact store.
-   Demo code is "123456" — any other entry triggers an error alert.        */
+   Demo code is "123456" - any other entry triggers an error alert.        */
 
 const VALID_CODE = "123456";
 

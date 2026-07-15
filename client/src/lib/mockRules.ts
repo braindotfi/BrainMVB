@@ -4,13 +4,13 @@ import { UTILITY_RULE, SAAS_RULE, LEASE_RULE, PAYROLL_RULE } from "./mockProposa
 /* ── Mock rule catalogue ──────────────────────────────────────────────────────
    Source of truth for the rules the Rules page renders. Grouped purely by
    `kind` so the page can derive its three sections (Automations / Guardrails /
-   Always-on) from data alone — empty sections collapse on their own.
+   Always-on) from data alone - empty sections collapse on their own.
 
    The four AP automations are imported from mockProposals so the auto-handled
    RECEIPTS that embed them ("Review rule") resolve to the same rule in the store.
    ──────────────────────────────────────────────────────────────────────────── */
 
-/* Automation that sweeps idle cash — the inline-editable threshold lives here
+/* Automation that sweeps idle cash - the inline-editable threshold lives here
    ($25,000), demonstrating an automation whose amount is tweakable in place. */
 export const SWEEP_RULE: AutoRule = {
   id: "sweep",
@@ -27,13 +27,13 @@ export const SWEEP_RULE: AutoRule = {
   scopeSummary: "the surplus above $25,000 in checking",
 };
 
-/* ── Guardrails — pull you back in above a threshold. The amount is the primary
+/* ── Guardrails - pull you back in above a threshold. The amount is the primary
    control and is editable inline as a bordered mono pill. ──────────────────── */
 export const APPROVAL_GUARDRAIL: AutoRule = {
   id: "ask-over-500",
   kind: "guardrail",
   name: "Ask before paying over the limit",
-  summary: "Any payment above the limit waits for your approval — no surprises",
+  summary: "Any payment above the limit waits for your approval - no surprises",
   createdLabel: "You created this Jun 12",
   policyId: "policy/guardrail.approval.v1",
   active: true,
@@ -59,14 +59,14 @@ export const SECOND_APPROVAL_GUARDRAIL: AutoRule = {
   scopeSummary: "any payment over $10,000",
 };
 
-/* ── Always-on — protections that can't be turned off. Locked, no toggle. ──── */
+/* ── Always-on - protections that can't be turned off. Locked, no toggle. ──── */
 export const ANOMALY_GUARD: AutoRule = {
   id: "flag-unusual",
   kind: "always_on",
   locked: true,
   name: "Flag strange behavior",
   summary: "New vendors, amounts that don't match a bill, anything off-pattern",
-  createdLabel: "Built in — protects every account",
+  createdLabel: "Built in - protects every account",
   policyId: "policy/guard.anomaly.v1",
   active: true,
   scopeSummary: "anything that doesn't fit your normal pattern",
@@ -78,7 +78,7 @@ export const BANK_CHANGE_GUARD: AutoRule = {
   locked: true,
   name: "Stop on changed bank details",
   summary: "Hold any payment where a vendor's bank account changed",
-  createdLabel: "Built in — protects every account",
+  createdLabel: "Built in - protects every account",
   policyId: "policy/guard.bankchange.v1",
   active: true,
   scopeSummary: "payments to a vendor whose bank details just changed",
@@ -90,14 +90,14 @@ export const DUPLICATE_GUARD: AutoRule = {
   locked: true,
   name: "Catch possible duplicates",
   summary: "Pause a payment that looks like one you've already made",
-  createdLabel: "Built in — protects every account",
+  createdLabel: "Built in - protects every account",
   policyId: "policy/guard.duplicate.v1",
   active: true,
   scopeSummary: "a charge that matches one already paid",
 };
 
 /* ── Rules the user authored in the "New rule" creator. `userCreated: true`
-   is what the "Your Rules" tab filters on — only self-authored rules appear
+   is what the "Your Rules" tab filters on - only self-authored rules appear
    there, while the category tabs still show the full system + user set. These
    are seeded examples; real creations are persisted per tenant. ──────────── */
 export const USER_EXAMPLE_RULE: AutoRule = {
@@ -135,24 +135,24 @@ export const USER_GUARD_RAIL: AutoRule = {
 /* The full seed list. Order within a kind is the display order. The store layers
    the SAAS paused-from-report demo state on top of this. */
 export const INITIAL_RULES: AutoRule[] = [
-  // Automations — act for you
+  // Automations - act for you
   UTILITY_RULE,
   SAAS_RULE,
   LEASE_RULE,
   PAYROLL_RULE,
   SWEEP_RULE,
   USER_EXAMPLE_RULE,
-  // Guardrails — pull you back in
+  // Guardrails - pull you back in
   APPROVAL_GUARDRAIL,
   SECOND_APPROVAL_GUARDRAIL,
   USER_GUARD_RAIL,
-  // Always-on — can't be turned off
+  // Always-on - can't be turned off
   ANOMALY_GUARD,
   BANK_CHANGE_GUARD,
   DUPLICATE_GUARD,
 ];
 
-/* ── Evidence-backed AI suggestions — patterns Brain noticed, with the facts.
+/* ── Evidence-backed AI suggestions - patterns Brain noticed, with the facts.
    Default unaccepted: the user must "Review and accept" (runs the create flow). ── */
 export const INITIAL_SUGGESTIONS: RuleSuggestion[] = [
   {
@@ -206,7 +206,7 @@ export const INITIAL_SUGGESTIONS: RuleSuggestion[] = [
   },
 ];
 
-/* ── Vendor trust — the builder's vendor picker only offers TRUSTED vendors.
+/* ── Vendor trust - the builder's vendor picker only offers TRUSTED vendors.
    Trusted = the union of every automation's allowlist. Untrusted vendors are
    shown greyed with a "trust first →" link to a placeholder route; trust is
    NEVER granted inline. ──────────────────────────────────────────────────── */

@@ -45,7 +45,7 @@ export const INLINE_FIGMA = {
   miscA,
   // The "popup-open" state variants for the bank icon expired upstream.
   // We reuse the closed-state assets for both states; visually the popup
-  // still works correctly — only the bg/glyph color tweak is dropped.
+  // still works correctly - only the bg/glyph color tweak is dropped.
   bankPopupClosedA,
   bankPopupOpenA: bankPopupClosedA,
   bankPopupClosedB,

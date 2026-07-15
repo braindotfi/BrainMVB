@@ -6,11 +6,11 @@ import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Email entry + Verify modals ──────────────────────────────────────
    Three-step flow:
-   1) verify-current — verify ownership of current email (Figma 4582:59937)
-   2) enter — enter new email address
-   3) verify — enter 6-digit code sent to new email
+   1) verify-current - verify ownership of current email (Figma 4582:59937)
+   2) enter - enter new email address
+   3) verify - enter 6-digit code sent to new email
    On success update the shared user-contact store.
-   Demo code is "123456" — any other entry triggers an error alert.
+   Demo code is "123456" - any other entry triggers an error alert.
    Visual style matches PhoneNumberModal
    (Figma 3734:40206 + 3734:40233 references, repurposed for email).   */
 

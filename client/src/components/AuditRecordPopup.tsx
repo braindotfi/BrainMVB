@@ -121,7 +121,7 @@ export function AuditRecordPopup({
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
 
-            {/* Header — close button right, title centred */}
+            {/* Header - close button right, title centred */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
               <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
                 Audit Record
@@ -167,7 +167,7 @@ export function AuditRecordPopup({
                             const actorMember = resolveMemberByTokens(actorIdentityTokens(step.actor));
                             return (
                               <div key={idx} className={`content-stretch flex gap-[8px] items-start relative shrink-0 w-full${!isLast ? " pb-[16px]" : ""}`}>
-                                {/* Icon + solid connector — self-stretch so line spans the pb gap to the next icon */}
+                                {/* Icon + solid connector - self-stretch so line spans the pb gap to the next icon */}
                                 <div className="flex flex-col items-center self-stretch shrink-0 w-[16px]">
                                   <img
                                     src={isAlert ? warningIcon : checkIcon}
@@ -299,7 +299,7 @@ export function AuditRecordPopup({
 
             </div>
 
-            {/* Bottom pager footer — Figma 5573:97391 — two full-width pill buttons */}
+            {/* Bottom pager footer - Figma 5573:97391 - two full-width pill buttons */}
             {hasPager && (
               <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-t border-solid flex flex-col items-start p-[24px] shrink-0 w-full">
                 <div className="flex gap-[16px] items-center w-full">

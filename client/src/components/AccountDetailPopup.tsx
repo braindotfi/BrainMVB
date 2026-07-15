@@ -9,7 +9,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"
    (node-id 5473-60415, file cC2lQwC3g9hv96o5Wgy8Ek).
    Opened from an Accounts-tab row. Renders ONE brain-core Ledger account: its
-   balance, a provenance block, and its recent activity. No action buttons —
+   balance, a provenance block, and its recent activity. No action buttons -
    Previous/Next only cycle between accounts in the same list. */
 
 type AccountKind =
@@ -79,7 +79,7 @@ function truncAddr(addr: string): string {
 function accountRef(a: BrainAccountDTO): string {
   const ext = a.external_account_id ?? "";
   if (a.account_type === "onchain" && ext.startsWith("0x")) return truncAddr(ext);
-  return ext || "—";
+  return ext || "-";
 }
 
 function balanceLabel(a: BrainAccountDTO, format: (n: string | number) => string): string {
@@ -91,10 +91,10 @@ function balanceLabel(a: BrainAccountDTO, format: (n: string | number) => string
 }
 
 function formatDate(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
-    ? "—"
+    ? "-"
     : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
@@ -219,7 +219,7 @@ export function AccountDetailPopup({
                 <div className="flex flex-col gap-[16px] items-start w-full" data-testid="account-provenance">
                   <SectionLabel>Provenance</SectionLabel>
                   <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
-                    <Row label="Source" value={`${account.institution ?? "—"} · ${KIND_LABEL[account.account_type] ?? account.account_type}`} />
+                    <Row label="Source" value={`${account.institution ?? "-"} · ${KIND_LABEL[account.account_type] ?? account.account_type}`} />
                     <Row label="Account" value={accountRef(account)} />
                     {account.status && <Row label="Status" value={account.status} />}
                     {typeof account.confidence === "number" && (

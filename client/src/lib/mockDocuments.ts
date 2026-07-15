@@ -2,7 +2,7 @@ import type { DocumentRecord } from "./documentTypes";
 
 /* ── Seeded evidence documents ────────────────────────────────────────────────
    Every record here is tied to an EXISTING demo item (a proposal, audit record,
-   vendor, or settled receipt) — no invented ids. This is the canonical catalogue
+   vendor, or settled receipt) - no invented ids. This is the canonical catalogue
    the documentsStore serves and the viewer renders from. Coherence with the
    referencing records (amounts, vendors, dates, status) is asserted at dev-boot
    by ruleConsistencyCheck. */
@@ -13,7 +13,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
   {
     id: "AWS-2026-07",
     kind: "invoice",
-    title: "AWS — June usage",
+    title: "AWS - June usage",
     vendorId: "aws",
     vendorName: "Amazon Web Services",
     amount: 4150,
@@ -43,7 +43,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
   {
     id: "CE-2026-0631",
     kind: "invoice",
-    title: "Con Edison — electricity",
+    title: "Con Edison - electricity",
     vendorId: "conedison",
     vendorName: "Con Edison Business",
     amount: 486,
@@ -69,11 +69,11 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
 
   /* ── invoice: Bright Futures retainer (bank details CHANGED, held) ──────────
      Backs the pending `prop-bankchange` (AUD-7K2M, flagged). New payout account
-     ••2087 vs the established ••6610 — compare against the prior payment below. */
+     ••2087 vs the established ••6610 - compare against the prior payment below. */
   {
     id: "BFS-0426",
     kind: "invoice",
-    title: "Bright Futures — April design retainer",
+    title: "Bright Futures - April design retainer",
     vendorId: "brightfutures",
     vendorName: "Bright Futures Studio",
     amount: 3200,
@@ -95,12 +95,12 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
   },
 
   /* ── prior_payment: established Bright Futures payment on the OLD account ────
-     The historical twin BFS-0426 is compared against — same vendor, same amount,
+     The historical twin BFS-0426 is compared against - same vendor, same amount,
      DIFFERENT payout account (••6610). Not tied to a proposal (it's history). */
   {
     id: "BFS-PRIOR-0326",
     kind: "prior_payment",
-    title: "Bright Futures — March retainer (paid)",
+    title: "Bright Futures - March retainer (paid)",
     vendorId: "brightfutures",
     vendorName: "Bright Futures Studio",
     amount: 3200,
@@ -116,13 +116,13 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     },
   },
 
-  /* ── invoice: Apex Cleaning — the NEW (possible-duplicate) invoice ──────────
+  /* ── invoice: Apex Cleaning - the NEW (possible-duplicate) invoice ──────────
      Backs the pending `prop-duplicate`. Unpaid. Compare against the near-
      identical paid invoice APX-3382 below. */
   {
     id: "APX-3391",
     kind: "invoice",
-    title: "Apex Cleaning — July service",
+    title: "Apex Cleaning - July service",
     vendorId: "apex",
     vendorName: "Apex Cleaning Co",
     amount: 1450,
@@ -143,12 +143,12 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     documentHref: "#",
   },
 
-  /* ── prior_payment: Apex Cleaning — the near-identical PAID invoice ─────────
-     Paid Jun 19 at $1,448 (delta $2 vs APX-3391) — the duplicate signal. */
+  /* ── prior_payment: Apex Cleaning - the near-identical PAID invoice ─────────
+     Paid Jun 19 at $1,448 (delta $2 vs APX-3391) - the duplicate signal. */
   {
     id: "APX-3382",
     kind: "prior_payment",
-    title: "Apex Cleaning — June service (paid)",
+    title: "Apex Cleaning - June service (paid)",
     vendorId: "apex",
     vendorName: "Apex Cleaning Co",
     amount: 1448,
@@ -166,7 +166,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
 
   /* ── bank_transaction: Plaid line that doesn't match the ledger ─────────────
      Backs the reconciliation gap in `prop-recon`. NO proposal amount tie (the
-     proposal's $184 is the correcting entry, not the line) — the evidence is the
+     proposal's $184 is the correcting entry, not the line) - the evidence is the
      bank-vs-ledger reconciliation itself. */
   {
     id: "TXN-2026-0621",
@@ -196,7 +196,7 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
 
   /* ── contract: office lease (justifies the recurring lease payment) ─────────
      Backs the auto-handled `auto-lease`. Hudson Yards Property LLC is NOT in the
-     vendor catalogue — a landlord, not an AP vendor — so it renders as plain
+     vendor catalogue - a landlord, not an AP vendor - so it renders as plain
      counterparty text with no vendor link. */
   {
     id: "CTR-LEASE-24",

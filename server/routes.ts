@@ -31,20 +31,20 @@ import { generateNonce } from "./nonce";
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const GOAL_REC_FALLBACK_DEFAULT =
-  "Set a target tied to one of your live metrics — e.g. operating cash, monthly burn, or AR — and Brain will keep agents aligned to it.";
+  "Set a target tied to one of your live metrics - e.g. operating cash, monthly burn, or AR - and Brain will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
   "Pay Off Debt":
-    "Target paying down the $1.2M term loan at 9.5% APR — clearing $400K this year saves ~$38K in interest and frees $9K/mo of cash flow.",
+    "Target paying down the $1.2M term loan at 9.5% APR - clearing $400K this year saves ~$38K in interest and frees $9K/mo of cash flow.",
   "Build Reserve":
-    "Aim for $11M in reserves to clear the 18-month runway bar against $612K monthly burn — current $4.8M leaves you ~6 months short.",
+    "Aim for $11M in reserves to clear the 18-month runway bar against $612K monthly burn - current $4.8M leaves you ~6 months short.",
   "Hit Milestone":
-    "With revenue at $1.42M last quarter and ~9% QoQ growth, $5M ARR is reachable in ~4 quarters — set it as the milestone and Brain will pace bookings.",
+    "With revenue at $1.42M last quarter and ~9% QoQ growth, $5M ARR is reachable in ~4 quarters - set it as the milestone and Brain will pace bookings.",
   "Cut Spend":
-    "AI Agents and SaaS are 77% of spend. Trimming 15% off SaaS alone saves ~$8K/mo — set that as your monthly reduction target.",
+    "AI Agents and SaaS are 77% of spend. Trimming 15% off SaaS alone saves ~$8K/mo - set that as your monthly reduction target.",
   "Capital Deploy":
     "$42K is idle in operating cash. Deploy it to the USDC yield vault at 1.16% APY for ~$487/yr, or earmark it for the AlphaFlow agent at current trade cadence.",
   "Other":
-    "Pick a number you want to move — runway, ARR, AR collected, burn — and Brain will translate it into agent budgets and policies.",
+    "Pick a number you want to move - runway, ARR, AR collected, burn - and Brain will translate it into agent budgets and policies.",
 };
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
@@ -64,8 +64,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ACCOUNT / BANKING
   // ─────────────────────────────────────────────────────────────
 
-  // DELETE /api/account — permanently delete the authenticated user's account and
-  // all associated records. The target user is derived from the session — never the body.
+  // DELETE /api/account - permanently delete the authenticated user's account and
+  // all associated records. The target user is derived from the session - never the body.
   app.delete("/api/account", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
@@ -78,10 +78,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // DELETE /api/account/data — purge all user-owned records (memories,
+  // DELETE /api/account/data - purge all user-owned records (memories,
   // transactions, notifications) but KEEP the user account itself so the user
   // remains logged in and can rebuild their data from scratch.
-  // The target user is derived from the session — never the body.
+  // The target user is derived from the session - never the body.
   app.delete("/api/account/data", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
@@ -95,7 +95,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ─────────────────────────────────────────────────────────────
   // GOAL RECOMMENDATIONS (brain-grounded, Claude-phrased)
-  // For the "New Goal" modal — given a category the user picks in
+  // For the "New Goal" modal - given a category the user picks in
   // the "What's it for?" tabs, returns a 1–2 sentence personalised
   // recommendation grounded in the user's live brain-core Ledger
   // (via Wiki Q&A) and phrased by Claude. Falls back to a curated,
@@ -107,7 +107,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   const GOAL_REC_SYSTEM = `You are Brain AI, the financial brain embedded in a neobank for businesses.
 The user is creating a new goal and just picked a CATEGORY in the "What's it for?" tabs.
 Given the user's real financial figures, return ONE concrete, numeric recommendation
-(1–2 short sentences, max ~220 chars) tailored to that category — what target to
+(1–2 short sentences, max ~220 chars) tailored to that category - what target to
 set and why, grounded in those actual numbers.
 
 Rules:
@@ -125,14 +125,14 @@ Rules:
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      // No LLM to phrase — prefer the curated, category-specific line (reads better
+      // No LLM to phrase - prefer the curated, category-specific line (reads better
       // than a raw figure dump). Skip the grounding fetch since it would go unused.
       return res.json({ text: GOAL_REC_FALLBACK[category] ?? GOAL_REC_FALLBACK_DEFAULT, cached: false, fallback: true });
     }
 
     // Best-effort: ground the recommendation in the user's real brain-core Ledger
     // account balances (replaces the old hardcoded mock snapshot). Read directly
-    // from /ledger/accounts — deterministic and correct, unlike a broad Wiki Q&A
+    // from /ledger/accounts - deterministic and correct, unlike a broad Wiki Q&A
     // which misreads "accounts". Silently ungrounded on failure so the
     // recommendation never breaks on the integration.
     let grounding = "";
@@ -157,7 +157,7 @@ Rules:
     try {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const context = grounding
-        ? `The user's real financial figures from Brain (source of truth — use only these, do not invent):\n${grounding}`
+        ? `The user's real financial figures from Brain (source of truth - use only these, do not invent):\n${grounding}`
         : "No live financial figures are available; give general but actionable guidance for the category.";
       const message = await anthropic.messages.create({
         model: "claude-opus-4-5",
@@ -190,11 +190,11 @@ Rules:
   // Powers the right-hand Brain Assistant panel. Takes the running
   // conversation and returns Claude's next reply.
   // ─────────────────────────────────────────────────────────────
-  const ASSISTANT_SYSTEM = `You are Brain, the AI financial assistant inside Brain Finance — a programmable neobank for businesses on Base L2.
+  const ASSISTANT_SYSTEM = `You are Brain, the AI financial assistant inside Brain Finance - a programmable neobank for businesses on Base L2.
 Help the user with their finances, accounts, transactions, crypto basics, and how to use the platform.
 Be concise, warm, and practical: default to 1–4 short sentences unless the user asks for more detail.
 Use plain prose (no markdown headings or bullet dumps unless genuinely helpful).
-You can explain concepts and surface general guidance, but do not give regulated/individualized investment advice — instead point users to their own data and let them decide.`;
+You can explain concepts and surface general guidance, but do not give regulated/individualized investment advice - instead point users to their own data and let them decide.`;
 
   const assistantChatSchema = z.object({
     messages: z
@@ -215,7 +215,7 @@ You can explain concepts and surface general guidance, but do not give regulated
    * questions where no ledger data is expected.
    */
   async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
-    // Fetch ALL tenant data in parallel — the assistant should have the full picture.
+    // Fetch ALL tenant data in parallel - the assistant should have the full picture.
     const [accounts, txs, cps, invoices, obligations, members, policy, actions, auditEvents] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
       listLedgerTransactions(token, { limit: 50 }),
@@ -236,14 +236,14 @@ You can explain concepts and surface general guidance, but do not give regulated
     if (allAccounts.length > 0) {
       const lines = allAccounts.map((a) => {
         const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
-        return `  • ${a.name} (${a.currency}) — balance ${bal} — status: ${a.status} — id: ${a.id}`;
+        return `  • ${a.name} (${a.currency}) - balance ${bal} - status: ${a.status} - id: ${a.id}`;
       });
       const usdTotal = allAccounts
         .filter((a) => a.currency === "USD" && a.current_balance != null)
         .reduce((s, a) => s + (Number(a.current_balance) || 0), 0);
       text += `Accounts (source of truth):\n${lines.join("\n")}\nTotal USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD.\n\n`;
       for (const a of allAccounts) {
-        sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} — ${a.currency} ${a.current_balance ?? "n/a"}` });
+        sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} - ${a.currency} ${a.current_balance ?? "n/a"}` });
       }
     }
 
@@ -255,7 +255,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         const dir = t.direction;
         const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
         const date = t.transaction_date;
-        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` — ${t.description_normalized}` : ""} — id: ${t.id}`;
+        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` - ${t.description_normalized}` : ""} - id: ${t.id}`;
       });
       text += `Recent transactions (last ${recent.length}):\n${lines.join("\n")}\n\n`;
       for (const t of recent) {
@@ -265,7 +265,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     // ─── Counterparties ───
     if (cps.status === "fulfilled" && cps.value.counterparties.length > 0) {
-      const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} — id: ${c.id}`);
+      const lines = cps.value.counterparties.slice(0, 20).map((c) => `  • ${c.name} - id: ${c.id}`);
       text += `Counterparties:\n${lines.join("\n")}\n\n`;
     }
 
@@ -273,11 +273,11 @@ You can explain concepts and surface general guidance, but do not give regulated
     if (invoices.status === "fulfilled" && invoices.value && invoices.value.invoices.length > 0) {
       const lines = invoices.value.invoices.slice(0, 10).map((inv) => {
         const amt = Number(inv.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
-        return `  • Invoice #${inv.invoice_number} — ${inv.currency} ${amt} — due ${inv.due_date ?? "unknown"} — status: ${inv.status} — id: ${inv.id}`;
+        return `  • Invoice #${inv.invoice_number} - ${inv.currency} ${amt} - due ${inv.due_date ?? "unknown"} - status: ${inv.status} - id: ${inv.id}`;
       });
       text += `Invoices:\n${lines.join("\n")}\n\n`;
       for (const inv of invoices.value.invoices.slice(0, 10)) {
-        sources.push({ entityId: inv.id, entityType: "invoice", excerpt: `Invoice #${inv.invoice_number} — ${inv.currency} ${inv.amount_due}` });
+        sources.push({ entityId: inv.id, entityType: "invoice", excerpt: `Invoice #${inv.invoice_number} - ${inv.currency} ${inv.amount_due}` });
       }
     }
 
@@ -285,7 +285,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     if (obligations.status === "fulfilled" && obligations.value && obligations.value.obligations.length > 0) {
       const lines = obligations.value.obligations.slice(0, 10).map((o) => {
         const amt = Number(o.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
-        return `  • ${o.direction} ${o.currency} ${amt} — due ${o.due_date ?? "unknown"} — status: ${o.status} — id: ${o.id}`;
+        return `  • ${o.direction} ${o.currency} ${amt} - due ${o.due_date ?? "unknown"} - status: ${o.status} - id: ${o.id}`;
       });
       text += `Upcoming obligations:\n${lines.join("\n")}\n\n`;
       for (const o of obligations.value.obligations.slice(0, 10)) {
@@ -296,11 +296,11 @@ You can explain concepts and surface general guidance, but do not give regulated
     // ─── Team members ───
     if (members.status === "fulfilled" && members.value && members.value.members.length > 0) {
       const lines = members.value.members.map((m) =>
-        `  • ${m.displayName} (${m.email}) — role: ${m.role} — ${m.active ? "active" : "inactive"} — id: ${m.id}`
+        `  • ${m.displayName} (${m.email}) - role: ${m.role} - ${m.active ? "active" : "inactive"} - id: ${m.id}`
       );
       text += `Team members:\n${lines.join("\n")}\n\n`;
       for (const m of members.value.members) {
-        sources.push({ entityId: m.id, entityType: "member", excerpt: `${m.displayName} — ${m.role}` });
+        sources.push({ entityId: m.id, entityType: "member", excerpt: `${m.displayName} - ${m.role}` });
       }
     }
 
@@ -331,11 +331,11 @@ You can explain concepts and surface general guidance, but do not give regulated
             const amt = Number(p.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
             const cpNote = p.destination_counterparty_id ? ` to counterparty ${p.destination_counterparty_id}` : "";
             const invNote = p.invoice_id ? ` (invoice ${p.invoice_id})` : "";
-            piLines.push(`  • PaymentIntent ${p.id} — ${p.action_type} — ${p.currency} ${amt}${cpNote}${invNote} — status: ${p.status}`);
-            sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${p.currency} ${p.amount} — ${p.status}` });
+            piLines.push(`  • PaymentIntent ${p.id} - ${p.action_type} - ${p.currency} ${amt}${cpNote}${invNote} - status: ${p.status}`);
+            sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${p.currency} ${p.amount} - ${p.status}` });
           } else {
-            piLines.push(`  • PaymentIntent ${a.id} — status: ${a.status}`);
-            sources.push({ entityId: a.id, entityType: "payment_intent", excerpt: `PaymentIntent ${a.id} — ${a.status}` });
+            piLines.push(`  • PaymentIntent ${a.id} - status: ${a.status}`);
+            sources.push({ entityId: a.id, entityType: "payment_intent", excerpt: `PaymentIntent ${a.id} - ${a.status}` });
           }
         }
         text += `Pending approvals (${pending.length} items in review queue):\n${piLines.join("\n")}\n\n`;
@@ -397,7 +397,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     const dataUnavailable = !dataAvailable && isDataQuestion(lastUser);
 
     const system = grounding
-      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, approval policy, pending approvals / payment intents, and recent audit trail — treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, approval policy, pending approvals / payment intents, and recent audit trail - treat this as the source of truth and answer from it, citing concrete figures; do not invent numbers):\n${grounding}`
       : ASSISTANT_SYSTEM;
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -407,7 +407,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       return res.status(503).json({
         error: "assistant_unconfigured",
         reply:
-          "I'm not connected to my brain yet — an ANTHROPIC_API_KEY needs to be configured before I can answer live.",
+          "I'm not connected to my brain yet - an ANTHROPIC_API_KEY needs to be configured before I can answer live.",
         sources: [],
       });
     }
@@ -450,7 +450,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         return res.status(402).json({
           error: "assistant_no_credit",
           reply:
-            "I can't answer right now — the Anthropic API key has no available credit. Please add credits or billing at console.anthropic.com to enable live answers.",
+            "I can't answer right now - the Anthropic API key has no available credit. Please add credits or billing at console.anthropic.com to enable live answers.",
           sources: [],
         });
       }
@@ -528,7 +528,7 @@ You can explain concepts and surface general guidance, but do not give regulated
   });
 
   // ─────────────────────────────────────────────────────────────
-  // PUBLIC CONFIG — exposes non-secret public keys to the frontend
+  // PUBLIC CONFIG - exposes non-secret public keys to the frontend
   // ─────────────────────────────────────────────────────────────
   app.get("/api/config", (_req, res) => {
     return res.json({
@@ -722,7 +722,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
   /* ──────────────────────────────────────────────────────────────────────
    *  Source documents (uploaded files registered as an ingestion source)
-   *  NOTE: only file metadata is persisted here — raw bytes are not stored.
+   *  NOTE: only file metadata is persisted here - raw bytes are not stored.
    * ────────────────────────────────────────────────────────────────────── */
 
   app.get("/api/integrations/documents", requireAuth, async (req, res) => {
@@ -760,7 +760,7 @@ You can explain concepts and surface general guidance, but do not give regulated
   });
 
   /**
-   * POST /api/integrations/documents/ingest — upload a file to Brain's ingestion
+   * POST /api/integrations/documents/ingest - upload a file to Brain's ingestion
    * pipeline. The bytes stream in as the raw request body (Content-Type
    * application/octet-stream); metadata rides on the query string. We:
    *   1. register a local metadata record (no file bytes stored here),
@@ -796,7 +796,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
       const userId = req.session.userId!;
 
-      // 1. Local metadata record (bytes are NOT persisted here — they live in Brain).
+      // 1. Local metadata record (bytes are NOT persisted here - they live in Brain).
       const doc = await storage.createSourceDocument({
         userId,
         name: filename,
@@ -843,7 +843,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         });
       }
 
-      // 3. Trigger extraction — non-fatal; record the outcome as a status.
+      // 3. Trigger extraction - non-fatal; record the outcome as a status.
       let extractStatus: ExtractStatus = "extracting";
       let parsedId: string | null = null;
       let confidence: string | null = null;
@@ -885,7 +885,7 @@ You can explain concepts and surface general guidance, but do not give regulated
   });
 
   /* ──────────────────────────────────────────────────────────────────────
-   *  User rules — rules authored via the "New rule" creator, persisted per
+   *  User rules - rules authored via the "New rule" creator, persisted per
    *  tenant (associated with the logged-in account via the session).
    * ────────────────────────────────────────────────────────────────────── */
 
@@ -937,7 +937,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
   });
 
-  /* Generic tool disconnect — registered LAST so specific routes (e.g. plaid) win */
+  /* Generic tool disconnect - registered LAST so specific routes (e.g. plaid) win */
   app.post("/api/integrations/:toolId/disconnect", async (req, res) => {
     try {
       const ok = await storage.removeToolConnection(DEMO_USER, req.params.toolId);

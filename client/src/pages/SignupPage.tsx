@@ -102,7 +102,7 @@ export function SignupPage() {
         });
         // Production tenancy: create the company right after the local account.
         // NOT retried automatically (tenant creation is not idempotent). If it fails,
-        // the user is logged in but unlinked — the Company Setup screen takes over and
+        // the user is logged in but unlinked - the Company Setup screen takes over and
         // shows the failure so THEY decide whether to submit again.
         if (tenancyProduction) {
           try {
@@ -325,7 +325,7 @@ export function SignupPage() {
             </button>
           </form>
 
-          {/* Demo access — explore the app without creating an account */}
+          {/* Demo access - explore the app without creating an account */}
           <div className="flex items-center gap-3 w-full my-5">
             <div className="flex-1 h-px bg-[#1d2132]" />
             <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>

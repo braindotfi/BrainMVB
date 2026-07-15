@@ -52,7 +52,7 @@ export type Notification = typeof notifications.$inferSelect;
 export const bankConnections = pgTable("bank_connections", {
   userId: text("user_id").notNull(),
   itemId: text("item_id").notNull(),               // Plaid item_id
-  accessToken: text("access_token").notNull(),     // Plaid access_token (sensitive — never returned to client)
+  accessToken: text("access_token").notNull(),     // Plaid access_token (sensitive - never returned to client)
   institutionId: text("institution_id"),
   institutionName: text("institution_name"),
   accounts: jsonb("accounts").notNull(),           // BankAccount[]
@@ -109,7 +109,7 @@ export const userRules = pgTable("user_rules", {
 /* ─── Brain Identities (production tenancy: app user → brain-core external_ref) ───
  * One row per app user linked to a brain-core tenant. `externalRef` is the stable
  * platform-side identifier sent as founder_external_ref at tenant creation or bound at
- * invite consume — it is the app user's id (never an email). The mapping is durable and
+ * invite consume - it is the app user's id (never an email). The mapping is durable and
  * survives restarts; without a row here, production mode has NO tenant for the user
  * (NoTenantError) and must route them to "create a company" or "enter an invite link". */
 export const brainIdentities = pgTable("brain_identities", {
@@ -130,7 +130,7 @@ export type BrainIdentity = typeof brainIdentities.$inferSelect;
  * brain-core mints a real agent token at tenant creation (production-agents contract) and
  * re-issues it idempotently via POST /v1/tenants/{tenantId}/agent-token. One row per tenant
  * (shared by every member of that tenant); refreshed server-side before expiry. The token
- * NEVER reaches the browser. Tenants created before this contract have no row — the next
+ * NEVER reaches the browser. Tenants created before this contract have no row - the next
  * session use mints one (idempotent backfill, no data migration). */
 export const brainAgentTokens = pgTable("brain_agent_tokens", {
   tenantId: text("tenant_id").primaryKey(),            // brain-core tnt_… id

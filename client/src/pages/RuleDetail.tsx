@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* ── Title case helper - used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
@@ -34,7 +34,7 @@ import infoCircleIcon from "@assets/Icons_1783625224759.png";
 
 const ALERT = "#d20344";
 
-/* ── Rule detail — the destination of "Report a problem → pause and review".
+/* ── Rule detail - the destination of "Report a problem → pause and review".
    #D20344 is reserved for problem/alert accents ONLY; affirmative actions use
    purple #7631ee. Amounts / dates / policy ids render monospace. ──────────── */
 export function RuleDetail() {
@@ -72,7 +72,7 @@ export function RuleDetail() {
     );
   }
 
-  /* Terminal "not found" — only shown when we are certain the rule doesn't exist:
+  /* Terminal "not found" - only shown when we are certain the rule doesn't exist:
      - For policy routes: after the query has loaded (not loading) and returned no rule.
      - For app routes: when useRule returns nothing (store is synchronous). */
   const definitelyMissing = isPolicy
@@ -138,7 +138,7 @@ export function RuleDetail() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[24px] items-start pb-[24px] pt-[32px] px-[16px] w-full">
 
-          {/* Back button — routes to the correct tab based on rule type.
+          {/* Back button - routes to the correct tab based on rule type.
               Policy rules render their own back pill inside PolicyDetailHeader. */}
           {!isPolicy && (
             <button
@@ -184,7 +184,7 @@ export function RuleDetail() {
             </div>
           ) : null}
 
-          {/* Paused-from-report banner — #D20344 accent, with the linked payment. */}
+          {/* Paused-from-report banner - #D20344 accent, with the linked payment. */}
           {pausedFromReport && (
             <div
               className="w-full rounded-[12px] p-[16px] flex flex-col gap-[12px]"
@@ -205,14 +205,14 @@ export function RuleDetail() {
             </div>
           )}
 
-          {/* Policy rule detail body — read-only, shows all DSL fields */}
+          {/* Policy rule detail body - read-only, shows all DSL fields */}
           {isPolicy && policyRule && <PolicyDetailBody rule={policyRule} />}
 
           {/* Everything below is ONLY for app-local rules */}
           {!isPolicy && rule && (
             <>
 
-          {/* Status banner — matches Figma's "Info Circle" info pill. */}
+          {/* Status banner - matches Figma's "Info Circle" info pill. */}
           <div
             className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
             data-testid="text-what-changed"
@@ -221,17 +221,17 @@ export function RuleDetail() {
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
-                  This rule is <span className="font-semibold text-[#42bf23]">active</span> — it auto-clears {titleCase(rule.scopeSummary ?? "matching payments")} without asking you.
+                  This rule is <span className="font-semibold text-[#42bf23]">active</span> - it auto-clears {titleCase(rule.scopeSummary ?? "matching payments")} without asking you.
                 </>
               ) : (
                 <>
-                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> — payments it used to auto-clear ({titleCase(rule.scopeSummary ?? "matching payments")}) will now wait for your approval in Needs Review.
+                  This rule is <span className="font-semibold text-[#ff9400]">paused</span> - payments it used to auto-clear ({titleCase(rule.scopeSummary ?? "matching payments")}) will now wait for your approval in Needs Review.
                 </>
               )}
             </p>
           </div>
 
-          {/* Rule status — Pause/Resume + Delete, matches Figma's "Rule Status" card. */}
+          {/* Rule status - Pause/Resume + Delete, matches Figma's "Rule Status" card. */}
           <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]">
             <div className="flex items-center justify-between gap-[16px] flex-wrap">
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
@@ -266,7 +266,7 @@ export function RuleDetail() {
 
           </div>
 
-          {/* Paused-from-report banner — orange accent, matches Figma's flagged banner under Rule Status. */}
+          {/* Paused-from-report banner - orange accent, matches Figma's flagged banner under Rule Status. */}
           {pausedFromReport && (
             <div
               className="w-full rounded-[12px] p-[16px] flex items-start gap-[10px]"
@@ -285,7 +285,7 @@ export function RuleDetail() {
             </div>
           )}
 
-          {/* Resume-rule confirmation — dim/blur backdrop modal, matches other popups. */}
+          {/* Resume-rule confirmation - dim/blur backdrop modal, matches other popups. */}
           <DialogPrimitive.Root open={resumeModalOpen} onOpenChange={setResumeModalOpen}>
             <DialogPrimitive.Portal>
               <DialogPrimitive.Overlay
@@ -341,7 +341,7 @@ export function RuleDetail() {
             </DialogPrimitive.Portal>
           </DialogPrimitive.Root>
 
-          {/* Delete-rule confirmation — popup modal matching Figma node 5577:65171. */}
+          {/* Delete-rule confirmation - popup modal matching Figma node 5577:65171. */}
           <DialogPrimitive.Root open={confirmingDelete} onOpenChange={setConfirmingDelete}>
             <DialogPrimitive.Portal>
               <DialogPrimitive.Overlay
@@ -397,7 +397,7 @@ export function RuleDetail() {
             </DialogPrimitive.Portal>
           </DialogPrimitive.Root>
 
-          {/* Trusted vendors — allowlist removal, matches Figma's "Popup - Search Results" panel. */}
+          {/* Trusted vendors - allowlist removal, matches Figma's "Popup - Search Results" panel. */}
           {rule.allowlist && rule.allowlist.length > 0 && (
             <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
               <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
@@ -435,7 +435,7 @@ export function RuleDetail() {
             </div>
           )}
 
-          {/* Amount — threshold / cap edit, matches Figma's "Amount" panel. */}
+          {/* Amount - threshold / cap edit, matches Figma's "Amount" panel. */}
           {(typeof rule.threshold === "number" || typeof rule.cap === "number") && (
             <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
               <div className="flex items-center px-[16px] py-[14px] border-b border-[#1d2132]">
@@ -485,7 +485,7 @@ export function RuleDetail() {
             </div>
           )}
 
-          {/* Reported problems — accordion trail, matches Figma's "Reported Problems" panel. */}
+          {/* Reported problems - accordion trail, matches Figma's "Reported Problems" panel. */}
           <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
             <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
@@ -508,7 +508,7 @@ export function RuleDetail() {
             </div>
           </div>
 
-          {/* History — created/paused/resumed trail, matches Figma's panel pattern. */}
+          {/* History - created/paused/resumed trail, matches Figma's panel pattern. */}
           <div className="w-full rounded-[16px] bg-[#0a0c10] overflow-hidden flex flex-col">
             <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-[#1d2132]">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
@@ -723,7 +723,7 @@ function AmountRow({
   );
 }
 
-/* ── Policy rule detail — read-only view of a brain-core policy rule ─────────
+/* ── Policy rule detail - read-only view of a brain-core policy rule ─────────
    Shows all DSL fields: applies_to, when conditions, execute, require,
    plus policy version + quorum metadata. No Pause/Resume/Delete. */
 
@@ -737,7 +737,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
 
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
-      {/* Back button — same pill style as automations/guardrails/suggested tabs */}
+      {/* Back button - same pill style as automations/guardrails/suggested tabs */}
       <button
         type="button"
         onClick={() => navigate("/rules?tab=default")}
@@ -747,7 +747,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         <ArrowLeft size={16} /> Back to Rules
       </button>
 
-      {/* Title + Read-Only tag + subtitle + policy-id — same spacing/format as automations/guardrails/suggested */}
+      {/* Title + Read-Only tag + subtitle + policy-id - same spacing/format as automations/guardrails/suggested */}
       <div className="flex items-start gap-[12px] w-full">
         <div className="flex flex-col gap-[6px] flex-1 min-w-px">
           <div className="flex items-center gap-[10px] flex-wrap">
@@ -784,7 +784,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
 
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
-      {/* Info banner — matches Figma "Inputfields / Dropdowns" row */}
+      {/* Info banner - matches Figma "Inputfields / Dropdowns" row */}
       <div
         className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full"
         data-testid="text-policy-info"
@@ -799,7 +799,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
         </div>
       </div>
 
-      {/* DSL fields panel — matches Figma "Popup - Search Results" */}
+      {/* DSL fields panel - matches Figma "Popup - Search Results" */}
       <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
         {/* Panel header */}
         <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -810,7 +810,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
           </div>
         </div>
 
-        {/* Panel body — rows with dividers */}
+        {/* Panel body - rows with dividers */}
         <div className="content-stretch flex flex-col items-start p-[8px] relative shrink-0 w-full">
           <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
             {/* ID row */}

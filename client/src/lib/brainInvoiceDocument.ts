@@ -23,10 +23,10 @@ export interface LedgerInvoice {
 }
 
 function fmtInvoiceDate(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
-    ? "—"
+    ? "-"
     : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -45,7 +45,7 @@ export function toBrainInvoiceDocument(invoice: LedgerInvoice, vendorName: strin
   return {
     id: invoice.invoice_number,
     kind: "invoice",
-    title: `${vendorName} — invoice`,
+    title: `${vendorName} - invoice`,
     counterparty: vendorName,
     amount: Number(invoice.amount_due),
     dateLabel: `Due ${fmtInvoiceDate(invoice.due_date)}`,
@@ -73,7 +73,7 @@ interface CounterpartiesLite {
  * Resolve a LIVE brain-core invoice (by ledger id OR invoice_number) to a DocumentRecord for
  * the evidence viewer. Returns undefined for an id that is NOT a live invoice (e.g. a mock
  * proposal's invoiceId), so callers fall back to the mock document store. Safe to call with
- * null/undefined — the queries disable.
+ * null/undefined - the queries disable.
  */
 export function useBrainInvoiceDocument(invoiceId: string | null | undefined): DocumentRecord | undefined {
   const id = invoiceId ?? "";

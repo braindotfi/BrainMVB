@@ -8,7 +8,7 @@
  * For this first vertical slice we hand-type only the few endpoints we call. The
  * full typed surface (openapi-typescript codegen from Brain_API_Specification.yaml,
  * matching brain-core's own clients/sdk) is the foundation upgrade for later
- * phases — see deliverables/DEAD-CODE-INVENTORY.md / the integration plan.
+ * phases - see deliverables/DEAD-CODE-INVENTORY.md / the integration plan.
  */
 
 import { randomUUID } from "node:crypto";
@@ -162,7 +162,7 @@ export function listLedgerCounterparties(token: string): Promise<ListCounterpart
 // ─── Counterparty create (manual "Add vendor"; MEMBER token) ─────────────────
 
 /** Identity-only fields brain-core's counterparty create accepts. No payment/bank/trust
- *  fields — core rejects those, and the BFF must not construct a payload that includes them. */
+ *  fields - core rejects those, and the BFF must not construct a payload that includes them. */
 export interface CreateCounterpartyBody {
   name: string;
   type: string;
@@ -180,7 +180,7 @@ export interface CreateCounterpartyResponse {
   merged: boolean;
 }
 
-/** POST /ledger/counterparties — upsert (created=true → 201, merged=true → 200). MEMBER token. */
+/** POST /ledger/counterparties - upsert (created=true → 201, merged=true → 200). MEMBER token. */
 export function createCounterparty(
   token: string,
   body: CreateCounterpartyBody,
@@ -225,11 +225,11 @@ export interface WikiEvidence {
 }
 
 export interface WikiAnswer {
-  /** The answer text/JSON, fence-stripped — suitable to ground an LLM or render. */
+  /** The answer text/JSON, fence-stripped - suitable to ground an LLM or render. */
   raw: string;
   /** Evidence records backing the answer (id + optional type/excerpt), deduped by id. */
   evidence: WikiEvidence[];
-  /** Evidence ids only, deduped — kept for back-compat (recommendation route, grounding). */
+  /** Evidence ids only, deduped - kept for back-compat (recommendation route, grounding). */
   evidenceIds: string[];
   confidence: number | null;
 }
@@ -286,7 +286,7 @@ export interface PolicyAction {
 }
 
 /**
- * POST /policy/{tenantId}/evaluate — read-only dry-run of the active policy.
+ * POST /policy/{tenantId}/evaluate - read-only dry-run of the active policy.
  * Returns the outcome + matched rule + required approvers + per-check trace.
  * Read-only (despite POST); needs only `policy:read`, which the demo token has.
  */
@@ -319,7 +319,7 @@ export interface PaymentIntent {
 }
 
 /**
- * POST /payment-intents with the `pay_invoice` shortcut — proposes a payment for
+ * POST /payment-intents with the `pay_invoice` shortcut - proposes a payment for
  * a Ledger invoice. brain-core resolves amount/currency/counterparty/source from
  * the invoice, runs Policy, and returns the intent with its decided `status`.
  *
@@ -336,7 +336,7 @@ export function proposeInvoicePayment(token: string, invoiceId: string): Promise
 }
 
 /**
- * POST /payment-intents/{id}/reject — operator declines a proposed/pending
+ * POST /payment-intents/{id}/reject - operator declines a proposed/pending
  * PaymentIntent. Demo-safe human-oversight action: uses the `payment_intent:approve`
  * scope the demo token already holds, transitions the intent to `rejected`, and
  * moves no money. (The complementary `approve` path is intentionally NOT exposed:
@@ -355,10 +355,10 @@ export function rejectPaymentIntent(
 }
 
 /**
- * POST /payment-intents/{id}/approve — a human member approves a pending PaymentIntent.
+ * POST /payment-intents/{id}/approve - a human member approves a pending PaymentIntent.
  *
  * MUST be called with the MEMBER token (payment_intent:approve; the agent token is
- * propose-only and correctly 403s here). Per ACTOR=SESSION we send NO actor field — core
+ * propose-only and correctly 403s here). Per ACTOR=SESSION we send NO actor field - core
  * derives the approver from the token subject and strips any client-supplied actor. The
  * response carries the new `status` (incl. "awaiting_second_approval") and `approvals[]`;
  * core rejects self-approval / limit / domain / second-approver violations with its own
@@ -420,17 +420,17 @@ export interface MemberMutationResponse {
   audit_id?: string;
 }
 
-/** POST /members — create a member (admin-gated by core). MEMBER token. */
+/** POST /members - create a member (admin-gated by core). MEMBER token. */
 export function createMember(token: string, body: unknown): Promise<MemberMutationResponse> {
   return brainRequest<MemberMutationResponse>("/members", { token, method: "POST", body });
 }
 
-/** PATCH /members/{id} — edit role/envelope (admin-gated by core). MEMBER token. */
+/** PATCH /members/{id} - edit role/envelope (admin-gated by core). MEMBER token. */
 export function updateMember(token: string, id: string, body: unknown): Promise<MemberMutationResponse> {
   return brainRequest<MemberMutationResponse>(`/members/${id}`, { token, method: "PATCH", body });
 }
 
-/** DELETE /members/{id} — DEACTIVATE (not hard delete). MEMBER token. */
+/** DELETE /members/{id} - DEACTIVATE (not hard delete). MEMBER token. */
 export function deactivateMember(token: string, id: string): Promise<MemberMutationResponse> {
   return brainRequest<MemberMutationResponse>(`/members/${id}`, { token, method: "DELETE" });
 }
@@ -452,7 +452,7 @@ interface ActivePolicy {
   quorum_required?: number;
 }
 
-/** The approval facts the Member Detail "locked rows" render — derived from core's policy. */
+/** The approval facts the Member Detail "locked rows" render - derived from core's policy. */
 export interface ApprovalPolicyFacts {
   /** Self-approval is a hard invariant in core; always true. */
   selfApprovalBlocked: true;
@@ -461,7 +461,7 @@ export interface ApprovalPolicyFacts {
   /**
    * Phase 2a (Rules page, read-only): the full active policy document, so the
    * client can render every clause rather than only the one derived threshold
-   * above. Same /policy/{tenantId} read this function already makes — added to
+   * above. Same /policy/{tenantId} read this function already makes - added to
    * the existing response instead of a new BFF route (server/brain/proxy.ts's
    * /approval-policy). Read-only GET, member token, no new scope required.
    */
@@ -473,7 +473,7 @@ export interface ApprovalPolicyFacts {
 /**
  * GET /policy/{tenantId} and derive the approval facts shown as LOCKED rows in Member Detail.
  * The second-approval threshold is read from the policy (the outbound-payment "confirm" rule
- * that requires two distinct approvers, e.g. `require: owner_and_cfo`) — never hardcoded.
+ * that requires two distinct approvers, e.g. `require: owner_and_cfo`) - never hardcoded.
  */
 export async function getApprovalPolicyFacts(token: string, tenantId: string): Promise<ApprovalPolicyFacts> {
   const policy = await brainRequest<ActivePolicy>(`/policy/${tenantId}`, { token });
@@ -501,7 +501,7 @@ export async function getApprovalPolicyFacts(token: string, tenantId: string): P
   };
 }
 
-/** POST /wiki/question — grounded Q&A over the tenant's Ledger. Read-only despite POST. */
+/** POST /wiki/question - grounded Q&A over the tenant's Ledger. Read-only despite POST. */
 export async function askWikiQuestion(token: string, question: string): Promise<WikiAnswer> {
   const resp = await brainRequest<WikiQuestionResponse>("/wiki/question", {
     token,
@@ -558,7 +558,7 @@ export async function askWikiQuestion(token: string, question: string): Promise<
     addIds(inner.evidence_ids);
     if (confidence === null && typeof inner.confidence === "number") confidence = inner.confidence;
   } catch {
-    // answer is prose, not JSON — nothing more to extract.
+    // answer is prose, not JSON - nothing more to extract.
   }
 
   const evidence = Array.from(byId.values());
@@ -578,7 +578,7 @@ export interface RawIngestResult {
 }
 
 /**
- * POST /raw/ingest — upload the file bytes to Brain as multipart/form-data.
+ * POST /raw/ingest - upload the file bytes to Brain as multipart/form-data.
  *
  * We do NOT go through `brainRequest` (which forces application/json). Instead we
  * build a native FormData (Node 20 global) with a Blob and let fetch set the
@@ -602,7 +602,7 @@ export async function ingestRawDocument(
       "X-Request-Id": `req_${randomUUID()}`,
       "Idempotency-Key": randomUUID(),
       Accept: "application/json",
-      // NB: no Content-Type — fetch sets multipart/form-data; boundary=… itself.
+      // NB: no Content-Type - fetch sets multipart/form-data; boundary=… itself.
     },
     body: form,
   });
@@ -629,7 +629,7 @@ export interface RawExtractResult {
 }
 
 /**
- * POST /raw/{raw_id}/extract — trigger extraction. Empty body. Returns the parsed
+ * POST /raw/{raw_id}/extract - trigger extraction. Empty body. Returns the parsed
  * record id + a (capped) confidence. The endpoint is being built brain-side, so
  * callers MUST handle BrainApiError 404 (not deployed yet) and 422 (unsupported
  * file type / scanned image needing OCR) gracefully.
@@ -668,7 +668,7 @@ export interface ListObligationsResponse {
   next_cursor: string | null;
 }
 
-/** GET /ledger/obligations — obligations Brain derived for the tenant. */
+/** GET /ledger/obligations - obligations Brain derived for the tenant. */
 export async function listObligations(
   token: string,
   query?: { status?: string; limit?: number },
@@ -716,12 +716,12 @@ export interface ListActionsResponse {
   data: BrainActionSummary[];
 }
 
-/** GET /actions — approval-queue summaries (MEMBER token, execution:read). */
+/** GET /actions - approval-queue summaries (MEMBER token, execution:read). */
 export function listActions(token: string): Promise<ListActionsResponse> {
   return brainRequest<ListActionsResponse>("/actions", { token });
 }
 
-/** GET /payment-intents/{id} — full PaymentIntent detail. */
+/** GET /payment-intents/{id} - full PaymentIntent detail. */
 export function getPaymentIntent(token: string, id: string): Promise<PaymentIntent> {
   return brainRequest<PaymentIntent>(`/payment-intents/${id}`, { token });
 }
@@ -748,7 +748,7 @@ export interface ListAuditEventsResponse {
   next_cursor?: string | null;
 }
 
-/** GET /audit/events — audit trail (MEMBER token, audit:read). */
+/** GET /audit/events - audit trail (MEMBER token, audit:read). */
 export function listAuditEvents(
   token: string,
   query?: { limit?: number; after?: string },

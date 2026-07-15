@@ -71,7 +71,7 @@ const registerSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
 });
 
-// `identifier` is a username OR an email — either may be used to log in.
+// `identifier` is a username OR an email - either may be used to log in.
 const loginSchema = z.object({
   identifier: z.string().min(1),
   password: z.string().min(1),
@@ -169,7 +169,7 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
-  // ─── Demo login (no credentials) — explore the app with a shared demo account ───
+  // ─── Demo login (no credentials) - explore the app with a shared demo account ───
   app.post("/api/auth/demo", async (req, res) => {
     const DEMO_EMAIL = "demo@brain.finance";
     let user = await storage.getUserByEmail(DEMO_EMAIL);

@@ -3,7 +3,7 @@ import type { DocumentRecord } from "./documentTypes";
 
 /* ── Canonical document store ─────────────────────────────────────────────────
    ONE place every evidence document is looked up from, mirroring rulesStore /
-   MOCK_VENDORS. Read-only (seeded from mockDocuments) — documents are source
+   MOCK_VENDORS. Read-only (seeded from mockDocuments) - documents are source
    evidence Brain reads, not app state it mutates. resolveDocument / getDocument
    is the single lookup used by openDocumentDetail, the viewer's compare toggle,
    and the dev coherence guards. */

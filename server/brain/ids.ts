@@ -13,7 +13,7 @@
 
 import { createHash } from "node:crypto";
 
-/** Crockford's Base32 alphabet (no I, L, O, U) — matches brain-core's ULID regex. */
+/** Crockford's Base32 alphabet (no I, L, O, U) - matches brain-core's ULID regex. */
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /** Encode bytes as Crockford Base32, returning exactly `length` chars. */

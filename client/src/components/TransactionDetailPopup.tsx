@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-// lucide-react removed — close icon uses asset
+// lucide-react removed - close icon uses asset
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";

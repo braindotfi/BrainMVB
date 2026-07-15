@@ -1,17 +1,17 @@
 import type { Proposal, AccountSummary, AutoRule } from "./proposalTypes";
 
 /* One Proposal per scenario so every UI branch is exercised by real data.
-   Brain PROPOSES only — wording for money-movers is always
+   Brain PROPOSES only - wording for money-movers is always
    "propose / recommend / draft", never "I paid" / "I will pay". */
 
 // ponytail: ReviewPage/HomePage no longer read MOCK_PROPOSALS for the pending
-// "Needs Review" queue (Phase 1a — replaced by a live brain-core read, see
+// "Needs Review" queue (Phase 1a - replaced by a live brain-core read, see
 // client/src/lib/brainQueue.ts). Kept here because mockAuditRecords.ts,
 // mockDocuments.ts, and openProposalDetail.ts's allProposals() still resolve
 // these ids for the Audit Log / document-viewer / dev consistency guards.
 // Remove once Phase 1c (Audit Log ← live /audit/events) migrates those refs.
 export const MOCK_PROPOSALS: Proposal[] = [
-  /* 1 — invoice / clean routine ─────────────────────────────────────────── */
+  /* 1 - invoice / clean routine ─────────────────────────────────────────── */
   {
     id: "prop-utilities",
     auditId: "AUD-7F3A21",
@@ -70,7 +70,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     status: "pending",
   },
 
-  /* 2 — invoice / DUPLICATE ─────────────────────────────────────────────── */
+  /* 2 - invoice / DUPLICATE ─────────────────────────────────────────────── */
   {
     id: "prop-duplicate",
     auditId: "AUD-91C0E4",
@@ -91,7 +91,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       { label: "Near-identical amount", severity: "info" },
     ],
     rationale:
-      "A near-identical invoice from the same vendor was paid about 10 days ago. The amounts differ by a few dollars and the invoice numbers are sequential, which can happen with re-issued bills — but it can also mean you're being asked to pay twice.",
+      "A near-identical invoice from the same vendor was paid about 10 days ago. The amounts differ by a few dollars and the invoice numbers are sequential, which can happen with re-issued bills - but it can also mean you're being asked to pay twice.",
     facts: [
       { label: "this invoice", value: "$1,450.00 · #APX-3391" },
       { label: "paid Jun 19", value: "$1,448.00 · #APX-3382", severity: "warning" },
@@ -116,7 +116,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       score: 0.58,
       band: "medium",
       caveat:
-        "Could be a legitimate re-issue or a second billing cycle — worth a human glance before paying.",
+        "Could be a legitimate re-issue or a second billing cycle - worth a human glance before paying.",
     },
     whatHappensNext:
       "On approval, Brain sends this to the execution service and ACH initiates the same day. If it is a duplicate, reject it and Brain will note the vendor for closer matching next time.",
@@ -128,13 +128,13 @@ export const MOCK_PROPOSALS: Proposal[] = [
     },
     actions: {
       approve: { label: "Approve anyway", sublabel: "not a duplicate" },
-      reject: { label: "Reject", sublabel: "not a duplicate — already paid" },
+      reject: { label: "Reject", sublabel: "not a duplicate - already paid" },
       postpone: { label: "Postpone", sublabel: "check with vendor" },
     },
     status: "pending",
   },
 
-  /* 3 — invoice / BANK DETAILS CHANGED (fraud_anomaly) ──────────────────── */
+  /* 3 - invoice / BANK DETAILS CHANGED (fraud_anomaly) ──────────────────── */
   {
     id: "prop-bankchange",
     auditId: "AUD-7K2M",
@@ -145,7 +145,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     rowSubtitle: "Bright Futures Studio · new account flagged",
     actionStatement: "Propose paying Bright Futures Studio $3,200",
     actionMeta: "from Operating ••4821 · due Mon Jul 6",
-    executionLabel: "ACH held — not initiated",
+    executionLabel: "ACH held - not initiated",
     cancelDeadlineLabel: "nothing scheduled until you decide",
     amount: 3200,
     counterparty: "Bright Futures Studio",
@@ -188,10 +188,10 @@ export const MOCK_PROPOSALS: Proposal[] = [
       score: 0.34,
       band: "low",
       caveat:
-        "Brain cannot confirm the new account is genuine — verify with the vendor through a known contact before paying.",
+        "Brain cannot confirm the new account is genuine - verify with the vendor through a known contact before paying.",
     },
     whatHappensNext:
-      "Nothing is scheduled. If you verify first, Brain drafts a confirmation to the vendor's on-file contact and parks the payment until you resolve it — no funds move. If you approve, the execution service pays the NEW account.",
+      "Nothing is scheduled. If you verify first, Brain drafts a confirmation to the vendor's on-file contact and parks the payment until you resolve it - no funds move. If you approve, the execution service pays the NEW account.",
     risk: "If this is wrong, $3,200 goes to a fraudster's account and is effectively unrecoverable.",
     policy: {
       id: "ap.fraud.v2",
@@ -204,13 +204,13 @@ export const MOCK_PROPOSALS: Proposal[] = [
       postpone: { label: "Postpone", sublabel: "decide tomorrow" },
       verifyFirst: {
         label: "Verify with vendor first",
-        sublabel: "draft a confirmation — no funds move",
+        sublabel: "draft a confirmation - no funds move",
       },
     },
     status: "pending",
   },
 
-  /* 4 — invoice / AMOUNT ANOMALY ────────────────────────────────────────── */
+  /* 4 - invoice / AMOUNT ANOMALY ────────────────────────────────────────── */
   {
     id: "prop-amount",
     auditId: "AUD-2B7710",
@@ -271,7 +271,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     status: "pending",
   },
 
-  /* 5 — cash / TREASURY SWEEP ───────────────────────────────────────────── */
+  /* 5 - cash / TREASURY SWEEP ───────────────────────────────────────────── */
   {
     id: "prop-sweep",
     auditId: "AUD-5E0C93",
@@ -338,7 +338,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     },
   },
 
-  /* 6 — collections / OVERDUE RECEIVABLE ────────────────────────────────── */
+  /* 6 - collections / OVERDUE RECEIVABLE ────────────────────────────────── */
   {
     id: "prop-collections",
     auditId: "AUD-A1F230",
@@ -356,10 +356,10 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "warning",
     reasonChips: [
       { label: "18 days overdue", severity: "warning" },
-      { label: "Reminder only — won't send", severity: "info" },
+      { label: "Reminder only - won't send", severity: "info" },
     ],
     rationale:
-      "Northstar Design's invoice passed net-30 eighteen days ago with no payment and no reply to the last statement. A gentle reminder usually recovers these without escalation. This is money owed TO you — nothing leaves your account.",
+      "Northstar Design's invoice passed net-30 eighteen days ago with no payment and no reply to the last statement. A gentle reminder usually recovers these without escalation. This is money owed TO you - nothing leaves your account.",
     facts: [
       { label: "invoice", value: "#INV-2026-041 · $6,200" },
       { label: "terms", value: "Net 30" },
@@ -384,8 +384,8 @@ export const MOCK_PROPOSALS: Proposal[] = [
       caveat: "A first reminder typically resolves overdue receivables of this size.",
     },
     whatHappensNext:
-      "Brain drafts a reminder for your review and does not send it. You read it, edit if you like, and choose whether to send — no message goes out automatically.",
-    risk: "If this is wrong (e.g. payment already arrived), the reminder could annoy a paying customer — which is why it stays a draft until you send it.",
+      "Brain drafts a reminder for your review and does not send it. You read it, edit if you like, and choose whether to send - no message goes out automatically.",
+    risk: "If this is wrong (e.g. payment already arrived), the reminder could annoy a paying customer - which is why it stays a draft until you send it.",
     policy: {
       id: "ar.dunning.v1",
       explanation: "outbound customer messages always need review",
@@ -399,7 +399,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     status: "pending",
   },
 
-  /* 7 — close / RECONCILIATION DISCREPANCY ──────────────────────────────── */
+  /* 7 - close / RECONCILIATION DISCREPANCY ──────────────────────────────── */
   {
     id: "prop-recon",
     auditId: "AUD-6C9D17",
@@ -417,7 +417,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     severity: "warning",
     reasonChips: [
       { label: "Out of tolerance", severity: "warning" },
-      { label: "Draft entry — won't post", severity: "info" },
+      { label: "Draft entry - won't post", severity: "info" },
     ],
     rationale:
       "A bank transaction of $1,024.00 doesn't match the ledger entry of $1,208.00 recorded against the same vendor, a $184.00 gap that's outside your $5 close tolerance. It looks like a partial refund that wasn't booked. Brain proposes a correcting entry for your review.",
@@ -461,7 +461,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
     status: "pending",
   },
 
-  /* 8 — invoice / BUSINESS SURFACE (batchApprovable) ────────────────────── */
+  /* 8 - invoice / BUSINESS SURFACE (batchApprovable) ────────────────────── */
   {
     id: "prop-aws",
     auditId: "AUD-9E22B4",
@@ -533,10 +533,10 @@ export const ACCOUNT_SUMMARY: AccountSummary = {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   AUTO-HANDLED — payments Brain ALREADY auto-approved + settled under a standing
+   AUTO-HANDLED - payments Brain ALREADY auto-approved + settled under a standing
    rule the user created. Tapping one opens a RECEIPT (a record), not a decision.
    Past-tense money-mover wording ("Paid …") is correct ONLY here. The review
-   page derives the banner count + total from THIS array — never hardcode them.
+   page derives the banner count + total from THIS array - never hardcode them.
    ───────────────────────────────────────────────────────────────────────────── */
 export const UTILITY_RULE: AutoRule = {
   id: "utility",
@@ -677,7 +677,7 @@ function autoHandled(p: {
     rationale: p.rationale,
     evidence: [],
     confidence: { score: 0.99, band: "high", caveat: "Matched your standing rule with no anomalies." },
-    whatHappensNext: "Already settled — nothing further to do.",
+    whatHappensNext: "Already settled - nothing further to do.",
     risk: "",
     policy: {
       id: p.rule!.policyId,
@@ -716,7 +716,7 @@ function settledTimeline(proposedAt: string, approvedAt: string, settledAt: stri
   ];
 }
 
-/* A human-approved, executed proposal — the settled counterpart of an item that
+/* A human-approved, executed proposal - the settled counterpart of an item that
    was escalated above threshold and signed off by a person (not a standing
    rule). Retained as a resolution target for openProposalDetail (SettledRecordCard
    was removed in the Phase 8 cleanup). */
@@ -753,7 +753,7 @@ function settledApproved(p: {
     facts: p.facts,
     evidence: [],
     confidence: { score: 1, band: "high", caveat: "You reviewed and approved this before it settled." },
-    whatHappensNext: "Already settled — nothing further to do.",
+    whatHappensNext: "Already settled - nothing further to do.",
     risk: "",
     policy: {
       id: "manual.human_approval",
@@ -775,7 +775,7 @@ function settledApproved(p: {
 /* ── Settled record twins ──────────────────────────────────────────────────────
    The Adobe / Comcast / payroll / USDC settled proposals. No longer opened via a
    UI row (Activity is live via useBrainAuditRecords; SettledRecordCard removed in
-   Phase 8) — RETAINED as resolution targets for openProposalDetail's allProposals()
+   Phase 8) - RETAINED as resolution targets for openProposalDetail's allProposals()
    so the document viewer's coherence chain and the mock audit-record proposal links
    still resolve. Reconciled by auditId with their twins in mockAuditRecords.ts
    (AUD-4E2N / AUD-1B3T / AUD-5J7Y / AUD-4M6Z / AUD-2R1M / AUD-7P9Q). */
@@ -876,7 +876,7 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
   id: "settled-payroll",
   auditId: "AUD-5J7Y",
   agent: "invoice",
-  title: "Payroll run — J. Smith (Engineering)",
+  title: "Payroll run - J. Smith (Engineering)",
   counterparty: "J. Smith (Engineering)",
   amount: 5600,
   pastTenseStatement: "Ran payroll for J. Smith (Engineering)",
@@ -892,7 +892,7 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
   ],
   timeline: [
     { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
-    { label: "Escalated to human — above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
+    { label: "Escalated to human - above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
     { label: "You approved", timestamp: "Jul 2, 9:55 AM ET", done: true },
     { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "Brain never held the funds", done: true },
   ],
@@ -918,7 +918,7 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
   ],
   timeline: [
     { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", done: true },
-    { label: "Escalated to human — above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
+    { label: "Escalated to human - above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
     { label: "You approved yield move", timestamp: "Jul 4, 6:27 PM ET", done: true },
     { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
   ],
@@ -928,7 +928,7 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
    The PRIOR month's cloud bill. It exceeded the business-surface batch
    auto-approval limit, so Brain escalated it and sarah@meridian signed off before
    the execution service settled the ACH. This is the SETTLED counterpart the
-   AUD-3308FE audit record + AWS-2026-07 paid invoice point at — distinct from the
+   AUD-3308FE audit record + AWS-2026-07 paid invoice point at - distinct from the
    still-pending current-cycle prop-aws in the review queue. Reachable by id from
    the Audit Log's linked-evidence deep-link, not rendered in the live queue. */
 export const AWS_SETTLED: Proposal = {
@@ -936,7 +936,7 @@ export const AWS_SETTLED: Proposal = {
     id: "settled-aws",
     auditId: "AUD-3308FE",
     agent: "invoice",
-    title: "Amazon Web Services — monthly cloud bill",
+    title: "Amazon Web Services - monthly cloud bill",
     counterparty: "Amazon Web Services",
     amount: 4150,
     pastTenseStatement: "Paid Amazon Web Services $4,150",
@@ -952,7 +952,7 @@ export const AWS_SETTLED: Proposal = {
     ],
     timeline: [
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", done: true },
-      { label: "Escalated to human — above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
+      { label: "Escalated to human - above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
       { label: "You approved", timestamp: "Jul 7, 8:55 AM ET", done: true },
       { label: "Execution service settled the ACH", timestamp: "Jul 7, 9:02 AM ET", note: "Brain never held the funds", done: true },
     ],
@@ -976,7 +976,7 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
   rowSubtitle: "Notion Team · higher seat count flagged",
   actionStatement: "Propose paying Notion Team $240",
   actionMeta: "on card ••4821 · renewal due Mon Jun 30",
-  executionLabel: "charge held — not initiated",
+  executionLabel: "charge held - not initiated",
   cancelDeadlineLabel: "nothing scheduled until you decide",
   amount: 240,
   counterparty: "Notion Team",
@@ -987,7 +987,7 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
     { label: "Above monthly threshold", severity: "warning" },
   ],
   rationale:
-    "Your Notion workspace renewed with more seats than last cycle, pushing the monthly charge above the threshold Brain holds new or changed subscriptions at. The vendor and card on file are unchanged — only the seat count, and therefore the amount, moved.",
+    "Your Notion workspace renewed with more seats than last cycle, pushing the monthly charge above the threshold Brain holds new or changed subscriptions at. The vendor and card on file are unchanged - only the seat count, and therefore the amount, moved.",
   facts: [
     { label: "vendor", value: "Notion Team" },
     { label: "prior charge", value: "$180 · 12 seats" },
@@ -1011,11 +1011,11 @@ export const NOTION_RENEWAL_FLAGGED: Proposal = {
     score: 0.72,
     band: "medium",
     caveat:
-      "The increase looks like normal team growth, but the seat jump crossed your review threshold — confirm the new seats are intended.",
+      "The increase looks like normal team growth, but the seat jump crossed your review threshold - confirm the new seats are intended.",
   },
   whatHappensNext:
     "Nothing is scheduled. If you approve, the execution service charges the card for the new seat count. If you reject, the renewal is held and Brain follows up with the workspace owner about the added seats.",
-  risk: "If this is wrong, you pay every month for seats nobody uses — a recurring overcharge until someone notices.",
+  risk: "If this is wrong, you pay every month for seats nobody uses - a recurring overcharge until someone notices.",
   policy: {
     id: "ap.threshold.v2",
     explanation: "recurring charge rose above the new/changed-subscription threshold",

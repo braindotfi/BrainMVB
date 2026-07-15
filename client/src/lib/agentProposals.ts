@@ -1,4 +1,4 @@
-/* Agent proposal records for the "Your Review" surface — one per Brain agent
+/* Agent proposal records for the "Your Review" surface - one per Brain agent
    (11 total, per the proposal-detail-modal spec). Brain is PROPOSE-ONLY:
    propose-mode records get Approve / Edit / Reject, notify-only records get a
    single Acknowledge, approved_automatically records get a disabled footer
@@ -39,7 +39,7 @@ export type LinkedSourceType =
 export interface LinkedSource {
   type: LinkedSourceType;
   id: string;
-  deepLink: string; // brain://{type}/{id} — placeholder until real detail views exist
+  deepLink: string; // brain://{type}/{id} - placeholder until real detail views exist
 }
 
 export interface EvidenceLine {
@@ -47,7 +47,7 @@ export interface EvidenceLine {
   linkedSource: LinkedSource;
 }
 
-/* ── Scenario module — the ONE slot that differs per agent ──────────────── */
+/* ── Scenario module - the ONE slot that differs per agent ──────────────── */
 
 export interface AccountCardData {
   label: string;
@@ -113,7 +113,7 @@ export interface AgentProposal {
   };
 }
 
-/* ── Risk styling — pill + note + confidence-bar color track risk_level ─── */
+/* ── Risk styling - pill + note + confidence-bar color track risk_level ─── */
 export const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
   low: { label: "Low risk", color: "#42bf23", bg: "rgba(66,191,35,0.12)" },
   standard: { label: "Standard", color: "#a8b9f4", bg: "#1d2132" },
@@ -219,7 +219,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can remove individual invoices from the batch or change the pay date.",
       ifRejected: "No payments are scheduled; invoices remain open for manual handling.",
     },
-    riskNote: "Low risk — this is a routine batch with no flagged exceptions.",
+    riskNote: "Low risk - this is a routine batch with no flagged exceptions.",
     source: "ledger_invoices, ledger_purchase_orders",
     createdAt: "2026-07-11T09:15:00Z",
   },
@@ -254,7 +254,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can rewrite the reminder tone or push the send date back.",
       ifRejected: "No reminder is sent; the invoice stays in aging without action.",
     },
-    riskNote: "Low risk — this only sends a message, no funds move.",
+    riskNote: "Low risk - this only sends a message, no funds move.",
     source: "ledger_receivables",
     createdAt: "2026-07-10T18:40:00Z",
   },
@@ -293,7 +293,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifRejected: "Cash stays in the operating account; Brain will re-check in the next cycle.",
     },
     riskNote:
-      "Moving funds always needs a human to actually authorize the transfer — Brain only proposes the sweep.",
+      "Moving funds always needs a human to actually authorize the transfer - Brain only proposes the sweep.",
     source: "ledger_balances, wiki_cash_policy",
     createdAt: "2026-07-11T07:00:00Z",
   },
@@ -323,18 +323,18 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       floor: 174,
       note: "13-week projected balance ($k) · working-capital floor $174k",
     },
-    recommendedAction: "No action needed — forecast is informational this cycle.",
+    recommendedAction: "No action needed - forecast is informational this cycle.",
     whatHappensNext: {
       ifApproved: "Forecast is published to your dashboard as the current view.",
       ifEdited: "You can adjust assumptions (e.g. add a known upcoming expense) and re-run.",
-      ifRejected: "Not applicable — this is a read-only update, not a proposal requiring approval.",
+      ifRejected: "Not applicable - this is a read-only update, not a proposal requiring approval.",
     },
-    riskNote: "None — this is an informational update with no funds movement.",
+    riskNote: "None - this is an informational update with no funds movement.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
     createdAt: "2026-07-11T06:00:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-11T06:00:00Z",
-      autoApprovalReason: "All checks passed — no shortfall risk, variance under 4%",
+      autoApprovalReason: "All checks passed - no shortfall risk, variance under 4%",
       outcome: {
         summary: "Forecast published to dashboard as the current view.",
         linkedSource: ls("forecast", "forecast_pr_005_1"),
@@ -375,7 +375,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can adjust assumptions (e.g. add a confirmed inflow date) and re-run the forecast.",
       ifRejected: "Forecast stays as-is; Brain will re-check in the next cycle and alert again if the shortfall persists.",
     },
-    riskNote: "A forecast shortfall is not a crisis — it gives you 9 weeks to adjust before it materializes.",
+    riskNote: "A forecast shortfall is not a crisis - it gives you 9 weeks to adjust before it materializes.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
     createdAt: "2026-07-11T06:05:00Z",
   },
@@ -449,7 +449,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Request a signed W-9 from the vendor before year-end 1099 filing.",
     whatHappensNext: {
-      ifApproved: "Not applicable — this is a flag, not an action Brain can take on its own.",
+      ifApproved: "Not applicable - this is a flag, not an action Brain can take on its own.",
       ifEdited: "Not applicable.",
       ifRejected: "Not applicable.",
     },
@@ -491,13 +491,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       unit: "$k",
       note: "Enterprise segment monthly revenue ($k) · +12% MoM",
     },
-    recommendedAction: "No action needed — informational insight only.",
+    recommendedAction: "No action needed - informational insight only.",
     whatHappensNext: {
-      ifApproved: "Not applicable — surfaced on the dashboard automatically.",
+      ifApproved: "Not applicable - surfaced on the dashboard automatically.",
       ifEdited: "Not applicable.",
       ifRejected: "Not applicable.",
     },
-    riskNote: "None — informational only.",
+    riskNote: "None - informational only.",
     source: "ledger_receivables, wiki_subscriptions",
     createdAt: "2026-07-11T05:00:00Z",
     approvedAutomaticallyMeta: {
@@ -579,10 +579,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       kind: "line_diff",
       columns: ["Bank statement", "Ledger"],
       rows: [
-        { label: "date", a: "Jul 8", b: "—", mismatch: true },
-        { label: "amount", a: "$184.00", b: "—", mismatch: true },
+        { label: "date", a: "Jul 8", b: "-", mismatch: true },
+        { label: "amount", a: "$184.00", b: "-", mismatch: true },
         { label: "description", a: "MERCH FEE 7741", b: "no matching entry", mismatch: true },
-        { label: "category", a: "—", b: "merchant fees (proposed)" },
+        { label: "category", a: "-", b: "merchant fees (proposed)" },
       ],
     },
     recommendedAction: "Post a correcting entry for the unmatched $184 merchant fee.",
@@ -591,7 +591,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can change the entry's category or amount before posting.",
       ifRejected: "The line stays unmatched and the period remains open.",
     },
-    riskNote: "Very low risk — small amount, clear pattern match to a recurring known fee type.",
+    riskNote: "Very low risk - small amount, clear pattern match to a recurring known fee type.",
     source: "ledger_bank_feed, ledger_gl",
     createdAt: "2026-07-11T12:10:00Z",
   },
@@ -627,7 +627,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can reassign the seat to someone else instead of cancelling it.",
       ifRejected: "The seat renews as normal at full price.",
     },
-    riskNote: "Low risk — worst case is simply re-adding the seat later if it turns out to be needed.",
+    riskNote: "Low risk - worst case is simply re-adding the seat later if it turns out to be needed.",
     source: "wiki_subscriptions, wiki_app_usage",
     createdAt: "2026-07-10T09:30:00Z",
   },
@@ -678,7 +678,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     recommendedAction:
       "Manually verify both vendors are legitimate, separate businesses before further payments.",
     whatHappensNext: {
-      ifApproved: "Not applicable — this is a flag, not an action Brain can take on its own.",
+      ifApproved: "Not applicable - this is a flag, not an action Brain can take on its own.",
       ifEdited: "Not applicable.",
       ifRejected: "Not applicable.",
     },
@@ -687,7 +687,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     source: "ledger_counterparties",
     createdAt: "2026-07-09T20:45:00Z",
   },
-  /* ── Auto-approved records — one per agent (11 total) with full
+  /* ── Auto-approved records - one per agent (11 total) with full
      approvedAutomaticallyMeta per the v2 modal spec. These answer "what
      happened, and can I undo it?" rather than "should I approve this?" */
   {
@@ -816,12 +816,12 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Send a first reminder referencing the invoice number and due date.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
-    riskNote: "Low risk — a message, not a fund movement.",
+    riskNote: "Low risk - a message, not a fund movement.",
     source: "ledger_receivables",
     createdAt: "2026-07-10T18:40:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-10T18:40:05Z",
-      autoApprovalReason: "First reminders under standard tone are pre-approved by policy — no dollar or relationship risk.",
+      autoApprovalReason: "First reminders under standard tone are pre-approved by policy - no dollar or relationship risk.",
       outcome: {
         summary: "Reminder email delivered to Northstar Design's billing contact.",
         linkedSource: ls("receivable", "receivable_aa_003_sent"),
@@ -894,14 +894,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       floor: 174,
       note: "13-week projected balance ($k) · working-capital floor $174k",
     },
-    recommendedAction: "No action needed — informational.",
+    recommendedAction: "No action needed - informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
     riskNote: "None.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
     createdAt: "2026-07-11T06:00:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-11T06:00:00Z",
-      autoApprovalReason: "Read-only informational update — nothing to approve.",
+      autoApprovalReason: "Read-only informational update - nothing to approve.",
       outcome: {
         summary: "Forecast published to your dashboard as the current view.",
         linkedSource: ls("forecast", "forecast_aa_005_1"),
@@ -943,7 +943,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     createdAt: "2026-07-09T11:20:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-09T11:20:10Z",
-      autoApprovalReason: "Complete, unambiguous evidence match found before the response deadline — standard auto-file policy.",
+      autoApprovalReason: "Complete, unambiguous evidence match found before the response deadline - standard auto-file policy.",
       outcome: {
         summary: "Evidence package submitted to the payment processor's dispute portal.",
         linkedSource: ls("payment", "payment_aa_006_dispute"),
@@ -979,14 +979,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Certificate of insurance", present: true },
       ],
     },
-    recommendedAction: "No action needed — informational.",
+    recommendedAction: "No action needed - informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
     riskNote: "None.",
     source: "wiki_vendor_documents",
     createdAt: "2026-07-08T16:00:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-12T10:00:00Z",
-      autoApprovalReason: "Notify-only agent — this closes the earlier flag automatically once the document is on file.",
+      autoApprovalReason: "Notify-only agent - this closes the earlier flag automatically once the document is on file.",
       outcome: {
         summary: "Vendor file updated to compliant; earlier flag cleared.",
         linkedSource: ls("vendor_document", "vendor_document_aa_007_1"),
@@ -1026,14 +1026,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       unit: "$k",
       note: "Enterprise segment monthly revenue ($k) · +12% MoM",
     },
-    recommendedAction: "No action needed — informational.",
+    recommendedAction: "No action needed - informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
     riskNote: "None.",
     source: "ledger_receivables, wiki_subscriptions",
     createdAt: "2026-07-11T05:00:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-11T05:00:00Z",
-      autoApprovalReason: "Read-only informational insight — nothing to approve.",
+      autoApprovalReason: "Read-only informational insight - nothing to approve.",
       outcome: {
         summary: "Analysis published to your dashboard.",
         linkedSource: ls("subscription", "subscription_aa_008_1"),
@@ -1067,17 +1067,17 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "date", a: "Jul 8", b: "Jul 8" },
         { label: "amount", a: "$184.00", b: "$184.00" },
         { label: "description", a: "MERCH FEE 7741", b: "merchant fees" },
-        { label: "category", a: "—", b: "merchant fees (posted)" },
+        { label: "category", a: "-", b: "merchant fees (posted)" },
       ],
     },
     recommendedAction: "Post a correcting entry for the unmatched $184 merchant fee.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
-    riskNote: "Very low risk — small, recurring, well-matched pattern.",
+    riskNote: "Very low risk - small, recurring, well-matched pattern.",
     source: "ledger_bank_feed, ledger_gl",
     createdAt: "2026-07-11T12:10:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-11T12:10:05Z",
-      autoApprovalReason: "Under $200 with a high-confidence recurring pattern match — within auto-post policy.",
+      autoApprovalReason: "Under $200 with a high-confidence recurring pattern match - within auto-post policy.",
       outcome: {
         summary: "Correcting entry posted; period marked reconciled.",
         linkedSource: ls("bank_feed", "bank_feed_aa_009_posted"),
@@ -1112,12 +1112,12 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Cancel the unused seat before renewal.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
-    riskNote: "Low risk — the seat can be re-added later if needed.",
+    riskNote: "Low risk - the seat can be re-added later if needed.",
     source: "wiki_subscriptions, wiki_app_usage",
     createdAt: "2026-07-10T09:30:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-10T09:30:15Z",
-      autoApprovalReason: "Under $250/mo and 60+ days inactive — within auto-cancel policy for unused seats.",
+      autoApprovalReason: "Under $250/mo and 60+ days inactive - within auto-cancel policy for unused seats.",
       outcome: {
         summary: "Cancellation request submitted to Figma's billing portal.",
         linkedSource: ls("subscription", "subscription_aa_010_cancelled"),
@@ -1170,12 +1170,12 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Manually verify both vendors are legitimate.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
-    riskNote: "Moderate confidence — logged for the audit trail rather than acted on automatically.",
+    riskNote: "Moderate confidence - logged for the audit trail rather than acted on automatically.",
     source: "ledger_counterparties",
     createdAt: "2026-07-09T20:45:00Z",
     approvedAutomaticallyMeta: {
       approvedAt: "2026-07-10T08:00:00Z",
-      autoApprovalReason: "Notify-only agents never execute — this entry auto-closes into the audit log after the review window passes with no manual action.",
+      autoApprovalReason: "Notify-only agents never execute - this entry auto-closes into the audit log after the review window passes with no manual action.",
       outcome: {
         summary: "Logged to the audit trail; no payments were blocked or vendors changed.",
         linkedSource: ls("counterparty", "counterparty_aa_011_1"),
@@ -1186,12 +1186,12 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
   },
 ];
 
-/* ── Decision store — user-driven status overrides, shared app-wide ──────
+/* ── Decision store - user-driven status overrides, shared app-wide ──────
    approved / rejected / acknowledged records drop out of Needs Review;
    an auto-approved record's Undo moves it back into Needs Review. */
 export type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
 let decisions: Record<string, AgentDecision> = {};
-/* Epoch-ms timestamp of each decision, keyed by proposal id — read by the
+/* Epoch-ms timestamp of each decision, keyed by proposal id - read by the
    Activity + Audit Log pages so a logged decision keeps its real time instead
    of re-stamping "now" on every rerender. */
 const decisionTimes: Record<string, number> = {};

@@ -7,7 +7,7 @@ import { apiRequest } from "./queryClient";
    Single source of truth for the standing auto-clear rules: live active state,
    scope (cap / allowlist), and the ProblemReport trail. The receipt report flow,
    the review page (related-item flagging), and RuleDetail all read/write here.
-   No backend, no localStorage — module state behind useSyncExternalStore, the
+   No backend, no localStorage - module state behind useSyncExternalStore, the
    same pattern as rule-suggestions.ts. Every write is user-initiated.
    ──────────────────────────────────────────────────────────────────────────── */
 
@@ -36,7 +36,7 @@ function seedRules(): AutoRule[] {
         ruleId: "saas",
         proposalId: "auto-figma",
         reason: "Wrong amount",
-        note: "Figma jumped from our usual $288 to $360 — I want to check this before it keeps clearing.",
+        note: "Figma jumped from our usual $288 to $360 - I want to check this before it keeps clearing.",
         reportedAtLabel: "Jun 28, 2026 · 4:12 PM ET",
         resolved: false,
       },
@@ -192,7 +192,7 @@ export function lowerCap(id: string, amount: number) {
   updateRule(id, (r) => ({ ...r, cap: amount }));
 }
 
-/* Inline threshold edit — guardrail trip point or automation sweep amount. */
+/* Inline threshold edit - guardrail trip point or automation sweep amount. */
 export function setThreshold(id: string, amount: number) {
   updateRule(id, (r) => ({ ...r, threshold: amount }));
 }
@@ -226,7 +226,7 @@ export function createRule(rule: AutoRule) {
 /* ── Backend persistence (per-tenant, session-authenticated) ─────────────────
    User-created rules are stored in Postgres and associated with the logged-in
    account. The store stays the SSOT for the session; the network calls keep the
-   account's rules durable across reloads. All calls fail soft — a persistence
+   account's rules durable across reloads. All calls fail soft - a persistence
    error never blocks the optimistic UI. ──────────────────────────────────── */
 function toRulePayload(rule: AutoRule) {
   return {
@@ -307,7 +307,7 @@ export async function hydrateUserRules() {
 /* ── Rule draft handoff ───────────────────────────────────────────────────────
    "Always handle this" on a routine receipt sets a draft, then navigates to the
    Rules page which consumes it to pre-fill the create flow. No backend, no
-   localStorage — a one-shot module slot. ───────────────────────────────────── */
+   localStorage - a one-shot module slot. ───────────────────────────────────── */
 let ruleDraft: Partial<AutoRule> | null = null;
 
 export function setRuleDraft(draft: Partial<AutoRule>) {

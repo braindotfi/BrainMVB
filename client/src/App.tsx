@@ -98,7 +98,7 @@ function AppLayout() {
 
 /* Production tenancy gate (Phase 2): once platform auth succeeds, check whether this
    user is linked to a brain-core tenant. In production mode an unlinked user is routed
-   to "Create a company / Enter your invite link" — never auto-provisioned. In demo mode
+   to "Create a company / Enter your invite link" - never auto-provisioned. In demo mode
    this is a no-op (linked:true). */
 function TenancyGate({ onLogout }: { onLogout: () => void }) {
   const { data, isLoading } = useQuery<{ mode: string; linked: boolean }>({
@@ -117,7 +117,7 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
 
   // Production only: unlinked users always land on setup; an invite link also opens it
   // explicitly (already-linked users get core's honest "already belongs" refusal if they
-  // try to consume — never a silent no-op). Demo mode is untouched, including /invite/*.
+  // try to consume - never a silent no-op). Demo mode is untouched, including /invite/*.
   if (data?.mode === "production" && (!data.linked || onInviteRoute)) {
     return <CompanySetupPage />;
   }

@@ -46,7 +46,7 @@ export function AnchorStatus({
         {guarantee}
       </p>
 
-      {/* Hash block — shown only in proof mode when anchored */}
+      {/* Hash block - shown only in proof mode when anchored */}
       {mode === "proof" && (
         <div className="bg-[#0a0c10] rounded-[8px] p-[12px] flex flex-col gap-[8px] w-full">
           <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d] w-full">
@@ -75,7 +75,7 @@ export function AnchorStatus({
         </div>
       )}
 
-      {/* Action row — 32px above button (gap-[12px] outer + mt-[20px] here) */}
+      {/* Action row - 32px above button (gap-[12px] outer + mt-[20px] here) */}
       {mode === "proof" ? (
         <div className="flex flex-col gap-[6px] w-full mt-[20px]">
           <button

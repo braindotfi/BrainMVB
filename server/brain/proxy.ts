@@ -9,7 +9,7 @@
  *   4. forwards the request to `${BRAIN_API_BASE_URL}/<path>` and relays the
  *      response verbatim.
  *
- * SAFETY (slice scope): only GET is proxied generically — reads are safe to pass
+ * SAFETY (slice scope): only GET is proxied generically - reads are safe to pass
  * through with the user's full scope set. Write paths (propose/approve/execute,
  * policy sign, raw ingest) are deliberately added per-endpoint in later phases so
  * an arbitrary POST from a session can't reach the money path. Non-GET returns 405.
@@ -39,7 +39,7 @@ import {
   type CreateCounterpartyBody,
 } from "./client";
 
-/** Canned prompt for the HomePage "Brain's take" line — one specific, numeric insight. */
+/** Canned prompt for the HomePage "Brain's take" line - one specific, numeric insight. */
 const RECOMMENDATION_PROMPT =
   "In one sentence, give me the single most important and specific thing to know about my " +
   "money right now (a cash-flow, spending, or receivable item). Be concrete and numeric; do " +
@@ -50,12 +50,12 @@ export function createBrainProxyRouter(): Router {
 
   router.use(requireAuth);
 
-  // POST /api/brain/propose — the ONLY write the BFF exposes (Fork A).
+  // POST /api/brain/propose - the ONLY write the BFF exposes (Fork A).
   //
   // Proposes a payment for a Ledger invoice and returns the §6/Policy decision.
   // This is propose-only and demo-safe: the demo token carries
   // `payment_intent:propose` + `policy:read` but NOT `payment_intent:execute`,
-  // and no execute path is proxied — so a proposal can never move money. The
+  // and no execute path is proxied - so a proposal can never move money. The
   // policy decision (allow/confirm/reject + trace) is derived from the SAME
   // invoice the proposal pays, so the "why" the UI shows is truthful, not
   // client-supplied.
@@ -98,7 +98,7 @@ export function createBrainProxyRouter(): Router {
       }
 
       // Authoritative: create the §6-gated PaymentIntent (no execution). Propose is an AGENT
-      // action — the member/session token has no payment_intent:propose scope, so this MUST
+      // action - the member/session token has no payment_intent:propose scope, so this MUST
       // use the agent token (agents propose, humans approve).
       const intent = await proposeInvoicePayment(agentToken, invoiceId);
       return res.json({ intent, decision });
@@ -107,7 +107,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/reject — operator declines a proposed PaymentIntent.
+  // POST /api/brain/reject - operator declines a proposed PaymentIntent.
   //
   // The second (and last) write the BFF exposes. Demo-safe human-oversight
   // action: transitions a proposed/pending intent to `rejected` via the
@@ -137,7 +137,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // GET /api/brain/recommendation — a one-line, ledger-grounded insight for the
+  // GET /api/brain/recommendation - a one-line, ledger-grounded insight for the
   // HomePage, synthesized from Wiki Q&A (read-only). Replaces the old mock-data
   // daily-insights cron (server/insightsService.ts). Returns {} on any failure
   // so the page falls back to its static line.
@@ -158,7 +158,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/wiki/question — grounded Q&A over the tenant's Ledger (incl.
+  // POST /api/brain/wiki/question - grounded Q&A over the tenant's Ledger (incl.
   // obligations Brain derived from uploaded documents). Read-only despite POST, so
   // it's safe on the MEMBER/session token. Relays upstream errors verbatim.
   router.post("/wiki/question", async (req: Request, res: Response) => {
@@ -178,7 +178,7 @@ export function createBrainProxyRouter(): Router {
 
   // ── Production tenancy (Phase 2): company creation, invites, tenancy status ──
 
-  // GET /api/brain/tenancy — tells the client which tenancy mode is active and whether
+  // GET /api/brain/tenancy - tells the client which tenancy mode is active and whether
   // the current user is linked to a tenant (drives the "Create a company / Enter your
   // invite link" gate after login). Cheap: one local DB read, no brain-core call.
   router.get("/tenancy", async (req: Request, res: Response) => {
@@ -188,8 +188,8 @@ export function createBrainProxyRouter(): Router {
     return res.json({ mode, linked: !!identity, tenantId: identity?.tenantId });
   });
 
-  // POST /api/brain/tenants — create a company tenant for the CURRENT logged-in user
-  // (they become the bootstrap admin). Explicit user action only — never called
+  // POST /api/brain/tenants - create a company tenant for the CURRENT logged-in user
+  // (they become the bootstrap admin). Explicit user action only - never called
   // automatically. NOT idempotent upstream, so we hard-guard on an existing mapping and
   // never retry: a failure surfaces verbatim for the user to decide.
   router.post("/tenants", async (req: Request, res: Response) => {
@@ -232,7 +232,7 @@ export function createBrainProxyRouter(): Router {
         memberId: result.member?.id ?? null,
       });
       // Capture the agent token core mints at tenant creation (production-agents contract)
-      // — never discarded, never sent to the browser. Older cores omit `agent`; the token
+      // - never discarded, never sent to the browser. Older cores omit `agent`; the token
       // is then backfilled idempotently on first session use.
       if (result.agent?.token) {
         await storage.upsertBrainAgentToken(
@@ -248,7 +248,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/invites/consume — accept an invite for the CURRENT logged-in user.
+  // POST /api/brain/invites/consume - accept an invite for the CURRENT logged-in user.
   // Never auto-consumed on page load; the client calls this only after an explicit
   // confirm. Uses the platform service credential; binds external_ref = app user id.
   router.post("/invites/consume", async (req: Request, res: Response) => {
@@ -291,7 +291,7 @@ export function createBrainProxyRouter(): Router {
       return res.json({ tenantId, member: result.member });
     } catch (err) {
       if (err instanceof TenancyApiError) {
-        // Map the four contract rejection reasons to plain language — never silent.
+        // Map the four contract rejection reasons to plain language - never silent.
         const messages: Record<string, string> = {
           invite_invalid: "That invite link isn't valid. Ask your admin to send a new one.",
           invite_expired: "That invite has expired. Ask your admin to resend it.",
@@ -307,7 +307,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/members/:id/invites — issue (or REISSUE, which revokes the prior
+  // POST /api/brain/members/:id/invites - issue (or REISSUE, which revokes the prior
   // token per contract) an invite for a member. MEMBER token; core admin-gates.
   router.post("/members/:id/invites", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
@@ -324,7 +324,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // DELETE /api/brain/members/:id/invites — revoke a member's outstanding invite.
+  // DELETE /api/brain/members/:id/invites - revoke a member's outstanding invite.
   router.delete("/members/:id/invites", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
@@ -344,9 +344,9 @@ export function createBrainProxyRouter(): Router {
   // Reads (GET /members, GET /members/:id, GET /policy/:tenant) flow through the generic
   // GET passthrough below on the member/session token. These are the WRITES + one derived
   // read, added per-endpoint so an arbitrary session POST can't reach an unaudited path.
-  // We NEVER send an `actor` field — core resolves the member from the token (ACTOR=SESSION).
+  // We NEVER send an `actor` field - core resolves the member from the token (ACTOR=SESSION).
 
-  // POST /api/brain/members — create a member (core admin-gates; relays 403 verbatim).
+  // POST /api/brain/members - create a member (core admin-gates; relays 403 verbatim).
   router.post("/members", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
@@ -358,7 +358,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // PATCH /api/brain/members/:id — edit role/envelope (perItemLimit, domains, role).
+  // PATCH /api/brain/members/:id - edit role/envelope (perItemLimit, domains, role).
   router.patch("/members/:id", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
@@ -370,7 +370,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // DELETE /api/brain/members/:id — DEACTIVATE (core protects the last admin → 403).
+  // DELETE /api/brain/members/:id - DEACTIVATE (core protects the last admin → 403).
   router.delete("/members/:id", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
@@ -382,15 +382,15 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/payment-intents/:id/approve — human approves a pending intent.
+  // POST /api/brain/payment-intents/:id/approve - human approves a pending intent.
   //
   // Two-signer auto-chain: the demo policy's quorum needs two DISTINCT approver members. The
   // first signature (member token) moves the intent to `awaiting_second_approval`; when the core
   // provisioned a SECOND distinct approver token (present since the two-signer fix), we sign again
-  // as that member to reach `approved`. Both signatures are REAL, distinct member ids — core's
+  // as that member to reach `approved`. Both signatures are REAL, distinct member ids - core's
   // distinct-approver + actor-payee gates are genuinely satisfied, not bypassed. Pre-deploy (no
   // second token) we return the first result verbatim, so the UI shows awaiting_second_approval
-  // exactly as before — no 404/500 window. The AGENT token is never used here (agents propose).
+  // exactly as before - no 404/500 window. The AGENT token is never used here (agents propose).
   router.post("/payment-intents/:id/approve", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const id = String(req.params.id);
@@ -409,7 +409,7 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // GET /api/brain/approval-policy — derived facts for Member Detail "locked rows"
+  // GET /api/brain/approval-policy - derived facts for Member Detail "locked rows"
   // (self-approval invariant + tenant second-approval threshold), read from core's policy.
   router.get("/approval-policy", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
@@ -422,13 +422,13 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/ledger/counterparties — manually add a vendor (counterparty).
+  // POST /api/brain/ledger/counterparties - manually add a vendor (counterparty).
   //
   // MEMBER token (a ledger write, not an agent action). Only identity fields are
-  // forwarded — never an `actor` (core derives it from the token) and never a
+  // forwarded - never an `actor` (core derives it from the token) and never a
   // payment/bank/trust field (core rejects those; we don't even accept them from
   // the client). Upsert: core returns 201 (created) or 200 (merged into an
-  // existing counterparty) — relayed verbatim.
+  // existing counterparty) - relayed verbatim.
   router.post("/ledger/counterparties", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const raw = req.body as Record<string, unknown> | undefined;
@@ -498,7 +498,7 @@ function unconfigured(res: Response): Response {
 function relayError(res: Response, err: unknown): Response {
   if (err instanceof NoTenantError) {
     // Production tenancy: this app user isn't linked to any tenant. The client must route
-    // to "Create a company" or "Enter your invite link" — nothing is auto-provisioned.
+    // to "Create a company" or "Enter your invite link" - nothing is auto-provisioned.
     return res.status(403).json({ error: "no_tenant", message: "This account isn't part of a company yet." });
   }
   if (err instanceof TenancyApiError) {

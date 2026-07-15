@@ -4,7 +4,7 @@ let cached: PlaidApi | null = null;
 
 /**
  * Returns a Plaid client instance.  The client is created lazily so the
- * server doesn't crash at boot if PLAID_CLIENT_ID/PLAID_SECRET aren't set —
+ * server doesn't crash at boot if PLAID_CLIENT_ID/PLAID_SECRET aren't set -
  * route handlers throw a clear "not configured" error instead.
  */
 export function getPlaidClient(): PlaidApi {
