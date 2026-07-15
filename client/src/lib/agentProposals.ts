@@ -114,11 +114,11 @@ export interface AgentProposal {
 }
 
 /* ── Risk styling - pill + note + confidence-bar color track risk_level ─── */
-export const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
-  low: { label: "Low risk", color: "#42bf23", bg: "rgba(66,191,35,0.12)" },
-  standard: { label: "Standard", color: "#a8b9f4", bg: "#1d2132" },
-  elevated: { label: "Elevated", color: "#ff9500", bg: "#3a2600" },
-  high: { label: "High risk", color: "#d20344", bg: "#350011" },
+export const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string; border: string }> = {
+  low:      { label: "Low risk",   color: "#42bf23", bg: "rgba(66,191,35,0.12)",  border: "rgba(66,191,35,0.25)" },
+  standard: { label: "Standard",   color: "#a8b9f4", bg: "#1d2132",               border: "rgba(168,185,244,0.2)" },
+  elevated: { label: "Elevated",   color: "#ff9500", bg: "#3a2600",               border: "rgba(255,149,0,0.25)" },
+  high:     { label: "High risk",  color: "#d20344", bg: "#350011",               border: "rgba(210,3,68,0.25)" },
 };
 
 const ls = (type: LinkedSourceType, id: string): LinkedSource => ({

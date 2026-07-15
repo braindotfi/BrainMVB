@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
+import approveIcon from "@assets/approve_1784154649123.png";
+import editIcon from "@assets/edit_1784154649123.png";
+import rejectIcon from "@assets/reject_1784154649120.png";
 import {
   ArrowLeft,
   ArrowRight,
@@ -213,15 +216,18 @@ function renderScenarioModule(
       );
     case "document_stack":
       return (
-        <div className="flex flex-col gap-[8px] w-full" data-testid="module-document-stack">
+        <div
+          className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full"
+          data-testid="module-document-stack"
+        >
           {module.docs.map((doc, i) => (
             <div
               key={i}
-              className="flex items-center gap-[12px] px-[12px] py-[10px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full"
+              className={`flex items-center gap-[12px] px-[12px] py-[10px] w-full ${i < module.docs.length - 1 ? "border-b border-[#1d2132]" : ""}`}
               data-testid={`module-doc-${i}`}
             >
               <div className="flex items-center justify-center size-[32px] rounded-[8px] bg-[#1d2132] shrink-0">
-                <FileText size={15} className="text-[#a8b9f4]" />
+                <FileText size={14} className="text-[#a8b9f4]" />
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4] truncate">
@@ -262,30 +268,43 @@ function renderScenarioModule(
       );
     case "account_flow":
       return (
-        <div className="flex flex-col items-center gap-[6px] w-full" data-testid="module-account-flow">
-          <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex items-center justify-between gap-[8px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4]">
+        <div
+          className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[16px] flex flex-col gap-[16px] items-center w-full"
+          data-testid="module-account-flow"
+        >
+          {/* FROM row */}
+          <div className="flex gap-[24px] items-center w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] flex-1 min-w-0 truncate">
               {module.from.name}
             </p>
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d]">
-              {format(module.from.before)}{" "}
-              <span className="text-[#a8b9f4]">{format(module.from.after)}</span>
-            </p>
+            <div className="flex gap-[4px] items-center shrink-0">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+                {format(module.from.before)}
+              </span>
+              <ArrowRight size={16} className="text-[#6c779d]" />
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+                {format(module.from.after)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-[8px]">
-            <ArrowDown size={14} className="text-[#7631ee]" />
-            <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]">
-              {format(module.amount)}
-            </span>
+          {/* Center transfer indicator */}
+          <div className="flex items-center justify-center size-[32px] rounded-full bg-[#1d2132] shrink-0">
+            <ArrowDown size={16} className="text-[#a8b9f4]" />
           </div>
-          <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex items-center justify-between gap-[8px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4]">
+          {/* TO row */}
+          <div className="flex gap-[24px] items-center w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] flex-1 min-w-0 truncate">
               {module.to.name}
             </p>
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d]">
-              {format(module.to.before)}{" "}
-              <span className="text-[#42bf23]">{format(module.to.after)}</span>
-            </p>
+            <div className="flex gap-[4px] items-center shrink-0">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+                {format(module.to.before)}
+              </span>
+              <ArrowRight size={16} className="text-[#6c779d]" />
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#42bf23] tracking-[-0.28px] whitespace-nowrap">
+                {format(module.to.after)}
+              </span>
+            </div>
           </div>
         </div>
       );
@@ -616,19 +635,19 @@ export function AgentProposalModal({
   const editViaModule = proposal.scenarioModule.kind === "message_preview";
   const showEditForm = editing && !editViaModule;
 
-  const nextSteps: { icon: React.ReactNode; label: string; text: string }[] = [
+  const nextSteps: { icon: string; label: string; text: string }[] = [
     {
-      icon: <Check size={13} className="text-[#42bf23]" />,
+      icon: approveIcon,
       label: "Approve",
       text: proposal.whatHappensNext.ifApproved,
     },
     {
-      icon: <Pencil size={13} className="text-[#a8b9f4]" />,
+      icon: editIcon,
       label: "Edit",
       text: proposal.whatHappensNext.ifEdited,
     },
     {
-      icon: <X size={13} className="text-[#d20344]" />,
+      icon: rejectIcon,
       label: "Reject",
       text: proposal.whatHappensNext.ifRejected,
     },
@@ -673,21 +692,21 @@ export function AgentProposalModal({
           <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
             {isAutoApproved ? (
               <div
-                className="bg-[#123509] border border-[rgba(66,191,35,0.2)] px-[10px] py-[4px] rounded-[22px]"
+                className="inline-flex items-center justify-center bg-[#123509] border border-[rgba(66,191,35,0.25)] px-[12px] py-[5px] rounded-[100px]"
                 data-testid="pill-auto-approved"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#42bf23] whitespace-nowrap">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-[#42bf23] whitespace-nowrap">
                   Auto-Approved
                 </span>
               </div>
             ) : (
               <div
-                className="px-[10px] py-[4px] rounded-[22px]"
-                style={{ background: risk.bg }}
+                className="inline-flex items-center justify-center px-[12px] py-[5px] rounded-[100px]"
+                style={{ background: risk.bg, border: `1px solid ${risk.border}` }}
                 data-testid="pill-risk-level"
               >
                 <span
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] whitespace-nowrap"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] whitespace-nowrap"
                   style={{ color: risk.color }}
                 >
                   {risk.label}
@@ -716,7 +735,7 @@ export function AgentProposalModal({
           </div>
 
           {/* Scrollable body */}
-          <div className="flex flex-col gap-[28px] items-start p-[24px] w-full overflow-y-auto">
+          <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
             {/* WHY BRAIN SUGGESTED THIS / WHY THIS DIDN'T NEED REVIEW */}
             <div className="flex flex-col gap-[16px] items-start w-full">
@@ -754,28 +773,31 @@ export function AgentProposalModal({
               )}
             </div>
 
-            {/* CONFIDENCE (needs_review only) */}
-            {!isAutoApproved && (
-              <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
-                <SectionLabel
-                  right={
-                    <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
-                      {confidencePct}%
-                    </span>
-                  }
-                >
-                  Confidence
-                </SectionLabel>
-                <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
-                  <div
-                    className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
-                    style={{ width: `${confidencePct}%` }}
-                  />
+            {/* CONFIDENCE (needs_review only) — HR always sits directly below bar */}
+            {!isAutoApproved ? (
+              <>
+                <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
+                  <SectionLabel
+                    right={
+                      <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
+                        {confidencePct}%
+                      </span>
+                    }
+                  >
+                    Confidence
+                  </SectionLabel>
+                  <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
+                    <div
+                      className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
+                      style={{ width: `${confidencePct}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
+                <HR />
+              </>
+            ) : (
+              <HR />
             )}
-
-            <HR />
 
             {/* SCENARIO MODULE: the one slot that swaps per agent */}
             {renderScenarioModule(
@@ -862,17 +884,15 @@ export function AgentProposalModal({
                       })
                     }
                     data-testid="link-outcome-record"
-                    className="flex items-start gap-[8px] w-full text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px] px-[4px] py-[3px] -mx-[4px]"
+                    className="inline-flex items-center gap-[8px] px-[14px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <ArrowUpRight size={14} className="text-[#7631ee] shrink-0 mt-[2px]" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[#7631ee] text-[14px] group-hover:underline">
-                      View{" "}
-                      {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(
-                        /_/g,
-                        " ",
-                      )}{" "}
-                      record
-                    </span>
+                    <ArrowUpRight size={14} className="text-[#a8b9f4] shrink-0" />
+                    View{" "}
+                    {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(
+                      /_/g,
+                      " ",
+                    )}{" "}
+                    record
                   </button>
                   <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
                     {new Date(
@@ -893,16 +913,18 @@ export function AgentProposalModal({
                   This is a flag for your awareness. Brain does not take action on it automatically.
                 </p>
               ) : (
-                <div className="flex flex-col gap-[8px] w-full">
+                <div className="flex flex-col gap-[10px] w-full">
                   {nextSteps.map((step) => (
                     <div
                       key={step.label}
-                      className="flex items-start gap-[10px] w-full"
+                      className="flex items-center gap-[10px] w-full"
                       data-testid={`next-step-${step.label.toLowerCase()}`}
                     >
-                      <div className="flex items-center justify-center size-[22px] rounded-full bg-[#1d2132] shrink-0 mt-[1px]">
-                        {step.icon}
-                      </div>
+                      <img
+                        src={step.icon}
+                        alt={step.label}
+                        className="size-[28px] shrink-0"
+                      />
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d]">
                         <span className="font-semibold text-[#a8b9f4]">{step.label}</span>
                         {" "}
