@@ -35,10 +35,16 @@ specifies the concrete API brain-core would need to ship to make this real.
 | `subscription` | Subscription | agnostic | propose | "Unused software seat renewing in 4 days" |
 | `fraud_anomaly` | Fraud & Anomaly | agnostic | notify_only | "Two invoices from different vendors share a phone number" |
 
-21 total records: 11 `needs_review` + 10 `approved_automatically` (one pair per
-agent, so each agent has both a live-decision card and an already-resolved outcome
-card; `cash_forecast` and `revenue_intel` each have an extra escalation variant,
-`pr_005b` / `pr_008b`, that never got an auto-approved twin).
+24 total records: 11 `needs_review` (`pr_001`–`pr_011`, one per agent) + 13
+`approved_automatically` (`aa_001`–`aa_011`, one per agent, plus `pr_005` and
+`pr_008` themselves, which are `approved_automatically` rather than
+`needs_review`). Every agent has an `pr_00N`/`aa_00N` pair — a live-decision
+card plus an already-resolved outcome card. `cash_forecast` and `revenue_intel`
+additionally carry an escalation-only `needs_review` variant on top of their
+pair (`pr_005b` / `pr_008b`), so those two agents surface three records each
+(`aa_00N` approved-automatically, `pr_00N` itself approved-automatically, and
+`pr_00Nb` needs-review) while the other 9 agents surface exactly two
+(`pr_00N` needs-review, `aa_00N` approved-automatically).
 
 ### Per-proposal shape (`AgentProposal` interface)
 
@@ -119,6 +125,15 @@ type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_revie
 | Grounded narrative/evidence | `POST /wiki/question` (`askWiki`) | Natural-language question → SQL against the Wiki → answer with an evidence path — this is what backs `BrainAssistant.tsx`'s "Grounded in N records" today |
 | Why an action was gated | `POST /policy/{tenant_id}/evaluate` | Real policy decision + trace for a `ProposedAction` |
 | Settlement/audit trail | `GET /audit/entity/{entityType}/{entityId}`, live `AuditEvent` stream (`layer: agent|execution|audit`, `event_hash`/`prev_event_hash` chain) | What `useBrainAuditRecords` / `AuditLogPage` already consume for real payment events |
+
+*Spec discrepancy on the approval queue row:* `Brain_API_Specification.yaml` has
+no top-level `/actions` path item — the only `actions` path it documents is
+`/agents/{agent_id}/actions` (`operationId: listAgentActions`). The deployed
+API and the BFF (`server/brain/client.ts`'s `listActions`, called from
+`GET /api/brain/actions`) both hit the bare `GET /actions` route this table
+cites, so the live surface and the checked-in spec have genuinely drifted —
+this doc reports what's actually called over the wire, not what the spec
+claims exists.
 
 This is a solid foundation — the shapes (`riskLevel`→policy decision, `evidence`→wiki
 answer path, `whatHappensNext`→approval_ids/execution_receipt_ids) are not far off
