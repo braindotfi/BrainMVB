@@ -83,10 +83,13 @@ export function CompanySetupPage() {
   };
 
   // Subscribe to the same tenancy query the gate (App.tsx) reads, and leave the moment it
-  // resolves linked — the mount-time invalidation above can refetch linked:true without the
-  // gate's own render ever swapping this page out, so this page must be able to leave itself.
+  // resolves linked — the mount-time invalidation above can race brain-core's own
+  // identity/session write and land linked:false, then sit there forever (staleTime,
+  // no remount/focus to retrigger). Poll every 3s only while unlinked to catch the flip.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean }>({
     queryKey: ["/api/brain/tenancy"],
+    staleTime: 0,
+    refetchInterval: (query) => (query.state.data?.linked ? false : 3000),
   });
   useEffect(() => {
     if (tenancy?.linked) finish();
