@@ -83,6 +83,10 @@ export interface AuditRecord {
   invoiceId?: string;
   /* Optional subtitle for the register row (key facts: amount · actor · audit id) */
   rowSubtitle?: string;
+  /* True when this record was synthesized from the fabricated agent-proposal demo
+     surface (agentProposals.ts), not a live brain-core audit event — see
+     deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. Drives the "Demo scenario" pill. */
+  demo?: boolean;
 }
 
 /* Filter tabs for the Audit Log page */

@@ -231,17 +231,19 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; onClick: () => void };
+type WidgetItem = { id: string; label: string; onClick: () => void; demo?: boolean };
 const ListItem = ({
   icon,
   label,
   onClick,
   testId,
+  demo,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   testId: string;
+  demo?: boolean;
 }) => (
   <button
     type="button"
@@ -250,8 +252,20 @@ const ListItem = ({
     className="flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] text-left"
   >
     {icon}
-    <div className="flex flex-1 flex-col items-start min-w-px relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">{label}</p>
+    <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
+      <div className="flex items-center gap-[8px] w-full min-w-0">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
+        {/* Fabricated seed record, not a live brain-core proposal — see
+            deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+        {demo && (
+          <span
+            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+            style={{ color: "#6c779d", background: "#1d2132" }}
+          >
+            Demo scenario
+          </span>
+        )}
+      </div>
     </div>
   </button>
 );
@@ -300,6 +314,7 @@ const SectionWidget = ({
                   label={item.label}
                   testId={`${testIdPrefix}-${item.id}`}
                   onClick={item.onClick}
+                  demo={item.demo}
                 />
                 {idx < visible.length - 1 && (
                   <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
@@ -555,6 +570,7 @@ export function HomePage() {
       id: p.id,
       label: p.title,
       onClick: () => setHomeAgent(p),
+      demo: true,
     }));
   }, [liveNeedsReview, agentDecisions]);
 

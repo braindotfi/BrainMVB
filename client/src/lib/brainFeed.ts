@@ -28,6 +28,9 @@ export type ActivityItemData = {
   /** If this activity item is a decided agent proposal (the AgentProposalModal flow),
       carry it so a tap re-opens that modal as a read-only receipt. */
   agentProposal?: AgentProposal;
+  /** True when this row was synthesized from the fabricated agent-proposal demo
+      surface (agentProposals.ts) — see deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
+  demo?: boolean;
 };
 
 /** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
@@ -165,6 +168,7 @@ export function agentDecisionToActivity(
       hour12: true,
     }),
     agentProposal: p,
+    demo: true,
   };
 }
 
@@ -201,6 +205,7 @@ export function agentDecisionToAuditRecord(
     ],
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `${p.id}--agent-audit-${decision}` },
+    demo: true,
   };
 }
 

@@ -240,9 +240,21 @@ export function AuditLogPage() {
                               style={borderLeft ? { borderLeft } : undefined}
                             >
                               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-                                  {record.summary}
-                                </p>
+                                <div className="flex items-center gap-[8px] w-full min-w-0">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap truncate">
+                                    {record.summary}
+                                  </p>
+                                  {/* Fabricated seed record, not a live brain-core event — see
+                                      deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+                                  {record.demo && (
+                                    <span
+                                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+                                      style={{ color: "#6c779d", background: "#1d2132" }}
+                                    >
+                                      Demo scenario
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
                                   {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
                                 </p>
