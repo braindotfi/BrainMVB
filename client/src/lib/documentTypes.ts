@@ -123,11 +123,12 @@ export async function openDocumentOriginal(doc: DocumentRecord): Promise<void> {
   if (!doc.rawId) return;
   // Open synchronously on the click so browsers don't treat the post-await
   // window.open as a popup and block it (Safari always, Chrome often).
-  const w = window.open("about:blank", "_blank", "noopener,noreferrer");
+  const w = window.open("about:blank", "_blank");
   if (!w) {
     console.warn("[openDocumentOriginal] window.open blocked; cannot resolve raw artifact URL");
     return;
   }
+  w.opener = null;
   try {
     const res = await fetch(`/api/brain/raw/${encodeURIComponent(doc.rawId)}`, {
       credentials: "include",

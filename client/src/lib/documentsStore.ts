@@ -3,13 +3,12 @@ import { apiRequest } from "./queryClient";
 
 /* ── Canonical document store ─────────────────────────────────────────────────
    ONE place every evidence document is looked up from, mirroring rulesStore.
-   Read-only, backed by the tenant's live uploads (GET /api/integrations/documents)
-   rather than mockDocuments — documents are source evidence Brain reads, not app
-   state it mutates. Starts empty; `hydrateDocuments` below fetches once. resolveDocument
-   / getDocument is the single lookup used by openDocumentDetail, the viewer's compare
-   toggle, and the dev coherence guards. mockDocuments.ts stays for other still-mocked
-   surfaces (proposals/audit records) until they're wired to live data — an id that
-   only exists there will honestly fail to resolve here (openDocumentDetail's
+   Read-only, backed by the tenant's live uploads (GET /api/integrations/documents) —
+   documents are source evidence Brain reads, not app state it mutates. Starts empty;
+   `hydrateDocuments` below fetches once. resolveDocument / getDocument is the single
+   lookup used by openDocumentDetail and the viewer's compare toggle. The mock document
+   corpus (mockDocuments.ts) and its dev consistency guard were deleted 2026-07-15; an
+   id that isn't in a live upload honestly fails to resolve here (openDocumentDetail's
    resolve-or-plain-text contract). */
 
 /** Shape of a row from GET /api/integrations/documents (server SourceDocument). */
