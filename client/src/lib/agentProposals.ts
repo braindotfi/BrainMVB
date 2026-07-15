@@ -57,7 +57,7 @@ export interface AccountCardData {
 export type ScenarioModule =
   | { kind: "account_comparison"; old: AccountCardData; next: AccountCardData }
   | { kind: "entity_comparison"; entities: [AccountCardData, AccountCardData]; sharedNote: string }
-  | { kind: "document_stack"; docs: { label: string; meta: string }[] }
+  | { kind: "document_stack"; title?: string; docs: { label: string; meta: string }[] }
   | { kind: "message_preview"; draft: string }
   | {
       kind: "account_flow";
@@ -207,6 +207,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
+      title: "Invoices",
       docs: [
         { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
         { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
@@ -773,6 +774,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
+      title: "Invoices",
       docs: [
         { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
         { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },

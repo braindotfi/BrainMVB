@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   FileText,
   HandCoins,
+  Info,
   Landmark,
   LineChart,
   Pencil,
@@ -211,29 +212,29 @@ function renderScenarioModule(
       );
     case "document_stack":
       return (
-        <div
-          className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full"
-          data-testid="module-document-stack"
-        >
-          {module.docs.map((doc, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-[12px] px-[12px] py-[10px] w-full ${i < module.docs.length - 1 ? "border-b border-[#1d2132]" : ""}`}
-              data-testid={`module-doc-${i}`}
-            >
-              <div className="flex items-center justify-center size-[32px] rounded-[8px] bg-[#1d2132] shrink-0">
-                <FileText size={14} className="text-[#a8b9f4]" />
+        <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
+          {module.title && <SectionLabel>{module.title}</SectionLabel>}
+          <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full">
+            {module.docs.map((doc, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-[12px] px-[12px] py-[10px] w-full ${i < module.docs.length - 1 ? "border-b border-[#1d2132]" : ""}`}
+                data-testid={`module-doc-${i}`}
+              >
+                <div className="flex items-center justify-center size-[32px] rounded-[8px] bg-[#1d2132] shrink-0">
+                  <FileText size={14} className="text-[#a8b9f4]" />
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4] truncate">
+                    {doc.label}
+                  </p>
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] truncate">
+                    {doc.meta}
+                  </p>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4] truncate">
-                  {doc.label}
-                </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] truncate">
-                  {doc.meta}
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       );
     case "message_preview":
@@ -766,31 +767,26 @@ export function AgentProposalModal({
               )}
             </div>
 
-            {/* CONFIDENCE (needs_review only) — wrapped so HR hugs bar with no body gap */}
-            {!isAutoApproved ? (
-              <div className="flex flex-col gap-[12px] w-full">
-                <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
-                  <SectionLabel
-                    right={
-                      <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
-                        {confidencePct}%
-                      </span>
-                    }
-                  >
-                    Confidence
-                  </SectionLabel>
-                  <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
-                    <div
-                      className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
-                      style={{ width: `${confidencePct}%` }}
-                    />
-                  </div>
-                </div>
-                <HR />
+            {/* CONFIDENCE — shown for all proposals */}
+            <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
+              <SectionLabel
+                right={
+                  <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
+                    {confidencePct}%
+                  </span>
+                }
+              >
+                Confidence
+              </SectionLabel>
+              <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
+                <div
+                  className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
+                  style={{ width: `${confidencePct}%` }}
+                />
               </div>
-            ) : (
-              <HR />
-            )}
+            </div>
+
+            <HR />
 
             {/* SCENARIO MODULE: the one slot that swaps per agent */}
             {renderScenarioModule(
@@ -843,8 +839,6 @@ export function AgentProposalModal({
               </div>
             )}
 
-            <HR />
-
             {/* RECOMMENDED ACTION */}
             <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel>Recommended Action</SectionLabel>
@@ -856,50 +850,53 @@ export function AgentProposalModal({
               </p>
             </div>
 
-            <HR />
-
             {/* WHAT HAPPENS NEXT / OUTCOME */}
             <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel>
                 {isAutoApproved ? "Outcome" : "What Happens Next"}
               </SectionLabel>
               {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
-                <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[14px] flex flex-col gap-[10px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[15px] w-full">
-                    {proposal.approvedAutomaticallyMeta.outcome.summary}
-                  </p>
-                  <div className="flex items-center gap-[10px] flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setViewingEvidence({
-                          text: "View record",
-                          linkedSource: proposal.approvedAutomaticallyMeta!.outcome.linkedSource,
-                        })
-                      }
-                      data-testid="link-outcome-record"
-                      className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0"
+                <>
+                  {/* Title + date stacked */}
+                  <div className="flex flex-col gap-[8px] items-start w-full">
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full"
+                      data-testid="text-outcome-summary"
                     >
-                      <ArrowUpRight size={13} className="text-[#6c779d] shrink-0" />
-                      View{" "}
-                      {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type.replace(
-                        /_/g,
-                        " ",
-                      )}{" "}
-                      record
-                    </button>
-                    <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
+                      {proposal.approvedAutomaticallyMeta.outcome.summary}
+                    </p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
                       {new Date(
                         proposal.approvedAutomaticallyMeta.approvedAt,
                       ).toLocaleDateString("en-US", {
-                        month: "short",
+                        month: "long",
                         day: "numeric",
                         hour: "numeric",
                         minute: "2-digit",
                       })}
                     </p>
                   </div>
-                </div>
+                  {/* Purple View button */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setViewingEvidence({
+                        text: "View record",
+                        linkedSource: proposal.approvedAutomaticallyMeta!.outcome.linkedSource,
+                      })
+                    }
+                    data-testid="link-outcome-record"
+                    className="inline-flex items-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#240757] hover:bg-[#2e0a6e] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    <ArrowUpRight size={20} className="text-[#7631ee] shrink-0" />
+                    View{" "}
+                    {proposal.approvedAutomaticallyMeta.outcome.linkedSource.type
+                      .split("_")
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(" ")}{" "}
+                    Record
+                  </button>
+                </>
               ) : isNotifyOnly ? (
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full"
@@ -929,20 +926,17 @@ export function AgentProposalModal({
                   ))}
                 </div>
               )}
-              {/* Info box: risk note + source — styled card for all states */}
+              {/* Info box — matches Figma 5822-66648: border-only, Info icon, riskNote */}
               <div
-                className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[6px] w-full"
+                className="border border-[#1d2132] rounded-[12px] p-[8px] flex items-start gap-[8px] w-full"
                 data-testid="box-risk-info"
               >
+                <Info size={16} className="text-[#6c779d] shrink-0 mt-[1px]" />
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] w-full"
-                  style={{ color: riskNoteColor }}
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-0"
                   data-testid="text-risk-note"
                 >
                   {proposal.riskNote}
-                </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#414965]">
-                  source: {proposal.source}
                 </p>
               </div>
             </div>
