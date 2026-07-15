@@ -340,8 +340,9 @@ const SectionWidget = ({
   );
 };
 
-// Shown when brain-core's ledger-grounded recommendation is unavailable.
-const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
+// Shown when brain-core's ledger-grounded recommendation is unavailable — neutral,
+// no invented figures (was a hardcoded "$432 less than last month. Nice.").
+const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", colorClass: "text-[#6c779d]" };
 
 /* ── Insight-text helpers ────────────────────────────────────────────────────────────
    The recommendation string from brain-core often contains raw numbers and
@@ -464,6 +465,17 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
+  // Real company name from the tenancy link, falling back to the user's own display name
+  // (was a hardcoded "ACME Inc."). Mirrors client/src/pages/SettingsPage.tsx.
+  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
+    queryKey: ["/api/brain/tenancy"],
+  });
+  // A locally-saved override from the Settings > Profile "Edit" field always wins, matching
+  // client/src/pages/SettingsPage.tsx's ProfileSection.
+  const nameOverride = (() => {
+    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
+  })();
+  const greetingName = nameOverride || tenancy?.companyName || user?.name || "";
 
   // Dynamic "last updated" timestamp — refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
@@ -588,8 +600,26 @@ export function HomePage() {
   const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "—";
   const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : "";
 
+  // Net cash flow per month from the live Ledger. With only inflows seeded today
+  // this reads as positive income; it nets real expenses automatically once money
+  // -out transactions land. null when no transactions are reachable at all.
+  const { data: brainTx } = useQuery<{
+    transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
+  }>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const netMonthly = netMonthlyCashflow(brainTx?.transactions);
+  // No live transactions → honest placeholder, never a fabricated figure (was "$7,324").
+  const cashLabel = netMonthly !== null ? "Net cash flow" : "Monthly spend";
+  const cashValue =
+    netMonthly !== null
+      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
+      : "—";
+
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
-  // static line when brain-core is unreachable/unconfigured.
+  // static (non-dollar) line when brain-core is unreachable/unconfigured; overridden
+  // below with a neutral prompt when there are no transactions to speak of at all.
   const { data: brainRec } = useQuery<{ text?: string }>({
     queryKey: ["/api/brain/recommendation"],
     retry: false,
@@ -601,25 +631,12 @@ export function HomePage() {
   const processedText = rawText
     ? formatDatesInText(formatAmountsInText(rawText, format), currency)
     : formatAmountsInText(SPENDING_INSIGHT_FALLBACK.text, format);
-  const insightLine = rawText
-    ? { text: processedText, colorClass: detectSentimentColor(processedText) }
-    : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
-
-  // Net cash flow per month from the live Ledger. With only inflows seeded today
-  // this reads as positive income; it nets real expenses automatically once money
-  // -out transactions land. Falls back to the static figure when unreachable.
-  const { data: brainTx } = useQuery<{
-    transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
-  }>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const netMonthly = netMonthlyCashflow(brainTx?.transactions);
-  const cashLabel = netMonthly !== null ? "Net cash flow" : "You're spending about";
-  const cashValue =
-    netMonthly !== null
-      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
-      : format("$7,324");
+  const insightLine =
+    netMonthly === null
+      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-[#6c779d]" }
+      : rawText
+        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
+        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
@@ -652,8 +669,10 @@ export function HomePage() {
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
-                <span className="leading-[24px] text-[20px]">{greeting}, </span>
-                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{(() => { try { return localStorage.getItem("brain_profile_name") || "ACME Inc."; } catch { return "ACME Inc."; } })()}</span>
+                <span className="leading-[24px] text-[20px]">{greeting}{greetingName ? ", " : ""}</span>
+                {greetingName && (
+                  <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{greetingName}</span>
+                )}
                 <span className="leading-[24px] text-[20px]">.</span>
               </p>
             </div>
