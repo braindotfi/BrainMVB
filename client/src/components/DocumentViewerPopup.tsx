@@ -17,7 +17,7 @@ import invoiceImg from "@assets/invoice_1783385090730.png";
 import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
-import { docKindLabel, docKindCaption, docStatusLabel } from "@/lib/documentTypes";
+import { docKindLabel, docKindCaption, docStatusLabel, openDocumentOriginal } from "@/lib/documentTypes";
 import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/currencyContext";
@@ -264,11 +264,10 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       </div>
 
       {/* Open Original in Source System — no icon per Figma */}
-      {doc.documentHref && (
-        <a
-          href={doc.documentHref}
-          target="_blank"
-          rel="noopener noreferrer"
+      {(doc.documentHref || doc.rawId) && (
+        <button
+          type="button"
+          onClick={() => void openDocumentOriginal(doc)}
           data-testid="link-open-original"
           className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] transition-opacity hover:opacity-80"
           style={{ background: "#240757" }}
@@ -276,7 +275,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
           <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px]" style={{ color: "#7631ee" }}>
             Open Original in Source System
           </span>
-        </a>
+        </button>
       )}
     </div>
   );
@@ -777,11 +776,10 @@ export function DocumentViewerPopup({
                 <CoherenceNote doc={doc} />
                 <ProvenanceBlock doc={doc} />
 
-                {doc.documentHref && (
-                  <a
-                    href={doc.documentHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {(doc.documentHref || doc.rawId) && (
+                  <button
+                    type="button"
+                    onClick={() => void openDocumentOriginal(doc)}
                     data-testid="link-open-original"
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
@@ -789,7 +787,7 @@ export function DocumentViewerPopup({
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4] flex-1 min-w-px">
                       Open original in source system
                     </span>
-                  </a>
+                  </button>
                 )}
 
                 <div className="flex items-start gap-[8px] w-full">

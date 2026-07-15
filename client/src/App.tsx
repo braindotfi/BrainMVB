@@ -29,6 +29,7 @@ import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
 import { MemberDetailHost } from "@/components/MemberDetailPopup";
+import { hydrateDocuments } from "@/lib/documentsStore";
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -131,6 +132,12 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
   const [addSourceOpen, setAddSourceOpen] = useState(false);
 
   const handleLogout = onLogout;
+
+  /* Load this account's live uploaded-document catalogue once — every page under
+     the shell can tap through to a document's evidence viewer. */
+  useEffect(() => {
+    void hydrateDocuments();
+  }, []);
 
   return (
     <NavContext.Provider value={{

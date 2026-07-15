@@ -103,6 +103,34 @@ export interface DocumentRecord {
 
   /* Link to the original file in the source system, if any. */
   documentHref?: string;
+
+  /* brain-core raw artifact id (from a live document upload). When present and
+     documentHref is not, the viewer resolves the actual file via a fetch to
+     GET /api/brain/raw/{raw_id} (returns a short-lived signed URL) rather than
+     a static href — see openDocumentOriginal below. */
+  rawId?: string;
+}
+
+/** Open a document's original file. Prefers a static documentHref (mock/live-invoice
+    records); falls back to resolving a brain-core raw artifact's signed URL on click
+    (uploads only carry rawId, never a pre-resolved href). Fails soft — a fetch error
+    just does nothing rather than throw into the click handler. */
+export async function openDocumentOriginal(doc: DocumentRecord): Promise<void> {
+  if (doc.documentHref) {
+    window.open(doc.documentHref, "_blank", "noopener,noreferrer");
+    return;
+  }
+  if (!doc.rawId) return;
+  try {
+    const res = await fetch(`/api/brain/raw/${encodeURIComponent(doc.rawId)}`, {
+      credentials: "include",
+    });
+    if (!res.ok) return;
+    const body: { signed_url?: string } = await res.json();
+    if (body.signed_url) window.open(body.signed_url, "_blank", "noopener,noreferrer");
+  } catch (err) {
+    console.warn("[openDocumentOriginal] failed to resolve raw artifact URL", err);
+  }
 }
 
 export function docKindLabel(kind: DocKind): string {
