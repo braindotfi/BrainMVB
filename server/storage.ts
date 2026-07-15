@@ -429,6 +429,7 @@ export class MemStorage implements IStorage {
       externalRef: identity.externalRef,
       tenantId: identity.tenantId,
       memberId: identity.memberId ?? null,
+      companyName: identity.companyName ?? null,
       linkedAt: new Date(),
     };
     this.brainIdentitiesStore.set(row.userId, row);

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
-import { PhoneNumberModal } from "@/components/PhoneNumberModal";
+import { useAuth } from "@/lib/authContext";
 import { EmailModal } from "@/components/EmailModal";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
 import { useUserContact } from "@/lib/userContact";
@@ -304,12 +305,20 @@ const ChevronActionButton = ({ onClick, label, testId }: { onClick?: () => void;
 
 function ProfileSection() {
   const alert = useAppAlert();
+  const { user } = useAuth();
   const { email, phone } = useUserContact();
-  const [name, setName] = useState(() => {
-    try { return localStorage.getItem("brain_profile_name") || "ACME Inc."; } catch { return "ACME Inc."; }
+  // Real company name from the tenancy link, falling back to the user's own display name.
+  // A locally-saved override (from the "Edit" button below) always wins once set.
+  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
+    queryKey: ["/api/brain/tenancy"],
   });
+  const liveName = tenancy?.companyName || user?.name || "";
+  const [nameOverride, setNameOverride] = useState<string | null>(() => {
+    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
+  });
+  const name = nameOverride ?? liveName;
+  const setName = setNameOverride;
   const [editing, setEditing] = useState(false);
-  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
   const avatarFileRef = useRef<HTMLInputElement | null>(null);
@@ -466,12 +475,11 @@ function ProfileSection() {
             useCircleIcon
           />
           <Divider />
+          {/* No phone field or SMS provider exists yet — read-only, no fake verification flow. */}
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
             sublabel={phone}
-            onClick={() => setPhoneModalOpen(true)}
-            right={<ChevronActionButton label="Edit phone number" testId="button-edit-phone" onClick={() => setPhoneModalOpen(true)} />}
             useCircleIcon
           />
         </Card>
@@ -540,7 +548,6 @@ function ProfileSection() {
         </div>
       </div>
 
-      <PhoneNumberModal open={phoneModalOpen} onOpenChange={setPhoneModalOpen} currentPhone={phone} />
       <EmailModal open={emailModalOpen} onOpenChange={setEmailModalOpen} currentEmail={email} />
     </div>
   );

@@ -117,6 +117,7 @@ export const brainIdentities = pgTable("brain_identities", {
   externalRef: text("external_ref").notNull().unique(), // sent to brain-core; = userId today
   tenantId: text("tenant_id").notNull(),               // brain-core tnt_… id
   memberId: text("member_id"),                         // brain-core user_… member id
+  companyName: text("company_name"),                   // what the founder typed at tenant creation; brain-core has no GET-by-member-token for this, so we keep our own copy
   linkedAt: timestamp("linked_at").defaultNow().notNull(),
 }, (t) => [
   index("brain_identities_tenant_id_idx").on(t.tenantId),

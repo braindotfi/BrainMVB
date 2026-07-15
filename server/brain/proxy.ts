@@ -185,7 +185,12 @@ export function createBrainProxyRouter(): Router {
     const mode = brainTenancyMode();
     if (mode !== "production") return res.json({ mode, linked: true });
     const identity = await storage.getBrainIdentity(req.session.userId!);
-    return res.json({ mode, linked: !!identity, tenantId: identity?.tenantId });
+    return res.json({
+      mode,
+      linked: !!identity,
+      tenantId: identity?.tenantId,
+      companyName: identity?.companyName ?? undefined,
+    });
   });
 
   // POST /api/brain/tenants — create a company tenant for the CURRENT logged-in user
@@ -230,6 +235,7 @@ export function createBrainProxyRouter(): Router {
         externalRef: userId,
         tenantId: result.tenant_id,
         memberId: result.member?.id ?? null,
+        companyName,
       });
       // Capture the agent token core mints at tenant creation (production-agents contract)
       // — never discarded, never sent to the browser. Older cores omit `agent`; the token
