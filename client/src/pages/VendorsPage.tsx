@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
-import { MOCK_VENDORS } from "@/lib/mockVendors";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { Plus, Info } from "lucide-react";
 
@@ -287,15 +286,7 @@ export function VendorsPage() {
     else if (activeTab === "New") list = grouped.newVendors;
     else if (activeTab === "Trusted") list = grouped.trusted;
     else list = grouped.known;
-    if (list.length > 0) return list;
-    /* Demo fallback: one mock vendor per tab so UI is testable */
-    const fallback = MOCK_VENDORS.filter((v) => {
-      if (activeTab === "Needs Review") return v.trustStatus === "under_review";
-      if (activeTab === "New") return v.trustStatus === "new";
-      if (activeTab === "Trusted") return v.trustStatus === "trusted";
-      return v.trustStatus === "known";
-    });
-    return fallback.length > 0 ? [fallback[0]] : [];
+    return list;
   }, [activeTab, grouped]);
 
   /* Header pager - cycle (wrap-around) through the vendors in the active tab.

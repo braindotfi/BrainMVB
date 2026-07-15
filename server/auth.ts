@@ -80,7 +80,11 @@ const loginSchema = z.object({
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
 
-  const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString("hex");
+  const configuredSessionSecret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production" && !configuredSessionSecret) {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+  const sessionSecret = configuredSessionSecret || randomBytes(32).toString("hex");
 
   let store: session.Store | undefined;
   if (process.env.DATABASE_URL) {
