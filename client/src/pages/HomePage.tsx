@@ -11,12 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { apiRequest } from "@/lib/queryClient";
-import {
-  ADOBE_SETTLED,
-  COMCAST_SETTLED,
-  MERIDIAN_RECEIVABLE_SETTLED,
-  GUSTO_RECON_SETTLED,
-} from "@/lib/mockProposals";
 import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
 import {
   useAgentDecisions,
@@ -24,7 +18,6 @@ import {
   needsReviewList,
   type AgentProposal,
 } from "@/lib/agentProposals";
-import { AUTO_APPROVED_IDS } from "@/lib/mockAuditRecords";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal } from "@/lib/proposalTypes";
@@ -517,30 +510,12 @@ export function HomePage() {
     // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
   };
 
-  /* Brain Did — live brain-core audit events + the 4 static auto-approved mock
-     proposals (Adobe, Comcast, Meridian, Gusto). Live records come first; the
-     static ones fill in regardless of what brain-core returns. De-duped by id
-     so a live brain-core event for the same record never produces a duplicate. */
+  /* Brain Did — live brain-core audit events only. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
   const brainDidItems: WidgetItem[] = useMemo(() => {
-    const seen = new Set<string>();
-    const items: WidgetItem[] = [];
-    const add = (id: string, label: string, go: () => void) => {
-      if (!seen.has(id)) { seen.add(id); items.push({ id, label, onClick: go }); }
-    };
-    liveAuditRecords
+    return liveAuditRecords
       .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
-      .forEach((r) => add(r.id, r.summary, () => navigate(`/audit-log?record=${r.id}`)));
-    /* Static auto-approved proposals — skip any whose audit id was already
-       returned by the live feed (unlikely in demo but correct to de-dupe). */
-    const liveAuditIds = new Set(liveAuditRecords.map((r) => r.id));
-    const AUTO_APPROVED_PROPOSALS = [ADOBE_SETTLED, COMCAST_SETTLED, MERIDIAN_RECEIVABLE_SETTLED, GUSTO_RECON_SETTLED];
-    AUTO_APPROVED_PROPOSALS.forEach((p) => {
-      const auditId = p.auditId ?? p.id;
-      if (!AUTO_APPROVED_IDS.has(auditId) || liveAuditIds.has(auditId)) return;
-      add(auditId, p.pastTenseStatement ?? p.title, () => navigate(`/audit-log?record=${auditId}`));
-    });
-    return items;
+      .map((r) => ({ id: r.id, label: r.summary, onClick: () => navigate(`/audit-log?record=${r.id}`) }));
   }, [liveAuditRecords, navigate]);
 
   /* Brain Detected — what Brain is advising for review. Mirrors the Review
