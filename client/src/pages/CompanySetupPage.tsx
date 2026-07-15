@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
@@ -80,6 +81,16 @@ export function CompanySetupPage() {
     await queryClient.invalidateQueries();
     navigate("/");
   };
+
+  // Subscribe to the same tenancy query the gate (App.tsx) reads, and leave the moment it
+  // resolves linked — the mount-time invalidation above can refetch linked:true without the
+  // gate's own render ever swapping this page out, so this page must be able to leave itself.
+  const { data: tenancy } = useQuery<{ mode: string; linked: boolean }>({
+    queryKey: ["/api/brain/tenancy"],
+  });
+  useEffect(() => {
+    if (tenancy?.linked) finish();
+  }, [tenancy?.linked]);
 
   const createCompany = async (e: React.FormEvent) => {
     e.preventDefault();
