@@ -354,25 +354,27 @@ function renderScenarioModule(
           data-testid="module-forecast-chart"
         >
           <SectionLabel>{module.title}</SectionLabel>
-          <div className="flex gap-[4px] items-end w-full">
-            {module.weeks.map((v, i) => {
-              const isShortfall = v < module.floor;
-              return (
-                <div key={i} className="flex-1 min-w-0 flex flex-col items-center gap-[4px]">
-                  <div
-                    className={`w-full rounded-[8px] border ${isShortfall ? "bg-[#1a050a] border-[rgba(210,3,68,0.4)]" : "bg-[#123509] border-[rgba(66,191,35,0.4)]"}`}
-                    style={{ height: `${Math.max(4, Math.round((v / max) * CHART_H))}px` }}
-                  />
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] leading-[12px] text-[#414965]">
-                    {weekLabels[i]}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="w-full">
+            <div className="flex gap-[4px] items-end w-full">
+              {module.weeks.map((v, i) => {
+                const isShortfall = v < module.floor;
+                return (
+                  <div key={i} className="flex-1 min-w-0 flex flex-col items-center gap-[4px]">
+                    <div
+                      className={`w-full rounded-[8px] border ${isShortfall ? "bg-[#1a050a] border-[rgba(210,3,68,0.4)]" : "bg-[#123509] border-[rgba(66,191,35,0.4)]"}`}
+                      style={{ height: `${Math.max(4, Math.round((v / max) * CHART_H))}px` }}
+                    />
+                    <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] leading-[12px] text-[#414965]">
+                      {weekLabels[i]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
+              {module.note}
+            </p>
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] w-full">
-            {module.note}
-          </p>
         </div>
       );
     }
@@ -491,22 +493,24 @@ function renderScenarioModule(
           data-testid="module-trend-chart"
         >
           <SectionLabel>{module.title}</SectionLabel>
-          <div className="flex gap-[8px] items-end w-full">
-            {module.points.map((p) => (
-              <div key={p.label} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
-                <div
-                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)] min-h-[4px]"
-                  style={{ height: `${Math.max(4, Math.round((p.value / max) * CHART_H))}px` }}
-                />
-                <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] leading-[14px] text-[#6c779d] text-center w-full">
-                  {p.label}
-                </span>
-              </div>
-            ))}
+          <div className="w-full">
+            <div className="flex gap-[8px] items-end w-full">
+              {module.points.map((p) => (
+                <div key={p.label} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
+                  <div
+                    className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)] min-h-[4px]"
+                    style={{ height: `${Math.max(4, Math.round((p.value / max) * CHART_H))}px` }}
+                  />
+                  <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] leading-[14px] text-[#6c779d] text-center w-full">
+                    {p.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
+              {module.note}
+            </p>
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] w-full">
-            {module.note}
-          </p>
         </div>
       );
     }
