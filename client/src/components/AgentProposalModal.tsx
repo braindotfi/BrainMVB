@@ -929,7 +929,7 @@ export function AgentProposalModal({
                   This is a flag for your awareness. Brain does not take action on it automatically.
                 </p>
               ) : (
-                <div className="flex flex-col gap-[10px] w-full">
+                <div className="flex flex-col gap-[16px] w-full">
                   {nextSteps.map((step) => (
                     <div
                       key={step.label}
@@ -973,9 +973,9 @@ export function AgentProposalModal({
               (() => {
                 const meta = proposal.approvedAutomaticallyMeta!;
                 return (
-                  <div className="flex flex-col gap-[10px] w-full">
+                  <div className="flex flex-col gap-[16px] w-full">
                     {undoConfirmOpen ? (
-                      <div className="flex flex-col gap-[12px] w-full">
+                      <div className="flex flex-col gap-[16px] w-full">
                         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] text-center">
                           {meta.undoAction}
                         </p>

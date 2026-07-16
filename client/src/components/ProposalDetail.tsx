@@ -466,7 +466,7 @@ export function ProposalDetail({
                     {proposal.risk}
                   </p>
                 </div>
-                <div className="w-full flex flex-col gap-[4px]">
+                <div className="w-full flex flex-col gap-[16px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                     Flagged by{" "}
                     <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">{proposal.policy.id}</span>
