@@ -19,7 +19,6 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approvals: "approved",
   "Auto-Approved": "auto_approved",
   Rejections: "rejected",
-  Postponed: "postponed",
   "Rule Changes": "rule_change",
   "Trusted Changes": "trust_granted", // trust_granted + trust_revoked
   Flagged: "flagged",
@@ -35,7 +34,7 @@ export function AuditLogPage() {
   const agentDecisions = useAgentDecisions();
 
   /* Merge live brain-core audit records with client-side review-status overrides
-     so the Audit Log captures rejected and postponed actions made on the Review
+     so the Audit Log captures rejected actions made on the Review
      surface even before brain-core's audit events catch up.
 
      NOTE: de-duplication against live brain-core events is not yet possible because
@@ -59,9 +58,9 @@ export function AuditLogPage() {
        Meridian, Gusto) - they originate from mock proposals, not brain-core,
        so they never arrive via the live feed. */
     AUTO_APPROVED_AUDIT_RECORDS.forEach(add);
-    /* Layer in client-side review-status overrides (reject / postpone / approve). */
+    /* Layer in client-side review-status overrides (reject / approve). */
     for (const [id, status] of Object.entries(reviewStatuses)) {
-      if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      if (status !== "executing" && status !== "executed" && status !== "rejected") continue;
       const p = resolveProposal(id);
       if (!p) continue;
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
@@ -212,7 +211,6 @@ export function AuditLogPage() {
                         {activeTab === "Approvals" && "No approval records yet."}
                         {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                         {activeTab === "Rejections" && "No rejected payment records yet."}
-                        {activeTab === "Postponed" && "No postponed payment records yet."}
                         {activeTab === "Rule Changes" && "No rule changes recorded yet."}
                         {activeTab === "Trusted Changes" && "No trust status changes yet."}
                         {activeTab === "Flagged" && "No flagged transactions yet."}
@@ -224,12 +222,9 @@ export function AuditLogPage() {
                       {filtered.map((record, idx) => {
                         const isFlagged = record.eventType === "flagged";
                         const isRejected = record.eventType === "rejected";
-                        const isPostponed = record.eventType === "postponed";
                         const borderLeft = isFlagged || isRejected
                           ? "3px solid #d20344"
-                          : isPostponed
-                            ? "3px solid #6c779d"
-                            : undefined;
+                          : undefined;
                         return (
                           <div key={record.id} className="flex flex-col gap-[8px] w-full">
                             <button

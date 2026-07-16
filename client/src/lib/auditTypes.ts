@@ -90,7 +90,6 @@ export type AuditLogTab =
   | "Approvals"
   | "Auto-Approved"
   | "Rejections"
-  | "Postponed"
   | "Rule Changes"
   | "Trusted Changes"
   | "Flagged"
@@ -100,7 +99,6 @@ export const AUDIT_TABS: AuditLogTab[] = [
   "Approvals",
   "Auto-Approved",
   "Rejections",
-  "Postponed",
   "Rule Changes",
   "Trusted Changes",
   "Flagged",

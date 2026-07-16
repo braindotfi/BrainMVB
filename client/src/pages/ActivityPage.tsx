@@ -35,17 +35,16 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 
-type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected" | "You Postponed";
+type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected";
 /* "All" is intentionally hidden for now. Kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
-const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected", "You Postponed"];
+const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected"];
 
 const TYPE_TO_TAB: Record<ActivityType, Tab> = {
   paid: "Brain Did",
   moved: "Brain Did",
   approved: "You Approved",
   rejected: "You Rejected",
-  postponed: "You Postponed",
 };
 
 const TAB_SLUG: Record<Tab, string> = {
@@ -53,7 +52,6 @@ const TAB_SLUG: Record<Tab, string> = {
   "Brain Did": "brain-did",
   "You Approved": "you-approved",
   "You Rejected": "you-rejected",
-  "You Postponed": "you-postponed",
 };
 
 const SLUG_TO_TAB: Record<string, Tab> = Object.fromEntries(
@@ -130,7 +128,9 @@ const ActivityItem = ({
       }
       className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
         clickable ? "cursor-pointer" : ""
-      } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
+      } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"} ${
+        item.type === "rejected" ? "border-l-[3px] border-l-[#d20344]" : ""
+      }`}
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
@@ -173,9 +173,7 @@ const SectionCard = ({
       ? "No manual approvals yet. Items you personally approve will show up here."
       : activeTab === "You Rejected"
         ? "No rejected items yet. Anything you reject will appear here."
-        : activeTab === "You Postponed"
-          ? "No postponed items yet. Anything you postpone will appear here."
-          : "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here.";
+        : "Brain hasn't taken any actions yet. Auto-approvals and policy runs will appear here.";
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
@@ -253,14 +251,14 @@ export function ActivityPage() {
   }, [highlightedId]);
 
   /* Merge live brain-core audit records with client-side review-status overrides
-     (executed / rejected / postponed) so Activity reflects user decisions made on
+     (executed / rejected) so Activity reflects user decisions made on
      the Review surface even before brain-core's audit log catches up. */
   const reviewStatuses = useReviewStatuses();
   const agentDecisions = useAgentDecisions();
   const actionItems: ActivityItemData[] = useMemo(() => {
     const items: ActivityItemData[] = [];
     for (const [id, status] of Object.entries(reviewStatuses)) {
-      if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      if (status !== "executing" && status !== "executed" && status !== "rejected") continue;
       const p = resolveProposal(id);
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
