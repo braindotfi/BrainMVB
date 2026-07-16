@@ -94,13 +94,13 @@ const EvidenceRow = ({
     type="button"
     onClick={onClick}
     data-testid={`link-evidence-${index}`}
-    className={`flex items-start gap-[8px] px-[12px] py-[10px] text-left w-full group hover:bg-[#0e1118] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${!isLast ? "border-b border-[#1d2132]" : ""}`}
+    className={`flex items-start gap-[8px] px-[12px] py-[10px] text-left w-full hover:bg-[#0e1118] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${!isLast ? "border-b border-[#1d2132]" : ""}`}
   >
-    <ArrowUpRight
+    <ArrowRight
       size={16}
-      className="text-[#6c779d] shrink-0 group-hover:text-[#a8b9f4] transition-colors mt-[0px]"
+      className="text-[#7631ee] shrink-0 mt-[0px]"
     />
-    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#a8b9f4]">
+    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#7631ee]">
       {line.text}
     </span>
   </button>
@@ -427,14 +427,14 @@ function renderScenarioModule(
               key={row.label}
               className={`flex items-start${i < module.rows.length - 1 ? " border-b border-[#1d2132]" : ""}`}
             >
-              <div className="w-[140px] shrink-0 px-[12px] py-[8px]">
+              <div className="flex flex-col items-start justify-center w-[140px] shrink-0 px-[12px] py-[8px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d] whitespace-nowrap">
                   {row.label}
                 </p>
               </div>
-              <div className="flex-1 px-[12px] py-[8px] min-w-0">
+              <div className="flex flex-col items-start justify-center flex-1 min-w-px px-[12px] py-[8px]">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] truncate"
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] w-full overflow-hidden text-ellipsis whitespace-nowrap"
                   style={{ color: row.valueColor ?? "#a8b9f4" }}
                 >
                   {row.value}
