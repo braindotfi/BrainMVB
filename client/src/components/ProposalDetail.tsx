@@ -336,40 +336,38 @@ export function ProposalDetail({
 
             {/* ── Linked Evidence ────────────────────────────────────────────── */}
             {proposal.evidence.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[8px] items-start w-full">
                 <SectionLabel>Linked Evidence</SectionLabel>
-                <div className="flex flex-col gap-[8px] w-full">
-                  {proposal.evidence.map((ev, i) => {
-                    const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
-                    const clickable = !!doc;
-                    const onClick = () => {
-                      if (doc) {
-                        setViewingDocument(doc);
-                        setDocumentOpen(true);
-                      }
-                    };
-                    const Wrapper = clickable ? "button" : "div";
-                    return (
-                      <Wrapper
-                        key={`ev-${i}`}
-                        type={clickable ? "button" : undefined}
-                        onClick={clickable ? onClick : undefined}
-                        data-testid={`linked-evidence-${i}`}
-                        className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
-                      >
-                        <div className="flex flex-1 gap-[16px] items-center min-w-px">
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
-                            {titleCase(ev.kind.replace("_", " "))}
-                          </span>
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                            {ev.title}
-                          </p>
-                        </div>
-                        {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
-                      </Wrapper>
-                    );
-                  })}
-                </div>
+                {proposal.evidence.map((ev, i) => {
+                  const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
+                  const clickable = !!doc;
+                  const onClick = () => {
+                    if (doc) {
+                      setViewingDocument(doc);
+                      setDocumentOpen(true);
+                    }
+                  };
+                  const Wrapper = clickable ? "button" : "div";
+                  return (
+                    <Wrapper
+                      key={`ev-${i}`}
+                      type={clickable ? "button" : undefined}
+                      onClick={clickable ? onClick : undefined}
+                      data-testid={`linked-evidence-${i}`}
+                      className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
+                    >
+                      <div className="flex flex-1 gap-[16px] items-center min-w-px">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
+                          {titleCase(ev.kind.replace("_", " "))}
+                        </span>
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                          {ev.title}
+                        </p>
+                      </div>
+                      {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
+                    </Wrapper>
+                  );
+                })}
                 {/* Source document: tappable link when invoiceId resolves (legacy fallback) */}
                 {proposal.invoiceId && (() => {
                   const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);

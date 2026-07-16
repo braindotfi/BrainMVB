@@ -213,7 +213,9 @@ function renderScenarioModule(
     case "document_stack":
       return (
         <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
-          {module.title && <SectionLabel>{module.title}</SectionLabel>}
+          <SectionLabel>
+            {module.title ?? "Linked Evidence"}
+          </SectionLabel>
           <div className="flex flex-col gap-[8px] w-full">
             {module.docs.map((doc, i) => (
               <div
