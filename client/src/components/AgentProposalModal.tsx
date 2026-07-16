@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import approveIcon from "@assets/approve_1784154649123.png";
@@ -44,6 +44,7 @@ import {
 import {
   RISK_META,
   useAgentDecisions,
+  getAgentProposalAmountOverride,
   type AgentKey,
   type AgentProposal,
   type EvidenceLine,
@@ -658,6 +659,7 @@ export function AgentProposalModal({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [editAmount, setEditAmount] = useState("");
+  const editSectionRef = useRef<HTMLDivElement>(null);
   const [editCategory, setEditCategory] = useState("");
   const [editFloor, setEditFloor] = useState("");
   const [editForecastNote, setEditForecastNote] = useState("");
@@ -687,6 +689,12 @@ export function AgentProposalModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposalId]);
+
+  useEffect(() => {
+    if (editing && editSectionRef.current) {
+      editSectionRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [editing]);
 
   if (!proposal) return null;
 
@@ -805,7 +813,9 @@ export function AgentProposalModal({
                   className="[font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[28px] text-[#a8b9f4] shrink-0"
                   data-testid="text-agent-proposal-amount"
                 >
-                  {format(proposal.amount)}
+                  {editing && editAmount
+                    ? `$${editAmount}`
+                    : format(getAgentProposalAmountOverride(proposal.id) ?? proposal.amount)}
                 </p>
               )}
             </div>
@@ -894,14 +904,15 @@ export function AgentProposalModal({
 
             {/* Inline edit form for non-message agents */}
             {showEditForm && (
-              <div className="flex flex-col gap-[16px] items-start w-full" data-testid="form-inline-edit">
+              <div className="flex flex-col gap-[16px] items-start w-full" data-testid="form-inline-edit" ref={editSectionRef}>
                 <SectionLabel>
                   {(() => {
-                    if (proposal.agentKey === "reconciliation") return "Edit Amount & Category";
+                    if (proposal.agentKey === "reconciliation") return "Edit Amount and Category";
                     if (proposal.agentKey === "cash_forecast") return "Edit Forecast";
                     return "Edit Amount";
                   })()}
                 </SectionLabel>
+                <div className="w-full">
                 {(proposal.amount !== null || proposal.agentKey === "reconciliation") && (
                   <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
                     {/* Amount row */}
@@ -992,7 +1003,7 @@ export function AgentProposalModal({
                         rows={3}
                         data-testid="input-edit-forecast-note"
                         placeholder="Add known upcoming expenses or income..."
-                        className="flex-1 bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] resize-none min-w-0"
+                        className="flex-1 bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] placeholder:text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] resize-none min-w-0"
                       />
                     </div>
                   </div>
@@ -1001,6 +1012,7 @@ export function AgentProposalModal({
                 <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
                   Changes only apply after you approve.
                 </p>
+                </div>
               </div>
             )}
 

@@ -26,6 +26,7 @@ import {
   decideAgentProposal,
   needsReviewList,
   autoApprovedList,
+  setAgentProposalAmountOverride,
   type AgentProposal,
 } from "@/lib/agentProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -467,8 +468,12 @@ export function ReviewPage() {
 
   /* Decide on an agent proposal. User-driven, logged via toast. The modal
      closes and the record drops out of (or returns to) the queue. */
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, _payload?: AgentModalEditPayload) => {
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, payload?: AgentModalEditPayload) => {
     if (action === "approve") {
+      if (payload?.amount) {
+        const parsed = parseFloat(payload.amount.replace(/,/g, ""));
+        if (!isNaN(parsed)) setAgentProposalAmountOverride(p.id, parsed);
+      }
       decideAgentProposal(p.id, "approved");
       alert.approved("Approved", p.whatHappensNext.ifApproved, 2_000);
       setActiveAgent(null);

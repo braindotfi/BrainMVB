@@ -1215,6 +1215,13 @@ export interface AgentModalEditPayload {
   draft?: string;
 }
 let decisions: Record<string, AgentDecision> = {};
+let overrideAmounts: Record<string, number> = {};
+export function setAgentProposalAmountOverride(id: string, amount: number) {
+  overrideAmounts = { ...overrideAmounts, [id]: amount };
+}
+export function getAgentProposalAmountOverride(id: string): number | undefined {
+  return overrideAmounts[id];
+}
 /* Epoch-ms timestamp of each decision, keyed by proposal id - read by the
    Activity + Audit Log pages so a logged decision keeps its real time instead
    of re-stamping "now" on every rerender. */
