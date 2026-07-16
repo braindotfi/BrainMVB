@@ -769,25 +769,27 @@ export function AgentProposalModal({
               )}
             </div>
 
-            {/* CONFIDENCE — shown for all proposals */}
-            <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
-              <SectionLabel
-                right={
-                  <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
-                    {confidencePct}%
-                  </span>
-                }
-              >
-                Confidence
-              </SectionLabel>
-              <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
-                <div
-                  className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
-                  style={{ width: `${confidencePct}%` }}
-                />
+            {/* CONFIDENCE — hidden for auto-approved (receipt) proposals */}
+            {!isAutoApproved && (
+              <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bar-confidence">
+                <SectionLabel
+                  right={
+                    <span className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] shrink-0">
+                      {confidencePct}%
+                    </span>
+                  }
+                >
+                  Confidence
+                </SectionLabel>
+                <div className="h-[6px] w-full rounded-[3px] bg-[#222737] relative overflow-hidden">
+                  <div
+                    className="absolute left-0 top-0 h-full rounded-[3px] bg-[#7631ee]"
+                    style={{ width: `${confidencePct}%` }}
+                  />
+                </div>
               </div>
-              <HR />
-            </div>
+            )}
+            {!isAutoApproved && <HR />}
 
             {/* SCENARIO MODULE: the one slot that swaps per agent */}
             {renderScenarioModule(
