@@ -25,18 +25,25 @@ import {
   useRuleSuggestions,
   acceptSuggestion,
   dismissSuggestion,
+  hydrateSuggestions,
 } from "@/lib/rule-suggestions";
-import {
-  TRUSTED_VENDORS,
-  UNTRUSTED_VENDORS,
-  BUILDER_CATEGORIES,
-  CATEGORY_TO_POLICY,
-} from "@/lib/mockRules";
 import { useBrainPolicy } from "@/lib/brainPolicy";
+import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 
 const ACTIVE = "#42bf23";
+
+/* Plain-English category → the policy the rule "compiles to" (shown in the
+   builder's visible compile line). Only used by the rule builder here. */
+const CATEGORY_TO_POLICY: Record<string, string> = {
+  bill: "policy/ap.tolerance.v3",
+  subscription: "policy/ap.saas.v2",
+  rent: "policy/ap.fixed.v1",
+  payroll: "policy/ap.payroll.v4",
+  invoice: "policy/ar.collections.v1",
+};
+const BUILDER_CATEGORIES = Object.keys(CATEGORY_TO_POLICY);
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -491,6 +498,17 @@ export function RulesPage() {
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
+  const { vendors } = useBrainVendors();
+  // Live counterparties carry no allowlist/trust-tier concept of their own —
+  // "trusted" is the one real trustStatus brain-core-derived vendors can hit
+  // (see brainVendors.ts's deriveTrustStatus). There's no live "untrusted"
+  // signal to classify against, so that list stays honestly empty rather
+  // than inventing one.
+  // ponytail: brain-core never actually returns trustStatus "trusted" today
+  // (deriveTrustStatus only yields "new"/"under_review"), so this reads
+  // empty in practice until that changes — same honest-empty as untrusted.
+  const trustedVendors = vendors.filter((v) => v.trustStatus === "trusted").map((v) => v.name);
+  const untrustedVendors: string[] = [];
 
   const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
     const sp = new URLSearchParams(search);
@@ -528,9 +546,10 @@ export function RulesPage() {
     setBuilderOpen(true);
   };
 
-  /* Load this account's persisted user-created rules into the store on mount. */
+  /* Load this account's persisted user-created rules + live suggestions on mount. */
   useEffect(() => {
     void hydrateUserRules();
+    void hydrateSuggestions();
   }, []);
 
   /* "Always handle this" handoff: consume the draft + open the builder pre-filled. */
@@ -784,7 +803,12 @@ export function RulesPage() {
                         <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
                           Trusted vendors
                         </p>
-                        {TRUSTED_VENDORS.map((v) => {
+                        {trustedVendors.length === 0 && (
+                          <p className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">
+                            No trusted vendors yet.
+                          </p>
+                        )}
+                        {trustedVendors.map((v) => {
                           const selected = builder.vendor === v;
                           return (
                             <button
@@ -807,19 +831,25 @@ export function RulesPage() {
                         <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
                           Not Trusted Yet
                         </p>
-                        {UNTRUSTED_VENDORS.map((v) => (
-                          <div
-                            key={v}
-                            className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
-                          >
-                            <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
-                              {v}
-                            </span>
-                            <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
-                              Not Trusted
-                            </span>
-                          </div>
-                        ))}
+                        {untrustedVendors.length === 0 ? (
+                          <p className="px-[10px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#414965]">
+                            Brain doesn't track an untrusted-vendor list yet.
+                          </p>
+                        ) : (
+                          untrustedVendors.map((v) => (
+                            <div
+                              key={v}
+                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
+                            >
+                              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
+                                {v}
+                              </span>
+                              <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                                Not Trusted
+                              </span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
@@ -984,7 +1014,7 @@ export function RulesPage() {
               {suggestions.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    No new suggestions from Brain right now. Check back as your patterns grow.
+                    Brain suggests policies as it sees patterns in your activity — nothing yet.
                   </p>
                 </div>
               ) : (

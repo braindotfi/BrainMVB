@@ -1,20 +1,27 @@
-import { MOCK_VENDORS } from "./mockVendors";
+import { queryClient } from "./queryClient";
+import { mapCounterpartyToVendor, type BrainCounterparty } from "./brainVendors";
 import type { Vendor } from "./vendorTypes";
 
 /* ── Single source of truth for opening a vendor's detail popup ───────────────
    Every vendor reference across the app resolves the same way: look the vendor
-   up by id in the mock catalogue, and - only if it resolves - navigate to the
-   vendor detail route. Callers use `resolveVendor` to decide whether to render
-   a tappable link or plain text; they never duplicate the lookup. An unresolved
-   id is a bug (dangling reference) - we `console.warn` loudly rather than fail
-   silently.
-   ──────────────────────────────────────────────────────────────────────────── */
+   up by id, and — only if it resolves — navigate to the vendor detail route.
+   Callers use `resolveVendor` to decide whether to render a tappable link or
+   plain text; they never duplicate the lookup. An unresolved id falls back to
+   plain text (e.g. the live counterparties list hasn't loaded/cached yet) —
+   this path is a graceful fallback, not necessarily a bug, so it's expected
+   more often than the old mock catalogue's "dangling ref = bug" invariant. */
 
 export function resolveVendor(
   vendorId: string | null | undefined,
 ): Vendor | undefined {
   if (!vendorId) return undefined;
-  return MOCK_VENDORS.find((v) => v.id === vendorId);
+  // Reads the same react-query cache useBrainVendors() populates
+  // (queryKey ["/api/brain/ledger/counterparties"]) — no separate fetch/store.
+  const data = queryClient.getQueryData<{ counterparties: BrainCounterparty[] }>([
+    "/api/brain/ledger/counterparties",
+  ]);
+  const cp = data?.counterparties.find((c) => c.id === vendorId);
+  return cp ? mapCounterpartyToVendor(cp) : undefined;
 }
 
 export function openVendorDetail(

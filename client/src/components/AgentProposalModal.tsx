@@ -570,6 +570,12 @@ export function AgentProposalModal({
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full">
                   {proposal.subtitle}
                 </p>
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full"
+                  data-testid="text-agent-proposal-demo-note"
+                >
+                  Demo scenario — illustrative content, not live tenant data.
+                </p>
               </div>
               {proposal.amount !== null && (
                 <p

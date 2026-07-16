@@ -231,17 +231,19 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; onClick: () => void };
+type WidgetItem = { id: string; label: string; onClick: () => void; demo?: boolean };
 const ListItem = ({
   icon,
   label,
   onClick,
   testId,
+  demo,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   testId: string;
+  demo?: boolean;
 }) => (
   <button
     type="button"
@@ -250,8 +252,20 @@ const ListItem = ({
     className="flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] text-left"
   >
     {icon}
-    <div className="flex flex-1 flex-col items-start min-w-px relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] w-full">{label}</p>
+    <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
+      <div className="flex items-center gap-[8px] w-full min-w-0">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
+        {/* Fabricated seed record, not a live brain-core proposal — see
+            deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+        {demo && (
+          <span
+            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+            style={{ color: "#6c779d", background: "#1d2132" }}
+          >
+            Demo scenario
+          </span>
+        )}
+      </div>
     </div>
   </button>
 );
@@ -300,6 +314,7 @@ const SectionWidget = ({
                   label={item.label}
                   testId={`${testIdPrefix}-${item.id}`}
                   onClick={item.onClick}
+                  demo={item.demo}
                 />
                 {idx < visible.length - 1 && (
                   <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
@@ -325,8 +340,9 @@ const SectionWidget = ({
   );
 };
 
-// Shown when brain-core's ledger-grounded recommendation is unavailable.
-const SPENDING_INSIGHT_FALLBACK = { text: "$432 less than last month. Nice.", colorClass: "text-[#42bf23]" };
+// Shown when brain-core's ledger-grounded recommendation is unavailable — neutral,
+// no invented figures (was a hardcoded "$432 less than last month. Nice.").
+const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", colorClass: "text-[#6c779d]" };
 
 /* ── Insight-text helpers ────────────────────────────────────────────────────────────
    The recommendation string from brain-core often contains raw numbers and
@@ -449,6 +465,17 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
+  // Real company name from the tenancy link, falling back to the user's own display name
+  // (was a hardcoded "ACME Inc."). Mirrors client/src/pages/SettingsPage.tsx.
+  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
+    queryKey: ["/api/brain/tenancy"],
+  });
+  // A locally-saved override from the Settings > Profile "Edit" field always wins, matching
+  // client/src/pages/SettingsPage.tsx's ProfileSection.
+  const nameOverride = (() => {
+    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
+  })();
+  const greetingName = nameOverride || tenancy?.companyName || user?.name || "";
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
@@ -510,18 +537,12 @@ export function HomePage() {
     // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
   };
 
-  /* Brain Did. Live brain-core audit events only. */
+  /* Brain Did — live brain-core audit events only. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
   const brainDidItems: WidgetItem[] = useMemo(() => {
-    const seen = new Set<string>();
-    const items: WidgetItem[] = [];
-    const add = (id: string, label: string, go: () => void) => {
-      if (!seen.has(id)) { seen.add(id); items.push({ id, label, onClick: go }); }
-    };
-    liveAuditRecords
+    return liveAuditRecords
       .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
-      .forEach((r) => add(r.id, r.summary, () => navigate(`/audit-log?record=${r.id}`)));
-    return items;
+      .map((r) => ({ id: r.id, label: r.summary, onClick: () => navigate(`/audit-log?record=${r.id}`) }));
   }, [liveAuditRecords, navigate]);
 
   /* Brain Detected. What Brain is advising for review. Mirrors the Review
@@ -561,6 +582,7 @@ export function HomePage() {
       id: p.id,
       label: p.title,
       onClick: () => setHomeAgent(p),
+      demo: true,
     }));
   }, [liveNeedsReview, agentDecisions]);
 
@@ -578,8 +600,26 @@ export function HomePage() {
   const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "-";
   const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : "";
 
+  // Net cash flow per month from the live Ledger. With only inflows seeded today
+  // this reads as positive income; it nets real expenses automatically once money
+  // -out transactions land. null when no transactions are reachable at all.
+  const { data: brainTx } = useQuery<{
+    transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
+  }>({
+    queryKey: ["/api/brain/ledger/transactions"],
+    retry: false,
+  });
+  const netMonthly = netMonthlyCashflow(brainTx?.transactions);
+  // No live transactions → honest placeholder, never a fabricated figure (was "$7,324").
+  const cashLabel = netMonthly !== null ? "Net cash flow" : "Monthly spend";
+  const cashValue =
+    netMonthly !== null
+      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
+      : "—";
+
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
-  // static line when brain-core is unreachable/unconfigured.
+  // static (non-dollar) line when brain-core is unreachable/unconfigured; overridden
+  // below with a neutral prompt when there are no transactions to speak of at all.
   const { data: brainRec } = useQuery<{ text?: string }>({
     queryKey: ["/api/brain/recommendation"],
     retry: false,
@@ -591,25 +631,12 @@ export function HomePage() {
   const processedText = rawText
     ? formatDatesInText(formatAmountsInText(rawText, format), currency)
     : formatAmountsInText(SPENDING_INSIGHT_FALLBACK.text, format);
-  const insightLine = rawText
-    ? { text: processedText, colorClass: detectSentimentColor(processedText) }
-    : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
-
-  // Net cash flow per month from the live Ledger. With only inflows seeded today
-  // this reads as positive income; it nets real expenses automatically once money
-  // -out transactions land. Falls back to the static figure when unreachable.
-  const { data: brainTx } = useQuery<{
-    transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
-  }>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const netMonthly = netMonthlyCashflow(brainTx?.transactions);
-  const cashLabel = netMonthly !== null ? "Net cash flow" : "You're spending about";
-  const cashValue =
-    netMonthly !== null
-      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
-      : format("$7,324");
+  const insightLine =
+    netMonthly === null
+      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-[#6c779d]" }
+      : rawText
+        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
+        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
@@ -642,8 +669,10 @@ export function HomePage() {
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
-                <span className="leading-[24px] text-[20px]">{greeting}, </span>
-                <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{(() => { try { return localStorage.getItem("brain_profile_name") || "ACME Inc."; } catch { return "ACME Inc."; } })()}</span>
+                <span className="leading-[24px] text-[20px]">{greeting}{greetingName ? ", " : ""}</span>
+                {greetingName && (
+                  <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{greetingName}</span>
+                )}
                 <span className="leading-[24px] text-[20px]">.</span>
               </p>
             </div>

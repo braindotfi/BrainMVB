@@ -127,9 +127,21 @@ const ActivityItem = ({
       } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
-          {item.title}
-        </p>
+        <div className="flex items-center gap-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+            {item.title}
+          </p>
+          {/* Fabricated seed record, not a live brain-core event — see
+              deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+          {item.demo && (
+            <span
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+              style={{ color: "#6c779d", background: "#1d2132" }}
+            >
+              Demo scenario
+            </span>
+          )}
+        </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full">
           {subtitle}
         </p>

@@ -1,23 +1,18 @@
 import { useSyncExternalStore } from "react";
 import type { RuleSuggestion } from "./proposalTypes";
-import { INITIAL_SUGGESTIONS } from "./mockRules";
+import { apiRequest } from "./queryClient";
 
 /* ── Rule suggestions store ───────────────────────────────────────────────────
    Evidence-backed AI suggestions Brain surfaces on the Rules page. Each carries
    the facts behind it + a confidence band, and is default unaccepted. Accepting
    runs the create-rule flow; dismissing hides it. The sidebar "Rules" badge
    counts the live (non-dismissed) suggestions via `.length`.
-   No backend, no localStorage - module state behind useSyncExternalStore. ──── */
+   Starts empty — `hydrateSuggestions` below fetches the tenant's live,
+   grounded suggestions from GET /api/rules/suggestions. No backend persistence
+   of the accept/dismiss state itself (session-only) — module state behind
+   useSyncExternalStore. ──── */
 
-function seed(): RuleSuggestion[] {
-  return INITIAL_SUGGESTIONS.map((s) => ({
-    ...s,
-    evidence: s.evidence.map((e) => ({ ...e })),
-    proposedRule: { ...s.proposedRule },
-  }));
-}
-
-let suggestions: RuleSuggestion[] = seed();
+let suggestions: RuleSuggestion[] = [];
 const listeners = new Set<() => void>();
 
 function subscribe(cb: () => void) {
@@ -66,4 +61,23 @@ export function acceptSuggestion(id: string): RuleSuggestion | undefined {
     notify();
   }
   return accepted;
+}
+
+/* Fetch this tenant's live, grounded suggestions once per session (retried on
+   the next mount if it fails). Fails soft — a failed fetch just leaves the
+   list empty, never fabricated. Mirrors rulesStore's hydrateUserRules. */
+let hydrated = false;
+export async function hydrateSuggestions() {
+  if (hydrated) return;
+  hydrated = true;
+  try {
+    const res = await apiRequest("GET", "/api/rules/suggestions");
+    const body: { suggestions?: RuleSuggestion[] } = await res.json();
+    suggestions = body.suggestions ?? [];
+    recompute();
+    notify();
+  } catch (err) {
+    hydrated = false; // allow a retry on the next mount
+    console.warn("[rule-suggestions] failed to hydrate suggestions", err);
+  }
 }

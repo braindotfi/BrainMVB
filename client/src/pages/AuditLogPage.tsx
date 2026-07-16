@@ -61,8 +61,11 @@ export function AuditLogPage() {
       if (!p) continue;
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
-    /* Layer in agent-proposal decisions (the AgentProposalModal flow) - these
-       live in the agentProposals decision store, not reviewStatusStore. */
+    /* Layer in agent-proposal decisions (the AgentProposalModal flow) — these
+       live in the agentProposals decision store, not reviewStatusStore. Records
+       a decision made on the still-present labeled demo surface (the "Demo
+       scenario" pill), NOT a live brain-core event; the id-continuity gap this
+       creates is documented in deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
     for (const [id, decision] of Object.entries(agentDecisions)) {
       if (decision !== "approved" && decision !== "rejected") continue;
       const p = getAgentProposal(id);
@@ -98,23 +101,19 @@ export function AuditLogPage() {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
   const filtered = useMemo(() => {
-    const fromLive = () => {
-      if (activeTab === "Last 30 Days") {
-        return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
-      }
-      const ev = TAB_TO_EVENT[activeTab];
-      if (activeTab === "Trusted Changes") {
-        return records.filter(
-          (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
-        );
-      }
-      if (ev) {
-        return records.filter((r) => r.eventType === ev);
-      }
-      return records;
-    };
-    const live = fromLive();
-    return live;
+    if (activeTab === "Last 30 Days") {
+      return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
+    }
+    if (activeTab === "Trusted Changes") {
+      return records.filter(
+        (r) => r.eventType === "trust_granted" || r.eventType === "trust_revoked",
+      );
+    }
+    const ev = TAB_TO_EVENT[activeTab];
+    if (ev) {
+      return records.filter((r) => r.eventType === ev);
+    }
+    return records;
   }, [activeTab, records]);
 
   /* Header pager - cycle (wrap-around) through the records in the active tab. */
@@ -221,9 +220,21 @@ export function AuditLogPage() {
                               style={borderLeft ? { borderLeft } : undefined}
                             >
                               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
-                                  {record.summary}
-                                </p>
+                                <div className="flex items-center gap-[8px] w-full min-w-0">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap truncate">
+                                    {record.summary}
+                                  </p>
+                                  {/* Fabricated seed record, not a live brain-core event — see
+                                      deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+                                  {record.demo && (
+                                    <span
+                                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+                                      style={{ color: "#6c779d", background: "#1d2132" }}
+                                    >
+                                      Demo scenario
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
                                   {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
                                 </p>

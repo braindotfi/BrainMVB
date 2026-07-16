@@ -402,7 +402,12 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     if (!process.env.ANTHROPIC_API_KEY) {
       if (grounding) {
-        return res.json({ reply: grounding, sources, grounded: true });
+        return res.json({
+          reply: `Assistant is offline (no API key configured) — here is your live data snapshot instead:\n\n${grounding}`,
+          sources,
+          grounded: true,
+          assistantOffline: true,
+        });
       }
       return res.status(503).json({
         error: "assistant_unconfigured",
@@ -696,10 +701,11 @@ You can explain concepts and surface general guidance, but do not give regulated
         return res.status(400).json({ error: "itemId required" });
       }
       const { itemId } = parsed.data;
+      const userId = req.session.userId!;
 
       // Best-effort revoke at Plaid; even if it fails we still drop our copy
       try {
-        const conns = await storage.listBankConnections(req.session.userId!);
+        const conns = await storage.listBankConnections(userId);
         const target = conns.find(c => c.itemId === itemId);
         if (target) {
           const { getPlaidClient } = await import("./plaid");
@@ -709,7 +715,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         console.warn("[plaid] item revoke failed:", (revokeErr as Error).message);
       }
 
-      const ok = await storage.removeBankConnection(req.session.userId!, itemId);
+      const ok = await storage.removeBankConnection(userId, itemId);
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -930,6 +936,116 @@ You can explain concepts and surface general guidance, but do not give regulated
       res.json({ success: ok });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // RULE SUGGESTIONS (Claude-generated, grounded in live brain-core data)
+  // Replaces the old client-side INITIAL_SUGGESTIONS seed. Never fabricates —
+  // an empty array (with a `reason`) beats an invented suggestion.
+  // ponytail: in-memory cache; DB-back if suggestions must survive restarts
+  // ─────────────────────────────────────────────────────────────
+  const ruleSuggestionsCache = new Map<string, { suggestions: unknown[]; at: number }>();
+  const RULE_SUGGESTIONS_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+  const factRowSchema = z.object({
+    label: z.string(),
+    value: z.string(),
+    severity: z.enum(["clean", "info", "warning", "danger"]).optional(),
+  });
+  const proposedRuleSchema = z.object({
+    name: z.string().optional(),
+    summary: z.string().optional(),
+    kind: z.enum(["automation", "guardrail", "always_on"]).optional(),
+    agent: z.enum(["invoice", "collections", "cash", "close"]).optional(),
+    category: z.string().optional(),
+    cap: z.number().optional(),
+    threshold: z.number().optional(),
+    allowlist: z.array(z.string()).optional(),
+    scopeSummary: z.string().optional(),
+  });
+  const ruleSuggestionSchema = z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    description: z.string().min(1),
+    proposedRule: proposedRuleSchema,
+    evidence: z.array(factRowSchema).min(1),
+    confidence: z.enum(["low", "medium", "high"]),
+  });
+
+  const RULE_SUGGESTIONS_SYSTEM = `You are Brain AI, proposing standing automation rules for a business's payment workflow.
+Given the user's real financial data (accounts, transactions, invoices, obligations, pending approvals), propose 0-3
+automation-rule suggestions derived ONLY from patterns you can see in that data:
+- Recurring same-vendor payments → an auto-pay allowlist rule.
+- A consistent amount pattern for a vendor/category → a cap rule.
+- A new or unusual vendor / an amount spike → a guardrail rule (asks before acting, does not auto-clear).
+Never invent a vendor, amount, or count that is not in the provided data. If nothing qualifies, return an empty array.
+
+Return ONLY a JSON array (no markdown, no prose), 0-3 items, each shaped exactly as:
+{
+  "id": "short-slug-string",
+  "title": "short title",
+  "description": "1-2 sentence explanation",
+  "proposedRule": { "name": "...", "summary": "...", "kind": "automation" | "guardrail", "agent": "invoice" | "collections" | "cash" | "close", "category": "...", "cap": number, "threshold": number, "allowlist": ["vendor name"], "scopeSummary": "..." },
+  "evidence": [ { "label": "...", "value": "...", "severity": "clean" | "info" | "warning" | "danger" } ],
+  "confidence": "low" | "medium" | "high"
+}
+Evidence rows must cite the actual vendor names, amounts, and counts you saw in the data — no placeholders.`;
+
+  app.get("/api/rules/suggestions", requireAuth, async (req, res) => {
+    let tenantId: string;
+    let token: string;
+    try {
+      const session = await getBrainSession(req.session.userId!);
+      token = session.token;
+      tenantId = session.tenantId;
+    } catch (e) {
+      console.warn("[RuleSuggestions] brain session unavailable:", (e as Error)?.message);
+      return res.json({ suggestions: [], reason: "no_data" });
+    }
+
+    const cached = ruleSuggestionsCache.get(tenantId);
+    if (cached && Date.now() - cached.at < RULE_SUGGESTIONS_TTL_MS) {
+      return res.json({ suggestions: cached.suggestions });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.json({ suggestions: [], reason: "unconfigured" });
+    }
+
+    const built = await buildGrounding(token, tenantId, "").catch(() => ({ text: "", sources: [], available: false }));
+    if (!built.available) {
+      return res.json({ suggestions: [], reason: "no_data" });
+    }
+
+    try {
+      const message = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 1024,
+        system: RULE_SUGGESTIONS_SYSTEM,
+        messages: [{ role: "user", content: `Live financial data from Brain:\n${built.text}` }],
+      });
+      const raw = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim() ?? "[]";
+      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      const parsedJson: unknown = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      const candidates = Array.isArray(parsedJson) ? parsedJson : [];
+      // Drop malformed entries silently rather than fail the whole response.
+      const suggestions = candidates
+        .map((c) => ruleSuggestionSchema.safeParse(c))
+        .filter((r): r is { success: true; data: z.infer<typeof ruleSuggestionSchema> } => r.success)
+        .map((r) => ({ ...r.data, dismissed: false }));
+
+      ruleSuggestionsCache.set(tenantId, { suggestions, at: Date.now() });
+      return res.json({ suggestions });
+    } catch (err) {
+      console.error("[RuleSuggestions] generation failed:", err);
+      const status = (err as { status?: number })?.status;
+      const e = err as { message?: string; error?: { message?: string; error?: { message?: string } } };
+      const apiMsg = e?.error?.error?.message ?? e?.error?.message ?? e?.message ?? "";
+      if (status === 400 && /credit balance/i.test(apiMsg)) {
+        return res.status(402).json({ error: "assistant_no_credit", suggestions: [] });
+      }
+      return res.status(500).json({ error: "rule_suggestions_failed", suggestions: [] });
     }
   });
 

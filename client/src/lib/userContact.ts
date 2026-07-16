@@ -1,19 +1,17 @@
 import { useSyncExternalStore } from "react";
 import { useAuth } from "./authContext";
 
-const DEFAULT_PHONE = "+1 (415) 555-0192";
+// ponytail: no phone field on the users table and no SMS provider wired up —
+// the app has no real phone number to show or edit, so this is a fixed
+// "Not set" rather than an editable value. Add when a real phone field +
+// verification flow exists.
+const PHONE_NOT_SET = "Not set";
 
-let phone: string = DEFAULT_PHONE;
 let emailOverride: string | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
   listeners.forEach(l => l());
-}
-
-export function setUserPhone(next: string) {
-  phone = next;
-  emit();
 }
 
 export function setUserEmail(next: string) {
@@ -27,7 +25,7 @@ function subscribe(cb: () => void) {
 }
 
 function getSnapshot() {
-  return `${phone}|${emailOverride ?? ""}`;
+  return emailOverride ?? "";
 }
 
 export function useUserContact() {
@@ -35,6 +33,6 @@ export function useUserContact() {
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
     email: emailOverride ?? user?.email ?? "demo@brain.fi",
-    phone,
+    phone: PHONE_NOT_SET,
   };
 }

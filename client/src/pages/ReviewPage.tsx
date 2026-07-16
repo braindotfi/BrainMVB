@@ -163,6 +163,14 @@ const AgentRow = ({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
             {proposal.title}
           </p>
+          {/* Fabricated seed record, not a live brain-core proposal — see
+              deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
+          <span
+            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
+            style={{ color: "#6c779d", background: "#1d2132" }}
+          >
+            Demo scenario
+          </span>
           {(proposal.riskLevel === "elevated" || proposal.riskLevel === "high") && (
             <span
               className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
