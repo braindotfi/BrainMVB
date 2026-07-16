@@ -1,21 +1,30 @@
 # BrainMVB — Next Steps
 
-Branch `feat/brain-core-integration` (off `origin/feat/ui-rework`), 3 commits, **not pushed**.
-Full context: `HANDOFF.md`. Auth = live demo-provision fence (key-free). node only via WSL.
+> **Current accuracy note — 2026-07-17:** this is a historical June snapshot, not an active branch
+> plan. The commits it describes have since been merged or superseded. In current `main`, the
+> propose BFF route still exists, but the redesigned bills UI has no "Let Brain pay" button, no
+> client call to `POST /api/brain/propose`, and no callers of `intentsStore.addProposed`. Treat the
+> propose flow as **pending re-wire**, not built and working.
+
+Full context: `HANDOFF.md`. Auth = live demo-provision fence (key-free).
 
 ## Done ✅ (committed)
 brain-core **read integration** across 5 surfaces, all on the demo path, server-verified:
 Accounts + Recent transactions (FinancesPage), "Money in all accounts" total (HomePage),
 grounded BrainAssistant (`/v1/wiki/question`) + evidence trail. `npm run brain:smoke` PASSES.
 
-## Done ✅ (COMMITTED — Fork A: propose-only §6 demo)
-Flagship "Brain proposes → §6/Policy gate decides" moment with **no money movement**. New
-"Bills — let Brain decide" widget on FinancesPage lists the 3 AP invoices; "Let Brain pay" →
-`POST /api/brain/propose` → renders ALLOW / CONFIRM (owner+cfo) / REJECT + expandable policy
-trace + proposal/decision ids ("not executed"). New scoped BFF write route (propose+evaluate
-only), `getBrainSession` provision-race fix, `brain:smoke` extended to assert all 3 outcomes.
-Verified end-to-end vs live api.brain.fi (smoke + curl + live browser). Committed as `4457d41`
-(+ `bbc6791` the `.gitattributes` LF guard), branch `feat/brain-core-integration`, **not pushed**.
+## Regressed / pending re-wire — Fork A: propose-only §6 demo
+The June branch once had a "Brain proposes → §6/Policy gate decides" demo with no money movement.
+Current `main` no longer has the UI part of that flow. `BrainBillsInbox` lists AP invoices and opens
+bill detail, but it does not call `POST /api/brain/propose` and does not add proposed intents to
+`intentsStore`. The server route and invariant tests remain, but the end-user propose flow should be
+treated as non-functional until a new explicit bills action is wired.
+
+Re-wire checklist:
+- Add an explicit propose action in the bills UI for eligible AP invoices.
+- Call `POST /api/brain/propose` from the client.
+- Store the returned PaymentIntent via `intentsStore.addProposed`.
+- Render ALLOW / CONFIRM / REJECT honestly as a proposal only, with no execution claim.
 
 ## To run / re-verify
 - Secret value is in `C:\Users\sanke\brain-prod-provision-secret.txt`.
@@ -26,22 +35,19 @@ Verified end-to-end vs live api.brain.fi (smoke + curl + live browser). Committe
 
 ## The forks (pick one — neither started without your call)
 
-### A. Propose-only §6-gate demo — ✅ DONE (committed `4457d41`)
-**+ Decline (reject) follow-on — DONE, UNCOMMITTED:** operator "Decline" button on a proposed bill
-→ `POST /api/brain/reject` → brain-core reject → "✕ You declined this". Files: `client.ts`
-(`rejectPaymentIntent`), `proxy.ts` (`POST /api/brain/reject`), `BrainBillsInbox.tsx`, `brain-smoke.ts`.
-Verified (smoke incl. decline + browser). **Approve→approved is NOT viable on the demo path**:
+### A. Propose-only §6-gate demo — pending UI re-wire
+The server-side propose and reject routes exist, but the current bills UI has no propose caller.
+Do not resume from the old "DONE" status. First re-wire propose from the bills UI, then decide
+whether a decline action is still part of the user flow. **Approve→approved is NOT viable on the demo path**:
 `POST /payment-intents/{id}/approve` 500s for the demo agent token + the CONFIRM rule needs 2 roles
 (owner+cfo) so quorum is unmeetable — would need a brain-core PR (seed approvers + fix the 500).
 
 ### A (orig note). Propose-only §6-gate demo
-Built + verified. (Probe correction: the demo tenant DOES have payable invoices — `GET
+Historical only; not current UI reality. (Probe correction: the demo tenant DOES have payable invoices — `GET
 /v1/ledger/invoices` returns 3 AP bills, `metadata.scenario:"ap"`; they're `ledger_invoices`,
 not `ledger_obligations`, which is why the old note said "0 obligations". The `pay_invoice`
 shortcut resolves amount/currency/counterparty/source from the invoice; `obligation_id` is null.)
-Possible follow-ons if continuing A: approve-flow for the CONFIRM case (`POST
-/payment-intents/{id}/approve`, token has `payment_intent:approve`) to flip pending_approval →
-approved in the UI; surface the proposed intents elsewhere (Activity/Review pages).
+Possible follow-ons after re-wiring A: surface proposed intents elsewhere (Activity/Review pages).
 
 ### B. Production-tenant decision — FINDING (defer to a future session; do NOT start here)
 
@@ -74,7 +80,7 @@ seed real approvers, then BrainMVB auth-path swap), so it is **a future-session 
 task.** Next session: decide scope/sequencing before writing any code.
 
 ### C. Smaller demo-compatible polish (if continuing reads)
-- ✅ **DONE (UNCOMMITTED):** HomePage **Recommendation** via `wiki/question` (`GET /api/brain/recommendation`)
+- Historical June note: HomePage **Recommendation** via `wiki/question` (`GET /api/brain/recommendation`)
   + **retired the mock `insightsService.ts` cron** (removed from `index.ts`; killed the boot 401 noise).
 - ⛔ **Detail panels BLOCKED on demo:** `GET /v1/wiki/entity/{id}` wants an `ent_` wiki entity id
   (`isBrainId(id,"ent")`); demo exposes ledger ids (`acct_`/`cp_`/`tx_`) → 400. Needs a brain-core

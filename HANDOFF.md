@@ -1,7 +1,15 @@
 # BrainMVB — Handoff
 
-_Authoritative current state at top. Older dated notes were folded into this; full history is in
-git log + the session memory `brainmvb-brain-core-integration`._
+> **Current accuracy note — 2026-07-17:** this file is a historical handoff snapshot, not the
+> authoritative current state. Several items below were merged long ago, and the bills UI was
+> redesigned after the June notes. In current `main`, `server/brain/proxy.ts` still exposes
+> `POST /api/brain/propose` and tests its token routing, but the visible bills UI no longer has a
+> "Let Brain pay" action, the client does not call `POST /api/brain/propose`, and
+> `intentsStore.addProposed` has no callers. The propose demo is therefore **not functional in the
+> reference client until the UI is re-wired**.
+
+_Historical notes below were folded into this file; full history is in git log + the session memory
+`brainmvb-brain-core-integration`._
 
 ## ⛔ DEV-WORKFLOW HARD RULE (read first)
 
@@ -21,9 +29,9 @@ touched files in WSL afterward: `sed -i 's/\r$//' <files>`. Full rationale in th
 > throughout. Restored via `git checkout` of the pure-noise files + binaries and added
 > `.gitattributes`. Working tree is now clean (only the Fork A changes below).
 
-## CURRENT STATE — 2026-06-25 (Fork A + Decline — propose COMMITTED, decline UNCOMMITTED)
+## Historical snapshot — 2026-06-25 (superseded by current main)
 
-### Decline (reject) follow-on — built + verified, NOT yet committed
+### Decline (reject) follow-on — historical June note, superseded
 After the committed propose work below, added an operator **Decline** action (human oversight):
 on a proposed bill (ALLOW or CONFIRM, not the policy-REJECTED one), a "Decline" button calls
 **`POST /api/brain/reject`** → brain-core `POST /v1/payment-intents/{id}/reject` → UI shows
@@ -39,7 +47,7 @@ browser-verified): `server/brain/client.ts` (`rejectPaymentIntent`), `server/bra
 > approve→approved work needs a brain-core change (seed approvers + fix the 500) via its own PR — out
 > of scope. Decline is the working human-in-the-loop action on the demo path.
 
-### Fork C (read polish) — recommendation slice, built + verified, UNCOMMITTED
+### Fork C (read polish) — historical June note, superseded
 HomePage's "You're spending about" insight line is now **ledger-grounded** via brain-core instead
 of mock data: new BFF `GET /api/brain/recommendation` calls `POST /v1/wiki/question` with a canned
 prompt and returns a one-line insight (e.g. *"You have an upcoming inflow of 48000.00 USD from BigCo
@@ -54,24 +62,22 @@ DEAD-CODE §A, delete in Phase 8). Files: `server/brain/proxy.ts` (route), `clie
 > ledger ids (`acct_`/`cp_`/`tx_`) — `wiki/entity/{acct_…}` 400s "malformed entity_id". Would need a
 > ledger-id → wiki-entity-id mapping (brain-core side) to wire provenance/confidence drill-downs.
 
-### Propose work (below) — COMMITTED
+### Propose work (historical; regressed in current UI)
 
-**Fork A is built, verified end-to-end against live `api.brain.fi` (v0.0.6), and COMMITTED**
-(branch `feat/brain-core-integration`, still NOT pushed):
+**Historical 2026-06-25 state:** Fork A was built and verified on the then-current
+`feat/brain-core-integration` branch:
 - `4457d41 feat(brain): propose payments behind the §6 policy gate`
 - `bbc6791 chore: enforce LF line endings via .gitattributes`
-The flagship "Brain proposes a payment → the §6/Policy gate decides" moment, with **no money
-movement** (the demo token has `payment_intent:propose` + `policy:read` but NOT
-`payment_intent:execute`, and the BFF exposes no execute path).
 
-**What it does (FinancesPage → new "Bills — let Brain decide" widget):** lists the 3 seeded AP
-invoices and, per bill, a "Let Brain pay" button → BFF proposes a PaymentIntent → renders the
-decision: **Auto-approved (ALLOW)** / **Needs approval (CONFIRM, names owner+cfo)** / **Blocked
-(REJECT)**, with an expandable per-rule policy trace and the proposal/decision ids labelled "not
-executed". The 3 seed bills exercise all three outcomes:
-- CloudOps $19,400 (approved, ≤$50k) → ALLOW (`ap-auto-approved-within`)
-- Datacenter $187,000 (approved, >$50k) → CONFIRM (`ap-confirm-approved-large`, approvers owner+cfo)
-- Quick Pay $4,800 (unapproved vendor, carries ⚠ flags) → REJECT (`ap-reject-unapproved`)
+**Current `main` reality (2026-07-17):** this UI path regressed to non-functional. The redesigned
+`BrainBillsInbox` lists AP invoices and opens `BillDetailPopup`, but it does not render the old
+"Let Brain pay" button, does not mutate `POST /api/brain/propose`, and does not populate
+`intentsStore.addProposed`. The server route remains present and covered by BFF invariant tests, but
+there is no end-user propose flow until the bills UI is re-wired.
+
+**Intended re-wire:** the bills UI should again offer an explicit propose action for eligible AP
+invoices, call `POST /api/brain/propose`, record the returned PaymentIntent in the session intent
+store, and render the policy outcome without implying execution or money movement.
 
 **Files changed (all compile clean; pre-existing `tsc` reds unchanged — see DEAD-CODE §C):**
 - `server/brain/client.ts` — added `listLedgerInvoices`, `evaluatePolicy` (read-only dry-run for the
@@ -88,9 +94,9 @@ executed". The 3 seed bills exercise all three outcomes:
 - `script/brain-smoke.ts` — `npm run brain:smoke` now also proposes each AP bill and asserts the
   status ∈ {approved, pending_approval, rejected} + logs the policy outcome. Still PASSES.
 
-**Verified:** `npm run brain:smoke` PASS (3 outcomes); full HTTP stack via curl (`POST /api/brain/propose`
-→ 200 `{intent, decision}`); live browser (preview MCP) — all 3 decision states + expanded trace
-render with correct content; `npx tsc --noEmit` adds no new errors (only the 5 pre-existing files).
+**Historical verification:** the June branch was smoke, curl, and browser verified at that time.
+Those results no longer prove the current reference-client UI works, because the current client has
+no caller for `POST /api/brain/propose`.
 
 **Probe facts (live, captured this session):** `POST /v1/payment-intents` `{type:"pay_invoice",
 invoice_id}` → 201 with `status` = the outcome (approved/pending_approval/rejected). `POST
@@ -100,10 +106,8 @@ amount:{currency,value}}` (amount MUST be the `{currency,value}` object, not a b
 `GET /v1/ledger/invoices` returns AP+AR rows; AP bills carry `metadata.scenario:"ap"` + `flags`.
 The provision response also returns `scenario.{vendors,customers,accounts,ap_invoices,ar_invoices,policy_id}`.
 
-**Next:** push the branch when asked. Remaining forks unchanged: **B** production-tenant
-(writes/execution, needs a brain-core PR) and **C** read polish. A natural Fork-A follow-on:
-wire the **approve** flow (`POST /payment-intents/{id}/approve`, token has `payment_intent:approve`)
-so the CONFIRM bill (Datacenter) can flip pending_approval → approved in the UI. See `next-steps.md`.
+**Next:** re-wire the propose UI before claiming the §6 propose demo works. Approve remains a
+separate human-approval workflow; do not document it as working from this historical section.
 
 ---
 
@@ -113,11 +117,12 @@ so the CONFIRM bill (Datacenter) can flip pending_approval → approved in the U
 npm, ESM). It is being made a thin web client + Backend-for-Frontend (BFF) over the live
 **brain-core** protocol (`https://api.brain.fi/v1`, v0.0.6), per the 8-phase blueprint in
 `deliverables/Brain-Migration-Plans.docx` (+ Handoff). That docx is dated April 2026 and is
-**stale in two ways**: Crossmint was removed in June (real provisioning adapters are now
-**Plaid + WireX**), and brain-core's real routes are `/v1/ledger/*`, `/v1/agents/*`,
-`/v1/payment-intents/*` (not the doc's `/v1/execution/*`).
+**stale in two ways**: the old Crossmint/WireX architecture was removed, and brain-core's real
+routes are `/v1/ledger/*`, `/v1/agents/*`, `/v1/payment-intents/*` (not the doc's
+`/v1/execution/*`).
 
-**Branch:** `feat/brain-core-integration` (off `origin/feat/ui-rework`). **3 commits, NOT pushed:**
+**Historical branch at the time:** `feat/brain-core-integration` (off `origin/feat/ui-rework`), with
+these commits:
 - `e75a7a4 feat(brain): wire FinancesPage accounts to brain-core Ledger via BFF proxy`
 - `542fea5 feat(finances): show live Ledger transactions and accounts total from brain-core`
 - `17c08a4 feat(assistant): ground answers in brain-core Wiki Q&A with evidence trail`
@@ -151,7 +156,9 @@ All keep their original static data as a fallback when brain-core is unreachable
 - `auth.ts` — `getBrainSession(appUserId)` → `{ token, tenantId }`, cached. demo-provision (preferred) + local-key (dev) minting via `jose`.
 - `client.ts` — `brainRequest()` + `listLedgerAccounts`, `getWikiSchema`, `askWikiQuestion` (parses the ```json envelope + evidence).
 - `ids.ts` — deterministic `user_<26-char ULID>` subject (local-key mode only).
-- `proxy.ts` — `/api/brain/*` router, **GET-only** passthrough. Mounted in `server/routes.ts`.
+- `proxy.ts` — `/api/brain/*` router. At this June snapshot it was described as GET-only; current
+  `main` has a generic GET passthrough plus explicit write routes documented in
+  `server/brain/README.md`.
 - `README.md` — env table + how it works. (There is no `tenant.ts` — removed in the refactor.)
 - `script/brain-smoke.ts` — `npm run brain:smoke` go/no-go (provision → `/wiki/schema` + `/ledger/accounts`).
 
