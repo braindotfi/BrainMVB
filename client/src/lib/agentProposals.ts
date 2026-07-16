@@ -71,7 +71,6 @@ export type ScenarioModule =
       columns: [string, string];
       rows: { label: string; a: string; b: string; mismatch?: boolean }[];
     }
-  | { kind: "usage_timeline"; lastActivityDaysAgo: number; renewalInDays: number; note: string }
   | { kind: "document_checklist"; items: { label: string; present: boolean }[] }
   | { kind: "trend_chart"; title: string; points: { label: string; value: number }[]; unit: string; note: string }
   | { kind: "subscription_table"; badge: string; rows: { label: string; value: string; valueColor?: string }[] };

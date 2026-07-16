@@ -370,42 +370,6 @@ function renderScenarioModule(
           ))}
         </div>
       );
-    case "usage_timeline": {
-      const total = module.lastActivityDaysAgo + module.renewalInDays;
-      const todayPct = (module.lastActivityDaysAgo / total) * 100;
-      return (
-        <div
-          className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[10px]"
-          data-testid="module-usage-timeline"
-        >
-          <div className="relative h-[6px] w-full rounded-full bg-[#1d2132]">
-            <div
-              className="absolute left-0 top-0 h-full rounded-full bg-[#414965]"
-              style={{ width: `${todayPct}%` }}
-            />
-            <div
-              className="absolute top-[-3px] size-[12px] rounded-full bg-[#a8b9f4]"
-              style={{ left: `calc(${todayPct}% - 6px)` }}
-            />
-            <div className="absolute top-[-3px] right-0 size-[12px] rounded-full border-2 border-[#ff9500] bg-[#0a0c10]" />
-          </div>
-          <div className="flex justify-between w-full">
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#6c779d]">
-              last login · {module.lastActivityDaysAgo}d ago
-            </p>
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#a8b9f4]">
-              today
-            </p>
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-[#ff9500]">
-              renews in {module.renewalInDays}d
-            </p>
-          </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-            {module.note}
-          </p>
-        </div>
-      );
-    }
     case "subscription_table":
       return (
         <div
