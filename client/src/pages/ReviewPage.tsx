@@ -128,7 +128,7 @@ const ProposalRow = ({
             </span>
           )}
         </div>
-        <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] truncate w-full ${parked ? "text-[#7631ee]" : "text-[#6c779d]"}`}>
+        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full ${parked ? "text-[#7631ee]" : "text-[#6c779d]"}`}>
           {parked ? "Verifying with vendor, draft ready for review" : proposal.rowSubtitle}
         </p>
       </div>
@@ -178,7 +178,7 @@ const AgentRow = ({
             </span>
           )}
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
           {proposal.agentDisplayName} · {proposal.subtitle}
         </p>
       </div>
@@ -512,7 +512,7 @@ export function ReviewPage() {
           <div className="flex flex-col items-start relative shrink-0 w-full">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Reviews</p>
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
@@ -719,7 +719,7 @@ const LiveRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: () 
   >
     <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">{item.title}</p>
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate w-full">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
         {item.vendor ? `${item.vendor} · ${item.due}` : item.due}
       </p>
     </div>
