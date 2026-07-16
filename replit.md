@@ -39,7 +39,8 @@ protocol (brain-core) executes. Settlement is anchored on Base L2.
   `font-['Gilroy',sans-serif] font-medium`. Gilroy loads via bunny.net in `index.css`.
 - **Route ordering**: specific routes before generic param routes, on the server AND in wouter
   (`/rules/:id` before `/rules`).
-- **WireX credentials broken** (`access_denied`) — demo fallback active in `/api/wirex/accounts`.
+- The old Crossmint/WireX architecture is gone. Do not use the April migration DOCX files as an
+  implementation guide for cards, bank accounts, or stablecoin balances.
 - Account/rule/invoice ids from demo provisioning are ephemeral — never hardcode.
 
 ## Design Tokens & Color Discipline
@@ -51,11 +52,12 @@ protocol (brain-core) executes. Settlement is anchored on Base L2.
 
 ## Data Sources — core-backed vs mock
 CORE-BACKED (live `/api/brain/*`, mock only as fallback unless noted): Finances tab ledger
-surfaces; Brain's take / Assistant chat (Claude, ledger-grounded); Bills inbox + live
-PaymentIntents (`useIntents`, read + propose/reject); Review queue (`useBrainReviewQueue`,
+surfaces; Brain's take / Assistant chat (Claude, ledger-grounded); Bills inbox read path;
+PaymentIntents (`useIntents`, session-scoped local overlay); Review queue (`useBrainReviewQueue`,
 mock `MOCK_PROPOSALS[0]` only when live queue empty); Vendors read; Members & approval
-authority (Settings → Team, NO mock fallback); document ingestion (AddSource).
-MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/mock*.ts`).
+authority (Settings → Team, NO mock fallback); Audit Log (`useBrainAuditRecords`, live
+`/audit/events` + latest anchor, NO demo-record fallback); document ingestion (AddSource).
+MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts`).
 
 ## Production tenancy (`BRAIN_TENANCY_MODE=production`; full contract in CLAUDE.md)
 - Demo mode (default) is byte-identical to before (`/api/brain/tenancy` → demo/linked).
@@ -65,9 +67,15 @@ MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/
 - `createProductionSession` in `auth.ts`: no identity → 403 `no_tenant`, never auto-provision;
   refresh-then-reauth. **Tenant creation is NOT idempotent — never auto-retry.**
 - **Production AGENT token**: per-tenant, stored in `brain_agent_tokens`, captured at tenant
-  creation, refreshed/backfilled idempotently via `POST /tenants/{id}/agent-token`. Contract
-  CONFIRMED LIVE on api.brain.fi 2026-07-14. If minting fails (outage/rollback), sessions
-  degrade to the member token (reads work, propose 403s honestly, loud warning).
+  creation, refreshed/backfilled idempotently via `POST /tenants/{id}/agent-token`. Verified
+  evidence on 2026-07-17: brain-core PR #250 merged as `0821e60`, that SHA has prod deploy tag
+  `deploy/prod/20260714T123355Z-0821e60`, and unauthenticated probes to
+  `POST https://api.brain.fi/v1/tenants` and
+  `/v1/tenants/tnt_probe/agent-token` returned 401 rather than 404, so the routes are deployed
+  and auth-gated. I did **not** have `BRAIN_PLATFORM_SERVICE_SECRET`, so successful production
+  tenant creation and agent-token minting still need maintainer confirmation with a credentialed
+  post-deploy probe. If minting fails (outage/rollback), sessions degrade to the member token
+  (reads work, propose 403s honestly, loud warning).
 - Client: `TenancyGate` → `CompanySetupPage` (create company / `/invite/:token`); SignupPage
   adds Company name when `/api/config.tenancyProduction`; Team UI has invite pill + Resend/Revoke.
 
@@ -80,8 +88,10 @@ MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/
   policy); the AGENT token is propose-ONLY (403 `actor_unresolved` elsewhere). `auth.ts` THROWS
   if no member token — no silent agent-token fallback.
 - Proxy: session-gated, generic GET pass-through; explicit writes are `POST /api/brain/propose`
-  `/reject` (agent token) and member writes `POST /members`, `PATCH/DELETE /members/:id`,
-  `POST /payment-intents/:id/approve`.
+  (agent token), `POST /api/brain/reject`, member writes for members, invites, vendor
+  counterparties, and `POST /payment-intents/:id/approve`, plus platform-service writes for
+  tenant creation and invite consume. The current Bills UI does **not** call the propose route;
+  re-wire it before documenting the end-user propose flow as working.
 
 ## API Endpoints (details in `server/routes.ts` / `server/auth.ts`)
 - Auth: `POST /api/auth/register|login|logout|demo`, `GET /api/auth/user`, Google OAuth +
@@ -92,7 +102,7 @@ MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/
 - Assistant: `POST /api/assistant/chat` — zod-validated, Claude; 503/402/500 errors each carry
   a user-facing `reply`.
 - Brain proxy: see BFF above; also `GET /api/brain/recommendation`, `/approval-policy`.
-- WireX, Account delete, Contracts read/deploy, Policy evaluate/hash, Integrations
+- Account delete, Contracts read/deploy, Policy evaluate/hash, Integrations
   (documents CRUD + ingest, plaid/stripe/tool connect-disconnect).
 
 ## Testing & CI
@@ -145,10 +155,11 @@ MOCK-ONLY: Rules, document viewer/resolution stores, Audit Log (`client/src/lib/
   local-key fallback `BRAIN_AUTH_SIGN_KEY`/`BRAIN_AUTH_JWT_SECRET` + `BRAIN_DEV_TENANT_ID`);
   `BRAIN_PLATFORM_SERVICE_SECRET` (production tenancy); `SESSION_SECRET`;
   `GOOGLE_CLIENT_ID`+`GOOGLE_CLIENT_SECRET` (optional; redirect `/api/auth/google/callback`);
-  `PLAID_CLIENT_ID`+`PLAID_SECRET` (+`PLAID_ENV`); `WIREX_*` (auth broken).
+  `PLAID_CLIENT_ID`+`PLAID_SECRET` (+`PLAID_ENV`).
 - Contracts live mode: `POLICY_SIGNER_PRIVATE_KEY`, `DEPLOYER_PRIVATE_KEY`, `ALCHEMY_API_KEY`,
   deployed addresses; `BASESCAN_API_KEY`.
 
 ## Removed Features
 - Agents pages/Marketplace, agent wallets/cards, `/api/agents` + `/api/marketplace`.
-- Crossmint (June 2026) — see the `tweetnacl` gotcha.
+- Crossmint and WireX architecture (removed; see the stale banner in the April migration DOCX
+  files).

@@ -7,8 +7,8 @@ protocol (live target: `https://api.brain.fi/v1`). The browser only ever calls s
 ```
 browser (session cookie) ──▶ /api/brain/ledger/accounts ──▶ BFF
                                                               │ getBrainSession(userId)  (auth.ts)
-                                                              │   demo-provision: POST /v1/demo/provision-run
-                                                              │   (X-Demo-Provision-Auth) → per-tenant token
+                                                              │   demo-provision or production session
+                                                              │   member token + propose-only agent token
                                                               ▼
                                             https://api.brain.fi/v1/ledger/accounts (client.ts)
 ```
@@ -34,9 +34,11 @@ browser (session cookie) ──▶ /api/brain/ledger/accounts ──▶ BFF
 ## Files
 - `config.ts` - reads all `BRAIN_*` env; `brainTokenMode()` picks the strategy.
 - `ids.ts` - deterministic `user_<ULID>` subject (local-key mode only).
-- `auth.ts` - `getBrainSession(appUserId)` → `{ token, tenantId }`, cached.
-- `client.ts` - `brainRequest()` + typed helpers (`listLedgerAccounts`, `getWikiSchema`).
-- `proxy.ts` - `/api/brain/*` router (GET-only passthrough; mounted in `server/routes.ts`).
+- `auth.ts` - `getBrainSession(appUserId)` → `{ token, agentToken, tenantId }`, cached.
+- `client.ts` - `brainRequest()` + typed helpers for ledger, policy, members, PaymentIntents,
+  tenancy, and wiki calls.
+- `proxy.ts` - `/api/brain/*` router mounted in `server/routes.ts`. It has a generic GET
+  passthrough plus explicit POST/PATCH/DELETE routes listed below.
 
 ## Secrets (Replit / env)
 
@@ -58,8 +60,53 @@ BRAIN_DEMO_PROVISION_SECRET='<secret>' npm run brain:smoke
 Provisions a tenant, reads `/wiki/schema` + `/ledger/accounts`. Verified PASS against api.brain.fi
 (3 real accounts: Operating, Reserve, Brain Smart Account).
 
-## Scope of this slice
-GET reads only. Write paths (raw ingest, policy sign, payment-intent propose/approve/execute) are
-added per-endpoint in later migration phases so an arbitrary session POST can't reach the money path.
-Note: each `provision-run` call creates a fresh seeded demo tenant - a production per-user (non-demo)
-tenant path is a later phase (would need a proper brain-core auth route landed via PR).
+## Scope and auth model
+Every `/api/brain/*` route first requires a BrainMVB session via `requireAuth`. The browser never
+receives a brain-core token. The generic catch-all remains **GET-only**; non-GET requests that do
+not match an explicit route return 405.
+
+### Generic read passthrough
+- `GET /api/brain/*` forwards to the matching brain-core path with the member/session token.
+- Examples include `/ledger/accounts`, `/ledger/transactions`, `/ledger/invoices`,
+  `/ledger/counterparties`, `/members`, `/policy/:tenant`, and `/audit/events`.
+
+### Explicit read-like POSTs
+- `POST /api/brain/wiki/question` uses the member token. It is read-only despite POST because it
+  asks the tenant wiki a question and returns grounded evidence.
+- `GET /api/brain/recommendation` uses the member token through the same wiki question path.
+- `GET /api/brain/approval-policy` uses the member token and tenant id to derive approval facts.
+
+### Explicit agent-token writes
+- `POST /api/brain/propose` uses the **agent token** only. The member token reads the invoice and
+  evaluates policy for the trace; the agent token creates the PaymentIntent. The route proposes
+  only and does not expose execution.
+
+### Explicit member-token writes
+- `POST /api/brain/reject` uses the member token to reject a proposed or pending PaymentIntent.
+- `POST /api/brain/payment-intents/:id/approve` uses member tokens. When brain-core returns
+  `awaiting_second_approval` and a second approver token is available, the BFF applies that second
+  member signature. The agent token is never used for approval.
+- `POST /api/brain/members`, `PATCH /api/brain/members/:id`, and
+  `DELETE /api/brain/members/:id` use the member token; brain-core enforces admin authority.
+- `POST /api/brain/members/:id/invites` and `DELETE /api/brain/members/:id/invites` use the
+  member token; brain-core gates invite issue, reissue, and revoke.
+- `POST /api/brain/ledger/counterparties` uses the member token to add a vendor counterparty. The
+  BFF forwards identity fields only and never accepts payment, bank, trust, or actor fields from
+  the client.
+
+### Explicit platform-service writes
+- `POST /api/brain/tenants` uses `BRAIN_PLATFORM_SERVICE_SECRET` through
+  `X-Platform-Service-Auth` to create a production tenant for the current app user. It is explicit
+  user action only and is not idempotent.
+- `POST /api/brain/invites/consume` uses the same platform-service credential to bind an invite to
+  the current app user after explicit confirmation.
+
+### Not exposed
+- No execute route is proxied.
+- Raw document ingestion is handled outside this router by `/api/integrations/documents/ingest` in
+  `server/routes.ts`; it streams bytes to brain-core after local source-document registration.
+- Policy signing and on-chain money movement are not generic proxy capabilities.
+
+In demo mode, each `provision-run` call creates a fresh seeded tenant. In production tenancy mode,
+the app user must be linked through `brain_identities`; unlinked users receive `403 no_tenant` and
+are routed to company setup.

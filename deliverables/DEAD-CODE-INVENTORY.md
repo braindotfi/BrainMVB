@@ -10,9 +10,10 @@ The migration blueprint (`deliverables/Brain-Migration-Plans.docx` +
 touch the codebase we add anything else that is outdated, unused, or superseded so the future
 cleanup has a complete, evidence-backed list.
 
-> Reconciliation note: the docx is dated April 2026 and predates the June removal of Crossmint,
-> so its Crossmint-as-signer guidance is itself stale. Provisioning adapters today are **Plaid
-> (real) + WireX (demo)** + a RainbowKit/SIWE wallet — no Crossmint.
+> Reconciliation note: the docx is dated April 2026 and predates the removal of the
+> Crossmint/WireX architecture, so its card, bank-account, and stablecoin-balance guidance is
+> historical only. Current code has no Crossmint or WireX implementation; use the live source and
+> `server/brain/README.md` instead.
 
 ## Legend
 - **Status**: `confirmed-dead` (no live references) · `superseded` (replaced by brain-core) ·

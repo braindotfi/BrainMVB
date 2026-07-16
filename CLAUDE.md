@@ -366,11 +366,14 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
     route is idempotent, no data migration).
   - `registerBrainSession` is async; tenant-create passes the fresh agent token, invite-consume
     resolves/mints the tenant's stored one.
-  - **Contract CONFIRMED LIVE on api.brain.fi 2026-07-14** (core merge 0821e60): tenant creation
-    returns `agent` (expires_in 3600), the mint route returns 200 with the same token
-    (idempotent), the agent token passes propose auth (a bad invoice fails with 400
-    `invoice_shortcut_invalid` — business validation, past auth) while the member token is
-    correctly blocked at 403 `auth_scope_insufficient`, and the agent token 403s on member reads.
+  - **Deployment evidence as of 2026-07-17:** core PR #250 merged as `0821e60`, and brain-core has
+    prod deploy tag `deploy/prod/20260714T123355Z-0821e60`; later prod deploy tags include that
+    merge. Unauthenticated public probes to `POST https://api.brain.fi/v1/tenants` and
+    `/v1/tenants/tnt_probe/agent-token` returned 401, not 404, so the production tenancy and
+    agent-token routes are deployed and auth-gated. This workspace does **not** contain a
+    credentialed post-deploy probe transcript and I did not have `BRAIN_PLATFORM_SERVICE_SECRET`,
+    so successful production tenant creation and agent-token minting still need maintainer
+    confirmation before this should be described as fully probe-confirmed.
   - **Graceful degradation** (kept for outages/rollbacks): a mint failure must NOT break
     sessions — `getProductionAgentToken` logs a loud warning and returns the stored token or
     null; `toProductionCached` then mirrors the member token so reads work and propose 403s
