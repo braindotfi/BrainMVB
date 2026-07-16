@@ -218,7 +218,7 @@ function renderScenarioModule(
       );
     case "document_stack":
       return (
-        <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
+        <div className="flex flex-col gap-[8px] items-start w-full" data-testid="module-document-stack">
           <SectionLabel>
             {module.title ?? "Linked Evidence"}
           </SectionLabel>
@@ -775,15 +775,17 @@ export function AgentProposalModal({
               </div>
               {/* Scenario module (e.g. subscription_table, entity_comparison)
                   sits inside the WHY section for both tabs, below evidence */}
-              {renderScenarioModule(
-                proposal.scenarioModule,
-                risk.color,
-                format,
-                editing,
-                draft,
-                setDraft,
-                (doc) => { setViewingDocument(doc); setDocumentOpen(true); },
-              )}
+              <div className="mt-[16px] w-full">
+                {renderScenarioModule(
+                  proposal.scenarioModule,
+                  risk.color,
+                  format,
+                  editing,
+                  draft,
+                  setDraft,
+                  (doc) => { setViewingDocument(doc); setDocumentOpen(true); },
+                )}
+              </div>
               {/* Auto-approved: "Auto-approved because: ..." */}
               {isAutoApproved && proposal.approvedAutomaticallyMeta && (
                 <p

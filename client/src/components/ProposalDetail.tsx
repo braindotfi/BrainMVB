@@ -336,7 +336,7 @@ export function ProposalDetail({
 
             {/* ── Linked Evidence ────────────────────────────────────────────── */}
             {proposal.evidence.length > 0 && (
-              <div className="flex flex-col gap-[16px] items-start w-full">
+              <div className="flex flex-col gap-[8px] items-start w-full">
                 <SectionLabel>Linked Evidence</SectionLabel>
                 {proposal.evidence.map((ev, i) => {
                   const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
