@@ -1,8 +1,8 @@
 /* ── Generalized document / record EVIDENCE model ─────────────────────────────
-   ONE data model for every read-only piece of evidence Brain surfaces behind a
-   proposal, audit record, or settled receipt — keyed off a `kind` discriminator.
+   ONE data model for every read only piece of evidence Brain surfaces behind a
+   proposal, audit record, or settled receipt - keyed off a `kind` discriminator.
    The viewer (DocumentViewerPopup) renders ALL kinds from this one shape; there
-   is no per-kind type. Brain READS these documents — it never owns them; the
+   is no per-kind type. Brain READS these documents - it never owns them; the
    source system (AP, bank, ERP, CLM) remains the system of record. */
 
 export type DocKind =
@@ -12,7 +12,7 @@ export type DocKind =
   | "contract"
   | "purchase_order";
 
-/* Where a document came from — provenance is shown on every kind so a human can
+/* Where a document came from - provenance is shown on every kind so a human can
    judge how much to trust the extracted facts. */
 export type Provenance =
   | "CONNECTOR_SYNC" // pulled from an accounting/AP connector
@@ -63,7 +63,7 @@ export type DocStatus =
 export interface DocumentRecord {
   id: string; // canonical id, e.g. "AWS-2026-07" | "TXN-2026-0621"
   kind: DocKind;
-  title: string; // e.g. "AWS — June usage" | "Office Lease Agreement"
+  title: string; // e.g. "AWS - June usage" | "Office Lease Agreement"
 
   /* Counterparty. A KNOWN vendor carries `vendorId` (resolves + deep-links to
      the vendor detail). NON-vendor counterparties (landlords, internal ledgers,
@@ -91,7 +91,7 @@ export interface DocumentRecord {
   reconciliation?: DocReconciliation;
 
   /* When this record has a natural prior/comparison twin (duplicate invoice, or
-     an established payment on the OLD account), point at it by id — the viewer
+     an established payment on the OLD account), point at it by id - the viewer
      offers an in-place COMPARE toggle that renders the two side by side. */
   compareToId?: string;
 
@@ -163,15 +163,15 @@ export function docKindLabel(kind: DocKind): string {
 export function docKindCaption(kind: DocKind): string {
   switch (kind) {
     case "invoice":
-      return "A viewer, not an AP system — Brain reads this invoice; your accounting system owns it.";
+      return "A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.";
     case "prior_payment":
-      return "A viewer, not a payments ledger — Brain reads this past payment; your bank and AP system own it.";
+      return "A viewer, not a payments ledger. Brain reads this past payment; your bank and AP system own it.";
     case "bank_transaction":
-      return "A viewer, not a banking system — Brain reads this bank-feed line; your bank owns it.";
+      return "A viewer, not a banking system. Brain reads this bank-feed line; your bank owns it.";
     case "contract":
-      return "A viewer, not a contract system — Brain reads this agreement; your CLM owns it.";
+      return "A viewer, not a contract system. Brain reads this agreement; your CLM owns it.";
     case "purchase_order":
-      return "A viewer, not a procurement system — Brain reads this PO; your ERP owns it.";
+      return "A viewer, not a procurement system. Brain reads this PO; your ERP owns it.";
   }
 }
 

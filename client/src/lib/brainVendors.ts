@@ -4,23 +4,23 @@ import type { Vendor, TrustStatus } from "./vendorTypes";
 /* ── Live brain-core counterparties → Vendor cards ────────────────────────────
    Replaces MOCK_VENDORS as the VendorsPage/VendorDetailPopup data source with
    `GET /ledger/counterparties` (proxied verbatim by the BFF's generic GET
-   passthrough — no new route needed; see server/brain/proxy.ts).
+   passthrough - no new route needed; see server/brain/proxy.ts).
 
    Shape verified against brain-core source, not docs:
    - services/ledger/src/repository/counterparties.ts (CounterpartyRow) and
      services/ledger/migrations/0002_ledger_counterparties.sql (enum values).
    `/ledger/counterparties` returns the FULL row (id, name, type, risk_level,
    verified_status, aliases, ...), not the {id, name} "lite" slice FinancesPage
-   destructures — so this hook declares its own fuller local type, same
+   destructures - so this hook declares its own fuller local type, same
    pattern as every other brain page (each declares the DTO slice it needs).
 
    Honesty: brain-core has NO payment-history aggregates, NO fraud-flag
-   catalogue, and no "trusted/known/new" tiering on a counterparty — those are
+   catalogue, and no "trusted/known/new" tiering on a counterparty - those are
    this app's OWN allowlist concept (mockVendors.ts), not a brain-core fact.
    We do NOT fabricate them. `trustStatus` is derived ONLY from the two real
    risk signals brain-core does carry (`risk_level`, `verified_status`); a
    counterparty with neither signal reads as "new" (Brain has no history on
-   them yet — literally true, since this list carries no payment counts).
+   them yet - literally true, since this list carries no payment counts).
    payment-count/totalPaid/flags are always the neutral zero/empty default. */
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -55,7 +55,7 @@ function deriveTrustStatus(cp: BrainCounterparty): TrustStatus {
 }
 
 /** Map a live brain-core counterparty to the app's Vendor card shape. Neutral,
- *  honest defaults for everything brain-core doesn't report — no invented
+ *  honest defaults for everything brain-core doesn't report - no invented
  *  payment history, no fabricated flags. */
 export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
   const trustStatus = deriveTrustStatus(cp);
@@ -83,7 +83,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
               kind: "reported_problem",
               label:
                 cp.risk_level === "sanctioned"
-                  ? "Sanctioned counterparty — payments blocked by policy"
+                  ? "Sanctioned counterparty. Payments blocked by policy"
                   : "High risk counterparty",
               raisedAtLabel: "brain-core risk assessment",
             },
@@ -111,13 +111,13 @@ export function useBrainVendors() {
    none). When the detail popup opens, this fills it in from the one read that DOES
    carry it: `/ledger/transactions?counterparty_id=` (real payments), reachable via
    the BFF's generic GET passthrough. Honest: "payments" counts ONLY outflows to
-   this counterparty (money we actually paid them) — a counterparty with only
+   this counterparty (money we actually paid them) - a counterparty with only
    inflows or no transactions reads "No payments recorded" (literally true).
 
    Trust is deliberately NOT refined here. brain-core exposes no payment-history-
    based trust signal, and its KYC `verified_status` is a different concept from
    this app's user-granted trust tiers ("known" = Brain suggests trust FROM payment
-   history) — overloading a tier with a verification signal would make the "known"
+   history) - overloading a tier with a verification signal would make the "known"
    copy ("based on consistent payment history") lie for a zero-payment vendor. So
    trust stays exactly as the list mapper derived it (risk-only). Surfacing KYC
    verification honestly is a separate future element, not this increment. */
@@ -140,7 +140,7 @@ function fmtVendorDate(iso: string): string {
 
 /** Enrich a list Vendor with live payment history for the detail popup. Returns the
  *  base vendor while loading or when there are no outflows (honest zeros stay
- *  zeros). Safe to call with null — the query disables. */
+ *  zeros). Safe to call with null - the query disables. */
 export function useBrainVendorDetail(base: Vendor | null): Vendor | null {
   const id = base?.id ?? "";
   const txQuery = useQuery<TxByCounterpartyResponse>({
@@ -151,7 +151,7 @@ export function useBrainVendorDetail(base: Vendor | null): Vendor | null {
 
   if (!base) return null;
 
-  // Only OUTFLOWS are "payments to this vendor" — inflows are money they paid us.
+  // Only OUTFLOWS are "payments to this vendor" - inflows are money they paid us.
   const paid = (txQuery.data?.transactions ?? [])
     .filter((t) => t.direction === "outflow")
     .map((t) => ({ amount: Number(t.amount), date: t.transaction_date }))

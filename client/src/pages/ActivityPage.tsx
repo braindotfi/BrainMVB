@@ -3,7 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
-import { type ActivityType, type ActivityItemData, statusOverrideToActivity, autoHandledToActivity, agentDecisionToActivity } from "@/lib/brainFeed";
+import { type ActivityType, type ActivityItemData, statusOverrideToActivity, agentDecisionToActivity } from "@/lib/brainFeed";
 import {
   useAgentDecisions,
   agentDecisionTimeMs,
@@ -13,12 +13,6 @@ import {
 } from "@/lib/agentProposals";
 import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ADOBE_SETTLED,
-  COMCAST_SETTLED,
-  MERIDIAN_RECEIVABLE_SETTLED,
-  GUSTO_RECON_SETTLED,
-} from "@/lib/mockProposals";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -36,7 +30,7 @@ import {
 } from "@/lib/rulesStore";
 
 type Tab = "All" | "Brain Did" | "You Approved" | "You Rejected" | "You Postponed";
-/* "All" is intentionally hidden for now — kept in the type/logic (filterByTab
+/* "All" is intentionally hidden for now. Kept in the type/logic (filterByTab
    still treats it as the unfiltered view) so it can be re-enabled later. */
 const TABS: Tab[] = ["Brain Did", "You Approved", "You Rejected", "You Postponed"];
 
@@ -277,7 +271,7 @@ export function ActivityPage() {
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
     }
-    /* Agent-proposal decisions (the AgentProposalModal flow) — approvals and
+    /* Agent-proposal decisions (the AgentProposalModal flow). Approvals and
        rejections made there live in the agentProposals decision store, not
        reviewStatusStore, so they are layered in here. */
     for (const [id, decision] of Object.entries(agentDecisions)) {
@@ -295,22 +289,6 @@ export function ActivityPage() {
   const { todayItems: bucketedToday, yesterdayItems: bucketedYesterday, earlierItems: bucketedEarlier } =
     useMemo(() => bucketByDay(records), [records]);
 
-  /* Static auto-approved items (Adobe, Comcast, Meridian, Gusto) — these are
-     mock proposals that were approved automatically by standing rules on Jul 5–6.
-     They live in "Earlier" and always appear in the "Brain Did" tab regardless
-     of what brain-core returns. De-duped against live records by proposal id. */
-  const autoHandledItems: ActivityItemData[] = useMemo(() => {
-    const liveIds = new Set(records.map((r) => r.proposalId).filter(Boolean));
-    return [
-      ADOBE_SETTLED,
-      COMCAST_SETTLED,
-      MERIDIAN_RECEIVABLE_SETTLED,
-      GUSTO_RECON_SETTLED,
-    ]
-      .filter((p) => !liveIds.has(p.id))
-      .map(autoHandledToActivity);
-  }, [records]);
-
   /* De-dupe merged rows by id so a live record and a local synthetic row for
      the same action never render twice (mirrors the Audit Log's merge guard). */
   const dedupeById = (items: ActivityItemData[]) => {
@@ -326,9 +304,9 @@ export function ActivityPage() {
   /* Client-side actions are always "Today" because they happened in-session. */
   const todayItems = filterByTab(dedupeById([...bucketedToday, ...actionItems]));
   const yesterdayItems = filterByTab(dedupeById(bucketedYesterday));
-  const earlierItems = filterByTab(dedupeById([...bucketedEarlier, ...autoHandledItems]));
+  const earlierItems = filterByTab(dedupeById(bucketedEarlier));
 
-  /* Inline proposal detail sheet — opened when an activity row with a proposal
+  /* Inline proposal detail sheet. Opened when an activity row with a proposal
      (review-status override or auto-handled receipt) is tapped. */
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const statuses = useReviewStatuses();
@@ -364,7 +342,7 @@ export function ActivityPage() {
       toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
     } else if (action === "acknowledge") {
       decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged — Brain won't re-raise this flag." });
+      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
     } else if (action === "undo") {
       decideAgentProposal(p.id, "undone_to_review");
       toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
@@ -372,7 +350,7 @@ export function ActivityPage() {
     setActiveAgentRecord(null);
   };
 
-  /* Header pager — cycle through all activity items that carry a proposal
+  /* Header pager. Cycle through all activity items that carry a proposal
      (review overrides + auto-handled receipts) in the current filtered view. */
   const allProposalItems = useMemo(
     () =>
@@ -484,7 +462,7 @@ export function ActivityPage() {
         </div>
       </ScrollArea>
 
-      {/* Inline proposal detail sheet — same experience as Review / Audit record popup */}
+      {/* Inline proposal detail sheet - same experience as Review / Audit record popup */}
       <ProposalDetail
         proposal={activeProposal}
         currentStatus={activeProposal ? statusOf(activeProposal) : undefined}
@@ -515,7 +493,7 @@ export function ActivityPage() {
         onAlwaysHandle={(p) => {
           setRuleDraft({
             kind: "automation",
-            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            name: p.counterparty ? `Auto clear ${p.counterparty}` : "Auto clear this payment",
             category: "bill",
             agent: p.agent,
             cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
@@ -526,7 +504,7 @@ export function ActivityPage() {
         }}
       />
 
-      {/* Agent recommendation receipt — opened from decided agent rows. */}
+      {/* Agent recommendation receipt - opened from decided agent rows. */}
       <AgentProposalModal
         proposal={activeAgentRecord}
         open={activeAgentRecord !== null}

@@ -109,7 +109,7 @@ export type ExtractStatus =
   | "ingested"     // bytes stored in Brain (raw_id assigned), extraction not triggered/settled
   | "extracting"   // extraction triggered, parsed record not yet materialized
   | "extracted"    // Brain produced a parsed record
-  | "unsupported"  // Brain can't read this file type yet (e.g. scanned image — 422)
+  | "unsupported"  // Brain can't read this file type yet (e.g. scanned image - 422)
   | "unavailable"  // extraction endpoint not deployed yet (404)
   | "failed";      // ingest/extract errored
 

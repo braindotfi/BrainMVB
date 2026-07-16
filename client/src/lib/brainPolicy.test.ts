@@ -3,9 +3,9 @@ import { mapPolicyRuleToCard, mapPolicyToRuleCards, type ApprovalPolicyFacts } f
 
 /**
  * mapPolicyRuleToCard's job is an honest plain-English rendering of the DSL
- * fields brain-core actually sends (applies_to/when/execute/require) — never
+ * fields brain-core actually sends (applies_to/when/execute/require) - never
  * inventing a name/vendor-list the way the mock rule catalogue does. This pins
- * the shape for the real default tenant policy (two rules, no amount caps —
+ * the shape for the real default tenant policy (two rules, no amount caps -
  * see brain-core services/api/src/onboarding/provision.ts:85-104) plus the
  * always-locked, always-on invariant (Phase 2a is read-only).
  */
@@ -25,7 +25,7 @@ describe("mapPolicyRuleToCard", () => {
     expect(card.summary).toMatch(/requires single signer/);
     expect(card.scopeSummary).toMatch(/outbound payments/);
     expect(card.scopeSummary).toMatch(/confidence ≥ 0\.6/);
-    // No fabricated dollar amount — this rule carries no amount.gt/lte.
+    // No fabricated dollar amount - this rule carries no amount.gt/lte.
     expect(card.cap).toBeUndefined();
     expect(card.threshold).toBeUndefined();
   });

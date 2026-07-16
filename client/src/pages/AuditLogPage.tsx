@@ -116,7 +116,7 @@ export function AuditLogPage() {
     return records;
   }, [activeTab, records]);
 
-  /* Header pager — cycle (wrap-around) through the records in the active tab. */
+  /* Header pager - cycle (wrap-around) through the records in the active tab. */
   const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
   const pagerDisabled = activeIdx < 0 || filtered.length <= 1;
   const pageRecord = (dir: 1 | -1) => {
@@ -137,7 +137,7 @@ export function AuditLogPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Tab bar — active tab is ORANGE */}
+            {/* Tab bar - active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {AUDIT_TABS.map((tab) => {
                 const isActive = activeTab === tab;

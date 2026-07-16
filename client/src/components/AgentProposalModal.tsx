@@ -33,7 +33,7 @@ import {
   type ScenarioModule,
 } from "@/lib/agentProposals";
 
-/* One reusable shell for all 11 agents — header → why → evidence → confidence
+/* One reusable shell for all 11 agents: header, why, evidence, confidence
    → scenario module → recommended action → next steps → risk note → footer.
    ONLY the scenario-module slot swaps per agent (see renderScenarioModule).
    Propose-mode records get Reject / Edit / Approve; notify-only records get a
@@ -67,7 +67,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const HR = () => <div className="h-px w-full bg-[#1d2132]" />;
 
-/* ── Scenario modules — the one slot that differs per agent ─────────────── */
+/* Scenario modules: the one slot that differs per agent */
 
 const EntityCard = ({
   card,
@@ -169,7 +169,7 @@ function renderScenarioModule(
             </div>
           )}
           <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-            {editing ? "Editing the draft directly — changes apply when you approve." : "Draft reminder — tap Edit to change the wording before it goes out."}
+            {editing ? "Editing the draft directly. Changes apply when you approve." : "Draft reminder. Tap Edit to change the wording before it goes out."}
           </p>
         </div>
       );
@@ -301,7 +301,7 @@ function renderScenarioModule(
                 style={{ color: item.present ? "#a8b9f4" : riskColor }}
               >
                 {item.label}
-                {!item.present && " — missing"}
+                {!item.present && ", missing"}
               </p>
             </div>
           ))}
@@ -333,7 +333,7 @@ function renderScenarioModule(
   }
 }
 
-/* ── Nested evidence sheet — stub view of the linked_source ─────────────── */
+/* Nested evidence sheet: stub view of the linked_source */
 
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   invoice: "Invoice",
@@ -398,7 +398,7 @@ function EvidenceSheet({
                 </div>
               </div>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]">
-                Preview of the underlying record — this is a viewer, not the system of record. Close it to return to the proposal.
+                Preview of the underlying record. This is a viewer, not the system of record. Close it to return to the proposal.
               </p>
             </>
           )}
@@ -458,10 +458,10 @@ export function AgentProposalModal({
   const isNotifyOnly = proposal.executionMode === "notify_only";
   /* Footer mode follows the record's EFFECTIVE state: a record undone back to
      the review queue must render the actionable propose footer, not the
-     auto-approved one — so the seed status is overridden by the decision. */
+     auto-approved one, so the seed status is overridden by the decision. */
   const isAutoApproved =
     proposal.status === "approved_automatically" && decisions[proposal.id] !== "undone_to_review";
-  /* The user's decision on this record (if any) — a decided needs_review record
+  /* The user's decision on this record (if any). A decided needs_review record
      opened again (e.g. as a receipt from the Activity page) renders a muted
      decision line in the footer instead of re-offering Approve / Reject. */
   const decided = decisions[proposal.id];
@@ -490,7 +490,7 @@ export function AgentProposalModal({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="agent-proposal-modal"
         >
-          {/* Header — pager left, risk pill + close right */}
+          {/* Header: pager left, risk pill + close right */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-between px-[12px]">
             <div className="flex items-center gap-[4px]">
               {onPrev && onNext && (
@@ -589,7 +589,7 @@ export function AgentProposalModal({
 
             <HR />
 
-            {/* WHY BRAIN SUGGESTED THIS — trigger + tappable evidence links */}
+            {/* WHY BRAIN SUGGESTED THIS. Trigger + tappable evidence links */}
             <div className="flex flex-col gap-[12px] items-start w-full">
               <SectionLabel>
                 {isAutoApproved ? "Why This Didn't Need Review" : "Why Brain Suggested This"}
@@ -623,7 +623,7 @@ export function AgentProposalModal({
                   {proposal.approvedAutomaticallyMeta.autoApprovalReason}
                 </p>
               ) : (
-                /* Confidence bar — fill color tracks risk_level, NOT the number */
+                /* Confidence bar. Fill color tracks risk_level, NOT the number */
                 <div className="flex items-center gap-[10px] w-full" data-testid="bar-confidence">
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d] shrink-0">
                     Confidence
@@ -643,7 +643,7 @@ export function AgentProposalModal({
 
             <HR />
 
-            {/* SCENARIO MODULE — the one slot that swaps per agent */}
+            {/* SCENARIO MODULE: the one slot that swaps per agent */}
             {renderScenarioModule(proposal.scenarioModule, risk.color, format, editing, draft, setDraft)}
 
             {/* Inline edit form for non-message agents */}
@@ -673,7 +673,7 @@ export function AgentProposalModal({
                   </label>
                 )}
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-                  Changes apply when you approve — nothing moves until then.
+                  Changes apply when you approve. Nothing moves until then.
                 </p>
               </div>
             )}
@@ -690,7 +690,7 @@ export function AgentProposalModal({
 
             <HR />
 
-            {/* WHAT HAPPENS NEXT / OUTCOME — propose-mode = 3 rows; notify-only = sentence; auto-approved = Outcome */}
+            {/* WHAT HAPPENS NEXT / OUTCOME. Propose-mode = 3 rows; notify-only = sentence; auto-approved = Outcome */}
             <div className="flex flex-col gap-[12px] items-start w-full">
               <SectionLabel>{isAutoApproved ? "Outcome" : "What Happens Next"}</SectionLabel>
               {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
@@ -715,7 +715,7 @@ export function AgentProposalModal({
                 </div>
               ) : isNotifyOnly ? (
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid="text-notify-only-next">
-                  This is a flag for your awareness — Brain doesn't take action on it automatically.
+                  This is a flag for your awareness. Brain does not take action on it automatically.
                 </p>
               ) : (
                 <div className="flex flex-col gap-[8px] w-full">
@@ -733,7 +733,7 @@ export function AgentProposalModal({
                   ))}
                 </div>
               )}
-              {/* risk note — color tracks risk_level */}
+              {/* risk note. Color tracks risk_level */}
               <div className="flex items-start gap-[8px] w-full" data-testid="text-risk-note">
                 <AlertTriangle size={14} className="shrink-0 mt-[2px]" style={{ color: riskNoteColor }} />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px]" style={{ color: riskNoteColor }}>
@@ -746,7 +746,7 @@ export function AgentProposalModal({
             </div>
           </div>
 
-          {/* Sticky footer — 3 buttons / Acknowledge / auto-approved variants */}
+          {/* Sticky footer: 3 buttons / Acknowledge / auto-approved variants */}
           <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[16px] w-full shrink-0">
             {isAutoApproved ? (
               (() => {
@@ -802,12 +802,12 @@ export function AgentProposalModal({
                 }
                 return (
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full" data-testid="text-informational">
-                    No action was taken — this is for your records.
+                    No action was taken. This is for your records.
                   </p>
                 );
               })()
             ) : decided === "approved" || decided === "rejected" ? (
-              /* Already decided (opened as a receipt, e.g. from the Activity page) —
+              /* Already decided (opened as a receipt, e.g. from the Activity page) -
                  show the decision instead of re-offering the action buttons. */
               <p
                 className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d] text-center w-full"
@@ -866,7 +866,7 @@ export function AgentProposalModal({
             )}
           </div>
 
-          {/* Nested evidence sheet — closes back to the proposal, never navigates away */}
+          {/* Nested evidence sheet. Closes back to the proposal, never navigates away */}
           <EvidenceSheet
             line={viewingEvidence}
             source={proposal.source}

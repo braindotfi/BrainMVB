@@ -1,15 +1,15 @@
 import { useSyncExternalStore } from "react";
 import type { BrainMember } from "./membersApi";
 
-/* Members store — a lightweight module-global cache + a "which member is open"
+/* Members store - a lightweight module-global cache + a "which member is open"
    signal, shared via useSyncExternalStore so any surface (Settings → Team, an
    audit record's ACTOR label, a receipt) resolves a member the SAME way.
 
    This is a CACHE, not a source of truth: brain-core is authoritative. The Members
    page primes it after every successful fetch/mutation; `resolveMember(id)` reads
    it synchronously for label rendering, and the detail popup independently re-fetches
-   the authoritative record by id (so a deactivated member — which is dropped from the
-   active list but still GET-able by id — still resolves and opens). */
+   the authoritative record by id (so a deactivated member - which is dropped from the
+   active list but still GET-able by id - still resolves and opens). */
 
 let cache = new Map<string, BrainMember>();
 let openId: string | null = null;
@@ -64,7 +64,7 @@ export function resolveMember(id: string | null | undefined): BrainMember | unde
 }
 
 /** Resolve a cached member from an actor identity (email/id tokens). Used to make an
-    audit-record ACTOR label tappable ONLY when it maps to a real core member — never
+    audit-record ACTOR label tappable ONLY when it maps to a real core member - never
     a client-side authority claim, just a link to core's record. Returns undefined
     (→ plain text) when no core member matches. */
 export function resolveMemberByTokens(tokens: string[]): BrainMember | undefined {

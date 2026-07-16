@@ -4,12 +4,12 @@
  * Returns a { token, tenantId } a BrainMVB request can use to read from brain-core.
  * Two strategies, chosen by config (see brainTokenMode):
  *
- *  1. "demo-provision" (PREFERRED, key-free) — POST ${baseUrl}/demo/provision-run with the
+ *  1. "demo-provision" (PREFERRED, key-free) - POST ${baseUrl}/demo/provision-run with the
  *     X-Demo-Provision-Auth: BRAIN_DEMO_PROVISION_SECRET header. brain-core creates a fresh
  *     seeded tenant and returns a scoped per-tenant token (reads + propose, no execute, ~30 min).
  *     The private signing key never leaves the box. Same path the BrainSaaS playground uses.
  *
- *  2. "local-key" (FALLBACK, local dev only) — mint a JWT in-process with a private JWK for
+ *  2. "local-key" (FALLBACK, local dev only) - mint a JWT in-process with a private JWK for
  *     BRAIN_DEV_TENANT_ID. Use only against a brain-core you control; never the prod key.
  *
  * Sessions are cached per app user and refreshed shortly before expiry. Nothing is ever
@@ -27,7 +27,7 @@ import { storage } from "../storage";
  * Thrown by the PRODUCTION strategy when the app user has no durable
  * appUserId → external_ref mapping (or brain-core answers 403
  * session_identity_unlinked). The caller must route the user to
- * "Create a company" or "Enter your invite link" — NEVER auto-provision.
+ * "Create a company" or "Enter your invite link" - NEVER auto-provision.
  */
 export class NoTenantError extends Error {
   constructor(appUserId: string) {
@@ -50,7 +50,7 @@ export interface BrainSession {
   /**
    * The AGENT token (principal_type "agent", propose-only: payment_intent:propose +
    * execution:propose). Used ONLY to create PaymentIntents on /propose. It is NOT authorized
-   * for /members or the approve path — sending it there correctly 403s (agents propose, humans
+   * for /members or the approve path - sending it there correctly 403s (agents propose, humans
    * approve), so it must never back those calls.
    */
   agentToken: string;
@@ -116,7 +116,7 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
 /** Mint a new session via the configured token source. */
 function createSession(appUserId: string, now: number, prior?: CachedSession): Promise<CachedSession> {
   // PRODUCTION TENANCY (Phase 2): real shared tenants, selected by BRAIN_TENANCY_MODE.
-  // The demo strategies below are untouched — the playground build never enters here.
+  // The demo strategies below are untouched - the playground build never enters here.
   if (brainTenancyMode() === "production") {
     return createProductionSession(appUserId, prior);
   }
@@ -131,7 +131,7 @@ function createSession(appUserId: string, now: number, prior?: CachedSession): P
     return mintLocalSession(appUserId, now);
   }
   throw new Error(
-    "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred — the box " +
+    "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred - the box " +
       "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
   );
 }
@@ -140,10 +140,10 @@ function createSession(appUserId: string, now: number, prior?: CachedSession): P
  * PRODUCTION strategy (docs/contracts/production-tenancy.md):
  *  1. Look up the durable appUserId → external_ref mapping (brain_identities). No row →
  *     NoTenantError (route to "Create a company" / "Enter your invite link"; NEVER
- *     auto-provision — membership only comes from POST /v1/tenants or invite consume).
+ *     auto-provision - membership only comes from POST /v1/tenants or invite consume).
  *  2. If a prior session holds a refresh_token, rotate via POST /v1/sessions/refresh first.
  *     A reuse-detected/invalid-refresh rejection means the family is revoked: fall through
- *     to a FULL re-auth via POST /v1/sessions (service credential) — never a silent retry
+ *     to a FULL re-auth via POST /v1/sessions (service credential) - never a silent retry
  *     of the same refresh token.
  *  3. Otherwise POST /v1/sessions { external_ref }. 403 session_identity_unlinked →
  *     NoTenantError.
@@ -152,7 +152,7 @@ function createSession(appUserId: string, now: number, prior?: CachedSession): P
  * (docs/contracts/production-agents.md): core mints a real agent token at tenant creation,
  * and POST /v1/tenants/{id}/agent-token re-issues it idempotently. The agent token is stored
  * per tenant (brain_agent_tokens), refreshed before expiry, and backfilled on first use for
- * tenants created before the contract existed. Agents propose, humans approve — the member
+ * tenants created before the contract existed. Agents propose, humans approve - the member
  * token still backs everything else.
  */
 async function createProductionSession(appUserId: string, prior?: CachedSession): Promise<CachedSession> {
@@ -166,9 +166,9 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
       return toProductionCached(rotated, identity.tenantId, await getProductionAgentToken(identity.tenantId));
     } catch (err) {
       // Revoked/reused/expired refresh family (or a core-side failure): fall through to a
-      // full re-auth via POST /v1/sessions. Loud, not silent — log the reason.
+      // full re-auth via POST /v1/sessions. Loud, not silent - log the reason.
       const reason = err instanceof TenancyApiError ? (err.reason ?? `HTTP ${err.status}`) : String(err);
-      console.warn(`[brain-auth] session refresh rejected (${reason}) — full re-auth via /sessions`);
+      console.warn(`[brain-auth] session refresh rejected (${reason}) - full re-auth via /sessions`);
     }
   }
 
@@ -189,11 +189,11 @@ const AGENT_TOKEN_REFRESH_SKEW = 120;
 /**
  * The tenant's AGENT token (propose-only principal). Reads the durable per-tenant row;
  * mints via POST /v1/tenants/{id}/agent-token when missing (backfill for pre-contract
- * tenants — the route is idempotent, so this is safe even if a token already exists via
+ * tenants - the route is idempotent, so this is safe even if a token already exists via
  * another path) or when within the refresh skew of expiry (mirrors the member-session
- * refresh pattern; also idempotent — an unexpired token is simply returned again).
+ * refresh pattern; also idempotent - an unexpired token is simply returned again).
  *
- * Returns null when brain-core does not (yet) serve the agent-token contract — verified
+ * Returns null when brain-core does not (yet) serve the agent-token contract - verified
  * live 2026-07-14: POST /tenants/{id}/agent-token answers 401 auth_token_missing to the
  * platform-service header, i.e. the production-agents route isn't deployed. In that case
  * the session must NOT fail: the caller falls back to the member token so reads keep
@@ -214,7 +214,7 @@ async function getProductionAgentToken(tenantId: string): Promise<string | null>
   } catch (err) {
     const reason = err instanceof TenancyApiError ? (err.reason ?? `HTTP ${err.status}`) : String(err);
     console.warn(
-      `[brain-auth] agent-token mint for ${tenantId} failed (${reason}) — ` +
+      `[brain-auth] agent-token mint for ${tenantId} failed (${reason}) - ` +
         (stored ? "using stored (possibly stale) agent token" : "no agent token; propose will 403 until core ships the agent contract"),
     );
     return stored?.token ?? null;
@@ -226,7 +226,7 @@ function toProductionCached(session: TenantSessionShape, fallbackTenantId: strin
   return {
     token: session.token,
     // Real per-tenant agent principal (production-agents contract). When core can't mint
-    // one yet, mirror the member token — reads work, propose 403s honestly (never faked).
+    // one yet, mirror the member token - reads work, propose 403s honestly (never faked).
     agentToken: agentToken ?? session.token,
     tenantId: session.member?.tenantId ?? fallbackTenantId,
     refreshToken: session.refresh_token,
@@ -246,14 +246,14 @@ export async function registerBrainSession(
   agentToken?: string,
 ): Promise<void> {
   // Tenant creation hands the agent token in directly; invite-consume (no agent in that
-  // response) resolves the tenant's stored token — minting it idempotently if missing.
+  // response) resolves the tenant's stored token - minting it idempotently if missing.
   const agent = agentToken ?? (await getProductionAgentToken(tenantId));
   cache.set(appUserId, toProductionCached(session, tenantId, agent));
 }
 
 /**
  * Staging demo-token flow (per the Brain staging integration guide): POST /demo/token with
- * an empty JSON body, no auth header — no signup, no secret. Returns ONE token good for
+ * an empty JSON body, no auth header - no signup, no secret. Returns ONE token good for
  * every scope the staging tenant needs (raw:read/write, ledger:read, wiki:*); staging has no
  * member/agent token split, so it doubles as both here.
  */
@@ -319,14 +319,14 @@ async function provisionSession(): Promise<CachedSession> {
   if (!memberToken) {
     throw new Error(
       "brain-core /demo/provision-run returned no member token (tokens.member.token). The " +
-        "members/approval surface requires the user-principal token — cannot start the session.",
+        "members/approval surface requires the user-principal token - cannot start the session.",
     );
   }
   const exp = Math.floor(Date.now() / 1000) + (json.expires_in ?? 30 * 60);
   return { token: memberToken, agentToken, secondApproverToken, tenantId: json.tenant_id, exp };
 }
 
-/** Local in-process minting — dev fallback only. Mirrors brain-core tools/dev-token. */
+/** Local in-process minting - dev fallback only. Mirrors brain-core tools/dev-token. */
 async function mintLocalSession(appUserId: string, now: number): Promise<CachedSession> {
   if (brainConfig.devTenantId === undefined) {
     throw new Error("local-key mode requires BRAIN_DEV_TENANT_ID (the tenant to mint for).");
@@ -360,7 +360,7 @@ async function mintLocalSession(appUserId: string, now: number): Promise<CachedS
   return { token, agentToken: token, tenantId: brainConfig.devTenantId, exp };
 }
 
-/** Test/maintenance hook — drop all cached sessions. */
+/** Test/maintenance hook - drop all cached sessions. */
 export function clearBrainTokenCache(): void {
   cache.clear();
   inflight.clear();

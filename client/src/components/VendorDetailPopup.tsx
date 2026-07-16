@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, useEffect } from "react";
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* ── Title case helper - used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")

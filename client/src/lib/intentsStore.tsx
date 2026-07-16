@@ -19,8 +19,8 @@ export interface IntentRecord {
   /** True once an operator declined a non-rejected proposal. */
   declined: boolean;
   /** Human-approval progress, set from brain-core's approve response.
-      "awaiting_second" — one approval recorded, core still needs another;
-      "approved"        — core accepted it (leaves the needs-review queue). */
+      "awaiting_second" - one approval recorded, core still needs another;
+      "approved"        - core accepted it (leaves the needs-review queue). */
   approvalState?: "awaiting_second" | "approved";
 }
 

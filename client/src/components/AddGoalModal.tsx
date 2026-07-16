@@ -4,7 +4,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import { useQuery } from "@tanstack/react-query";
 import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
 
-/* AddGoalModal — Figma 4074:65865 ("New Goal").
+/* AddGoalModal, Figma 4074:65865 ("New Goal").
    Same modal chrome as the Review popup (440px, rounded-24,
    #11141b BG, blurred 56px title bar, #1d2132 stroke). The body
    scrolls when content exceeds viewport height. */
@@ -86,7 +86,7 @@ const Chip = ({
   </button>
 );
 
-/* Figma 4077:66106 — amber-filled circle (#4A2300) with an inverted
+/* Figma 4077:66106, amber-filled circle (#4A2300) with an inverted
    exclamation glyph (#FF9500). The inner glyph is the 12px icon offset
    2px in from each edge of the 16px circle, matching the Figma layers. */
 const HintIcon = () => (
@@ -176,7 +176,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
     amountTouched && (amountEmpty ? "Enter a target amount." : amountInvalid ? "Amount must be greater than zero." : "");
 
   /* Build the live ranked list. The new goal joins the anchors and is
-     re-sorted by priority on every slider tick — higher priority bubbles
+     re-sorted by priority on every slider tick. Higher priority bubbles
      it up the list in real time. If the user hasn't typed a name yet we
      keep the original "Your new goal will go here" placeholder copy. */
   const rankedList = useMemo(() => {
@@ -216,7 +216,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
           data-testid="add-goal-modal"
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
-          {/* Title bar — Figma 4074:65866. */}
+          {/* Title bar, Figma 4074:65866. */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
               New Goal
@@ -230,7 +230,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
             </DialogPrimitive.Close>
           </div>
 
-          {/* Scrollable body — gap-24, p-24 per Figma. */}
+          {/* Scrollable body, gap-24, p-24 per Figma. */}
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
             <DialogPrimitive.Description
               id="add-goal-modal-description"
@@ -256,7 +256,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               </div>
             </div>
 
-            {/* Brain hint card — dynamic recommendation per selected category */}
+            {/* Brain hint card: dynamic recommendation per selected category */}
             <RecommendationCard category={category} />
 
             {/* Goal name */}
@@ -362,7 +362,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                       Higher Priority
                     </p>
                   </div>
-                  {/* Slider — native range hidden over a styled track + knob. */}
+                  {/* Slider: native range hidden over a styled track + knob. */}
                   <div className="relative h-[32px] w-full mt-[8px]">
                     <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[6px] bg-[#222737] rounded-[3px]" />
                     <div

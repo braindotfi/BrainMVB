@@ -122,7 +122,7 @@ const FinancesIconInactive = () => (
   </div>
 );
 
-/* Review icon — Figma 4062:44310 (inactive) / 4062:44311 (active) */
+/* Review icon - Figma 4062:44310 (inactive) / 4062:44311 (active) */
 const ReviewIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute h-[20px] left-[3px] top-[3px] w-[18px]">
@@ -149,7 +149,7 @@ const ReviewIconInactive = () => (
   </div>
 );
 
-/* Rules icon — Figma 4062:44620 (inactive) / 4062:44617 (active) */
+/* Rules icon - Figma 4062:44620 (inactive) / 4062:44617 (active) */
 const RulesIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%_8.33%]">
@@ -211,7 +211,7 @@ const SettingsIconInactive = () => (
   </div>
 );
 
-/* Notification counter badge — Figma 3876:70929 (Counter)
+/* Notification counter badge - Figma 3876:70929 (Counter)
    bg #7631ee, text #240757 (dark purple), rounded-[4px], min-w-[16px], p-[2px] */
 const NotificationBadge = ({ count, testId }: { count: number; testId?: string }) => (
   <div
@@ -249,7 +249,7 @@ type NavItem = {
   InactiveIcon: () => JSX.Element;
 };
 
-/* Vendors icon — Figma-matched PNG assets (active/inactive) */
+/* Vendors icon - Figma-matched PNG assets (active/inactive) */
 const VendorsIconActive = () => (
   <img alt="" className="shrink-0 size-[24px]" src={vendorsActiveIcon} />
 );
@@ -267,7 +267,7 @@ const MAIN_NAV: NavItem[] = [
   { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
 
-/* Audit Log icon — Figma-matched PNG assets (active/inactive) */
+/* Audit Log icon - Figma-matched PNG assets (active/inactive) */
 const AuditLogIconActive = () => (
   <img alt="" className="shrink-0 size-[24px]" src={auditLogActiveIcon} />
 );
@@ -290,7 +290,7 @@ const AddSourceIcon = () => (
 export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSource }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  // Live intents needing review only — never inflate the badge with mock proposals.
+  // Live intents needing review only - never inflate the badge with mock proposals.
   const reviewItemsCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
 
   const isActive = (path: string) => {
@@ -449,7 +449,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
           </div>
         </div>
 
-        {/* Bottom buttons — Add Source + Logout */}
+        {/* Bottom buttons - Add Source + Logout */}
         <div className="flex flex-col gap-[8px] mx-[7px] mb-[7px] shrink-0">
           {onAddSource && (
             <button

@@ -64,7 +64,7 @@ function formatConverted(parsed: { sign: "" | "-"; value: number; decimals: numb
 function reformat(amount: string | number, symbol: string, rate: number): string {
   const parsed = parseAmount(amount);
   if (parsed) return formatConverted(parsed, symbol, rate);
-  // Fallback: couldn't parse a number — just swap the leading symbol.
+  // Fallback: couldn't parse a number - just swap the leading symbol.
   const s = String(amount).trim();
   if (!s) return s;
   let sign = "";

@@ -28,7 +28,7 @@ interface TenancyStatus {
 
 /* Settings → Team. Members & approval authority, backed by the REAL brain-core API
    through the BFF (member/user-principal token). This page never enforces anything
-   itself — it reads and mutates; core is the sole authority and its refusals surface
+   itself - it reads and mutates; core is the sole authority and its refusals surface
    verbatim (e.g. last_admin_protected). */
 
 const ALL_DOMAINS: ApprovalDomain[] = ["ap", "ar", "treasury", "payroll", "reconciliation"];
@@ -114,7 +114,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
                 style={{ background: "rgba(108,119,157,0.1)", color: "#6c779d", border: "1px solid rgba(108,119,157,0.3)" }}
                 data-testid={`pill-invited-${member.id}`}
               >
-                Invited — awaiting signup
+                Invited - awaiting signup
               </span>
             )}
             {!member.active && (
@@ -210,7 +210,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
         return;
       }
       // Production tenancy: issue the invite link for the new member. If this second
-      // call fails, the member exists but has no invite — say exactly that, loudly.
+      // call fails, the member exists but has no invite - say exactly that, loudly.
       if (production) {
         const memberId: string | undefined = (body as { member?: { id?: string } })?.member?.id;
         if (memberId) {
@@ -233,7 +233,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
       toast({
         title: production ? "Invite sent" : "Member added",
         description: production
-          ? `${displayName.trim()} was invited — they'll appear as Active once they accept.`
+          ? `${displayName.trim()} was invited - they'll appear as Active once they accept.`
           : `${displayName.trim()} can now approve within their authority.`,
       });
       onClose();

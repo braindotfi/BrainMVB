@@ -31,16 +31,16 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 
-/* Brain Did widget icons (Figma 3839:43693) — green circle with checkmark */
+/* Brain Did widget icons (Figma 3839:43693), green circle with checkmark */
 const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
 const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
 
-/* Brain Detected widget icons (Figma 3839:43709) — orange circle with "i" */
+/* Brain Detected widget icons (Figma 3839:43709), orange circle with "i" */
 const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
 const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
-/* ─── Your Goals (Figma 3882:43037) — progress bars per goal ─── */
+/* Your Goals (Figma 3882:43037), progress bars per goal */
 type GoalRow = {
   id: string;
   name: string;
@@ -53,7 +53,7 @@ type GoalRow = {
 
 /* Initial four goals matching the original Figma mock-up. New goals
    created via the modal are appended to local state; nothing is
-   persisted yet — the wiring will land when brain-core is integrated. */
+   persisted yet. The wiring will land when brain-core is integrated. */
 const SEED_GOALS: GoalRow[] = [
   { id: "tax",       name: "Q2 tax reserve",       vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
   { id: "runway",    name: "Operating runway",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
@@ -122,7 +122,7 @@ const GoalProgress = ({ goal }: { goal: GoalRow }) => {
   );
 };
 
-/* Add Goal pill — Figma 4074:65844. Amber pill (#4a2300 / #ff9500),
+/* Add Goal pill, Figma 4074:65844. Amber pill (#4a2300 / #ff9500),
    matches the same treatment as the Settings "Edit" button. */
 const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
   <button
@@ -411,7 +411,7 @@ function formatDatesInText(text: string, currency: CurrencyCode): string {
   Red = negative / outflow / "over" / "exceeded" / "shortfall" / "decline". */
 function detectSentimentColor(text: string): string {
   const lower = text.toLowerCase();
-  // 1) Negative / outflow / danger signals — always red, highest priority
+  // 1) Negative / outflow / danger signals. Always red, highest priority
   const negative = [
     "over budget", "shortfall", "decline", "dropping", "fell",
     "negative", "deficit", "loss", "lost", "missed", "overdue", "late",
@@ -419,7 +419,7 @@ function detectSentimentColor(text: string): string {
     "overdraft", "bounced", "rejected", "failed", "unpaid",
   ];
   if (negative.some((w) => lower.includes(w))) return "text-[#d20344]";
-  // 2) Positive / inflow / good signals — green, checked before warning so that
+  // 2) Positive / inflow / good signals. Green, checked before warning so that
   //    an "upcoming inflow" is green (the inflow wins) not orange.
   const positive = [
     "saved", "surplus", "extra", "more than", "higher", "increase", "gained",
@@ -427,7 +427,7 @@ function detectSentimentColor(text: string): string {
     "good", "strong", "healthy", "positive", "inflow", "received", "collected",
   ];
   if (positive.some((w) => lower.includes(w))) return "text-[#42bf23]";
-  // 3) Warning / caution signals — orange, only when no positive signal present
+  // 3) Warning / caution signals. Orange, only when no positive signal present
   const warning = [
     "watch", "caution", "careful", "attention", "upcoming", "due soon",
     "approaching", "nearing", "almost", "limited", "tight", "constrained",
@@ -477,7 +477,7 @@ export function HomePage() {
   })();
   const greetingName = nameOverride || tenancy?.companyName || user?.name || "";
 
-  // Dynamic "last updated" timestamp — refreshes every 10s
+  // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
@@ -488,7 +488,7 @@ export function HomePage() {
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  /* Record opened directly from a Home widget — the proposal sheet (Brain
+  /* Record opened directly from a Home widget. The proposal sheet (Brain
      Detected), opened in place, mirroring the Review page surface. (Brain Did
      rows deep-link straight to /audit-log; they carry no Proposal object.) */
   const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
@@ -530,11 +530,11 @@ export function HomePage() {
   const handleReviewAction = (action: ProposalAction) => {
     if (!selectedReview) return;
     /* selectedReview is only ever set from the LIVE brain-core queue (the seeded
-       agent records open AgentProposalModal instead) — always ask core directly,
+       agent records open AgentProposalModal instead). Always ask core directly,
        never flip a client-side status for a live intent. */
     if (action === "approve") approveLive.mutate(selectedReview.id);
     else if (action === "reject") rejectLive.mutate(selectedReview.id);
-    // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
+    // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
   };
 
   /* Brain Did — live brain-core audit events only. */
@@ -545,7 +545,7 @@ export function HomePage() {
       .map((r) => ({ id: r.id, label: r.summary, onClick: () => navigate(`/audit-log?record=${r.id}`) }));
   }, [liveAuditRecords, navigate]);
 
-  /* Brain Detected — what Brain is advising for review. Mirrors the Review
+  /* Brain Detected. What Brain is advising for review. Mirrors the Review
      page: live brain-core PaymentIntents (primary), falling back to the seeded
      agent proposal records when the live queue is empty. Tapping opens the
      matching detail sheet in place. */
@@ -561,7 +561,7 @@ export function HomePage() {
       toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
     } else if (action === "acknowledge") {
       decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged — Brain won't re-raise this flag." });
+      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
     } else if (action === "undo") {
       decideAgentProposal(p.id, "undone_to_review");
       toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
@@ -597,7 +597,7 @@ export function HomePage() {
       ? brainAccounts.accounts.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0)
       : null;
   // No live ledger total → honest placeholder, never a fabricated figure (was "$86,993.42").
-  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "—";
+  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "-";
   const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : "";
 
   // Net cash flow per month from the live Ledger. With only inflows seeded today
@@ -744,7 +744,7 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Your Goals — hidden for now */}
+            {/* Your Goals - hidden for now */}
             {/* <GoalsSection /> */}
           </div>
         </div>
@@ -756,7 +756,7 @@ export function HomePage() {
         onComplete={finishOnboarding}
       />
 
-      {/* Brain Detected — seeded agent proposal sheet, opened in place */}
+      {/* Brain Detected - seeded agent proposal sheet, opened in place */}
       <AgentProposalModal
         proposal={homeAgent}
         open={homeAgent !== null}
@@ -765,7 +765,7 @@ export function HomePage() {
         pagerDisabled
       />
 
-      {/* Brain Detected — proposal sheet, opened in place */}
+      {/* Brain Detected - proposal sheet, opened in place */}
       <ProposalDetail
         proposal={selectedReview}
         currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
@@ -781,7 +781,7 @@ export function HomePage() {
         onAlwaysHandle={(p) => {
           setRuleDraft({
             kind: "automation",
-            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            name: p.counterparty ? `Auto clear ${p.counterparty}` : "Auto clear this payment",
             category: "bill",
             agent: p.agent,
             cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,

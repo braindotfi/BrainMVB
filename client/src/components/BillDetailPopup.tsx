@@ -44,10 +44,10 @@ function humanizeFlag(flag: string): string {
 }
 
 function fmtDue(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
-    ? "—"
+    ? "-"
     : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
@@ -271,7 +271,7 @@ export function BillDetailPopup({
                     ) : (
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
                         {isFlagged
-                          ? "This hasn't been proposed yet — the flags above need a human look first. You'll approve before any money moves."
+                          ? "This hasn't been proposed yet. The flags above need a human look first. You'll approve before any money moves."
                           : overdue
                           ? "This is past due and hasn't been proposed yet. You'll approve before any money moves."
                           : "Brain hasn't proposed this yet. When it does, you'll approve before any money moves."}

@@ -5,9 +5,9 @@ import type { AgentProposal } from "@/lib/agentProposals";
 /* ── Shared source of truth for the Activity feed ──────────────────────────────
    The Activity page's "Brain Did" tab renders off the data declared here.
    (The Home page's "Brain Did" widget moved to a live brain-core read in
-   Phase 1b — see client/src/lib/brainAudit.ts's useBrainAuditRecords — and
+   Phase 1b. See client/src/lib/brainAudit.ts's useBrainAuditRecords, and
    the Review page's "Needs Review" queue + Home's "Brain Detected" widget
-   moved earlier in Phase 1a — see client/src/lib/brainQueue.ts. Neither
+   moved earlier in Phase 1a. See client/src/lib/brainQueue.ts. Neither
    reads from here anymore.) */
 
 export type ActivityType = "paid" | "moved" | "approved" | "rejected" | "postponed";
@@ -26,7 +26,7 @@ export type ActivityItemData = {
   /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open its record detail. */
   proposal?: Proposal;
   /** If this activity item is a decided agent proposal (the AgentProposalModal flow),
-      carry it so a tap re-opens that modal as a read-only receipt. */
+      carry it so a tap re-opens that modal as a read only receipt. */
   agentProposal?: AgentProposal;
   /** True when this row was synthesized from the fabricated agent-proposal demo
       surface (agentProposals.ts) — see deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
@@ -107,10 +107,10 @@ export function statusOverrideToAuditRecord(
     status === "executing" || status === "executed" ? "approved" : status;
   const summary =
     status === "executing" || status === "executed"
-      ? `Payment approved — ${proposal.counterparty ?? proposal.title}`
+      ? `Payment approved. ${proposal.counterparty ?? proposal.title}`
       : status === "rejected"
-        ? `Payment rejected — ${proposal.counterparty ?? proposal.title}`
-        : `Payment postponed — ${proposal.counterparty ?? proposal.title}`;
+        ? `Payment rejected. ${proposal.counterparty ?? proposal.title}`
+        : `Payment postponed. ${proposal.counterparty ?? proposal.title}`;
   const nowMs = Date.now();
   const occurredAtLabel = new Date(nowMs).toLocaleString("en-US", {
     month: "short",
@@ -148,7 +148,7 @@ function decisionTimeLabel(ms: number): string {
   );
 }
 
-/** Map a user decision on an agent proposal (the AgentProposalModal flow —
+/** Map a user decision on an agent proposal (the AgentProposalModal flow -
     decideAgentProposal in agentProposals.ts) onto an activity item so the
     Activity page reflects approvals/rejections made on that surface. */
 export function agentDecisionToActivity(
@@ -175,7 +175,7 @@ export function agentDecisionToActivity(
 
 /** Map a user decision on an agent proposal into an AuditRecord for the
     canonical Audit Log. pending_next_batch because the decision is a local,
-    in-session action with no brain-core anchor yet — same convention as
+    in-session action with no brain-core anchor yet. Same convention as
     statusOverrideToAuditRecord above. */
 export function agentDecisionToAuditRecord(
   p: AgentProposal,
@@ -185,8 +185,8 @@ export function agentDecisionToAuditRecord(
 ): AuditRecord {
   const summary =
     decision === "approved"
-      ? `Proposal approved — ${p.title}`
-      : `Proposal rejected — ${p.title}`;
+      ? `Proposal approved. ${p.title}`
+      : `Proposal rejected. ${p.title}`;
   const label = decisionTimeLabel(decidedAtMs);
   return {
     id: `${p.id}--agent-audit-${decision}`,
@@ -211,7 +211,7 @@ export function agentDecisionToAuditRecord(
 }
 
 // Fabricated settled-history rows (Adobe/Comcast/USDC/payroll) REMOVED (2026-07-03
-// honesty pass) — they asserted completed money movements that never happened. Real
+// honesty pass). They asserted completed money movements that never happened. Real
 // activity history comes from brain-core executed intents / audit log once Fork B lands.
 export const TODAY_ACTIVITIES: ActivityItemData[] = [];
 

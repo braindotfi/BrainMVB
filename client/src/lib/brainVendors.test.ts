@@ -4,7 +4,7 @@ import { mapCounterpartyToVendor, type BrainCounterparty } from "./brainVendors"
 /**
  * mapCounterpartyToVendor's only real branch is trust-status derivation from
  * brain-core's actual risk fields. This pins the honesty invariant: only
- * `risk_level` in {high, sanctioned} may produce "under_review" — everything
+ * `risk_level` in {high, sanctioned} may produce "under_review" - everything
  * else (including a merely "unverified" counterparty) defaults "new", because
  * brain-core reports no payment history here to ever justify "known"/"trusted".
  */
@@ -28,7 +28,7 @@ describe("mapCounterpartyToVendor", () => {
     expect(v.flags).toEqual([]);
   });
 
-  it("never fabricates 'trusted'/'known' — an unverified counterparty still reads as new", () => {
+  it("never fabricates 'trusted'/'known' - an unverified counterparty still reads as new", () => {
     const v = mapCounterpartyToVendor(cp({ verified_status: "unverified" }));
     expect(v.trustStatus).toBe("new");
   });

@@ -8,7 +8,7 @@ import type { ProposalStatus } from "./proposalTypes";
    reflected in the other (a proposal approved from Home leaves the Home queue
    and shows as executing on Review, and vice-versa).
 
-   No backend, no localStorage — module state behind useSyncExternalStore, the
+   No backend, no localStorage - module state behind useSyncExternalStore, the
    same pattern as rulesStore.ts. Every transition is user-initiated; there is no
    setTimeout / auto-settle anywhere.
    ──────────────────────────────────────────────────────────────────────────── */

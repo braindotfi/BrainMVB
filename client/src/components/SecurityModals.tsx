@@ -3,8 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Security modals ───────────────────────────────────────
-   - LoginHistoryModal:  recent sign-in sessions + sign-out-others.
-   - ChangePinModal:     3-step (current → new → confirm) PIN flow.            */
+   LoginHistoryModal:  recent sign-in sessions + sign-out-others.
+   ChangePinModal:     3-step (current, new, confirm) PIN flow.            */
 
 const CloseIcon = () => (
   <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -210,13 +210,13 @@ export function LoginHistoryModal({
             </Dialog.Close>
           </div>
 
-          {/* Body — Figma 4569:61431 */}
+          {/* Body - Figma 4569:61431 */}
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
             <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
               Devices and browsers that recently signed in to your Brain account.
             </p>
 
-            {/* List container — Figma 4569:61474.
+            {/* List container - Figma 4569:61474.
                 Height hugs content; capped at 216px (3 rows) with internal
                 scroll if more sessions ever exist. */}
             <div className="bg-[#0a0c10] max-h-[216px] overflow-y-auto rounded-[16px] w-[432px]">
@@ -243,7 +243,7 @@ export function LoginHistoryModal({
               </div>
             </div>
 
-            {/* Sign Out button — Figma 4569:61467 */}
+            {/* Sign Out button - Figma 4569:61467 */}
             <button
               type="button"
               data-testid="button-signout-others"
@@ -290,7 +290,7 @@ function PinInput({ value, onChange, testIdPrefix }: { value: string; onChange: 
             ref={(el) => { refs.current[i] = el; }}
             type="password"
             inputMode="numeric"
-            autoComplete="one-time-code"
+            autoComplete="one time code"
             maxLength={1}
             value={ch}
             data-testid={`${testIdPrefix}-${i}`}
@@ -404,7 +404,7 @@ export function ChangePinModal({
         >
           <Dialog.Description className="sr-only">Update your 6-digit transaction PIN.</Dialog.Description>
 
-          {/* Title + Controls — Figma 4575:61705 */}
+          {/* Title + Controls - Figma 4575:61705 */}
           <div className="relative h-[56px] w-full bg-[#0a0c10] border-b border-[#1d2132]">
             <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Change Pin
@@ -418,7 +418,7 @@ export function ChangePinModal({
             </Dialog.Close>
           </div>
 
-          {/* Body — Figma 4575:61709 / 4575:61726.
+          {/* Body - Figma 4575:61709 / 4575:61726.
               Figma frame is 400 × 336: header 56, body inset 39px sides, top
               39px (= 95−56), button gap 24px (= 247−95−body), bottom 41px. */}
           <div className="px-[39px] pt-[39px] pb-[41px] flex flex-col w-full">
