@@ -21,6 +21,7 @@ import {
   listAuditEvents,
   ingestRawDocument,
   extractRawDocument,
+  askWikiQuestion,
   BrainApiError,
   type RawSourceType,
   type WikiEvidence,
@@ -209,10 +210,16 @@ You can explain concepts and surface general guidance, but do not give regulated
   });
 
   /**
-   * Build deterministic grounding from the ledger (accounts, recent txs,
-   * counterparties).  This replaces the fuzzy Wiki Q&A which misread "accounts"
-   * and caused hallucinated balances.  Falls back to Wiki only for purely conceptual
-   * questions where no ledger data is expected.
+   * Deterministic ledger grounding (accounts, recent txs, counterparties, …),
+   * fed to local Anthropic. This is now the FALLBACK path for /api/assistant/chat
+   * (used when brain-core's wiki/question is unavailable) and still the primary
+   * grounding for /api/rules/suggestions.
+   *
+   * Chat's primary path is brain-core's own POST /wiki/question: it grounds with
+   * brain-core's server-side key, filters evidence against real ledger ids
+   * (anti-hallucination), and returns per-answer cited evidence — a meaningfully
+   * different (and better) contract than the old fuzzy Wiki Q&A this comment used
+   * to warn about, which misread "accounts" and hallucinated balances client-side.
    */
   async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
     // Fetch ALL tenant data in parallel — the assistant should have the full picture.
@@ -379,13 +386,34 @@ You can explain concepts and surface general guidance, but do not give regulated
       return res.status(400).json({ error: "invalid_messages" });
     }
 
-    // ─── Deterministic ledger grounding (no more fuzzy Wiki for balances) ───
+    const lastUserContent = parsed.data.messages[parsed.data.messages.length - 1].content;
+
+    // ─── PRIMARY: brain-core wiki/question — per-answer cited evidence, grounded
+    // server-side with brain-core's own key. ponytail: wiki/question takes a
+    // single question, so multi-turn follow-up context (earlier messages) is
+    // dropped here; revisit if users complain about lost follow-ups. ───
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const wiki = await askWikiQuestion(token, lastUserContent);
+      if (wiki.raw.trim().length > 0) {
+        return res.json({
+          reply: wiki.raw,
+          sources: wiki.evidence,
+          grounded: true,
+          engine: "wiki",
+        });
+      }
+    } catch (e) {
+      console.warn("[Assistant] wiki/question failed, falling back to ledger grounding:", (e as Error)?.message);
+    }
+
+    // ─── FALLBACK: deterministic ledger grounding + local Anthropic ───
     let grounding = "";
     let sources: WikiEvidence[] = [];
     let dataAvailable = false;
     try {
       const { token, tenantId } = await getBrainSession(req.session.userId!);
-      const built = await buildGrounding(token, tenantId, parsed.data.messages[parsed.data.messages.length - 1].content);
+      const built = await buildGrounding(token, tenantId, lastUserContent);
       grounding = built.text;
       sources = built.sources;
       dataAvailable = built.available;
@@ -407,6 +435,7 @@ You can explain concepts and surface general guidance, but do not give regulated
           sources,
           grounded: true,
           assistantOffline: true,
+          engine: "grounding-fallback",
         });
       }
       return res.status(503).json({
@@ -424,6 +453,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         sources: [],
         grounded: false,
         ungrounded: true,
+        engine: "grounding-fallback",
       });
     }
 
@@ -441,6 +471,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         reply: reply || "Sorry, I couldn't generate a response. Please try again.",
         sources,
         grounded: grounding.length > 0,
+        engine: "anthropic",
       });
     } catch (err) {
       console.error("[Assistant] chat failed:", err);
