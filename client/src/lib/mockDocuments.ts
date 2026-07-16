@@ -218,6 +218,103 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
     proposalId: "auto-lease",
     documentHref: "#",
   },
+
+
+  /* invoice: Apex Manufacturing (batch payment evidence)
+     Backs the agent proposal pr_002 document_stack. */
+  {
+    id: "INV-8841",
+    kind: "invoice",
+    title: "Apex Manufacturing, July invoice",
+    counterparty: "Apex Manufacturing",
+    amount: 5400,
+    dateLabel: "Due Jul 15, 2026",
+    dateCaption: "Due",
+    status: "unpaid",
+    payeeAccountLast4: "6610",
+    billingPeriod: "Production run · July",
+    lineItems: [{ label: "Manufacturing batch #2210", amount: 5400 }],
+    provenance: {
+      source: "QuickBooks Online",
+      ingestedAtLabel: "Ingested Jul 1, 2026 · 8:15 AM ET",
+      enum: "CONNECTOR_SYNC",
+      ledgerRef: "qbo:bill:INV-8841",
+    },
+    proposalId: "pr_002",
+    documentHref: "#",
+  },
+
+  /* invoice: Northwind Logistics (batch payment evidence)
+     Backs the agent proposal pr_002 document_stack. */
+  {
+    id: "INV-0392",
+    kind: "invoice",
+    title: "Northwind Logistics, freight Jul",
+    counterparty: "Northwind Logistics",
+    amount: 6250,
+    dateLabel: "Due Jul 16, 2026",
+    dateCaption: "Due",
+    status: "unpaid",
+    payeeAccountLast4: "6610",
+    billingPeriod: "Freight · July",
+    lineItems: [{ label: "Logistics services PO-2214", amount: 6250 }],
+    provenance: {
+      source: "Email attachment · ap@northwind.com",
+      ingestedAtLabel: "Ingested Jul 1, 2026 · 9:22 AM ET",
+      enum: "EMAIL_INGEST",
+      ledgerRef: "email:northwind:INV-0392",
+    },
+    proposalId: "pr_002",
+    documentHref: "#",
+  },
+
+  /* invoice: Corta Print Co. (batch payment evidence)
+     Backs the agent proposal pr_002 document_stack. */
+  {
+    id: "INV-1177",
+    kind: "invoice",
+    title: "Corta Print Co., printing Jul",
+    counterparty: "Corta Print Co.",
+    amount: 3200,
+    dateLabel: "Due Jul 17, 2026",
+    dateCaption: "Due",
+    status: "unpaid",
+    payeeAccountLast4: "6610",
+    billingPeriod: "Print run · July",
+    lineItems: [{ label: "Brochure printing PO-2217", amount: 3200 }],
+    provenance: {
+      source: "Email attachment · billing@cortaprint.co",
+      ingestedAtLabel: "Ingested Jul 1, 2026 · 10:05 AM ET",
+      enum: "EMAIL_INGEST",
+      ledgerRef: "email:corta:INV-1177",
+    },
+    proposalId: "pr_002",
+    documentHref: "#",
+  },
+
+  /* invoice: INV-7719 (dispute evidence)
+     Backs the agent proposal pr_006 / aa_006 document_stack. */
+  {
+    id: "INV-7719",
+    kind: "invoice",
+    title: "Customer invoice, chargeback dispute",
+    counterparty: "Acme Retail",
+    amount: 840,
+    dateLabel: "Issued Jun 2, 2026",
+    dateCaption: "Issued",
+    status: "disputed",
+    payeeAccountLast4: "4821",
+    billingPeriod: "Jun 1 – Jun 30, 2026",
+    lineItems: [{ label: "Widget order #7719", amount: 840 }],
+    provenance: {
+      source: "Stripe",
+      ingestedAtLabel: "Ingested Jun 2, 2026 · 11:30 AM ET",
+      enum: "CONNECTOR_SYNC",
+      ledgerRef: "stripe:inv:INV-7719",
+    },
+    proposalId: "pr_006",
+    documentHref: "#",
+  },
 ];
 
 /* Dev-only: a document's line items (when present) must sum to its amount. */

@@ -57,7 +57,7 @@ export interface AccountCardData {
 export type ScenarioModule =
   | { kind: "account_comparison"; old: AccountCardData; next: AccountCardData }
   | { kind: "entity_comparison"; entities: [AccountCardData, AccountCardData]; sharedNote: string }
-  | { kind: "document_stack"; title?: string; docs: { label: string; meta: string }[] }
+  | { kind: "document_stack"; title?: string; docs: { label: string; meta: string; documentId?: string }[] }
   | { kind: "message_preview"; draft: string }
   | {
       kind: "account_flow";
@@ -207,11 +207,11 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
-      title: "Invoices",
+      title: "Linked Evidence",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15", documentId: "INV-8841" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16", documentId: "INV-0392" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17", documentId: "INV-1177" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -405,7 +405,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     scenarioModule: {
       kind: "document_stack",
       docs: [
-        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2" },
+        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2", documentId: "INV-7719" },
         { label: "Delivery confirmation", meta: "signed · Jun 6 · tracking 1Z999AA1" },
         { label: "Chargeback notice", meta: "reason: 'item not received' · respond by Jul 19" },
       ],
@@ -778,11 +778,11 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
-      title: "Invoices",
+      title: "Linked Evidence",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15", documentId: "INV-8841" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16", documentId: "INV-0392" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17", documentId: "INV-1177" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -942,7 +942,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     scenarioModule: {
       kind: "document_stack",
       docs: [
-        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2" },
+        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2", documentId: "INV-7719" },
         { label: "Delivery confirmation", meta: "signed · Jun 6 · tracking 1Z999AA1" },
         { label: "Chargeback notice", meta: "reason: 'item not received' · respond by Jul 19" },
       ],

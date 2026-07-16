@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   BookCheck,
   Check,
+  ChevronRight,
   ClipboardCheck,
   FileText,
   HandCoins,
@@ -28,6 +29,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
+import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
+import type { DocumentRecord } from "@/lib/documentTypes";
+import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import {
   RISK_META,
   useAgentDecisions,
@@ -164,6 +168,7 @@ function renderScenarioModule(
   editing: boolean,
   draft: string,
   setDraft: (v: string) => void,
+  onOpenDocument: (doc: DocumentRecord) => void,
 ) {
   switch (module.kind) {
     case "account_comparison": {
@@ -212,31 +217,37 @@ function renderScenarioModule(
       );
     case "document_stack":
       return (
-        <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
+        <div className="flex flex-col gap-[8px] items-start w-full" data-testid="module-document-stack">
           <SectionLabel>
             {module.title ?? "Linked Evidence"}
           </SectionLabel>
-          <div className="flex flex-col gap-[8px] w-full">
-            {module.docs.map((doc, i) => (
-              <div
+          {module.docs.map((doc, i) => {
+            const resolved = doc.documentId ? resolveDocument(doc.documentId) : undefined;
+            const clickable = !!resolved;
+            const onClick = () => {
+              if (resolved) onOpenDocument(resolved);
+            };
+            const Wrapper = clickable ? "button" : "div";
+            return (
+              <Wrapper
                 key={i}
-                className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[16px] flex items-start gap-[16px] w-full"
+                type={clickable ? "button" : undefined}
+                onClick={clickable ? onClick : undefined}
                 data-testid={`module-doc-${i}`}
+                className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
               >
-                <div className="flex items-center justify-center size-[40px] rounded-[8px] bg-[#1d2132] shrink-0">
-                  <FileText size={18} className="text-[#a8b9f4]" />
-                </div>
-                <div className="flex flex-col gap-[6px] min-w-0 flex-1 justify-center">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
+                <div className="flex flex-1 gap-[16px] items-center min-w-px">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
+                    Document
+                  </span>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                     {doc.label}
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[12px] leading-[14px] text-[#6c779d] tracking-[-0.24px] truncate">
-                    {doc.meta}
-                  </p>
                 </div>
-              </div>
-            ))}
-          </div>
+                {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
+              </Wrapper>
+            );
+          })}
         </div>
       );
     case "message_preview":
@@ -582,6 +593,8 @@ export function AgentProposalModal({
   const { format } = useCurrency();
   const decisions = useAgentDecisions();
   const [viewingEvidence, setViewingEvidence] = useState<EvidenceLine | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
+  const [documentOpen, setDocumentOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -768,6 +781,7 @@ export function AgentProposalModal({
                 editing,
                 draft,
                 setDraft,
+                (doc) => { setViewingDocument(doc); setDocumentOpen(true); },
               )}
               {/* Auto-approved: "Auto-approved because: ..." */}
               {isAutoApproved && proposal.approvedAutomaticallyMeta && (
@@ -1094,6 +1108,13 @@ export function AgentProposalModal({
             line={viewingEvidence}
             source={proposal.source}
             onClose={() => setViewingEvidence(null)}
+          />
+
+          {/* Document viewer for linked evidence in document_stack modules */}
+          <DocumentViewerPopup
+            document={viewingDocument}
+            open={documentOpen}
+            onOpenChange={setDocumentOpen}
           />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
