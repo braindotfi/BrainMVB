@@ -235,7 +235,7 @@ export function ProposalDetail({
               const badge = getStatusBadge(proposal.severity);
               const BadgeIcon = badge.Icon;
               return (
-                <div className="flex flex-col gap-[14px] items-start w-full border-b border-[#1d2132] pb-[24px]">
+                <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
                   <span className={`inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
                     {BadgeIcon && <BadgeIcon size={12} className="shrink-0" />}
                     {badge.label}
@@ -261,7 +261,7 @@ export function ProposalDetail({
             })()}
 
             {/* ── Why Brain Suggested This: rationale + optional bullets ─────── */}
-            <div className="flex flex-col gap-[12px] items-start w-full">
+            <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel>Why Brain Suggested This</SectionLabel>
               <p
                 id="proposal-detail-rationale"
@@ -284,7 +284,7 @@ export function ProposalDetail({
             </div>
 
             {/* ── Confidence: score + band ──────────────────────────────────── */}
-            <div className="flex flex-col gap-[10px] items-start w-full">
+            <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel
                 trailing={
                   <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap" data-testid="text-confidence">
@@ -303,7 +303,7 @@ export function ProposalDetail({
 
             {/* ── What Brain Found: facts table ────────────────────────────── */}
             {proposal.facts && proposal.facts.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>What Brain Found</SectionLabel>
                 <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
                   {proposal.facts.map((fact, i) => {
@@ -336,7 +336,7 @@ export function ProposalDetail({
 
             {/* ── Linked Evidence ────────────────────────────────────────────── */}
             {proposal.evidence.length > 0 && (
-              <div className="flex flex-col gap-[8px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>Linked Evidence</SectionLabel>
                 {proposal.evidence.map((ev, i) => {
                   const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
@@ -398,7 +398,7 @@ export function ProposalDetail({
 
             {/* ── Recommended Action ───────────────────────────────────────── */}
             {proposal.recommendedAction && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>Recommended Action</SectionLabel>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
                   {proposal.recommendedAction}
@@ -408,7 +408,7 @@ export function ProposalDetail({
 
             {/* ── What Happens Next ────────────────────────────────────────── */}
             {proposal.whatHappensNext && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>What Happens Next</SectionLabel>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
                   {proposal.whatHappensNext}
@@ -418,7 +418,7 @@ export function ProposalDetail({
 
             {/* ── Sweep math: reconciling mono breakdown (only when present) ── */}
             {proposal.sweepMath && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>The Math: Your Account Is Not Drained</SectionLabel>
                 <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]">
                   <div className="flex items-center justify-between gap-[12px]">
@@ -458,7 +458,7 @@ export function ProposalDetail({
 
             {/* ── If This Is Wrong: risk + policy (only when risk text is set) ── */}
             {proposal.risk && (
-              <div className="flex flex-col gap-[10px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>If This Is Wrong</SectionLabel>
                 <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
                   <ShieldAlert size={16} className="shrink-0" style={{ color: ALERT }} />
@@ -482,7 +482,7 @@ export function ProposalDetail({
             )}
 
             {/* ── Actions footer ────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-[12px] items-start w-full">
+            <div className="flex flex-col gap-[16px] items-start w-full">
               {proposal.actions.verifyFirst && (
                 <button
                   type="button"
@@ -660,7 +660,7 @@ function AutoHandledReceipt({
   return (
     <>
       {/* ── Hero section: Auto-Approved badge + title + amount + subtitle ─── */}
-      <div className="flex flex-col gap-[14px] items-start w-full border-b border-[#1d2132] pb-[24px]">
+      <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
         <span
           data-testid="chip-auto-handled"
           className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap bg-[#123509] text-[#42bf23] border border-[rgba(66,191,35,0.2)]"
@@ -687,7 +687,7 @@ function AutoHandledReceipt({
       </div>
 
       {/* ── Why This Didn't Need Review ───────────────────────────────────── */}
-      <div className="flex flex-col gap-[12px] items-start w-full">
+      <div className="flex flex-col gap-[16px] items-start w-full">
         <SectionLabel>Why This Didn't Need Review</SectionLabel>
         <p
           id="proposal-detail-rationale"
@@ -711,7 +711,7 @@ function AutoHandledReceipt({
 
       {/* ── What happened: timeline (shown when no bullets, backward compat) ── */}
       {!proposal.bullets && proposal.handoffTimeline && proposal.handoffTimeline.length > 0 && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
+        <div className="flex flex-col gap-[16px] items-start w-full">
           <SectionLabel>What Happened</SectionLabel>
           <div className="flex flex-col w-full">
             {proposal.handoffTimeline.map((step, i, arr) => (
@@ -741,7 +741,7 @@ function AutoHandledReceipt({
 
       {/* ── What Brain Cleared ────────────────────────────────────────────── */}
       {proposal.clearedBecause && proposal.clearedBecause.length > 0 && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
+        <div className="flex flex-col gap-[16px] items-start w-full">
           <SectionLabel>What Brain Cleared</SectionLabel>
           <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
             {proposal.clearedBecause.map((fact, i) => {
@@ -773,7 +773,7 @@ function AutoHandledReceipt({
 
       {/* ── Recommended Action (for new Figma-style auto proposals) ──────── */}
       {proposal.recommendedAction && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
+        <div className="flex flex-col gap-[16px] items-start w-full">
           <SectionLabel>Recommended Action</SectionLabel>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
             {proposal.recommendedAction}
@@ -796,7 +796,7 @@ function AutoHandledReceipt({
           </>
         );
         return (
-          <div className="flex flex-col gap-[12px] items-start w-full">
+          <div className="flex flex-col gap-[16px] items-start w-full">
             <SectionLabel>The Rule That Authorized This</SectionLabel>
             {ruleResolves ? (
               <button
@@ -824,7 +824,7 @@ function AutoHandledReceipt({
       </div>
 
       {/* FOOTER: retroactive controls only. No approve/reject/postpone/verify. */}
-      <div className="flex flex-col gap-[12px] items-start w-full">
+      <div className="flex flex-col gap-[16px] items-start w-full">
         {paused && (
           <div
             data-testid="text-rule-paused-confirm"

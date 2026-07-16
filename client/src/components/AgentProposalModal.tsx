@@ -218,7 +218,7 @@ function renderScenarioModule(
       );
     case "document_stack":
       return (
-        <div className="flex flex-col gap-[8px] items-start w-full" data-testid="module-document-stack">
+        <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
           <SectionLabel>
             {module.title ?? "Linked Evidence"}
           </SectionLabel>
@@ -882,7 +882,7 @@ export function AgentProposalModal({
               {isAutoApproved && proposal.approvedAutomaticallyMeta ? (
                 <>
                   {/* Title + date stacked */}
-                  <div className="flex flex-col gap-[8px] items-start w-full">
+                  <div className="flex flex-col gap-[16px] items-start w-full">
                     <p
                       className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full"
                       data-testid="text-outcome-summary"
