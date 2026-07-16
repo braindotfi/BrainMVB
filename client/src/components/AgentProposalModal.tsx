@@ -31,6 +31,7 @@ import {
 import { useCurrency } from "@/lib/currencyContext";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
+import { docKindLabel } from "@/lib/documentTypes";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import {
   RISK_META,
@@ -238,7 +239,7 @@ function renderScenarioModule(
               >
                 <div className="flex flex-1 gap-[16px] items-center min-w-px">
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
-                    Document
+                    {resolved ? docKindLabel(resolved.kind) : "Document"}
                   </span>
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                     {doc.label}
