@@ -54,13 +54,36 @@ export interface BrainAnchor {
 }
 
 /** action → (eventType, plain-language summary prefix). Anything not listed
- *  here falls back to a generic "system event" reading — no invented eventType. */
+ *  here falls back to a generic "system event" reading — no invented eventType.
+ *
+ *  Verified against brain-core source (2026-07-16), not docs — grepped every
+ *  `action: "..."` / `action: '...'` audit emit call across services/execution,
+ *  services/api, services/wiki:
+ *   - services/execution/src/payment-intents/PaymentIntentService.ts:457,634,683,721,832,882,962,1131
+ *     (created/approved/rejected/cancelled/paused/resumed/execute.after/enqueued)
+ *     and :1351 (`approval_rejected`, a distinct action emitted from
+ *     `emitApprovalRejected` when an approve() CALL itself is rejected —
+ *     e.g. self-approval blocked, actor unresolved — separate from a human
+ *     explicitly rejecting the payment via `payment_intent.rejected`).
+ *   - services/execution/src/payment-intents/PaymentIntentService.ts:591
+ *     (`proposal.awaiting_second_approval` — fired when the first approval
+ *     lands but a second is still required; distinct from `.created`).
+ *   - services/execution/src/routes.ts:88,180,203 (execution.propose/approve/escalate).
+ *   - services/execution/src/members/routes.ts:380 (`member.changed`).
+ *   - services/wiki/src/routes/question.ts:52 (`wiki.question`).
+ *
+ *  No `auto_approved` or `postponed` action exists anywhere in brain-core —
+ *  see the ponytail note below for what that means for those two tabs. */
 const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: BrainAuditEvent) => string }> = {
   "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed — awaiting decision" },
+  "proposal.awaiting_second_approval": { eventType: "flagged", summary: () => "Payment awaiting second approval" },
   "payment_intent.approved": { eventType: "approved", summary: () => "Payment approved" },
   "payment_intent.rejected": { eventType: "rejected", summary: () => "Payment rejected" },
+  "approval_rejected": { eventType: "rejected", summary: () => "Approval attempt rejected" },
   "execution.approve": { eventType: "approved", summary: () => "Payment approved" },
   "execution.escalate": { eventType: "flagged", summary: () => "Payment escalated for review" },
+  "wiki.question": { eventType: "flagged", summary: () => "Assistant asked a question" },
+  "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
 };
 
 /** Honest event-type + summary derivation: use the known mapping, otherwise
@@ -71,6 +94,18 @@ function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: str
   // ponytail: no fabricated category for unmapped actions — the raw action id
   // is the honest label until this map grows to cover more of brain-core's
   // action vocabulary.
+  //
+  // "Auto-Approved" and "Postponed" tabs stay honestly near-empty: brain-core
+  // has NO `auto_approved` or `postponed` audit action (verified above) —
+  // "auto" clearance is a derived /actions status (proposed|approved
+  // PaymentIntent, see services/execution/src/actions/mapper.ts:17-19), not
+  // its own audit event, and "postpone" is a BrainMVB-local review-queue
+  // state that never calls brain-core (no server route). `payment_intent.
+  // paused`/`.cancelled` DO exist but are a different concept (an ops
+  // kill-switch hold and a pre-approval agent cancel, respectively) — mapping
+  // either to "postponed" would be inventing an equivalence brain-core
+  // doesn't make, so they're left unmapped (raw action id) until brain-core
+  // grows a real auto-approval / postpone event to key off of.
   return { eventType: "flagged", summary: e.action };
 }
 
