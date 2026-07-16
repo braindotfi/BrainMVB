@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus,
@@ -15,6 +16,7 @@ import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";
+import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -283,6 +285,7 @@ let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
+  const [, navigate] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const storageKey = `brain.chat.${user?.id ?? "anon"}`;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -844,7 +847,8 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                             (s.entityType === "account" && acctIds.has(s.entityId)) ||
                             (s.entityType === "transaction" && txIds.has(s.entityId)) ||
                             (s.entityType === "invoice" && invIds.has(s.entityId)) ||
-                            s.entityType === "member";
+                            s.entityType === "member" ||
+                            (s.entityType === "counterparty" && !!resolveVendor(s.entityId));
                           return isClickable ? (
                             <button
                               key={`${s.entityId}-${i}`}
@@ -855,6 +859,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (s.entityType === "transaction") setOpenTxId(s.entityId);
                                 else if (s.entityType === "invoice") setOpenBillId(s.entityId);
                                 else if (s.entityType === "member") openMemberDetail(s.entityId);
+                                else if (s.entityType === "counterparty") openVendorDetail(s.entityId, navigate);
                               }}
                               title={s.entityId}
                               className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
