@@ -4,12 +4,12 @@ import { getRule } from "./rulesStore";
 /* ── Single source of truth for opening a rule's RuleDetail ───────────────────
    Every RULE REFERENCE across the app (auto-handled receipt, Audit Log record
    popup, Rules page, settled record card) resolves the same way: look the rule
-   up by id in the rules store, and — only if it resolves — navigate to its
+   up by id in the rules store, and - only if it resolves - navigate to its
    existing `/rules/:id` route. Callers use `resolveRule` to decide whether to
    render a tappable link or plain "(rule unavailable)" text; they never
    duplicate the lookup. Navigation uses wouter's push `navigate`, so the browser
    back button returns the user to wherever they came from (receipt, audit
-   record). An unresolved id is a bug (dangling reference) — we `console.warn`
+   record). An unresolved id is a bug (dangling reference) - we `console.warn`
    loudly rather than fail silently. */
 
 export function resolveRule(

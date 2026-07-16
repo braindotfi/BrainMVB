@@ -4,7 +4,7 @@ import { type Server } from "node:http";
 import { type AddressInfo } from "node:net";
 
 /**
- * BFF safety invariants — the platform-side twins of brain-core's own invariants.
+ * BFF safety invariants - the platform-side twins of brain-core's own invariants.
  * Any change to server/brain/* MUST keep this suite green.
  *
  * brain-core is mocked at the HTTP (fetch) boundary; the live API is never hit.
@@ -12,13 +12,13 @@ import { type AddressInfo } from "node:net";
  * assertions cover the actual token routing / payload construction, not a stub.
  *
  * Covered:
- *   1. TOKEN ROUTING  — /propose uses the AGENT token and only it; reads,
+ *   1. TOKEN ROUTING  - /propose uses the AGENT token and only it; reads,
  *      member writes, and approve/reject use the MEMBER token, never the agent.
- *   2. NO ACTOR FIELD — no BFF-constructed request to core carries an `actor`
+ *   2. NO ACTOR FIELD - no BFF-constructed request to core carries an `actor`
  *      (ACTOR = SESSION; core derives it from the token subject).
- *   3. PROVISION FAIL-HARD — a provision-run lacking the member token throws a
+ *   3. PROVISION FAIL-HARD - a provision-run lacking the member token throws a
  *      clear error and does NOT silently fall back to agent-only.
- *   5. SECRETS BOUNDARY — the provision secret and the brain-core tokens are
+ *   5. SECRETS BOUNDARY - the provision secret and the brain-core tokens are
  *      never present in any response the BFF returns to the browser.
  *  (Invariant 4, rejection mapping, lives in
  *   client/src/lib/approvalRejections.test.ts.)
@@ -217,7 +217,7 @@ beforeEach(() => {
   approveCallCount = 0;
 });
 
-describe("Invariant 1 — token routing (agent vs member)", () => {
+describe("Invariant 1 - token routing (agent vs member)", () => {
   it("/propose sends the AGENT token to create the PaymentIntent, and the MEMBER token for the invoice read + policy evaluate", async () => {
     const { status } = await post("/api/brain/propose", { invoice_id: "inv_1" });
     expect(status).toBe(200);
@@ -232,7 +232,7 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
     expect(invoiceRead).toHaveLength(1);
     expect(invoiceRead[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
 
-    // The agent token is used for propose ONLY — nowhere else.
+    // The agent token is used for propose ONLY - nowhere else.
     const agentCalls = calls.filter((c) => c.auth === `Bearer ${AGENT_TOKEN}`);
     expect(agentCalls).toHaveLength(1);
     expect(agentCalls[0].url.endsWith("/payment-intents")).toBe(true);
@@ -264,7 +264,7 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
 
     const approve = callsEndingWith("/payment-intents/pi_123/approve");
     expect(approve).toHaveLength(2);
-    // First signature on the member token, second on the DISTINCT second-approver token — two
+    // First signature on the member token, second on the DISTINCT second-approver token - two
     // real member ids, so core's distinct-approver + actor-payee gates are genuinely satisfied.
     expect(approve[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(approve[1].auth).toBe(`Bearer ${SECOND_APPROVER_TOKEN}`);
@@ -316,7 +316,7 @@ describe("Invariant 1 — token routing (agent vs member)", () => {
   });
 });
 
-describe("Invariant 2 — no actor field in any BFF-constructed payload", () => {
+describe("Invariant 2 - no actor field in any BFF-constructed payload", () => {
   it("drops a client-supplied actor on propose and never adds one on approve/reject", async () => {
     // Client tries to smuggle an actor through every write path.
     await post("/api/brain/propose", { invoice_id: "inv_1", actor: "attacker@evil.co" });
@@ -331,7 +331,7 @@ describe("Invariant 2 — no actor field in any BFF-constructed payload", () => 
     }
   });
 
-  it("add-vendor forwards only identity fields — no actor, no payment/bank/trust fields", async () => {
+  it("add-vendor forwards only identity fields - no actor, no payment/bank/trust fields", async () => {
     await post("/api/brain/ledger/counterparties", {
       name: "Acme Supplies",
       display_name: "Acme",
@@ -365,7 +365,7 @@ describe("Invariant 2 — no actor field in any BFF-constructed payload", () => 
   });
 });
 
-describe("Invariant 3 — provision fail-hard on missing member token", () => {
+describe("Invariant 3 - provision fail-hard on missing member token", () => {
   it("throws a clear error (no silent agent-only fallback) when the provision-run omits the member token", async () => {
     provisionResponse = { tenant_id: TENANT_ID, agent_token: AGENT_TOKEN, expires_in: 1800 };
     clearBrainTokenCache();
@@ -387,7 +387,7 @@ describe("Invariant 3 — provision fail-hard on missing member token", () => {
   });
 });
 
-describe("Invariant 5 — secrets never returned to the browser", () => {
+describe("Invariant 5 - secrets never returned to the browser", () => {
   it("no response the BFF returns contains the provision secret or any brain-core token", async () => {
     const responses: unknown[] = [];
     responses.push((await post("/api/brain/propose", { invoice_id: "inv_1" })).json);
@@ -402,7 +402,7 @@ describe("Invariant 5 — secrets never returned to the browser", () => {
     expect(blob).not.toContain(MEMBER_TOKEN);
     expect(blob).not.toContain(AGENT_TOKEN);
 
-    // Sanity: the secret WAS sent to core (as the provision header) — proving the
+    // Sanity: the secret WAS sent to core (as the provision header) - proving the
     // assertion above isn't vacuous because provisioning never ran.
     const prov = callsEndingWith("/demo/provision-run");
     expect(prov.length).toBeGreaterThan(0);

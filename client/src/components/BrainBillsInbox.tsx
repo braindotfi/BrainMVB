@@ -86,7 +86,7 @@ export function BrainBillsInbox() {
 
           return (
             <div key={bill.id} className="flex flex-col gap-[8px] w-full">
-              {/* Bill row — entire card is tappable to open detail popup */}
+              {/* Bill row - entire card is tappable to open detail popup */}
               <div
                 role="button"
                 tabIndex={0}

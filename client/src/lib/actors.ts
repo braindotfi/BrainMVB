@@ -1,4 +1,4 @@
-/* Canonical actor / member registry — the people who can take governed actions
+/* Canonical actor / member registry - the people who can take governed actions
    (approve payments, change rules). Kept deliberately minimal: this is the seam
    the upcoming members/limits spec will grow into (roles, approval limits, the
    "within her $10K payroll limit" authority line). Until then it carries just the
@@ -8,7 +8,7 @@
 export interface Actor {
   id: string;
   email: string;
-  role: string; // e.g. "finance admin" — the muted role suffix on approval steps
+  role: string; // e.g. "finance admin" - the muted role suffix on approval steps
 }
 
 export const ACTORS: Actor[] = [
@@ -31,7 +31,7 @@ export function resolveActorRole(identifier?: string): string | undefined {
   return resolveActor(identifier)?.role;
 }
 
-/* Identity tokens for an actor — used by the segregation-of-duties guard to check
+/* Identity tokens for an actor - used by the segregation-of-duties guard to check
    an approver isn't also the payee. Includes the raw identifier plus the resolved
    email/id so a match is caught regardless of which form a payee row carries. */
 export function actorIdentityTokens(identifier?: string): string[] {

@@ -132,7 +132,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
             </div>
           </div>
 
-          {/* Stats widgets — NO border/stroke */}
+          {/* Stats widgets - NO border/stroke */}
           <div className="flex gap-[16px]">
             <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
               <TeamIcon />
@@ -230,7 +230,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
             </label>
             <div className="flex items-center gap-[8px]">
               <button
-                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance — let AI handle your money. ${REFERRAL_URL}`)}`)}
+                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance - let AI handle your money. ${REFERRAL_URL}`)}`)}
                 className="bg-black rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-x"
                 title="Share on X"

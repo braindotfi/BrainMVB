@@ -19,7 +19,7 @@ export type ReviewItemType = {
   autoLabel: string;
   /** True for a real brain-core PaymentIntent awaiting approval (vs a static demo item). */
   live?: boolean;
-  /** The PaymentIntent id, when `live` — used to decline via the BFF. */
+  /** The PaymentIntent id, when `live`. Used to decline via the BFF. */
   intentId?: string;
 };
 
@@ -34,7 +34,7 @@ const InfoCell = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-/* Checkbox — Figma 47:10802 (inactive) / 47:10808 (active).
+/* Checkbox, Figma 47:10802 (inactive) / 47:10808 (active).
    Inactive: bg #06070a, border #222737.
    Active:   bg #240757, border rgba(118,49,238,0.2), purple checkmark
              rendered from the Figma SVG, inset-[20%] w/ inner inset
@@ -122,7 +122,7 @@ export const ReviewModal = ({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="review-modal"
         >
-          {/* Title bar — Figma 4062:65550. Border on all sides per
+          {/* Title bar, Figma 4062:65550. Border on all sides per
               Figma; only the bottom is visible due to outer
               overflow-clip + rounded-[24px]. */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
@@ -139,7 +139,7 @@ export const ReviewModal = ({
           </div>
 
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
-            {/* Question + Description block — Figma 4062:65560,
+            {/* Question + Description block, Figma 4062:65560,
                 gap-8, description #6c779d (Baby Blue 60). */}
             <div className="flex flex-col gap-[8px] items-start w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
@@ -163,7 +163,7 @@ export const ReviewModal = ({
                 <InfoCell label="From"    value={item.from} />
               </div>
 
-              {/* Auto-action row — Figma 4071:65830, items-start. */}
+              {/* Auto-action row, Figma 4071:65830, items-start. */}
               <label
                 htmlFor={`review-auto-${item.id}`}
                 className="flex gap-[16px] items-start w-full cursor-pointer"
@@ -180,16 +180,16 @@ export const ReviewModal = ({
             </div>
 
             {/* Real (live) PaymentIntent: approving asks brain-core to sign it off.
-                We do NOT pre-gate — core is the sole enforcer. If it refuses, its
+                We do NOT pre-gate. Core is the sole enforcer. If it refuses, its
                 exact reason is rendered below (danger tone); otherwise a neutral note. */}
             {item.live && !rejection && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
                 This is a real payment. Approving asks Brain core to sign it off under your approval
-                authority — it will only settle if core accepts it.
+                authority. It will only settle if core accepts it.
               </p>
             )}
 
-            {/* brain-core refusal — the honest, verbatim reason (self-approval, over
+            {/* brain-core refusal: the honest, verbatim reason (self-approval, over
                 limit, second approver needed, signer revoked, …). Danger color only. */}
             {rejection && (
               <div
@@ -205,7 +205,7 @@ export const ReviewModal = ({
               </div>
             )}
 
-            {/* Action row — Figma 4071:65833. Confirm + Decline. */}
+            {/* Action row, Figma 4071:65833. Confirm + Decline. */}
             <div className="flex gap-[16px] items-start w-full">
               <button
                 onClick={() => onConfirm(auto)}

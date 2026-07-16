@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AutoRule } from "./proposalTypes";
 
-/* ── Live brain-core policy → read-only rule cards ────────────────────────────
+/* ── Live brain-core policy → read only rule cards ────────────────────────────
    Surfaces the tenant's ACTUAL signed policy document on the Rules page via
    the EXISTING `GET /api/brain/approval-policy` route (server/brain/proxy.ts,
-   backed by server/brain/client.ts's `getApprovalPolicyFacts`) — no new BFF
+   backed by server/brain/client.ts's `getApprovalPolicyFacts`) - no new BFF
    route added. That function already reads `GET /policy/{tenantId}` for
    TeamSection's locked rows but only returned ONE derived fact (the
    second-approval threshold). FLAG: this Phase 2a change WIDENS its response
    to also include `version`, `quorumRequired`, and the full `rules[]` array
    (server/brain/client.ts's `ApprovalPolicyFacts` + `PolicyContentRule`, now
    exported) so the Rules page can render every clause, not just one number.
-   Still a read-only GET on the member token — no new scope, no new write path,
+   Still a read only GET on the member token - no new scope, no new write path,
    same shape `bff-invariants.test.ts` already covers (that suite never calls
    this route, so it stays green, but per CLAUDE.md this touch to
    server/brain/* must be flagged for the Replit-side test run.
@@ -24,17 +24,17 @@ import type { AutoRule } from "./proposalTypes";
      require?, execute, approval_required_above?`) and :100-115 (`PolicyDocument`:
      `version, rules[], lists?, message_templates?, agent_actions?`).
    - services/api/src/onboarding/provision.ts:85-104 (`buildDefaultPolicyDocument`)
-     is what a fresh/demo tenant actually gets: TWO rules, no amount thresholds —
+     is what a fresh/demo tenant actually gets: TWO rules, no amount thresholds -
      `default-money-requires-confirmation` (outbound_payment/onchain_tx, confirm,
      single_signer) and `default-non-money-confidence-floor` (inbound_payment/
      ledger_write, auto). version 1, quorum_required 1 (provision.ts:179).
 
    Honesty: this is NOT the app's 12 hand-authored rule cards (mockRules.ts).
-   A policy rule has no name/summary/vendor allowlist — those are invented by
+   A policy rule has no name/summary/vendor allowlist - those are invented by
    this mapper as a plain-English rendering of the DSL fields (applies_to +
    when + execute/require), never copied from mock data. Every mapped card is
-   `locked: true` (no pause/resume — Phase 2b, blocked on policy:sign scope) and
-   `kind: "always_on"` so it renders in the read-only style, never mixed into
+   `locked: true` (no pause/resume - Phase 2b, blocked on policy:sign scope) and
+   `kind: "always_on"` so it renders in the read only style, never mixed into
    the app-local Automations/Guardrails tabs. */
 
 export interface PolicyContentRule {
@@ -68,7 +68,7 @@ export const EXECUTE_LABEL: Record<string, string> = {
 };
 
 /** Plain-English rendering of a rule's `when` clause. Only the fields
- *  brain-core's DSL actually defines (dsl.ts:48-67) — no invented conditions. */
+ *  brain-core's DSL actually defines (dsl.ts:48-67) - no invented conditions. */
 export function describeWhen(when: Record<string, unknown>): string[] {
   const parts: string[] = [];
   const amountGt = when["amount.gt"] as { value?: string; currency?: string } | undefined;
@@ -88,8 +88,8 @@ export function describeWhen(when: Record<string, unknown>): string[] {
   return parts;
 }
 
-/** Map one brain-core policy rule to the app's read-only rule-card shape.
- *  Always `locked: true` — Phase 2a is display-only; mutation needs the
+/** Map one brain-core policy rule to the app's read only rule-card shape.
+ *  Always `locked: true` - Phase 2a is display-only; mutation needs the
  *  policy-sign scope the token lacks (Phase 2b). */
 export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
   const appliesTo = rule.applies_to ?? [];
@@ -106,7 +106,7 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
     kind: "always_on",
     locked: true,
     name: rule.id.replace(/[-_]/g, " "),
-    summary: `${scopes} — ${executeLabel}${requireSuffix}`,
+    summary: `${scopes} - ${executeLabel}${requireSuffix}`,
     createdLabel: "From your active Brain policy",
     policyId: rule.id,
     active: true,
@@ -116,7 +116,7 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
 
 /** Map the facts response's rule list to display cards, in rule order (the VM
  *  evaluates rules in this order and short-circuits on the first match, so
- *  order is meaningful — not re-sorted). */
+ *  order is meaningful - not re-sorted). */
 export function mapPolicyToRuleCards(facts: ApprovalPolicyFacts | undefined): AutoRule[] {
   return (facts?.rules ?? []).map(mapPolicyRuleToCard);
 }

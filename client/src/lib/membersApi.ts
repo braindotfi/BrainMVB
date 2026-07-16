@@ -1,6 +1,6 @@
 /* Members and approval-authority types + formatters (client mirror of the brain-core
    shapes the BFF relays from GET/POST/PATCH/DELETE /api/brain/members and
-   /api/brain/approval-policy). Enforcement is CORE-ONLY — these are for rendering and
+   /api/brain/approval-policy). Enforcement is CORE-ONLY - these are for rendering and
    admin conveniences; core's response is always the final word. */
 
 export type MemberRole = "admin" | "approver" | "viewer";
@@ -27,7 +27,7 @@ export interface BrainMember {
 }
 
 /** True while a member has been invited but hasn't accepted yet (production tenancy).
- *  Explicit core status ONLY — no heuristics (demo-tenant members often carry no
+ *  Explicit core status ONLY - no heuristics (demo-tenant members often carry no
  *  identityLinks and must never render as "Invited"). */
 export function isInvitedPending(m: BrainMember): boolean {
   return m.status === "invited";
@@ -55,7 +55,7 @@ export function isUnlimited(limit: number): boolean {
   return limit >= UNLIMITED_FLOOR;
 }
 
-/** "$10,000" / "$2,500" — whole-dollar, grouped. */
+/** "$10,000" / "$2,500" - whole-dollar, grouped. */
 export function formatLimit(limit: number, currency = "USD"): string {
   if (isUnlimited(limit)) return "no limit";
   try {
@@ -88,13 +88,13 @@ export function domainLabel(d: ApprovalDomain): string {
   return DOMAIN_LABELS[d] ?? d;
 }
 
-/** "AP + Payroll" (or "No domains") — the domains half of the envelope line. */
+/** "AP + Payroll" (or "No domains") - the domains half of the envelope line. */
 export function domainsSummary(domains: ApprovalDomain[]): string {
   if (!domains.length) return "No domains";
   return domains.map(domainLabel).join(" + ");
 }
 
-/** "AP + Payroll · up to $10,000" — the one-line envelope shown on member rows. */
+/** "AP + Payroll · up to $10,000" - the one-line envelope shown on member rows. */
 export function envelopeLine(approval: MemberApproval, currency = "USD"): string {
   const limit = isUnlimited(approval.perItemLimit)
     ? "no per-item limit"

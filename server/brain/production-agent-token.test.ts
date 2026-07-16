@@ -8,9 +8,9 @@ import { type AddressInfo } from "node:net";
  * Pins the BFF behavior when BRAIN_TENANCY_MODE=production:
  *
  *   A. Tenant creation PERSISTS the agent token core returns and /propose then uses
- *      that real agent token — never the member session token.
+ *      that real agent token - never the member session token.
  *   B. When core does NOT serve the agent contract (no `agent` at creation, mint route
- *      401s — the live state as of 2026-07-14), sessions still work: /propose degrades
+ *      401s - the live state as of 2026-07-14), sessions still work: /propose degrades
  *      to the member token (core 403s honestly) instead of failing the session.
  *   C. No brain-core token or the platform-service secret ever appears in a response
  *      the BFF returns to the browser.
@@ -28,7 +28,7 @@ process.env.BRAIN_API_BASE_URL = "https://api.brain.fi/v1";
 process.env.BRAIN_DEMO_PROVISION_SECRET = "unused-in-production-mode";
 delete process.env.BRAIN_AUTH_SIGN_KEY;
 delete process.env.BRAIN_AUTH_JWT_SECRET;
-// Force MemStorage — this suite must never touch a real database.
+// Force MemStorage - this suite must never touch a real database.
 delete process.env.DATABASE_URL;
 
 interface RecordedCall {
@@ -161,7 +161,7 @@ beforeEach(async () => {
   calls = [];
   clearBrainTokenCache();
   coreHasAgentContract = true;
-  // Fresh tenant per test — MemStorage persists across tests in this file.
+  // Fresh tenant per test - MemStorage persists across tests in this file.
   TENANT_ID = `tnt_test_prod_${userCounter + 1}`;
   // Fresh app user per test (tenant creation is 409 already_linked for a linked user).
   userCounter += 1;
@@ -171,7 +171,7 @@ beforeEach(async () => {
   currentUserId = user!.id;
 });
 
-describe("Production agent token — contract live", () => {
+describe("Production agent token - contract live", () => {
   it("tenant creation persists the agent token and /propose uses it (never the member token)", async () => {
     const create = await post("/api/brain/tenants", { company_name: "Acme" });
     expect(create.status).toBe(201);
@@ -187,7 +187,7 @@ describe("Production agent token — contract live", () => {
   });
 });
 
-describe("Production agent token — core predates the contract (graceful degradation)", () => {
+describe("Production agent token - core predates the contract (graceful degradation)", () => {
   it("no agent at creation + 401 mint does NOT break the session; /propose falls back to the member token", async () => {
     coreHasAgentContract = false;
     const create = await post("/api/brain/tenants", { company_name: "Acme Legacy" });

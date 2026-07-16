@@ -18,10 +18,10 @@ import {
   type ApprovalPolicyFacts,
 } from "@/lib/membersApi";
 
-/* Member detail popup — the ONE place a member reference (Settings → Team row, an
+/* Member detail popup - the ONE place a member reference (Settings → Team row, an
    audit record's ACTOR label, a receipt) opens into. Driven by the membersStore
    `openMemberDetail(id)` signal. It re-fetches the authoritative record by id (so a
-   DEACTIVATED member — dropped from the active list but still GET-able — still
+   DEACTIVATED member. Dropped from the active list but still GET-able. Still
    resolves and opens), falling back to the cache for an instant first paint.
 
    Enforcement is CORE-ONLY: the "locked rows" (self-approval blocked, tenant
@@ -74,7 +74,7 @@ function MemberDetailBody({ id }: { id: string }) {
   }, [data]);
 
   // Core is authoritative. Cache is used ONLY as a transient first-paint while the
-  // fetch is in flight — if the authoritative fetch ERRORS (e.g. a stale id from a
+  // fetch is in flight. If the authoritative fetch ERRORS (e.g. a stale id from a
   // prior provision/tenant), show "unavailable" rather than rendering stale cached
   // member data (which could be from another session/tenant).
   const member = data ?? (isError ? undefined : cached);
@@ -145,7 +145,7 @@ function MemberDetailBody({ id }: { id: string }) {
         {policy?.selfApprovalBlocked && (
           <LockedRow
             title="Can't approve their own payments"
-            detail="Segregation of duties is enforced on every approval — a member can never sign off a payment to themselves."
+            detail="Segregation of duties is enforced on every approval. A member can never sign off a payment to themselves."
           />
         )}
         {policy?.secondApprovalThreshold && (

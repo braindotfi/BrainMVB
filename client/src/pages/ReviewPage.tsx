@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* Title case helper, used for all labels platform-wide */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
@@ -49,7 +49,7 @@ import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 
 /* ── Tabs (mirrors the Activity page's segmented control) ─────────────────── */
 type ReviewTab = "All" | "Needs Review" | "Approved Automatically";
-/* "All" is intentionally hidden for now — kept in the type/logic so the
+/* "All" is intentionally hidden for now. Kept in the type/logic so the
    filtering branches still compile and can be re-enabled later. */
 const REVIEW_TABS: ReviewTab[] = ["Needs Review", "Approved Automatically"];
 
@@ -66,7 +66,7 @@ function intentToReview(rec: IntentRecord): ReviewItemType {
     amount: amountStr,
     due: "Needs approval",
     question: `Should I pay ${rec.vendor} ${amountStr}?`,
-    description: `Brain proposed this payment (${rec.invoiceNumber}) and the §6 policy gate flagged it for human sign-off — it is above your auto-pay limit and needs approval from ${approvers} before it can settle.`,
+    description: `Brain flagged this payment (${rec.invoiceNumber}) and the §6 policy gate flagged it for human sign-off. It is above your auto-pay limit and needs approval from ${approvers} before it can settle.`,
     who: rec.vendor,
     amountFull: amountStr,
     dueBy: "Awaiting approval",
@@ -121,7 +121,7 @@ const ProposalRow = ({
           {proposal.title}
         </p>
         <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full ${parked ? "text-[#7631ee]" : "text-[#6c779d]"}`}>
-          {parked ? "Verifying with vendor — draft ready for review" : proposal.rowSubtitle}
+          {parked ? "Verifying with vendor, draft ready for review" : proposal.rowSubtitle}
         </p>
       </div>
       {typeof proposal.amount === "number" && (
@@ -135,7 +135,7 @@ const ProposalRow = ({
   );
 };
 
-/* ── Agent proposal row — the 11 spec records (tappable → AgentProposalModal) ── */
+/* Agent proposal row, the 11 spec records (tappable, AgentProposalModal) */
 const AgentRow = ({
   proposal,
   onClick,
@@ -203,7 +203,7 @@ export function ReviewPage() {
 
   /* Status overrides keyed by proposal id, held in the shared reviewStatusStore
      so decisions made here AND on the Home "Brain Detected" widget stay in sync.
-     Every transition is user-driven — no setTimeout / auto-settle anywhere. */
+     Every transition is user-driven. No setTimeout or auto-settle anywhere. */
   const statuses = useReviewStatuses();
   const [active, setActive] = useState<Proposal | null>(null);
   /* Provenance of the open proposal, captured AT OPEN TIME so an action can't
@@ -212,21 +212,21 @@ export function ReviewPage() {
   const [activeIsLive, setActiveIsLive] = useState(false);
   // When a proposal is opened via a deep-link that carried a `?from=` return
   // target (e.g. from the Audit Log record popup), dismissing the sheet returns
-  // there so that surface re-opens — mirroring the stacked invoice experience.
+  // there so that surface re-opens, mirroring the stacked invoice experience.
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ReviewTab>("Needs Review");
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
   const setStatus = (id: string, status: ProposalStatus) => setReviewStatus(id, status);
 
-  /* Durable "Needs Review" queue — live brain-core PaymentIntents awaiting a
+  /* Durable "Needs Review" queue. Live brain-core PaymentIntents awaiting a
      human decision (replaces MOCK_PROPOSALS; see client/src/lib/brainQueue.ts
      for why this fans out to a per-id fetch). brain-core has no client-side
-     "executing/verifying/settled" states for these — approve/reject mutate
+     "executing/verifying/settled" states for these. Approve/reject mutate
      the intent directly and the queue refetches, so there's nothing to hold
      in reviewStatusStore for a live row. */
   const { proposals: liveQueue, isLoading: liveQueueLoading } = useBrainReviewQueue();
-  // Exclude intents already tracked by the session-scoped `intentsStore` — those
+  // Exclude intents already tracked by the session-scoped `intentsStore`. Those
   // render in the separate "Needs your approval" widget below (liveReviews) so
   // this durable queue doesn't show the same intent twice.
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
@@ -270,7 +270,7 @@ export function ReviewPage() {
 
   const handleAction = (action: ProposalAction) => {
     if (!active) return;
-    // A live brain-core row — mutate core immediately, then show bottom-right alert.
+    // A live brain-core row. Mutate core immediately, then show bottom-right alert.
     if (activeIsLive) {
       if (action === "approve") {
         alert.approved("Approved", "The payment has been approved and will be processed.", 2_000);
@@ -279,10 +279,10 @@ export function ReviewPage() {
         alert.rejected("Rejected", "The payment has been rejected.", 2_000);
         rejectLive.mutate(active.id);
       }
-      // postpone/verifyFirst have no brain-core equivalent for a live intent — no-op.
+      // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
       return;
     }
-    // Mock / deep-linked proposal — flip local status, then show alert.
+    // Mock / deep-linked proposal. Flip local status, then show alert.
     const next: ProposalStatus =
       action === "approve" ? "executing"
         : action === "reject" ? "rejected"
@@ -317,7 +317,7 @@ export function ReviewPage() {
     onSuccess: (_d, intentId) => markDeclined(intentId),
   });
 
-  /* Approve: ask brain-core to sign the intent off. NO client gate — we always
+  /* Approve: ask brain-core to sign the intent off. NO client gate. We always
      call core and react to its answer. Reads the JSON body even on a non-2xx so the
      exact refusal reason surfaces inline. */
   const [approving, setApproving] = useState(false);
@@ -339,17 +339,17 @@ export function ReviewPage() {
       const status: string = body?.intent?.status ?? "";
       if (status === "awaiting_second_approval" || status === "pending_approval") {
         setApprovalState(intentId, "awaiting_second");
-        alert.approved("Approval recorded — one more needed", "Your approval is in. Brain core still needs a second approver before this can settle.", 2_000);
+        alert.approved("Approval recorded. One more needed", "Your approval is in. Brain core still needs a second approver before this can settle.", 2_000);
       } else {
         setApprovalState(intentId, "approved");
-        alert.approved("Payment approved", "Brain core accepted the approval — it will settle shortly.", 2_000);
+        alert.approved("Payment approved", "Brain core accepted the approval. It will settle shortly.", 2_000);
       }
       setActiveLive(null);
     } catch {
       setLiveRejection({
         reason: "network_error",
         title: "Couldn't reach Brain core",
-        detail: "The approval didn't go through. Check your connection and try again — nothing was changed.",
+        detail: "The approval didn't go through. Check your connection and try again. Nothing was changed.",
       });
     } finally {
       setApproving(false);
@@ -379,10 +379,10 @@ export function ReviewPage() {
     return r ? !r.active : p.rule ? !p.rule.active : false;
   };
 
-  /* Related pending items: a paused rule with an open report flags any pending
-     proposal it WOULD have auto-cleared — i.e. one that falls inside the rule's
+  /* Related pending items. A paused rule with an open report flags any pending
+     proposal it would have auto-cleared, meaning one that falls inside the rule's
      actual scope (same agent, vendor on the rule's allowlist, amount within its
-     cap). This is a NON-BLOCKING note — it never changes a proposal's status. */
+     cap). This is a non-blocking note. It never changes a proposal's status. */
   const pausedRulesWithReports = rules.filter(
     (r) => !r.active && (r.problemReports ?? []).some((pr) => !pr.resolved),
   );
@@ -398,7 +398,7 @@ export function ReviewPage() {
     );
 
   /* Auto-open a record linked from elsewhere:
-       /review?proposal=<id> — any proposal by id (from the Audit Log's linked
+       /review?proposal=<id>, any proposal by id (from the Audit Log's linked
                                evidence), resolved across every proposal source. */
   const search = useSearch();
   useEffect(() => {
@@ -410,7 +410,7 @@ export function ReviewPage() {
         // Capture any `?from=` return target BEFORE we strip the query, so
         // dismissing the sheet can navigate back there (re-opening that surface).
         setReturnTo(params.get("from"));
-        setActiveIsLive(false); // deep-linked mock record — local status only
+        setActiveIsLive(false); // deep-linked mock record. Local status only
         setActive(target);
         navigate("/review", { replace: true });
       }
@@ -429,7 +429,7 @@ export function ReviewPage() {
     }
   };
 
-  /* Open a proposal from within this page (row click) — clears any stale return
+  /* Open a proposal from within this page (row click). Clears any stale return
      target so a later dismiss doesn't wrongly navigate away. */
   const openLocal = (p: Proposal) => {
     setReturnTo(null);
@@ -437,7 +437,7 @@ export function ReviewPage() {
     setActive(p);
   };
 
-  /* Header pager — cycle (wrap-around) through the active tab's list. */
+  /* Header pager. Cycle (wrap-around) through the active tab's list. */
   const pagerList: Proposal[] | null = !active
     ? null
     : queue.some((p) => p.id === active.id)
@@ -452,7 +452,7 @@ export function ReviewPage() {
     setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
   };
 
-  /* Agent-proposal pager — cycle within whichever tab list holds the open record. */
+  /* Agent-proposal pager. Cycle within whichever tab list holds the open record. */
   const agentPagerList: AgentProposal[] | null = !activeAgent
     ? null
     : agentQueue.some((p) => p.id === activeAgent.id)
@@ -467,7 +467,7 @@ export function ReviewPage() {
     setActiveAgent(agentPagerList[(agentPagerIdx + dir + agentPagerList.length) % agentPagerList.length]);
   };
 
-  /* Decide on an agent proposal — user-driven, logged via toast; the modal
+  /* Decide on an agent proposal. User-driven, logged via toast. The modal
      closes and the record drops out of (or returns to) the queue. */
   const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
     if (action === "approve") {
@@ -480,7 +480,7 @@ export function ReviewPage() {
       setActiveAgent(null);
     } else if (action === "acknowledge") {
       decideAgentProposal(p.id, "acknowledged");
-      alert.success("Acknowledged", "Logged — Brain won't re-raise this flag.", 2_000);
+      alert.success("Acknowledged", "Logged. Brain won't re-raise this flag.", 2_000);
       setActiveAgent(null);
     } else if (action === "undo") {
       decideAgentProposal(p.id, "undone_to_review");
@@ -489,17 +489,17 @@ export function ReviewPage() {
     }
   };
 
-  /* Tab visibility — "All" shows everything; the other tabs filter the view. */
+  /* Tab visibility. "All" shows everything. The other tabs filter the view. */
   const showNeedsReview = activeTab === "All" || activeTab === "Needs Review";
   const showApproved = activeTab === "All" || activeTab === "Approved Automatically";
 
-  /* Helper banner (purple) — sits mid-page in "All", but pins to the bottom
+  /* Helper banner (purple). Sits mid-page in "All", but pins to the bottom
      of the page when the "Needs Review" tab is selected. */
   const HelperBanner = () => (
     <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
       <div className="flex flex-1 items-start min-w-px relative">
         <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px]">
-          Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes — you decide, and a separate execution service settles.
+          Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
         </p>
       </div>
     </div>
@@ -541,7 +541,7 @@ export function ReviewPage() {
               })}
             </div>
 
-            {/* Live — real brain-core PaymentIntents flagged by §6 (only when present) */}
+            {/* Live: real brain-core PaymentIntents flagged by §6 (only when present) */}
             {showNeedsReview && liveReviews.length > 0 && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Needs your approval" count={liveReviews.length} />
@@ -553,7 +553,7 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Needs Review — live brain-core queue first, then the seeded agent records */}
+            {/* Needs Review: live brain-core queue first, then the seeded agent records */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
               <WidgetHeader title="Needs Review" count={queue.length + agentQueue.length} />
@@ -582,7 +582,7 @@ export function ReviewPage() {
                         >
                           <Flag size={13} className="shrink-0" style={{ color: "#d20344" }} />
                           <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[12px] text-[#a8b9f4]">
-                            Waiting for you because you paused <span className="font-semibold">“{titleCase(related.name)}”</span> — review the rule
+                            Waiting because you paused <span className="font-semibold">“{titleCase(related.name)}”</span>. Review the rule
                           </span>
                         </button>
                       );
@@ -591,7 +591,7 @@ export function ReviewPage() {
                   </div>
                 ))}
 
-                {/* Agent proposal records — one per Brain agent (spec-seeded) */}
+                {/* Agent proposal records, one per Brain agent (spec-seeded) */}
                 {agentQueue.map((p, idx, arr) => (
                   <div key={p.id} className="flex flex-col gap-[8px] w-full">
                     <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
@@ -602,11 +602,11 @@ export function ReviewPage() {
             </div>
             )}
 
-            {/* Helper banner — purple. In "All" it sits here; the "Needs Review"
+            {/* Helper banner, purple. In "All" it sits here. The "Needs Review"
                 tab renders it at the very bottom of the page instead. */}
             {activeTab === "All" && <HelperBanner />}
 
-            {/* Approved Automatically — agent records Brain cleared on its own. */}
+            {/* Approved Automatically: agent records Brain cleared on its own. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
                 <WidgetHeader title="Approved Automatically" count={autoApproved.length} />
@@ -637,7 +637,7 @@ export function ReviewPage() {
         </div>
       </ScrollArea>
 
-      {/* Data-driven proposal sheet — also renders the auto_handled receipt branch */}
+      {/* Data-driven proposal sheet. Also renders the auto_handled receipt branch */}
       <ProposalDetail
         proposal={active}
         currentStatus={active ? statusOf(active) : undefined}
@@ -658,7 +658,7 @@ export function ReviewPage() {
           // flow in allowlist mode, then hand off to the Rules page.
           setRuleDraft({
             kind: "automation",
-            name: p.counterparty ? `Auto-clear ${p.counterparty}` : "Auto-clear this payment",
+            name: p.counterparty ? `Auto clear ${p.counterparty}` : "Auto clear this payment",
             category: "bill",
             agent: p.agent,
             cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
@@ -676,13 +676,13 @@ export function ReviewPage() {
             setActive(null);
             openRuleDetail(r.id, navigate);
           } else {
-            // Feedback only — record but leave the rule running.
+            // Feedback only. Record but leave the rule running.
             storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
           }
         }}
       />
 
-      {/* Agent proposal detail — the spec-driven modal for the 11 agent records */}
+      {/* Agent proposal detail. The spec-driven modal for the 11 agent records */}
       <AgentProposalModal
         proposal={activeAgent}
         open={activeAgent !== null}

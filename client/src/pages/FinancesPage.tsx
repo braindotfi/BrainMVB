@@ -53,7 +53,7 @@ const KIND_LABEL: Record<AccountKind, string> = {
 type AccountRow = { id?: string; name: string; sub: string; sub2: string; balance: string | number; currency?: string };
 
 /** Render a balance honestly: USD (and other fiat) through the currency
- *  formatter; a non-fiat token balance (ETH) in its native units — never run a
+ *  formatter; a non-fiat token balance (ETH) in its native units. Never run a
  *  token amount through the USD→display-currency converter. Mirrors
  *  AccountDetailPopup.balanceLabel. Rows with no currency (e.g. the mixed
  *  totals row) fall back to the formatter. */
@@ -150,9 +150,9 @@ const WidgetCard = ({ title, count, children }: { title: string; count?: number;
   </div>
 );
 
-// ─── Overdue receivables (live) — replaces the static "2 Invoices are late" banner ──
+// ─── Overdue receivables (live) - replaces the static "2 Invoices are late" banner ──
 // Money owed TO the business that is past due. Excludes AP payables (those are the
-// "Bills — let Brain decide" inbox). Renders nothing when nothing is overdue.
+// "Bills, let Brain decide" inbox). Renders nothing when nothing is overdue.
 interface InvoiceLite {
   id: string;
   counterparty_id: string;
@@ -210,7 +210,7 @@ const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => str
   );
 };
 
-// ─── Income summary (live) — monthly inflow + top customers from the Ledger ──
+// ─── Income summary (live) - monthly inflow + top customers from the Ledger ──
 // Derived from brain-core ledger inflow transactions + counterparties for names.
 // Falls back to static copy only when no transaction data is reachable at all.
 function summarizeIncome(
@@ -226,7 +226,7 @@ function summarizeIncome(
     if (!Number.isFinite(amt)) continue;
     total += amt;
     months.add(t.transaction_date.slice(0, 7)); // YYYY-MM
-    const cp = t.counterparty_id ?? "—";
+    const cp = t.counterparty_id ?? "-";
     byCp.set(cp, (byCp.get(cp) ?? 0) + amt);
   }
   const ranked = Array.from(byCp.entries()).sort((a, b) => b[1] - a[1]);
@@ -259,7 +259,7 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
         ? names[0] ?? "one customer"
         : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
     const verb = names.length > 1 ? "are" : "is";
-    const tail = s.share >= 99 ? " — essentially all your revenue" : `, together about ${s.share}% of your revenue`;
+    const tail = s.share >= 99 ? ", essentially all your revenue" : `, together about ${s.share}% of your revenue`;
     return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
   })();
 
@@ -279,9 +279,9 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   );
 };
 
-// ─── Income drill-down (live) — the actual inflow transactions ───────────────
+// ─── Income drill-down (live) - the actual inflow transactions ───────────────
 // The "filtered transaction list" behind the Income summary: real inflow rows
-// from the Ledger, each opening the shared transaction detail. No popup — an
+// from the Ledger, each opening the shared transaction detail. No popup, an
 // inline list, honest to what's recorded.
 const IncomeTxList = ({
   format,
@@ -342,7 +342,7 @@ const IncomeTxList = ({
   );
 };
 
-// ─── Expenses (live) — outflow transactions grouped from the Ledger ──────────
+// ─── Expenses (live) - outflow transactions grouped from the Ledger ──────────
 // Derived from brain-core ledger outflow transactions. The demo seed currently
 // carries only inflows, so this renders an honest empty state today and will
 // populate automatically when real money-out data lands. Never faked.
@@ -416,7 +416,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
   );
 };
 
-// ─── Liabilities (live) — outstanding accounts-payable from the Ledger ───────
+// ─── Liabilities (live) - outstanding accounts-payable from the Ledger ───────
 // "What we owe": sum of unpaid AP invoices (metadata.scenario === "ap"). The demo
 // tenant has no loan/line_of_credit accounts, so AP is the real liabilities figure.
 // Falls back to static copy only when no AP data is reachable at all.
@@ -480,7 +480,7 @@ export function FinancesPage() {
   const [liabilitiesCount, setLiabilitiesCount] = useState<number>(0);
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
-  // The browser never sees a brain-core JWT — the BFF mints it server-side.
+  // The browser never sees a brain-core JWT. The BFF mints it server-side.
   const { data: brainData, isLoading: accountsLoading } = useQuery<BrainAccountsResponse>({
     queryKey: ["/api/brain/ledger/accounts"],
     retry: false,
@@ -510,7 +510,7 @@ export function FinancesPage() {
   const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
   const [activeTab, setActiveTab] = useState<FinanceTab>("Accounts");
 
-  // Dynamic "last updated" timestamp — refreshes every 10s
+  // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
@@ -532,7 +532,7 @@ export function FinancesPage() {
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
 
-            {/* Tab bar — active tab is ORANGE */}
+            {/* Tab bar: active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {FINANCE_TABS.map((tab) => {
                 const isActive = activeTab === tab;

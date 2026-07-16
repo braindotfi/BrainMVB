@@ -155,7 +155,7 @@ export function lowerCap(id: string, amount: number) {
   updateRule(id, (r) => ({ ...r, cap: amount }));
 }
 
-/* Inline threshold edit — guardrail trip point or automation sweep amount. */
+/* Inline threshold edit - guardrail trip point or automation sweep amount. */
 export function setThreshold(id: string, amount: number) {
   updateRule(id, (r) => ({ ...r, threshold: amount }));
 }
@@ -189,7 +189,7 @@ export function createRule(rule: AutoRule) {
 /* ── Backend persistence (per-tenant, session-authenticated) ─────────────────
    User-created rules are stored in Postgres and associated with the logged-in
    account. The store stays the SSOT for the session; the network calls keep the
-   account's rules durable across reloads. All calls fail soft — a persistence
+   account's rules durable across reloads. All calls fail soft - a persistence
    error never blocks the optimistic UI. ──────────────────────────────────── */
 function toRulePayload(rule: AutoRule) {
   return {
@@ -270,7 +270,7 @@ export async function hydrateUserRules() {
 /* ── Rule draft handoff ───────────────────────────────────────────────────────
    "Always handle this" on a routine receipt sets a draft, then navigates to the
    Rules page which consumes it to pre-fill the create flow. No backend, no
-   localStorage — a one-shot module slot. ───────────────────────────────────── */
+   localStorage - a one-shot module slot. ───────────────────────────────────── */
 let ruleDraft: Partial<AutoRule> | null = null;
 
 export function setRuleDraft(draft: Partial<AutoRule>) {

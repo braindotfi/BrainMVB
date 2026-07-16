@@ -23,7 +23,7 @@ type UploadedFile = {
   detail: string;
 };
 
-/* ─── Step 3: Connect tools — third-party data sources ─── */
+/* Step 3: Connect tools, third-party data sources */
 type ToolCategory = "Accounting" | "Productivity" | "CRM & Sales" | "Payments" | "Communication" | "Crypto";
 
 type Tool = {
@@ -306,7 +306,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="onboarding-modal"
         >
-          {/* Header — back, step dots, close */}
+          {/* Header - back, step dots, close */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             {step > 0 && (
               <button
@@ -737,7 +737,7 @@ function StepConnectTools({
           What else should Brain plug into?
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Connect your accounting, CRM, docs, and other tools so Brain has the full picture from day one. You can pick more than one — or skip and add them later.
+          Connect your accounting, CRM, docs, and other tools so Brain has the full picture from day one. You can pick more than one, or skip and add them later.
         </p>
       </div>
 
@@ -815,7 +815,7 @@ function StepConnectTools({
                     data-testid={`button-tool-${t.id}`}
                     title={
                       isConnected
-                        ? `Connected as ${conn?.accountLabel ?? t.name} — click to disconnect`
+                        ? `Connected as ${conn?.accountLabel ?? t.name}. Click to disconnect`
                         : isLive
                         ? `Connect your ${t.name} account`
                         : `${t.name} integration coming soon`
@@ -870,7 +870,7 @@ function StepConnectTools({
         title="Read-only by Default"
         body={
           <>
-            Brain only reads from each tool you connect — never writes back without your explicit approval. Disconnect any source any time from Settings.
+            Brain only reads from each tool you connect. It never writes back without your explicit approval. Disconnect any source any time from Settings.
           </>
         }
       />
@@ -910,7 +910,7 @@ function StepUpload({
       name: f.name,
       size: f.size,
       status: "processing",
-      detail: "Queued — will process when you continue",
+      detail: "Queued. Will process when you continue",
     }));
     setFiles((prev) => [...prev, ...incoming]);
   }, [setFiles]);

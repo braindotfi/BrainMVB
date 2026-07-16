@@ -97,7 +97,7 @@ function RowEndIcon({ icon }: { icon: "plus" | "chevron-down" }) {
   );
 }
 
-// ── Address action button (QR / Copy) — solid ellipse + centered icon ─────────
+// ── Address action button (QR / Copy) - solid ellipse + centered icon ─────────
 function ActionBtn({
   variant,
   icon,
@@ -574,7 +574,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
-                    {recipientName || "—"}
+                    {recipientName || "-"}
                   </p>
                   <ActionBtn
                     variant="orange"
@@ -593,7 +593,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                 </p>
                 <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
                   <p className="flex-1 [font-family:'JetBrains_Mono',monospace] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
-                    {iban ? truncIban(iban) : "—"}
+                    {iban ? truncIban(iban) : "-"}
                   </p>
                   <ActionBtn
                     variant="orange"

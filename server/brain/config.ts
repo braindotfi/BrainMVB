@@ -5,18 +5,18 @@
  * talk to the brain-core protocol (live target: https://api.brain.fi/v1).
  *
  * Token source (see auth.ts / brainTokenMode), in priority order:
- *   - "staging-demo-token" (staging environment only) — when BRAIN_API_BASE_URL points at
+ *   - "staging-demo-token" (staging environment only) - when BRAIN_API_BASE_URL points at
  *     https://staging-api.brain.fi/v1, the BFF calls the key-free POST /v1/demo/token
  *     (empty JSON body, no auth header) and uses the single 24h token it returns for every
  *     call (staging has no member/agent token split). Per the staging integration guide.
- *   - "demo-provision" (preferred against the live/prod box, key-free) — the BFF calls the
+ *   - "demo-provision" (preferred against the live/prod box, key-free) - the BFF calls the
  *     already-live, fenced POST /v1/demo/provision-run with BRAIN_DEMO_PROVISION_SECRET in
  *     the X-Demo-Provision-Auth header, and uses the per-tenant token it returns. No signing
  *     key needed; this is the same path the BrainSaaS playground uses.
- *   - "local-key" (dev fallback) — mint tokens in-process with a private JWK against a
+ *   - "local-key" (dev fallback) - mint tokens in-process with a private JWK against a
  *     brain-core you control (e.g. dev-up.sh). Never copy the prod key here.
  *
- * Nothing here is sent to the browser — secrets and minted/fetched tokens stay server-side.
+ * Nothing here is sent to the browser - secrets and minted/fetched tokens stay server-side.
  */
 
 /** Scopes requested in the local-key mint path. Subset of brain-core VALID_SCOPES. */
@@ -49,7 +49,7 @@ export interface BrainConfig {
   platformServiceSecret: string | undefined;
   /** FALLBACK (local dev only): private signing JWK (JSON) to mint tokens in-process. */
   signKeyJson: string | undefined;
-  /** FALLBACK (local dev only): HS256 secret — valid only against a non-prod verifier. */
+  /** FALLBACK (local dev only): HS256 secret - valid only against a non-prod verifier. */
   hs256Secret: string | undefined;
   issuer: string;
   audience: string;

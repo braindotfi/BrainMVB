@@ -32,7 +32,7 @@ import type {
   FactRow,
 } from "@/lib/proposalTypes";
 
-/* ── Title case helper — used for all labels platform-wide ──────────────── */
+/* Title case helper, used for all labels platform-wide */
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
@@ -45,7 +45,7 @@ function titleCase(str: string) {
 
 /* Brain is PROPOSE-ONLY. One component renders every scenario; sections appear
    or collapse based on which fields are present. #D20344 is reserved for
-   alerts / flags / danger only — purple is the affirmative accent. */
+   alerts, flags, danger only. Purple is the affirmative accent. */
 
 export type ProposalAction = "approve" | "reject" | "postpone" | "verifyFirst";
 
@@ -114,17 +114,17 @@ export function ProposalDetail({
   currentStatus?: ProposalStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /* header pager — cycle through the other records in the active tab */
+  /* Header pager. Cycle through the other records in the active tab */
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
   onAction: (action: ProposalAction) => void;
-  /* auto_handled receipt — retroactive controls (decision already happened) */
+  /* Auto_handled receipt. Retroactive controls (decision already happened) */
   rulePaused?: boolean;
   onPauseRule?: (proposal: Proposal) => void;
   onReviewRule?: (proposal: Proposal) => void;
   onReportProblem?: (proposal: Proposal, report: { reason: string; note: string; pause: boolean }) => void;
-  /* routine pending proposal — promote into a standing rule via the create flow */
+  /* Routine pending proposal. Promote into a standing rule via the create flow */
   onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
   const { format } = useCurrency();
@@ -157,7 +157,7 @@ export function ProposalDetail({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="proposal-detail"
         >
-          {/* Header — centered title only + close X (matches Figma) */}
+          {/* Header: centered title only + close X (matches Figma) */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
             <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
               {agent.label}
@@ -183,7 +183,7 @@ export function ProposalDetail({
             />
           ) : (
           <>
-            {/* Info banner — action statement + policy + deadline (matches Figma) */}
+            {/* Info banner: action statement + policy + deadline (matches Figma) */}
             <div className="flex flex-col gap-[16px] items-start w-full">
               <div className="flex flex-col gap-[6px] items-start w-full">
                 <p
@@ -212,7 +212,7 @@ export function ProposalDetail({
               </div>
             </div>
 
-            {/* Reason chips — flags use alert red. Clean & no chips → "Looks routine" */}
+            {/* Reason chips: flags use alert red. Clean and no chips means "Looks routine" */}
             <div className="flex flex-wrap gap-[8px] items-center w-full">
               {chips.length > 0 ? (
                 chips.map((chip, i) => (
@@ -234,7 +234,7 @@ export function ProposalDetail({
               )}
             </div>
 
-            {/* Why this needs your call — rationale only (facts moved to Linked Evidence) */}
+            {/* Why this needs your call. Rationale only (facts moved to Linked Evidence) */}
             <div className="flex flex-col gap-[12px] items-start w-full">
               <SectionLabel>Why This Needs Your Call</SectionLabel>
               <p
@@ -245,7 +245,7 @@ export function ProposalDetail({
               </p>
             </div>
 
-            {/* What Brain Found — facts in a Figma-style table */}
+            {/* What Brain Found. Facts in a Figma-style table */}
             {proposal.facts && proposal.facts.length > 0 && (
               <div className="flex flex-col gap-[12px] items-start w-full">
                 <SectionLabel>What Brain Found</SectionLabel>
@@ -275,7 +275,7 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* Linked Evidence — evidence items as tappable cards per Figma */}
+            {/* Linked Evidence. Evidence items as tappable cards per Figma */}
             {proposal.evidence.length > 0 && (
               <div className="flex flex-col gap-[12px] items-start w-full">
                 <SectionLabel>Linked Evidence</SectionLabel>
@@ -311,7 +311,7 @@ export function ProposalDetail({
                     );
                   })}
                 </div>
-                {/* Source document — tappable link when invoiceId resolves (legacy fallback) */}
+                {/* Source document: tappable link when invoiceId resolves (legacy fallback) */}
                 {proposal.invoiceId && (() => {
                   const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
                   if (!srcDoc) return null;
@@ -339,7 +339,7 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* Confidence — band + score + bar (purple) + caveat */}
+            {/* Confidence: band, score, bar (purple), caveat */}
             <div className="flex flex-col gap-[10px] items-start w-full">
               <SectionLabel
                 trailing={
@@ -361,10 +361,10 @@ export function ProposalDetail({
               </p>
             </div>
 
-            {/* Sweep math — reconciling mono breakdown (only when present) */}
+            {/* Sweep math: reconciling mono breakdown (only when present) */}
             {proposal.sweepMath && (
               <div className="flex flex-col gap-[12px] items-start w-full">
-                <SectionLabel>The Math - Your Account Isn't Drained</SectionLabel>
+                <SectionLabel>The Math: Your Account Is Not Drained</SectionLabel>
                 <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]">
                   <div className="flex items-center justify-between gap-[12px]">
                     <span className="text-[#6c779d]">total cash</span>
@@ -401,7 +401,7 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* If this is wrong — risk boxed in alert-red panel + policy line */}
+            {/* If this is wrong. Risk boxed in alert-red panel + policy line */}
             <div className="flex flex-col gap-[10px] items-start w-full">
               <SectionLabel>If This Is Wrong</SectionLabel>
               <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
@@ -414,7 +414,7 @@ export function ProposalDetail({
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   Flagged by{" "}
                   <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">{proposal.policy.id}</span>
-                  {" "}— {proposal.policy.explanation}.
+                  {" "}- {proposal.policy.explanation}.
                 </p>
                 {proposal.policy.autoClearedOtherwise && (
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[13px]">
@@ -486,7 +486,7 @@ export function ProposalDetail({
           </>
           )}
 
-            {/* Technical detail — raw six-layer trace / JSON, collapsed */}
+            {/* Technical detail: raw six-layer trace / JSON, collapsed */}
             <div className="w-full border-t border-[#1d2132] pt-[16px]">
               <button
                 type="button"
@@ -508,7 +508,7 @@ export function ProposalDetail({
             </div>
           </div>
 
-          {/* Footer — Previous/Next pill buttons (matches Figma) */}
+          {/* Footer: Previous/Next pill buttons (matches Figma) */}
           {onPrev && onNext && (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-solid border-t content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
@@ -546,7 +546,7 @@ export function ProposalDetail({
   );
 }
 
-/* ── Auto-handled RECEIPT — a record of a payment Brain already approved + settled
+/* Auto-handled RECEIPT: a record of a payment Brain already approved and settled
    under the user's standing rule. NO approve/reject/postpone/verify; the decision
    already happened and the money already moved. Retroactive controls only. ───── */
 const REPORT_PRESETS = [
@@ -605,7 +605,7 @@ function AutoHandledReceipt({
 
   return (
     <>
-      {/* 1 — status pill: GREEN "Approved automatically · no approval needed" */}
+      {/* 1: status pill. GREEN "Approved automatically, no approval needed" */}
       <div className="flex flex-wrap gap-[8px] items-center w-full">
         <span
           data-testid="chip-auto-handled"
@@ -616,7 +616,7 @@ function AutoHandledReceipt({
         </span>
       </div>
 
-      {/* 2 — past-tense headline + amount mono + settledMeta (rule attribution) */}
+      {/* 2: past-tense headline + amount mono + settledMeta (rule attribution) */}
       <div className="flex flex-col gap-[6px] items-start w-full">
         <p
           className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
@@ -631,7 +631,7 @@ function AutoHandledReceipt({
         )}
       </div>
 
-      {/* 3 — "What happened" — propose → approve → execute, told retroactively */}
+      {/* 3: "What happened". Propose, approve, execute, told retroactively */}
       {proposal.handoffTimeline && proposal.handoffTimeline.length > 0 && (
         <div className="flex flex-col gap-[12px] items-start w-full">
           <SectionLabel>What happened</SectionLabel>
@@ -651,7 +651,7 @@ function AutoHandledReceipt({
                     {step.label}
                     {step.note && (
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">
-                        {" "}— {step.note}
+                        {" "}- {step.note}
                       </span>
                     )}
                   </p>
@@ -665,10 +665,10 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* 4 — "Why this cleared without asking" — positive evidence, mono block */}
+      {/* 4: "Why this cleared automatically". Positive evidence, mono block */}
       {proposal.clearedBecause && proposal.clearedBecause.length > 0 && (
         <div className="flex flex-col gap-[12px] items-start w-full">
-          <SectionLabel>Why this cleared without asking</SectionLabel>
+          <SectionLabel>Why this cleared automatically</SectionLabel>
           <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px]">
             {proposal.clearedBecause.map((fact: FactRow, i: number) => {
               const isLimit = /under limit/i.test(fact.label);
@@ -690,7 +690,7 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* 5 — "The rule that approved this" — bordered sub-card + Active/Paused
+      {/* 5: "The rule that approved this". Bordered sub-card + Active/Paused
           chip. The whole card taps through to RuleDetail when the rule still
           resolves; a deleted rule stays readable but non-tappable. */}
       {rule && (() => {
@@ -744,21 +744,21 @@ function AutoHandledReceipt({
         );
       })()}
 
-      {/* 6 — info note: this is a record, not a request */}
+      {/* 6: info note. This is a record, not a request */}
       <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[12px]">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[13px]">
-          This is a record, not a request — it's already settled. You can change how Brain handles these going forward.
+          This is a record, not a request. It is already settled. You can change how Brain handles these going forward.
         </p>
       </div>
 
-      {/* FOOTER — retroactive controls only. No approve/reject/postpone/verify. */}
+      {/* FOOTER: retroactive controls only. No approve/reject/postpone/verify. */}
       <div className="flex flex-col gap-[12px] items-start w-full">
         {paused && (
           <div
             data-testid="text-rule-paused-confirm"
             className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#42bf23]"
           >
-            {rule ? `"${titleCase(rule.name)}" is paused — Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
+            {rule ? `"${titleCase(rule.name)}" is paused. Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
           </div>
         )}
         <div className="flex gap-[10px] items-stretch w-full">
@@ -788,7 +788,7 @@ function AutoHandledReceipt({
           </button>
         </div>
 
-        {/* Report a problem — the escape hatch. #D20344 is the ONLY red here. */}
+        {/* Report a problem: the escape hatch. #D20344 is the ONLY red here. */}
         {reportStep === "idle" && (
           <button
             type="button"
@@ -804,7 +804,7 @@ function AutoHandledReceipt({
           </button>
         )}
 
-        {/* Step 1 — capture a reason: preset chips + optional free-text note. */}
+        {/* Step 1: capture a reason. Preset chips + optional free-text note. */}
         {reportStep === "reason" && (
           <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[12px]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
@@ -863,7 +863,7 @@ function AutoHandledReceipt({
           </div>
         )}
 
-        {/* Step 2 — confirm the safety action. Pausing is NEVER silent: the user
+        {/* Step 2: confirm the safety action. Pausing is NEVER silent: the user
             chooses to pause-and-review (purple primary) or just send feedback. */}
         {reportStep === "confirm" && (
           <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[12px]">
@@ -910,7 +910,7 @@ function AutoHandledReceipt({
           >
             <Check size={16} className="shrink-0 mt-[1px] text-[#42bf23]" strokeWidth={2.5} />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] text-[#a8b9f4]">
-              Thanks — we logged this as policy feedback{rule ? ` on "${titleCase(rule.name)}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
+              Thanks. We logged this as policy feedback{rule ? ` on "${titleCase(rule.name)}"` : ""}. The rule is still running; you can pause it anytime from its detail screen.
             </p>
           </div>
         )}

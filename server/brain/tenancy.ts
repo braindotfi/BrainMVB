@@ -1,17 +1,17 @@
 /**
- * Production tenancy — platform-service-credential calls (docs/contracts/production-tenancy.md).
+ * Production tenancy - platform-service-credential calls (docs/contracts/production-tenancy.md).
  *
  * Everything here authenticates with the X-Platform-Service-Auth header
  * (BRAIN_PLATFORM_SERVICE_SECRET). None of it ever reaches the browser.
  *
- *  - POST /v1/tenants            — create a company tenant + bootstrap admin (NOT idempotent:
+ *  - POST /v1/tenants            - create a company tenant + bootstrap admin (NOT idempotent:
  *                                  never auto-retried; a failure surfaces verbatim).
- *  - POST /v1/sessions           — exchange a durable external_ref for a member session
+ *  - POST /v1/sessions           - exchange a durable external_ref for a member session
  *                                  (token + refresh_token, 900s). 403 session_identity_unlinked
  *                                  when the ref was never bound → NoTenantError upstream.
- *  - POST /v1/sessions/refresh   — rotate a session before expiry. A reuse-detected rejection
+ *  - POST /v1/sessions/refresh   - rotate a session before expiry. A reuse-detected rejection
  *                                  (refresh family revoked) forces a full re-auth via /sessions.
- *  - POST /v1/invites/consume    — bind an invitee's external_ref to a tenant membership.
+ *  - POST /v1/invites/consume    - bind an invitee's external_ref to a tenant membership.
  *                                  Rejections: invite_invalid | invite_expired | invite_consumed
  *                                  | invite_revoked (mapped to plain language at the route).
  */
@@ -63,7 +63,7 @@ function requireServiceSecret(): string {
   const secret = brainConfig.platformServiceSecret;
   if (!secret) {
     throw new Error(
-      "BRAIN_PLATFORM_SERVICE_SECRET is not configured — production tenancy calls are unavailable.",
+      "BRAIN_PLATFORM_SERVICE_SECRET is not configured - production tenancy calls are unavailable.",
     );
   }
   return secret;
@@ -89,7 +89,7 @@ async function serviceCall<T>(path: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-/** Create a company tenant + bootstrap admin. NOT idempotent — call exactly once per signup. */
+/** Create a company tenant + bootstrap admin. NOT idempotent - call exactly once per signup. */
 export function createTenant(params: {
   companyName: string;
   founderEmail: string;
@@ -114,9 +114,9 @@ export function refreshSession(refreshToken: string): Promise<TenantSessionShape
 }
 
 /**
- * Mint (or re-fetch) the tenant's agent token — POST /v1/tenants/{tenantId}/agent-token
+ * Mint (or re-fetch) the tenant's agent token - POST /v1/tenants/{tenantId}/agent-token
  * (docs/contracts/production-agents.md). IDEMPOTENT: safe to call before expiry or for a
- * tenant that already has one via another path — core returns the existing token. Used for
+ * tenant that already has one via another path - core returns the existing token. Used for
  * refresh AND for backfilling tenants created before the agent contract existed.
  */
 export function mintAgentToken(tenantId: string): Promise<AgentTokenShape> {

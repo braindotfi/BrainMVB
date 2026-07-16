@@ -256,7 +256,7 @@ const ProfileRowCircle = ({ src, w, h }: { src: string; w: number; h: number }) 
   </div>
 );
 
-/* Briefcase icon — 4-layer composite for the "Add Business Account" row
+/* Briefcase icon: 4-layer composite for the "Add Business Account" row
    (Figma node within 3957:43975 misc section). */
 const BriefcaseRowCircle = () => (
   <div className="relative rounded-[100px] shrink-0 size-[40px]">
@@ -366,7 +366,7 @@ function ProfileSection() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Profile header card — borderless per Figma */}
+      {/* Profile header card, borderless per Figma */}
       <Card noBorder>
         <div className="flex items-center gap-4 p-4">
           <button
@@ -431,7 +431,7 @@ function ProfileSection() {
             )}
           </div>
 
-          {/* Edit button — Figma 3695:40062: amber pill #4a2300 / #ff9500 */}
+          {/* Edit button, Figma 3695:40062: amber pill #4a2300 / #ff9500 */}
           <button
             data-testid="button-edit-profile"
             onClick={() => {
@@ -462,7 +462,7 @@ function ProfileSection() {
         </div>
       </Card>
 
-      {/* Identity card — borderless per Figma 3957:43974 */}
+      {/* Identity card, borderless per Figma 3957:43974 */}
       <div>
         <SectionLabel>Identity</SectionLabel>
         <Card noBorder>
@@ -556,10 +556,10 @@ function ProfileSection() {
 /* ─── Billing section ──────────────────────────────────────
    Plan summary, payment method, upcoming invoice and history. */
 const INVOICES: { id: string; date: string; description: string; amount: string; status: "paid" | "due" }[] = [
-  { id: "INV-2026-04", date: "Apr 1, 2026",  description: "Pro plan — April 2026",    amount: "$24.00", status: "paid" },
-  { id: "INV-2026-03", date: "Mar 1, 2026",  description: "Pro plan — March 2026",    amount: "$24.00", status: "paid" },
-  { id: "INV-2026-02", date: "Feb 1, 2026",  description: "Pro plan — February 2026", amount: "$24.00", status: "paid" },
-  { id: "INV-2026-01", date: "Jan 1, 2026",  description: "Pro plan — January 2026",  amount: "$24.00", status: "paid" },
+  { id: "INV-2026-04", date: "Apr 1, 2026",  description: "Pro plan, April 2026",    amount: "$24.00", status: "paid" },
+  { id: "INV-2026-03", date: "Mar 1, 2026",  description: "Pro plan, March 2026",    amount: "$24.00", status: "paid" },
+  { id: "INV-2026-02", date: "Feb 1, 2026",  description: "Pro plan, February 2026", amount: "$24.00", status: "paid" },
+  { id: "INV-2026-01", date: "Jan 1, 2026",  description: "Pro plan, January 2026",  amount: "$24.00", status: "paid" },
 ];
 
 function StatusPill({ status }: { status: "paid" | "due" }) {
@@ -583,7 +583,7 @@ function StatusPill({ status }: { status: "paid" | "due" }) {
 }
 
 const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string; cadence: string }> = {
-  free:     { label: "Free plan",     tagline: "Try Brain — 1 agent, $10k monthly cap.",                  price: "$0",   cadence: "per month" },
+  free:     { label: "Free plan",     tagline: "Try Brain: 1 agent, $10k monthly cap.",                  price: "$0",   cadence: "per month" },
   pro:      { label: "Pro plan",      tagline: "Unlimited agents, $5M monthly volume cap, priority support.", price: "$24",  cadence: "per month" },
   business: { label: "Business plan", tagline: "Dedicated infra, SLAs, custom policy signers.",           price: "$199", cadence: "per month" },
 };
@@ -725,7 +725,7 @@ function BillingSection() {
                 Due May 1, 2026
               </p>
               <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}>
-                Pro plan — May 2026
+                Pro plan, May 2026
               </p>
             </div>
             <p

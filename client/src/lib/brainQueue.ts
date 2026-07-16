@@ -1,11 +1,11 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
 import type { Proposal, ProposalStatus } from "./proposalTypes";
 
-/* ── Durable "Needs Review" queue — live brain-core PaymentIntents ─────────
+/* ── Durable "Needs Review" queue - live brain-core PaymentIntents ─────────
    brain-core has no bulk list of full PaymentIntents: `GET /actions` is the
    only tenant-scoped list, but its wire shape (`Action`) strips amount/
    currency/counterparty/invoice_id (see brain-core services/execution/src/
-   actions/mapper.ts — deliberate: /actions is the docs-vocabulary summary).
+   actions/mapper.ts - deliberate: /actions is the docs-vocabulary summary).
    So this hook fans out: list ids+status from /actions, then fetch each
    candidate's full record from GET /payment-intents/{id} (already exposed,
    passthrough-safe, execution:read scope). Bounded to a handful of pending
@@ -19,7 +19,7 @@ interface ActionsListResponse {
   data: BrainAction[];
 }
 
-/** Raw brain-core PaymentIntent (subset — see shared/src/contracts/IPaymentIntentService.ts). */
+/** Raw brain-core PaymentIntent (subset - see shared/src/contracts/IPaymentIntentService.ts). */
 export interface BrainPaymentIntent {
   id: string;
   action_type: string;
@@ -51,7 +51,7 @@ export function useBrainReviewQueue() {
     retry: false,
   });
   // /actions maps both pending_approval + awaiting_second_approval to its
-  // own "needs_approval" status — that's the only signal it carries.
+  // own "needs_approval" status - that's the only signal it carries.
   const pendingIds = (actions.data?.data ?? [])
     .filter((a) => a.status === "needs_approval")
     .map((a) => a.id);
@@ -73,7 +73,7 @@ export function useBrainReviewQueue() {
   const intents = details
     .map((q) => q.data)
     .filter((d): d is BrainPaymentIntent => d !== undefined)
-    // Only the statuses this queue is FOR — a detail fetch racing a status
+    // Only the statuses this queue is FOR - a detail fetch racing a status
     // change (e.g. approved between the two calls) shouldn't show stale.
     .filter((d) => d.status === "pending_approval" || d.status === "awaiting_second_approval");
 
@@ -95,7 +95,7 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     id: intent.id,
     auditId: intent.id,
     // ponytail: brain-core's PaymentIntent carries no "which agent proposed
-    // this" tag on the wire — every intent this queue shows pays an invoice,
+    // this" tag on the wire - every intent this queue shows pays an invoice,
     // so "invoice" is the honest single choice, not a fabricated guess.
     agent: "invoice",
     surface: "business",
@@ -113,7 +113,7 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     rationale: "Brain core's §6 policy gate flagged this payment for human approval before it can settle.",
     evidence: [],
     // Real confidence when brain-core attaches one (RFC 0004 evidence
-    // confidence); no fabricated score otherwise — a neutral mid value with
+    // confidence); no fabricated score otherwise - a neutral mid value with
     // an honest caveat instead of inventing certainty.
     confidence:
       typeof intent.confidence === "number"

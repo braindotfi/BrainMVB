@@ -3,9 +3,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* ─── Billing-related modals ────────────────────────────────
-   - ChangePlanModal:           pick a plan, confirm.
-   - UpdateCardModal:           edit card number / expiry / CVC / name.
-   - CancelSubscriptionModal:   logout-style confirm dialog.                 */
+   ChangePlanModal: pick a plan, confirm.
+   UpdateCardModal: processor placeholder only, no raw card capture.
+   CancelSubscriptionModal: logout-style confirm dialog. */
 
 const CloseIcon = () => (
   <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -86,7 +86,7 @@ const ModalShell = ({ open, onOpenChange, title, testId, description, children }
 export type PlanId = "free" | "pro" | "business";
 
 const PLANS: { id: PlanId; name: string; price: string; cadence: string; tagline: string }[] = [
-  { id: "free",     name: "Free",     price: "$0",   cadence: "/mo", tagline: "Try Brain — 1 agent, $10k monthly cap." },
+  { id: "free",     name: "Free",     price: "$0",   cadence: "/mo", tagline: "Try Brain: 1 agent, $10k monthly cap." },
   { id: "pro",      name: "Pro",      price: "$24",  cadence: "/mo", tagline: "Unlimited agents, $5M monthly cap, priority support." },
   { id: "business", name: "Business", price: "$199", cadence: "/mo", tagline: "Dedicated infra, SLAs, custom policy signers." },
 ];
@@ -176,35 +176,13 @@ export function ChangePlanModal({
 
 /* ─── Update Credit Card ───────────────────────────────── */
 
-const formatCardNumber = (raw: string) =>
-  raw.replace(/\D/g, "").slice(0, 19).replace(/(\d{4})(?=\d)/g, "$1 ");
-
-const formatExpiry = (raw: string) => {
-  const d = raw.replace(/\D/g, "").slice(0, 4);
-  if (d.length < 3) return d;
-  return `${d.slice(0, 2)}/${d.slice(2)}`;
-};
-
 export function UpdateCardModal({
-  open, onOpenChange, onConfirm,
+  open, onOpenChange,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onConfirm: (last4: string) => void;
 }) {
-  const [number, setNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc]       = useState("");
-  const [name, setName]     = useState("");
-
-  useEffect(() => {
-    if (open) { setNumber(""); setExpiry(""); setCvc(""); setName(""); }
-  }, [open]);
-
-  const digits = number.replace(/\D/g, "");
-  const expiryValid = /^\d{2}\/\d{2}$/.test(expiry) && Number(expiry.slice(0, 2)) >= 1 && Number(expiry.slice(0, 2)) <= 12;
-  const canSave = digits.length >= 13 && digits.length <= 19 && expiryValid && cvc.length >= 3 && name.trim().length > 1;
-
   return (
     <ModalShell
       open={open}
@@ -213,81 +191,28 @@ export function UpdateCardModal({
       testId="update-card"
       description="Update the payment card on file."
     >
-      <div className="flex flex-col gap-1 w-full">
-        <FieldLabel>Card Number</FieldLabel>
-        <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
-          <input
-            data-testid="input-card-number"
-            type="text"
-            inputMode="numeric"
-            autoComplete="cc-number"
-            placeholder="1234 5678 9012 3456"
-            value={number}
-            onChange={e => setNumber(formatCardNumber(e.target.value))}
-            className="flex-1 min-w-0 bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[16px] leading-[20px] text-white placeholder:text-[#6c779d]"
-            autoFocus
-          />
-        </div>
-      </div>
-      <div className="flex gap-3 w-full">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <FieldLabel>Expiry</FieldLabel>
-          <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
-            <input
-              data-testid="input-card-expiry"
-              type="text"
-              inputMode="numeric"
-              autoComplete="cc-exp"
-              placeholder="MM/YY"
-              value={expiry}
-              onChange={e => setExpiry(formatExpiry(e.target.value))}
-              className="flex-1 min-w-0 bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[16px] leading-[20px] text-white placeholder:text-[#6c779d]"
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <FieldLabel>CVC</FieldLabel>
-          <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
-            <input
-              data-testid="input-card-cvc"
-              type="text"
-              inputMode="numeric"
-              autoComplete="cc-csc"
-              placeholder="123"
-              value={cvc}
-              onChange={e => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              className="flex-1 min-w-0 bg-transparent outline-none font-['JetBrains_Mono',monospace] font-medium text-[16px] leading-[20px] text-white placeholder:text-[#6c779d]"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1 w-full">
-        <FieldLabel>Name on Card</FieldLabel>
-        <div className="flex items-center px-2 py-[10px] rounded-[8px]" style={{ background: "#222737" }}>
-          <input
-            data-testid="input-card-name"
-            type="text"
-            autoComplete="cc-name"
-            placeholder="Full name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent outline-none font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-white placeholder:text-[#6c779d]"
-          />
-        </div>
+      <div className="flex flex-col gap-3 w-full rounded-[12px] p-4" style={{ background: "#222737", border: "1px solid #1d2132" }}>
+        <FieldLabel>Payment Method</FieldLabel>
+        <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]">
+          Card updates are unavailable until a tokenized payment processor is connected.
+        </p>
+        <p className="font-['Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+          Brain will not collect card numbers or security codes in this form.
+        </p>
       </div>
       <div className="flex items-center gap-2 pt-1" style={{ color: "#6c779d" }}>
         <CheckIcon />
         <p className="font-['Gilroy',sans-serif] font-medium text-[12px] leading-[16px]">
-          Payments are processed securely. We never store your full card number.
+          Add Stripe Elements or another tokenizing widget before enabling card updates.
         </p>
       </div>
       <div className="pt-2">
         <PrimaryButton
           testId="button-update-card-save"
-          disabled={!canSave}
-          onClick={() => onConfirm(digits.slice(-4))}
+          disabled
+          onClick={() => undefined}
         >
-          Save Card
+          Processor Required
         </PrimaryButton>
       </div>
     </ModalShell>

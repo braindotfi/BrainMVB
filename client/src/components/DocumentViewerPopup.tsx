@@ -23,8 +23,8 @@ import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/currencyContext";
 
 /* ── Document / Record EVIDENCE Viewer ────────────────────────────────────────
-   ONE read-only viewer for every kind of evidence Brain surfaces behind a
-   proposal / audit record / receipt — keyed off `document.kind`:
+   ONE read only viewer for every kind of evidence Brain surfaces behind a
+   proposal, audit record, or receipt. Keyed off `document.kind`:
      invoice · purchase_order · prior_payment  → cream "paper" document pane
      bank_transaction                          → feed line + bank↔ledger recon
      contract                                  → agreement terms pane
@@ -99,7 +99,7 @@ function DarkTableRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ── Invoice pane — Figma 5573:97699 dark-themed invoice viewer ───────────── */
+/* Invoice pane, Figma 5573:97699 dark-themed invoice viewer */
 function InvoicePane({ doc }: { doc: DocumentRecord }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const { format } = useCurrency();
@@ -136,7 +136,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
 
       {/* Top: thumbnail + invoice id + status + amount/date */}
       <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
-        {/* Invoice thumbnail — click expands full preview, hover shows magnifier */}
+        {/* Invoice thumbnail: click expands full preview, hover shows magnifier */}
         <div
           className="group relative shrink-0 size-[56px] rounded-[12px] overflow-hidden cursor-pointer"
           onClick={() => setPreviewOpen(true)}
@@ -185,7 +185,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
             <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
           </div>
           <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
-            <DarkTableRow label="Party" value={doc.vendorName ?? doc.counterparty ?? "—"} />
+            <DarkTableRow label="Party" value={doc.vendorName ?? doc.counterparty ?? "-"} />
             <DarkTableRow label="Document ID" value={doc.id} />
             {typeof doc.amount === "number" && (
               <DarkTableRow label="Amount" value={format(doc.amount)} />
@@ -212,7 +212,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#42bf23] text-[14px] whitespace-nowrap">
                   {match
                     ? `Matches the linked payment (${format(proposal.amount)})`
-                    : `Differs from the linked payment — document ${format(doc.amount)} vs payment ${format(proposal.amount)}`
+                    : `Differs from the linked payment. Document ${format(doc.amount)} vs payment ${format(proposal.amount)}`
                   }
                 </p>
               </div>
@@ -247,18 +247,18 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
             </div>
             <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
               <DarkTableRow label="Rule" value={proposal.rule.name} />
-              <DarkTableRow label="Policy" value={proposal.policy?.id ?? "—"} />
+              <DarkTableRow label="Policy" value={proposal.policy?.id ?? "-"} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Info box — Figma 5573:97923 — between provenance and Open Original */}
+      {/* Info box, Figma 5573:97923. Between provenance and Open Original */}
       <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] w-full">
         <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
           <Info size={16} className="text-[#6c779d] shrink-0 mt-[1px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
-            A viewer, not an AP system — Brain reads this invoice; your accounting system owns it.
+            A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.
           </p>
         </div>
       </div>
@@ -281,9 +281,9 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
   );
 }
 
-/* ── Cream "paper" pane — invoice / purchase_order / prior_payment / contract ── */
+/* Cream "paper" pane: invoice, purchase_order, prior_payment, or contract */
 function PaperPane({ doc }: { doc: DocumentRecord }) {
-  const partyName = doc.vendorName ?? doc.counterparty ?? "—";
+  const partyName = doc.vendorName ?? doc.counterparty ?? "-";
   const isContract = doc.kind === "contract";
 
   return (
@@ -336,7 +336,7 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
                 Effective from
               </p>
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
-                {doc.effectiveFromLabel ?? "—"}
+                {doc.effectiveFromLabel ?? "-"}
               </p>
             </div>
             <div className="flex justify-between items-center">
@@ -344,7 +344,7 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
                 Through
               </p>
               <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
-                {doc.effectiveToLabel ?? "—"}
+                {doc.effectiveToLabel ?? "-"}
               </p>
             </div>
             {doc.cadence && (
@@ -413,7 +413,7 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
   );
 }
 
-/* ── bank_transaction — feed line + reconciliation side-by-side ──────────────── */
+/* bank_transaction: feed line + reconciliation side-by-side */
 function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
   const recon = doc.reconciliation;
   const amountsDiffer =
@@ -434,7 +434,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-[#a8b9f4]">
             {doc.direction === "credit" ? "+" : "−"}
-            {typeof doc.amount === "number" ? `$${fmt(doc.amount)}` : "—"}
+            {typeof doc.amount === "number" ? `$${fmt(doc.amount)}` : "-"}
           </span>
         </div>
         <div className="flex flex-col gap-[6px]">
@@ -495,7 +495,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
               className={`[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] ${amountsDiffer ? "text-[#d20344]" : "text-[#42bf23]"}`}
             >
               {amountsDiffer
-                ? `Bank line and ledger differ by $${fmt(gap)} — outside close tolerance.`
+                ? `Bank line and ledger differ by $${fmt(gap)}, outside close tolerance.`
                 : "Bank line reconciles with the ledger entry."}
             </p>
           </div>
@@ -511,7 +511,7 @@ function ExtractedBlock({ doc }: { doc: DocumentRecord }) {
     <div className="flex flex-col gap-[8px] w-full" data-testid="document-extracted-section">
       <SectionLabel>What Brain extracted</SectionLabel>
       <div className="bg-[#0a0c10] rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]">
-        <KeyValue label="party" value={doc.vendorName ?? doc.counterparty ?? "—"} />
+        <KeyValue label="party" value={doc.vendorName ?? doc.counterparty ?? "-"} />
         <KeyValue label="document id" value={doc.id} />
         {typeof doc.amount === "number" && (
           <KeyValue label="amount" value={`$${fmt(doc.amount)}`} />
@@ -525,7 +525,7 @@ function ExtractedBlock({ doc }: { doc: DocumentRecord }) {
   );
 }
 
-/* ── Amount-coherence note — only when the doc backs a proposal/payment ─────── */
+/* Amount-coherence note. Only when the doc backs a proposal/payment */
 function CoherenceNote({ doc }: { doc: DocumentRecord }) {
   const { format } = useCurrency();
   const proposal = resolveProposal(doc.proposalId);
@@ -550,7 +550,7 @@ function CoherenceNote({ doc }: { doc: DocumentRecord }) {
         >
           {match
             ? `Matches the linked payment (${format(proposal.amount)}).`
-            : `Differs from the linked payment — document ${format(doc.amount)} vs payment ${format(proposal.amount)}. Review before approving.`}
+            : `Differs from the linked payment. Document ${format(doc.amount)} vs payment ${format(proposal.amount)}. Review before approving.`}
         </p>
       </div>
     </div>
@@ -593,7 +593,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
   );
 }
 
-/* ── Compare columns — current doc beside its prior twin ────────────────────── */
+/* Compare columns: current doc beside its prior twin */
 function CompareColumns({
   current,
   prior,
@@ -625,7 +625,7 @@ function CompareColumns({
         <span
           className={`[font-family:'JetBrains_Mono',monospace] text-[12px] font-medium ${amountDiffers ? "text-[#d20344]" : "text-[#a8b9f4]"}`}
         >
-          {typeof d.amount === "number" ? `$${fmt(d.amount)}` : "—"}
+          {typeof d.amount === "number" ? `$${fmt(d.amount)}` : "-"}
         </span>
       </div>
       <div className="flex justify-between items-center gap-[6px]">
@@ -643,7 +643,7 @@ function CompareColumns({
         <span
           className={`[font-family:'JetBrains_Mono',monospace] text-[12px] font-medium ${accountDiffers ? "text-[#d20344]" : "text-[#a8b9f4]"}`}
         >
-          {d.payeeAccountLast4 ? `••${d.payeeAccountLast4}` : "—"}
+          {d.payeeAccountLast4 ? `••${d.payeeAccountLast4}` : "-"}
         </span>
       </div>
     </div>
@@ -661,8 +661,8 @@ function CompareColumns({
           <AlertCircle size={15} className="text-[#d20344] shrink-0 mt-[1px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344]">
             {accountDiffers
-              ? "Payout account differs from the established one — a common invoice-redirect signal."
-              : "Amounts differ between these near-identical documents — check for a duplicate."}
+              ? "Payout account differs from the established one. A common invoice-redirect signal."
+              : "Amounts differ between these near-identical documents. Check for a duplicate."}
           </p>
         </div>
       )}
@@ -700,7 +700,7 @@ export function DocumentViewerPopup({
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[560px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >
-          {/* Header — invoice uses "Invoice Record" centred title; other kinds show doc id + kind */}
+          {/* Header: invoice uses "Invoice Record" centred title; other kinds show doc id + kind */}
           {doc.kind === "invoice" ? (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)]">
@@ -746,7 +746,7 @@ export function DocumentViewerPopup({
           )}
 
           <div className="flex flex-col gap-[20px] items-start p-[24px] w-full overflow-y-auto">
-            {/* Primary pane — invoice uses dark Figma viewer; others use paper or bank.
+            {/* Primary pane: invoice uses dark Figma viewer; others use paper or bank.
                 InvoicePane renders all its own sections internally (no duplicates below). */}
             {doc.kind === "invoice" ? (
               <InvoicePane doc={doc} />
