@@ -85,6 +85,50 @@ export function useBrainReviewQueue() {
   };
 }
 
+/**
+ * The "Approved Automatically" queue: brain-core PaymentIntents that cleared
+ * the §6 policy gate without needing a human decision. brain-core's own
+ * mapper (services/execution/src/actions/mapper.ts:17-19,69-77) emits Action
+ * status "auto" for PaymentIntent status "proposed" | "approved" — i.e.
+ * policy-permitted and ready to run, NOT necessarily settled yet ("executed"
+ * is a distinct, later status). So this queue is honestly "cleared", not
+ * "paid" — see mapIntentToAutoApprovedProposal below.
+ */
+export function useBrainAutoApproved() {
+  const actions = useQuery<ActionsListResponse>({
+    queryKey: ["/api/brain/actions"],
+    retry: false,
+  });
+  const autoIds = (actions.data?.data ?? [])
+    .filter((a) => a.status === "auto")
+    .map((a) => a.id);
+
+  const details = useQueries({
+    queries: autoIds.map((id) => ({
+      queryKey: [`/api/brain/payment-intents/${id}`],
+      retry: false,
+    })),
+  }) as { data?: BrainPaymentIntent; isLoading: boolean }[];
+  const counterparties = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const intents = details
+    .map((q) => q.data)
+    .filter((d): d is BrainPaymentIntent => d !== undefined)
+    // Only the statuses "auto" actually maps from — a detail fetch racing a
+    // status change (e.g. executed between the two calls) shouldn't show stale.
+    .filter((d) => d.status === "proposed" || d.status === "approved");
+
+  const nameOf = (id: string) => counterparties.data?.counterparties.find((c) => c.id === id)?.name ?? undefined;
+
+  return {
+    isLoading: actions.isLoading || details.some((d) => d.isLoading),
+    proposals: intents.map((i) => mapIntentToAutoApprovedProposal(i, nameOf(i.destination_counterparty_id))),
+  };
+}
+
 /** Map a live brain-core PaymentIntent to the app's Proposal shape (honest defaults, no fabrication). */
 export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: string): Proposal {
   const amount = Number(intent.amount);
@@ -129,5 +173,32 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     },
     status,
     invoiceId: intent.invoice_id ?? undefined,
+  };
+}
+
+/**
+ * Map a live "auto"-cleared PaymentIntent to the app's auto_handled receipt
+ * shape (ProposalDetail's isReceipt branch — no Approve/Reject, matches
+ * brain-core's real "no human decision needed" semantics). Reuses
+ * mapIntentToProposal for the shared fields, overriding only what differs
+ * for a cleared-not-pending record.
+ */
+export function mapIntentToAutoApprovedProposal(intent: BrainPaymentIntent, vendorName?: string): Proposal {
+  const base = mapIntentToProposal(intent, vendorName);
+  const vendor = vendorName ?? "a vendor";
+  return {
+    ...base,
+    title: `Payment to ${vendor}`,
+    rowSubtitle: `${vendor} · cleared automatically by policy`,
+    dueLabel: "Approved automatically",
+    rationale: "Brain core's §6 policy gate cleared this payment automatically — no human approval was required.",
+    whatHappensNext: "This clears through its payment rail without further review.",
+    risk: "Brain's policy gate cleared this automatically.",
+    policy: { ...base.policy, explanation: "brain-core's policy gate did not require approval", autoClearedOtherwise: true },
+    status: "auto_handled",
+    // ponytail: brain-core's PaymentIntent status here is "proposed"/"approved"
+    // (not "executed"), so say "cleared to pay", never "paid"/"settled" — and
+    // skip settledMeta, there's no real settle timestamp yet to show.
+    pastTenseStatement: `Brain cleared paying ${vendor} ${intent.currency} ${intent.amount} automatically`,
   };
 }

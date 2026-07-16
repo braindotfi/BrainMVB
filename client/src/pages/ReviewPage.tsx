@@ -34,7 +34,7 @@ import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
-import { useBrainReviewQueue } from "@/lib/brainQueue";
+import { useBrainReviewQueue, useBrainAutoApproved } from "@/lib/brainQueue";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -231,6 +231,11 @@ export function ReviewPage() {
   // this durable queue doesn't show the same intent twice.
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
+  /* Live "Approved Automatically" queue — brain-core PaymentIntents that
+     cleared §6 without a human decision (see brainQueue.ts for the honest
+     "cleared, not settled" wording). Rendered ahead of the demo agent rows
+     below via the same ProposalRow used for the live Needs-Review queue. */
+  const { proposals: liveAutoApproved } = useBrainAutoApproved();
   /* Agent proposal records (one per Brain agent, per the proposal-detail-modal
      spec) seed the Needs Review + Approved Automatically tabs. Decisions are
      user-driven via the shared agentProposals decision store (no setTimeout):
@@ -606,18 +611,27 @@ export function ReviewPage() {
                 tab renders it at the very bottom of the page instead. */}
             {activeTab === "All" && <HelperBanner />}
 
-            {/* Approved Automatically — agent records Brain cleared on its own. */}
+            {/* Approved Automatically — live brain-core "auto" intents first, then
+                the demo agent records Brain cleared on its own. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Approved Automatically" count={autoApproved.length} />
+                <WidgetHeader title="Approved Automatically" count={liveAutoApproved.length + autoApproved.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {autoApproved.length === 0 && (
+                  {liveAutoApproved.length === 0 && autoApproved.length === 0 && (
                     <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                         Nothing was approved automatically recently.
                       </p>
                     </div>
                   )}
+                  {liveAutoApproved.map((p, idx, arr) => (
+                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
+                      <ProposalRow proposal={p} status={p.status} onClick={() => openLocal(p)} format={format} />
+                      {(idx < arr.length - 1 || autoApproved.length > 0) && (
+                        <div className="h-px w-full" style={{ background: "#1d2132" }} />
+                      )}
+                    </div>
+                  ))}
                   {autoApproved.map((p, idx, arr) => (
                     <div key={p.id} className="flex flex-col gap-[8px] w-full">
                       <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
