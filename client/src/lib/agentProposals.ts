@@ -1206,6 +1206,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
    approved / rejected / acknowledged records drop out of Needs Review;
    an auto-approved record's Undo moves it back into Needs Review. */
 export type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
+
+export interface AgentModalEditPayload {
+  amount?: string;
+  category?: string;
+  floor?: string;
+  forecastNote?: string;
+  draft?: string;
+}
 let decisions: Record<string, AgentDecision> = {};
 /* Epoch-ms timestamp of each decision, keyed by proposal id - read by the
    Activity + Audit Log pages so a logged decision keeps its real time instead

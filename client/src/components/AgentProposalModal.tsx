@@ -14,6 +14,7 @@ import {
   Check,
   ChevronRight,
   ClipboardCheck,
+  DollarSign,
   FileText,
   HandCoins,
   Info,
@@ -34,6 +35,13 @@ import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RISK_META,
   useAgentDecisions,
   type AgentKey,
@@ -50,6 +58,9 @@ import {
    with an Undo link. */
 
 export type AgentModalAction = "approve" | "reject" | "acknowledge" | "undo";
+
+import type { AgentModalEditPayload } from "@/lib/agentProposals";
+export type { AgentModalEditPayload };
 
 const AGENT_ICONS: Record<AgentKey, LucideIcon> = {
   vendor_risk: ShieldAlert,
@@ -82,6 +93,21 @@ const SectionLabel = ({
 );
 
 const HR = () => <div className="h-px w-full bg-[#1d2132]" />;
+
+const RECONCILIATION_CATEGORIES = [
+  "Merchant fees",
+  "Software",
+  "Office supplies",
+  "Travel & meals",
+  "Professional services",
+  "Rent & utilities",
+  "Marketing",
+  "Equipment",
+  "Insurance",
+  "Payroll",
+  "Taxes",
+  "Other",
+];
 
 /* Evidence card row — clickable, shows dark card style */
 const EvidenceRow = ({
@@ -321,6 +347,7 @@ function renderScenarioModule(
     case "forecast_chart": {
       const max = Math.max(...module.weeks);
       const CHART_H = 88;
+      const weekLabels = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "W10", "W11", "W12", "W13"];
       return (
         <div
           className="flex flex-col gap-[16px] items-start w-full"
@@ -328,14 +355,20 @@ function renderScenarioModule(
         >
           <SectionLabel>{module.title}</SectionLabel>
           <div className="flex gap-[4px] items-end w-full">
-            {module.weeks.map((v, i) => (
-              <div key={i} className="flex-1 min-w-0">
-                <div
-                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)]"
-                  style={{ height: `${Math.max(4, Math.round((v / max) * CHART_H))}px` }}
-                />
-              </div>
-            ))}
+            {module.weeks.map((v, i) => {
+              const isShortfall = v < module.floor;
+              return (
+                <div key={i} className="flex-1 min-w-0 flex flex-col items-center gap-[4px]">
+                  <div
+                    className={`w-full rounded-[8px] border ${isShortfall ? "bg-[#1a050a] border-[rgba(210,3,68,0.4)]" : "bg-[#123509] border-[rgba(66,191,35,0.4)]"}`}
+                    style={{ height: `${Math.max(4, Math.round((v / max) * CHART_H))}px` }}
+                  />
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] leading-[12px] text-[#414965]">
+                    {weekLabels[i]}
+                  </span>
+                </div>
+              );
+            })}
           </div>
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] w-full">
             {module.note}
@@ -586,7 +619,7 @@ export function AgentProposalModal({
   proposal: AgentProposal | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAction: (action: AgentModalAction, proposal: AgentProposal) => void;
+  onAction: (action: AgentModalAction, proposal: AgentProposal, payload?: AgentModalEditPayload) => void;
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
@@ -600,6 +633,8 @@ export function AgentProposalModal({
   const [draft, setDraft] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editFloor, setEditFloor] = useState("");
+  const [editForecastNote, setEditForecastNote] = useState("");
   const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
 
   /* Reset transient edit state whenever a different record is shown. */
@@ -615,7 +650,14 @@ export function AgentProposalModal({
           : "",
       );
       setEditAmount(proposal.amount !== null ? String(proposal.amount) : "");
-      setEditCategory(proposal.agentKey === "reconciliation" ? "merchant fees" : "");
+      setEditCategory(proposal.agentKey === "reconciliation" ? "Merchant fees" : "");
+      if (proposal.scenarioModule.kind === "forecast_chart") {
+        setEditFloor(String(proposal.scenarioModule.floor));
+        setEditForecastNote("");
+      } else {
+        setEditFloor("");
+        setEditForecastNote("");
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposalId]);
@@ -826,42 +868,119 @@ export function AgentProposalModal({
 
             {/* Inline edit form for non-message agents */}
             {showEditForm && (
-              <div
-                className="w-full bg-[#0a0c10] border border-[#7631ee]/50 rounded-[12px] p-[12px] flex flex-col gap-[10px]"
-                data-testid="form-inline-edit"
-              >
-                {proposal.amount !== null && (
-                  <label className="flex items-center justify-between gap-[8px]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-                      Amount
-                    </span>
-                    <input
-                      value={editAmount}
-                      onChange={(e) =>
-                        setEditAmount(e.target.value.replace(/[^0-9.]/g, ""))
-                      }
-                      inputMode="decimal"
-                      data-testid="input-edit-amount"
-                      className="w-[140px] bg-[#11141b] border border-[#1d2132] rounded-[8px] px-[10px] py-[6px] [font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    />
-                  </label>
-                )}
-                {proposal.agentKey === "reconciliation" && (
-                  <label className="flex items-center justify-between gap-[8px]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-                      Entry category
-                    </span>
-                    <input
-                      value={editCategory}
-                      onChange={(e) => setEditCategory(e.target.value)}
-                      data-testid="input-edit-category"
-                      className="w-[180px] bg-[#11141b] border border-[#1d2132] rounded-[8px] px-[10px] py-[6px] [font-family:'Gilroy',sans-serif] text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    />
-                  </label>
-                )}
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-                  Changes apply when you approve. Nothing moves until then.
+              <div className="flex flex-col gap-[16px] items-start w-full" data-testid="form-inline-edit">
+                <SectionLabel>
+                  {(() => {
+                    if (proposal.agentKey === "reconciliation") return "Edit Amount & Category";
+                    if (proposal.agentKey === "cash_forecast") return "Edit Forecast";
+                    return "Edit Amount";
+                  })()}
+                </SectionLabel>
+                <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+                  {/* Amount row */}
+                  {proposal.amount !== null && (
+                    <div className="flex gap-[16px] items-start w-full">
+                      <div className="flex-1 min-w-0">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                          Amount
+                        </p>
+                      </div>
+                      <div className="bg-[#222737] flex flex-1 items-center px-[8px] py-[10px] rounded-[8px] min-w-0">
+                        <div className="flex gap-[2px] items-center">
+                          <DollarSign size={16} className="shrink-0 text-[#6c779d]" />
+                          <input
+                            value={editAmount}
+                            onChange={(e) =>
+                              setEditAmount(e.target.value.replace(/[^0-9.,]/g, ""))
+                            }
+                            inputMode="decimal"
+                            data-testid="input-edit-amount"
+                            className="bg-transparent border-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Category row (reconciliation only) */}
+                  {proposal.agentKey === "reconciliation" && (
+                    <div className="flex gap-[16px] items-start w-full">
+                      <div className="flex-1 min-w-0">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                          Entry category
+                        </p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Select
+                          value={editCategory}
+                          onValueChange={setEditCategory}
+                        >
+                          <SelectTrigger
+                            data-testid="select-edit-category"
+                            className="w-full bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:ring-2 focus:ring-[#7631EE] focus:ring-offset-0 h-auto"
+                          >
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#11141b] border border-[#1d2132] rounded-[8px]">
+                            {RECONCILIATION_CATEGORIES.map((cat) => (
+                              <SelectItem
+                                key={cat}
+                                value={cat}
+                                className="[font-family:'Gilroy',sans-serif] text-[16px] text-[#a8b9f4] focus:bg-[#222737] focus:text-[#a8b9f4] cursor-pointer"
+                              >
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
+                  Changes only apply after you approve.
                 </p>
+
+                {/* Cash forecasting editable fields */}
+                {proposal.agentKey === "cash_forecast" && (
+                  <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+                    <div className="flex gap-[16px] items-start w-full">
+                      <div className="flex-1 min-w-0">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                          Working Capital Floor
+                        </p>
+                      </div>
+                      <div className="bg-[#222737] flex flex-1 items-center px-[8px] py-[10px] rounded-[8px] min-w-0">
+                        <div className="flex gap-[2px] items-center">
+                          <DollarSign size={16} className="shrink-0 text-[#6c779d]" />
+                          <input
+                            value={editFloor}
+                            onChange={(e) =>
+                              setEditFloor(e.target.value.replace(/[^0-9.,]/g, ""))
+                            }
+                            inputMode="decimal"
+                            data-testid="input-edit-floor"
+                            className="bg-transparent border-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-[16px] items-start w-full">
+                      <div className="flex-1 min-w-0">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                          Notes / Assumptions
+                        </p>
+                      </div>
+                      <textarea
+                        value={editForecastNote}
+                        onChange={(e) => setEditForecastNote(e.target.value)}
+                        rows={3}
+                        data-testid="input-edit-forecast-note"
+                        placeholder="Add known upcoming expenses or income..."
+                        className="flex-1 bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] resize-none min-w-0"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1045,7 +1164,15 @@ export function AgentProposalModal({
               <div className="flex gap-[12px] w-full">
                 <button
                   type="button"
-                  onClick={() => onAction("reject", proposal)}
+                  onClick={() =>
+                    onAction("reject", proposal, {
+                      amount: editAmount,
+                      category: editCategory,
+                      floor: editFloor,
+                      forecastNote: editForecastNote,
+                      draft,
+                    })
+                  }
                   data-testid="button-agent-reject"
                   className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 >
@@ -1065,7 +1192,15 @@ export function AgentProposalModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onAction("approve", proposal)}
+                  onClick={() =>
+                    onAction("approve", proposal, {
+                      amount: editAmount,
+                      category: editCategory,
+                      floor: editFloor,
+                      forecastNote: editForecastNote,
+                      draft,
+                    })
+                  }
                   data-testid="button-agent-approve"
                   className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                 >

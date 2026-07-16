@@ -11,7 +11,7 @@ import {
   decideAgentProposal,
   type AgentProposal,
 } from "@/lib/agentProposals";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
 import { useToast } from "@/hooks/use-toast";
 import {
   ADOBE_SETTLED,
@@ -341,7 +341,7 @@ export function ActivityPage() {
      (e.g. Undo on a reversible auto-approved record). */
   const [activeAgentRecord, setActiveAgentRecord] = useState<AgentProposal | null>(null);
   const { toast } = useToast();
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, _payload?: AgentModalEditPayload) => {
     if (action === "approve") {
       decideAgentProposal(p.id, "approved");
       toast({ title: "Approved", description: p.whatHappensNext.ifApproved });

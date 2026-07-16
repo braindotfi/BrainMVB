@@ -19,7 +19,7 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
 import { useAppAlert } from "@/components/AppAlert";
 import {
   useAgentDecisions,
@@ -467,7 +467,7 @@ export function ReviewPage() {
 
   /* Decide on an agent proposal. User-driven, logged via toast. The modal
      closes and the record drops out of (or returns to) the queue. */
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, _payload?: AgentModalEditPayload) => {
     if (action === "approve") {
       decideAgentProposal(p.id, "approved");
       alert.approved("Approved", p.whatHappensNext.ifApproved, 2_000);
