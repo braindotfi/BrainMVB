@@ -214,21 +214,21 @@ function renderScenarioModule(
       return (
         <div className="flex flex-col gap-[16px] items-start w-full" data-testid="module-document-stack">
           {module.title && <SectionLabel>{module.title}</SectionLabel>}
-          <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full">
+          <div className="flex flex-col gap-[8px] w-full">
             {module.docs.map((doc, i) => (
               <div
                 key={i}
-                className={`flex items-center gap-[12px] px-[12px] py-[10px] w-full ${i < module.docs.length - 1 ? "border-b border-[#1d2132]" : ""}`}
+                className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[16px] flex items-start gap-[16px] w-full"
                 data-testid={`module-doc-${i}`}
               >
-                <div className="flex items-center justify-center size-[32px] rounded-[8px] bg-[#1d2132] shrink-0">
-                  <FileText size={14} className="text-[#a8b9f4]" />
+                <div className="flex items-center justify-center size-[40px] rounded-[8px] bg-[#1d2132] shrink-0">
+                  <FileText size={18} className="text-[#a8b9f4]" />
                 </div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[18px] text-[#a8b9f4] truncate">
+                <div className="flex flex-col gap-[6px] min-w-0 flex-1 justify-center">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
                     {doc.label}
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] truncate">
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[12px] leading-[14px] text-[#6c779d] tracking-[-0.24px] truncate">
                     {doc.meta}
                   </p>
                 </div>
@@ -406,6 +406,44 @@ function renderScenarioModule(
         </div>
       );
     }
+    case "subscription_table":
+      return (
+        <div
+          className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full"
+          data-testid="module-subscription-table"
+        >
+          <div className="border-b border-[#1d2132] flex gap-[16px] items-center px-[12px] py-[8px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] flex-1 min-w-0">
+              Activity Status
+            </p>
+            <div className="inline-flex items-center justify-center bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] whitespace-nowrap">
+                {module.badge}
+              </span>
+            </div>
+          </div>
+          {module.rows.map((row, i) => (
+            <div
+              key={row.label}
+              className={`flex items-start${i < module.rows.length - 1 ? " border-b border-[#1d2132]" : ""}`}
+            >
+              <div className="w-[140px] shrink-0 px-[12px] py-[8px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+                  {row.label}
+                </p>
+              </div>
+              <div className="flex-1 px-[12px] py-[8px] min-w-0">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] truncate"
+                  style={{ color: row.valueColor ?? "#a8b9f4" }}
+                >
+                  {row.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
     case "document_checklist":
       return (
         <div
@@ -784,9 +822,8 @@ export function AgentProposalModal({
                   style={{ width: `${confidencePct}%` }}
                 />
               </div>
+              <HR />
             </div>
-
-            <HR />
 
             {/* SCENARIO MODULE: the one slot that swaps per agent */}
             {renderScenarioModule(
@@ -942,71 +979,52 @@ export function AgentProposalModal({
             </div>
           </div>
 
-          {/* Sticky action footer */}
+          {/* Sticky action footer — hidden for auto-approved irreversible/informational */}
+          {(!isAutoApproved || proposal.approvedAutomaticallyMeta?.reversibility === "reversible") && (
           <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[24px] w-full shrink-0">
             {isAutoApproved ? (
               (() => {
                 const meta = proposal.approvedAutomaticallyMeta!;
-                if (meta.reversibility === "reversible") {
-                  return (
-                    <div className="flex flex-col gap-[10px] w-full">
-                      {undoConfirmOpen ? (
-                        <div className="flex flex-col gap-[12px] w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] text-center">
-                            {meta.undoAction}
-                          </p>
-                          <div className="flex gap-[12px] w-full">
-                            <button
-                              type="button"
-                              onClick={() => setUndoConfirmOpen(false)}
-                              data-testid="button-undo-cancel"
-                              className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setUndoConfirmOpen(false);
-                                onAction("undo", proposal);
-                              }}
-                              data-testid="button-undo-confirm"
-                              className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
-                            >
-                              Undo
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setUndoConfirmOpen(true)}
-                          data-testid="button-agent-undo"
-                          className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                        >
-                          Undo
-                        </button>
-                      )}
-                    </div>
-                  );
-                }
-                if (meta.reversibility === "irreversible") {
-                  return (
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
-                      data-testid="text-irreversible"
-                    >
-                      This action can&apos;t be undone.
-                    </p>
-                  );
-                }
                 return (
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
-                    data-testid="text-informational"
-                  >
-                    No action was taken. This is for your records.
-                  </p>
+                  <div className="flex flex-col gap-[10px] w-full">
+                    {undoConfirmOpen ? (
+                      <div className="flex flex-col gap-[12px] w-full">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] text-center">
+                          {meta.undoAction}
+                        </p>
+                        <div className="flex gap-[12px] w-full">
+                          <button
+                            type="button"
+                            onClick={() => setUndoConfirmOpen(false)}
+                            data-testid="button-undo-cancel"
+                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUndoConfirmOpen(false);
+                              onAction("undo", proposal);
+                            }}
+                            data-testid="button-undo-confirm"
+                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                          >
+                            Undo
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setUndoConfirmOpen(true)}
+                        data-testid="button-agent-undo"
+                        className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      >
+                        Undo
+                      </button>
+                    )}
+                  </div>
                 );
               })()
             ) : decided === "approved" || decided === "rejected" ? (
@@ -1067,6 +1085,7 @@ export function AgentProposalModal({
               </div>
             )}
           </div>
+          )}
 
           {/* Navigation footer: previous / next pager (moved from header) */}
           {hasPager && (

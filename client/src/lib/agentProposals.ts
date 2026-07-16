@@ -73,7 +73,8 @@ export type ScenarioModule =
     }
   | { kind: "usage_timeline"; lastActivityDaysAgo: number; renewalInDays: number; note: string }
   | { kind: "document_checklist"; items: { label: string; present: boolean }[] }
-  | { kind: "trend_chart"; title: string; points: { label: string; value: number }[]; unit: string; note: string };
+  | { kind: "trend_chart"; title: string; points: { label: string; value: number }[]; unit: string; note: string }
+  | { kind: "subscription_table"; badge: string; rows: { label: string; value: string; valueColor?: string }[] };
 
 export interface AgentProposal {
   id: string;
@@ -209,9 +210,9 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       kind: "document_stack",
       title: "Invoices",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · due Jul 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -621,10 +622,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ],
     },
     scenarioModule: {
-      kind: "usage_timeline",
-      lastActivityDaysAgo: 63,
-      renewalInDays: 4,
-      note: "Last login May 11 · renewal charge Jul 17",
+      kind: "subscription_table",
+      badge: "1 of 8 Inactive",
+      rows: [
+        { label: "Last Login", value: "May 11" },
+        { label: "Renewal Charge", value: "Jul 17", valueColor: "#ff9500" },
+        { label: "Inactivity", value: "63 Days" },
+        { label: "Renews In", value: "4 Days", valueColor: "#ff9500" },
+      ],
     },
     recommendedAction: "Cancel the unused seat before renewal to avoid the charge.",
     whatHappensNext: {
@@ -632,14 +637,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can reassign the seat to someone else instead of cancelling it.",
       ifRejected: "The seat renews as normal at full price.",
     },
-    riskNote: "Low risk. Worst case is simply readding the seat later if it turns out to be needed.",
+    riskNote: "Low risk. The seat can be re-added later if needed.",
     source: "wiki_subscriptions, wiki_app_usage",
     createdAt: "2026-07-10T09:30:00Z",
   },
   {
     id: "pr_011",
     agentKey: "fraud_anomaly",
-    agentDisplayName: "Fraud & Anomaly",
+    agentDisplayName: "Fraud and Anomaly",
     category: "agnostic",
     executionMode: "notify_only",
     riskLevel: "high",
@@ -776,9 +781,9 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       kind: "document_stack",
       title: "Invoices",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · due Jul 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -896,9 +901,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 249, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · working-capital floor $174k",
+      note: "Working Capital Floor $174k",
     },
     recommendedAction: "No action needed. Informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -1021,6 +1027,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "trend_chart",
+      title: "Enterprise Segment Revenue ($k)",
       points: [
         { label: "Feb", value: 68 },
         { label: "Mar", value: 71 },
@@ -1030,7 +1037,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 83 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · +12% MoM",
+      note: "+12% MoM · 2 upsells, no churn",
     },
     recommendedAction: "No action needed. Informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -1111,10 +1118,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ],
     },
     scenarioModule: {
-      kind: "usage_timeline",
-      lastActivityDaysAgo: 63,
-      renewalInDays: 0,
-      note: "Seat cancelled Jul 13 · $180 saved",
+      kind: "subscription_table",
+      badge: "Seat Cancelled",
+      rows: [
+        { label: "Last Login", value: "May 11" },
+        { label: "Renewal Charge", value: "Cancelled", valueColor: "#d20344" },
+        { label: "Inactivity", value: "63 Days" },
+        { label: "Renews In", value: "Cancelled", valueColor: "#d20344" },
+      ],
     },
     recommendedAction: "Cancel the unused seat before renewal.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -1135,13 +1146,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
   {
     id: "aa_011",
     agentKey: "fraud_anomaly",
-    agentDisplayName: "Fraud & Anomaly",
+    agentDisplayName: "Fraud and Anomaly",
     category: "agnostic",
     executionMode: "notify_only",
     riskLevel: "elevated",
     status: "approved_automatically",
     title: "Vendor contact overlap logged for audit",
-    subtitle: "Fraud & Anomaly · reviewed, no further action taken",
+    subtitle: "Fraud and Anomaly · reviewed, no further action taken",
     amount: null,
     confidence: 0.68,
     whySuggested: {
