@@ -236,7 +236,7 @@ function renderScenarioModule(
             riskColor={riskColor}
           />
           {module.sharedNote && (
-            <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
+            <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
               {module.sharedNote}
             </p>
           )}
@@ -978,7 +978,7 @@ export function AgentProposalModal({
                   </div>
                 )}
 
-                <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
+                <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
                   Changes only apply after you approve.
                 </p>
               </div>
