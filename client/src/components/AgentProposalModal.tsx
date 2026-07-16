@@ -1003,7 +1003,7 @@ export function AgentProposalModal({
                         rows={3}
                         data-testid="input-edit-forecast-note"
                         placeholder="Add known upcoming expenses or income..."
-                        className="flex-1 bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] placeholder:text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] resize-none min-w-0"
+                        className="flex-1 bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] placeholder:text-[#6c779d] placeholder:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] resize-none min-w-0"
                       />
                     </div>
                   </div>
