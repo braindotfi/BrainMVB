@@ -217,7 +217,7 @@ const SettingRow = ({
 
 const SectionLabel = ({ children }: { children: string }) => (
   <p
-    className="text-[11px] uppercase tracking-[0.08em] px-1 mb-2"
+    className="text-[11px] uppercase px-1 mb-2"
     style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600 }}
   >
     {children}

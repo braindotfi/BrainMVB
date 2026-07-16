@@ -171,7 +171,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 
       {/* ── Footer ── */}
       <footer className="flex w-full h-14 flex-shrink-0 items-center justify-between px-6 py-3 bg-shared-colorsheaderfooterbg">
-        <span className="w-fit [font-family:'Gilroy',sans-serif] font-normal text-shared-colorsbaby-blue-60 text-sm tracking-[0] leading-[18px] whitespace-nowrap">
+        <span className="w-fit [font-family:'Gilroy',sans-serif] font-normal text-shared-colorsbaby-blue-60 text-sm leading-[18px] whitespace-nowrap">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
         <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />

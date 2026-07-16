@@ -62,7 +62,7 @@ const STATUS_CHIP: Record<DocStatus, string> = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase tracking-[0.04em]">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#414965] uppercase">
       {children}
     </p>
   );
@@ -71,7 +71,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function KeyValue({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-start gap-[8px]">
-      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em] shrink-0">
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] shrink-0">
         {label}
       </span>
       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#a8b9f4] text-right">
@@ -304,7 +304,7 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase tracking-[0.04em]">
+            <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase">
               {doc.dateCaption ?? "Date"}
             </p>
             <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
@@ -312,7 +312,7 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
             </p>
             {isContract && doc.effectiveToLabel && (
               <>
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase tracking-[0.04em] mt-[6px]">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase mt-[6px]">
                   Through
                 </p>
                 <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
@@ -375,10 +375,10 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
             {doc.lineItems && doc.lineItems.length > 0 && (
               <>
                 <div className="flex gap-[8px] px-[20px] py-[8px] border-b border-[#ddd8c8]">
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase tracking-[0.06em] text-[#8a7a60] flex-1">
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#8a7a60] flex-1">
                     Description
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase tracking-[0.06em] text-[#8a7a60] w-[80px] text-right">
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#8a7a60] w-[80px] text-right">
                     Amount
                   </p>
                 </div>
@@ -457,7 +457,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
           <div className="grid grid-cols-2 gap-[8px] w-full">
             {/* Bank side */}
             <div className="bg-[#0a0c10] rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase tracking-[0.06em] text-[#414965]">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965]">
                 Bank line
               </p>
               <p
@@ -471,7 +471,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
             </div>
             {/* Ledger side */}
             <div className="bg-[#0a0c10] rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase tracking-[0.06em] text-[#414965]">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965]">
                 Ledger {recon.ledgerRef}
               </p>
               <p
@@ -566,7 +566,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
       <div className="bg-[#0a0c10] rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]">
         <KeyValue label="source" value={doc.provenance.source} />
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em] shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] shrink-0">
             ingested
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#6c779d] text-right">
@@ -574,7 +574,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em] shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] shrink-0">
             channel
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#a8b9f4] text-right">
@@ -582,7 +582,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em] shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] shrink-0">
             ledger ref
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#6c779d] text-right break-all">
@@ -613,7 +613,7 @@ function CompareColumns({
 
   const col = (d: DocumentRecord, heading: string) => (
     <div className="bg-[#0a0c10] rounded-[10px] p-[12px] flex flex-col gap-[8px] flex-1 min-w-px">
-      <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase tracking-[0.06em] text-[#414965]">
+      <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965]">
         {heading}
       </p>
       <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] leading-[18px]">
@@ -724,13 +724,13 @@ export function DocumentViewerPopup({
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
                     {doc.id}
                   </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase tracking-[0.08em] text-[#414965]">
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase text-[#414965]">
                     {docKindLabel(doc.kind)}
                   </span>
                 </div>
                 {doc.status && (
                   <span
-                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase tracking-[0.06em] shrink-0 ${STATUS_CHIP[doc.status]}`}
+                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase shrink-0 ${STATUS_CHIP[doc.status]}`}
                     data-testid="document-status-chip"
                   >
                     {docStatusLabel(doc.status)}

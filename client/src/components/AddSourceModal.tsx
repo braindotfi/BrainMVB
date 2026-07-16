@@ -497,7 +497,7 @@ function SourceGroup({ label, children }: { label: string; children: React.React
   return (
     <div className="flex flex-col gap-[8px]">
       <div className="flex items-center gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase tracking-[0.04em] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase whitespace-nowrap">
           {label}
         </p>
         <div className="flex-1 h-px bg-[#1d2132]" />

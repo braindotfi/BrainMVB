@@ -781,7 +781,7 @@ export function RulesPage() {
                     />
                     {openChip === "vendor" && (
                       <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
-                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Trusted vendors
                         </p>
                         {TRUSTED_VENDORS.map((v) => {
@@ -804,7 +804,7 @@ export function RulesPage() {
                           );
                         })}
                         <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
-                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
+                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
                           Not Trusted Yet
                         </p>
                         {UNTRUSTED_VENDORS.map((v) => (
@@ -815,7 +815,7 @@ export function RulesPage() {
                             <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
                               {v}
                             </span>
-                            <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                            <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase">
                               Not Trusted
                             </span>
                           </div>

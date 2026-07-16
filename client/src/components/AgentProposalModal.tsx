@@ -288,11 +288,11 @@ function renderScenarioModule(
               {module.from.name}
             </p>
             <div className="flex gap-[4px] items-center shrink-0">
-              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
                 {format(module.from.before)}
               </span>
               <ArrowRight size={16} className="text-[#6c779d]" />
-              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
                 {format(module.from.after)}
               </span>
             </div>
@@ -307,11 +307,11 @@ function renderScenarioModule(
               {module.to.name}
             </p>
             <div className="flex gap-[4px] items-center shrink-0">
-              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] tracking-[-0.28px] whitespace-nowrap">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
                 {format(module.to.before)}
               </span>
               <ArrowRight size={16} className="text-[#6c779d]" />
-              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#42bf23] tracking-[-0.28px] whitespace-nowrap">
+              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-[#42bf23] whitespace-nowrap">
                 {format(module.to.after)}
               </span>
             </div>
@@ -734,7 +734,7 @@ export function AgentProposalModal({
               </p>
               {proposal.amount !== null && (
                 <p
-                  className="[font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[28px] text-[#a8b9f4] tracking-[-2px] shrink-0"
+                  className="[font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[28px] text-[#a8b9f4] shrink-0"
                   data-testid="text-agent-proposal-amount"
                 >
                   {format(proposal.amount)}

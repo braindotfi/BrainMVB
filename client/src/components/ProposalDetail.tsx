@@ -387,7 +387,7 @@ export function ProposalDetail({
                       data-testid="button-source-invoice"
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                     >
-                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
+                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-[#414965]">{docKindLabel(srcDoc.kind)}</span>
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
                       <ChevronRight size={14} className="text-[#414965] shrink-0" />
                     </button>
@@ -546,7 +546,7 @@ export function ProposalDetail({
                 type="button"
                 onClick={() => setShowTrace((s) => !s)}
                 data-testid="button-toggle-trace"
-                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase tracking-[0.04em]"
+                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase"
               >
                 <ChevronDown size={14} className={`transition-transform ${showTrace ? "rotate-180" : ""}`} />
                 Technical detail

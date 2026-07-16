@@ -8,7 +8,7 @@ export const HeaderFooterSection = (): JSX.Element => {
           alt="Frame"
           src="/figmaAssets/frame-1000002163.svg"
         />
-        <div className="w-fit mt-[-1.00px] [font-family:'Gilroy',sans-serif] font-normal text-transparent text-[28px] tracking-[0] leading-7 whitespace-nowrap">
+        <div className="w-fit mt-[-1.00px] [font-family:'Gilroy',sans-serif] font-normal text-transparent text-[28px] leading-7 whitespace-nowrap">
           <span className="text-[#7631ee]">br</span>
           <span className="text-[#ffffff] leading-[0.1px]">ai</span>
           <span className="text-[#7631ee]">n</span>

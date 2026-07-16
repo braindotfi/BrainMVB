@@ -30,7 +30,7 @@ import {
 function LabelValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-[4px] rounded-[12px] bg-[#0a0c10] p-[12px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-[#414965] text-[12px] uppercase tracking-[0.06em]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-[#414965] text-[12px] uppercase">
         {label}
       </p>
       <p
@@ -139,7 +139,7 @@ function MemberDetailBody({ id }: { id: string }) {
 
       {/* Locked, core-enforced rows */}
       <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] uppercase tracking-[0.08em]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] uppercase">
           Enforced by Brain core
         </p>
         {policy?.selfApprovalBlocked && (
