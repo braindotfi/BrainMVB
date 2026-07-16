@@ -236,7 +236,7 @@ function renderScenarioModule(
             riskColor={riskColor}
           />
           {module.sharedNote && (
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+            <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
               {module.sharedNote}
             </p>
           )}
@@ -649,10 +649,10 @@ export function AgentProposalModal({
           ? proposal.scenarioModule.draft
           : "",
       );
-      setEditAmount(proposal.amount !== null ? String(proposal.amount) : "");
+      setEditAmount(proposal.amount !== null ? Number(proposal.amount).toLocaleString("en-US") : "");
       setEditCategory(proposal.agentKey === "reconciliation" ? "Merchant fees" : "");
       if (proposal.scenarioModule.kind === "forecast_chart") {
-        setEditFloor(String(proposal.scenarioModule.floor));
+        setEditFloor(Number(proposal.scenarioModule.floor).toLocaleString("en-US"));
         setEditForecastNote("");
       } else {
         setEditFloor("");
@@ -880,7 +880,7 @@ export function AgentProposalModal({
                   {/* Amount row */}
                   {proposal.amount !== null && (
                     <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Amount
                         </p>
@@ -904,7 +904,7 @@ export function AgentProposalModal({
                   {/* Category row (reconciliation only) */}
                   {proposal.agentKey === "reconciliation" && (
                     <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Entry category
                         </p>
@@ -936,15 +936,11 @@ export function AgentProposalModal({
                     </div>
                   )}
                 </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
-                  Changes only apply after you approve.
-                </p>
-
                 {/* Cash forecasting editable fields */}
                 {proposal.agentKey === "cash_forecast" && (
                   <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
                     <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Working Capital Floor
                         </p>
@@ -965,7 +961,7 @@ export function AgentProposalModal({
                       </div>
                     </div>
                     <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Notes / Assumptions
                         </p>
@@ -981,6 +977,10 @@ export function AgentProposalModal({
                     </div>
                   </div>
                 )}
+
+                <p className="mt-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#414965]">
+                  Changes only apply after you approve.
+                </p>
               </div>
             )}
 
