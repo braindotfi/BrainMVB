@@ -757,6 +757,16 @@ export function AgentProposalModal({
                   />
                 ))}
               </div>
+              {/* Scenario module (e.g. subscription_table, entity_comparison)
+                  sits inside the WHY section for both tabs, below evidence */}
+              {renderScenarioModule(
+                proposal.scenarioModule,
+                risk.color,
+                format,
+                editing,
+                draft,
+                setDraft,
+              )}
               {/* Auto-approved: "Auto-approved because: ..." */}
               {isAutoApproved && proposal.approvedAutomaticallyMeta && (
                 <p
@@ -766,16 +776,6 @@ export function AgentProposalModal({
                   <span className="font-semibold text-[#a8b9f4]">Auto-approved because: </span>
                   {proposal.approvedAutomaticallyMeta.autoApprovalReason}
                 </p>
-              )}
-              {/* Auto-approved: scenario module (e.g. subscription_table) sits here,
-                  directly below the "Auto-approved because" text per Figma layout */}
-              {isAutoApproved && renderScenarioModule(
-                proposal.scenarioModule,
-                risk.color,
-                format,
-                editing,
-                draft,
-                setDraft,
               )}
             </div>
 
@@ -803,17 +803,6 @@ export function AgentProposalModal({
                   <HR />
                 </div>
               </div>
-            )}
-
-            {/* SCENARIO MODULE: renders for non-auto-approved proposals only
-                (auto-approved path moved inside the WHY section above) */}
-            {!isAutoApproved && renderScenarioModule(
-              proposal.scenarioModule,
-              risk.color,
-              format,
-              editing,
-              draft,
-              setDraft,
             )}
 
             {/* Inline edit form for non-message agents */}
