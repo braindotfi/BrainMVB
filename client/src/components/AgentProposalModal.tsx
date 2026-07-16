@@ -549,54 +549,76 @@ function EvidenceSheet({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="evidence-source-sheet"
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[20px] w-[420px] max-w-[calc(100vw-48px)] p-[20px] flex flex-col gap-[16px] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[480px] max-w-[calc(100vw-48px)] overflow-hidden flex flex-col shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         >
           {line && (
             <>
-              <div className="flex items-center justify-between w-full">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] bg-[#1d2132] text-[#a8b9f4]">
+              {/* Header bar */}
+              <div className="relative h-[56px] shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] flex items-center justify-center px-[12px]">
+                <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center">
                   {SOURCE_TYPE_LABEL[line.linkedSource.type] ?? line.linkedSource.type}
-                </span>
+                </DialogPrimitive.Title>
                 <DialogPrimitive.Close
                   aria-label="Close"
                   data-testid="button-evidence-sheet-close"
-                  className="size-[28px] flex items-center justify-center rounded-full bg-[#1d2132] hover:bg-[#252a3d] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="absolute right-[11px] top-[12px] size-[32px] flex items-center justify-center rounded-full bg-[#1d2132] hover:bg-[#252a3d] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <X size={14} className="text-[#a8b9f4]" />
                 </DialogPrimitive.Close>
               </div>
-              <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[18px]">
-                {line.text}
-              </DialogPrimitive.Title>
-              <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] p-[12px] flex flex-col gap-[8px] w-full">
-                <div className="flex items-baseline justify-between gap-[8px]">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-                    record id
-                  </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4]">
-                    {line.linkedSource.id}
-                  </span>
+
+              {/* Body */}
+              <div className="flex flex-col gap-[24px] p-[24px] w-full">
+                {/* Evidence title */}
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full">
+                  {line.text}
+                </p>
+
+                {/* Info card — 140px label column matching AccountTable */}
+                <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] overflow-hidden w-full">
+                  <div className="border-b border-[#1d2132] flex items-start w-full">
+                    <div className="w-[140px] shrink-0 px-[12px] py-[8px] flex flex-col items-start justify-center">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+                        Record ID
+                      </p>
+                    </div>
+                    <div className="flex-1 px-[12px] py-[8px] min-w-0">
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[20px] text-[#a8b9f4] truncate">
+                        {line.linkedSource.id}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border-b border-[#1d2132] flex items-start w-full">
+                    <div className="w-[140px] shrink-0 px-[12px] py-[8px] flex flex-col items-start justify-center">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+                        Deep Link
+                      </p>
+                    </div>
+                    <div className="flex-1 px-[12px] py-[8px] min-w-0">
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[20px] text-[#7631ee] truncate">
+                        {line.linkedSource.deepLink}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start w-full">
+                    <div className="w-[140px] shrink-0 px-[12px] py-[8px] flex flex-col items-start justify-center">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+                        Derived From
+                      </p>
+                    </div>
+                    <div className="flex-1 px-[12px] py-[8px] min-w-0">
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[20px] text-[#a8b9f4] truncate">
+                        {source}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-baseline justify-between gap-[8px]">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-                    deep link
-                  </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee] truncate">
-                    {line.linkedSource.deepLink}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-[8px]">
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965]">
-                    derived from
-                  </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4]">
-                    {source}
-                  </span>
-                </div>
+
+                {/* Footer description */}
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+                  Preview of the underlying record. This is a viewer, not the system of record. Close it to return to the proposal.
+                </p>
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]">
-                Preview of the underlying record. This is a viewer, not the system of record. Close it to return to the proposal.
-              </p>
             </>
           )}
         </DialogPrimitive.Content>
