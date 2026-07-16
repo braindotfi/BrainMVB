@@ -679,7 +679,13 @@ export function HomePage() {
           {/* Stat cards row */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
             <div className="flex gap-[16px] items-stretch relative shrink-0 w-full">
-              <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px]">
+              <div
+                className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px] cursor-pointer transition-colors hover:bg-[#11141b] border border-transparent hover:border-[#1d2132]"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate("/finances?tab=Accounts")}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/finances?tab=Accounts"); } }}
+              >
                 <div className="flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase whitespace-nowrap">Money in all accounts</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">

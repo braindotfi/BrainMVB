@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
@@ -508,7 +509,12 @@ export function FinancesPage() {
 
   type FinanceTab = "Accounts" | "Recent" | "Bills" | "Income" | "Expenses" | "Liabilities";
   const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
-  const [activeTab, setActiveTab] = useState<FinanceTab>("Accounts");
+  const search = useSearch();
+  const [activeTab, setActiveTab] = useState<FinanceTab>(() => {
+    const sp = new URLSearchParams(search);
+    const t = sp.get("tab");
+    return (t && FINANCE_TABS.includes(t as FinanceTab)) ? (t as FinanceTab) : "Accounts";
+  });
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
