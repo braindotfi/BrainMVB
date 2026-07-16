@@ -127,9 +127,9 @@ const EvidenceRow = ({
     data-testid={`link-evidence-${index}`}
     className={`flex items-start gap-[8px] px-[12px] py-[10px] text-left w-full hover:bg-[#0e1118] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${!isLast ? "border-b border-[#1d2132]" : ""}`}
   >
-    <ArrowRight
+    <ArrowUpRight
       size={16}
-      className="text-[#7631ee] shrink-0 mt-[0px]"
+      className="text-[#7631ee] shrink-0"
     />
     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#7631ee]">
       {line.text}
@@ -902,77 +902,73 @@ export function AgentProposalModal({
                     return "Edit Amount";
                   })()}
                 </SectionLabel>
-                <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
-                  {/* Amount row */}
-                  {proposal.amount !== null && (
-                    <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                {(proposal.amount !== null || proposal.agentKey === "reconciliation") && (
+                  <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+                    {/* Amount row */}
+                    {proposal.amount !== null && (
+                      <div className="flex gap-[16px] items-center w-full">
+                        <p className="w-[140px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Amount
                         </p>
-                      </div>
-                      <div className="bg-[#222737] flex flex-1 items-center px-[8px] py-[10px] rounded-[8px] min-w-0">
-                        <div className="flex gap-[2px] items-center">
-                          <DollarSign size={16} className="shrink-0 text-[#6c779d]" />
-                          <input
-                            value={editAmount}
-                            onChange={(e) =>
-                              setEditAmount(e.target.value.replace(/[^0-9.,]/g, ""))
-                            }
-                            inputMode="decimal"
-                            data-testid="input-edit-amount"
-                            className="bg-transparent border-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none w-full"
-                          />
+                        <div className="bg-[#222737] flex flex-1 items-center px-[8px] py-[10px] rounded-[8px] min-w-0">
+                          <div className="flex gap-[2px] items-center w-full">
+                            <DollarSign size={16} className="shrink-0 text-[#6c779d]" />
+                            <input
+                              value={editAmount}
+                              onChange={(e) =>
+                                setEditAmount(e.target.value.replace(/[^0-9.,]/g, ""))
+                              }
+                              inputMode="decimal"
+                              data-testid="input-edit-amount"
+                              className="bg-transparent border-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:outline-none w-full"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  {/* Category row (reconciliation only) */}
-                  {proposal.agentKey === "reconciliation" && (
-                    <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                    )}
+                    {/* Category row (reconciliation only) */}
+                    {proposal.agentKey === "reconciliation" && (
+                      <div className="flex gap-[16px] items-center w-full">
+                        <p className="w-[140px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
                           Entry category
                         </p>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Select
-                          value={editCategory}
-                          onValueChange={setEditCategory}
-                        >
-                          <SelectTrigger
-                            data-testid="select-edit-category"
-                            className="w-full bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:ring-2 focus:ring-[#7631EE] focus:ring-offset-0 h-auto"
+                        <div className="flex-1 min-w-0">
+                          <Select
+                            value={editCategory}
+                            onValueChange={setEditCategory}
                           >
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#11141b] border border-[#1d2132] rounded-[8px]">
-                            {RECONCILIATION_CATEGORIES.map((cat) => (
-                              <SelectItem
-                                key={cat}
-                                value={cat}
-                                className="[font-family:'Gilroy',sans-serif] text-[16px] text-[#a8b9f4] focus:bg-[#222737] focus:text-[#a8b9f4] cursor-pointer"
-                              >
-                                {cat}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                            <SelectTrigger
+                              data-testid="select-edit-category"
+                              className="w-full bg-[#222737] border-none rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] focus:ring-2 focus:ring-[#7631EE] focus:ring-offset-0 h-auto"
+                            >
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#11141b] border border-[#1d2132] rounded-[8px]">
+                              {RECONCILIATION_CATEGORIES.map((cat) => (
+                                <SelectItem
+                                  key={cat}
+                                  value={cat}
+                                  className="[font-family:'Gilroy',sans-serif] text-[16px] text-[#a8b9f4] focus:bg-[#222737] focus:text-[#a8b9f4] cursor-pointer"
+                                >
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
                 {/* Cash forecasting editable fields */}
                 {proposal.agentKey === "cash_forecast" && (
                   <div className="w-full bg-[#0a0c10] border border-[#1d2132] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
-                    <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
-                          Working Capital Floor
-                        </p>
-                      </div>
+                    <div className="flex gap-[16px] items-center w-full">
+                      <p className="w-[140px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                        Working Capital Floor
+                      </p>
                       <div className="bg-[#222737] flex flex-1 items-center px-[8px] py-[10px] rounded-[8px] min-w-0">
-                        <div className="flex gap-[2px] items-center">
+                        <div className="flex gap-[2px] items-center w-full">
                           <DollarSign size={16} className="shrink-0 text-[#6c779d]" />
                           <input
                             value={editFloor}
@@ -987,11 +983,9 @@ export function AgentProposalModal({
                       </div>
                     </div>
                     <div className="flex gap-[16px] items-start w-full">
-                      <div className="flex-1 min-w-0 flex items-center h-[40px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
-                          Notes / Assumptions
-                        </p>
-                      </div>
+                      <p className="w-[140px] shrink-0 pt-[10px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]">
+                        Notes / Assumptions
+                      </p>
                       <textarea
                         value={editForecastNote}
                         onChange={(e) => setEditForecastNote(e.target.value)}
