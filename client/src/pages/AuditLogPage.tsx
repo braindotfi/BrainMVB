@@ -8,8 +8,7 @@ import { AUDIT_TABS } from "@/lib/auditTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
-import { statusOverrideToAuditRecord, agentDecisionToAuditRecord } from "@/lib/brainFeed";
-import { useAgentDecisions, agentDecisionTimeMs, getAgentProposal } from "@/lib/agentProposals";
+import { statusOverrideToAuditRecord } from "@/lib/brainFeed";
 import { useAuth } from "@/lib/authContext";
 
 type Tab = (typeof AUDIT_TABS)[number];
@@ -30,7 +29,6 @@ export function AuditLogPage() {
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
   const { user } = useAuth();
   const reviewStatuses = useReviewStatuses();
-  const agentDecisions = useAgentDecisions();
 
   /* Merge live brain-core audit records with client-side review-status overrides
      so the Audit Log captures rejected actions made on the Review
@@ -60,19 +58,8 @@ export function AuditLogPage() {
       if (!p) continue;
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
-    /* Layer in agent-proposal decisions (the AgentProposalModal flow) — these
-       live in the agentProposals decision store, not reviewStatusStore. Records
-       a decision made on the still-present labeled demo surface (the "Demo
-       scenario" pill), NOT a live brain-core event; the id-continuity gap this
-       creates is documented in deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
-    for (const [id, decision] of Object.entries(agentDecisions)) {
-      if (decision !== "approved" && decision !== "rejected") continue;
-      const p = getAgentProposal(id);
-      if (!p) continue;
-      add(agentDecisionToAuditRecord(p, decision, user?.email ?? user?.username ?? "operator", agentDecisionTimeMs(id)));
-    }
     return merged;
-  }, [brainRecords, reviewStatuses, agentDecisions, user]);
+  }, [brainRecords, reviewStatuses, user]);
 
   const [activeTab, setActiveTab] = useState<Tab>("Approvals");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
@@ -219,16 +206,6 @@ export function AuditLogPage() {
                                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap truncate">
                                     {record.summary}
                                   </p>
-                                  {/* Fabricated seed record, not a live brain-core event — see
-                                      deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
-                                  {record.demo && (
-                                    <span
-                                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-                                      style={{ color: "#6c779d", background: "#1d2132" }}
-                                    >
-                                      Demo scenario
-                                    </span>
-                                  )}
                                 </div>
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
                                   {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}

@@ -1,5 +1,22 @@
 # brain-core orchestration gap: the fabricated agent-proposal surface
 
+> **2026-07-17 - fabricated records no longer served; surface partially live-wired.**
+> Per the zero-mock-data mandate, `agentProposals.ts`'s 24 seeded records and every
+> "Demo scenario" pill on ReviewPage/HomePage/ActivityPage/AuditLogPage are gone from
+> what actually renders — `agentProposals.ts` and `AgentProposalModal.tsx` stay in the
+> tree as dormant scaffolding (no page imports the record lists) rather than being
+> deleted outright. In their place, four of the 11 agent slots below now render real
+> data pulled straight from brain-core's Ledger, read-only (no approve/reject —
+> see `client/src/lib/brainAgentSurfaces.ts` + `LiveInsightModal.tsx`):
+> `reconciliation` (`GET /ledger/reconciliation-matches`), `subscription`
+> (`GET /ledger/obligations?type=subscription`), `dispute` (`GET
+> /ledger/obligations?status=disputed`), and a cash-flow trend
+> (`GET /ledger/cash_flows`). The other 7 agents (`vendor_risk`, `payment` batch,
+> `collections`, `treasury`, `cash_forecast`, `compliance`, `revenue_intel`,
+> `fraud_anomaly`) have no brain-core Ledger equivalent to read — nothing changed on
+> the brain-core side for those, and the upstream ask in §3 (a real `/proposals`
+> resource) still stands as the only path to making them real.
+
 ## Why this exists
 
 BrainMVB ships a "Your Review" / "Brain Detected" experience with 11 fully-designed

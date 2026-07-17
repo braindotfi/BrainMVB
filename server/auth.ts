@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { z } from "zod";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
+import { brainTenancyMode } from "./brain/config";
 
 const scryptAsync = promisify(scrypt);
 
@@ -175,6 +176,12 @@ export function setupAuth(app: Express) {
 
   // ─── Demo login (no credentials) - explore the app with a shared demo account ───
   app.post("/api/auth/demo", async (req, res) => {
+    // No shared demo account in production tenancy - real tenants/agents live there,
+    // and there is no honest "explore with someone else's data" story. 404, not a
+    // gated 403, so the route reads as not existing rather than merely locked.
+    if (brainTenancyMode() === "production") {
+      return res.status(404).json({ error: "Not found" });
+    }
     const DEMO_EMAIL = "demo@brain.finance";
     let user = await storage.getUserByEmail(DEMO_EMAIL);
     if (!user) {

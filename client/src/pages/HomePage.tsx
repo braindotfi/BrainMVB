@@ -10,14 +10,15 @@ import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
-import { apiRequest } from "@/lib/queryClient";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
 import {
-  useAgentDecisions,
-  decideAgentProposal,
-  needsReviewList,
-  type AgentProposal,
-} from "@/lib/agentProposals";
+  useBrainReconciliationInsights,
+  useBrainSubscriptionInsights,
+  useBrainDisputeInsights,
+  useBrainCashFlowInsight,
+  type LiveInsight,
+} from "@/lib/brainAgentSurfaces";
+import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal } from "@/lib/proposalTypes";
@@ -231,19 +232,17 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; onClick: () => void; demo?: boolean };
+type WidgetItem = { id: string; label: string; onClick: () => void };
 const ListItem = ({
   icon,
   label,
   onClick,
   testId,
-  demo,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   testId: string;
-  demo?: boolean;
 }) => (
   <button
     type="button"
@@ -255,16 +254,6 @@ const ListItem = ({
     <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
       <div className="flex items-center gap-[8px] w-full min-w-0">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-        {/* Fabricated seed record, not a live brain-core proposal — see
-            deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
-        {demo && (
-          <span
-            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-            style={{ color: "#6c779d", background: "#1d2132" }}
-          >
-            Demo scenario
-          </span>
-        )}
       </div>
     </div>
   </button>
@@ -314,7 +303,6 @@ const SectionWidget = ({
                   label={item.label}
                   testId={`${testIdPrefix}-${item.id}`}
                   onClick={item.onClick}
-                  demo={item.demo}
                 />
                 {idx < visible.length - 1 && (
                   <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
@@ -529,9 +517,8 @@ export function HomePage() {
 
   const handleReviewAction = (action: ProposalAction) => {
     if (!selectedReview) return;
-    /* selectedReview is only ever set from the LIVE brain-core queue (the seeded
-       agent records open AgentProposalModal instead). Always ask core directly,
-       never flip a client-side status for a live intent. */
+    /* selectedReview is only ever set from the LIVE brain-core queue. Always
+       ask core directly, never flip a client-side status for a live intent. */
     if (action === "approve") approveLive.mutate(selectedReview.id);
     else if (action === "reject") rejectLive.mutate(selectedReview.id);
     // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
@@ -545,46 +532,35 @@ export function HomePage() {
       .map((r) => ({ id: r.id, label: r.summary, onClick: () => navigate(`/audit-log?record=${r.id}`) }));
   }, [liveAuditRecords, navigate]);
 
-  /* Brain Detected. What Brain is advising for review. Mirrors the Review
-     page: live brain-core PaymentIntents (primary), falling back to the seeded
-     agent proposal records when the live queue is empty. Tapping opens the
-     matching detail sheet in place. */
+  /* Brain Detected. What Brain is advising for review: live brain-core
+     PaymentIntents needing approval, plus read-only live Ledger facts
+     (reconciliation matches, subscription/disputed obligations, cash flow -
+     see brainAgentSurfaces.ts) that have no proposal lifecycle of their own
+     yet. Tapping a payment-intent row opens the actionable review sheet;
+     tapping an insight row opens the read-only LiveInsightModal. */
   const { proposals: liveNeedsReview } = useBrainReviewQueue();
-  const agentDecisions = useAgentDecisions();
-  const [homeAgent, setHomeAgent] = useState<AgentProposal | null>(null);
-  const handleHomeAgentAction = (action: AgentModalAction, p: AgentProposal) => {
-    if (action === "approve") {
-      decideAgentProposal(p.id, "approved");
-      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
-    } else if (action === "reject") {
-      decideAgentProposal(p.id, "rejected");
-      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
-    } else if (action === "acknowledge") {
-      decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
-    } else if (action === "undo") {
-      decideAgentProposal(p.id, "undone_to_review");
-      toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
-    }
-    setHomeAgent(null);
-  };
+  const { insights: reconInsights } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight } = useBrainCashFlowInsight();
+  const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  const liveInsights: LiveInsight[] = useMemo(
+    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])],
+    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
+  );
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
-    if (liveNeedsReview.length > 0) {
-      return liveNeedsReview.map((p) => ({
-        id: p.id,
-        label: p.title,
-        onClick: () => setSelectedReview(p),
-      }));
-    }
-    /* Fallback: the seeded agent proposal records still awaiting a decision
-       (mirrors ReviewPage's Needs Review list). */
-    return needsReviewList(agentDecisions).map((p) => ({
+    const queueItems = liveNeedsReview.map((p) => ({
       id: p.id,
       label: p.title,
-      onClick: () => setHomeAgent(p),
-      demo: true,
+      onClick: () => setSelectedReview(p),
     }));
-  }, [liveNeedsReview, agentDecisions]);
+    const insightItems = liveInsights.map((i) => ({
+      id: i.id,
+      label: i.title,
+      onClick: () => setSelectedInsight(i),
+    }));
+    return [...queueItems, ...insightItems];
+  }, [liveNeedsReview, liveInsights]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -762,13 +738,11 @@ export function HomePage() {
         onComplete={finishOnboarding}
       />
 
-      {/* Brain Detected - seeded agent proposal sheet, opened in place */}
-      <AgentProposalModal
-        proposal={homeAgent}
-        open={homeAgent !== null}
-        onOpenChange={(o) => { if (!o) setHomeAgent(null); }}
-        onAction={handleHomeAgentAction}
-        pagerDisabled
+      {/* Brain Detected - read-only live Ledger insight (reconciliation/subscription/dispute/cash flow) */}
+      <LiveInsightModal
+        insight={selectedInsight}
+        open={selectedInsight !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}
