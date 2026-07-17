@@ -26,6 +26,14 @@ import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
 import { useCurrency } from "@/lib/currencyContext";
 import { useIntents, type IntentRecord } from "@/lib/intentsStore";
 import { useBrainReviewQueue, useBrainAutoApproved } from "@/lib/brainQueue";
+import {
+  useBrainReconciliationInsights,
+  useBrainSubscriptionInsights,
+  useBrainDisputeInsights,
+  useBrainCashFlowInsight,
+  type LiveInsight,
+} from "@/lib/brainAgentSurfaces";
+import { LiveInsightModal, LiveInsightRow } from "@/components/LiveInsightModal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -176,6 +184,22 @@ export function ReviewPage() {
      cleared §6 without a human decision (see brainQueue.ts for the honest
      "cleared, not settled" wording). */
   const { proposals: liveAutoApproved } = useBrainAutoApproved();
+
+  /* Read-only live Ledger facts (reconciliation matches, subscription/disputed
+     obligations, cash flow) shown alongside the actionable payment-intent
+     queue above. No proposal lifecycle - brain-core has no /v1/proposals
+     endpoint yet (see deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md). */
+  const { insights: reconInsights } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight } = useBrainCashFlowInsight();
+  const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  const liveInsights: LiveInsight[] = [
+    ...reconInsights,
+    ...subscriptionInsights,
+    ...disputeInsights,
+    ...(cashFlowInsight ? [cashFlowInsight] : []),
+  ];
 
   /* Bottom-right pop-up alerts (replaces plain toasts + center modals) */
   const alert = useAppAlert();
@@ -493,6 +517,20 @@ export function ReviewPage() {
             </div>
             )}
 
+            {/* Brain Detected: read-only live Ledger facts (reconciliation/
+                subscription/dispute/cash flow), alongside the actionable
+                queue above - no decision workflow, see brainAgentSurfaces.ts. */}
+            {showNeedsReview && liveInsights.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+                <WidgetHeader title="Brain Detected" count={liveInsights.length} />
+                <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+                  {liveInsights.map((i) => (
+                    <LiveInsightRow key={i.id} insight={i} onClick={() => setSelectedInsight(i)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Helper banner, purple. In "All" it sits here. The "Needs Review"
                 tab renders it at the very bottom of the page instead. */}
             {activeTab === "All" && <HelperBanner />}
@@ -583,6 +621,13 @@ export function ReviewPage() {
         onReject={handleLiveReject}
         busy={approving}
         rejection={liveRejection}
+      />
+
+      {/* Brain Detected - read-only live Ledger insight */}
+      <LiveInsightModal
+        insight={selectedInsight}
+        open={selectedInsight !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
       />
 
     </div>
