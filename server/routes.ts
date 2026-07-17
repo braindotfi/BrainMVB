@@ -86,15 +86,15 @@ const GOAL_REC_FALLBACK_DEFAULT =
   "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and Brain will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
   "Pay Off Debt":
-    "Target paying down the $1.2M term loan at 9.5% APR. Clearing $400K this year saves ~$38K in interest and frees $9K/mo of cash flow.",
+    "Target your highest-interest debt first — paying it down fastest frees up the most monthly cash flow.",
   "Build Reserve":
-    "Aim for $11M in reserves to clear the 18-month runway bar against $612K monthly burn. Current $4.8M leaves you ~6 months short.",
+    "Base your reserve target on a multiple of your monthly operating burn (e.g. 3-6 months) so it tracks real runway.",
   "Hit Milestone":
-    "With revenue at $1.42M last quarter and ~9% QoQ growth, $5M ARR is reachable in ~4 quarters. Set it as the milestone and Brain will pace bookings.",
+    "Pick a growth number tied to a metric you actually track (revenue, ARR, users) and Brain will pace agent activity toward it.",
   "Cut Spend":
-    "AI Agents and SaaS are 77% of spend. Trimming 15% off SaaS alone saves ~$8K/mo. Set that as your monthly reduction target.",
+    "Start with your largest recurring expense categories — trimming there usually has the biggest monthly impact.",
   "Capital Deploy":
-    "$42K is idle in operating cash. Deploy it to the USDC yield vault at 1.16% APY for ~$487/yr, or earmark it for the AlphaFlow agent at current trade cadence.",
+    "Point idle operating cash at a yield vault or a specific agent budget instead of letting it sit unused.",
   "Other":
     "Pick a number you want to move (runway, ARR, AR collected, burn) and Brain will translate it into agent budgets and policies.",
 };

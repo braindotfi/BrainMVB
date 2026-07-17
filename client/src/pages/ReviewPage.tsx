@@ -19,16 +19,7 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
 import { useAppAlert } from "@/components/AppAlert";
-import {
-  useAgentDecisions,
-  decideAgentProposal,
-  needsReviewList,
-  autoApprovedList,
-  setAgentProposalAmountOverride,
-  type AgentProposal,
-} from "@/lib/agentProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
@@ -144,64 +135,6 @@ const ProposalRow = ({
   );
 };
 
-/* Agent proposal row, the 11 spec records (tappable, AgentProposalModal) */
-const AgentRow = ({
-  proposal,
-  onClick,
-  format,
-}: {
-  proposal: AgentProposal;
-  onClick: () => void;
-  format: (a: string | number) => string;
-}) => {
-  return (
-    <div
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-      data-testid={`row-agent-proposal-${proposal.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
-    >
-      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <div className="flex items-start gap-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-            {proposal.title}
-          </p>
-          {/* Fabricated seed record, not a live brain-core proposal — see
-              deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
-          <span
-            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-            style={{ color: "#6c779d", background: "#1d2132" }}
-          >
-            Demo scenario
-          </span>
-          {proposal.riskLevel === "high" && (
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#350011] border border-[rgba(210,3,68,0.2)] text-[#d20344]">
-              High Risk
-            </span>
-          )}
-          {proposal.riskLevel === "elevated" && (
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#4a2300] border border-[rgba(255,149,0,0.2)] text-[#ff9400]">
-              Elevated
-            </span>
-          )}
-        </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
-          {proposal.agentDisplayName} · {proposal.subtitle}
-        </p>
-      </div>
-      {proposal.amount !== null && (
-        <div className="flex flex-col items-end justify-center relative shrink-0">
-          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
-            {format(proposal.amount)}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export function ReviewPage() {
   const { format } = useCurrency();
@@ -215,7 +148,8 @@ export function ReviewPage() {
   const [active, setActive] = useState<Proposal | null>(null);
   /* Provenance of the open proposal, captured AT OPEN TIME so an action can't
      be misrouted if list membership changes while the sheet is open: live
-     brain-core rows mutate core; deep-linked mock records flip local status. */
+     brain-core rows mutate core; a deep-linked record with no live match
+     (resolveProposal returns undefined) never opens. */
   const [activeIsLive, setActiveIsLive] = useState(false);
   // When a proposal is opened via a deep-link that carried a `?from=` return
   // target (e.g. from the Audit Log record popup), dismissing the sheet returns
@@ -227,8 +161,8 @@ export function ReviewPage() {
   const setStatus = (id: string, status: ProposalStatus) => setReviewStatus(id, status);
 
   /* Durable "Needs Review" queue. Live brain-core PaymentIntents awaiting a
-     human decision (replaces MOCK_PROPOSALS; see client/src/lib/brainQueue.ts
-     for why this fans out to a per-id fetch). brain-core has no client-side
+     human decision (see client/src/lib/brainQueue.ts for why this fans out
+     to a per-id fetch). brain-core has no client-side
      "executing/verifying/settled" states for these. Approve/reject mutate
      the intent directly and the queue refetches, so there's nothing to hold
      in reviewStatusStore for a live row. */
@@ -240,18 +174,8 @@ export function ReviewPage() {
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
   /* Live "Approved Automatically" queue — brain-core PaymentIntents that
      cleared §6 without a human decision (see brainQueue.ts for the honest
-     "cleared, not settled" wording). Rendered ahead of the demo agent rows
-     below via the same ProposalRow used for the live Needs-Review queue. */
+     "cleared, not settled" wording). */
   const { proposals: liveAutoApproved } = useBrainAutoApproved();
-  /* Agent proposal records (one per Brain agent, per the proposal-detail-modal
-     spec) seed the Needs Review + Approved Automatically tabs. Decisions are
-     user-driven via the shared agentProposals decision store (no setTimeout):
-     approve / reject / acknowledge drops a record out of the queue; Undo on an
-     auto-approved record moves it back into Needs Review. */
-  const agentDecisions = useAgentDecisions();
-  const agentQueue: AgentProposal[] = needsReviewList(agentDecisions);
-  const autoApproved: AgentProposal[] = autoApprovedList(agentDecisions);
-  const [activeAgent, setActiveAgent] = useState<AgentProposal | null>(null);
 
   /* Bottom-right pop-up alerts (replaces plain toasts + center modals) */
   const alert = useAppAlert();
@@ -294,7 +218,7 @@ export function ReviewPage() {
       // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
       return;
     }
-    // Mock / deep-linked proposal. Flip local status, then show alert.
+    // Deep-linked (non-live) proposal. Flip local status, then show alert.
     const next: ProposalStatus =
       action === "approve" ? "executing"
         : action === "reject" ? "rejected"
@@ -422,7 +346,7 @@ export function ReviewPage() {
         // Capture any `?from=` return target BEFORE we strip the query, so
         // dismissing the sheet can navigate back there (re-opening that surface).
         setReturnTo(params.get("from"));
-        setActiveIsLive(false); // deep-linked mock record. Local status only
+        setActiveIsLive(false); // deep-linked, non-live record. Local status only
         setActive(target);
         navigate("/review", { replace: true });
       }
@@ -462,47 +386,6 @@ export function ReviewPage() {
     setReturnTo(null);
     setActiveIsLive(true); // pager only cycles the live queue
     setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
-  };
-
-  /* Agent-proposal pager. Cycle within whichever tab list holds the open record. */
-  const agentPagerList: AgentProposal[] | null = !activeAgent
-    ? null
-    : agentQueue.some((p) => p.id === activeAgent.id)
-      ? agentQueue
-      : autoApproved.some((p) => p.id === activeAgent.id)
-        ? autoApproved
-        : null;
-  const agentPagerIdx = activeAgent && agentPagerList ? agentPagerList.findIndex((p) => p.id === activeAgent.id) : -1;
-  const agentPagerDisabled = !agentPagerList || agentPagerList.length <= 1 || agentPagerIdx < 0;
-  const pageAgent = (dir: 1 | -1) => {
-    if (!agentPagerList || agentPagerDisabled) return;
-    setActiveAgent(agentPagerList[(agentPagerIdx + dir + agentPagerList.length) % agentPagerList.length]);
-  };
-
-  /* Decide on an agent proposal. User-driven, logged via toast. The modal
-     closes and the record drops out of (or returns to) the queue. */
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, payload?: AgentModalEditPayload) => {
-    if (action === "approve") {
-      if (payload?.amount) {
-        const parsed = parseFloat(payload.amount.replace(/,/g, ""));
-        if (!isNaN(parsed)) setAgentProposalAmountOverride(p.id, parsed);
-      }
-      decideAgentProposal(p.id, "approved");
-      alert.approved("Approved", p.whatHappensNext.ifApproved, 2_000);
-      setActiveAgent(null);
-    } else if (action === "reject") {
-      decideAgentProposal(p.id, "rejected");
-      alert.rejected("Rejected", p.whatHappensNext.ifRejected, 2_000);
-      setActiveAgent(null);
-    } else if (action === "acknowledge") {
-      decideAgentProposal(p.id, "acknowledged");
-      alert.success("Acknowledged", "Logged. Brain won't re-raise this flag.", 2_000);
-      setActiveAgent(null);
-    } else if (action === "undo") {
-      decideAgentProposal(p.id, "undone_to_review");
-      alert.info("Moved back to review", `"${p.title}" now needs your decision.`, 2_000);
-      setActiveAgent(null);
-    }
   };
 
   /* Tab visibility. "All" shows everything. The other tabs filter the view. */
@@ -569,12 +452,12 @@ export function ReviewPage() {
               </div>
             )}
 
-            {/* Needs Review: live brain-core queue first, then the seeded agent records */}
+            {/* Needs Review: live brain-core queue */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={queue.length + agentQueue.length} />
+              <WidgetHeader title="Needs Review" count={queue.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {queue.length === 0 && agentQueue.length === 0 && (
+                {queue.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -603,14 +486,6 @@ export function ReviewPage() {
                         </button>
                       );
                     })()}
-                    {(idx < arr.length - 1 || agentQueue.length > 0) && <Divider />}
-                  </div>
-                ))}
-
-                {/* Agent proposal records, one per Brain agent (spec-seeded) */}
-                {agentQueue.map((p, idx, arr) => (
-                  <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                    <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
                     {idx < arr.length - 1 && <Divider />}
                   </div>
                 ))}
@@ -622,13 +497,12 @@ export function ReviewPage() {
                 tab renders it at the very bottom of the page instead. */}
             {activeTab === "All" && <HelperBanner />}
 
-            {/* Approved Automatically — live brain-core "auto" intents first, then
-                the demo agent records Brain cleared on its own. */}
+            {/* Approved Automatically — live brain-core "auto" intents. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Approved Automatically" count={liveAutoApproved.length + autoApproved.length} />
+                <WidgetHeader title="Approved Automatically" count={liveAutoApproved.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {liveAutoApproved.length === 0 && autoApproved.length === 0 && (
+                  {liveAutoApproved.length === 0 && (
                     <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                         Nothing was approved automatically recently.
@@ -638,14 +512,6 @@ export function ReviewPage() {
                   {liveAutoApproved.map((p, idx, arr) => (
                     <div key={p.id} className="flex flex-col gap-[8px] w-full">
                       <ProposalRow proposal={p} status={p.status} onClick={() => openLocal(p)} format={format} />
-                      {(idx < arr.length - 1 || autoApproved.length > 0) && (
-                        <div className="h-px w-full" style={{ background: "#1d2132" }} />
-                      )}
-                    </div>
-                  ))}
-                  {autoApproved.map((p, idx, arr) => (
-                    <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                      <AgentRow proposal={p} onClick={() => setActiveAgent(p)} format={format} />
                       {idx < arr.length - 1 && (
                         <div className="h-px w-full" style={{ background: "#1d2132" }} />
                       )}
@@ -707,17 +573,6 @@ export function ReviewPage() {
         }}
       />
 
-      {/* Agent proposal detail. The spec-driven modal for the 11 agent records */}
-      <AgentProposalModal
-        proposal={activeAgent}
-        open={activeAgent !== null}
-        onOpenChange={(o) => { if (!o) setActiveAgent(null); }}
-        onAction={handleAgentAction}
-        onPrev={() => pageAgent(-1)}
-        onNext={() => pageAgent(1)}
-        pagerDisabled={agentPagerDisabled}
-      />
-
       {/* Legacy / live approval modal. For a live PaymentIntent, Confirm/Approve
           asks brain-core to sign it off (no client gate); its refusal shows inline. */}
       <ReviewModal
@@ -734,7 +589,7 @@ export function ReviewPage() {
   );
 }
 
-/* Row used for both live PaymentIntents and legacy static demo items. */
+/* Row for the session-scoped "Needs your approval" live PaymentIntents widget. */
 const LiveRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: () => void; format: (a: string | number) => string }) => (
   <div
     onClick={onClick}

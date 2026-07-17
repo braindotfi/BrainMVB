@@ -4,20 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
-import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { apiRequest } from "@/lib/queryClient";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
-import {
-  useAgentDecisions,
-  decideAgentProposal,
-  needsReviewList,
-  type AgentProposal,
-} from "@/lib/agentProposals";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import type { Proposal } from "@/lib/proposalTypes";
@@ -39,162 +31,6 @@ const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
 const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
 const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
 const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
-
-/* Your Goals (Figma 3882:43037), progress bars per goal */
-type GoalRow = {
-  id: string;
-  name: string;
-  vault: string;
-  saved: number;
-  target: number;
-  /** Tailwind/CSS color for the progress bar fill. */
-  color: string;
-};
-
-/* Initial four goals matching the original Figma mock-up. New goals
-   created via the modal are appended to local state; nothing is
-   persisted yet. The wiring will land when brain-core is integrated. */
-const SEED_GOALS: GoalRow[] = [
-  { id: "tax",       name: "Q2 tax reserve",       vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
-  { id: "runway",    name: "Operating runway",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
-  { id: "marketing", name: "Q4 marketing budget",  vault: "USDC Vault", saved:    400, target:   2_000, color: "#7631EE" },
-  { id: "equipment", name: "New equipment fund",   vault: "sUSDS",      saved:  4_295, target:   8_000, color: "#d20344" },
-];
-
-/* Palette for newly created goals so each new entry gets a fresh accent
-   colour rather than always defaulting to the same one. */
-const GOAL_COLORS = ["#42bf23", "#ff9500", "#7631EE", "#d20344", "#22d3ee"];
-
-/* Map the modal's category enum onto a sensible vault label for the
-   progress row. */
-const CATEGORY_VAULT: Record<string, string> = {
-  "Pay Off Debt":   "USDC",
-  "Build Reserve":  "USDC Vault",
-  "Hit Milestone":  "USDC Vault",
-  "Cut Spend":      "USDC Vault",
-  "Capital Deploy": "sUSDS",
-  "Other":          "USDC Vault",
-};
-
-/* Best-effort numeric parse: accepts "$11,000", "11k", "5m", plain numbers etc.
-   Returns 0 when the user leaves the field blank or types an unparseable string. */
-const parseAmount = (raw: string): number => {
-  if (!raw) return 0;
-  const cleaned = raw.replace(/[\s,$]/g, "").toLowerCase();
-  const match = cleaned.match(/^(-?\d*\.?\d+)\s*([kmb])?$/);
-  if (!match) return 0;
-  const n = parseFloat(match[1]);
-  const mult = match[2] === "k" ? 1_000 : match[2] === "m" ? 1_000_000 : match[2] === "b" ? 1_000_000_000 : 1;
-  return Math.max(0, Math.round(n * mult));
-};
-
-const useFmt = () => {
-  const { format } = useCurrency();
-  return (n: number) => format(n);
-};
-
-const GoalProgress = ({ goal }: { goal: GoalRow }) => {
-  const fmt = useFmt();
-  const pct = Math.max(0, Math.min(100, Math.round((goal.saved / goal.target) * 100)));
-  return (
-    <div className="flex flex-col gap-[8px] w-full" data-testid={`goal-${goal.id}`}>
-      <div className="flex items-center justify-between gap-[12px] w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[14px] truncate">
-          <span>{goal.name}</span>
-          <span className="text-[#6c779d] font-medium"> · {goal.vault}</span>
-        </p>
-        <div className="flex items-center gap-[12px] shrink-0 [font-family:'JetBrains_Mono',monospace] tabular-nums">
-          <p className="text-[#a8b9f4] text-[14px]">
-            <span className="font-medium">{fmt(goal.saved)}</span>
-            <span className="text-[#6c779d]"> of </span>
-            <span className="font-medium">{fmt(goal.target)}</span>
-          </p>
-          <p className="text-[#6c779d] text-[14px] w-[36px] text-right">{pct}%</p>
-        </div>
-      </div>
-      <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, background: goal.color }}
-        />
-      </div>
-    </div>
-  );
-};
-
-/* Add Goal pill, Figma 4074:65844. Amber pill (#4a2300 / #ff9500),
-   matches the same treatment as the Settings "Edit" button. */
-const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
-  <button
-    type="button"
-    data-testid="button-add-goal"
-    onClick={onClick}
-    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
-  >
-    <span className="relative shrink-0 size-[16px]">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="block"
-      >
-        <path d="M8 3.33V12.67M3.33 8H12.67" stroke="#ff9500" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap">
-      Add Goal
-    </span>
-  </button>
-);
-
-const GoalsSection = () => {
-  const { toast } = useToast();
-  const [addOpen, setAddOpen] = useState(false);
-  /* Local-only state: new goals live in memory until the brain-core
-     wiring lands. They reset on refresh by design. */
-  const [goals, setGoals] = useState<GoalRow[]>(SEED_GOALS);
-
-  const handleCreate = (payload: AddGoalPayload) => {
-    const target = parseAmount(payload.amount);
-    const fallbackName =
-      payload.name.trim() || `${payload.category} goal`;
-    const newGoal: GoalRow = {
-      id: `goal-${Date.now()}`,
-      name: fallbackName,
-      vault: CATEGORY_VAULT[payload.category] ?? "USDC Vault",
-      saved: 0,
-      target: target || 0,
-      color: GOAL_COLORS[goals.length % GOAL_COLORS.length],
-    };
-    setGoals((prev) => [...prev, newGoal]);
-    setAddOpen(false);
-    toast({
-      title: "Goal created",
-      description: `"${fallbackName}" added to your goals.`,
-    });
-  };
-
-  return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden rounded-[16px] w-full">
-      <div className="border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
-          Your Goals
-        </p>
-        <AddGoalButton onClick={() => setAddOpen(true)} />
-      </div>
-      <div className="flex flex-col gap-[16px] items-start p-[16px] w-full">
-        {goals.map((g) => <GoalProgress key={g.id} goal={g} />)}
-      </div>
-      <AddGoalModal
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onCreate={handleCreate}
-      />
-    </div>
-  );
-};
 
 const GreenCheckIcon = () => (
   <div className="relative rounded-[100px] shrink-0 size-[24px]">
@@ -231,19 +67,17 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; onClick: () => void; demo?: boolean };
+type WidgetItem = { id: string; label: string; onClick: () => void };
 const ListItem = ({
   icon,
   label,
   onClick,
   testId,
-  demo,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   testId: string;
-  demo?: boolean;
 }) => (
   <button
     type="button"
@@ -255,16 +89,6 @@ const ListItem = ({
     <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
       <div className="flex items-center gap-[8px] w-full min-w-0">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-        {/* Fabricated seed record, not a live brain-core proposal — see
-            deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
-        {demo && (
-          <span
-            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-            style={{ color: "#6c779d", background: "#1d2132" }}
-          >
-            Demo scenario
-          </span>
-        )}
       </div>
     </div>
   </button>
@@ -314,7 +138,6 @@ const SectionWidget = ({
                   label={item.label}
                   testId={`${testIdPrefix}-${item.id}`}
                   onClick={item.onClick}
-                  demo={item.demo}
                 />
                 {idx < visible.length - 1 && (
                   <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
@@ -529,9 +352,8 @@ export function HomePage() {
 
   const handleReviewAction = (action: ProposalAction) => {
     if (!selectedReview) return;
-    /* selectedReview is only ever set from the LIVE brain-core queue (the seeded
-       agent records open AgentProposalModal instead). Always ask core directly,
-       never flip a client-side status for a live intent. */
+    /* selectedReview is only ever set from the LIVE brain-core queue. Always
+       ask core directly, never flip a client-side status for a live intent. */
     if (action === "approve") approveLive.mutate(selectedReview.id);
     else if (action === "reject") rejectLive.mutate(selectedReview.id);
     // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
@@ -550,41 +372,13 @@ export function HomePage() {
      agent proposal records when the live queue is empty. Tapping opens the
      matching detail sheet in place. */
   const { proposals: liveNeedsReview } = useBrainReviewQueue();
-  const agentDecisions = useAgentDecisions();
-  const [homeAgent, setHomeAgent] = useState<AgentProposal | null>(null);
-  const handleHomeAgentAction = (action: AgentModalAction, p: AgentProposal) => {
-    if (action === "approve") {
-      decideAgentProposal(p.id, "approved");
-      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
-    } else if (action === "reject") {
-      decideAgentProposal(p.id, "rejected");
-      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
-    } else if (action === "acknowledge") {
-      decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
-    } else if (action === "undo") {
-      decideAgentProposal(p.id, "undone_to_review");
-      toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
-    }
-    setHomeAgent(null);
-  };
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
-    if (liveNeedsReview.length > 0) {
-      return liveNeedsReview.map((p) => ({
-        id: p.id,
-        label: p.title,
-        onClick: () => setSelectedReview(p),
-      }));
-    }
-    /* Fallback: the seeded agent proposal records still awaiting a decision
-       (mirrors ReviewPage's Needs Review list). */
-    return needsReviewList(agentDecisions).map((p) => ({
+    return liveNeedsReview.map((p) => ({
       id: p.id,
       label: p.title,
-      onClick: () => setHomeAgent(p),
-      demo: true,
+      onClick: () => setSelectedReview(p),
     }));
-  }, [liveNeedsReview, agentDecisions]);
+  }, [liveNeedsReview]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -749,9 +543,6 @@ export function HomePage() {
                 />
               </div>
             </div>
-
-            {/* Your Goals - hidden for now */}
-            {/* <GoalsSection /> */}
           </div>
         </div>
       </ScrollArea>
@@ -760,15 +551,6 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
-      />
-
-      {/* Brain Detected - seeded agent proposal sheet, opened in place */}
-      <AgentProposalModal
-        proposal={homeAgent}
-        open={homeAgent !== null}
-        onOpenChange={(o) => { if (!o) setHomeAgent(null); }}
-        onAction={handleHomeAgentAction}
-        pagerDisabled
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}

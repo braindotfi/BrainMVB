@@ -1,5 +1,15 @@
 # brain-core orchestration gap: the fabricated agent-proposal surface
 
+> **2026-07-17 - labeled demo surface REMOVED.** Per the zero-mock-data mandate,
+> `client/src/lib/agentProposals.ts`, `AgentProposalModal.tsx`, and every "Demo
+> scenario" pill on ReviewPage/HomePage/ActivityPage/AuditLogPage described below
+> have been deleted from the product. Brain now shows only its live PaymentIntent
+> queues (§6-gated, real) with an honest empty state where the 11 non-payment
+> agents used to render fabricated cards. Nothing changed on the brain-core side —
+> the upstream ask in §3 (a real `/proposals` resource) still stands, and a future
+> rebuild of this surface must be built against that real endpoint, not another
+> client-only seed file.
+
 ## Why this exists
 
 BrainMVB ships a "Your Review" / "Brain Detected" experience with 11 fully-designed

@@ -1,7 +1,5 @@
 import type { Proposal } from "@/lib/proposalTypes";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import type { AgentProposal } from "@/lib/agentProposals";
-import { getAgentProposalAmountOverride } from "@/lib/agentProposals";
 
 /* ── Shared source of truth for the Activity feed ──────────────────────────────
    The Activity page's "Brain Did" tab renders off the data declared here.
@@ -26,12 +24,6 @@ export type ActivityItemData = {
   linkTo?: string;
   /** If this activity item is a settled/approved proposal, carry the proposal so a tap can open its record detail. */
   proposal?: Proposal;
-  /** If this activity item is a decided agent proposal (the AgentProposalModal flow),
-      carry it so a tap re-opens that modal as a read only receipt. */
-  agentProposal?: AgentProposal;
-  /** True when this row was synthesized from the fabricated agent-proposal demo
-      surface (agentProposals.ts) — see deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md. */
-  demo?: boolean;
 };
 
 /** Parse a "8:02 AM" style label into minutes-since-midnight for sorting (-1 if unparseable). */
@@ -56,7 +48,6 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
     time: settled ? settled[1] : "Today",
     linkTo: `/review?receipt=${p.id}`,
     proposal: p,
-    demo: true,
   };
 }
 
@@ -133,81 +124,6 @@ export function statusOverrideToAuditRecord(
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `${proposal.id}--audit-${status}` },
     proposalId: proposal.id,
-  };
-}
-
-/** Shared time formatter for agent-decision records ("Jul 13, 5:42 PM ET"). */
-function decisionTimeLabel(ms: number): string {
-  return (
-    new Date(ms).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }) + " ET"
-  );
-}
-
-/** Map a user decision on an agent proposal (the AgentProposalModal flow -
-    decideAgentProposal in agentProposals.ts) onto an activity item so the
-    Activity page reflects approvals/rejections made on that surface. */
-export function agentDecisionToActivity(
-  p: AgentProposal,
-  decision: "approved" | "rejected",
-  decidedAtMs: number,
-): ActivityItemData {
-  return {
-    id: `${p.id}--agent-${decision}`,
-    type: decision,
-    title: p.title,
-    meta1: decision === "approved" ? "You approved" : "You rejected",
-    meta2: `${p.agentDisplayName} agent`,
-    amount: (() => { const a = getAgentProposalAmountOverride(p.id) ?? p.amount; return a != null ? `$${a.toLocaleString()}` : ""; })(),
-    time: new Date(decidedAtMs).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-    agentProposal: p,
-    demo: true,
-  };
-}
-
-/** Map a user decision on an agent proposal into an AuditRecord for the
-    canonical Audit Log. pending_next_batch because the decision is a local,
-    in-session action with no brain-core anchor yet. Same convention as
-    statusOverrideToAuditRecord above. */
-export function agentDecisionToAuditRecord(
-  p: AgentProposal,
-  decision: "approved" | "rejected",
-  actor: string,
-  decidedAtMs: number,
-): AuditRecord {
-  const summary =
-    decision === "approved"
-      ? `Proposal approved. ${p.title}`
-      : `Proposal rejected. ${p.title}`;
-  const label = decisionTimeLabel(decidedAtMs);
-  return {
-    id: `${p.id}--agent-audit-${decision}`,
-    eventType: decision,
-    summary,
-    amount: getAgentProposalAmountOverride(p.id) ?? p.amount ?? undefined,
-    actor,
-    occurredAtLabel: label,
-    occurredAtMs: decidedAtMs,
-    lifecycle: [
-      {
-        label: summary,
-        timestamp: label,
-        kind: decision === "rejected" ? "alert" : "ok",
-        actor,
-      },
-    ],
-    linked: [],
-    anchor: { status: "pending_next_batch", auditId: `${p.id}--agent-audit-${decision}` },
-    demo: true,
   };
 }
 

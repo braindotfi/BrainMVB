@@ -6,6 +6,7 @@ import { useAuth } from "./authContext";
 // "Not set" rather than an editable value. Add when a real phone field +
 // verification flow exists.
 const PHONE_NOT_SET = "Not set";
+const EMAIL_NOT_SET = "Not set";
 
 let emailOverride: string | null = null;
 const listeners = new Set<() => void>();
@@ -32,7 +33,7 @@ export function useUserContact() {
   const { user } = useAuth();
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
-    email: emailOverride ?? user?.email ?? "demo@brain.fi",
+    email: emailOverride ?? user?.email ?? EMAIL_NOT_SET,
     phone: PHONE_NOT_SET,
   };
 }

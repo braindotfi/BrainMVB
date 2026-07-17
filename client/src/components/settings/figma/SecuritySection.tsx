@@ -67,12 +67,13 @@ import { useAppAlert } from "@/components/AppAlert";
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    Enabled via authentication app
+                    Not enabled
                   </p>
                 </div>
               </div>
             </div>
-            <Switch active className="h-[24px] relative rounded-[100px] shrink-0 w-[40px]" />
+            {/* No 2FA backend wired up yet - off, not a fabricated "enabled". */}
+            <Switch className="h-[24px] relative rounded-[12px] shrink-0 w-[40px]" />
           </div>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
@@ -187,12 +188,13 @@ import { useAppAlert } from "@/components/AppAlert";
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
-                    Email me on new sign-ins
+                    Not enabled
                   </p>
                 </div>
               </div>
             </div>
-            <Switch active className="h-[24px] relative rounded-[100px] shrink-0 w-[40px]" />
+            {/* No email/notification backend wired up yet - off, not fabricated. */}
+            <Switch className="h-[24px] relative rounded-[12px] shrink-0 w-[40px]" />
           </div>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">

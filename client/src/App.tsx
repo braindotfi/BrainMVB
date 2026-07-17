@@ -26,7 +26,6 @@ import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
-import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
 import { MemberDetailHost } from "@/components/MemberDetailPopup";
 import { hydrateDocuments } from "@/lib/documentsStore";
@@ -196,17 +195,15 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 function App() {
   return (
     <Web3Provider>
-      <TransactionProvider>
-        <IntentsProvider>
-          <TooltipProvider>
-            <AppAlertProvider>
-              <Toaster />
-              <AppLayout />
-              <MemberDetailHost />
-            </AppAlertProvider>
-          </TooltipProvider>
-        </IntentsProvider>
-      </TransactionProvider>
+      <IntentsProvider>
+        <TooltipProvider>
+          <AppAlertProvider>
+            <Toaster />
+            <AppLayout />
+            <MemberDetailHost />
+          </AppAlertProvider>
+        </TooltipProvider>
+      </IntentsProvider>
     </Web3Provider>
   );
 }

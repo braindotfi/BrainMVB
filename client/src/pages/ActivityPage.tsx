@@ -3,16 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord } from "@/lib/auditTypes";
-import { type ActivityType, type ActivityItemData, statusOverrideToActivity, agentDecisionToActivity } from "@/lib/brainFeed";
-import {
-  useAgentDecisions,
-  agentDecisionTimeMs,
-  getAgentProposal,
-  decideAgentProposal,
-  type AgentProposal,
-} from "@/lib/agentProposals";
-import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
-import { useToast } from "@/hooks/use-toast";
+import { type ActivityType, type ActivityItemData, statusOverrideToActivity } from "@/lib/brainFeed";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -101,7 +92,7 @@ const ActivityItem = ({
   rowRef?: (el: HTMLDivElement | null) => void;
   onSelect?: (item: ActivityItemData) => void;
 }) => {
-  const clickable = Boolean(item.linkTo || item.proposal || item.agentProposal);
+  const clickable = Boolean(item.linkTo || item.proposal);
   const subtitle = [item.meta1, item.meta2, item.meta3, item.time]
     .filter(Boolean)
     .join(" · ");
@@ -133,16 +124,6 @@ const ActivityItem = ({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
             {item.title}
           </p>
-          {/* Fabricated seed record, not a live brain-core event — see
-              deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md */}
-          {item.demo && (
-            <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-              style={{ color: "#6c779d", background: "#1d2132" }}
-            >
-              Demo scenario
-            </span>
-          )}
         </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full">
           {subtitle}
@@ -264,7 +245,6 @@ export function ActivityPage() {
      (executed / rejected) so Activity reflects user decisions made on
      the Review surface even before brain-core's audit log catches up. */
   const reviewStatuses = useReviewStatuses();
-  const agentDecisions = useAgentDecisions();
   const actionItems: ActivityItemData[] = useMemo(() => {
     const items: ActivityItemData[] = [];
     for (const [id, status] of Object.entries(reviewStatuses)) {
@@ -273,17 +253,8 @@ export function ActivityPage() {
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
     }
-    /* Agent-proposal decisions (the AgentProposalModal flow). Approvals and
-       rejections made there live in the agentProposals decision store, not
-       reviewStatusStore, so they are layered in here. */
-    for (const [id, decision] of Object.entries(agentDecisions)) {
-      if (decision !== "approved" && decision !== "rejected") continue;
-      const p = getAgentProposal(id);
-      if (!p) continue;
-      items.push(agentDecisionToActivity(p, decision, agentDecisionTimeMs(id)));
-    }
     return items;
-  }, [reviewStatuses, agentDecisions]);
+  }, [reviewStatuses]);
 
   const filterByTab = (items: ActivityItemData[]) =>
     activeTab === "All" ? items : items.filter((it) => TYPE_TO_TAB[it.type] === activeTab);
@@ -322,34 +293,7 @@ export function ActivityPage() {
       setActiveProposal(item.proposal);
       return;
     }
-    if (item.agentProposal) {
-      setActiveAgentRecord(item.agentProposal);
-      return;
-    }
     if (item.linkTo) navigate(item.linkTo);
-  };
-
-  /* Agent-decision rows re-open the AgentProposalModal as a receipt. The modal
-     renders a decided footer (no Approve/Reject) for already-decided records;
-     the handler below only fires for the few actions still offered there
-     (e.g. Undo on a reversible auto-approved record). */
-  const [activeAgentRecord, setActiveAgentRecord] = useState<AgentProposal | null>(null);
-  const { toast } = useToast();
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, _payload?: AgentModalEditPayload) => {
-    if (action === "approve") {
-      decideAgentProposal(p.id, "approved");
-      toast({ title: "Approved", description: p.whatHappensNext.ifApproved });
-    } else if (action === "reject") {
-      decideAgentProposal(p.id, "rejected");
-      toast({ title: "Rejected", description: p.whatHappensNext.ifRejected });
-    } else if (action === "acknowledge") {
-      decideAgentProposal(p.id, "acknowledged");
-      toast({ title: "Acknowledged", description: "Logged. Brain won't re-raise this flag." });
-    } else if (action === "undo") {
-      decideAgentProposal(p.id, "undone_to_review");
-      toast({ title: "Moved back to review", description: `"${p.title}" now needs your decision.` });
-    }
-    setActiveAgentRecord(null);
   };
 
   /* Header pager. Cycle through all activity items that carry a proposal
@@ -506,14 +450,6 @@ export function ActivityPage() {
         }}
       />
 
-      {/* Agent recommendation receipt - opened from decided agent rows. */}
-      <AgentProposalModal
-        proposal={activeAgentRecord}
-        open={activeAgentRecord !== null}
-        onOpenChange={(o) => { if (!o) setActiveAgentRecord(null); }}
-        onAction={handleAgentAction}
-        pagerDisabled
-      />
     </div>
   );
 }

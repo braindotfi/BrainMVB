@@ -1,44 +1,24 @@
-import {
-  ADOBE_SETTLED,
-  AWS_SETTLED,
-  COMCAST_SETTLED,
-  GUSTO_RECON_SETTLED,
-  MERIDIAN_RECEIVABLE_SETTLED,
-  MOCK_PROPOSALS,
-  NOTION_RENEWAL_FLAGGED,
-  PAYROLL_SETTLED,
-  USDC_SWEEP_SETTLED,
-} from "./mockProposals";
 import type { Proposal } from "./proposalTypes";
 
 /* ── Single source of truth for opening a proposal's detail sheet ─────────────
    Every PROPOSAL REFERENCE across the app (Audit Log record popup, and any other
-   linked-evidence surface) resolves the same way: look the proposal up by id
-   across every place a proposal can live - the pending review queue
-   (MOCK_PROPOSALS) and the standalone settled/held records - then, only if it
-   resolves, deep-link to the ReviewPage with `?proposal=<id>` so it auto-opens
-   that exact record. Callers
-   use `resolveProposal` to decide whether to render a tappable link or plain
-   text; they never duplicate the lookup. An unresolved id is a bug (dangling
-   reference) - we `console.warn` loudly rather than fail silently. Mirrors
-   openRuleDetail / openVendorDetail / openDocumentDetail. */
+   linked-evidence surface) resolves the same way: look the proposal up by id,
+   then, only if it resolves, deep-link to the ReviewPage with `?proposal=<id>`
+   so it auto-opens that exact record. Callers use `resolveProposal` to decide
+   whether to render a tappable link or plain text; they never duplicate the
+   lookup. An unresolved id is a bug (dangling reference) - we `console.warn`
+   loudly rather than fail silently. Mirrors openRuleDetail / openVendorDetail /
+   openDocumentDetail.
 
-/* Every source a proposal can be referenced from. Standalone settled/held
-   records aren't in the queue arrays, so they're listed explicitly. Exported so
-   dev guards (ruleConsistencyCheck) can assert coherence over the SAME complete
-   set of proposals - otherwise standalone twins escape the lifecycle checks. */
+   There is currently no id-addressable proposal source to resolve against: the
+   live brain-core "Needs Review" / "Approved Automatically" queues (brainQueue.ts)
+   are opened directly from their row click, never by id lookup, and the
+   session-scoped intentsStore uses its own IntentRecord type, not Proposal.
+   So every lookup here honestly resolves to "not found" until a real
+   id-addressable proposal source exists. */
+
 export function allProposals(): Proposal[] {
-  return [
-    ...MOCK_PROPOSALS,
-    ADOBE_SETTLED,
-    AWS_SETTLED,
-    COMCAST_SETTLED,
-    GUSTO_RECON_SETTLED,
-    MERIDIAN_RECEIVABLE_SETTLED,
-    PAYROLL_SETTLED,
-    USDC_SWEEP_SETTLED,
-    NOTION_RENEWAL_FLAGGED,
-  ];
+  return [];
 }
 
 export function resolveProposal(
