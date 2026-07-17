@@ -31,6 +31,57 @@ import { generateNonce } from "./nonce";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+/**
+ * True if `s` is a JSON object/array, not prose. Used to catch brain-core
+ * wiki/question answers that come back as structured data (e.g. forecasts)
+ * instead of a written answer, so they can be humanized before being shown
+ * to the user.
+ */
+export function looksLikeStructuredJson(s: string): boolean {
+  const trimmed = s.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return false;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return typeof parsed === "object" && parsed !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * brain-core's wiki/question sometimes answers a question with structured
+ * JSON (e.g. a cash-flow forecast) instead of prose. Turn that into a short
+ * written answer, keeping every number/date exactly as given. Falls back to
+ * the raw JSON on any failure so this step can never make the response worse
+ * than today.
+ */
+async function humanizeWikiAnswer(raw: string): Promise<string> {
+  if (!looksLikeStructuredJson(raw)) return raw;
+  if (!process.env.ANTHROPIC_API_KEY) return raw;
+
+  try {
+    const parsed = JSON.parse(raw.trim());
+    const payload = parsed && typeof parsed === "object" && "answer" in parsed
+      ? JSON.stringify(parsed.answer)
+      : raw;
+    const message = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 512,
+      system:
+        "You turn a structured financial result (JSON) into a concise, warm prose answer for a business owner. " +
+        "Keep every number and date EXACTLY as given in the JSON — do not round, recompute, or drop any. " +
+        "Format currency with a $ and thousands separators. No JSON, no code fences. " +
+        "Write about 1-4 sentences, plus a short list only if it genuinely helps readability.",
+      messages: [{ role: "user", content: payload }],
+    });
+    const text = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim();
+    return text || raw;
+  } catch (e) {
+    console.warn("[Assistant] humanizeWikiAnswer failed, returning raw wiki answer:", (e as Error)?.message);
+    return raw;
+  }
+}
+
 const GOAL_REC_FALLBACK_DEFAULT =
   "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and Brain will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
@@ -397,7 +448,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       const wiki = await askWikiQuestion(token, lastUserContent);
       if (wiki.raw.trim().length > 0) {
         return res.json({
-          reply: wiki.raw,
+          reply: await humanizeWikiAnswer(wiki.raw),
           sources: wiki.evidence,
           grounded: true,
           engine: "wiki",
