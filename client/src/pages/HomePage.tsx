@@ -18,6 +18,8 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brainProposals";
+import { LiveProposalModal } from "@/components/AgentProposalModal";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -548,6 +550,14 @@ export function HomePage() {
     () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])],
     [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
   );
+
+  /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
+     merged into the same "Brain Detected" widget as the live payment queue
+     and read-only insights above. */
+  const { proposals: liveProposals } = useBrainProposals();
+  const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
+  const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
     const queueItems = liveNeedsReview.map((p) => ({
       id: p.id,
@@ -559,8 +569,13 @@ export function HomePage() {
       label: i.title,
       onClick: () => setSelectedInsight(i),
     }));
-    return [...queueItems, ...insightItems];
-  }, [liveNeedsReview, liveInsights]);
+    const proposalItems = needsReviewProposals.map((p) => ({
+      id: p.id,
+      label: p.title,
+      onClick: () => setSelectedProposal(p),
+    }));
+    return [...queueItems, ...insightItems, ...proposalItems];
+  }, [liveNeedsReview, liveInsights, needsReviewProposals]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -743,6 +758,13 @@ export function HomePage() {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+      />
+
+      {/* Brain Detected - live brain-core agent proposal */}
+      <LiveProposalModal
+        proposal={selectedProposal}
+        open={selectedProposal !== null}
+        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}

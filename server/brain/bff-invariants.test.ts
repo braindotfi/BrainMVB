@@ -63,6 +63,30 @@ let provisionResponse: Record<string, unknown> = {
 let approveStatuses: string[] = ["pending_approval"];
 let approveCallCount = 0;
 
+// Per-test control of POST /proposals/:id/decide's mocked upstream response, so a test
+// can drive the 409 agent_proposal_invalid_state relay path.
+let decideStatus = 200;
+let decideResponse: Record<string, unknown> = {
+  id: "agpr_1",
+  type: "vendor_risk",
+  agent_principal: "agent_1",
+  risk_band: "standard",
+  status: "approved",
+  title: "t",
+  amount: null,
+  created_at: "2026-01-01T00:00:00Z",
+  execution_mode: "propose",
+  narrative: "",
+  evidence: [],
+  links: {},
+  policy_decision_id: null,
+  confidence: null,
+  reversible: false,
+  decision: "approved",
+  decided_by: "m1",
+  decided_at: "2026-01-01T00:00:00Z",
+};
+
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), {
     status,
@@ -112,6 +136,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   }
   if (url.endsWith("/ledger/counterparties") && method === "POST") {
     return json({ counterparty: { id: "cp_new", name: "Acme Supplies" }, created: true, merged: false }, 201);
+  }
+  if (url.includes("/proposals/") && url.endsWith("/decide") && method === "POST") {
+    return json(decideResponse, decideStatus);
   }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
@@ -215,6 +242,27 @@ beforeEach(() => {
   };
   approveStatuses = ["pending_approval"];
   approveCallCount = 0;
+  decideStatus = 200;
+  decideResponse = {
+    id: "agpr_1",
+    type: "vendor_risk",
+    agent_principal: "agent_1",
+    risk_band: "standard",
+    status: "approved",
+    title: "t",
+    amount: null,
+    created_at: "2026-01-01T00:00:00Z",
+    execution_mode: "propose",
+    narrative: "",
+    evidence: [],
+    links: {},
+    policy_decision_id: null,
+    confidence: null,
+    reversible: false,
+    decision: "approved",
+    decided_by: "m1",
+    decided_at: "2026-01-01T00:00:00Z",
+  };
 });
 
 describe("Invariant 1 - token routing (agent vs member)", () => {
@@ -314,6 +362,35 @@ describe("Invariant 1 - token routing (agent vs member)", () => {
     expect(cpCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
   });
+
+  it("proposal decide uses the MEMBER token and forwards only {decision, edit}", async () => {
+    const { status } = await post("/api/brain/proposals/agpr_1/decide", {
+      decision: "approved",
+      edit: { amount: "50.00" },
+    });
+    expect(status).toBe(200);
+    const decideCalls = callsEndingWith("/proposals/agpr_1/decide");
+    expect(decideCalls).toHaveLength(1);
+    expect(decideCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(decideCalls[0].body).toEqual({ decision: "approved", edit: { amount: "50.00" } });
+    expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+  });
+
+  it("proposal decide relays a 409 agent_proposal_invalid_state verbatim", async () => {
+    decideStatus = 409;
+    decideResponse = { error: { code: "agent_proposal_invalid_state", message: "agent proposal agpr_1 not in state needs_review" } };
+    const { status, json: body } = await post("/api/brain/proposals/agpr_1/decide", { decision: "approved" });
+    expect(status).toBe(409);
+    expect((body as { body: { error: { code: string } } }).body.error.code).toBe("agent_proposal_invalid_state");
+  });
+
+  it("proposal decide relays a 404 agent_proposal_not_found verbatim", async () => {
+    decideStatus = 404;
+    decideResponse = { error: { code: "agent_proposal_not_found", message: "no such agent proposal" } };
+    const { status, json: body } = await post("/api/brain/proposals/agpr_missing/decide", { decision: "approved" });
+    expect(status).toBe(404);
+    expect((body as { body: { error: { code: string } } }).body.error.code).toBe("agent_proposal_not_found");
+  });
 });
 
 describe("Invariant 2 - no actor field in any BFF-constructed payload", () => {
@@ -322,6 +399,11 @@ describe("Invariant 2 - no actor field in any BFF-constructed payload", () => {
     await post("/api/brain/propose", { invoice_id: "inv_1", actor: "attacker@evil.co" });
     await post("/api/brain/payment-intents/pi_123/approve", { actor: "attacker@evil.co" });
     await post("/api/brain/reject", { payment_intent_id: "pi_123", actor: "attacker@evil.co" });
+    await post("/api/brain/proposals/agpr_1/decide", {
+      decision: "approved",
+      actor: "attacker@evil.co",
+      actor_id: "m_attacker",
+    });
 
     // Every recorded write body must be free of an `actor` key.
     const writes = calls.filter((c) => c.method !== "GET" && c.body && typeof c.body === "object");
@@ -396,6 +478,7 @@ describe("Invariant 5 - secrets never returned to the browser", () => {
     responses.push((await get("/api/brain/members")).json);
     responses.push((await get("/api/brain/ledger/invoices")).json);
     responses.push((await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" })).json);
+    responses.push((await post("/api/brain/proposals/agpr_1/decide", { decision: "approved" })).json);
 
     const blob = JSON.stringify(responses);
     expect(blob).not.toContain(PROVISION_SECRET);

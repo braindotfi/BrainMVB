@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import approveIcon from "@assets/approve_1784154649123.png";
@@ -50,6 +51,15 @@ import {
   type EvidenceLine,
   type ScenarioModule,
 } from "@/lib/agentProposals";
+import {
+  agentKeyForProposalType,
+  isNeedsReview,
+  canUndo as canUndoProposal,
+  useDecideProposal,
+  type BrainProposal,
+  type BrainProposalSummary,
+} from "@/lib/brainProposals";
+import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
 
 /* One reusable shell for all 11 agents: header, why, evidence, confidence
    → scenario module → recommended action → next steps → risk note → footer.
@@ -1297,3 +1307,294 @@ export function AgentProposalModal({
     </DialogPrimitive.Root>
   );
 }
+
+/* ── LIVE mode: brain-core /v1/proposals (BrainProposal, client/src/lib/brainProposals.ts) ──
+   The component above renders the fabricated 11-agent AgentProposal shape and stays
+   untouched (dormant scaffolding - no page imports it, see openProposalDetail.ts /
+   ReviewPage.tsx). This is a SEPARATE, honest render for the live wire shape: only
+   sections the record actually carries data for are shown. No scenarioModule,
+   recommendedAction, or whatHappensNext are fabricated to fill the gaps, and there is
+   no Edit flow in this v1 (see the ponytail note below). Mirrors LiveInsightModal's
+   conditional-rendering approach for brainAgentSurfaces.ts's LiveInsight. */
+
+/** Display name per agent, matching the copy already used per-record in
+ *  agentProposals.ts's AGENT_PROPOSALS (client-owned presentation, not brain-core data). */
+const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
+  vendor_risk: "Vendor Risk",
+  payment: "Payment",
+  collections: "Collections",
+  treasury: "Treasury",
+  cash_forecast: "Cash Forecasting",
+  dispute: "Dispute",
+  compliance: "Compliance",
+  revenue_intel: "Revenue Intelligence",
+  reconciliation: "Reconciliation",
+  subscription: "Subscription",
+  fraud_anomaly: "Fraud and Anomaly",
+};
+
+export function LiveProposalModal({
+  proposal,
+  open,
+  onOpenChange,
+}: {
+  proposal: BrainProposal | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { format } = useCurrency();
+  const [, navigate] = useLocation();
+  const decide = useDecideProposal();
+
+  if (!proposal) return null;
+
+  const agentKey = agentKeyForProposalType(proposal.type);
+  const AgentIcon = AGENT_ICONS[agentKey];
+  const risk = RISK_META[proposal.risk_band];
+  const confidencePct = typeof proposal.confidence === "number" ? Math.round(proposal.confidence * 100) : null;
+  const amount = proposal.amount !== null ? Number(proposal.amount) : null;
+  const needsReview = isNeedsReview(proposal);
+  const notifyOnly = proposal.execution_mode === "notify_only";
+  const undoable = canUndoProposal(proposal);
+  const links = proposal.links;
+  const hasLinks = !!(links.payment_intent_id || links.counterparty_id || links.raw_id);
+
+  const act = (decision: "approved" | "rejected" | "acknowledged" | "undone_to_review") => {
+    decide.mutate({ id: proposal.id, decision }, { onSuccess: () => onOpenChange(false) });
+  };
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          data-testid="live-proposal-backdrop"
+        />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          data-testid="live-proposal-modal"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+        >
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-between px-[16px]">
+            <div className="flex items-center gap-[8px] min-w-0">
+              <AgentIcon size={18} className="text-[#a8b9f4] shrink-0" />
+              <DialogPrimitive.Title
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate"
+                data-testid="text-live-proposal-agent-name"
+              >
+                {AGENT_DISPLAY_NAME[agentKey]}
+              </DialogPrimitive.Title>
+            </div>
+            <DialogPrimitive.Close
+              aria-label="Close"
+              data-testid="button-live-proposal-close"
+              className="size-[32px] shrink-0 flex items-center justify-center rounded-full hover:bg-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              <X size={18} className="text-[#6c779d]" />
+            </DialogPrimitive.Close>
+          </div>
+
+          <div className="flex flex-col gap-[16px] p-[24px] w-full overflow-y-auto">
+            <div
+              className="inline-flex items-center justify-center px-[12px] py-[5px] rounded-[100px]"
+              style={{ background: risk.bg, border: `1px solid ${risk.border}` }}
+              data-testid="pill-live-proposal-risk"
+            >
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px]" style={{ color: risk.color }}>
+                {risk.label}
+              </span>
+            </div>
+
+            <div className="flex gap-[24px] items-start w-full">
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] flex-1 min-w-0"
+                data-testid="text-live-proposal-title"
+              >
+                {proposal.title}
+              </p>
+              {amount !== null && (
+                <p
+                  className="[font-family:'JetBrains_Mono',monospace] font-medium text-[20px] leading-[28px] text-[#a8b9f4] shrink-0"
+                  data-testid="text-live-proposal-amount"
+                >
+                  {format(amount)}
+                </p>
+              )}
+            </div>
+
+            {confidencePct !== null && (
+              <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-proposal-confidence">
+                <div className="flex items-center justify-between">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">Confidence</span>
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]">{confidencePct}%</span>
+                </div>
+                <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
+                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidencePct}%` }} />
+                </div>
+              </div>
+            )}
+
+            {proposal.narrative && (
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]"
+                data-testid="text-live-proposal-narrative"
+              >
+                {proposal.narrative}
+              </p>
+            )}
+
+            {proposal.evidence.length > 0 && (
+              <div className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]" data-testid="list-live-proposal-evidence">
+                {proposal.evidence.map((e, i) => (
+                  <div key={i} className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#a8b9f4]">{e.text}</span>
+                    {/* wiki_entity_id: informational only - no wiki-entity viewer exists yet, so
+                        this is NOT a deep link (would be a dangling/fabricated one). */}
+                    {e.wiki_entity_id && (
+                      <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#414965]">{e.wiki_entity_id}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {hasLinks && (
+              <div className="flex flex-col gap-[4px] w-full" data-testid="list-live-proposal-links">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">Linked records</span>
+                {/* payment_intent_id: no live PaymentIntent-by-id detail viewer exists outside
+                    ReviewPage's own local queue state (verified: openProposalDetail.ts only
+                    resolves the fabricated mock catalogue) - muted reference text, not a link. */}
+                {links.payment_intent_id && (
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] truncate">
+                    {links.payment_intent_id}
+                  </p>
+                )}
+                {links.counterparty_id &&
+                  (resolveVendor(links.counterparty_id) ? (
+                    <button
+                      type="button"
+                      onClick={() => openVendorDetail(links.counterparty_id, navigate)}
+                      data-testid="link-live-proposal-counterparty"
+                      className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#7631ee] text-left truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      {links.counterparty_id}
+                    </button>
+                  ) : (
+                    <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] truncate">
+                      {links.counterparty_id}
+                    </p>
+                  ))}
+                {links.raw_id && (
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] truncate">{links.raw_id}</p>
+                )}
+              </div>
+            )}
+
+            {/* ponytail: v1 skips an inline edit flow (the fabricated modal's Edit button) - the
+                API already supports POST /proposals/{id}/decide { edit: { amount } } if the UI
+                wants one later; add it here when that need is real. */}
+          </div>
+
+          <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[24px] w-full shrink-0">
+            {undoable ? (
+              <button
+                type="button"
+                onClick={() => act("undone_to_review")}
+                disabled={decide.isPending}
+                data-testid="button-live-proposal-undo"
+                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              >
+                Undo
+              </button>
+            ) : notifyOnly && needsReview ? (
+              <button
+                type="button"
+                onClick={() => act("acknowledged")}
+                disabled={decide.isPending}
+                data-testid="button-live-proposal-acknowledge"
+                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
+              >
+                Acknowledge
+              </button>
+            ) : needsReview ? (
+              <div className="flex gap-[12px] w-full">
+                <button
+                  type="button"
+                  onClick={() => act("rejected")}
+                  disabled={decide.isPending}
+                  data-testid="button-live-proposal-reject"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => act("approved")}
+                  disabled={decide.isPending}
+                  data-testid="button-live-proposal-approve"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                >
+                  Approve
+                </button>
+              </div>
+            ) : (
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
+                data-testid="text-live-proposal-decided"
+              >
+                {proposal.decision ? `Decision recorded: ${proposal.decision}` : "No action available for this record."}
+              </p>
+            )}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+/** Compact row for a live proposal, matching LiveInsightRow/ProposalRow's existing
+ *  styling. Works off the list SUMMARY shape (no fan-out needed just to render a row). */
+export const LiveProposalRow = ({
+  proposal,
+  onClick,
+}: {
+  proposal: BrainProposalSummary;
+  onClick: () => void;
+}) => {
+  const { format } = useCurrency();
+  const risk = RISK_META[proposal.risk_band];
+  return (
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      data-testid={`row-live-proposal-${proposal.id}`}
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
+    >
+      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+          {proposal.title}
+        </p>
+        <span
+          className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0 w-fit"
+          style={{ color: risk.color, background: risk.bg, border: `1px solid ${risk.border}` }}
+        >
+          {risk.label}
+        </span>
+      </div>
+      {proposal.amount !== null && (
+        <div className="flex flex-col items-end justify-center relative shrink-0">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
+            {format(Number(proposal.amount))}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};

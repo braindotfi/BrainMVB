@@ -86,9 +86,23 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
 };
 
+/** `proposal.decided` (services/execution/src/proposals/routes.ts) carries its
+ *  eventType in the decision itself, not a fixed action string, so it's handled
+ *  separately from the static ACTION_MAP above rather than one entry per decision.
+ *  proposal_id is included as plain reference text (not a tappable link) - see
+ *  the `linked: []` honesty note on mapAuditEventToRecord below. */
+function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
+  const decision = typeof e.outputs.decision === "string" ? e.outputs.decision : "decided";
+  const proposalId = typeof e.outputs.proposal_id === "string" ? e.outputs.proposal_id : undefined;
+  const eventType: AuditEventType =
+    decision === "rejected" ? "rejected" : decision === "undone_to_review" ? "flagged" : "approved";
+  return { eventType, summary: `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}` };
+}
+
 /** Honest event-type + summary derivation: use the known mapping, otherwise
  *  render the raw action id as the summary rather than guessing a category. */
 function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
+  if (e.action === "proposal.decided") return classifyProposalDecided(e);
   const known = ACTION_MAP[e.action];
   if (known) return { eventType: known.eventType, summary: known.summary(e) };
   // ponytail: no fabricated category for unmapped actions - the raw action id

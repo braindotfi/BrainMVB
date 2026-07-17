@@ -34,6 +34,8 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal, LiveInsightRow } from "@/components/LiveInsightModal";
+import { useBrainProposals, isNeedsReview, isAutoApproved, type BrainProposal } from "@/lib/brainProposals";
+import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -194,6 +196,15 @@ export function ReviewPage() {
   const { insights: disputeInsights } = useBrainDisputeInsights();
   const { insight: cashFlowInsight } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+
+  /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
+     treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
+     above. Merges into both tabs alongside the existing payment-intent rows. */
+  const { proposals: liveProposals } = useBrainProposals();
+  const needsReviewProposals = liveProposals.filter(isNeedsReview);
+  const autoApprovedProposals = liveProposals.filter(isAutoApproved);
+  const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+
   const liveInsights: LiveInsight[] = [
     ...reconInsights,
     ...subscriptionInsights,
@@ -479,9 +490,9 @@ export function ReviewPage() {
             {/* Needs Review: live brain-core queue */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={queue.length} />
+              <WidgetHeader title="Needs Review" count={queue.length + needsReviewProposals.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {queue.length === 0 && (
+                {queue.length === 0 && needsReviewProposals.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -513,6 +524,10 @@ export function ReviewPage() {
                     {idx < arr.length - 1 && <Divider />}
                   </div>
                 ))}
+
+                {needsReviewProposals.map((p) => (
+                  <LiveProposalRow key={p.id} proposal={p} onClick={() => setSelectedProposal(p)} />
+                ))}
               </div>
             </div>
             )}
@@ -538,9 +553,9 @@ export function ReviewPage() {
             {/* Approved Automatically — live brain-core "auto" intents. */}
             {showApproved && (
               <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-                <WidgetHeader title="Approved Automatically" count={liveAutoApproved.length} />
+                <WidgetHeader title="Approved Automatically" count={liveAutoApproved.length + autoApprovedProposals.length} />
                 <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                  {liveAutoApproved.length === 0 && (
+                  {liveAutoApproved.length === 0 && autoApprovedProposals.length === 0 && (
                     <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                         Nothing was approved automatically recently.
@@ -554,6 +569,9 @@ export function ReviewPage() {
                         <div className="h-px w-full" style={{ background: "#1d2132" }} />
                       )}
                     </div>
+                  ))}
+                  {autoApprovedProposals.map((p) => (
+                    <LiveProposalRow key={p.id} proposal={p} onClick={() => setSelectedProposal(p)} />
                   ))}
                 </div>
               </div>
@@ -628,6 +646,13 @@ export function ReviewPage() {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+      />
+
+      {/* Live brain-core agent proposal (vendor risk, collections, treasury, etc.) */}
+      <LiveProposalModal
+        proposal={selectedProposal}
+        open={selectedProposal !== null}
+        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
       />
 
     </div>
