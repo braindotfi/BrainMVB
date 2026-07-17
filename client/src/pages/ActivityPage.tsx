@@ -11,7 +11,7 @@ import {
   decideAgentProposal,
   type AgentProposal,
 } from "@/lib/agentProposals";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
 import { useToast } from "@/hooks/use-toast";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -124,7 +124,9 @@ const ActivityItem = ({
       }
       className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
         clickable ? "cursor-pointer" : ""
-      } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"}`}
+      } ${highlighted ? "bg-[#11141b] border-[#7631EE]" : "border-transparent"} ${
+        item.type === "rejected" ? "border-l-[3px] border-l-[#d20344]" : ""
+      }`}
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex items-center gap-[8px] w-full min-w-0">
@@ -259,14 +261,14 @@ export function ActivityPage() {
   }, [highlightedId]);
 
   /* Merge live brain-core audit records with client-side review-status overrides
-     (executed / rejected / postponed) so Activity reflects user decisions made on
+     (executed / rejected) so Activity reflects user decisions made on
      the Review surface even before brain-core's audit log catches up. */
   const reviewStatuses = useReviewStatuses();
   const agentDecisions = useAgentDecisions();
   const actionItems: ActivityItemData[] = useMemo(() => {
     const items: ActivityItemData[] = [];
     for (const [id, status] of Object.entries(reviewStatuses)) {
-      if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
+      if (status !== "executing" && status !== "executed" && status !== "rejected") continue;
       const p = resolveProposal(id);
       if (!p) continue;
       items.push(statusOverrideToActivity(p, status));
@@ -333,7 +335,7 @@ export function ActivityPage() {
      (e.g. Undo on a reversible auto-approved record). */
   const [activeAgentRecord, setActiveAgentRecord] = useState<AgentProposal | null>(null);
   const { toast } = useToast();
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, _payload?: AgentModalEditPayload) => {
     if (action === "approve") {
       decideAgentProposal(p.id, "approved");
       toast({ title: "Approved", description: p.whatHappensNext.ifApproved });

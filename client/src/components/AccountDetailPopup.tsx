@@ -198,7 +198,7 @@ export function AccountDetailPopup({
                     {account.name}
                   </p>
                   <div className="flex gap-[8px] items-center w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-[#a8b9f4] text-[32px] tracking-[-2px]" data-testid="text-account-balance">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-[#a8b9f4] text-[32px]" data-testid="text-account-balance">
                       {balanceLabel(account, format)}
                     </p>
                     <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0">

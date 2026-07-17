@@ -1,0 +1,66 @@
+Update the following review detail pop-up cards and make it pixel perfect for the design frames below. Only do the work if the MCP server is up, otherwise do not waste tokens.
+
+Vendor Risk Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5781-65956&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5781-65758&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Payment Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5782-66174&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5785-65273&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Collections Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5785-65450&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5786-65744&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Treasury Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5786-65900&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5803-65525&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Cash Forecast Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5804-65401&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5807-94178&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Dispute Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5810-94342&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5810-94478&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Compliance Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5810-94642&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5811-94853&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Revenue Intelligence Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5813-65559&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5813-65743&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Reconciliation Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5816-65903&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5816-66042&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Subscription Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5820-66354&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5822-66494&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+
+Fraud and Anomaly Agent:
+- Needs Review:  https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5822-66725&m=draw&t=QqFV2d0f3UFVSWaJ-11
+
+- Approved Automatically: https://www.figma.com/design/cC2lQwC3g9hv96o5Wgy8Ek/%F0%9F%A7%A0-BRAIN?node-id=5822-66935&m=draw&t=QqFV2d0f3UFVSWaJ-11

@@ -103,7 +103,7 @@ export default defineConfig({
     esbuildOptions: {
       // NOTE: changing this define busts the browserHash so browsers
       // fetch fresh pre-bundled chunks (v1 = bs58+tweetnacl fully fixed).
-      define: { __BRAIN_DEP_VERSION__: '"v3"' },
+      define: { __BRAIN_DEP_VERSION__: '"v4"' },
       plugins: [esbuildStubPlugin],
     },
   },

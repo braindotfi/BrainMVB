@@ -151,11 +151,11 @@ export async function openDocumentOriginal(doc: DocumentRecord): Promise<void> {
 
 export function docKindLabel(kind: DocKind): string {
   switch (kind) {
-    case "invoice": return "INVOICE";
-    case "prior_payment": return "PRIOR PAYMENT";
-    case "bank_transaction": return "BANK TXN";
-    case "contract": return "CONTRACT";
-    case "purchase_order": return "PURCHASE ORDER";
+    case "invoice": return "Invoice";
+    case "prior_payment": return "Prior Payment";
+    case "bank_transaction": return "Bank Txn";
+    case "contract": return "Contract";
+    case "purchase_order": return "Purchase Order";
   }
 }
 

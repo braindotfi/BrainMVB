@@ -57,7 +57,7 @@ export interface AccountCardData {
 export type ScenarioModule =
   | { kind: "account_comparison"; old: AccountCardData; next: AccountCardData }
   | { kind: "entity_comparison"; entities: [AccountCardData, AccountCardData]; sharedNote: string }
-  | { kind: "document_stack"; docs: { label: string; meta: string }[] }
+  | { kind: "document_stack"; title?: string; docs: { label: string; meta: string; documentId?: string }[] }
   | { kind: "message_preview"; draft: string }
   | {
       kind: "account_flow";
@@ -65,15 +65,15 @@ export type ScenarioModule =
       to: { name: string; before: number; after: number };
       amount: number;
     }
-  | { kind: "forecast_chart"; weeks: number[]; floor: number; note: string }
+  | { kind: "forecast_chart"; title: string; weeks: number[]; floor: number; note: string }
   | {
       kind: "line_diff";
       columns: [string, string];
       rows: { label: string; a: string; b: string; mismatch?: boolean }[];
     }
-  | { kind: "usage_timeline"; lastActivityDaysAgo: number; renewalInDays: number; note: string }
   | { kind: "document_checklist"; items: { label: string; present: boolean }[] }
-  | { kind: "trend_chart"; points: { label: string; value: number }[]; unit: string; note: string };
+  | { kind: "trend_chart"; title: string; points: { label: string; value: number }[]; unit: string; note: string }
+  | { kind: "subscription_table"; badge: string; rows: { label: string; value: string; valueColor?: string }[] };
 
 export interface AgentProposal {
   id: string;
@@ -114,11 +114,11 @@ export interface AgentProposal {
 }
 
 /* ── Risk styling - pill + note + confidence-bar color track risk_level ─── */
-export const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string }> = {
-  low: { label: "Low risk", color: "#42bf23", bg: "rgba(66,191,35,0.12)" },
-  standard: { label: "Standard", color: "#a8b9f4", bg: "#1d2132" },
-  elevated: { label: "Elevated", color: "#ff9500", bg: "#3a2600" },
-  high: { label: "High risk", color: "#d20344", bg: "#350011" },
+export const RISK_META: Record<RiskLevel, { label: string; color: string; bg: string; border: string }> = {
+  low:      { label: "Low risk",   color: "#42bf23", bg: "rgba(66,191,35,0.12)",  border: "rgba(66,191,35,0.25)" },
+  standard: { label: "Standard",   color: "#a8b9f4", bg: "#1d2132",               border: "rgba(168,185,244,0.2)" },
+  elevated: { label: "Elevated",   color: "#ff9500", bg: "#3a2600",               border: "rgba(255,149,0,0.25)" },
+  high:     { label: "High risk",  color: "#d20344", bg: "#350011",               border: "rgba(210,3,68,0.25)" },
 };
 
 const ls = (type: LinkedSourceType, id: string): LinkedSource => ({
@@ -207,10 +207,11 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
+      title: "Linked Evidence",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · due Jul 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15", documentId: "INV-8841" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16", documentId: "INV-0392" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17", documentId: "INV-1177" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -319,9 +320,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 249, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · working-capital floor $174k",
+      note: "Working Capital Floor $174k.",
     },
     recommendedAction: "No action needed. Forecast is informational this cycle.",
     whatHappensNext: {
@@ -365,9 +367,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 142, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · week 9 drops below $174k floor",
+      note: "Week 9 shortfall · $142k vs. $174k floor",
     },
     recommendedAction: "Review the BigCo receivable timing or move a vendor payment to avoid the shortfall.",
     whatHappensNext: {
@@ -402,7 +405,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     scenarioModule: {
       kind: "document_stack",
       docs: [
-        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2" },
+        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2", documentId: "INV-7719" },
         { label: "Delivery confirmation", meta: "signed · Jun 6 · tracking 1Z999AA1" },
         { label: "Chargeback notice", meta: "reason: 'item not received' · respond by Jul 19" },
       ],
@@ -489,7 +492,8 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 83 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · +12% MoM",
+      note: "+12% MoM · no churn this month",
+      title: "Enterprise Segment Monthly Revenue ($k)",
     },
     recommendedAction: "No action needed. Informational insight only.",
     whatHappensNext: {
@@ -542,7 +546,8 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 68 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · -8% MoM · 1 churn",
+      note: "-8% MoM · 1 churn",
+      title: "Enterprise Segment Monthly Revenue ($k)",
     },
     recommendedAction: "Review the churn reason and check if the account is salvageable before the end of the grace period.",
     whatHappensNext: {
@@ -616,10 +621,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ],
     },
     scenarioModule: {
-      kind: "usage_timeline",
-      lastActivityDaysAgo: 63,
-      renewalInDays: 4,
-      note: "Last login May 11 · renewal charge Jul 17",
+      kind: "subscription_table",
+      badge: "1 of 8 Inactive",
+      rows: [
+        { label: "Last Login", value: "May 11" },
+        { label: "Renewal Charge", value: "Jul 17", valueColor: "#ff9500" },
+        { label: "Inactivity", value: "63 Days" },
+        { label: "Renews In", value: "4 Days", valueColor: "#ff9500" },
+      ],
     },
     recommendedAction: "Cancel the unused seat before renewal to avoid the charge.",
     whatHappensNext: {
@@ -627,14 +636,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifEdited: "You can reassign the seat to someone else instead of cancelling it.",
       ifRejected: "The seat renews as normal at full price.",
     },
-    riskNote: "Low risk. Worst case is simply readding the seat later if it turns out to be needed.",
+    riskNote: "Low risk. The seat can be re-added later if needed.",
     source: "wiki_subscriptions, wiki_app_usage",
     createdAt: "2026-07-10T09:30:00Z",
   },
   {
     id: "pr_011",
     agentKey: "fraud_anomaly",
-    agentDisplayName: "Fraud & Anomaly",
+    agentDisplayName: "Fraud and Anomaly",
     category: "agnostic",
     executionMode: "notify_only",
     riskLevel: "high",
@@ -769,10 +778,11 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "document_stack",
+      title: "Linked Evidence",
       docs: [
-        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · matched PO-2210 · due Jul 15" },
-        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · matched PO-2214 · due Jul 16" },
-        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · matched PO-2217 · due Jul 17" },
+        { label: "INV-8841 · Apex Manufacturing", meta: "$5,400 · Matched PO-2210 · Due July 15", documentId: "INV-8841" },
+        { label: "INV-0392 · Northwind Logistics", meta: "$6,250 · Matched PO-2214 · Due July 16", documentId: "INV-0392" },
+        { label: "INV-1177 · Corta Print Co.", meta: "$3,200 · Matched PO-2217 · Due July 17", documentId: "INV-1177" },
       ],
     },
     recommendedAction: "Batch and schedule payment for all 3 invoices on their due dates.",
@@ -890,9 +900,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "forecast_chart",
+      title: "13-Week Projected Balance ($k)",
       weeks: [292, 274, 268, 281, 259, 246, 252, 238, 249, 261, 243, 256, 268],
       floor: 174,
-      note: "13 week projected balance ($k) · working-capital floor $174k",
+      note: "Working Capital Floor $174k",
     },
     recommendedAction: "No action needed. Informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -931,7 +942,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     scenarioModule: {
       kind: "document_stack",
       docs: [
-        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2" },
+        { label: "INV-7719 · matched invoice", meta: "$840.00 · issued Jun 2", documentId: "INV-7719" },
         { label: "Delivery confirmation", meta: "signed · Jun 6 · tracking 1Z999AA1" },
         { label: "Chargeback notice", meta: "reason: 'item not received' · respond by Jul 19" },
       ],
@@ -1015,6 +1026,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     scenarioModule: {
       kind: "trend_chart",
+      title: "Enterprise Segment Revenue ($k)",
       points: [
         { label: "Feb", value: 68 },
         { label: "Mar", value: 71 },
@@ -1024,7 +1036,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
         { label: "Jul", value: 83 },
       ],
       unit: "$k",
-      note: "Enterprise segment monthly revenue ($k) · +12% MoM",
+      note: "+12% MoM · 2 upsells, no churn",
     },
     recommendedAction: "No action needed. Informational.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -1105,10 +1117,14 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ],
     },
     scenarioModule: {
-      kind: "usage_timeline",
-      lastActivityDaysAgo: 63,
-      renewalInDays: 0,
-      note: "Seat cancelled Jul 13 · $180 saved",
+      kind: "subscription_table",
+      badge: "Seat Cancelled",
+      rows: [
+        { label: "Last Login", value: "May 11" },
+        { label: "Renewal Charge", value: "Cancelled", valueColor: "#d20344" },
+        { label: "Inactivity", value: "63 Days" },
+        { label: "Renews In", value: "Cancelled", valueColor: "#d20344" },
+      ],
     },
     recommendedAction: "Cancel the unused seat before renewal.",
     whatHappensNext: { ifApproved: "", ifEdited: "", ifRejected: "" },
@@ -1129,13 +1145,13 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
   {
     id: "aa_011",
     agentKey: "fraud_anomaly",
-    agentDisplayName: "Fraud & Anomaly",
+    agentDisplayName: "Fraud and Anomaly",
     category: "agnostic",
     executionMode: "notify_only",
     riskLevel: "elevated",
     status: "approved_automatically",
     title: "Vendor contact overlap logged for audit",
-    subtitle: "Fraud & Anomaly · reviewed, no further action taken",
+    subtitle: "Fraud and Anomaly · reviewed, no further action taken",
     amount: null,
     confidence: 0.68,
     whySuggested: {
@@ -1190,7 +1206,22 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
    approved / rejected / acknowledged records drop out of Needs Review;
    an auto-approved record's Undo moves it back into Needs Review. */
 export type AgentDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
+
+export interface AgentModalEditPayload {
+  amount?: string;
+  category?: string;
+  floor?: string;
+  forecastNote?: string;
+  draft?: string;
+}
 let decisions: Record<string, AgentDecision> = {};
+let overrideAmounts: Record<string, number> = {};
+export function setAgentProposalAmountOverride(id: string, amount: number) {
+  overrideAmounts = { ...overrideAmounts, [id]: amount };
+}
+export function getAgentProposalAmountOverride(id: string): number | undefined {
+  return overrideAmounts[id];
+}
 /* Epoch-ms timestamp of each decision, keyed by proposal id - read by the
    Activity + Audit Log pages so a logged decision keeps its real time instead
    of re-stamping "now" on every rerender. */

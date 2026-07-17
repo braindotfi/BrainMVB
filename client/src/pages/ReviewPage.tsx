@@ -19,14 +19,14 @@ import {
   type ReviewItemType,
 } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { AgentProposalModal, type AgentModalAction } from "@/components/AgentProposalModal";
+import { AgentProposalModal, type AgentModalAction, type AgentModalEditPayload } from "@/components/AgentProposalModal";
 import { useAppAlert } from "@/components/AppAlert";
 import {
   useAgentDecisions,
   decideAgentProposal,
   needsReviewList,
   autoApprovedList,
-  RISK_META,
+  setAgentProposalAmountOverride,
   type AgentProposal,
 } from "@/lib/agentProposals";
 import { openRuleDetail } from "@/lib/openRuleDetail";
@@ -113,20 +113,29 @@ const ProposalRow = ({
       data-testid={`row-proposal-${proposal.id}`}
       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
     >
-      {proposal.severity === "danger" && (
-        <div className="w-[3px] self-stretch rounded-full bg-[#d20344] shrink-0" />
-      )}
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
-          {proposal.title}
-        </p>
+        <div className="flex items-start gap-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+            {proposal.title}
+          </p>
+          {proposal.severity === "danger" && (
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#350011] border border-[rgba(210,3,68,0.2)] text-[#d20344]">
+              High Risk
+            </span>
+          )}
+          {proposal.severity === "warning" && (
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#4a2300] border border-[rgba(255,149,0,0.2)] text-[#ff9400]">
+              Elevated
+            </span>
+          )}
+        </div>
         <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full ${parked ? "text-[#7631ee]" : "text-[#6c779d]"}`}>
           {parked ? "Verifying with vendor, draft ready for review" : proposal.rowSubtitle}
         </p>
       </div>
       {typeof proposal.amount === "number" && (
         <div className="flex flex-col items-end justify-center relative shrink-0">
-          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
             {format(proposal.amount)}
           </p>
         </div>
@@ -145,7 +154,6 @@ const AgentRow = ({
   onClick: () => void;
   format: (a: string | number) => string;
 }) => {
-  const risk = RISK_META[proposal.riskLevel];
   return (
     <div
       onClick={onClick}
@@ -155,12 +163,9 @@ const AgentRow = ({
       data-testid={`row-agent-proposal-${proposal.id}`}
       className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
     >
-      {proposal.riskLevel === "high" && (
-        <div className="w-[3px] self-stretch rounded-full bg-[#d20344] shrink-0" />
-      )}
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <div className="flex items-center gap-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+        <div className="flex items-start gap-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
             {proposal.title}
           </p>
           {/* Fabricated seed record, not a live brain-core proposal — see
@@ -171,12 +176,14 @@ const AgentRow = ({
           >
             Demo scenario
           </span>
-          {(proposal.riskLevel === "elevated" || proposal.riskLevel === "high") && (
-            <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0"
-              style={{ color: risk.color, background: risk.bg }}
-            >
-              {risk.label}
+          {proposal.riskLevel === "high" && (
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#350011] border border-[rgba(210,3,68,0.2)] text-[#d20344]">
+              High Risk
+            </span>
+          )}
+          {proposal.riskLevel === "elevated" && (
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#4a2300] border border-[rgba(255,149,0,0.2)] text-[#ff9400]">
+              Elevated
             </span>
           )}
         </div>
@@ -186,7 +193,7 @@ const AgentRow = ({
       </div>
       {proposal.amount !== null && (
         <div className="flex flex-col items-end justify-center relative shrink-0">
-          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">
             {format(proposal.amount)}
           </p>
         </div>
@@ -474,8 +481,12 @@ export function ReviewPage() {
 
   /* Decide on an agent proposal. User-driven, logged via toast. The modal
      closes and the record drops out of (or returns to) the queue. */
-  const handleAgentAction = (action: AgentModalAction, p: AgentProposal) => {
+  const handleAgentAction = (action: AgentModalAction, p: AgentProposal, payload?: AgentModalEditPayload) => {
     if (action === "approve") {
+      if (payload?.amount) {
+        const parsed = parseFloat(payload.amount.replace(/,/g, ""));
+        if (!isNaN(parsed)) setAgentProposalAmountOverride(p.id, parsed);
+      }
       decideAgentProposal(p.id, "approved");
       alert.approved("Approved", p.whatHappensNext.ifApproved, 2_000);
       setActiveAgent(null);
@@ -517,7 +528,7 @@ export function ReviewPage() {
 
           {/* Header */}
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Review</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Reviews</p>
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">A few things I need your help on.</p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Take a quick look and decide what should happen next.</p>
           </div>
@@ -733,14 +744,14 @@ const LiveRow = ({ item, onClick, format }: { item: ReviewItemType; onClick: () 
     data-testid={`row-review-${item.id}`}
     className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
   >
-    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
+    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">{item.title}</p>
       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
         {item.vendor ? `${item.vendor} · ${item.due}` : item.due}
       </p>
     </div>
     <div className="flex flex-col items-end justify-center relative shrink-0">
-      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
+      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[20px] text-right whitespace-nowrap">{format(item.amount)}</p>
     </div>
   </div>
 );

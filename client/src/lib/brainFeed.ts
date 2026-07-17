@@ -1,6 +1,7 @@
 import type { Proposal } from "@/lib/proposalTypes";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import type { AgentProposal } from "@/lib/agentProposals";
+import { getAgentProposalAmountOverride } from "@/lib/agentProposals";
 
 /* ── Shared source of truth for the Activity feed ──────────────────────────────
    The Activity page's "Brain Did" tab renders off the data declared here.
@@ -162,7 +163,7 @@ export function agentDecisionToActivity(
     title: p.title,
     meta1: decision === "approved" ? "You approved" : "You rejected",
     meta2: `${p.agentDisplayName} agent`,
-    amount: p.amount != null ? `$${p.amount.toLocaleString()}` : "",
+    amount: (() => { const a = getAgentProposalAmountOverride(p.id) ?? p.amount; return a != null ? `$${a.toLocaleString()}` : ""; })(),
     time: new Date(decidedAtMs).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
@@ -192,7 +193,7 @@ export function agentDecisionToAuditRecord(
     id: `${p.id}--agent-audit-${decision}`,
     eventType: decision,
     summary,
-    amount: p.amount ?? undefined,
+    amount: getAgentProposalAmountOverride(p.id) ?? p.amount ?? undefined,
     actor,
     occurredAtLabel: label,
     occurredAtMs: decidedAtMs,

@@ -176,7 +176,7 @@ export function CompanySetupPage() {
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
         <div className="w-full max-w-[440px] bg-[#11141b] border border-[#1d2132] rounded-[24px] px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
-            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px] tracking-[-0.96px]">
+            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px]">
               Set Up Your Company
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">

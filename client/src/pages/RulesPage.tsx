@@ -800,7 +800,7 @@ export function RulesPage() {
                     />
                     {openChip === "vendor" && (
                       <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
-                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#6c779d]">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Trusted vendors
                         </p>
                         {trustedVendors.length === 0 && (
@@ -828,7 +828,7 @@ export function RulesPage() {
                           );
                         })}
                         <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
-                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase tracking-[0.06em] text-[#414965]">
+                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
                           Not Trusted Yet
                         </p>
                         {untrustedVendors.length === 0 ? (

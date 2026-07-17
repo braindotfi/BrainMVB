@@ -16,6 +16,14 @@ import {
   PauseCircle,
   SlidersHorizontal,
   Sparkles,
+  CreditCard,
+  TrendingUp,
+  MessageSquare,
+  Scale,
+  LineChart,
+  RefreshCw,
+  Repeat2,
+  ScanSearch,
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
@@ -51,12 +59,52 @@ export type ProposalAction = "approve" | "reject" | "postpone" | "verifyFirst";
 
 const ALERT = "#d20344";
 
-export const AGENT_META: Record<Agent, { label: string; icon: LucideIcon }> = {
-  invoice: { label: "Invoice Agent", icon: Receipt },
-  collections: { label: "Collections Agent", icon: HandCoins },
-  cash: { label: "Cash Agent", icon: Landmark },
-  close: { label: "Close Agent", icon: BookCheck },
+export const AGENT_META: Record<Agent, { label: string; shortLabel: string; icon: LucideIcon }> = {
+  /* Legacy agent types - kept for backward compat with live brain-core data */
+  invoice:              { label: "Invoice Agent",               shortLabel: "Payment",               icon: Receipt       },
+  collections:          { label: "Collections Agent",           shortLabel: "Collections",            icon: HandCoins     },
+  cash:                 { label: "Cash Agent",                  shortLabel: "Treasury",               icon: Landmark      },
+  close:                { label: "Close Agent",                 shortLabel: "Reconciliation",         icon: BookCheck     },
+  /* New agent types matching Figma designs */
+  vendor_risk:          { label: "Vendor Risk Agent",           shortLabel: "Vendor Risk",            icon: ShieldAlert   },
+  payment:              { label: "Payment Agent",               shortLabel: "Payment",                icon: CreditCard    },
+  treasury:             { label: "Treasury Agent",              shortLabel: "Treasury",               icon: Landmark      },
+  cash_forecast:        { label: "Cash Forecast Agent",         shortLabel: "Cash Forecasting",       icon: TrendingUp    },
+  dispute:              { label: "Dispute Agent",               shortLabel: "Dispute",                icon: MessageSquare },
+  compliance:           { label: "Compliance Agent",            shortLabel: "Compliance",             icon: Scale         },
+  revenue_intelligence: { label: "Revenue Intelligence Agent",  shortLabel: "Revenue Intelligence",   icon: LineChart     },
+  reconciliation:       { label: "Reconciliation Agent",        shortLabel: "Reconciliation",         icon: RefreshCw     },
+  subscription:         { label: "Subscription Agent",          shortLabel: "Subscription",           icon: Repeat2       },
+  fraud_anomaly:        { label: "Fraud and Anomaly Agent",     shortLabel: "Fraud and Anomaly",      icon: ScanSearch    },
 };
+
+/* Status badge config for the hero section */
+function getStatusBadge(severity: Severity): { label: string; className: string; Icon?: LucideIcon } {
+  switch (severity) {
+    case "danger":
+      return {
+        label: "High Risk",
+        className: "bg-[#350011] text-[#d20344] border border-[rgba(210,3,68,0.2)]",
+        Icon: ShieldAlert,
+      };
+    case "warning":
+      return {
+        label: "Elevated",
+        className: "bg-[#4a2300] text-[#ff9500] border border-[rgba(255,149,0,0.2)]",
+      };
+    case "info":
+      return {
+        label: "Standard",
+        className: "bg-[#222737] text-[#a8b9f4] border border-[rgba(168,185,244,0.2)]",
+      };
+    case "clean":
+    default:
+      return {
+        label: "Standard",
+        className: "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]",
+      };
+  }
+}
 
 /* Pills: danger → alert red; warning → gold; info → baby blue; clean → purple. */
 export function chipClasses(severity: Severity): string {
@@ -141,7 +189,6 @@ export function ProposalDetail({
   const agent = AGENT_META[proposal.agent];
   const AgentIcon = agent.icon;
   const confidencePct = Math.round(proposal.confidence.score * 100);
-  const chips = proposal.reasonChips;
   const effectiveStatus = currentStatus ?? proposal.status;
   const isReceipt = effectiveStatus === "auto_handled";
 
@@ -157,10 +204,10 @@ export function ProposalDetail({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="proposal-detail"
         >
-          {/* Header: centered title only + close X (matches Figma) */}
+          {/* Header: short agent name centered + close X (matches Figma) */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
             <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-              {agent.label}
+              {agent.shortLabel}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-proposal-close"
@@ -183,71 +230,80 @@ export function ProposalDetail({
             />
           ) : (
           <>
-            {/* Info banner: action statement + policy + deadline (matches Figma) */}
-            <div className="flex flex-col gap-[16px] items-start w-full">
-              <div className="flex flex-col gap-[6px] items-start w-full">
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] w-full"
-                  data-testid="text-action-statement"
-                >
-                  {proposal.actionStatement}
-                </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[13px] w-full">
-                  {proposal.actionMeta}
-                </p>
-              </div>
-              <div className="flex flex-col gap-[4px] w-full">
-                <div className="flex items-center gap-[8px] w-full">
-                  <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#240757] shrink-0">
-                    <AgentIcon size={16} className="text-[#7631ee]" />
-                  </div>
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] text-[#a8b9f4]">{agent.label}</span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">{proposal.auditId}</span>
-                </div>
-                {proposal.whatHappensNext && (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full pl-[36px]">
-                    {proposal.whatHappensNext}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Reason chips: flags use alert red. Clean and no chips means "Looks routine" */}
-            <div className="flex flex-wrap gap-[8px] items-center w-full">
-              {chips.length > 0 ? (
-                chips.map((chip, i) => (
-                  <span
-                    key={i}
-                    data-testid={`chip-reason-${i}`}
-                    className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] whitespace-nowrap ${chipClasses(chip.severity)}`}
-                  >
-                    {chip.label}
+            {/* ── Hero section: status badge + title + amount + subtitle ─────── */}
+            {(() => {
+              const badge = getStatusBadge(proposal.severity);
+              const BadgeIcon = badge.Icon;
+              return (
+                <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
+                  <span className={`inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
+                    {BadgeIcon && <BadgeIcon size={12} className="shrink-0" />}
+                    {badge.label}
                   </span>
-                ))
-              ) : (
-                <span
-                  data-testid="chip-routine"
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[100px] whitespace-nowrap bg-[#240757] text-[#7631ee]"
-                >
-                  Looks routine
-                </span>
-              )}
-            </div>
+                  <div className="flex items-start justify-between gap-[12px] w-full">
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[26px] text-[#a8b9f4] text-[20px]"
+                      data-testid="text-action-statement"
+                    >
+                      {proposal.title}
+                    </p>
+                    {proposal.amount != null && (
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-bold text-[20px] leading-[26px] text-[#a8b9f4] whitespace-nowrap shrink-0">
+                        {format(proposal.amount)}
+                      </p>
+                    )}
+                  </div>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d]">
+                    {proposal.rowSubtitle}
+                  </p>
+                </div>
+              );
+            })()}
 
-            {/* Why this needs your call. Rationale only (facts moved to Linked Evidence) */}
-            <div className="flex flex-col gap-[12px] items-start w-full">
-              <SectionLabel>Why This Needs Your Call</SectionLabel>
+            {/* ── Why Brain Suggested This: rationale + optional bullets ─────── */}
+            <div className="flex flex-col gap-[16px] items-start w-full">
+              <SectionLabel>Why Brain Suggested This</SectionLabel>
               <p
                 id="proposal-detail-rationale"
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
               >
                 {proposal.rationale}
               </p>
+              {proposal.bullets && proposal.bullets.length > 0 && (
+                <div className="flex flex-col gap-[8px] w-full pl-[4px]">
+                  {proposal.bullets.map((bullet, i) => (
+                    <div key={i} className="flex gap-[10px] items-start">
+                      <span className="shrink-0 w-[5px] h-[5px] rounded-full bg-[#414965] mt-[7px]" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                        {bullet}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* What Brain Found. Facts in a Figma-style table */}
+            {/* ── Confidence: score + band ──────────────────────────────────── */}
+            <div className="flex flex-col gap-[16px] items-start w-full">
+              <SectionLabel
+                trailing={
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap" data-testid="text-confidence">
+                    {proposal.confidence.band} · {confidencePct}%
+                  </span>
+                }
+              >
+                Confidence
+              </SectionLabel>
+              {proposal.confidence.caveat && (
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] w-full">
+                  {proposal.confidence.caveat}
+                </p>
+              )}
+            </div>
+
+            {/* ── What Brain Found: facts table ────────────────────────────── */}
             {proposal.facts && proposal.facts.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>What Brain Found</SectionLabel>
                 <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
                   {proposal.facts.map((fact, i) => {
@@ -264,7 +320,10 @@ export function ProposalDetail({
                           </p>
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px]">
+                          <p
+                            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
+                            style={{ color: factColor(fact.severity) }}
+                          >
                             {fact.value}
                           </p>
                         </div>
@@ -275,42 +334,40 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* Linked Evidence. Evidence items as tappable cards per Figma */}
+            {/* ── Linked Evidence ────────────────────────────────────────────── */}
             {proposal.evidence.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[8px] items-start w-full">
                 <SectionLabel>Linked Evidence</SectionLabel>
-                <div className="flex flex-col gap-[8px] w-full">
-                  {proposal.evidence.map((ev, i) => {
-                    const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
-                    const clickable = !!doc;
-                    const onClick = () => {
-                      if (doc) {
-                        setViewingDocument(doc);
-                        setDocumentOpen(true);
-                      }
-                    };
-                    const Wrapper = clickable ? "button" : "div";
-                    return (
-                      <Wrapper
-                        key={`ev-${i}`}
-                        type={clickable ? "button" : undefined}
-                        onClick={clickable ? onClick : undefined}
-                        data-testid={`linked-evidence-${i}`}
-                        className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
-                      >
-                        <div className="flex flex-1 gap-[16px] items-center min-w-px">
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
-                            {titleCase(ev.kind.replace("_", " "))}
-                          </span>
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                            {ev.title}
-                          </p>
-                        </div>
-                        {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
-                      </Wrapper>
-                    );
-                  })}
-                </div>
+                {proposal.evidence.map((ev, i) => {
+                  const doc = ev.documentId ? resolveDocument(ev.documentId) : undefined;
+                  const clickable = !!doc;
+                  const onClick = () => {
+                    if (doc) {
+                      setViewingDocument(doc);
+                      setDocumentOpen(true);
+                    }
+                  };
+                  const Wrapper = clickable ? "button" : "div";
+                  return (
+                    <Wrapper
+                      key={`ev-${i}`}
+                      type={clickable ? "button" : undefined}
+                      onClick={clickable ? onClick : undefined}
+                      data-testid={`linked-evidence-${i}`}
+                      className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-[12px] bg-[#0a0c10] border border-[#1d2132] w-full text-left ${clickable ? "hover:bg-[#11141b] hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
+                    >
+                      <div className="flex flex-1 gap-[16px] items-center min-w-px">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)]">
+                          {titleCase(ev.kind.replace("_", " "))}
+                        </span>
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                          {ev.title}
+                        </p>
+                      </div>
+                      {clickable && <ChevronRight size={16} className="text-[#414965] shrink-0" />}
+                    </Wrapper>
+                  );
+                })}
                 {/* Source document: tappable link when invoiceId resolves (legacy fallback) */}
                 {proposal.invoiceId && (() => {
                   const srcDoc = liveInvoiceDoc ?? resolveDocument(proposal.invoiceId);
@@ -330,7 +387,7 @@ export function ProposalDetail({
                       data-testid="button-source-invoice"
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-[#0a0c10] hover:bg-[#11141b] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                     >
-                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#414965] tracking-[0.04em]">{docKindLabel(srcDoc.kind)}</span>
+                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-[#414965]">{docKindLabel(srcDoc.kind)}</span>
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4] flex-1 min-w-px">#{srcDoc.id}</span>
                       <ChevronRight size={14} className="text-[#414965] shrink-0" />
                     </button>
@@ -339,31 +396,29 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* Confidence: band, score, bar (purple), caveat */}
-            <div className="flex flex-col gap-[10px] items-start w-full">
-              <SectionLabel
-                trailing={
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap" data-testid="text-confidence">
-                    {proposal.confidence.band} · {confidencePct}%
-                  </span>
-                }
-              >
-                Confidence
-              </SectionLabel>
-              <div className="h-[6px] w-full rounded-full bg-[#222737] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-[#7631ee] transition-all"
-                  style={{ width: `${confidencePct}%` }}
-                />
+            {/* ── Recommended Action ───────────────────────────────────────── */}
+            {proposal.recommendedAction && (
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                <SectionLabel>Recommended Action</SectionLabel>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
+                  {proposal.recommendedAction}
+                </p>
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
-                {proposal.confidence.caveat}
-              </p>
-            </div>
+            )}
 
-            {/* Sweep math: reconciling mono breakdown (only when present) */}
+            {/* ── What Happens Next ────────────────────────────────────────── */}
+            {proposal.whatHappensNext && (
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                <SectionLabel>What Happens Next</SectionLabel>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
+                  {proposal.whatHappensNext}
+                </p>
+              </div>
+            )}
+
+            {/* ── Sweep math: reconciling mono breakdown (only when present) ── */}
             {proposal.sweepMath && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>The Math: Your Account Is Not Drained</SectionLabel>
                 <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px] [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]">
                   <div className="flex items-center justify-between gap-[12px]">
@@ -401,31 +456,33 @@ export function ProposalDetail({
               </div>
             )}
 
-            {/* If this is wrong. Risk boxed in alert-red panel + policy line */}
-            <div className="flex flex-col gap-[10px] items-start w-full">
-              <SectionLabel>If This Is Wrong</SectionLabel>
-              <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
-                <ShieldAlert size={16} className="shrink-0" style={{ color: ALERT }} />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] w-full" style={{ color: ALERT }}>
-                  {proposal.risk}
-                </p>
-              </div>
-              <div className="w-full flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-                  Flagged by{" "}
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">{proposal.policy.id}</span>
-                  {" "}- {proposal.policy.explanation}.
-                </p>
-                {proposal.policy.autoClearedOtherwise && (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[13px]">
-                    Would have auto-cleared otherwise.
+            {/* ── If This Is Wrong: risk + policy (only when risk text is set) ── */}
+            {proposal.risk && (
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                <SectionLabel>If This Is Wrong</SectionLabel>
+                <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
+                  <ShieldAlert size={16} className="shrink-0" style={{ color: ALERT }} />
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] w-full" style={{ color: ALERT }}>
+                    {proposal.risk}
                   </p>
-                )}
+                </div>
+                <div className="w-full flex flex-col gap-[16px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                    Flagged by{" "}
+                    <span className="[font-family:'JetBrains_Mono',monospace] text-[#a8b9f4]">{proposal.policy.id}</span>
+                    {" "}- {proposal.policy.explanation}.
+                  </p>
+                  {proposal.policy.autoClearedOtherwise && (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[13px]">
+                      Would have auto-cleared otherwise.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Actions footer. verifyFirst → prominent full-width fourth action ABOVE the row. */}
-            <div className="flex flex-col gap-[12px] items-start w-full">
+            {/* ── Actions footer ────────────────────────────────────────────── */}
+            <div className="flex flex-col gap-[16px] items-start w-full">
               {proposal.actions.verifyFirst && (
                 <button
                   type="button"
@@ -448,26 +505,23 @@ export function ProposalDetail({
                   testId="button-reject"
                   onClick={() => onAction("reject")}
                   label={proposal.actions.reject.label}
-                  sublabel={proposal.actions.reject.sublabel}
                   variant="reject"
                 />
                 <ActionButton
                   testId="button-postpone"
                   onClick={() => onAction("postpone")}
                   label={proposal.actions.postpone.label}
-                  sublabel={proposal.actions.postpone.sublabel}
                   variant="postpone"
                 />
                 <ActionButton
                   testId="button-approve"
                   onClick={() => onAction("approve")}
                   label={proposal.actions.approve.label}
-                  sublabel={proposal.actions.approve.sublabel}
                   variant="approve"
                 />
               </div>
 
-              {/* Routine proposal → promote into a standing rule (create flow). */}
+              {/* Routine proposal: promote into a standing rule (create flow). */}
               {proposal.batchApprovable && onAlwaysHandle && (
                 <button
                   type="button"
@@ -492,7 +546,7 @@ export function ProposalDetail({
                 type="button"
                 onClick={() => setShowTrace((s) => !s)}
                 data-testid="button-toggle-trace"
-                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase tracking-[0.04em]"
+                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase"
               >
                 <ChevronDown size={14} className={`transition-transform ${showTrace ? "rotate-180" : ""}`} />
                 Technical detail
@@ -577,8 +631,8 @@ function AutoHandledReceipt({
   // The link resolves only while the rule still exists in the store; a deleted
   // rule keeps the receipt readable but renders a muted "(rule unavailable)" note.
   const ruleResolves = !!rule && !!resolveRule(rule.id);
-  /* Report flow is a small wizard: idle → "reason" capture → "confirm" safety
-     action → done. Never auto-advances; the user drives every step. */
+  /* Report flow is a small wizard: idle -> "reason" capture -> "confirm" safety
+     action -> done. Never auto-advances; the user drives every step. */
   const [reportStep, setReportStep] = useState<"idle" | "reason" | "confirm" | "done">("idle");
   const [didPause, setDidPause] = useState(false);
   const [preset, setPreset] = useState("");
@@ -605,36 +659,60 @@ function AutoHandledReceipt({
 
   return (
     <>
-      {/* 1: status pill. GREEN "Approved automatically, no approval needed" */}
-      <div className="flex flex-wrap gap-[8px] items-center w-full">
+      {/* ── Hero section: Auto-Approved badge + title + amount + subtitle ─── */}
+      <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
         <span
           data-testid="chip-auto-handled"
-          className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap bg-[#123509] text-[#42bf23]"
+          className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap bg-[#123509] text-[#42bf23] border border-[rgba(66,191,35,0.2)]"
         >
-          <CircleCheckBig size={13} className="shrink-0" />
-          Approved automatically · no approval needed
+          <CircleCheckBig size={12} className="shrink-0" />
+          Auto-Approved
         </span>
+        <div className="flex items-start justify-between gap-[12px] w-full">
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[26px] text-[#a8b9f4] text-[20px]"
+            data-testid="text-past-tense"
+          >
+            {proposal.pastTenseStatement}
+          </p>
+          {proposal.amount != null && (
+            <p className="[font-family:'JetBrains_Mono',monospace] font-bold text-[20px] leading-[26px] text-[#a8b9f4] whitespace-nowrap shrink-0">
+              {format(proposal.amount)}
+            </p>
+          )}
+        </div>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#6c779d]">
+          {proposal.rowSubtitle}
+        </p>
       </div>
 
-      {/* 2: past-tense headline + amount mono + settledMeta (rule attribution) */}
-      <div className="flex flex-col gap-[6px] items-start w-full">
+      {/* ── Why This Didn't Need Review ───────────────────────────────────── */}
+      <div className="flex flex-col gap-[16px] items-start w-full">
+        <SectionLabel>Why This Didn't Need Review</SectionLabel>
         <p
-          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[22px] w-full"
-          data-testid="text-past-tense"
+          id="proposal-detail-rationale"
+          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
         >
-          {proposal.pastTenseStatement}
+          {proposal.rationale}
         </p>
-        {proposal.settledMeta && (
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[13px] w-full">
-            {proposal.settledMeta}
-          </p>
+        {proposal.bullets && proposal.bullets.length > 0 && (
+          <div className="flex flex-col gap-[8px] w-full pl-[4px]">
+            {proposal.bullets.map((bullet, i) => (
+              <div key={i} className="flex gap-[10px] items-start">
+                <span className="shrink-0 w-[5px] h-[5px] rounded-full bg-[#414965] mt-[7px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                  {bullet}
+                </p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* 3: "What happened". Propose, approve, execute, told retroactively */}
-      {proposal.handoffTimeline && proposal.handoffTimeline.length > 0 && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
-          <SectionLabel>What happened</SectionLabel>
+      {/* ── What happened: timeline (shown when no bullets, backward compat) ── */}
+      {!proposal.bullets && proposal.handoffTimeline && proposal.handoffTimeline.length > 0 && (
+        <div className="flex flex-col gap-[16px] items-start w-full">
+          <SectionLabel>What Happened</SectionLabel>
           <div className="flex flex-col w-full">
             {proposal.handoffTimeline.map((step, i, arr) => (
               <div key={i} className="flex gap-[12px] items-stretch w-full" data-testid={`timeline-step-${i}`}>
@@ -646,17 +724,13 @@ function AutoHandledReceipt({
                   {i < arr.length - 1 && <div className="w-[2px] flex-1 bg-[#1d2132] my-[2px]" />}
                 </div>
                 {/* content */}
-                <div className={`flex flex-col gap-[2px] ${i < arr.length - 1 ? "pb-[16px]" : ""}`}>
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
+                <div className={`flex flex-col gap-[2px] pb-[12px] ${i === arr.length - 1 ? "" : ""}`}>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4]">
                     {step.label}
-                    {step.note && (
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">
-                        {" "}- {step.note}
-                      </span>
-                    )}
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-[#6c779d] text-[12px]">
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">
                     {step.timestamp}
+                    {step.note && <span className="text-[#414965]"> · {step.note}</span>}
                   </p>
                 </div>
               </div>
@@ -665,24 +739,31 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* 4: "Why this cleared automatically". Positive evidence, mono block */}
+      {/* ── What Brain Cleared ────────────────────────────────────────────── */}
       {proposal.clearedBecause && proposal.clearedBecause.length > 0 && (
-        <div className="flex flex-col gap-[12px] items-start w-full">
-          <SectionLabel>Why this cleared automatically</SectionLabel>
-          <div className="bg-[#0a0c10] rounded-[12px] w-full p-[14px] flex flex-col gap-[8px]">
-            {proposal.clearedBecause.map((fact: FactRow, i: number) => {
-              const isLimit = /under limit/i.test(fact.label);
+        <div className="flex flex-col gap-[16px] items-start w-full">
+          <SectionLabel>What Brain Cleared</SectionLabel>
+          <div className="bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[12px] w-full flex flex-col">
+            {proposal.clearedBecause.map((fact, i) => {
+              const isLast = i === proposal.clearedBecause!.length - 1;
               return (
                 <div
-                  key={i}
-                  className="flex items-center justify-between gap-[12px] w-full [font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px]"
-                  data-testid={`cleared-${i}`}
+                  key={`cleared-${i}`}
+                  className={`flex items-start w-full ${!isLast ? "border-b border-[#1d2132]" : ""}`}
                 >
-                  <span className="text-[#6c779d]">{titleCase(fact.label)}</span>
-                  <span className="text-right flex items-center gap-[6px]" style={{ color: isLimit ? "#42bf23" : factColor(fact.severity) }}>
-                    {fact.value}
-                    {isLimit && <Check size={13} className="text-[#42bf23] shrink-0" strokeWidth={2.5} />}
-                  </span>
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+                      {titleCase(fact.label)}
+                    </p>
+                  </div>
+                  <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
+                      style={{ color: factColor(fact.severity) }}
+                    >
+                      {fact.value}
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -690,42 +771,33 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* 5: "The rule that approved this". Bordered sub-card + Active/Paused
-          chip. The whole card taps through to RuleDetail when the rule still
-          resolves; a deleted rule stays readable but non-tappable. */}
+      {/* ── Recommended Action (for new Figma-style auto proposals) ──────── */}
+      {proposal.recommendedAction && (
+        <div className="flex flex-col gap-[16px] items-start w-full">
+          <SectionLabel>Recommended Action</SectionLabel>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
+            {proposal.recommendedAction}
+          </p>
+        </div>
+      )}
+
+      {/* ── The Rule That Authorized ──────────────────────────────────────── */}
       {rule && (() => {
         const cardInner = (
           <>
-            <div className="flex items-center justify-between gap-[12px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[15px]">
-                {titleCase(rule.name)}
-              </p>
-              <span
-                data-testid="chip-rule-status"
-                className={`[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[3px] rounded-[100px] whitespace-nowrap ${
-                  paused ? "bg-[#3a2600] text-[#ff9500]" : "bg-[#123509] text-[#42bf23]"
-                }`}
-              >
-                {paused ? "Paused" : "Active"}
+            <div className="flex items-center gap-[8px] w-full">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">
+                {rule.name}
               </span>
             </div>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-              {titleCase(rule.summary)}
+              {rule.createdLabel}
             </p>
-            <div className="flex flex-col gap-[2px] [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965]">
-              <span>{rule.createdLabel}</span>
-              <span className="text-[#6c779d]">{rule.policyId}</span>
-            </div>
-            {!ruleResolves && (
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]">
-                (rule unavailable)
-              </span>
-            )}
           </>
         );
         return (
-          <div className="flex flex-col gap-[12px] items-start w-full">
-            <SectionLabel>The rule that approved this</SectionLabel>
+          <div className="flex flex-col gap-[16px] items-start w-full">
+            <SectionLabel>The Rule That Authorized This</SectionLabel>
             {ruleResolves ? (
               <button
                 type="button"
@@ -744,7 +816,7 @@ function AutoHandledReceipt({
         );
       })()}
 
-      {/* 6: info note. This is a record, not a request */}
+      {/* ── Info note: this is a record, not a request ───────────────────── */}
       <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[12px]">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[13px]">
           This is a record, not a request. It is already settled. You can change how Brain handles these going forward.
@@ -752,7 +824,7 @@ function AutoHandledReceipt({
       </div>
 
       {/* FOOTER: retroactive controls only. No approve/reject/postpone/verify. */}
-      <div className="flex flex-col gap-[12px] items-start w-full">
+      <div className="flex flex-col gap-[16px] items-start w-full">
         {paused && (
           <div
             data-testid="text-rule-paused-confirm"
@@ -836,7 +908,7 @@ function AutoHandledReceipt({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               data-testid="input-report-note"
-              placeholder="Add a note (optional)…"
+              placeholder="Add a note (optional)..."
               rows={2}
               className="w-full resize-none rounded-[8px] bg-[#06070a] border border-[#1d2132] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
             />
@@ -863,8 +935,7 @@ function AutoHandledReceipt({
           </div>
         )}
 
-        {/* Step 2: confirm the safety action. Pausing is NEVER silent: the user
-            chooses to pause-and-review (purple primary) or just send feedback. */}
+        {/* Step 2: confirm the safety action. Pausing is NEVER silent. */}
         {reportStep === "confirm" && (
           <div className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[#0a0c10] p-[14px] flex flex-col gap-[12px]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#a8b9f4]">
@@ -921,20 +992,18 @@ function AutoHandledReceipt({
 
 function ActionButton({
   label,
-  sublabel,
   onClick,
   variant,
   testId,
 }: {
   label: string;
-  sublabel?: string;
   onClick: () => void;
   variant: "approve" | "reject" | "postpone";
   testId: string;
 }) {
-  /* Per Figma (node 5737:66019-21): Reject = dark-red bg / alert-red text,
-     Postpone = neutral gray bg / muted text, Approve = dark-green bg / green text.
-     All: h-[44px] px-[20px] py-[10px] rounded-[100px] SemiBold 16px. */
+  /* Per Figma: Reject = dark-red bg / alert-red text,
+     Postpone/Edit = neutral gray bg / muted text, Approve = dark-green bg / green text.
+     All: rounded-[100px] SemiBold 16px. */
   const styles =
     variant === "approve"
       ? "bg-[#123509] hover:bg-[#194d0d] focus-visible:ring-[#42bf23] text-[#42bf23]"

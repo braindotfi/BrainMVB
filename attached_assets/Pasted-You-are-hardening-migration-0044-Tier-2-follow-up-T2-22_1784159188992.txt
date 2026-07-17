@@ -1,0 +1,68 @@
+You are hardening migration 0044 (Tier 2 follow-up T2-22/T2-23) so it cannot fail-closed
+a deploy on pre-existing duplicate rows. Migration
+services/ledger/migrations/0044_ledger_direct_write_dedup_constraints.sql adds three
+partial UNIQUE indexes but includes NO dedup of existing rows, so it aborts the deploy
+(`could not create unique index ... is duplicated`) in any environment where the old
+racy SELECT-then-INSERT path already produced duplicate counterparties or obligations.
+
+WHY EDIT 0044 RATHER THAN ADD A NEW MIGRATION: migrations run in order and the runner
+aborts on the first failure, so a migration numbered after 0044 would never run in the
+exact environment that needs it (0044 fails first). Editing 0044 is safe because the
+runner skips already-applied migrations by name/version: an environment where 0044
+already succeeded had no duplicates (the added dedup is a no-op there and will not
+re-run), and an environment where 0044 failed has not recorded it as applied (the
+edited version applies cleanly). Confirm this runner behavior in tools/migrate/src/
+runner.ts before proceeding; if the runner does NOT skip-by-name (e.g. it hashes files
+and would re-run or error on a changed applied migration), STOP and report that instead
+of editing.
+
+ENVIRONMENT AND CONVENTIONS
+- Work in the WSL clone at ~/work/brain.fi/brain-core. Do NOT touch the Windows mirror.
+- git fetch origin, then branch off origin/main: fix/migration-0044-dedup.
+- Copy rules: no em dashes, no ampersands outside brand names, no emojis. Run
+  `pnpm run check-no-em-dashes`.
+- Fail closed. The migration must remain idempotent and deterministic (no now()/random
+  in a way that changes which row survives across reruns).
+
+FIX - inside 0044, BEFORE each CREATE UNIQUE INDEX (same transaction), add a
+deterministic, idempotent dedup/merge step:
+
+1. Duplicate counterparties (group by owner_id, normalized_name, type WHERE
+   normalized_name IS NOT NULL AND canonical_counterparty_id IS NULL): choose a
+   deterministic survivor (e.g. MIN(id), or earliest created_at then MIN(id) as a
+   tiebreak), then BEFORE deleting the losers, REPOINT every foreign-key reference to a
+   loser onto the survivor. Enumerate the referencing tables from the schema (at least
+   ledger_obligations.counterparty_id, ledger_payment_intents.destination_counterparty_id,
+   ledger_reconciliation_matches left/right entity ids where entity_type='counterparty',
+   ledger_counterparty_payment_instructions, and any alias/history tables) and update
+   them all. Merge alias/metadata arrays onto the survivor (union, distinct). Then delete
+   the losers.
+
+2. Duplicate obligations (group by owner_id, counterparty_id, type, amount_due, currency,
+   due_date WHERE external_key IS NULL): same pattern. Deterministic survivor, REPOINT
+   references (at least ledger_payment_intents.obligation_id, ledger_reconciliation_matches
+   entity ids where entity_type='obligation'), MERGE source_ids and evidence_ids (union,
+   distinct) onto the survivor, then delete the losers.
+
+3. Only after both dedups, run the existing CREATE UNIQUE INDEX statements unchanged.
+
+Do NOT collapse two rows that are NOT actually duplicates: the grouping key is exactly
+the unique-index key, so any group with >1 row already violates the constraint the index
+is about to enforce and is by definition a duplicate under this contract. Preserve the
+richest survivor (merge arrays) rather than dropping data.
+
+TESTS
+- Add a migration/integration test (or extend the existing ledger migration test harness)
+  that seeds duplicate counterparties AND duplicate obligations, runs the migration, and
+  asserts: (a) the migration succeeds, (b) one survivor remains per group with merged
+  source_ids/evidence_ids/aliases, (c) all references were repointed (no orphaned
+  counterparty_id/obligation_id), and (d) the unique indexes now exist.
+- Confirm the existing writes.ts ON CONFLICT tests still pass unchanged.
+
+DELIVERABLE
+- One PR from fix/migration-0044-dedup, green on typecheck/test/coverage/lint and the
+  migrate dry-run/up in the test harness. In the PR description, state that this edits an
+  already-merged migration deliberately (with the runner-skip-by-name justification) and
+  that it makes 0044 self-healing so the deploy cannot be blocked by historical
+  duplicates. If the runner does NOT skip-by-name, the PR should instead fold the dedup +
+  DROP/CREATE of the indexes into a new migration and explain the ordering reasoning.

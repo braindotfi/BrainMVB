@@ -785,7 +785,7 @@ function StepConnectTools({
         grouped.map(({ cat, items }) => (
           <div key={cat} className="flex flex-col gap-[8px]">
             <div className="flex items-center gap-[8px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase tracking-[0.04em] whitespace-nowrap">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase whitespace-nowrap">
                 {cat}
               </p>
               <div className="flex-1 h-px bg-[#1d2132]" />
@@ -1509,7 +1509,7 @@ function StepPeople({
             : g.totalHidden;
           return (
             <div key={g.id} className="flex flex-col gap-[10px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase tracking-[0.08em] text-[#6c779d] text-[11px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase text-[#6c779d] text-[11px]">
                 {g.label}
               </p>
               <div className="flex flex-col gap-[8px]">
