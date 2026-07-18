@@ -18,8 +18,8 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brainProposals";
-import { LiveProposalModal } from "@/components/AgentProposalModal";
+import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -571,7 +571,7 @@ export function HomePage() {
     }));
     const proposalItems = needsReviewProposals.map((p) => ({
       id: p.id,
-      label: p.title,
+      label: AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)],
       onClick: () => setSelectedProposal(p),
     }));
     return [...queueItems, ...insightItems, ...proposalItems];

@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { parseCoreError } from "./approvalRejections";
 import type { AgentKey } from "./agentProposals";
@@ -6,14 +6,14 @@ import type { AgentKey } from "./agentProposals";
 /* ── Live brain-core agent proposals (GET/POST /v1/proposals*) ────────────────
    Non-financial agent outputs (vendor risk, collections, treasury, etc.) that a
    human reviews and decides on - distinct from the PaymentIntent queue in
-   brainQueue.ts. Shape verified against brain-core source, not docs:
-   services/execution/src/proposals/{repository,routes}.ts (PR #267, not yet
-   deployed - every call here 404s against api.brain.fi today and must degrade
-   to an honest empty state, same as every other live hook in this file). */
+   brainQueue.ts. Contract MERGED via brain-core #268-271 and LIVE on
+   api.brain.fi (GET /v1/proposals returns 401, i.e. deployed, not 404). Shape
+   verified against brain-core source: services/execution/src/proposals/
+   read-model.ts + decision-service.ts on main. */
 
 export type ProposalType =
   | "vendor_risk"
-  | "payment_batch"
+  | "payment"
   | "collections"
   | "treasury"
   | "cash_forecast"
@@ -24,124 +24,71 @@ export type ProposalType =
   | "subscription"
   | "fraud_anomaly";
 
-export type ProposalStatus = "needs_review" | "acknowledged" | "approved" | "rejected" | "undone_to_review";
+export type ProposalStatus = "pending" | "approved" | "acknowledged" | "rejected" | "undone" | (string & {});
 export type ProposalRiskBand = "low" | "standard" | "elevated" | "high";
-export type ProposalExecutionMode = "propose" | "notify_only";
-export type ProposalDecision = "approved" | "rejected" | "acknowledged" | "undone_to_review";
+export type ProposalMode = "propose" | "notify_only";
+export type ProposalDecision = "approve" | "reject" | "acknowledge" | "undo";
 
 export interface ProposalEvidenceItem {
-  text: string;
-  wiki_entity_id?: string;
-}
-export interface ProposalLinks {
-  payment_intent_id?: string | null;
-  counterparty_id?: string | null;
-  raw_id?: string | null;
+  kind: string;
+  ref: string;
+  resolvable: boolean;
 }
 
-/** GET /proposals row (repository.ts's `AgentProposalSummary`). */
-export interface BrainProposalSummary {
+/** GET /proposals row = GET /proposals/{id} detail - identical shape, no extra
+ *  detail-only fields (read-model.ts's `ProposalReadItem`). */
+export interface BrainProposal {
   id: string;
   type: ProposalType;
-  agent_principal: string;
-  risk_band: ProposalRiskBand;
-  status: ProposalStatus;
-  title: string;
-  amount: string | null;
   created_at: string;
-}
-
-/** GET /proposals/{id} (repository.ts's `AgentProposalView`) - summary + detail fields. */
-export interface BrainProposal extends BrainProposalSummary {
-  execution_mode: ProposalExecutionMode;
-  narrative: string;
-  evidence: ProposalEvidenceItem[];
-  links: ProposalLinks;
-  policy_decision_id: string | null;
+  status: ProposalStatus;
+  risk_band: ProposalRiskBand | null;
   confidence: number | null;
-  reversible: boolean;
-  decision: ProposalDecision | null;
-  decided_by: string | null;
-  decided_at: string | null;
+  mode: ProposalMode;
+  narrative: string | null;
+  evidence: ProposalEvidenceItem[];
+  agent: { id: string; kind: string; display_name: string } | null;
+  payment_intent_id: string | null;
+  action_type: string | null;
 }
 
 interface ListProposalsResponse {
-  proposals: BrainProposalSummary[];
+  proposals: BrainProposal[];
+  next_cursor: string | null;
 }
 
-/** Wire `type` -> the client's existing AgentKey (agentProposals.ts), for display
- *  meta (icon/name) reuse. Only `payment_batch` differs; every other value is the
- *  identical string, verified against the 11 AgentKey members. */
-const TYPE_TO_AGENT_KEY: Record<ProposalType, AgentKey> = {
-  vendor_risk: "vendor_risk",
-  payment_batch: "payment",
-  collections: "collections",
-  treasury: "treasury",
-  cash_forecast: "cash_forecast",
-  dispute: "dispute",
-  compliance: "compliance",
-  revenue_intel: "revenue_intel",
-  reconciliation: "reconciliation",
-  subscription: "subscription",
-  fraud_anomaly: "fraud_anomaly",
-};
+/** `type` -> the client's AgentKey (agentProposals.ts) is now the identity
+ *  function - all 11 ProposalType values are the identical AgentKey strings. */
 export function agentKeyForProposalType(type: ProposalType): AgentKey {
-  return TYPE_TO_AGENT_KEY[type];
+  return type;
 }
 
 /* ── Queue-membership helpers (pure - see brainProposals.test.ts) ───────────── */
 
-/** A record still awaiting a human decision (fresh, or sent back via Undo). */
+/** A record still awaiting a human decision. */
 export function isNeedsReview(p: { status: ProposalStatus }): boolean {
-  return p.status === "needs_review" || p.status === "undone_to_review";
+  return p.status === "pending" || p.status === "pending_approval" || p.status === "awaiting_second_approval";
 }
 
-/** Cleared without a human decision - the agent itself decided (decided_by is
- *  an agent principal, not a member id). Requires the full detail (decided_by
- *  isn't on the list summary). */
-export function isAutoApproved(p: { status: ProposalStatus; decided_by?: string | null }): boolean {
-  return p.status === "approved" && typeof p.decided_by === "string" && p.decided_by.startsWith("agent_");
-}
-
-/** An auto-approved record the operator can send back to review. */
-export function canUndo(p: { status: ProposalStatus; decided_by?: string | null; reversible: boolean }): boolean {
-  return isAutoApproved(p) && p.reversible === true;
-}
+// ponytail: the auto-approved live-proposal bucket (an agent decided without a
+// human) is deferred - the merged read model carries no decider-identity field
+// (no `decided_by`), so there's no honest way to tell an agent decision from a
+// human one. Add it back when read-model.ts grows that field.
 
 /* ── Reads ──────────────────────────────────────────────────────────────────── */
 
-/** All proposals, as full detail records (fanned out from the list the same way
- *  brainQueue.ts's useBrainReviewQueue does for PaymentIntents) - callers need
- *  decided_by/reversible, which only the detail carries. Empty array on any
- *  failure (list 404s until brain-core deploys PR #267). */
+/** All proposals. The list already returns full detail records (no extra
+ *  fields live on GET /proposals/{id} that aren't on the list row), so no
+ *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
 export function useBrainProposals(): { isLoading: boolean; proposals: BrainProposal[] } {
   const list = useQuery<ListProposalsResponse>({
     queryKey: ["/api/brain/proposals"],
     retry: false,
   });
-  // Only the statuses the UI renders: review queue + auto-approved detection.
-  const ids = (list.data?.proposals ?? [])
-    .filter((p) => p.status === "needs_review" || p.status === "undone_to_review" || p.status === "approved")
-    .map((p) => p.id);
-  const details = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: [`/api/brain/proposals/${id}`],
-      retry: false,
-    })),
-  }) as { data?: BrainProposal; isLoading: boolean }[];
   return {
-    isLoading: list.isLoading || details.some((d) => d.isLoading),
-    proposals: details.map((d) => d.data).filter((d): d is BrainProposal => d !== undefined),
+    isLoading: list.isLoading,
+    proposals: list.data?.proposals ?? [],
   };
-}
-
-/** A single proposal's detail (shares its cache key with the fan-out above). */
-export function useBrainProposal(id: string | null | undefined) {
-  return useQuery<BrainProposal>({
-    queryKey: [`/api/brain/proposals/${id ?? ""}`],
-    enabled: !!id,
-    retry: false,
-  });
 }
 
 /* ── Decide (write) ───────────────────────────────────────────────────────── */
@@ -149,20 +96,28 @@ export function useBrainProposal(id: string | null | undefined) {
 export interface DecideProposalInput {
   id: string;
   decision: ProposalDecision;
-  edit?: { amount?: string };
+}
+
+export interface ProposalDecisionResult {
+  id: string;
+  decision: ProposalDecision;
+  status: string;
+  audit_id: string | null;
+  payment_intent_id: string | null;
 }
 
 class ProposalConflictError extends Error {
   constructor() {
-    super("agent_proposal_invalid_state");
+    super("execution_proposal_invalid_state");
     this.name = "ProposalConflictError";
   }
 }
 
 /** POST /proposals/{id}/decide via the BFF. On success, invalidates the proposals
  *  list/detail queries + the audit feed (a decision emits `proposal.decided`).
- *  On a 409 `agent_proposal_invalid_state` (someone else decided it first), shows
- *  a friendly toast and still invalidates so the UI reflects the real state. */
+ *  On a 409 `execution_proposal_invalid_state` (someone else decided it first,
+ *  or a legacy `agent_proposal_invalid_state` alias), shows a friendly toast and
+ *  still invalidates so the UI reflects the real state. */
 export function useDecideProposal() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -176,23 +131,23 @@ export function useDecideProposal() {
     });
   };
 
-  return useMutation<BrainProposal, Error, DecideProposalInput>({
-    mutationFn: async ({ id, decision, edit }) => {
+  return useMutation<ProposalDecisionResult, Error, DecideProposalInput>({
+    mutationFn: async ({ id, decision }) => {
       const res = await fetch(`/api/brain/proposals/${encodeURIComponent(id)}/decide`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(edit !== undefined ? { decision, edit } : { decision }),
+        body: JSON.stringify({ decision }),
       });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
         const code = parseCoreError(body)?.error?.code;
-        if (res.status === 409 && code === "agent_proposal_invalid_state") {
+        if (res.status === 409 && (code === "execution_proposal_invalid_state" || code === "agent_proposal_invalid_state")) {
           throw new ProposalConflictError();
         }
         throw new Error(parseCoreError(body)?.error?.message ?? `Couldn't record the decision (${res.status}).`);
       }
-      return body as BrainProposal;
+      return body as ProposalDecisionResult;
     },
     onSuccess: () => invalidate(),
     onError: (err) => {

@@ -462,25 +462,23 @@ export function createBrainProxyRouter(): Router {
   });
 
   // POST /api/brain/proposals/:id/decide - human records a decision on an agent
-  // proposal (BRAIN-CORE-ORCHESTRATION-GAP.md §3 /v1/proposals; PR #267, not yet
-  // deployed - relayed error codes (agent_proposal_not_found 404,
-  // agent_proposal_invalid_state 409) surface honestly until it is).
+  // proposal (services/execution/src/proposals/{read-model,decision-service}.ts;
+  // MERGED via brain-core #268-271 and LIVE on api.brain.fi). Relayed error codes:
+  // execution_proposal_not_found -> 404, execution_proposal_invalid_state -> 409.
   //
-  // MEMBER token (execution:admin; core resolves the actor from the token subject
-  // via ActorResolver - ACTOR=SESSION). Only {decision, edit} are ever forwarded,
-  // exactly mirroring approve/reject: never a client-supplied actor field.
+  // MEMBER token (route accepts payment_intent:approve OR execution:read; core
+  // resolves the actor from the token subject via ActorResolver - ACTOR=SESSION).
+  // Only {decision} is ever forwarded, exactly mirroring approve/reject: never a
+  // client-supplied actor field.
   router.post("/proposals/:id/decide", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const id = String(req.params.id);
-    const raw = req.body as { decision?: unknown; edit?: unknown } | undefined;
+    const raw = req.body as { decision?: unknown } | undefined;
     const decision = typeof raw?.decision === "string" ? raw.decision : undefined;
     if (!decision) {
       return res.status(400).json({ error: "invalid_request", message: "decision is required" });
     }
-    const body: { decision: string; edit?: unknown } = { decision };
-    if (raw?.edit !== undefined && typeof raw.edit === "object" && raw.edit !== null) {
-      body.edit = raw.edit;
-    }
+    const body = { decision };
     try {
       const { token } = await getBrainSession(req.session.userId!);
       const result = await brainRequest<unknown>(`/proposals/${encodeURIComponent(id)}/decide`, {
