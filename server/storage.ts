@@ -5,6 +5,7 @@ import {
   users as usersTable,
   notifications as notificationsTable,
   siweNonces as siweNoncesTable,
+  type SiweNonce,
   bankConnections as bankConnectionsTable,
   sourceDocuments as sourceDocumentsTable,
   userRules as userRulesTable,
@@ -15,6 +16,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
+import { decryptPlaidAccessToken, encryptPlaidAccessToken } from "./tokenCrypto";
 
 export interface DeleteAccountIdentifiers {
   userId?: string;          // app user id (free-form)
@@ -26,6 +28,12 @@ export interface DeleteAccountResult {
   user: User | null;
   notificationsDeleted: number;
   noncesDeleted: number;
+  toolConnectionsDeleted: number;
+  bankConnectionsDeleted: number;
+  sourceDocumentsDeleted: number;
+  userRulesDeleted: number;
+  brainIdentitiesDeleted: number;
+  brainAgentTokensDeleted: number;
 }
 
 export interface IStorage {
@@ -46,6 +54,11 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   markAsRead(id: string): Promise<void>;
   deleteNotification(id: string): Promise<void>;
+  deleteNotificationForUser(userId: string, id: string): Promise<boolean>;
+
+  // SIWE nonces
+  createSiweNonce(nonce: { nonce: string; walletAddress?: string | null; expiresAt: Date }): Promise<SiweNonce>;
+  consumeSiweNonce(nonce: string): Promise<SiweNonce | undefined>;
 
   // Tool connections (third-party integrations linked from onboarding)
   listToolConnections(userId: string): Promise<ToolConnection[]>;
@@ -102,6 +115,25 @@ export type BankConnection = {
   accounts: BankAccount[];
   connectedAt: string;     // ISO
 };
+
+async function revokePlaidTokens(accessTokens: string[]): Promise<void> {
+  if (accessTokens.length === 0) return;
+  let getPlaidClient: (() => { itemRemove: (arg: { access_token: string }) => Promise<unknown> }) | undefined;
+  try {
+    ({ getPlaidClient } = await import("./plaid"));
+  } catch (err) {
+    console.warn("[plaid] item revoke skipped:", (err as Error).message);
+    return;
+  }
+
+  for (const token of accessTokens) {
+    try {
+      await getPlaidClient().itemRemove({ access_token: token });
+    } catch (err) {
+      console.warn("[plaid] item revoke failed:", (err as Error).message);
+    }
+  }
+}
 
 /** Where the uploaded file is in Brain's extraction pipeline (metadata mirror). */
 export type ExtractStatus =
@@ -194,6 +226,7 @@ export type InsertUserRule = {
 export class MemStorage implements IStorage {
   private users = new Map<string, User>();
   private notifs = new Map<string, Notification>();
+  private siweNoncesStore = new Map<string, SiweNonce>();
 
   // ─── Users ───
   async getUser(id: string) { return this.users.get(id); }
@@ -256,8 +289,88 @@ export class MemStorage implements IStorage {
       }
     }
 
+    const bankAccessTokens = Array.from(this.bankConns.values())
+      .filter(c => ownerKeys.has(c.userId))
+      .map(c => {
+        try {
+          return decryptPlaidAccessToken(c.accessToken);
+        } catch {
+          return null;
+        }
+      })
+      .filter((token): token is string => token !== null);
+    await revokePlaidTokens(bankAccessTokens);
+
+    let toolConnectionsDeleted = 0;
+    for (const [key, c] of Array.from(this.toolConns.entries())) {
+      if (ownerKeys.has(c.userId)) {
+        this.toolConns.delete(key);
+        toolConnectionsDeleted++;
+      }
+    }
+
+    let bankConnectionsDeleted = 0;
+    for (const [key, c] of Array.from(this.bankConns.entries())) {
+      if (ownerKeys.has(c.userId)) {
+        this.bankConns.delete(key);
+        bankConnectionsDeleted++;
+      }
+    }
+
+    let sourceDocumentsDeleted = 0;
+    for (const [key, d] of Array.from(this.sourceDocs.entries())) {
+      if (ownerKeys.has(d.userId)) {
+        this.sourceDocs.delete(key);
+        sourceDocumentsDeleted++;
+      }
+    }
+
+    let userRulesDeleted = 0;
+    for (const [key, r] of Array.from(this.userRulesStore.entries())) {
+      if (ownerKeys.has(r.userId)) {
+        this.userRulesStore.delete(key);
+        userRulesDeleted++;
+      }
+    }
+
+    const tenantIds = new Set<string>();
+    let brainIdentitiesDeleted = 0;
+    for (const [key, identity] of Array.from(this.brainIdentitiesStore.entries())) {
+      if (ownerKeys.has(identity.userId)) {
+        tenantIds.add(identity.tenantId);
+        this.brainIdentitiesStore.delete(key);
+        brainIdentitiesDeleted++;
+      }
+    }
+
+    let brainAgentTokensDeleted = 0;
+    for (const tenantId of tenantIds) {
+      const stillOwned = Array.from(this.brainIdentitiesStore.values()).some(i => i.tenantId === tenantId);
+      if (!stillOwned && this.brainAgentTokensStore.delete(tenantId)) {
+        brainAgentTokensDeleted++;
+      }
+    }
+
+    let noncesDeleted = 0;
+    for (const [nonce, row] of Array.from(this.siweNoncesStore.entries())) {
+      if (row.walletAddress && ownerKeys.has(row.walletAddress)) {
+        this.siweNoncesStore.delete(nonce);
+        noncesDeleted++;
+      }
+    }
+
     if (user) this.users.delete(user.id);
-    return { user, notificationsDeleted, noncesDeleted: 0 };
+    return {
+      user,
+      notificationsDeleted,
+      noncesDeleted,
+      toolConnectionsDeleted,
+      bankConnectionsDeleted,
+      sourceDocumentsDeleted,
+      userRulesDeleted,
+      brainIdentitiesDeleted,
+      brainAgentTokensDeleted,
+    };
   }
 
   async deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
@@ -283,7 +396,87 @@ export class MemStorage implements IStorage {
       }
     }
 
-    return { user, notificationsDeleted, noncesDeleted: 0 };
+    const bankAccessTokens = Array.from(this.bankConns.values())
+      .filter(c => ownerKeys.has(c.userId))
+      .map(c => {
+        try {
+          return decryptPlaidAccessToken(c.accessToken);
+        } catch {
+          return null;
+        }
+      })
+      .filter((token): token is string => token !== null);
+    await revokePlaidTokens(bankAccessTokens);
+
+    let toolConnectionsDeleted = 0;
+    for (const [key, c] of Array.from(this.toolConns.entries())) {
+      if (ownerKeys.has(c.userId)) {
+        this.toolConns.delete(key);
+        toolConnectionsDeleted++;
+      }
+    }
+
+    let bankConnectionsDeleted = 0;
+    for (const [key, c] of Array.from(this.bankConns.entries())) {
+      if (ownerKeys.has(c.userId)) {
+        this.bankConns.delete(key);
+        bankConnectionsDeleted++;
+      }
+    }
+
+    let sourceDocumentsDeleted = 0;
+    for (const [key, d] of Array.from(this.sourceDocs.entries())) {
+      if (ownerKeys.has(d.userId)) {
+        this.sourceDocs.delete(key);
+        sourceDocumentsDeleted++;
+      }
+    }
+
+    let userRulesDeleted = 0;
+    for (const [key, r] of Array.from(this.userRulesStore.entries())) {
+      if (ownerKeys.has(r.userId)) {
+        this.userRulesStore.delete(key);
+        userRulesDeleted++;
+      }
+    }
+
+    const tenantIds = new Set<string>();
+    let brainIdentitiesDeleted = 0;
+    for (const [key, identity] of Array.from(this.brainIdentitiesStore.entries())) {
+      if (ownerKeys.has(identity.userId)) {
+        tenantIds.add(identity.tenantId);
+        this.brainIdentitiesStore.delete(key);
+        brainIdentitiesDeleted++;
+      }
+    }
+
+    let brainAgentTokensDeleted = 0;
+    for (const tenantId of tenantIds) {
+      const stillOwned = Array.from(this.brainIdentitiesStore.values()).some(i => i.tenantId === tenantId);
+      if (!stillOwned && this.brainAgentTokensStore.delete(tenantId)) {
+        brainAgentTokensDeleted++;
+      }
+    }
+
+    let noncesDeleted = 0;
+    for (const [nonce, row] of Array.from(this.siweNoncesStore.entries())) {
+      if (row.walletAddress && ownerKeys.has(row.walletAddress)) {
+        this.siweNoncesStore.delete(nonce);
+        noncesDeleted++;
+      }
+    }
+
+    return {
+      user,
+      notificationsDeleted,
+      noncesDeleted,
+      toolConnectionsDeleted,
+      bankConnectionsDeleted,
+      sourceDocumentsDeleted,
+      userRulesDeleted,
+      brainIdentitiesDeleted,
+      brainAgentTokensDeleted,
+    };
   }
 
   // ─── Notifications ───
@@ -316,6 +509,28 @@ export class MemStorage implements IStorage {
   async deleteNotification(id: string): Promise<void> {
     this.notifs.delete(id);
   }
+  async deleteNotificationForUser(userId: string, id: string): Promise<boolean> {
+    const n = this.notifs.get(id);
+    if (!n || n.userId !== userId) return false;
+    return this.notifs.delete(id);
+  }
+
+  async createSiweNonce(row: { nonce: string; walletAddress?: string | null; expiresAt: Date }): Promise<SiweNonce> {
+    const full: SiweNonce = {
+      nonce: row.nonce,
+      walletAddress: row.walletAddress ?? null,
+      expiresAt: row.expiresAt,
+      createdAt: new Date(),
+    };
+    this.siweNoncesStore.set(full.nonce, full);
+    return full;
+  }
+  async consumeSiweNonce(nonce: string): Promise<SiweNonce | undefined> {
+    const row = this.siweNoncesStore.get(nonce);
+    if (!row) return undefined;
+    this.siweNoncesStore.delete(nonce);
+    return row;
+  }
 
   // ─── Tool connections ───
   private toolConns = new Map<string, ToolConnection>(); // key = `${userId}::${toolId}`
@@ -333,10 +548,15 @@ export class MemStorage implements IStorage {
   // ─── Bank connections (Plaid) ───
   private bankConns = new Map<string, BankConnection>(); // key = `${userId}::${itemId}`
   async listBankConnections(userId: string): Promise<BankConnection[]> {
-    return Array.from(this.bankConns.values()).filter(c => c.userId === userId);
+    return Array.from(this.bankConns.values())
+      .filter(c => c.userId === userId)
+      .map(c => ({ ...c, accessToken: decryptPlaidAccessToken(c.accessToken) }));
   }
   async createBankConnection(conn: BankConnection): Promise<BankConnection> {
-    this.bankConns.set(`${conn.userId}::${conn.itemId}`, conn);
+    this.bankConns.set(`${conn.userId}::${conn.itemId}`, {
+      ...conn,
+      accessToken: encryptPlaidAccessToken(conn.accessToken),
+    });
     return conn;
   }
   async removeBankConnection(userId: string, itemId: string): Promise<boolean> {
@@ -519,8 +739,31 @@ export class DatabaseStorage implements IStorage {
 
     let notificationsDeleted = 0;
     let noncesDeleted = 0;
+    let toolConnectionsDeleted = 0;
+    let bankConnectionsDeleted = 0;
+    let sourceDocumentsDeleted = 0;
+    let userRulesDeleted = 0;
+    let brainIdentitiesDeleted = 0;
+    let brainAgentTokensDeleted = 0;
 
     const walletForNonces = ids.walletAddress ?? user?.walletAddress;
+    const identities = ownerKeyList.length > 0
+      ? await db.select().from(brainIdentitiesTable).where(inArray(brainIdentitiesTable.userId, ownerKeyList))
+      : [];
+    const tenantIds = identities.map((i) => i.tenantId);
+    const bankRows = ownerKeyList.length > 0
+      ? await db.select().from(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, ownerKeyList))
+      : [];
+    const bankAccessTokens = bankRows
+      .map((row) => {
+        try {
+          return decryptPlaidAccessToken(row.accessToken);
+        } catch {
+          return null;
+        }
+      })
+      .filter((token): token is string => token !== null);
+    await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
       if (ownerKeyList.length > 0) {
@@ -529,6 +772,30 @@ export class DatabaseStorage implements IStorage {
           .where(inArray(notificationsTable.userId, ownerKeyList))
           .returning({ id: notificationsTable.id });
         notificationsDeleted = notifDel.length;
+
+        const bankDel = await tx
+          .delete(bankConnectionsTable)
+          .where(inArray(bankConnectionsTable.userId, ownerKeyList))
+          .returning({ itemId: bankConnectionsTable.itemId });
+        bankConnectionsDeleted = bankDel.length;
+
+        const docsDel = await tx
+          .delete(sourceDocumentsTable)
+          .where(inArray(sourceDocumentsTable.userId, ownerKeyList))
+          .returning({ id: sourceDocumentsTable.id });
+        sourceDocumentsDeleted = docsDel.length;
+
+        const rulesDel = await tx
+          .delete(userRulesTable)
+          .where(inArray(userRulesTable.userId, ownerKeyList))
+          .returning({ id: userRulesTable.id });
+        userRulesDeleted = rulesDel.length;
+
+        const identitiesDel = await tx
+          .delete(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.userId, ownerKeyList))
+          .returning({ userId: brainIdentitiesTable.userId });
+        brainIdentitiesDeleted = identitiesDel.length;
       }
 
       if (walletForNonces) {
@@ -539,12 +806,47 @@ export class DatabaseStorage implements IStorage {
         noncesDeleted = nonceDel.length;
       }
 
+      if (tenantIds.length > 0) {
+        const remaining = await tx
+          .select()
+          .from(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.tenantId, tenantIds));
+        const stillLinkedTenantIds = new Set(remaining.map((i) => i.tenantId));
+        const tokenTenantIds = tenantIds.filter((tenantId) => !stillLinkedTenantIds.has(tenantId));
+        if (tokenTenantIds.length > 0) {
+          const tokenDel = await tx
+            .delete(brainAgentTokensTable)
+            .where(inArray(brainAgentTokensTable.tenantId, tokenTenantIds))
+            .returning({ tenantId: brainAgentTokensTable.tenantId });
+          brainAgentTokensDeleted = tokenDel.length;
+        }
+      }
+
       if (user) {
         await tx.delete(usersTable).where(eq(usersTable.id, user.id));
       }
     });
 
-    return { user: user ?? null, notificationsDeleted, noncesDeleted };
+    if (ownerKeyList.length > 0) {
+      for (const [key, c] of Array.from(this.toolConns.entries())) {
+        if (ownerKeys.has(c.userId)) {
+          this.toolConns.delete(key);
+          toolConnectionsDeleted++;
+        }
+      }
+    }
+
+    return {
+      user: user ?? null,
+      notificationsDeleted,
+      noncesDeleted,
+      toolConnectionsDeleted,
+      bankConnectionsDeleted,
+      sourceDocumentsDeleted,
+      userRulesDeleted,
+      brainIdentitiesDeleted,
+      brainAgentTokensDeleted,
+    };
   }
 
   async deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult> {
@@ -566,6 +868,31 @@ export class DatabaseStorage implements IStorage {
     const ownerKeyList = Array.from(ownerKeys);
 
     let notificationsDeleted = 0;
+    let noncesDeleted = 0;
+    let toolConnectionsDeleted = 0;
+    let bankConnectionsDeleted = 0;
+    let sourceDocumentsDeleted = 0;
+    let userRulesDeleted = 0;
+    let brainIdentitiesDeleted = 0;
+    let brainAgentTokensDeleted = 0;
+    const walletForNonces = ids.walletAddress ?? user?.walletAddress;
+    const identities = ownerKeyList.length > 0
+      ? await db.select().from(brainIdentitiesTable).where(inArray(brainIdentitiesTable.userId, ownerKeyList))
+      : [];
+    const tenantIds = identities.map((i) => i.tenantId);
+    const bankRows = ownerKeyList.length > 0
+      ? await db.select().from(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, ownerKeyList))
+      : [];
+    const bankAccessTokens = bankRows
+      .map((row) => {
+        try {
+          return decryptPlaidAccessToken(row.accessToken);
+        } catch {
+          return null;
+        }
+      })
+      .filter((token): token is string => token !== null);
+    await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
       if (ownerKeyList.length > 0) {
@@ -574,10 +901,77 @@ export class DatabaseStorage implements IStorage {
           .where(inArray(notificationsTable.userId, ownerKeyList))
           .returning({ id: notificationsTable.id });
         notificationsDeleted = notifDel.length;
+
+        const bankDel = await tx
+          .delete(bankConnectionsTable)
+          .where(inArray(bankConnectionsTable.userId, ownerKeyList))
+          .returning({ itemId: bankConnectionsTable.itemId });
+        bankConnectionsDeleted = bankDel.length;
+
+        const docsDel = await tx
+          .delete(sourceDocumentsTable)
+          .where(inArray(sourceDocumentsTable.userId, ownerKeyList))
+          .returning({ id: sourceDocumentsTable.id });
+        sourceDocumentsDeleted = docsDel.length;
+
+        const rulesDel = await tx
+          .delete(userRulesTable)
+          .where(inArray(userRulesTable.userId, ownerKeyList))
+          .returning({ id: userRulesTable.id });
+        userRulesDeleted = rulesDel.length;
+
+        const identitiesDel = await tx
+          .delete(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.userId, ownerKeyList))
+          .returning({ userId: brainIdentitiesTable.userId });
+        brainIdentitiesDeleted = identitiesDel.length;
+      }
+
+      if (walletForNonces) {
+        const nonceDel = await tx
+          .delete(siweNoncesTable)
+          .where(eq(siweNoncesTable.walletAddress, walletForNonces))
+          .returning({ nonce: siweNoncesTable.nonce });
+        noncesDeleted = nonceDel.length;
+      }
+
+      if (tenantIds.length > 0) {
+        const remaining = await tx
+          .select()
+          .from(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.tenantId, tenantIds));
+        const stillLinkedTenantIds = new Set(remaining.map((i) => i.tenantId));
+        const tokenTenantIds = tenantIds.filter((tenantId) => !stillLinkedTenantIds.has(tenantId));
+        if (tokenTenantIds.length > 0) {
+          const tokenDel = await tx
+            .delete(brainAgentTokensTable)
+            .where(inArray(brainAgentTokensTable.tenantId, tokenTenantIds))
+            .returning({ tenantId: brainAgentTokensTable.tenantId });
+          brainAgentTokensDeleted = tokenDel.length;
+        }
       }
     });
 
-    return { user: user ?? null, notificationsDeleted, noncesDeleted: 0 };
+    if (ownerKeyList.length > 0) {
+      for (const [key, c] of Array.from(this.toolConns.entries())) {
+        if (ownerKeys.has(c.userId)) {
+          this.toolConns.delete(key);
+          toolConnectionsDeleted++;
+        }
+      }
+    }
+
+    return {
+      user: user ?? null,
+      notificationsDeleted,
+      noncesDeleted,
+      toolConnectionsDeleted,
+      bankConnectionsDeleted,
+      sourceDocumentsDeleted,
+      userRulesDeleted,
+      brainIdentitiesDeleted,
+      brainAgentTokensDeleted,
+    };
   }
 
   // ─── Notifications ───
@@ -606,6 +1000,32 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: string): Promise<void> {
     await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
   }
+  async deleteNotificationForUser(userId: string, id: string): Promise<boolean> {
+    const res = await db
+      .delete(notificationsTable)
+      .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.id, id)))
+      .returning({ id: notificationsTable.id });
+    return res.length > 0;
+  }
+
+  async createSiweNonce(row: { nonce: string; walletAddress?: string | null; expiresAt: Date }): Promise<SiweNonce> {
+    const [created] = await db
+      .insert(siweNoncesTable)
+      .values({
+        nonce: row.nonce,
+        walletAddress: row.walletAddress ?? null,
+        expiresAt: row.expiresAt,
+      })
+      .returning();
+    return created;
+  }
+  async consumeSiweNonce(nonce: string): Promise<SiweNonce | undefined> {
+    const [row] = await db
+      .delete(siweNoncesTable)
+      .where(eq(siweNoncesTable.nonce, nonce))
+      .returning();
+    return row ?? undefined;
+  }
 
   // ─── Tool connections (kept in-memory; no DB schema yet) ───
   private toolConns = new Map<string, ToolConnection>();
@@ -629,7 +1049,7 @@ export class DatabaseStorage implements IStorage {
     return rows.map((r) => ({
       userId: r.userId,
       itemId: r.itemId,
-      accessToken: r.accessToken,
+      accessToken: decryptPlaidAccessToken(r.accessToken),
       institutionId: r.institutionId,
       institutionName: r.institutionName,
       accounts: (r.accounts as BankAccount[]) ?? [],
@@ -642,7 +1062,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         userId: conn.userId,
         itemId: conn.itemId,
-        accessToken: conn.accessToken,
+        accessToken: encryptPlaidAccessToken(conn.accessToken),
         institutionId: conn.institutionId,
         institutionName: conn.institutionName,
         accounts: conn.accounts,
@@ -651,7 +1071,7 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: [bankConnectionsTable.userId, bankConnectionsTable.itemId],
         set: {
-          accessToken: conn.accessToken,
+          accessToken: encryptPlaidAccessToken(conn.accessToken),
           institutionId: conn.institutionId,
           institutionName: conn.institutionName,
           accounts: conn.accounts,
