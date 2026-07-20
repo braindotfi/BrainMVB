@@ -16,7 +16,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
 import { db } from "./db";
-import { decryptPlaidAccessToken, encryptPlaidAccessToken } from "./tokenCrypto";
+import { encryptPlaidAccessToken, readPlaidAccessToken } from "./tokenCrypto";
 
 export interface DeleteAccountIdentifiers {
   userId?: string;          // app user id (free-form)
@@ -291,14 +291,7 @@ export class MemStorage implements IStorage {
 
     const bankAccessTokens = Array.from(this.bankConns.values())
       .filter(c => ownerKeys.has(c.userId))
-      .map(c => {
-        try {
-          return decryptPlaidAccessToken(c.accessToken);
-        } catch {
-          return null;
-        }
-      })
-      .filter((token): token is string => token !== null);
+      .map(c => readPlaidAccessToken(c.accessToken));
     await revokePlaidTokens(bankAccessTokens);
 
     let toolConnectionsDeleted = 0;
@@ -398,14 +391,7 @@ export class MemStorage implements IStorage {
 
     const bankAccessTokens = Array.from(this.bankConns.values())
       .filter(c => ownerKeys.has(c.userId))
-      .map(c => {
-        try {
-          return decryptPlaidAccessToken(c.accessToken);
-        } catch {
-          return null;
-        }
-      })
-      .filter((token): token is string => token !== null);
+      .map(c => readPlaidAccessToken(c.accessToken));
     await revokePlaidTokens(bankAccessTokens);
 
     let toolConnectionsDeleted = 0;
@@ -550,7 +536,7 @@ export class MemStorage implements IStorage {
   async listBankConnections(userId: string): Promise<BankConnection[]> {
     return Array.from(this.bankConns.values())
       .filter(c => c.userId === userId)
-      .map(c => ({ ...c, accessToken: decryptPlaidAccessToken(c.accessToken) }));
+      .map(c => ({ ...c, accessToken: readPlaidAccessToken(c.accessToken) }));
   }
   async createBankConnection(conn: BankConnection): Promise<BankConnection> {
     this.bankConns.set(`${conn.userId}::${conn.itemId}`, {
@@ -755,14 +741,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, ownerKeyList))
       : [];
     const bankAccessTokens = bankRows
-      .map((row) => {
-        try {
-          return decryptPlaidAccessToken(row.accessToken);
-        } catch {
-          return null;
-        }
-      })
-      .filter((token): token is string => token !== null);
+      .map((row) => readPlaidAccessToken(row.accessToken));
     await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
@@ -884,14 +863,7 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, ownerKeyList))
       : [];
     const bankAccessTokens = bankRows
-      .map((row) => {
-        try {
-          return decryptPlaidAccessToken(row.accessToken);
-        } catch {
-          return null;
-        }
-      })
-      .filter((token): token is string => token !== null);
+      .map((row) => readPlaidAccessToken(row.accessToken));
     await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
@@ -1049,7 +1021,7 @@ export class DatabaseStorage implements IStorage {
     return rows.map((r) => ({
       userId: r.userId,
       itemId: r.itemId,
-      accessToken: decryptPlaidAccessToken(r.accessToken),
+      accessToken: readPlaidAccessToken(r.accessToken),
       institutionId: r.institutionId,
       institutionName: r.institutionName,
       accounts: (r.accounts as BankAccount[]) ?? [],

@@ -1,10 +1,20 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import type { AddressInfo } from "net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { registerRoutes } from "./routes";
 import { storage, type BankConnection, type ToolConnection } from "./storage";
+
+const plaidMocks = vi.hoisted(() => ({
+  itemRemove: vi.fn(async (_arg: { access_token: string }) => ({})),
+}));
+
+vi.mock("./plaid", () => ({
+  getPlaidClient: () => ({ itemRemove: plaidMocks.itemRemove }),
+  PLAID_PRODUCTS: [],
+  PLAID_COUNTRIES: [],
+}));
 
 type JsonResponse<T = unknown> = {
   status: number;
@@ -62,6 +72,10 @@ beforeAll(async () => {
 
 afterAll(() => {
   server?.close();
+});
+
+beforeEach(() => {
+  plaidMocks.itemRemove.mockClear();
 });
 
 describe("auth boundary hardening", () => {
@@ -166,5 +180,37 @@ describe("account deletion hygiene", () => {
     expect(await storage.listUserRules(userId)).toHaveLength(0);
     expect(await storage.getBrainIdentity(userId)).toBeUndefined();
     expect(await storage.getBrainAgentToken(`tenant-${unique}`)).toBeUndefined();
+  });
+
+  it("reads and revokes legacy plaintext Plaid tokens", async () => {
+    const unique = `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
+    const user = await storage.createUser({
+      username: `legacy-${unique}`,
+      email: `legacy-${unique}@example.com`,
+      password: "hashed",
+      name: "Legacy Token",
+    });
+    const legacyToken = `legacy-token-${unique}`;
+    const bank: BankConnection = {
+      userId: user.id,
+      itemId: `legacy-item-${unique}`,
+      accessToken: legacyToken,
+      institutionId: "ins_legacy",
+      institutionName: "Legacy Bank",
+      accounts: [],
+      connectedAt: new Date().toISOString(),
+    };
+    const storageInternals = storage as unknown as {
+      bankConns: Map<string, BankConnection>;
+    };
+    storageInternals.bankConns.set(`${bank.userId}::${bank.itemId}`, bank);
+
+    const listed = await storage.listBankConnections(user.id);
+    expect(listed).toHaveLength(1);
+    expect(listed[0].accessToken).toBe(legacyToken);
+
+    const deleted = await storage.deleteUserAccount({ userId: user.id });
+    expect(deleted.bankConnectionsDeleted).toBe(1);
+    expect(plaidMocks.itemRemove).toHaveBeenCalledWith({ access_token: legacyToken });
   });
 });
