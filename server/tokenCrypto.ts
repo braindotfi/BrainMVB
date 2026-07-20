@@ -59,3 +59,10 @@ export function decryptPlaidAccessToken(stored: string): string {
     decipher.final(),
   ]).toString("utf8");
 }
+
+export function readPlaidAccessToken(stored: string): string {
+  if (isEncryptedPlaidToken(stored)) {
+    return decryptPlaidAccessToken(stored);
+  }
+  return stored;
+}

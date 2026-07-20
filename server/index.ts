@@ -11,6 +11,26 @@ assertEncryptionKeyConfigured();
 const app = express();
 const httpServer = createServer(app)
 
+const helmetConfig: Parameters<typeof helmet>[0] = process.env.NODE_ENV === "production"
+  ? {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'sha256-NzvNrqk5jB9YZATwo5BF4JoRlJ02HsnFikbKXgEPdaQ='"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          imgSrc: ["'self'", "data:", "blob:"],
+          fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+          connectSrc: ["'self'", "https://mm-sdk-analytics.api.cx.metamask.io"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+    }
+  : {
+      contentSecurityPolicy: false,
+    };
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -26,7 +46,7 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
-app.use(helmet());
+app.use(helmet(helmetConfig));
 
 function envInt(name: string, fallback: number): number {
   const parsed = Number.parseInt(process.env[name] ?? "", 10);
@@ -124,14 +144,18 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  const listenOptions: {
+    port: number;
+    host: string;
+    reusePort?: boolean;
+  } = {
+    port,
+    host: "0.0.0.0",
+  };
+  if (process.platform === "linux") {
+    listenOptions.reusePort = true;
+  }
+  httpServer.listen(listenOptions, () => {
+    log(`serving on port ${port}`);
+  });
 })();
