@@ -67,6 +67,15 @@ export const EXECUTE_LABEL: Record<string, string> = {
   reject: "is blocked",
 };
 
+const C_LEVEL = new Set(["cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
+/** Render a `require` field value (e.g. "single_signer", "cfo") as plain English
+ *  with C-suite acronyms uppercased. */
+function formatRequire(require: string): string {
+  return require
+    .replace(/_/g, " ")
+    .replace(/\b\w+/g, (w) => C_LEVEL.has(w.toLowerCase()) ? w.toUpperCase() : w);
+}
+
 /** Plain-English rendering of a rule's `when` clause. Only the fields
  *  brain-core's DSL actually defines (dsl.ts:48-67) - no invented conditions. */
 export function describeWhen(when: Record<string, unknown>): string[] {
@@ -98,7 +107,7 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
     : "any action";
   const conditions = describeWhen(rule.when ?? {});
   const conditionSummary = conditions.length > 0 ? conditions.join(" · ") : "no conditions";
-  const requireSuffix = rule.require ? ` · requires ${rule.require.replace(/_/g, " ")}` : "";
+  const requireSuffix = rule.require ? ` · requires ${formatRequire(rule.require)}` : "";
   const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
 
   return {

@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
+const C_LEVEL = new Set(["cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
+/** Render a brain-core `require` field (e.g. "single_signer", "cfo") with
+ *  underscores replaced by spaces and C-suite acronyms uppercased. */
+function formatRequire(require: string): string {
+  return require
+    .replace(/_/g, " ")
+    .replace(/\b\w+/g, (w) => C_LEVEL.has(w.toLowerCase()) ? w.toUpperCase() : w);
+}
+
 /* ── Title case helper - used for all labels platform-wide ──────────────── */
 function titleCase(str: string) {
   return str
@@ -886,7 +895,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
                   </div>
                   <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                      {rule.require!.replace(/_/g, " ")}
+                      {formatRequire(rule.require!)}
                     </p>
                   </div>
                 </div>

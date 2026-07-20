@@ -54,7 +54,7 @@ const REVIEW_TABS: ReviewTab[] = ["Needs Review", "Approved Automatically"];
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
 function intentToReview(rec: IntentRecord): ReviewItemType {
-  const amountStr = `$${rec.amount.toLocaleString()}`;
+  const amountStr = `$${rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const approvers = rec.requiredApprovers.length > 0 ? rec.requiredApprovers.map((a) => a.toUpperCase()).join(" + ") : "OWNER + CFO";
   return {
     id: rec.intentId,
