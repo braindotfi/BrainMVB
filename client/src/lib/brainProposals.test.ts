@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { agentKeyForProposalType, isNeedsReview, type ProposalStatus, type ProposalType } from "./brainProposals";
+import {
+  agentKeyForProposalType,
+  isNeedsReview,
+  selectNonFinancialProposals,
+  type BrainProposal,
+  type ProposalStatus,
+  type ProposalType,
+} from "./brainProposals";
 import type { AgentKey } from "./agentProposals";
 
 /**
@@ -23,6 +30,47 @@ describe("isNeedsReview", () => {
     expect(isNeedsReview(proposal("rejected"))).toBe(false);
     expect(isNeedsReview(proposal("acknowledged"))).toBe(false);
     expect(isNeedsReview(proposal("undone"))).toBe(false);
+  });
+});
+
+describe("selectNonFinancialProposals", () => {
+  const moneyPathProposal: BrainProposal = {
+    id: "prop_1",
+    type: "payment",
+    created_at: "2026-07-20T00:00:00Z",
+    status: "pending_approval",
+    risk_band: null,
+    confidence: null,
+    mode: "propose",
+    narrative: null,
+    evidence: [],
+    agent: null,
+    payment_intent_id: "pi_1",
+    action_type: null,
+  };
+  const nonFinancialProposal: BrainProposal = {
+    id: "prop_2",
+    type: "vendor_risk",
+    created_at: "2026-07-20T00:00:00Z",
+    status: "pending",
+    risk_band: "elevated",
+    confidence: 0.8,
+    mode: "propose",
+    narrative: "Vendor risk flagged",
+    evidence: [],
+    agent: { id: "agent_1", kind: "vendor_risk", display_name: "Vendor Risk Agent" },
+    payment_intent_id: null,
+    action_type: null,
+  };
+
+  it("excludes payment-intent-sourced (money-path) rows", () => {
+    expect(selectNonFinancialProposals([moneyPathProposal])).toEqual([]);
+  });
+  it("includes rows with no payment_intent_id", () => {
+    expect(selectNonFinancialProposals([nonFinancialProposal])).toEqual([nonFinancialProposal]);
+  });
+  it("filters a mixed list down to only the non-financial row", () => {
+    expect(selectNonFinancialProposals([moneyPathProposal, nonFinancialProposal])).toEqual([nonFinancialProposal]);
   });
 });
 

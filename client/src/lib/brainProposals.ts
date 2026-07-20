@@ -70,6 +70,16 @@ export function isNeedsReview(p: { status: ProposalStatus }): boolean {
   return p.status === "pending" || p.status === "pending_approval" || p.status === "awaiting_second_approval";
 }
 
+/** Non-financial rows only. GET /v1/proposals is a UNION ALL of the proposals
+ *  table and ledger_payment_intents (brain-core read-model.ts) - a row with a
+ *  non-null payment_intent_id is a money-path PaymentIntent already surfaced
+ *  by the PaymentIntent queue (brainQueue.ts). Deciding it here would call
+ *  paymentIntents.approve() and execute a real payment with no amount/vendor
+ *  shown on this surface, so it must never reach a review/approve UI here. */
+export function selectNonFinancialProposals(items: BrainProposal[]): BrainProposal[] {
+  return items.filter((p) => p.payment_intent_id === null);
+}
+
 // ponytail: the auto-approved live-proposal bucket (an agent decided without a
 // human) is deferred - the merged read model carries no decider-identity field
 // (no `decided_by`), so there's no honest way to tell an agent decision from a
@@ -82,12 +92,17 @@ export function isNeedsReview(p: { status: ProposalStatus }): boolean {
  *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
 export function useBrainProposals(): { isLoading: boolean; proposals: BrainProposal[] } {
   const list = useQuery<ListProposalsResponse>({
-    queryKey: ["/api/brain/proposals"],
+    // ponytail: caps at 100 rows; add next_cursor paging when a non-payment
+    // proposal producer ships and volume can exceed one page
+    queryKey: ["/api/brain/proposals?limit=100"],
     retry: false,
   });
   return {
     isLoading: list.isLoading,
-    proposals: list.data?.proposals ?? [],
+    // Money-path rows (payment_intent_id != null) are excluded here - see
+    // selectNonFinancialProposals for why approving them on this surface
+    // would be a blind second approval path that executes a real payment.
+    proposals: selectNonFinancialProposals(list.data?.proposals ?? []),
   };
 }
 
