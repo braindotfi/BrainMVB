@@ -1,5 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 
+/** Format a numeric string (e.g. "48000.00") from brain-core with comma separators. */
+function fmtNet(v: string | number): string {
+  const n = typeof v === "number" ? v : parseFloat(String(v));
+  if (!isFinite(n)) return String(v);
+  const decimals = String(v).includes(".") ? (String(v).split(".")[1] ?? "").length : 2;
+  return n.toLocaleString("en-US", { minimumFractionDigits: Math.max(decimals, 2), maximumFractionDigits: Math.max(decimals, 2) });
+}
+
 /* ── Live read-only informational records from brain-core's Ledger ───────────
    The "Your Review" / "Brain Detected" surfaces used to render 11 fabricated
    agent-proposal cards (agentProposals.ts - now dormant scaffolding, see
@@ -241,7 +249,7 @@ export function useBrainCashFlowInsight() {
     kind: "cashflow",
     badge: "Cash flow",
     title: `Trailing cash flow (${currency.currency})`,
-    subtitle: `Net ${currency.currency} ${currency.net} over ${currency.transaction_count} transactions`,
+    subtitle: `Net ${currency.currency} ${fmtNet(currency.net)} over ${currency.transaction_count} transactions`,
     chart: {
       points,
       unit: currency.currency,

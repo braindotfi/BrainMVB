@@ -316,12 +316,13 @@ function PolicySection() {
 }
 
 /* Title case helper, used for all labels platform-wide */
+const ALWAYS_UPPER = new Set(["ap", "ar", "cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
     .replace(/\w\S*/g, (txt) => {
       const lower = txt.toLowerCase();
-      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      if (ALWAYS_UPPER.has(lower)) return lower.toUpperCase();
       return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
     });
 }

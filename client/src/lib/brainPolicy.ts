@@ -67,6 +67,14 @@ export const EXECUTE_LABEL: Record<string, string> = {
   reject: "is blocked",
 };
 
+/** Format a numeric string (e.g. "50000.00") from brain-core with comma separators. */
+function fmtAmt(v: string): string {
+  const n = parseFloat(v);
+  if (!isFinite(n)) return v;
+  const decimals = (v.split(".")[1] ?? "").length;
+  return n.toLocaleString("en-US", { minimumFractionDigits: Math.max(decimals, 2), maximumFractionDigits: Math.max(decimals, 2) });
+}
+
 const C_LEVEL = new Set(["cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
 /** Render a `require` field value (e.g. "single_signer", "cfo") as plain English
  *  with C-suite acronyms uppercased. */
@@ -82,8 +90,8 @@ export function describeWhen(when: Record<string, unknown>): string[] {
   const parts: string[] = [];
   const amountGt = when["amount.gt"] as { value?: string; currency?: string } | undefined;
   const amountLte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
-  if (amountGt?.value) parts.push(`over ${amountGt.value} ${amountGt.currency ?? "USD"}`);
-  if (amountLte?.value) parts.push(`up to ${amountLte.value} ${amountLte.currency ?? "USD"}`);
+  if (amountGt?.value) parts.push(`over ${fmtAmt(amountGt.value)} ${amountGt.currency ?? "USD"}`);
+  if (amountLte?.value) parts.push(`up to ${fmtAmt(amountLte.value)} ${amountLte.currency ?? "USD"}`);
   const confidence = when["agent.confidence.gte"];
   if (typeof confidence === "number") parts.push(`agent confidence ≥ ${confidence}`);
   const riskLte = when["agent.risk_level.lte"];
