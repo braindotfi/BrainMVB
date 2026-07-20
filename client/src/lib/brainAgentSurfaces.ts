@@ -1,12 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-
-/** Format a numeric string (e.g. "48000.00") from brain-core with comma separators. */
-function fmtNet(v: string | number): string {
-  const n = typeof v === "number" ? v : parseFloat(String(v));
-  if (!isFinite(n)) return String(v);
-  const decimals = String(v).includes(".") ? (String(v).split(".")[1] ?? "").length : 2;
-  return n.toLocaleString("en-US", { minimumFractionDigits: Math.max(decimals, 2), maximumFractionDigits: Math.max(decimals, 2) });
-}
+import { useCurrency } from "./currencyContext";
 
 /* ── Live read-only informational records from brain-core's Ledger ───────────
    The "Your Review" / "Brain Detected" surfaces used to render 11 fabricated
@@ -154,6 +147,7 @@ function dueDateLabel(due_date: string): string {
 }
 
 export function useBrainSubscriptionInsights() {
+  const { format } = useCurrency();
   const nameOf = useCounterpartyNames();
   const q = useQuery<ObligationsResponse>({
     queryKey: ["/api/brain/ledger/obligations?type=subscription"],
@@ -163,15 +157,16 @@ export function useBrainSubscriptionInsights() {
     .filter((o) => o.type === "subscription" && o.status !== "disputed")
     .map((o) => {
       const vendor = nameOf(o.counterparty_id) ?? "a vendor";
+      const amt = format(o.amount_due);
       return {
         id: `sub-${o.id}`,
         kind: "subscription",
         badge: "Subscription",
         title: `Subscription: ${vendor}`,
-        subtitle: `${o.currency} ${o.amount_due} · due ${dueDateLabel(o.due_date)}`,
+        subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
         fields: [
           { label: "Vendor", value: vendor },
-          { label: "Amount", value: `${o.currency} ${o.amount_due}` },
+          { label: "Amount", value: amt },
           { label: "Due date", value: dueDateLabel(o.due_date) },
           { label: "Recurrence", value: o.recurrence ?? "Not specified" },
         ],
@@ -181,6 +176,7 @@ export function useBrainSubscriptionInsights() {
 }
 
 export function useBrainDisputeInsights() {
+  const { format } = useCurrency();
   const nameOf = useCounterpartyNames();
   const q = useQuery<ObligationsResponse>({
     queryKey: ["/api/brain/ledger/obligations?status=disputed"],
@@ -190,15 +186,16 @@ export function useBrainDisputeInsights() {
     .filter((o) => o.status === "disputed")
     .map((o) => {
       const vendor = nameOf(o.counterparty_id) ?? "a vendor";
+      const amt = format(o.amount_due);
       return {
         id: `dispute-${o.id}`,
         kind: "dispute",
         badge: "Dispute",
         title: `Disputed: ${vendor}`,
-        subtitle: `${o.currency} ${o.amount_due} · due ${dueDateLabel(o.due_date)}`,
+        subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
         fields: [
           { label: "Vendor", value: vendor },
-          { label: "Amount", value: `${o.currency} ${o.amount_due}` },
+          { label: "Amount", value: amt },
           { label: "Due date", value: dueDateLabel(o.due_date) },
           { label: "Status", value: "Disputed" },
         ],
@@ -230,6 +227,7 @@ interface CashFlowSummaryResponse {
 }
 
 export function useBrainCashFlowInsight() {
+  const { format } = useCurrency();
   const q = useQuery<CashFlowSummaryResponse>({
     queryKey: ["/api/brain/ledger/cash_flows"],
     retry: false,
@@ -249,7 +247,7 @@ export function useBrainCashFlowInsight() {
     kind: "cashflow",
     badge: "Cash flow",
     title: `Trailing cash flow (${currency.currency})`,
-    subtitle: `Net ${currency.currency} ${fmtNet(currency.net)} over ${currency.transaction_count} transactions`,
+    subtitle: `Net ${format(currency.net)} over ${currency.transaction_count} transactions`,
     chart: {
       points,
       unit: currency.currency,

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AutoRule } from "./proposalTypes";
+import { useCurrency } from "./currencyContext";
 
 /* ── Live brain-core policy → read only rule cards ────────────────────────────
    Surfaces the tenant's ACTUAL signed policy document on the Rules page via
@@ -86,12 +87,12 @@ function formatRequire(require: string): string {
 
 /** Plain-English rendering of a rule's `when` clause. Only the fields
  *  brain-core's DSL actually defines (dsl.ts:48-67) - no invented conditions. */
-export function describeWhen(when: Record<string, unknown>): string[] {
+export function describeWhen(when: Record<string, unknown>, fmt: (v: string | number) => string = fmtAmt): string[] {
   const parts: string[] = [];
   const amountGt = when["amount.gt"] as { value?: string; currency?: string } | undefined;
   const amountLte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
-  if (amountGt?.value) parts.push(`over ${fmtAmt(amountGt.value)} ${amountGt.currency ?? "USD"}`);
-  if (amountLte?.value) parts.push(`up to ${fmtAmt(amountLte.value)} ${amountLte.currency ?? "USD"}`);
+  if (amountGt?.value) parts.push(`over ${fmt(amountGt.value)}`);
+  if (amountLte?.value) parts.push(`up to ${fmt(amountLte.value)}`);
   const confidence = when["agent.confidence.gte"];
   if (typeof confidence === "number") parts.push(`agent confidence ≥ ${confidence}`);
   const riskLte = when["agent.risk_level.lte"];
@@ -108,12 +109,12 @@ export function describeWhen(when: Record<string, unknown>): string[] {
 /** Map one brain-core policy rule to the app's read only rule-card shape.
  *  Always `locked: true` - Phase 2a is display-only; mutation needs the
  *  policy-sign scope the token lacks (Phase 2b). */
-export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
+export function mapPolicyRuleToCard(rule: PolicyContentRule, fmt?: (v: string | number) => string): AutoRule {
   const appliesTo = rule.applies_to ?? [];
   const scopes = appliesTo.length > 0
     ? appliesTo.map((a) => APPLIES_TO_LABEL[a] ?? a).join(", ")
     : "any action";
-  const conditions = describeWhen(rule.when ?? {});
+  const conditions = describeWhen(rule.when ?? {}, fmt);
   const conditionSummary = conditions.length > 0 ? conditions.join(" · ") : "no conditions";
   const requireSuffix = rule.require ? ` · requires ${formatRequire(rule.require)}` : "";
   const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
@@ -134,8 +135,8 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule): AutoRule {
 /** Map the facts response's rule list to display cards, in rule order (the VM
  *  evaluates rules in this order and short-circuits on the first match, so
  *  order is meaningful - not re-sorted). */
-export function mapPolicyToRuleCards(facts: ApprovalPolicyFacts | undefined): AutoRule[] {
-  return (facts?.rules ?? []).map(mapPolicyRuleToCard);
+export function mapPolicyToRuleCards(facts: ApprovalPolicyFacts | undefined, fmt?: (v: string | number) => string): AutoRule[] {
+  return (facts?.rules ?? []).map((r) => mapPolicyRuleToCard(r, fmt));
 }
 
 /** brain-core returns 404 `policy_not_found` for a tenant with no policy document
@@ -146,6 +147,7 @@ function isPolicyNotFound(error: unknown): boolean {
 }
 
 export function useBrainPolicy() {
+  const { format } = useCurrency();
   const query = useQuery<ApprovalPolicyFacts>({
     queryKey: ["/api/brain/approval-policy"],
     retry: false,
@@ -154,7 +156,7 @@ export function useBrainPolicy() {
   return {
     isLoading: query.isLoading,
     isError: query.isError && !notFound,
-    rules: notFound ? [] : mapPolicyToRuleCards(query.data),
+    rules: notFound ? [] : mapPolicyToRuleCards(query.data, format),
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
   };

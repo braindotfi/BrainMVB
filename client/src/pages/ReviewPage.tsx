@@ -53,8 +53,8 @@ type ReviewTab = "All" | "Needs Review" | "Approved Automatically";
 const REVIEW_TABS: ReviewTab[] = ["Needs Review", "Approved Automatically"];
 
 /* ── Live brain-core PaymentIntents (real, gated approvals) ──────────────── */
-function intentToReview(rec: IntentRecord): ReviewItemType {
-  const amountStr = `$${rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function intentToReview(rec: IntentRecord, fmt: (v: string | number) => string): ReviewItemType {
+  const amountStr = fmt(rec.amount);
   const approvers = rec.requiredApprovers.length > 0 ? rec.requiredApprovers.map((a) => a.toUpperCase()).join(" + ") : "OWNER + CFO";
   return {
     id: rec.intentId,
@@ -264,7 +264,7 @@ export function ReviewPage() {
      out of the queue; awaiting-second-approval ones stay (still need a second sign-off). */
   const liveReviews = intents
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
-    .map(intentToReview);
+    .map((r) => intentToReview(r, format));
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
   const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
   const { toast } = useToast();
