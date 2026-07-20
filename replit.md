@@ -12,7 +12,7 @@ protocol (brain-core) executes. Settlement is anchored on Base L2.
 - **Backend**: Express (same server/port via Vite)
 - **Auth**: username/email + scrypt password + Google OAuth, express-session (`server/auth.ts`)
 - **Web3**: wagmi v2, viem, RainbowKit (SIWE retained, not primary login)
-- **AI**: Anthropic SDK (`ANTHROPIC_API_KEY`), model `claude-opus-4-5`
+- **AI**: Anthropic SDK (`ANTHROPIC_API_KEY`), model from `ANTHROPIC_MODEL` (defaults to `claude-opus-4-8`)
 - **DB**: Drizzle + PostgreSQL (DatabaseStorage; MemStorage fallback if no DATABASE_URL)
 - **Contracts**: Hardhat + Base Sepolia in `contracts/` (`CONTRACT_MODE=demo` default; domain
   tags must match Solidity↔TS: `BrainFinance:PaymentProof:v1` / `TradeProof:v1`)
@@ -151,7 +151,8 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   `client/src/assets/*-icons.ts`.
 
 ## Secrets
-- `ANTHROPIC_API_KEY`; `BRAIN_DEMO_PROVISION_SECRET` (+ optional `BRAIN_API_BASE_URL`;
+- `ANTHROPIC_API_KEY`; optional `ANTHROPIC_MODEL`; `ENCRYPTION_KEY` for Plaid token encryption;
+  `BRAIN_DEMO_PROVISION_SECRET` (+ optional `BRAIN_API_BASE_URL`;
   local-key fallback `BRAIN_AUTH_SIGN_KEY`/`BRAIN_AUTH_JWT_SECRET` + `BRAIN_DEV_TENANT_ID`);
   `BRAIN_PLATFORM_SERVICE_SECRET` (production tenancy); `SESSION_SECRET`;
   `GOOGLE_CLIENT_ID`+`GOOGLE_CLIENT_SECRET` (optional; redirect `/api/auth/google/callback`);

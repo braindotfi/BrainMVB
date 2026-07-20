@@ -2,6 +2,11 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { assertEncryptionKeyConfigured } from "./tokenCrypto";
+
+assertEncryptionKeyConfigured();
 
 const app = express();
 const httpServer = createServer(app)
@@ -21,6 +26,29 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+app.use(helmet());
+
+function envInt(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const authLimiter = rateLimit({
+  windowMs: envInt("AUTH_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
+  limit: envInt("AUTH_RATE_LIMIT_MAX", 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const llmLimiter = rateLimit({
+  windowMs: envInt("LLM_RATE_LIMIT_WINDOW_MS", 60 * 1000),
+  limit: envInt("LLM_RATE_LIMIT_MAX", 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(["/api/auth/login", "/api/auth/register"], authLimiter);
+app.use(["/api/goals/recommendation", "/api/assistant/chat", "/api/rules/suggestions"], llmLimiter);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -36,11 +64,12 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const logBodies = process.env.NODE_ENV !== "production" && process.env.API_LOG_RESPONSE_BODY === "true";
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
+    if (logBodies) capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 

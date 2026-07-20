@@ -151,3 +151,4 @@ export const siweNonces = pgTable("siwe_nonces", {
 }, (t) => [
   index("siwe_nonces_expires_at_idx").on(t.expiresAt),
 ]);
+export type SiweNonce = typeof siweNonces.$inferSelect;

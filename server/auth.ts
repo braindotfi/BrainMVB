@@ -274,17 +274,23 @@ export function setupAuth(app: Express) {
       const profile = (await profResp.json()) as {
         sub: string;
         email?: string;
+        email_verified?: boolean;
         name?: string;
       };
 
       let user = await storage.getUserByGoogleId(profile.sub);
       if (!user && profile.email) {
-        // Link an existing email/password account to this Google identity.
-        const byEmail = await storage.getUserByEmail(profile.email.toLowerCase());
-        if (byEmail) user = byEmail;
+        const email = profile.email.toLowerCase();
+        const byEmail = await storage.getUserByEmail(email);
+        if (byEmail) {
+          if (profile.email_verified !== true) {
+            return res.redirect("/?auth_error=google_unverified_email");
+          }
+          user = byEmail;
+        }
       }
       if (!user) {
-        const email = profile.email?.toLowerCase();
+        const email = profile.email_verified === true ? profile.email?.toLowerCase() : undefined;
         user = await storage.createUser({
           username: email ?? `google_${profile.sub}`,
           email: email ?? null,
