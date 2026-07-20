@@ -591,7 +591,7 @@ export function HomePage() {
   const cashValue =
     netMonthly !== null
       ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
-      : "—";
+      : "-";
 
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
   // static (non-dollar) line when brain-core is unreachable/unconfigured; overridden

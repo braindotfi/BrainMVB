@@ -24,7 +24,7 @@ type UploadedFile = {
 };
 
 /* Step 3: Connect tools, third-party data sources */
-type ToolCategory = "Accounting" | "Productivity" | "CRM & Sales" | "Payments" | "Communication" | "Crypto";
+type ToolCategory = "Accounting" | "Productivity" | "CRM and Sales" | "Payments" | "Communication" | "Crypto";
 
 type Tool = {
   id: string;
@@ -43,15 +43,15 @@ const TOOLS: Tool[] = [
   { id: "quickbooks", name: "QuickBooks", category: "Accounting",     logo: "qb", bg: "#2CA01C" },
   { id: "xero",       name: "Xero",       category: "Accounting",     logo: "X",  bg: "#13B5EA" },
   { id: "wave",       name: "Wave",       category: "Accounting",     logo: "~",  bg: "#1F46FA" },
-  // Productivity & docs
+  // Productivity and docs
   { id: "notion",     name: "Notion",     category: "Productivity",   logo: "N",  bg: "#FFFFFF", light: true },
   { id: "gdrive",     name: "Google Drive", category: "Productivity", logo: "G",  bg: "#FFFFFF", light: true },
   { id: "dropbox",    name: "Dropbox",    category: "Productivity",   logo: "D",  bg: "#0061FF" },
   { id: "onedrive",   name: "OneDrive",   category: "Productivity",   logo: "OD", bg: "#0364B8" },
-  // CRM & sales
-  { id: "attio",      name: "Attio",      category: "CRM & Sales",    logo: "A",  bg: "#1d1d1f" },
-  { id: "hubspot",    name: "HubSpot",    category: "CRM & Sales",    logo: "H",  bg: "#FF7A59" },
-  { id: "salesforce", name: "Salesforce", category: "CRM & Sales",    logo: "SF", bg: "#00A1E0" },
+  // CRM and sales
+  { id: "attio",      name: "Attio",      category: "CRM and Sales",    logo: "A",  bg: "#1d1d1f" },
+  { id: "hubspot",    name: "HubSpot",    category: "CRM and Sales",    logo: "H",  bg: "#FF7A59" },
+  { id: "salesforce", name: "Salesforce", category: "CRM and Sales",    logo: "SF", bg: "#00A1E0" },
   // Payments
   { id: "stripe",     name: "Stripe",     category: "Payments",       logo: "S",  bg: "#635BFF" },
   { id: "paypal",     name: "PayPal",     category: "Payments",       logo: "P",  bg: "#003087" },
@@ -66,7 +66,7 @@ const TOOLS: Tool[] = [
 const TOOL_CATEGORY_ORDER: ToolCategory[] = [
   "Accounting",
   "Productivity",
-  "CRM & Sales",
+  "CRM and Sales",
   "Payments",
   "Communication",
   "Crypto",

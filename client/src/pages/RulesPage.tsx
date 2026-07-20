@@ -1014,7 +1014,7 @@ export function RulesPage() {
               {suggestions.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    Brain suggests policies as it sees patterns in your activity — nothing yet.
+                    Brain suggests policies as it sees patterns in your activity. Nothing yet.
                   </p>
                 </div>
               ) : (
