@@ -786,7 +786,8 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
 }
 
 function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
-  const conditions = describeWhen(rule.when ?? {});
+  const { format } = useCurrency();
+  const conditions = describeWhen(rule.when ?? {}, format);
   const appliesTo = rule.applies_to ?? [];
   const hasRequire = !!rule.require;
   const execute = rule.execute ?? "confirm";
