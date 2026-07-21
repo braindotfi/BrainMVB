@@ -219,11 +219,13 @@ const SettingRow = ({
 /* 16px/24 semibold #414965. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children }: { children: string }) => (
-  <p
-    style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
-  >
-    {children}
-  </p>
+  <div className="flex items-center min-h-[36px]">
+    <p
+      style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
+    >
+      {children}
+    </p>
+  </div>
 );
 
 /* ─── Profile section (Figma 3695:38606 / 3957:43974) ─── */

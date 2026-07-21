@@ -388,9 +388,11 @@ export default function TeamSection() {
     <div className="flex flex-col gap-[20px] w-full">
       {/* Header + panel: 4px gap, matching Account subpage */}
       <div className="flex flex-col gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
-          Members
-        </p>
+        <div className="flex items-center min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            Members
+          </p>
+        </div>
 
         <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
         {isLoading && (

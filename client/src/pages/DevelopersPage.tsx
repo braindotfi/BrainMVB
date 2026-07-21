@@ -111,9 +111,11 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
 /* 16px/24 semibold #414965. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children }: { children: ReactNode }) => (
-  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
-    {children}
-  </p>
+  <div className="flex items-center min-h-[36px]">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+      {children}
+    </p>
+  </div>
 );
 
 const Mono = ({ children, className = "", testId }: { children: ReactNode; className?: string; testId?: string }) => (
@@ -240,7 +242,7 @@ const PageHeader = ({ title, actions }: {
   title: ReactNode;
   actions?: ReactNode;
 }) => (
-  <div className="flex items-center justify-between gap-4">
+  <div className="flex items-center justify-between gap-4 min-h-[36px]">
     <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
       {title}
     </h1>
@@ -586,7 +588,7 @@ function KeysSection({ env }: { env: DevEnv }) {
       {plaintext && <PlaintextKeyModal plaintext={plaintext} onClose={() => setPlaintext(null)} />}
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 min-h-[36px]">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
             {env === "live" ? "Live Keys" : "Sandbox Keys"}
           </p>
