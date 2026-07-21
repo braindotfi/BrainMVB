@@ -112,7 +112,7 @@ const humanizeAction = (action: string): string => ACTION_LABELS[action] ?? acti
 /** Key-authed platform endpoints — paths and scopes MUST mirror the
  *  registerKeyAuthedRead registrations in server/routes.ts exactly. */
 const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: string }> = [
-  { path: "/api/v1/ping", scope: null, description: "Verify a key works — completes the checklist above" },
+  { path: "/api/v1/ping", scope: null, description: "Verify a key works and complete the checklist above" },
   { path: "/api/v1/ledger/accounts", scope: "ledger:read", description: "Ledger accounts for your tenant" },
   { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
   { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?after=)" },
@@ -304,13 +304,13 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         <div className="flex flex-col gap-2 p-5">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px] leading-[22px]">Your new API key</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[13px] leading-[18px]">
-            Copy it now — for your security, it will never be shown again.
+            Copy it now. For your security, it will never be shown again.
           </p>
           <div className="rounded-[8px] p-3 mt-1 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <Mono className="text-white text-[13px] leading-[18px]" testId="text-plaintext-key">{plaintext}</Mono>
           </div>
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-2">
-            Try it now — this completes "Make a key-authenticated call":
+            Try it now to complete "Make a key-authenticated call":
           </p>
           <div className="rounded-[8px] p-3 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <Mono className="text-[#a8b9f4] text-[12px] leading-[17px]" testId="text-curl-example">
@@ -580,7 +580,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             Build on your Brain ledger.
           </p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]" data-testid="text-enforcement-disclosure">
-            Keys authenticate against platform endpoints (start with GET /api/v1/ping) — brain-core gateway enforcement is rolling out.
+            Keys authenticate against platform endpoints (start with GET /api/v1/ping). Brain-core gateway enforcement is rolling out.
           </p>
         </div>
         <div className="flex-shrink-0">{envControl}</div>
@@ -815,14 +815,14 @@ function KeysSection({ env }: { env: DevEnv }) {
                 </>
               ) : (
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]" data-testid="text-key-revoked-footer">
-                  Revoked {formatDateTime(k.revokedAt)} — this key can no longer be used.
+                  Revoked {formatDateTime(k.revokedAt)}. This key can no longer be used.
                 </p>
               )
             }
           >
             <DetailRow label="Key" testId="detail-key-masked"><Mono className="text-white">{k.maskedKey}</Mono></DetailRow>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px] -mt-2">
-              Keys are stored hashed — the full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
+              Keys are stored hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
             </p>
             <DetailRow label="Scopes" testId="detail-key-scopes">{k.scopes.length ? k.scopes.join(", ") : "None"}</DetailRow>
             <DetailRow label="Environment">{k.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
@@ -841,7 +841,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             )}
             {k.status === "active" && k.lastUsedAt === null && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
-                This key has never authenticated a call yet — try GET /api/v1/ping from the API Reference.
+                This key has never authenticated a call yet. Try GET /api/v1/ping from the API Reference.
               </p>
             )}
           </DetailModal>
@@ -903,7 +903,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             <div className="flex flex-col gap-2">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Requested scopes</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Enforced on the platform data endpoints (ledger/audit reads) — see the API Reference on Overview.
+                Enforced on the platform data endpoints (ledger/audit reads). See the API Reference on Overview.
               </p>
               {SCOPE_OPTIONS.map((s) => {
                 const checked = scopes.includes(s.id);
@@ -989,8 +989,8 @@ function KeysSection({ env }: { env: DevEnv }) {
       </div>
 
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-        Keys are issued by this platform and stored hashed. Enforcement inside brain-core's API gateway is rolling out —
-        until then, keys authenticate against platform endpoints only.
+        Keys are issued by this platform and stored hashed. Enforcement inside brain-core's API gateway is rolling out.
+        Until then, keys authenticate against platform endpoints only.
       </p>
     </div>
   );
@@ -1060,7 +1060,7 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
               </DetailRow>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
                 Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is
-                provisioned automatically — ids and data don't carry over.
+                provisioned automatically. Ids and data don't carry over.
               </p>
             </>
           )}
@@ -1078,14 +1078,14 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
                 setShowCreate((v) => !v);
               } else if (data?.mode === "demo") {
                 alert.info(
-                  "Demo mode — tenants are provisioned automatically",
+                  "Demo mode: tenants are provisioned automatically",
                   "This workspace runs in demo mode: your tenant is provisioned fresh for each session (~30 min) and can't be created manually. Production tenant creation unlocks when the platform runs in production tenancy mode.",
                 );
               } else {
                 alert.info(
                   "Tenant creation unavailable",
                   data?.tenants.length
-                    ? "Your company tenant already exists — each workspace has exactly one."
+                    ? "Your company tenant already exists. Each workspace has exactly one."
                     : "Tenant creation isn't available right now. The platform service isn't configured for this workspace.",
                 );
               }
@@ -1193,6 +1193,7 @@ function UsageSection({ env }: { env: DevEnv }) {
   const planId = usePlanId();
   // In-place accordion for the by-method rows (ONE open at a time).
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
+  const navigate = useLocation()[1];
   const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
 
   const data = usageQ.data;
@@ -1235,9 +1236,33 @@ function UsageSection({ env }: { env: DevEnv }) {
               : <span className="text-[18px] leading-[24px]">No plan selected</span>
           }
           sub={
-            tier
-              ? `${tier.requestsPerMin} req/min, burst ${tier.burst} — from your Settings → Billing plan`
-              : "Choose a plan in Settings → Billing to set your tier"
+            tier ? (
+              <>
+                {tier.requestsPerMin} req/min, burst {tier.burst}. From your{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/settings?section=billing")}
+                  className="text-[#7631ee] hover:underline cursor-pointer"
+                  data-testid="link-settings-billing"
+                >
+                  Settings → Billing
+                </button>{" "}
+                plan.
+              </>
+            ) : (
+              <>
+                Choose a plan in{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/settings?section=billing")}
+                  className="text-[#7631ee] hover:underline cursor-pointer"
+                  data-testid="link-settings-billing"
+                >
+                  Settings → Billing
+                </button>{" "}
+                to set your tier
+              </>
+            )
           }
           testId="metric-rate-limit-tier"
         />
@@ -1250,7 +1275,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
           ) : usageQ.isError ? (
-            <EmptyRow>Usage is unavailable — brain-core audit events couldn't be read.</EmptyRow>
+            <EmptyRow>Usage is unavailable because brain-core audit events couldn't be read.</EmptyRow>
           ) : !data?.byAction.length ? (
             <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
           ) : (
@@ -1281,7 +1306,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                     {isOpen && (
                       <div className="px-[8px] pb-[10px] flex flex-col gap-2" data-testid={`panel-method-daily-${a.action}`}>
                         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                          Daily requests, last {trend.length} days — <Mono className="text-[#6c779d]">{a.action}</Mono>
+                          Daily requests, last {trend.length} days: <Mono className="text-[#6c779d]">{a.action}</Mono>
                         </p>
                         <div className="flex items-end gap-[3px] h-[48px]">
                           {trend.map((d) => (
@@ -1318,7 +1343,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           ) : keysQ.isError ? (
             <EmptyRow>Key counters are unavailable right now.</EmptyRow>
           ) : !envKeys.length ? (
-            <EmptyRow>No {env} API keys yet — create one under API Keys.</EmptyRow>
+            <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[8px] p-[8px]">
               {envKeys.map((k) => {

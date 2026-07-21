@@ -764,8 +764,14 @@ function BillingSection() {
 }
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
+const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "legal", "account"];
+
 export function SettingsPage() {
-  const [section, setSection] = useState<Section>("profile");
+  // Deep-link support: /settings?section=billing opens that section directly.
+  const [section, setSection] = useState<Section>(() => {
+    const s = new URLSearchParams(window.location.search).get("section");
+    return VALID_SECTIONS.includes(s as Section) ? (s as Section) : "profile";
+  });
   const { toast } = useToast();
 
   const SectionContent = {

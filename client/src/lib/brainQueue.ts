@@ -191,7 +191,7 @@ export function mapIntentToAutoApprovedProposal(intent: BrainPaymentIntent, vend
     title: `Payment to ${vendor}`,
     rowSubtitle: `${vendor} · cleared automatically by policy`,
     dueLabel: "Approved automatically",
-    rationale: "Brain core's §6 policy gate cleared this payment automatically — no human approval was required.",
+    rationale: "Brain core's §6 policy gate cleared this payment automatically; no human approval was required.",
     whatHappensNext: "This clears through its payment rail without further review.",
     risk: "Brain's policy gate cleared this automatically.",
     policy: { ...base.policy, explanation: "brain-core's policy gate did not require approval", autoClearedOtherwise: true },

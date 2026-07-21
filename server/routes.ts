@@ -97,13 +97,13 @@ const GOAL_REC_FALLBACK_DEFAULT =
   "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and Brain will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
   "Pay Off Debt":
-    "Target your highest-interest debt first — paying it down fastest frees up the most monthly cash flow.",
+    "Target your highest-interest debt first. Paying it down fastest frees up the most monthly cash flow.",
   "Build Reserve":
     "Base your reserve target on a multiple of your monthly operating burn (e.g. 3-6 months) so it tracks real runway.",
   "Hit Milestone":
     "Pick a growth number tied to a metric you actually track (revenue, ARR, users) and Brain will pace agent activity toward it.",
   "Cut Spend":
-    "Start with your largest recurring expense categories — trimming there usually has the biggest monthly impact.",
+    "Start with your largest recurring expense categories. Trimming there usually has the biggest monthly impact.",
   "Capital Deploy":
     "Point idle operating cash at a yield vault or a specific agent budget instead of letting it sit unused.",
   "Other":
@@ -906,7 +906,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     if (!process.env.ANTHROPIC_API_KEY) {
       if (grounding) {
         return res.json({
-          reply: `Assistant is offline (no API key configured) — here is your live data snapshot instead:\n\n${grounding}`,
+          reply: `Assistant is offline (no API key configured), so here is your live data snapshot instead:\n\n${grounding}`,
           sources,
           grounded: true,
           assistantOffline: true,

@@ -278,7 +278,7 @@ const SectionWidget = ({
   const hasMore = items.length > DEFAULT_VISIBLE;
   const visible = expanded ? items : items.slice(0, DEFAULT_VISIBLE);
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full h-full">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
@@ -704,8 +704,10 @@ export function HomePage() {
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Middle row: Brain Detected (left) + Brain Did (right) */}
-            <div className="flex gap-[16px] items-start relative shrink-0 w-full">
+            {/* Middle row: Brain Detected (left) + Brain Did (right).
+                items-stretch + h-full keep both cards the same height regardless
+                of how many rows each side has. */}
+            <div className="flex gap-[16px] items-stretch relative shrink-0 w-full">
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Detected"
