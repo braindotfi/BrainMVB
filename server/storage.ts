@@ -21,8 +21,8 @@ import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "dri
 /* Daily usage rows older than this many days are dead weight (UI shows at most
  * the last 30 days). Pruned opportunistically, at most once per UTC day per
  * process, in the touchApiKeyLastUsed path. */
-const DAILY_USAGE_RETENTION_DAYS = 90;
-function dailyUsageRetentionCutoff(): string {
+export const DAILY_USAGE_RETENTION_DAYS = 90;
+export function dailyUsageRetentionCutoff(): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - DAILY_USAGE_RETENTION_DAYS);
   return d.toISOString().slice(0, 10);
