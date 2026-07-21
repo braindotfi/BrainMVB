@@ -182,6 +182,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // GET /api/developers/keys/usage?days=7|30 - per-key daily request counts,
+  // zero-filled for every day in the window (recent-activity view; no analytics pipeline).
+  app.get("/api/developers/keys/usage", requireAuth, async (req, res) => {
+    try {
+      const days = req.query.days === "30" ? 30 : 7;
+      const userId = req.session.userId!;
+      const dayList: string[] = [];
+      const now = Date.now();
+      for (let i = days - 1; i >= 0; i--) {
+        dayList.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
+      }
+      const [keys, rows] = await Promise.all([
+        storage.listApiKeys(userId),
+        storage.getApiKeyDailyUsage(userId, dayList[0]),
+      ]);
+      const byKey = new Map<string, Map<string, number>>();
+      for (const r of rows) {
+        if (!byKey.has(r.keyId)) byKey.set(r.keyId, new Map());
+        byKey.get(r.keyId)!.set(r.day, r.count);
+      }
+      const usage = keys.map((k) => {
+        const daysMap = byKey.get(k.id);
+        const daily = dayList.map((day) => ({ day, count: daysMap?.get(day) ?? 0 }));
+        return {
+          keyId: k.id,
+          daily,
+          windowTotal: daily.reduce((sum, d) => sum + d.count, 0),
+        };
+      });
+      return res.json({ days, usage });
+    } catch (error: any) {
+      console.error("Key usage error:", error);
+      return res.status(500).json({ error: "Failed to load key usage" });
+    }
+  });
+
   // POST /api/developers/keys - issue a key. Plaintext appears ONLY in this response.
   // Live keys require production tenancy readiness (platform service configured AND
   // the user linked to a tenant) — the UI shows "request access" otherwise.

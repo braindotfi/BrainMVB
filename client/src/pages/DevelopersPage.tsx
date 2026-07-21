@@ -56,6 +56,15 @@ interface UsageResponse {
   environment: DevEnv;
 }
 
+interface KeyUsageResponse {
+  days: number;
+  usage: Array<{
+    keyId: string;
+    daily: Array<{ day: string; count: number }>;
+    windowTotal: number;
+  }>;
+}
+
 interface AuditEventsResponse {
   events: Array<{ id: string; layer: string; action: string; created_at: string }>;
 }
@@ -477,17 +486,42 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
   );
 }
 
+/** Tiny per-key daily-activity bars (last N days, zeros render as faint stubs). */
+function UsageSparkline({ daily, keyId }: { daily: Array<{ day: string; count: number }>; keyId: string }) {
+  const max = Math.max(1, ...daily.map((d) => d.count));
+  return (
+    <div className="flex items-end gap-[2px] h-[16px]" data-testid={`sparkline-usage-${keyId}`}>
+      {daily.map((d) => (
+        <div
+          key={d.day}
+          title={`${d.day}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}
+          className="w-[5px] rounded-[1px]"
+          style={{
+            height: d.count === 0 ? 2 : Math.max(3, Math.round((d.count / max) * 16)),
+            background: d.count === 0 ? "#1d2132" : "#7631ee",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /* ─── API Keys ─── */
 function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
   const alert = useAppAlert();
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
+  const usageQ = useQuery<KeyUsageResponse>({ queryKey: ["/api/developers/keys/usage"] });
+  const usageByKey = new Map((usageQ.data?.usage ?? []).map((u) => [u.keyId, u]));
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>(["ledger:read"]);
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/developers/keys"] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/developers/keys"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/developers/keys/usage"] });
+  };
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -649,6 +683,15 @@ function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }
                   </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
                     Requests <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>{(k.requestCount ?? 0).toLocaleString()}</Mono>
+                  </span>
+                  <span className="flex items-center gap-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
+                    Last 7 days{" "}
+                    <Mono className="text-[#6c779d]" testId={`text-usage-7d-${k.id}`}>
+                      {(usageByKey.get(k.id)?.windowTotal ?? 0).toLocaleString()}
+                    </Mono>
+                    {usageByKey.get(k.id) && (
+                      <UsageSparkline daily={usageByKey.get(k.id)!.daily} keyId={k.id} />
+                    )}
                   </span>
                 </div>
                 {k.status === "active" && (

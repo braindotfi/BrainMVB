@@ -13,9 +13,10 @@ import {
   brainAgentTokens as brainAgentTokensTable,
   type BrainAgentToken,
   apiKeys as apiKeysTable,
-  type ApiKey, type InsertApiKey,
+  apiKeyDailyUsage as apiKeyDailyUsageTable,
+  type ApiKey, type InsertApiKey, type ApiKeyDailyUsage,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne, isNull, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, gte, sql } from "drizzle-orm";
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
@@ -85,7 +86,10 @@ export interface IStorage {
   revokeApiKey(userId: string, id: string): Promise<ApiKey | null>;
   /** Atomic rotate: revoke `id` and insert its replacement in one transaction. */
   rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null>;
+  /** Touch path: bumps lastUsedAt/requestCount AND upserts the per-key daily counter. */
   touchApiKeyLastUsed(userId: string, id: string): Promise<void>;
+  /** Per-key daily counters for this user's keys, days >= sinceDay (UTC YYYY-MM-DD). */
+  getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]>;
   /** Look up an ACTIVE (non-revoked) key by its SHA-256 secret hash — key-auth path. */
   getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined>;
 }
@@ -504,11 +508,24 @@ export class MemStorage implements IStorage {
     const created = await this.createApiKey(replacement);
     return { revoked, created };
   }
+  private apiKeyDailyUsageStore = new Map<string, ApiKeyDailyUsage>(); // `${keyId}|${day}`
   async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
     const row = this.apiKeysStore.get(id);
     if (row && row.userId === userId) {
       this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date(), requestCount: row.requestCount + 1 });
+      const day = new Date().toISOString().slice(0, 10);
+      const usageKey = `${id}|${day}`;
+      const existing = this.apiKeyDailyUsageStore.get(usageKey);
+      if (existing) {
+        this.apiKeyDailyUsageStore.set(usageKey, { ...existing, count: existing.count + 1 });
+      } else {
+        this.apiKeyDailyUsageStore.set(usageKey, { id: randomUUID(), keyId: id, userId, day, count: 1 });
+      }
     }
+  }
+  async getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]> {
+    return Array.from(this.apiKeyDailyUsageStore.values())
+      .filter((u) => u.userId === userId && u.day >= sinceDay);
   }
   async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
     return Array.from(this.apiKeysStore.values())
@@ -936,10 +953,29 @@ export class DatabaseStorage implements IStorage {
     });
   }
   async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
-    await db
+    const [row] = await db
       .update(apiKeysTable)
       .set({ lastUsedAt: new Date(), requestCount: sql`${apiKeysTable.requestCount} + 1` })
-      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)));
+      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)))
+      .returning({ id: apiKeysTable.id });
+    if (!row) return; // key not found / not this user's — don't record usage
+    const day = new Date().toISOString().slice(0, 10);
+    await db
+      .insert(apiKeyDailyUsageTable)
+      .values({ keyId: id, userId, day, count: 1 })
+      .onConflictDoUpdate({
+        target: [apiKeyDailyUsageTable.keyId, apiKeyDailyUsageTable.day],
+        set: { count: sql`${apiKeyDailyUsageTable.count} + 1` },
+      });
+  }
+  async getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]> {
+    return db
+      .select()
+      .from(apiKeyDailyUsageTable)
+      .where(and(
+        eq(apiKeyDailyUsageTable.userId, userId),
+        gte(apiKeyDailyUsageTable.day, sinceDay),
+      ));
   }
   async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
     const [row] = await db

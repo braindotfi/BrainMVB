@@ -168,6 +168,22 @@ export const apiKeys = pgTable("api_keys", {
   index("api_keys_user_id_idx").on(t.userId),
 ]);
 
+/* Per-key daily request counters (keyId, day, count) — upserted in the same
+ * touch path as lastUsedAt/requestCount so recent activity (7/30-day views)
+ * can be shown without an analytics pipeline. `day` is a UTC YYYY-MM-DD string. */
+export const apiKeyDailyUsage = pgTable("api_key_daily_usage", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  keyId: uuid("key_id").notNull(),
+  userId: text("user_id").notNull(),                 // denormalized for session-scoped reads
+  day: text("day").notNull(),                        // UTC calendar day, YYYY-MM-DD
+  count: integer("count").default(0).notNull(),
+}, (t) => [
+  uniqueIndex("api_key_daily_usage_key_day_idx").on(t.keyId, t.day),
+  index("api_key_daily_usage_user_id_idx").on(t.userId),
+]);
+
+export type ApiKeyDailyUsage = typeof apiKeyDailyUsage.$inferSelect;
+
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
   id: true, createdAt: true, lastUsedAt: true, requestCount: true, revokedAt: true,
 });
