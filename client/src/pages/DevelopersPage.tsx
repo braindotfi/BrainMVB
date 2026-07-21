@@ -1526,7 +1526,7 @@ export function DevelopersPage() {
     <div className="flex h-full rounded-[16px] border border-[#1d2132] overflow-hidden" style={{ background: "#11141b" }}>
       {/* ── Developers sidebar ── */}
       <nav className="flex-shrink-0 flex flex-col overflow-y-auto" style={{ width: 240, borderRight: "1px solid #1d2132", background: "#11141b" }}>
-        <div className="flex flex-col gap-[8px] p-2 pt-2 flex-1">
+        <div className="flex flex-col gap-1 p-2 pt-2">
           {DEV_NAV.map(({ id, label, activeIcon, inactiveIcon }) => {
             const active = section === id;
             return (
@@ -1536,8 +1536,8 @@ export function DevelopersPage() {
                 onClick={() => setSection(id)}
                 className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left"
                 style={{ background: active ? "#0a0c10" : "transparent" }}
-                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}
-                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(168,185,244,0.05)"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
               >
                 <div className="size-[24px] flex-shrink-0 flex items-center justify-center">
                   <img src={active ? activeIcon : inactiveIcon} alt="" aria-hidden="true" width={20} height={20} className="select-none" draggable={false} />
