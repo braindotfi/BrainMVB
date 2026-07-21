@@ -10,7 +10,7 @@
  * Webhooks are deliberately excluded from this section (v2).
  */
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, type LucideIcon } from "lucide-react";
+import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, Plus, type LucideIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
@@ -388,9 +388,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   const today = usageQ.data?.daily.length ? usageQ.data.daily[usageQ.data.daily.length - 1].count : null;
 
   const steps = [
-    { label: "Create a tenant", done: hasTenant },
-    { label: "Issue an API key", done: hasKey },
-    { label: "Make a key-authenticated call", done: hasKeyAuthedCall },
+    { label: "Create a Tenant", done: hasTenant },
+    { label: "Issue an API Key", done: hasKey },
+    { label: "Make a Key-Authenticated Call", done: hasKeyAuthedCall },
   ];
 
   const orgName = tenancy?.companyName;
@@ -435,20 +435,29 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   </p>
                   {i === 0 && (
                     <div>
-                      <PillButton testId="button-overview-add-tenant" onClick={() => onNavigate("tenants")}>
+                      <button
+                        type="button"
+                        data-testid="button-overview-add-tenant"
+                        onClick={() => onNavigate("tenants")}
+                        className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      >
+                        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                         Add Tenant
-                      </PillButton>
+                      </button>
                     </div>
                   )}
                   {i === 1 && (
                     <div>
-                      <PillButton
-                        testId="button-overview-create-key"
+                      <button
+                        type="button"
+                        data-testid="button-overview-create-key"
                         onClick={() => onNavigate("keys")}
                         disabled={!hasTenant}
+                        className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
+                        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                         Create Key
-                      </PillButton>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -602,9 +611,15 @@ function KeysSection({ env }: { env: DevEnv }) {
             {env === "live" ? "Live Keys" : "Sandbox Keys"}
           </p>
           {(env === "sandbox" || liveAvailable) && (
-            <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
-              {showCreate ? "Cancel" : "+ New key"}
-            </PillButton>
+            <button
+              type="button"
+              data-testid="button-new-key"
+              onClick={() => setShowCreate((v) => !v)}
+              className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
+              {showCreate ? "Cancel" : "New Key"}
+            </button>
           )}
         </div>
 
@@ -677,7 +692,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                 onClick={() => createMut.mutate()}
                 disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
               >
-                {createMut.isPending ? "Creating…" : "Create key"}
+                {createMut.isPending ? "Creating…" : "Create Key"}
               </PillButton>
             </div>
           </div>
@@ -782,8 +797,9 @@ function TenantsSection() {
       <PageHeader
         title="Tenants"
         actions={
-          <PillButton
-            testId="button-create-tenant"
+          <button
+            type="button"
+            data-testid="button-create-tenant"
             onClick={() => {
               if (data?.canCreate) {
                 setShowCreate((v) => !v);
@@ -801,9 +817,11 @@ function TenantsSection() {
                 );
               }
             }}
+            className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
-            {showCreate ? "Cancel" : "+ Create tenant"}
-          </PillButton>
+            {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
+            {showCreate ? "Cancel" : "Create Tenant"}
+          </button>
         }
       />
 
@@ -831,7 +849,7 @@ function TenantsSection() {
                 onClick={() => createMut.mutate()}
                 disabled={createMut.isPending || companyName.trim().length === 0}
               >
-                {createMut.isPending ? "Creating…" : "Create tenant"}
+                {createMut.isPending ? "Creating…" : "Create Tenant"}
               </PillButton>
             </div>
           </div>
