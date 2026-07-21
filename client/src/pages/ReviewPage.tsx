@@ -118,12 +118,12 @@ const ProposalRow = ({
             {proposal.title}
           </p>
           {proposal.severity === "danger" && (
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#350011] border border-[rgba(210,3,68,0.2)] text-[#d20344]">
+            <span className="inline-flex items-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0 bg-[#350011] border border-[rgba(210,3,68,0.2)] text-[#d20344]">
               High Risk
             </span>
           )}
           {proposal.severity === "warning" && (
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[3px] rounded-[22px] whitespace-nowrap shrink-0 bg-[#4a2300] border border-[rgba(255,149,0,0.2)] text-[#ff9400]">
+            <span className="inline-flex items-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0 bg-[#4a2300] border border-[rgba(255,149,0,0.2)] text-[#ff9400]">
               Elevated
             </span>
           )}
