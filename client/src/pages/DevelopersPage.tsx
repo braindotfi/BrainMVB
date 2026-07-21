@@ -10,6 +10,7 @@
  * Webhooks are deliberately excluded from this section (v2).
  */
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useLocation } from "wouter";
 import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, Plus, type LucideIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -149,13 +150,15 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
   );
 };
 
+/* Pills matching the ProposalDetail review pop-up pattern:
+   rounded-[100px], px-[10px] py-[5px], 12px/16px semibold, subtle border. */
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="px-2 py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px]"
+    className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
     style={status === "active"
-      ? { background: "#1c1132", color: "#a88afa" }
-      : { background: "#350011", color: "#d20344" }}
+      ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
+      : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
   >
     {status === "active" ? "Active" : "Revoked"}
   </span>
@@ -163,10 +166,10 @@ const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
 
 const EnvBadge = ({ env }: { env: string }) => (
   <span
-    className="px-2 py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px]"
+    className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
     style={env === "live"
-      ? { background: "#4a2300", color: "#ff9500" }
-      : { background: "#1d2132", color: "#a8b9f4" }}
+      ? { background: "#4a2300", color: "#ff9500", borderColor: "rgba(255,149,0,0.2)" }
+      : { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }}
   >
     {env === "live" ? "Live" : "Sandbox"}
   </span>
@@ -705,18 +708,22 @@ function KeysSection({ env }: { env: DevEnv }) {
         ) : keys.length === 0 ? (
           <EmptyRow>No {env} keys yet.{env === "sandbox" ? " Create one to start calling the API." : ""}</EmptyRow>
         ) : (
-          <div className="divide-y divide-[#1d2132]">
+          <div className="flex flex-col gap-[8px] p-[8px]">
             {keys.map((k) => (
-              <div key={k.id} className="p-4 flex flex-col gap-2" data-testid={`row-key-${k.id}`}>
+              <div
+                key={k.id}
+                className="flex flex-col gap-2 p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors"
+                data-testid={`row-key-${k.id}`}
+              >
                 <div className="flex items-center gap-2">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px] flex-1 truncate">{k.name}</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] flex-1 truncate">{k.name}</p>
                   <EnvBadge env={k.environment} />
                   <StatusBadge status={k.status} />
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <Mono className="text-[#a8b9f4] text-[13px]" testId={`text-masked-key-${k.id}`}>{k.maskedKey}</Mono>
+                  <Mono className="text-[#6c779d] text-[13px]" testId={`text-masked-key-${k.id}`}>{k.maskedKey}</Mono>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Requested scopes: <span className="text-[#6c779d]">{k.scopes.join(", ")}</span>
+                    Scopes: <span className="text-[#6c779d]">{k.scopes.join(", ")}</span>
                   </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
                     Created <Mono className="text-[#6c779d]">{formatDate(k.createdAt)}</Mono>
@@ -728,7 +735,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                     Requests <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>{(k.requestCount ?? 0).toLocaleString()}</Mono>
                   </span>
                   <span className="flex items-center gap-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Last 7 days{" "}
+                    7d{" "}
                     <Mono className="text-[#6c779d]" testId={`text-usage-7d-${k.id}`}>
                       {(usageByKey.get(k.id)?.windowTotal ?? 0).toLocaleString()}
                     </Mono>
@@ -738,7 +745,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   </span>
                 </div>
                 {k.status === "active" && (
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2">
                     <PillButton tone="neutral" testId={`button-rotate-${k.id}`} onClick={() => rotateMut.mutate(k.id)} disabled={rotateMut.isPending}>
                       {rotateMut.isPending ? "Rotating…" : "Rotate"}
                     </PillButton>
@@ -868,11 +875,15 @@ function TenantsSection() {
               : "No tenant available."}
           </EmptyRow>
         ) : (
-          <div className="divide-y divide-[#1d2132]">
+          <div className="flex flex-col gap-[8px] p-[8px]">
             {data.tenants.map((t) => (
-              <div key={t.id} className="p-4 flex items-center gap-4" data-testid={`row-tenant-${t.id}`}>
+              <div
+                key={t.id}
+                className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-4"
+                data-testid={`row-tenant-${t.id}`}
+              >
                 <div className="flex-1 min-w-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px] truncate">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] truncate">
                     {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
                   </p>
                   <Mono className="text-[#6c779d] text-[12px]" testId={`text-tenant-id-${t.id}`}>{t.id}</Mono>
@@ -970,12 +981,16 @@ function UsageSection({ env }: { env: DevEnv }) {
           ) : !data?.byAction.length ? (
             <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
           ) : (
-            <div className="divide-y divide-[#1d2132]">
+            <div className="flex flex-col gap-[8px] p-[8px]">
               {data.byAction.map((a) => {
                 const max = data.byAction[0]?.count || 1;
                 return (
-                  <div key={a.action} className="px-4 py-3 flex items-center gap-3" data-testid={`row-method-${a.action}`}>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
+                  <div
+                    key={a.action}
+                    className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-3"
+                    data-testid={`row-method-${a.action}`}
+                  >
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
                     <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
                       <div className="h-full rounded-full" style={{ width: `${Math.max((a.count / max) * 100, 2)}%`, background: "#7631ee" }} />
                     </div>
@@ -998,15 +1013,19 @@ function UsageSection({ env }: { env: DevEnv }) {
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet — create one under API Keys.</EmptyRow>
           ) : (
-            <div className="divide-y divide-[#1d2132]">
+            <div className="flex flex-col gap-[8px] p-[8px]">
               {envKeys.map((k) => {
                 const max = envKeys[0]?.requestCount || 1;
                 return (
-                  <div key={k.id} className="px-4 py-3 flex items-center gap-3" data-testid={`row-usage-key-${k.id}`}>
+                  <div
+                    key={k.id}
+                    className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-3"
+                    data-testid={`row-usage-key-${k.id}`}
+                  >
                     <div className="w-[220px] flex items-center gap-2 min-w-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate" title={k.name}>{k.name}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate" title={k.name}>{k.name}</p>
                       {k.status === "revoked" && (
-                        <span className="flex-shrink-0 [font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[11px]">revoked</span>
+                        <span className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]">Revoked</span>
                       )}
                     </div>
                     <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{k.maskedKey}</Mono>
@@ -1038,6 +1057,23 @@ function UsageSection({ env }: { env: DevEnv }) {
 /* ─── Section nav (Settings two-column pattern) ─── */
 type DevSection = "overview" | "keys" | "tenants" | "usage";
 
+function useDevSection(): [DevSection, (s: DevSection) => void] {
+  const valid: DevSection[] = ["overview", "keys", "tenants", "usage"];
+  const initial = (() => {
+    const s = new URLSearchParams(window.location.search).get("section");
+    return valid.includes(s as DevSection) ? (s as DevSection) : "overview";
+  })();
+  const [section, setSection] = useState<DevSection>(initial);
+  const navigate = useLocation()[1];
+  const set = (s: DevSection) => {
+    setSection(s);
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", s);
+    navigate(url.pathname + url.search, { replace: true });
+  };
+  return [section, set];
+}
+
 const DEV_NAV: { id: DevSection; label: string; Icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", Icon: LayoutGrid },
   { id: "keys", label: "API Keys", Icon: KeyRound },
@@ -1058,7 +1094,7 @@ const ExternalLinkIcon = () => (
 );
 
 export function DevelopersPage() {
-  const [section, setSection] = useState<DevSection>("overview");
+  const [section, setSection] = useDevSection();
   const [env, setEnv] = useState<DevEnv>(() => {
     const stored = localStorage.getItem(ENV_STORAGE_KEY);
     return stored === "live" ? "live" : "sandbox";
