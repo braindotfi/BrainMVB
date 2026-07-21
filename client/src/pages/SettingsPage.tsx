@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { useAuth } from "@/lib/authContext";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
+import { usePlanId, setPlanId } from "@/lib/planStore";
 import { useUserContact } from "@/lib/userContact";
 import { useCurrency } from "@/lib/currencyContext";
 import { ICONS } from "@/assets/figma-icons";
@@ -564,7 +565,9 @@ const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string;
 function BillingSection() {
   const alert = useAppAlert();
   const { email } = useUserContact();
-  const [planId, setPlanId] = useState<PlanId | null>(null);
+  // Plan lives in the shared plan store (SSOT) — the Developers Usage & Limits
+  // page reads the same source for its rate-limit tier.
+  const planId = usePlanId();
   const [cardLast4, setCardLast4] = useState<string | null>(null);
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [updateCardOpen, setUpdateCardOpen] = useState(false);

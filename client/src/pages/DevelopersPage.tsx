@@ -13,6 +13,7 @@ import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
+import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -34,6 +35,8 @@ interface MaskedKey {
 interface TenantsResponse {
   mode: "demo" | "production";
   canCreate: boolean;
+  /** Server-computed readiness signal — matches the gate on POST /keys exactly. */
+  liveKeysAvailable: boolean;
   tenants: Array<{
     id: string;
     companyName: string | null;
@@ -49,6 +52,7 @@ interface UsageResponse {
   byLayer: Array<{ layer: string; count: number }>;
   daily: Array<{ date: string; count: number }>;
   windowDays: number;
+  environment: DevEnv;
 }
 
 interface AuditEventsResponse {
@@ -231,7 +235,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
 function OverviewSection({ env }: { env: DevEnv }) {
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
-  const usageQ = useQuery<UsageResponse>({ queryKey: ["/api/developers/usage"] });
+  const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
 
   const activeKeys = (keysQ.data?.keys ?? []).filter((k) => k.status === "active" && k.environment === env);
@@ -271,7 +275,7 @@ function OverviewSection({ env }: { env: DevEnv }) {
 
       <div className="grid grid-cols-2 gap-4">
         <MetricCard
-          label="Requests today"
+          label={`Requests today (${env})`}
           value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
           sub={usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
           testId="metric-requests-today"
@@ -360,7 +364,7 @@ function KeysSection({ env }: { env: DevEnv }) {
   });
 
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
-  const liveAvailable = tenantsQ.data?.mode === "production" && (tenantsQ.data?.tenants.length ?? 0) > 0;
+  const liveAvailable = tenantsQ.data?.liveKeysAvailable === true;
   const keys = (keysQ.data?.keys ?? []).filter((k) => k.environment === env);
 
   return (
@@ -381,7 +385,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           <div className="p-4 flex flex-col gap-2">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">Live access not enabled</p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
-              Live keys require a production tenant. This workspace is running in {tenantsQ.data?.mode === "production" ? "production mode without a linked tenant — create your company first" : "demo mode"}.
+              Live keys require a production tenant. This workspace is running in {tenantsQ.data?.mode === "production" ? "production mode without live-key readiness — link your company tenant first" : "demo mode"}.
             </p>
             <div className="mt-1">
               <PillButton tone="neutral" testId="button-request-live-access" onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}>
@@ -611,7 +615,15 @@ function TenantsSection() {
 
 /* ─── Usage & Limits ─── */
 function UsageSection({ env }: { env: DevEnv }) {
-  const usageQ = useQuery<UsageResponse>({ queryKey: ["/api/developers/usage?window=60"] });
+  // Environment-scoped usage: the server attributes tenant traffic to the
+  // environment implied by the tenancy mode (demo→sandbox, production→live),
+  // so the non-matching environment honestly reports zero.
+  const usageQ = useQuery<UsageResponse>({
+    queryKey: [`/api/developers/usage?window=60&environment=${env}`],
+  });
+  // Rate-limit tier comes from the SAME plan source as Settings → Billing.
+  const planId = usePlanId();
+  const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
 
   const data = usageQ.data;
   let thisMonth = 0;
@@ -644,21 +656,29 @@ function UsageSection({ env }: { env: DevEnv }) {
         />
         <MetricCard
           label="Rate-limit tier"
-          value={<span className="text-[18px] leading-[24px]">No plan selected</span>}
-          sub="Choose a plan in Settings → Billing to set your tier"
+          value={
+            tier
+              ? <span className="text-[18px] leading-[24px]">{tier.tier}</span>
+              : <span className="text-[18px] leading-[24px]">No plan selected</span>
+          }
+          sub={
+            tier
+              ? `${tier.requestsPerMin} req/min, burst ${tier.burst} — from your Settings → Billing plan`
+              : "Choose a plan in Settings → Billing to set your tier"
+          }
           testId="metric-rate-limit-tier"
         />
       </div>
 
       <div>
-        <SectionLabel>Requests by method (tenant-wide)</SectionLabel>
+        <SectionLabel>Requests by method ({env})</SectionLabel>
         <Card testId="card-usage-by-method">
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
           ) : usageQ.isError ? (
             <EmptyRow>Usage is unavailable — brain-core audit events couldn't be read.</EmptyRow>
           ) : !data?.byAction.length ? (
-            <EmptyRow>No calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
+            <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
           ) : (
             <div className="divide-y divide-[#1d2132]">
               {data.byAction.map((a) => {
@@ -679,8 +699,9 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-        Usage is aggregated from brain-core audit events for your tenant. Environment filtering applies once brain-core
-        attributes events to individual API keys.
+        Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your tenancy
+        mode runs in (demo → sandbox, production → live). Per-key attribution arrives once brain-core enforces
+        platform-issued keys.
       </p>
     </div>
   );

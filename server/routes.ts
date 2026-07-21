@@ -278,6 +278,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.json({
           mode,
           canCreate: platformServiceConfigured() && !identity,
+          // Single readiness signal for live keys — MUST match the gate on
+          // POST /api/developers/keys so the UI never offers a create that 403s.
+          liveKeysAvailable: platformServiceConfigured() && !!identity,
           tenants: identity
             ? [{
                 id: identity.tenantId,
@@ -291,12 +294,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       // Demo mode: the tenant is the provisioned demo tenant of the current session.
       if (!brainAuthConfigured()) {
-        return res.json({ mode, canCreate: false, tenants: [] });
+        return res.json({ mode, canCreate: false, liveKeysAvailable: false, tenants: [] });
       }
       const { tenantId } = await getBrainSession(userId);
       return res.json({
         mode,
         canCreate: false,
+        liveKeysAvailable: false,
         tenants: [{
           id: tenantId,
           companyName: null,
@@ -316,6 +320,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // pipeline, no mock data; empty tenant → honest zeros.
   app.get("/api/developers/usage", requireAuth, async (req, res) => {
     const windowDays = Math.min(Math.max(parseInt(String(req.query.window ?? "30"), 10) || 30, 1), 90);
+    const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
+    if (!envParsed.success) {
+      return res.status(400).json({ error: "invalid_environment" });
+    }
+    const environment = envParsed.data;
+    // Environment attribution: brain-core doesn't tag audit events with an API
+    // environment, but the tenancy mode determines it unambiguously — demo-mode
+    // tenants are sandbox, production-mode tenants are live. The non-matching
+    // environment therefore honestly has zero traffic (not "unknown").
+    const tenantEnvironment = brainTenancyMode() === "production" ? "live" : "sandbox";
+    if (environment !== tenantEnvironment) {
+      return res.json({ ...aggregateUsage([], windowDays), environment });
+    }
     if (!brainAuthConfigured()) {
       return res.status(503).json({
         error: "brain_unconfigured",
@@ -339,7 +356,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (!batch.next_cursor || batch.events.length === 0) break;
         after = batch.next_cursor;
       }
-      return res.json(aggregateUsage(events, windowDays));
+      return res.json({ ...aggregateUsage(events, windowDays), environment });
     } catch (error: any) {
       console.error("Developers usage error:", error);
       if (error instanceof BrainApiError) {
