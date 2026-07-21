@@ -22,6 +22,7 @@ import { RuleDetail } from "@/pages/RuleDetail";
 import { VendorsPage } from "@/pages/VendorsPage";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
+import { DevelopersPage } from "@/pages/DevelopersPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { AddSourceModal } from "@/components/AddSourceModal";
@@ -165,6 +166,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
             <Route path="/vendors" component={VendorsPage} />
             <Route path="/activity" component={ActivityPage} />
             <Route path="/audit-log" component={AuditLogPage} />
+            <Route path="/developers" component={DevelopersPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>

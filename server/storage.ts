@@ -12,8 +12,10 @@ import {
   type BrainIdentity, type InsertBrainIdentity,
   brainAgentTokens as brainAgentTokensTable,
   type BrainAgentToken,
+  apiKeys as apiKeysTable,
+  type ApiKey, type InsertApiKey,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull } from "drizzle-orm";
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
@@ -75,6 +77,15 @@ export interface IStorage {
   // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
+
+  // Developer API keys (platform-issued; hashed secret only — plaintext never stored)
+  listApiKeys(userId: string): Promise<ApiKey[]>;
+  getApiKey(userId: string, id: string): Promise<ApiKey | undefined>;
+  createApiKey(key: InsertApiKey): Promise<ApiKey>;
+  revokeApiKey(userId: string, id: string): Promise<ApiKey | null>;
+  /** Atomic rotate: revoke `id` and insert its replacement in one transaction. */
+  rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null>;
+  touchApiKeyLastUsed(userId: string, id: string): Promise<void>;
 }
 
 export type ToolConnection = {
@@ -445,6 +456,56 @@ export class MemStorage implements IStorage {
     const row: BrainAgentToken = { tenantId, token, expiresAt, updatedAt: new Date() };
     this.brainAgentTokensStore.set(tenantId, row);
     return row;
+  }
+
+  // ─── Developer API keys ───
+  private apiKeysStore = new Map<string, ApiKey>();
+  async listApiKeys(userId: string): Promise<ApiKey[]> {
+    return Array.from(this.apiKeysStore.values())
+      .filter((k) => k.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async getApiKey(userId: string, id: string): Promise<ApiKey | undefined> {
+    const row = this.apiKeysStore.get(id);
+    return row && row.userId === userId ? row : undefined;
+  }
+  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
+    const row: ApiKey = {
+      id: randomUUID(),
+      userId: key.userId,
+      tenantId: key.tenantId ?? null,
+      name: key.name,
+      environment: key.environment,
+      scopes: key.scopes,
+      keyPrefix: key.keyPrefix,
+      keyLast4: key.keyLast4,
+      hashedSecret: key.hashedSecret,
+      createdAt: new Date(),
+      lastUsedAt: null,
+      revokedAt: null,
+      rotatedFromId: key.rotatedFromId ?? null,
+    };
+    this.apiKeysStore.set(row.id, row);
+    return row;
+  }
+  async revokeApiKey(userId: string, id: string): Promise<ApiKey | null> {
+    const row = this.apiKeysStore.get(id);
+    if (!row || row.userId !== userId || row.revokedAt) return null;
+    const updated: ApiKey = { ...row, revokedAt: new Date() };
+    this.apiKeysStore.set(id, updated);
+    return updated;
+  }
+  async rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null> {
+    const revoked = await this.revokeApiKey(userId, id);
+    if (!revoked) return null;
+    const created = await this.createApiKey(replacement);
+    return { revoked, created };
+  }
+  async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
+    const row = this.apiKeysStore.get(id);
+    if (row && row.userId === userId) {
+      this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date() });
+    }
   }
 }
 
@@ -817,6 +878,61 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return row;
+  }
+
+  // ─── Developer API keys ───
+  async listApiKeys(userId: string): Promise<ApiKey[]> {
+    return db
+      .select()
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.userId, userId))
+      .orderBy(desc(apiKeysTable.createdAt));
+  }
+  async getApiKey(userId: string, id: string): Promise<ApiKey | undefined> {
+    const [row] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)))
+      .limit(1);
+    return row ?? undefined;
+  }
+  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
+    const [row] = await db.insert(apiKeysTable).values(key).returning();
+    return row;
+  }
+  async revokeApiKey(userId: string, id: string): Promise<ApiKey | null> {
+    const [row] = await db
+      .update(apiKeysTable)
+      .set({ revokedAt: new Date() })
+      .where(and(
+        eq(apiKeysTable.userId, userId),
+        eq(apiKeysTable.id, id),
+        isNull(apiKeysTable.revokedAt),
+      ))
+      .returning();
+    return row ?? null;
+  }
+  async rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null> {
+    return db.transaction(async (tx) => {
+      const [revoked] = await tx
+        .update(apiKeysTable)
+        .set({ revokedAt: new Date() })
+        .where(and(
+          eq(apiKeysTable.userId, userId),
+          eq(apiKeysTable.id, id),
+          isNull(apiKeysTable.revokedAt),
+        ))
+        .returning();
+      if (!revoked) return null;
+      const [created] = await tx.insert(apiKeysTable).values(replacement).returning();
+      return { revoked, created };
+    });
+  }
+  async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
+    await db
+      .update(apiKeysTable)
+      .set({ lastUsedAt: new Date() })
+      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)));
   }
 }
 

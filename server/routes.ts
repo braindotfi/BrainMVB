@@ -27,7 +27,16 @@ import {
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
+import type { ApiKey as ApiKeyRow } from "@shared/schema";
 import { generateNonce } from "./nonce";
+import { brainAuthConfigured, platformServiceConfigured } from "./brain/config";
+import {
+  generateApiKey,
+  maskKey,
+  aggregateUsage,
+  API_KEY_SCOPES,
+  type UsageAuditEvent,
+} from "./developers";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -111,6 +120,234 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Reads flow through here; the browser never sees a brain-core JWT.
   // ─────────────────────────────────────────────────────────────
   app.use("/api/brain", createBrainProxyRouter());
+
+  // ─────────────────────────────────────────────────────────────
+  // DEVELOPERS (API keys, tenants read, usage aggregation)
+  //
+  // API keys are platform-issued (this backend): SHA-256-hashed at rest,
+  // plaintext returned EXACTLY ONCE on create/rotate. FOLLOW-UP (brain-core
+  // repo): brain-core's auth middleware does not yet accept these keys —
+  // enforcement wiring is upstream follow-up work.
+  // Webhooks are explicitly excluded from this section (v2).
+  // ─────────────────────────────────────────────────────────────
+
+  const createKeySchema = z.object({
+    name: z.string().trim().min(1).max(80),
+    environment: z.enum(["sandbox", "live"]),
+    scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
+  });
+
+  /** Masked wire shape — never includes hashedSecret. */
+  const toMaskedKey = (k: ApiKeyRow) => ({
+    id: k.id,
+    tenantId: k.tenantId,
+    name: k.name,
+    environment: k.environment,
+    scopes: k.scopes,
+    maskedKey: maskKey(k.keyPrefix, k.keyLast4),
+    createdAt: k.createdAt.toISOString(),
+    lastUsedAt: k.lastUsedAt ? k.lastUsedAt.toISOString() : null,
+    revokedAt: k.revokedAt ? k.revokedAt.toISOString() : null,
+    rotatedFromId: k.rotatedFromId,
+    status: k.revokedAt ? "revoked" : "active",
+  });
+
+  /** Resolve the tenant id for a new key: durable identity in production, live
+   * brain session in demo (best-effort; demo tenants are ephemeral), else null. */
+  async function resolveKeyTenantId(userId: string): Promise<string | null> {
+    const identity = await storage.getBrainIdentity(userId);
+    if (identity) return identity.tenantId;
+    if (brainAuthConfigured()) {
+      try {
+        const { tenantId } = await getBrainSession(userId);
+        return tenantId;
+      } catch {
+        /* key issuance must not depend on brain-core availability */
+      }
+    }
+    return null;
+  }
+
+  // GET /api/developers/keys - masked list, newest first.
+  app.get("/api/developers/keys", requireAuth, async (req, res) => {
+    try {
+      const keys = await storage.listApiKeys(req.session.userId!);
+      return res.json({ keys: keys.map(toMaskedKey) });
+    } catch (error: any) {
+      console.error("List API keys error:", error);
+      return res.status(500).json({ error: "Failed to list API keys" });
+    }
+  });
+
+  // POST /api/developers/keys - issue a key. Plaintext appears ONLY in this response.
+  // Live keys require production tenancy readiness (platform service configured AND
+  // the user linked to a tenant) — the UI shows "request access" otherwise.
+  app.post("/api/developers/keys", requireAuth, async (req, res) => {
+    const parsed = createKeySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "invalid_request", details: parsed.error.flatten() });
+    }
+    const { name, environment, scopes } = parsed.data;
+    const userId = req.session.userId!;
+    try {
+      if (environment === "live") {
+        const identity = await storage.getBrainIdentity(userId);
+        if (!platformServiceConfigured() || !identity) {
+          return res.status(403).json({
+            error: "live_not_available",
+            message: "Live keys require a production tenant. Request access to go live.",
+          });
+        }
+      }
+      const generated = generateApiKey(environment);
+      const tenantId = await resolveKeyTenantId(userId);
+      const created = await storage.createApiKey({
+        userId,
+        tenantId,
+        name,
+        environment,
+        scopes,
+        keyPrefix: generated.keyPrefix,
+        keyLast4: generated.keyLast4,
+        hashedSecret: generated.hashedSecret,
+        rotatedFromId: null,
+      });
+      return res.status(201).json({ key: toMaskedKey(created), plaintext: generated.plaintext });
+    } catch (error: any) {
+      console.error("Create API key error:", error);
+      return res.status(500).json({ error: "Failed to create API key" });
+    }
+  });
+
+  // POST /api/developers/keys/:id/rotate - atomic revoke + reissue (same name/env/scopes).
+  app.post("/api/developers/keys/:id/rotate", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const id = String(req.params.id);
+    try {
+      const existing = await storage.getApiKey(userId, id);
+      if (!existing) return res.status(404).json({ error: "not_found" });
+      if (existing.revokedAt) {
+        return res.status(409).json({ error: "already_revoked", message: "Revoked keys can't be rotated." });
+      }
+      const generated = generateApiKey(existing.environment as "sandbox" | "live");
+      const result = await storage.rotateApiKey(userId, id, {
+        userId,
+        tenantId: existing.tenantId,
+        name: existing.name,
+        environment: existing.environment,
+        scopes: existing.scopes,
+        keyPrefix: generated.keyPrefix,
+        keyLast4: generated.keyLast4,
+        hashedSecret: generated.hashedSecret,
+        rotatedFromId: existing.id,
+      });
+      if (!result) return res.status(409).json({ error: "already_revoked" });
+      return res.json({
+        key: toMaskedKey(result.created),
+        revoked: toMaskedKey(result.revoked),
+        plaintext: generated.plaintext,
+      });
+    } catch (error: any) {
+      console.error("Rotate API key error:", error);
+      return res.status(500).json({ error: "Failed to rotate API key" });
+    }
+  });
+
+  // POST /api/developers/keys/:id/revoke - idempotent-safe revoke (409 if already revoked).
+  app.post("/api/developers/keys/:id/revoke", requireAuth, async (req, res) => {
+    try {
+      const revoked = await storage.revokeApiKey(req.session.userId!, String(req.params.id));
+      if (!revoked) return res.status(404).json({ error: "not_found_or_already_revoked" });
+      return res.json({ key: toMaskedKey(revoked) });
+    } catch (error: any) {
+      console.error("Revoke API key error:", error);
+      return res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+
+  // GET /api/developers/tenants - read over the EXISTING tenancy layer. Demo mode
+  // shows the live demo tenant honestly (ephemeral, creation N/A); production mode
+  // shows the durable brain_identities mapping. Creation stays on the existing
+  // POST /api/brain/tenants path (NOT idempotent — never duplicated here).
+  app.get("/api/developers/tenants", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const mode = brainTenancyMode();
+    try {
+      if (mode === "production") {
+        const identity = await storage.getBrainIdentity(userId);
+        return res.json({
+          mode,
+          canCreate: platformServiceConfigured() && !identity,
+          tenants: identity
+            ? [{
+                id: identity.tenantId,
+                companyName: identity.companyName,
+                environment: "live",
+                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                ephemeral: false,
+              }]
+            : [],
+        });
+      }
+      // Demo mode: the tenant is the provisioned demo tenant of the current session.
+      if (!brainAuthConfigured()) {
+        return res.json({ mode, canCreate: false, tenants: [] });
+      }
+      const { tenantId } = await getBrainSession(userId);
+      return res.json({
+        mode,
+        canCreate: false,
+        tenants: [{
+          id: tenantId,
+          companyName: null,
+          environment: "sandbox",
+          createdAt: null, // provision time isn't exposed by brain-core; never fabricated
+          ephemeral: true,
+        }],
+      });
+    } catch (error: any) {
+      console.error("List tenants error:", error);
+      return res.status(500).json({ error: "Failed to load tenants" });
+    }
+  });
+
+  // GET /api/developers/usage?window=30 - server-side aggregation over REAL
+  // brain-core audit events (member token via the BFF session). No analytics
+  // pipeline, no mock data; empty tenant → honest zeros.
+  app.get("/api/developers/usage", requireAuth, async (req, res) => {
+    const windowDays = Math.min(Math.max(parseInt(String(req.query.window ?? "30"), 10) || 30, 1), 90);
+    if (!brainAuthConfigured()) {
+      return res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      // Page through audit events (bounded: 5 pages × 200 = 1000 events max —
+      // plenty for a 90-day demo/POC window; older events fall out of the window).
+      const events: UsageAuditEvent[] = [];
+      let after: string | undefined = undefined;
+      for (let page = 0; page < 5; page++) {
+        const batch = await listAuditEvents(token, { limit: 200, after });
+        events.push(...batch.events.map((e) => ({
+          id: e.id,
+          layer: e.layer,
+          action: e.action,
+          created_at: e.created_at,
+        })));
+        if (!batch.next_cursor || batch.events.length === 0) break;
+        after = batch.next_cursor;
+      }
+      return res.json(aggregateUsage(events, windowDays));
+    } catch (error: any) {
+      console.error("Developers usage error:", error);
+      if (error instanceof BrainApiError) {
+        return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
+      }
+      return res.status(502).json({ error: "Failed to aggregate usage" });
+    }
+  });
 
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING

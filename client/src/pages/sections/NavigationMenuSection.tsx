@@ -276,8 +276,28 @@ const AuditLogIconInactive = () => (
   <img alt="" className="shrink-0 size-[24px]" src={auditLogInactiveIcon} />
 );
 
+/* Developers icon - inline SVG code brackets, matching the 24px nav icon frame */
+const DevelopersIconActive = () => (
+  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#a88afa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 4.5L10.5 19.5" stroke="#7631ee" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
+const DevelopersIconInactive = () => (
+  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 4.5L10.5 19.5" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
 const OTHER_NAV: NavItem[] = [
   { path: "/audit-log", label: "Audit Log", ActiveIcon: AuditLogIconActive, InactiveIcon: AuditLogIconInactive },
+  { path: "/developers", label: "Developers", ActiveIcon: DevelopersIconActive, InactiveIcon: DevelopersIconInactive },
   { path: "/settings", label: "Settings", ActiveIcon: SettingsIconActive, InactiveIcon: SettingsIconInactive },
 ];
 
