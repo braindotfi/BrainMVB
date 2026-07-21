@@ -386,13 +386,13 @@ export default function TeamSection() {
 
   return (
     <div className="flex flex-col gap-[20px] w-full">
-      {/* Header */}
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
-        Members
-      </p>
+      {/* Header + panel: 4px gap, matching Account subpage */}
+      <div className="flex flex-col gap-[4px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+          Members
+        </p>
 
-      {/* Members list panel */}
-      <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+        <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
         {isLoading && (
           <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">Loading members…</p>
@@ -416,6 +416,7 @@ export default function TeamSection() {
             <MemberRow member={m} inviteActions={production} />
           </div>
         ))}
+        </div>
       </div>
 
       <button

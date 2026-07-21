@@ -108,10 +108,10 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
   </div>
 );
 
-/* Matches the Settings → Account section label ("Your Data"):
-   16px/24 semibold #414965 with a 4px gap to the card below. */
+/* 16px/24 semibold #414965. Spacing to the card below comes from the
+   parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children }: { children: ReactNode }) => (
-  <p className="mb-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
     {children}
   </p>
 );
@@ -406,7 +406,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         <div className="flex-shrink-0">{envControl}</div>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Get Started</SectionLabel>
         <Card testId="card-get-started">
           <div className="flex items-stretch divide-x divide-[#1d2132]">
@@ -447,7 +447,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         </Card>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>API Reference</SectionLabel>
         <Card testId="card-api-reference">
           <div className="divide-y divide-[#1d2132]">
@@ -477,7 +477,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         />
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Recent Activity</SectionLabel>
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
@@ -931,7 +931,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Method ({env})</SectionLabel>
         <Card testId="card-usage-by-method">
           {usageQ.isLoading ? (
@@ -959,7 +959,7 @@ function UsageSection({ env }: { env: DevEnv }) {
         </Card>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Key ({env})</SectionLabel>
         <Card testId="card-usage-by-key">
           {keysQ.isLoading ? (
