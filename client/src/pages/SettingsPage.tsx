@@ -216,10 +216,12 @@ const SettingRow = ({
   </div>
 );
 
+/* Matches the Settings → Account section label (e.g. "Your Data"):
+   16px/24 semibold #414965 with a 4px gap to the card below. */
 const SectionLabel = ({ children }: { children: string }) => (
   <p
-    className="text-[11px] uppercase px-1 mb-2"
-    style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600 }}
+    className="mb-[4px]"
+    style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
   >
     {children}
   </p>
