@@ -16,7 +16,17 @@ import {
   apiKeyDailyUsage as apiKeyDailyUsageTable,
   type ApiKey, type InsertApiKey, type ApiKeyDailyUsage,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne, isNull, gte, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "drizzle-orm";
+
+/* Daily usage rows older than this many days are dead weight (UI shows at most
+ * the last 30 days). Pruned opportunistically, at most once per UTC day per
+ * process, in the touchApiKeyLastUsed path. */
+const DAILY_USAGE_RETENTION_DAYS = 90;
+function dailyUsageRetentionCutoff(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - DAILY_USAGE_RETENTION_DAYS);
+  return d.toISOString().slice(0, 10);
+}
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
@@ -509,11 +519,19 @@ export class MemStorage implements IStorage {
     return { revoked, created };
   }
   private apiKeyDailyUsageStore = new Map<string, ApiKeyDailyUsage>(); // `${keyId}|${day}`
+  private lastDailyUsagePruneDay: string | null = null;
   async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
     const row = this.apiKeysStore.get(id);
     if (row && row.userId === userId) {
       this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date(), requestCount: row.requestCount + 1 });
       const day = new Date().toISOString().slice(0, 10);
+      if (this.lastDailyUsagePruneDay !== day) {
+        this.lastDailyUsagePruneDay = day;
+        const cutoff = dailyUsageRetentionCutoff();
+        for (const [key, usage] of this.apiKeyDailyUsageStore) {
+          if (usage.day < cutoff) this.apiKeyDailyUsageStore.delete(key);
+        }
+      }
       const usageKey = `${id}|${day}`;
       const existing = this.apiKeyDailyUsageStore.get(usageKey);
       if (existing) {
@@ -967,7 +985,20 @@ export class DatabaseStorage implements IStorage {
         target: [apiKeyDailyUsageTable.keyId, apiKeyDailyUsageTable.day],
         set: { count: sql`${apiKeyDailyUsageTable.count} + 1` },
       });
+    if (this.lastDailyUsagePruneDay !== day) {
+      this.lastDailyUsagePruneDay = day;
+      try {
+        await db
+          .delete(apiKeyDailyUsageTable)
+          .where(lt(apiKeyDailyUsageTable.day, dailyUsageRetentionCutoff()));
+      } catch (err) {
+        // Pruning is best-effort; never let it break the request path.
+        this.lastDailyUsagePruneDay = null;
+        console.warn("[storage] daily-usage prune failed:", err);
+      }
+    }
   }
+  private lastDailyUsagePruneDay: string | null = null;
   async getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]> {
     return db
       .select()
