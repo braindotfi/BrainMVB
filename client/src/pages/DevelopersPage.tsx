@@ -10,6 +10,7 @@
  * Webhooks are deliberately excluded from this section (v2).
  */
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, type LucideIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
@@ -214,25 +215,30 @@ function formatDateTime(iso: string | null): string {
   return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-/* ─── Environment toggle (persisted; Live gated server-side too) ─── */
+/* ─── Environment toggle (persisted; Live gated server-side too).
+   Matches the Finances page tab switcher formatting. ─── */
 const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => void }) => (
-  <div className="flex items-center rounded-full p-[3px] gap-[2px]" style={{ background: "#0a0c10" }}>
-    {(["sandbox", "live"] as DevEnv[]).map((e) => (
-      <button
-        key={e}
-        type="button"
-        data-testid={`toggle-env-${e}`}
-        onClick={() => onChange(e)}
-        className="px-3 py-[5px] rounded-full [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors"
-        style={env === e
-          ? e === "live"
-            ? { background: "#4a2300", color: "#ff9500" }
-            : { background: "#240757", color: "#a8b9f4" }
-          : { background: "transparent", color: "#6c779d" }}
-      >
-        {e === "live" ? "Live" : "Sandbox"}
-      </button>
-    ))}
+  <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0">
+    {(["sandbox", "live"] as DevEnv[]).map((e) => {
+      const isActive = env === e;
+      return (
+        <button
+          key={e}
+          type="button"
+          data-testid={`toggle-env-${e}`}
+          onClick={() => onChange(e)}
+          className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+          style={{ background: isActive ? "#4a2300" : "transparent" }}
+        >
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+            style={{ color: isActive ? "#ff9500" : "#414965" }}
+          >
+            {e === "live" ? "Live" : "Sandbox"}
+          </p>
+        </button>
+      );
+    })}
   </div>
 );
 
@@ -390,8 +396,11 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   const orgName = tenancy?.companyName;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4 w-full">
+    <div className="flex flex-col gap-6 pt-[20px]">
+      {/* Header spacing matches the Finances page: 40px above the kicker
+         (20px page padding + 20px here) and 40px below the text (24px
+         root gap + 16px padding here). */}
+      <div className="flex items-start justify-between gap-4 w-full pb-[16px]">
         <div className="flex flex-col gap-[4px] min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
             Developers
@@ -1011,11 +1020,11 @@ function UsageSection({ env }: { env: DevEnv }) {
 /* ─── Section nav (Settings two-column pattern) ─── */
 type DevSection = "overview" | "keys" | "tenants" | "usage";
 
-const DEV_NAV: { id: DevSection; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "keys", label: "API Keys" },
-  { id: "tenants", label: "Tenants" },
-  { id: "usage", label: "Usage and Limits" },
+const DEV_NAV: { id: DevSection; label: string; Icon: LucideIcon }[] = [
+  { id: "overview", label: "Overview", Icon: LayoutGrid },
+  { id: "keys", label: "API Keys", Icon: KeyRound },
+  { id: "tenants", label: "Tenants", Icon: Building2 },
+  { id: "usage", label: "Usage and Limits", Icon: Gauge },
 ];
 
 const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
@@ -1057,7 +1066,7 @@ export function DevelopersPage() {
       {/* ── Developers sidebar ── */}
       <nav className="flex-shrink-0 flex flex-col overflow-y-auto" style={{ width: 240, borderRight: "1px solid #1d2132", background: "#11141b" }}>
         <div className="flex flex-col gap-1 p-2 pt-2 flex-1">
-          {DEV_NAV.map(({ id, label }) => {
+          {DEV_NAV.map(({ id, label, Icon }) => {
             const active = section === id;
             return (
               <button
@@ -1069,6 +1078,7 @@ export function DevelopersPage() {
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
+                <Icon size={20} strokeWidth={1.7} className="flex-shrink-0" color={active ? "#ffffff" : "#6c779d"} />
                 <span
                   className="flex-1 text-[16px] leading-5 whitespace-nowrap"
                   style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: active ? "#ffffff" : "#6c779d" }}
@@ -1086,6 +1096,7 @@ export function DevelopersPage() {
             data-testid="developers-nav-docs"
             className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left hover:bg-[rgba(168,185,244,0.05)]"
           >
+            <BookOpen size={20} strokeWidth={1.7} className="flex-shrink-0" color="#6c779d" />
             <span className="flex-1 text-[16px] leading-5 whitespace-nowrap" style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}>
               Docs
             </span>
