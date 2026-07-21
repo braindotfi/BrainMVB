@@ -809,6 +809,13 @@ function UsageSection({ env, envControl }: { env: DevEnv; envControl: ReactNode 
   const usageQ = useQuery<UsageResponse>({
     queryKey: [`/api/developers/usage?window=60&environment=${env}`],
   });
+  // Per-key breakdown from platform-side counters (api_keys.requestCount) —
+  // a DIFFERENT measurement than the brain-core audit events above, so it is
+  // labeled explicitly and never summed with them.
+  const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
+  const envKeys = (keysQ.data?.keys ?? [])
+    .filter((k) => k.environment === env)
+    .sort((a, b) => b.requestCount - a.requestCount || (a.name < b.name ? -1 : 1));
   // Rate-limit tier comes from the SAME plan source as Settings → Billing.
   const planId = usePlanId();
   const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
@@ -888,10 +895,48 @@ function UsageSection({ env, envControl }: { env: DevEnv; envControl: ReactNode 
         </Card>
       </div>
 
+      <div>
+        <SectionLabel>Requests by key ({env})</SectionLabel>
+        <Card testId="card-usage-by-key">
+          {keysQ.isLoading ? (
+            <EmptyRow>Loading keys…</EmptyRow>
+          ) : keysQ.isError ? (
+            <EmptyRow>Key counters are unavailable right now.</EmptyRow>
+          ) : !envKeys.length ? (
+            <EmptyRow>No {env} API keys yet — create one under API Keys.</EmptyRow>
+          ) : (
+            <div className="divide-y divide-[#1d2132]">
+              {envKeys.map((k) => {
+                const max = envKeys[0]?.requestCount || 1;
+                return (
+                  <div key={k.id} className="px-4 py-3 flex items-center gap-3" data-testid={`row-usage-key-${k.id}`}>
+                    <div className="w-[220px] flex items-center gap-2 min-w-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate" title={k.name}>{k.name}</p>
+                      {k.status === "revoked" && (
+                        <span className="flex-shrink-0 [font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[11px]">revoked</span>
+                      )}
+                    </div>
+                    <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{k.maskedKey}</Mono>
+                    <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
+                      <div className="h-full rounded-full" style={{ width: k.requestCount > 0 ? `${Math.max((k.requestCount / max) * 100, 2)}%` : "0%", background: "#7631ee" }} />
+                    </div>
+                    <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right" testId={`text-usage-key-count-${k.id}`}>{k.requestCount.toLocaleString()}</Mono>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+        <p className="mt-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+          Key counts measure key-authed calls to this platform's API (all-time, per key). They are a different
+          measurement than the brain-core audit events above and won't match those totals.
+        </p>
+      </div>
+
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
         Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your tenancy
-        mode runs in (demo → sandbox, production → live). Per-key attribution arrives once brain-core enforces
-        platform-issued keys.
+        mode runs in (demo → sandbox, production → live). Per-key attribution of brain-core traffic arrives once
+        brain-core enforces platform-issued keys.
       </p>
     </div>
   );
