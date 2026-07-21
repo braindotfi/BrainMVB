@@ -417,6 +417,84 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Key-authed DATA endpoints. Same auth path as /api/v1/ping
+  // (resolveApiKeyFromRequest → lastUsedAt touch), plus scope enforcement:
+  // a key that didn't request the needed scope gets an honest 403. Data is
+  // read from brain-core via the issuing user's MEMBER token — the key never
+  // grants more than that member could already read.
+  function requireApiKeyScope(
+    key: ApiKeyRow,
+    scope: (typeof API_KEY_SCOPES)[number],
+  ): { ok: true } | { ok: false; status: number; error: string; message: string } {
+    if (!key.scopes.includes(scope)) {
+      return {
+        ok: false,
+        status: 403,
+        error: "insufficient_scope",
+        message: `This API key does not have the '${scope}' scope. Requested scopes: ${key.scopes.join(", ")}.`,
+      };
+    }
+    return { ok: true };
+  }
+
+  function registerKeyAuthedRead(
+    path: string,
+    scope: (typeof API_KEY_SCOPES)[number],
+    fetcher: (memberToken: string, req: Request) => Promise<unknown>,
+  ): void {
+    app.get(path, async (req, res) => {
+      try {
+        const auth = await resolveApiKeyFromRequest(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ error: auth.error, message: auth.message });
+        }
+        const scoped = requireApiKeyScope(auth.key, scope);
+        if (!scoped.ok) {
+          return res.status(scoped.status).json({ error: scoped.error, message: scoped.message });
+        }
+        if (!brainAuthConfigured()) {
+          return res.status(503).json({
+            error: "brain_unconfigured",
+            message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+          });
+        }
+        // Member token of the user who issued the key — reads only what that
+        // member can read. Touch lastUsedAt on every authorized call so usage
+        // attribution stays on the single resolveApiKeyFromRequest path.
+        const { token } = await getBrainSession(auth.key.userId);
+        await storage.touchApiKeyLastUsed(auth.key.userId, auth.key.id);
+        return res.json(await fetcher(token, req));
+      } catch (error: any) {
+        console.error(`Key-authed ${path} error:`, error);
+        if (error instanceof BrainApiError) {
+          return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
+        }
+        return res.status(500).json({ error: "request_failed" });
+      }
+    });
+  }
+
+  const clampLimit = (raw: unknown, fallback: number, max: number): number =>
+    Math.min(Math.max(parseInt(String(raw ?? fallback), 10) || fallback, 1), max);
+
+  // GET /api/v1/ledger/accounts — ledger:read
+  registerKeyAuthedRead("/api/v1/ledger/accounts", "ledger:read", (token, req) =>
+    listLedgerAccounts(token, { limit: clampLimit(req.query.limit, 50, 200) }),
+  );
+
+  // GET /api/v1/ledger/transactions — ledger:read
+  registerKeyAuthedRead("/api/v1/ledger/transactions", "ledger:read", (token, req) =>
+    listLedgerTransactions(token, { limit: clampLimit(req.query.limit, 50, 200) }),
+  );
+
+  // GET /api/v1/audit/events — audit:read
+  registerKeyAuthedRead("/api/v1/audit/events", "audit:read", (token, req) =>
+    listAuditEvents(token, {
+      limit: clampLimit(req.query.limit, 50, 200),
+      after: typeof req.query.after === "string" ? req.query.after : undefined,
+    }),
+  );
+
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
   // ─────────────────────────────────────────────────────────────
