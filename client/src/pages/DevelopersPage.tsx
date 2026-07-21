@@ -1500,12 +1500,6 @@ const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
   </svg>
 );
 
-const ExternalLinkIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path d="M5.5 2.5H2.5C1.94772 2.5 1.5 2.94772 1.5 3.5V11.5C1.5 12.0523 1.94772 12.5 2.5 12.5H10.5C11.0523 12.5 11.5 12.0523 11.5 11.5V8.5M8.5 1.5H12.5M12.5 1.5V5.5M12.5 1.5L6.5 7.5" stroke="#6c779d" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 export function DevelopersPage() {
   const [section, setSection] = useDevSection();
   const [env, setEnv] = useState<DevEnv>(() => {
@@ -1567,7 +1561,6 @@ export function DevelopersPage() {
             <span className="flex-1 text-[16px] leading-5 whitespace-nowrap" style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}>
               Docs
             </span>
-            <ExternalLinkIcon />
           </a>
         </div>
       </nav>
