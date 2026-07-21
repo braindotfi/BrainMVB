@@ -46,12 +46,14 @@ interface TenantsResponse {
     environment: string;
     createdAt: string | null;
     ephemeral: boolean;
+    /** Demo tenants only: when the ephemeral session (and tenant) resets. */
+    expiresAt?: string | null;
   }>;
 }
 
 interface UsageResponse {
   totalEvents: number;
-  byAction: Array<{ action: string; count: number }>;
+  byAction: Array<{ action: string; count: number; daily: Array<{ date: string; count: number }> }>;
   byLayer: Array<{ layer: string; count: number }>;
   daily: Array<{ date: string; count: number }>;
   windowDays: number;
@@ -67,8 +69,21 @@ interface KeyUsageResponse {
   }>;
 }
 
+/** Full brain-core audit event shape passed through the generic proxy —
+ *  the list row uses a subset; the detail modal consumes the rest. */
+interface DevAuditEvent {
+  id: string;
+  tenant_id: string;
+  layer: string;
+  actor: string;
+  action: string;
+  inputs: unknown;
+  outputs: unknown;
+  created_at: string;
+}
+
 interface AuditEventsResponse {
-  events: Array<{ id: string; layer: string; action: string; created_at: string }>;
+  events: DevAuditEvent[];
 }
 
 /** The scope set brain-core's policy layer actually recognizes on member
@@ -181,15 +196,32 @@ const EmptyRow = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-const MetricCard = ({ label, value, sub, testId }: { label: string; value: ReactNode; sub?: ReactNode; testId?: string }) => (
-  <Card testId={testId}>
-    <div className="p-4 flex flex-col gap-1">
+const MetricCard = ({ label, value, sub, testId, onClick }: { label: string; value: ReactNode; sub?: ReactNode; testId?: string; onClick?: () => void }) => {
+  const body = (
+    <div className="p-4 flex flex-col gap-1 relative">
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]">{label}</p>
       <Mono className="text-white text-[28px] leading-[34px] font-semibold">{value}</Mono>
       {sub && <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">{sub}</p>}
+      {onClick && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2">
+          <ChevronRight />
+        </span>
+      )}
     </div>
-  </Card>
-);
+  );
+  if (!onClick) return <Card testId={testId}>{body}</Card>;
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={onClick}
+      className="rounded-[16px] overflow-hidden text-left cursor-pointer border border-transparent hover:border-[#1d2132] hover:bg-[#11141b] transition-colors"
+      style={{ background: "#0a0c10" }}
+    >
+      {body}
+    </button>
+  );
+};
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -313,6 +345,77 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
   );
 };
 
+/* ─── Shared record-detail modal (ONE component for keys / activity / tenants).
+   Shell matches PlaintextKeyModal: backdrop blur, #11141b card, #1d2132 border. ─── */
+const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
+  title: ReactNode;
+  badges?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  testId?: string;
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      data-testid={testId}
+    >
+      <div className="flex flex-col rounded-[16px] w-[480px] max-h-[80vh] overflow-hidden" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
+        <div className="flex items-center gap-2 p-5 pb-3">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px] leading-[22px] flex-1 min-w-0 truncate" data-testid="text-detail-modal-title">{title}</p>
+          {badges}
+          <button
+            type="button"
+            data-testid="button-close-detail-modal"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex-shrink-0 size-[28px] rounded-full flex items-center justify-center hover:bg-[#1d2132] transition-colors text-[#6c779d]"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex flex-col gap-3 px-5 pb-5 overflow-y-auto">{children}</div>
+        {footer && <div className="flex items-center gap-2 p-3 border-t border-[#1d2132]">{footer}</div>}
+      </div>
+    </div>
+  );
+};
+
+/* Label/value line inside the detail modal. */
+const DetailRow = ({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) => (
+  <div className="flex items-start justify-between gap-4" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] flex-shrink-0">{label}</p>
+    <div className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] text-right min-w-0 break-words">{children}</div>
+  </div>
+);
+
+/** Live countdown to an ISO timestamp; ticks every second. Null when no target. */
+function useCountdown(targetIso: string | null | undefined): string | null {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!targetIso) return;
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [targetIso]);
+  if (!targetIso) return null;
+  const target = new Date(targetIso).getTime();
+  if (Number.isNaN(target)) return null;
+  const left = target - nowMs;
+  if (left <= 0) return "expiring now";
+  const mins = Math.floor(left / 60000);
+  const secs = Math.floor((left % 60000) / 1000);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 /* ─── API reference (copy-paste curl examples for key-authed endpoints) ─── */
 const EndpointRow = ({ path, scope, description }: { path: string; scope: string | null; description: string }) => {
   const [copied, setCopied] = useState(false);
@@ -375,6 +478,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
+  const [selectedEvent, setSelectedEvent] = useState<DevAuditEvent | null>(null);
+  const navigate = useLocation()[1];
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; companyName?: string }>({
     queryKey: ["/api/brain/tenancy"],
   });
@@ -398,8 +503,69 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
   const orgName = tenancy?.companyName;
 
+  // Question / response only for wiki events, pulled from the event's own
+  // inputs/outputs — never fabricated for other event kinds.
+  const str = (v: unknown, key: string): string | null => {
+    if (v && typeof v === "object" && typeof (v as Record<string, unknown>)[key] === "string") {
+      return (v as Record<string, string>)[key];
+    }
+    return null;
+  };
+
   return (
     <div className="flex flex-col gap-6 pt-[20px]">
+      {selectedEvent && (
+        <DetailModal
+          title={humanizeAction(selectedEvent.action)}
+          badges={
+            <span className="px-2 py-[2px] rounded-[4px] text-[11px] [font-family:'Gilroy',sans-serif] font-semibold" style={{ background: "#1d2132", color: "#a8b9f4" }}>
+              {selectedEvent.layer}
+            </span>
+          }
+          onClose={() => setSelectedEvent(null)}
+          testId="modal-activity-detail"
+          footer={
+            <PillButton
+              tone="neutral"
+              testId="button-open-audit-log"
+              onClick={() => { setSelectedEvent(null); navigate("/audit-log"); }}
+            >
+              View in Audit Log
+            </PillButton>
+          }
+        >
+          <DetailRow label="Event" testId="detail-activity-action"><Mono className="text-white">{selectedEvent.action}</Mono></DetailRow>
+          <DetailRow label="When" testId="detail-activity-when"><Mono className="text-white">{formatDateTime(selectedEvent.created_at)}</Mono></DetailRow>
+          <DetailRow label="Authenticated as" testId="detail-activity-actor">
+            <span className="inline-flex flex-col items-end gap-[2px]">
+              <span>{selectedEvent.actor.startsWith("agent") ? "Agent token" : "Member session"}</span>
+              <Mono className="text-[#6c779d] text-[12px]">{selectedEvent.actor}</Mono>
+            </span>
+          </DetailRow>
+          <DetailRow label="Tenant" testId="detail-activity-tenant"><Mono className="text-white">{selectedEvent.tenant_id}</Mono></DetailRow>
+          <DetailRow label="Event id"><Mono className="text-[#6c779d] text-[12px]">{selectedEvent.id}</Mono></DetailRow>
+          {str(selectedEvent.inputs, "question") && (
+            <div className="flex flex-col gap-1">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">Question</p>
+              <div className="rounded-[8px] p-3" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] whitespace-pre-wrap break-words" data-testid="text-activity-question">
+                  {str(selectedEvent.inputs, "question")}
+                </p>
+              </div>
+            </div>
+          )}
+          {(str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")) && (
+            <div className="flex flex-col gap-1">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">Response</p>
+              <div className="rounded-[8px] p-3" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] whitespace-pre-wrap break-words" data-testid="text-activity-response">
+                  {str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")}
+                </p>
+              </div>
+            </div>
+          )}
+        </DetailModal>
+      )}
       {/* Header spacing matches the Finances page: 40px above the kicker
          (20px page padding + 20px here) and 40px below the text (24px
          root gap + 16px padding here). */}
@@ -491,12 +657,14 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
           sub={usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
           testId="metric-requests-today"
+          onClick={() => onNavigate("usage")}
         />
         <MetricCard
           label={`Active keys (${env})`}
           value={keysQ.isLoading ? "…" : String(activeKeys.length)}
           sub="Platform-issued keys"
           testId="metric-active-keys"
+          onClick={() => onNavigate("keys")}
         />
       </div>
 
@@ -510,13 +678,20 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           ) : (
             <div className="divide-y divide-[#1d2132]">
               {activityQ.data.events.slice(0, 8).map((ev) => (
-                <div key={ev.id} className="flex items-center gap-3 px-4 py-3" data-testid={`row-activity-${ev.id}`}>
+                <button
+                  key={ev.id}
+                  type="button"
+                  onClick={() => setSelectedEvent(ev)}
+                  className="flex items-center gap-3 px-4 py-3 w-full text-left cursor-pointer hover:bg-[#11141b] transition-colors"
+                  data-testid={`row-activity-${ev.id}`}
+                >
                   <span className="px-2 py-[2px] rounded-[4px] text-[11px] [font-family:'Gilroy',sans-serif] font-semibold" style={{ background: "#1d2132", color: "#a8b9f4" }}>
                     {ev.layer}
                   </span>
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate" title={ev.action}>{humanizeAction(ev.action)}</p>
                   <Mono className="text-[#6c779d] text-[12px]">{formatDateTime(ev.created_at)}</Mono>
-                </div>
+                  <ChevronRight />
+                </button>
               ))}
             </div>
           )}
@@ -557,6 +732,7 @@ function KeysSection({ env }: { env: DevEnv }) {
   const [scopes, setScopes] = useState<string[]>(["ledger:read"]);
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/developers/keys"] });
@@ -585,6 +761,7 @@ function KeysSection({ env }: { env: DevEnv }) {
     },
     onSuccess: (data: { plaintext: string }) => {
       setPlaintext(data.plaintext);
+      setSelectedKeyId(null);
       invalidate();
     },
     onError: (e: Error) => alert.error("Couldn't rotate key", e.message),
@@ -594,6 +771,7 @@ function KeysSection({ env }: { env: DevEnv }) {
     mutationFn: async (id: string) => (await apiRequest("POST", `/api/developers/keys/${id}/revoke`)).json(),
     onSuccess: () => {
       setConfirmRevoke(null);
+      setSelectedKeyId(null);
       alert.success("Key revoked", "The key can no longer be used.");
       invalidate();
     },
@@ -607,6 +785,68 @@ function KeysSection({ env }: { env: DevEnv }) {
   return (
     <div className="flex flex-col gap-6">
       {plaintext && <PlaintextKeyModal plaintext={plaintext} onClose={() => setPlaintext(null)} />}
+      {(() => {
+        const k = selectedKeyId ? (keysQ.data?.keys ?? []).find((x) => x.id === selectedKeyId) : undefined;
+        if (!k) return null;
+        const close = () => { setSelectedKeyId(null); setConfirmRevoke(null); };
+        return (
+          <DetailModal
+            title={k.name}
+            badges={<><EnvBadge env={k.environment} /><StatusBadge status={k.status} /></>}
+            onClose={close}
+            testId="modal-key-detail"
+            footer={
+              k.status === "active" ? (
+                <>
+                  <PillButton tone="neutral" testId={`button-rotate-${k.id}`} onClick={() => rotateMut.mutate(k.id)} disabled={rotateMut.isPending || revokeMut.isPending}>
+                    {rotateMut.isPending ? "Rotating…" : "Rotate"}
+                  </PillButton>
+                  <div className="flex-1" />
+                  {confirmRevoke === k.id ? (
+                    <>
+                      <PillButton tone="neutral" testId={`button-revoke-cancel-${k.id}`} onClick={() => setConfirmRevoke(null)}>Cancel</PillButton>
+                      <PillButton tone="danger" testId={`button-revoke-confirm-${k.id}`} onClick={() => revokeMut.mutate(k.id)} disabled={revokeMut.isPending}>
+                        {revokeMut.isPending ? "Revoking…" : "Confirm revoke"}
+                      </PillButton>
+                    </>
+                  ) : (
+                    <PillButton tone="danger" testId={`button-revoke-${k.id}`} onClick={() => setConfirmRevoke(k.id)}>Revoke</PillButton>
+                  )}
+                </>
+              ) : (
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]" data-testid="text-key-revoked-footer">
+                  Revoked {formatDateTime(k.revokedAt)} — this key can no longer be used.
+                </p>
+              )
+            }
+          >
+            <DetailRow label="Key" testId="detail-key-masked"><Mono className="text-white">{k.maskedKey}</Mono></DetailRow>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px] -mt-2">
+              Keys are stored hashed — the full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
+            </p>
+            <DetailRow label="Scopes" testId="detail-key-scopes">{k.scopes.length ? k.scopes.join(", ") : "None"}</DetailRow>
+            <DetailRow label="Environment">{k.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
+            {k.tenantId && <DetailRow label="Tenant" testId="detail-key-tenant"><Mono className="text-white">{k.tenantId}</Mono></DetailRow>}
+            <DetailRow label="Created" testId="detail-key-created"><Mono className="text-white">{formatDateTime(k.createdAt)}</Mono></DetailRow>
+            <DetailRow label="Last used" testId="detail-key-last-used"><Mono className="text-white">{formatDateTime(k.lastUsedAt)}</Mono></DetailRow>
+            <DetailRow label="Requests (all-time)" testId="detail-key-requests"><Mono className="text-white">{(k.requestCount ?? 0).toLocaleString()}</Mono></DetailRow>
+            {k.rotatedFromId && <DetailRow label="Rotated from"><Mono className="text-white">{k.rotatedFromId}</Mono></DetailRow>}
+            {usageByKey.get(k.id) && (
+              <DetailRow label="Last 7 days">
+                <span className="inline-flex items-center gap-2">
+                  <Mono className="text-white">{usageByKey.get(k.id)!.windowTotal.toLocaleString()}</Mono>
+                  <UsageSparkline daily={usageByKey.get(k.id)!.daily} keyId={`modal-${k.id}`} />
+                </span>
+              </DetailRow>
+            )}
+            {k.status === "active" && k.lastUsedAt === null && (
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
+                This key has never authenticated a call yet — try GET /api/v1/ping from the API Reference.
+              </p>
+            )}
+          </DetailModal>
+        );
+      })()}
 
       <div className="flex flex-col gap-[4px]">
         <div className="flex items-center justify-between gap-4 min-h-[36px]">
@@ -710,24 +950,21 @@ function KeysSection({ env }: { env: DevEnv }) {
         ) : (
           <div className="flex flex-col gap-[8px] p-[8px]">
             {keys.map((k) => (
-              <div
+              <button
                 key={k.id}
-                className="flex flex-col gap-2 p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors"
+                type="button"
+                onClick={() => setSelectedKeyId(k.id)}
+                className="flex flex-col gap-2 p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors cursor-pointer text-left w-full"
                 data-testid={`row-key-${k.id}`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] flex-1 truncate">{k.name}</p>
                   <EnvBadge env={k.environment} />
                   <StatusBadge status={k.status} />
+                  <ChevronRight />
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
                   <Mono className="text-[#6c779d] text-[13px]" testId={`text-masked-key-${k.id}`}>{k.maskedKey}</Mono>
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Scopes: <span className="text-[#6c779d]">{k.scopes.join(", ")}</span>
-                  </span>
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Created <Mono className="text-[#6c779d]">{formatDate(k.createdAt)}</Mono>
-                  </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
                     Last used <Mono className="text-[#6c779d]">{formatDateTime(k.lastUsedAt)}</Mono>
                   </span>
@@ -744,24 +981,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                     )}
                   </span>
                 </div>
-                {k.status === "active" && (
-                  <div className="flex items-center gap-2">
-                    <PillButton tone="neutral" testId={`button-rotate-${k.id}`} onClick={() => rotateMut.mutate(k.id)} disabled={rotateMut.isPending}>
-                      {rotateMut.isPending ? "Rotating…" : "Rotate"}
-                    </PillButton>
-                    {confirmRevoke === k.id ? (
-                      <>
-                        <PillButton tone="danger" testId={`button-revoke-confirm-${k.id}`} onClick={() => revokeMut.mutate(k.id)} disabled={revokeMut.isPending}>
-                          {revokeMut.isPending ? "Revoking…" : "Confirm revoke"}
-                        </PillButton>
-                        <PillButton tone="neutral" testId={`button-revoke-cancel-${k.id}`} onClick={() => setConfirmRevoke(null)}>Cancel</PillButton>
-                      </>
-                    ) : (
-                      <PillButton tone="danger" testId={`button-revoke-${k.id}`} onClick={() => setConfirmRevoke(k.id)}>Revoke</PillButton>
-                    )}
-                  </div>
-                )}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -777,11 +997,15 @@ function KeysSection({ env }: { env: DevEnv }) {
 }
 
 /* ─── Tenants ─── */
-function TenantsSection() {
+function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void }) {
   const alert = useAppAlert();
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
+  const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
   const [companyName, setCompanyName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const selectedTenant = tenantsQ.data?.tenants.find((t) => t.id === selectedTenantId) ?? null;
+  const countdown = useCountdown(selectedTenant?.ephemeral ? selectedTenant.expiresAt : null);
 
   // Uses the EXISTING production tenant-creation path. NOT idempotent — never retried.
   const createMut = useMutation({
@@ -797,9 +1021,51 @@ function TenantsSection() {
   });
 
   const data = tenantsQ.data;
+  const tenantKeyCount = selectedTenant
+    ? (keysQ.data?.keys ?? []).filter((k) => k.tenantId === selectedTenant.id && k.status === "active").length
+    : 0;
 
   return (
     <div className="flex flex-col gap-6">
+      {selectedTenant && (
+        <DetailModal
+          title={selectedTenant.companyName ?? (selectedTenant.ephemeral ? "Demo tenant" : "Your company")}
+          badges={<EnvBadge env={selectedTenant.environment} />}
+          onClose={() => setSelectedTenantId(null)}
+          testId="modal-tenant-detail"
+          footer={
+            <PillButton
+              tone="neutral"
+              testId="button-tenant-view-keys"
+              onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
+            >
+              View API Keys
+            </PillButton>
+          }
+        >
+          <DetailRow label="Tenant id" testId="detail-tenant-id"><Mono className="text-white">{selectedTenant.id}</Mono></DetailRow>
+          <DetailRow label="Environment">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
+          <DetailRow label="Active keys" testId="detail-tenant-key-count">
+            <Mono className="text-white">{keysQ.isLoading ? "…" : String(tenantKeyCount)}</Mono>
+          </DetailRow>
+          <DetailRow label="Created" testId="detail-tenant-created">
+            <Mono className="text-white">
+              {selectedTenant.ephemeral ? formatRelative(selectedTenant.createdAt) : formatDate(selectedTenant.createdAt)}
+            </Mono>
+          </DetailRow>
+          {selectedTenant.ephemeral && (
+            <>
+              <DetailRow label="Resets in" testId="detail-tenant-expiry">
+                <Mono className="text-[#ff9500]">{countdown ?? "—"}</Mono>
+              </DetailRow>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+                Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is
+                provisioned automatically — ids and data don't carry over.
+              </p>
+            </>
+          )}
+        </DetailModal>
+      )}
       <div className="flex flex-col gap-[4px]">
       <PageHeader
         title="Tenants"
@@ -877,22 +1143,27 @@ function TenantsSection() {
         ) : (
           <div className="flex flex-col gap-[8px] p-[8px]">
             {data.tenants.map((t) => (
-              <div
+              <button
                 key={t.id}
-                className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-4"
+                type="button"
+                onClick={() => setSelectedTenantId(t.id)}
+                className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-4 w-full text-left cursor-pointer"
                 data-testid={`row-tenant-${t.id}`}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] truncate">
-                    {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
-                  </p>
-                  <Mono className="text-[#6c779d] text-[12px]" testId={`text-tenant-id-${t.id}`}>{t.id}</Mono>
+                <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+                      {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
+                    </p>
+                    <EnvBadge env={t.environment} />
+                  </div>
+                  <Mono className="block truncate text-[#6c779d] text-[12px]" testId={`text-tenant-id-${t.id}`}>{t.id}</Mono>
+                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]" data-testid={`text-tenant-created-${t.id}`}>
+                    Created <Mono className="text-[#6c779d]">{t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}</Mono>
+                  </span>
                 </div>
-                <EnvBadge env={t.environment} />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]" data-testid={`text-tenant-created-${t.id}`}>
-                  Created <Mono className="text-[#6c779d]">{t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}</Mono>
-                </span>
-              </div>
+                <ChevronRight />
+              </button>
             ))}
           </div>
         )}
@@ -920,6 +1191,8 @@ function UsageSection({ env }: { env: DevEnv }) {
     .sort((a, b) => b.requestCount - a.requestCount || (a.name < b.name ? -1 : 1));
   // Rate-limit tier comes from the SAME plan source as Settings → Billing.
   const planId = usePlanId();
+  // In-place accordion for the by-method rows (ONE open at a time).
+  const [expandedAction, setExpandedAction] = useState<string | null>(null);
   const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
 
   const data = usageQ.data;
@@ -984,17 +1257,51 @@ function UsageSection({ env }: { env: DevEnv }) {
             <div className="flex flex-col gap-[8px] p-[8px]">
               {data.byAction.map((a) => {
                 const max = data.byAction[0]?.count || 1;
+                const isOpen = expandedAction === a.action;
+                // Show the trailing 14 days of the per-action series so the
+                // expanded trend stays readable (full window is 60 days).
+                const trend = (a.daily ?? []).slice(-14);
+                const trendMax = Math.max(1, ...trend.map((d) => d.count));
                 return (
-                  <div
-                    key={a.action}
-                    className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-3"
-                    data-testid={`row-method-${a.action}`}
-                  >
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
-                    <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
-                      <div className="h-full rounded-full" style={{ width: `${Math.max((a.count / max) * 100, 2)}%`, background: "#7631ee" }} />
-                    </div>
-                    <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right">{a.count}</Mono>
+                  <div key={a.action} className={`rounded-[8px] bg-[#0a0c10] border transition-colors ${isOpen ? "border-[#1d2132] bg-[#11141b]" : "border-transparent hover:bg-[#11141b] hover:border-[#1d2132]"}`}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAction(isOpen ? null : a.action)}
+                      className="p-[8px] flex items-center gap-3 w-full text-left cursor-pointer"
+                      data-testid={`row-method-${a.action}`}
+                      aria-expanded={isOpen}
+                    >
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
+                      <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
+                        <div className="h-full rounded-full" style={{ width: `${Math.max((a.count / max) * 100, 2)}%`, background: "#7631ee" }} />
+                      </div>
+                      <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right">{a.count}</Mono>
+                      <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}><ChevronRight /></span>
+                    </button>
+                    {isOpen && (
+                      <div className="px-[8px] pb-[10px] flex flex-col gap-2" data-testid={`panel-method-daily-${a.action}`}>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+                          Daily requests, last {trend.length} days — <Mono className="text-[#6c779d]">{a.action}</Mono>
+                        </p>
+                        <div className="flex items-end gap-[3px] h-[48px]">
+                          {trend.map((d) => (
+                            <div key={d.date} className="flex-1 flex flex-col items-center gap-[3px] min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
+                              <div
+                                className="w-full rounded-[2px]"
+                                style={{
+                                  height: d.count === 0 ? 2 : Math.max(4, Math.round((d.count / trendMax) * 40)),
+                                  background: d.count === 0 ? "#1d2132" : "#7631ee",
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between">
+                          <Mono className="text-[#414965] text-[10px]">{trend[0]?.date ?? ""}</Mono>
+                          <Mono className="text-[#414965] text-[10px]">{trend[trend.length - 1]?.date ?? ""}</Mono>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1111,7 +1418,7 @@ export function DevelopersPage() {
   const SectionContent = {
     overview: <OverviewSection env={env} envControl={envControl} onNavigate={setSection} />,
     keys: <KeysSection env={env} />,
-    tenants: <TenantsSection />,
+    tenants: <TenantsSection onNavigate={setSection} />,
     usage: <UsageSection env={env} />,
   }[section];
 

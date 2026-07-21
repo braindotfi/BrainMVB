@@ -130,6 +130,17 @@ export function getBrainSessionProvisionedAt(appUserId: string): number | null {
   return cache.get(appUserId)?.provisionedAt ?? null;
 }
 
+/**
+ * When the given user's CURRENT cached demo session token expires (epoch ms),
+ * or null if there is no live cached session. On the demo-provision path a
+ * token refresh provisions a fresh tenant, so this is effectively when the
+ * ephemeral demo tenant resets. Real expiry from the token source, never fabricated.
+ */
+export function getBrainSessionExpiresAt(appUserId: string): number | null {
+  const exp = cache.get(appUserId)?.exp;
+  return exp ? exp * 1000 : null;
+}
+
 /** Mint a new session via the configured token source. */
 function createSession(appUserId: string, now: number, prior?: CachedSession): Promise<CachedSession> {
   // PRODUCTION TENANCY (Phase 2): real shared tenants, selected by BRAIN_TENANCY_MODE.

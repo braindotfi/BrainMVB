@@ -66,10 +66,20 @@ describe("aggregateUsage", () => {
     expect(out.totalEvents).toBe(3);
     expect(out.daily.find((d) => d.date === "2026-07-21")?.count).toBe(2);
     expect(out.daily.find((d) => d.date === "2026-07-19")?.count).toBe(1);
-    expect(out.byAction).toEqual([
+    expect(out.byAction.map(({ action, count }) => ({ action, count }))).toEqual([
       { action: "ledger.read", count: 2 },
       { action: "audit.read", count: 1 },
     ]);
+    // Per-action daily series: zero-filled across the SAME window, oldest first.
+    const ledger = out.byAction.find((a) => a.action === "ledger.read")!;
+    expect(ledger.daily).toHaveLength(7);
+    expect(ledger.daily.map((d) => d.date)).toEqual(out.daily.map((d) => d.date));
+    expect(ledger.daily.find((d) => d.date === "2026-07-21")?.count).toBe(1);
+    expect(ledger.daily.find((d) => d.date === "2026-07-19")?.count).toBe(1);
+    expect(ledger.daily.reduce((s, d) => s + d.count, 0)).toBe(2);
+    const audit = out.byAction.find((a) => a.action === "audit.read")!;
+    expect(audit.daily.find((d) => d.date === "2026-07-21")?.count).toBe(1);
+    expect(audit.daily.reduce((s, d) => s + d.count, 0)).toBe(1);
     expect(out.byLayer).toEqual([
       { layer: "ledger", count: 2 },
       { layer: "audit", count: 1 },

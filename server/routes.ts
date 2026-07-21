@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
-import { getBrainSession, getBrainSessionProvisionedAt } from "./brain/auth";
+import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -339,6 +339,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Real per-session provision timestamp recorded when the session cache
       // entry was created — never fabricated (null only if the cache is gone).
       const provisionedAt = getBrainSessionProvisionedAt(userId);
+      // Demo tenants are ephemeral: the session token expiry is when the tenant
+      // effectively resets (a refresh provisions a fresh tenant). Real expiry
+      // from the token source — null if the cache is gone.
+      const expiresAt = getBrainSessionExpiresAt(userId);
       return res.json({
         mode,
         canCreate: false,
@@ -349,6 +353,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           environment: "sandbox",
           createdAt: provisionedAt ? new Date(provisionedAt).toISOString() : null,
           ephemeral: true,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
         }],
       });
     } catch (error: any) {
