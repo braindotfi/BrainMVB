@@ -346,7 +346,33 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               </div>
 
               <div className="flex flex-col gap-1 items-center">
-                {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                  const count = getNavCount(path);
+                  return (
+                    <Link key={path} href={path} className="outline-none focus:outline-none">
+                      <button
+                        title={count > 0 ? `${label} (${count} new)` : label}
+                        data-testid={`nav-collapsed-${label.toLowerCase()}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                      >
+                        {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                        {count > 0 && (
+                          <span
+                            data-testid={`badge-collapsed-${label.toLowerCase()}`}
+                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                          />
+                        )}
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Divider between Activity and the items below it */}
+              <div className="w-full h-px bg-[#1d2132]" />
+
+              <div className="flex flex-col gap-1 items-center">
+                {OTHER_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
                   const count = getNavCount(path);
                   return (
                     <Link key={path} href={path} className="outline-none focus:outline-none">
