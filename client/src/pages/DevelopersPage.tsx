@@ -579,7 +579,7 @@ function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }
                     Last used <Mono className="text-[#6c779d]">{formatDateTime(k.lastUsedAt)}</Mono>
                   </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Requests <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>{k.requestCount.toLocaleString()}</Mono>
+                    Requests <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>{(k.requestCount ?? 0).toLocaleString()}</Mono>
                   </span>
                 </div>
                 {k.status === "active" && (
