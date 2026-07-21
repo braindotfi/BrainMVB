@@ -14,7 +14,16 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, Plus, type LucideIcon } from "lucide-react";
+import { Plus } from "lucide-react";
+import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784673358525.png";
+import overviewInactiveIcon from "@assets/Icon=Overview,_State=Inactive_1784673358525.png";
+import keysActiveIcon from "@assets/Icon=Keys_State=Active_1784673358524.png";
+import keysInactiveIcon from "@assets/Icon=Keys_State=Inactive_1784673358523.png";
+import tenantsActiveIcon from "@assets/Icon=Tenant,_State=Active_1784673358525.png";
+import tenantsInactiveIcon from "@assets/Icon=Tenant,_State=Inactive_1784673358525.png";
+import usageActiveIcon from "@assets/Icon=Usage,_State=Active_1784673358525.png";
+import usageInactiveIcon from "@assets/Icon=Usage,_State=Inactive_1784673358525.png";
+import docsInactiveIcon from "@assets/Icon=Docs,_State=Inactive_1784673358525.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
@@ -1475,11 +1484,11 @@ function useDevSection(): [DevSection, (s: DevSection) => void] {
   return [section, set];
 }
 
-const DEV_NAV: { id: DevSection; label: string; Icon: LucideIcon }[] = [
-  { id: "overview", label: "Overview", Icon: LayoutGrid },
-  { id: "keys", label: "API Keys", Icon: KeyRound },
-  { id: "tenants", label: "Tenants", Icon: Building2 },
-  { id: "usage", label: "Usage and Limits", Icon: Gauge },
+const DEV_NAV: { id: DevSection; label: string; activeIcon: string; inactiveIcon: string }[] = [
+  { id: "overview", label: "Overview", activeIcon: overviewActiveIcon, inactiveIcon: overviewInactiveIcon },
+  { id: "keys", label: "API Keys", activeIcon: keysActiveIcon, inactiveIcon: keysInactiveIcon },
+  { id: "tenants", label: "Tenants", activeIcon: tenantsActiveIcon, inactiveIcon: tenantsInactiveIcon },
+  { id: "usage", label: "Usage and Limits", activeIcon: usageActiveIcon, inactiveIcon: usageInactiveIcon },
 ];
 
 const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
@@ -1521,7 +1530,7 @@ export function DevelopersPage() {
       {/* ── Developers sidebar ── */}
       <nav className="flex-shrink-0 flex flex-col overflow-y-auto" style={{ width: 240, borderRight: "1px solid #1d2132", background: "#11141b" }}>
         <div className="flex flex-col gap-1 p-2 pt-2 flex-1">
-          {DEV_NAV.map(({ id, label, Icon }) => {
+          {DEV_NAV.map(({ id, label, activeIcon, inactiveIcon }) => {
             const active = section === id;
             return (
               <button
@@ -1533,7 +1542,7 @@ export function DevelopersPage() {
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
-                <Icon size={20} strokeWidth={1.7} className="flex-shrink-0" color={active ? "#ffffff" : "#6c779d"} />
+                <img src={active ? activeIcon : inactiveIcon} alt="" aria-hidden="true" width={20} height={20} className="flex-shrink-0 select-none" draggable={false} />
                 <span
                   className="flex-1 text-[16px] leading-5 whitespace-nowrap"
                   style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: active ? "#ffffff" : "#6c779d" }}
@@ -1551,7 +1560,7 @@ export function DevelopersPage() {
             data-testid="developers-nav-docs"
             className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left hover:bg-[rgba(168,185,244,0.05)]"
           >
-            <BookOpen size={20} strokeWidth={1.7} className="flex-shrink-0" color="#6c779d" />
+            <img src={docsInactiveIcon} alt="" aria-hidden="true" width={20} height={20} className="flex-shrink-0 select-none" draggable={false} />
             <span className="flex-1 text-[16px] leading-5 whitespace-nowrap" style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}>
               Docs
             </span>
