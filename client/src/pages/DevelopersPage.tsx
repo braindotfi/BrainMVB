@@ -108,8 +108,10 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
   </div>
 );
 
+/* Matches the Settings → Account section label ("Your Data"):
+   16px/24 semibold #414965 with a 4px gap to the card below. */
 const SectionLabel = ({ children }: { children: ReactNode }) => (
-  <p className="mb-2 [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px] uppercase tracking-wide">
+  <p className="mb-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
     {children}
   </p>
 );
@@ -583,18 +585,19 @@ function KeysSection({ env }: { env: DevEnv }) {
     <div className="flex flex-col gap-6">
       {plaintext && <PlaintextKeyModal plaintext={plaintext} onClose={() => setPlaintext(null)} />}
 
-      <PageHeader
-        title="API Keys"
-        actions={env === "sandbox" || liveAvailable ? (
-          <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
-            {showCreate ? "Cancel" : "+ New key"}
-          </PillButton>
-        ) : null}
-      />
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex items-center justify-between gap-4">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
+            {env === "live" ? "Live keys" : "Sandbox keys"}
+          </p>
+          {(env === "sandbox" || liveAvailable) && (
+            <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
+              {showCreate ? "Cancel" : "+ New key"}
+            </PillButton>
+          )}
+        </div>
 
-      <SectionLabel>{env === "live" ? "Live keys" : "Sandbox keys"}</SectionLabel>
-
-      {env === "live" && !liveAvailable && (
+        {env === "live" && !liveAvailable && (
         <Card testId="card-live-gated">
           <div className="p-4 flex flex-col gap-2">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">Live key issuance is gated</p>
@@ -730,6 +733,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           </div>
         )}
       </Card>
+      </div>
 
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
         Keys are issued by this platform and stored hashed. Enforcement inside brain-core's API gateway is rolling out —
@@ -763,6 +767,7 @@ function TenantsSection() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-[4px]">
       <PageHeader
         title="Tenants"
         actions={
@@ -852,6 +857,7 @@ function TenantsSection() {
           </div>
         )}
       </Card>
+      </div>
 
     </div>
   );
@@ -892,6 +898,7 @@ function UsageSection({ env }: { env: DevEnv }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-[4px]">
       <PageHeader title="Usage and Limits" />
 
       <div className="grid grid-cols-2 gap-4">
@@ -921,6 +928,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           }
           testId="metric-rate-limit-tier"
         />
+      </div>
       </div>
 
       <div>
