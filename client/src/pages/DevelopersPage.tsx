@@ -256,6 +256,14 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
           <div className="rounded-[8px] p-3 mt-1 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
             <Mono className="text-white text-[13px] leading-[18px]" testId="text-plaintext-key">{plaintext}</Mono>
           </div>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-2">
+            Try it now — this completes "Make a key-authenticated call":
+          </p>
+          <div className="rounded-[8px] p-3 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
+            <Mono className="text-[#a8b9f4] text-[12px] leading-[17px]" testId="text-curl-example">
+              {`curl ${window.location.origin}/api/v1/ping -H "Authorization: Bearer ${plaintext}"`}
+            </Mono>
+          </div>
         </div>
         <div className="flex gap-2 p-3 pt-0">
           <button
@@ -286,7 +294,18 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
 
 /* ─── Overview ─── */
 function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
-  const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
+  // Poll keys ONLY while an active key has never been used, so the
+  // "Make a key-authenticated call" step lights up in-session when the
+  // user makes their first real key-authed call (e.g. curl /api/v1/ping).
+  // Once every active key has a lastUsedAt (or there are no keys), stop.
+  const keysQ = useQuery<{ keys: MaskedKey[] }>({
+    queryKey: ["/api/developers/keys"],
+    refetchInterval: (query) => {
+      const ks = query.state.data?.keys ?? [];
+      const awaitingFirstCall = ks.some((k) => k.status === "active" && k.lastUsedAt === null);
+      return awaitingFirstCall ? 5000 : false;
+    },
+  });
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
@@ -299,8 +318,9 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
   const hasKey = activeKeys.length > 0;
   // "Make a key-authenticated call" completes ONLY once an issued key has
   // actually been used (lastUsedAt) — never from chat/session-auth activity.
-  // Until gateway enforcement ships this honestly stays incomplete, and it can
-  // never show done while step 2 (issue a key) is incomplete.
+  // lastUsedAt is touched by the key-authed platform endpoint (GET /api/v1/ping
+  // with Authorization: Bearer brain_sk_...). It can never show done while
+  // step 2 (issue a key) is incomplete.
   const hasKeyAuthedCall = hasKey && activeKeys.some((k) => k.lastUsedAt !== null);
   const today = usageQ.data?.daily.length ? usageQ.data.daily[usageQ.data.daily.length - 1].count : null;
 
@@ -321,7 +341,7 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
           envControl={envControl}
         />
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]" data-testid="text-enforcement-disclosure">
-          Keys authenticate against platform endpoints only — brain-core gateway enforcement is rolling out.
+          Keys authenticate against platform endpoints (start with GET /api/v1/ping) — brain-core gateway enforcement is rolling out.
         </p>
       </div>
 

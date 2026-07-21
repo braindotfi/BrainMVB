@@ -86,6 +86,8 @@ export interface IStorage {
   /** Atomic rotate: revoke `id` and insert its replacement in one transaction. */
   rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null>;
   touchApiKeyLastUsed(userId: string, id: string): Promise<void>;
+  /** Look up an ACTIVE (non-revoked) key by its SHA-256 secret hash — key-auth path. */
+  getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined>;
 }
 
 export type ToolConnection = {
@@ -506,6 +508,10 @@ export class MemStorage implements IStorage {
     if (row && row.userId === userId) {
       this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date() });
     }
+  }
+  async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
+    return Array.from(this.apiKeysStore.values())
+      .find((k) => k.hashedSecret === hashedSecret && !k.revokedAt);
   }
 }
 
@@ -933,6 +939,14 @@ export class DatabaseStorage implements IStorage {
       .update(apiKeysTable)
       .set({ lastUsedAt: new Date() })
       .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)));
+  }
+  async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
+    const [row] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(and(eq(apiKeysTable.hashedSecret, hashedSecret), isNull(apiKeysTable.revokedAt)))
+      .limit(1);
+    return row;
   }
 }
 

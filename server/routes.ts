@@ -32,6 +32,7 @@ import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured } from "./brain/config";
 import {
   generateApiKey,
+  hashSecret,
   maskKey,
   aggregateUsage,
   API_KEY_SCOPES,
@@ -366,6 +367,60 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
       }
       return res.status(502).json({ error: "Failed to aggregate usage" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // KEY-AUTHENTICATED PLATFORM API (v1)
+  //
+  // First endpoint that accepts a platform-issued key (Authorization:
+  // Bearer brain_sk_...). Auth is by SHA-256 hash lookup of the FULL
+  // plaintext — active keys only. Every successful call touches the
+  // key's lastUsedAt, which is what flips "Make a key-authenticated
+  // call" on Developers → Overview. Usage attribution can hang off
+  // this same resolution path later.
+  // ─────────────────────────────────────────────────────────────
+
+  async function resolveApiKeyFromRequest(req: Parameters<Parameters<typeof app.get>[1]>[0]): Promise<
+    { ok: true; key: ApiKeyRow } | { ok: false; status: number; error: string; message: string }
+  > {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith("Bearer ")) {
+      return { ok: false, status: 401, error: "missing_api_key", message: "Provide an API key: Authorization: Bearer brain_sk_..." };
+    }
+    const plaintext = header.slice("Bearer ".length).trim();
+    if (!plaintext.startsWith("brain_sk_")) {
+      return { ok: false, status: 401, error: "invalid_api_key", message: "Malformed API key." };
+    }
+    const key = await storage.getApiKeyByHash(hashSecret(plaintext));
+    if (!key) {
+      return { ok: false, status: 401, error: "invalid_api_key", message: "Unknown or revoked API key." };
+    }
+    return { ok: true, key };
+  }
+
+  // GET /api/v1/ping — key-authenticated hello. Returns the key's identity
+  // context (never the secret) and marks the key as used.
+  app.get("/api/v1/ping", async (req, res) => {
+    try {
+      const auth = await resolveApiKeyFromRequest(req);
+      if (!auth.ok) {
+        return res.status(auth.status).json({ error: auth.error, message: auth.message });
+      }
+      const { key } = auth;
+      await storage.touchApiKeyLastUsed(key.userId, key.id);
+      return res.json({
+        ok: true,
+        keyId: key.id,
+        name: key.name,
+        environment: key.environment,
+        scopes: key.scopes,
+        tenantId: key.tenantId,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Key-authed ping error:", error);
+      return res.status(500).json({ error: "ping_failed" });
     }
   });
 
