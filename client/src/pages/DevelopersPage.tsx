@@ -407,7 +407,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       </div>
 
       <div>
-        <SectionLabel>Get started</SectionLabel>
+        <SectionLabel>Get Started</SectionLabel>
         <Card testId="card-get-started">
           <div className="flex items-stretch divide-x divide-[#1d2132]">
             {steps.map((s, i) => (
@@ -448,7 +448,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       </div>
 
       <div>
-        <SectionLabel>API reference</SectionLabel>
+        <SectionLabel>API Reference</SectionLabel>
         <Card testId="card-api-reference">
           <div className="divide-y divide-[#1d2132]">
             {API_ENDPOINTS.map((ep) => (
@@ -478,7 +478,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       </div>
 
       <div>
-        <SectionLabel>Recent activity</SectionLabel>
+        <SectionLabel>Recent Activity</SectionLabel>
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
@@ -588,7 +588,7 @@ function KeysSection({ env }: { env: DevEnv }) {
       <div className="flex flex-col gap-[4px]">
         <div className="flex items-center justify-between gap-4">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
-            {env === "live" ? "Live keys" : "Sandbox keys"}
+            {env === "live" ? "Live Keys" : "Sandbox Keys"}
           </p>
           {(env === "sandbox" || liveAvailable) && (
             <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
@@ -634,7 +634,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             <div className="flex flex-col gap-2">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Requested scopes</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Enforced on the platform data endpoints (ledger/audit reads) — see the API reference on Overview.
+                Enforced on the platform data endpoints (ledger/audit reads) — see the API Reference on Overview.
               </p>
               {SCOPE_OPTIONS.map((s) => {
                 const checked = scopes.includes(s.id);
@@ -932,7 +932,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <div>
-        <SectionLabel>Requests by method ({env})</SectionLabel>
+        <SectionLabel>Requests by Method ({env})</SectionLabel>
         <Card testId="card-usage-by-method">
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
@@ -960,7 +960,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <div>
-        <SectionLabel>Requests by key ({env})</SectionLabel>
+        <SectionLabel>Requests by Key ({env})</SectionLabel>
         <Card testId="card-usage-by-key">
           {keysQ.isLoading ? (
             <EmptyRow>Loading keys…</EmptyRow>
@@ -1078,7 +1078,7 @@ export function DevelopersPage() {
             );
           })}
           <a
-            href="https://docs.brain.fi/quickstart"
+            href="https://docs.brain.fi/introduction/quickstart"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="developers-nav-docs"
