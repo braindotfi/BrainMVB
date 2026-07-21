@@ -573,8 +573,10 @@ export function HomePage() {
       ? brainAccounts.accounts.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0)
       : null;
   // No live ledger total → honest placeholder, never a fabricated figure (was "$86,993.42").
-  const totalWhole = liveTotal !== null ? format(Math.floor(liveTotal)) : "-";
-  const totalCents = liveTotal !== null ? `.${String(Math.round((liveTotal - Math.floor(liveTotal)) * 100)).padStart(2, "0")}` : "";
+  const totalFormatted = liveTotal !== null ? format(liveTotal) : "-";
+  const totalParts = totalFormatted.match(/^(.+)\.(\d{2})$/);
+  const totalWhole = totalParts ? totalParts[1] : totalFormatted;
+  const totalCents = totalParts ? `.${totalParts[2]}` : "";
 
   // Net cash flow per month from the live Ledger. With only inflows seeded today
   // this reads as positive income; it nets real expenses automatically once money
