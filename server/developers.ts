@@ -77,6 +77,40 @@ export function maskKey(keyPrefix: string, keyLast4: string): string {
   return `${keyPrefix}\u2022\u2022\u2022\u2022${keyLast4}`;
 }
 
+// ─── Key-authenticated request resolution ───
+
+export type ResolveApiKeyFailure = {
+  ok: false;
+  status: number;
+  error: "missing_api_key" | "invalid_api_key";
+  message: string;
+};
+
+export type ResolveApiKeyResult<K> = { ok: true; key: K } | ResolveApiKeyFailure;
+
+/**
+ * Resolve an `Authorization: Bearer brain_sk_...` header to an active API key.
+ * Storage-agnostic: `lookupByHash` is expected to return ONLY active (non-revoked)
+ * keys — revoked/unknown keys must resolve to undefined and yield a 401.
+ */
+export async function resolveApiKeyFromAuthHeader<K>(
+  authHeader: string | undefined,
+  lookupByHash: (hashedSecret: string) => Promise<K | undefined>,
+): Promise<ResolveApiKeyResult<K>> {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { ok: false, status: 401, error: "missing_api_key", message: "Provide an API key: Authorization: Bearer brain_sk_..." };
+  }
+  const plaintext = authHeader.slice("Bearer ".length).trim();
+  if (!plaintext.startsWith("brain_sk_")) {
+    return { ok: false, status: 401, error: "invalid_api_key", message: "Malformed API key." };
+  }
+  const key = await lookupByHash(hashSecret(plaintext));
+  if (!key) {
+    return { ok: false, status: 401, error: "invalid_api_key", message: "Unknown or revoked API key." };
+  }
+  return { ok: true, key };
+}
+
 // ─── Usage aggregation over brain-core audit events ───
 
 export interface UsageAuditEvent {

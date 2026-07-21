@@ -34,6 +34,7 @@ import {
   generateApiKey,
   hashSecret,
   maskKey,
+  resolveApiKeyFromAuthHeader,
   aggregateUsage,
   API_KEY_SCOPES,
   type UsageAuditEvent,
@@ -384,19 +385,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   async function resolveApiKeyFromRequest(req: Parameters<Parameters<typeof app.get>[1]>[0]): Promise<
     { ok: true; key: ApiKeyRow } | { ok: false; status: number; error: string; message: string }
   > {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith("Bearer ")) {
-      return { ok: false, status: 401, error: "missing_api_key", message: "Provide an API key: Authorization: Bearer brain_sk_..." };
-    }
-    const plaintext = header.slice("Bearer ".length).trim();
-    if (!plaintext.startsWith("brain_sk_")) {
-      return { ok: false, status: 401, error: "invalid_api_key", message: "Malformed API key." };
-    }
-    const key = await storage.getApiKeyByHash(hashSecret(plaintext));
-    if (!key) {
-      return { ok: false, status: 401, error: "invalid_api_key", message: "Unknown or revoked API key." };
-    }
-    return { ok: true, key };
+    return resolveApiKeyFromAuthHeader<ApiKeyRow>(
+      req.headers.authorization,
+      (hash) => storage.getApiKeyByHash(hash),
+    );
   }
 
   // GET /api/v1/ping — key-authenticated hello. Returns the key's identity
