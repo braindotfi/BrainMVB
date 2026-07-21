@@ -22,19 +22,22 @@ import {
   ingestRawDocument,
   extractRawDocument,
   askWikiQuestion,
+  listTenantKeys,
+  issueTenantKey,
+  rotateTenantKey,
+  revokeTenantKey,
+  getTenantKeyUsage,
+  brainErrorCode,
   BrainApiError,
+  type BrainTenantKey,
+  type IssuedTenantKeyResponse,
   type RawSourceType,
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
-import type { ApiKey as ApiKeyRow } from "@shared/schema";
 import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured } from "./brain/config";
 import {
-  generateApiKey,
-  hashSecret,
-  maskKey,
-  resolveApiKeyFromAuthHeader,
   aggregateUsage,
   API_KEY_SCOPES,
   type UsageAuditEvent,
@@ -126,10 +129,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ─────────────────────────────────────────────────────────────
   // DEVELOPERS (API keys, tenants read, usage aggregation)
   //
-  // API keys are platform-issued (this backend): SHA-256-hashed at rest,
-  // plaintext returned EXACTLY ONCE on create/rotate. FOLLOW-UP (brain-core
-  // repo): brain-core's auth middleware does not yet accept these keys —
-  // enforcement wiring is upstream follow-up work.
+  // API keys are brain-core-issued (PR #309: POST/GET /tenants/:id/keys,
+  // POST /keys/:id/rotate, DELETE /keys/:id, GET /tenants/:id/usage).
+  // The platform stores NOTHING key-related: list/issue/rotate/revoke and
+  // per-key usage all proxy to brain-core over the MEMBER token, and the
+  // plaintext secret is relayed from the create/rotate response exactly
+  // once. While brain-core's key flag (BRAIN_API_KEY_AUTH_ENABLED) is off
+  // the routes 404 route_not_found — surfaced honestly as 503
+  // keys_api_unavailable, never a local fallback.
   // Webhooks are explicitly excluded from this section (v2).
   // ─────────────────────────────────────────────────────────────
 
@@ -139,98 +146,99 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
   });
 
-  /** Masked wire shape — never includes hashedSecret. */
-  const toMaskedKey = (k: ApiKeyRow) => ({
+  /** brain-core key → camelCase wire shape. Masked display is built
+   * CLIENT-side from keyPrefix + keyLast4 (per the PR #309 contract). */
+  const toDevKey = (k: BrainTenantKey) => ({
     id: k.id,
-    tenantId: k.tenantId,
     name: k.name,
     environment: k.environment,
-    scopes: k.scopes,
-    maskedKey: maskKey(k.keyPrefix, k.keyLast4),
-    createdAt: k.createdAt.toISOString(),
-    lastUsedAt: k.lastUsedAt ? k.lastUsedAt.toISOString() : null,
-    requestCount: k.requestCount,
-    revokedAt: k.revokedAt ? k.revokedAt.toISOString() : null,
-    rotatedFromId: k.rotatedFromId,
-    status: k.revokedAt ? "revoked" : "active",
+    scopes: k.scopes ?? [],
+    keyPrefix: k.key_prefix,
+    keyLast4: k.key_last4,
+    createdAt: k.created_at ?? null,
+    lastUsedAt: k.last_used_at ?? null,
+    revokedAt: k.revoked_at ?? null,
+    rotatedFromId: k.rotated_from_id ?? null,
+    status: (k.status === "revoked" || k.revoked_at) ? "revoked" : "active",
   });
 
-  /** Resolve the tenant id for a new key: durable identity in production, live
-   * brain session in demo (best-effort; demo tenants are ephemeral), else null. */
-  async function resolveKeyTenantId(userId: string): Promise<string | null> {
-    const identity = await storage.getBrainIdentity(userId);
-    if (identity) return identity.tenantId;
-    if (brainAuthConfigured()) {
-      try {
-        const { tenantId } = await getBrainSession(userId);
-        return tenantId;
-      } catch {
-        /* key issuance must not depend on brain-core availability */
-      }
+  /** The one-time plaintext from an issue/rotate response (field name tolerant). */
+  const issuedPlaintext = (r: IssuedTenantKeyResponse): string | null => {
+    for (const f of ["secret", "plaintext", "key_secret", "api_key"]) {
+      const v = (r as Record<string, unknown>)[f];
+      if (typeof v === "string" && v.startsWith("brain_sk_")) return v;
     }
-    return null;
+    const keyObj = r.key as unknown as Record<string, unknown> | undefined;
+    return keyObj && typeof keyObj.secret === "string" ? keyObj.secret : null;
+  };
+
+  /** Map brain-core key-API errors to honest platform responses.
+   * route_not_found = the upstream key flag is off → 503 keys_api_unavailable
+   * (the UI shows a "not yet enabled" state and auto-recovers when it flips). */
+  function sendKeyApiError(res: Response, error: unknown, action: string): void {
+    if (error instanceof BrainApiError) {
+      const code = brainErrorCode(error);
+      if (code === "route_not_found") {
+        res.status(503).json({
+          error: "keys_api_unavailable",
+          message: "The brain-core API-key service isn't enabled yet. Keys become available as soon as it is — no action needed on your side.",
+        });
+        return;
+      }
+      if (code === "api_key_not_found" || error.status === 404) {
+        res.status(404).json({ error: "api_key_not_found", message: "This key no longer exists — it may already have been rotated or revoked." });
+        return;
+      }
+      if (code === "rate_limited" || error.status === 429) {
+        res.status(429).json({ error: "rate_limited", message: "Rate limit hit (600 requests per 60s per key). Try again shortly." });
+        return;
+      }
+      if (code === "auth_invalid_key" || error.status === 401) {
+        res.status(401).json({ error: "auth_invalid_key", message: "The key is invalid or revoked." });
+        return;
+      }
+      res.status(error.status >= 500 ? 502 : error.status).json({ error: code ?? "brain_upstream_error", status: error.status });
+      return;
+    }
+    console.error(`Developers ${action} error:`, error);
+    res.status(500).json({ error: `Failed to ${action}` });
   }
 
-  // GET /api/developers/keys - masked list, newest first.
+  /** Member session (token + tenantId) or an honest 503 if unconfigured. */
+  async function requireBrainMemberSession(req: Request, res: Response): Promise<{ token: string; tenantId: string } | null> {
+    if (!brainAuthConfigured()) {
+      res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+      return null;
+    }
+    return await getBrainSession(req.session.userId!);
+  }
+
+  // GET /api/developers/keys - brain-core key list (masked fields only).
   app.get("/api/developers/keys", requireAuth, async (req, res) => {
     try {
-      const keys = await storage.listApiKeys(req.session.userId!);
-      return res.json({ keys: keys.map(toMaskedKey) });
-    } catch (error: any) {
-      console.error("List API keys error:", error);
-      return res.status(500).json({ error: "Failed to list API keys" });
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const { keys } = await listTenantKeys(session.token, session.tenantId);
+      return res.json({ keys: (keys ?? []).map(toDevKey) });
+    } catch (error) {
+      return sendKeyApiError(res, error, "list keys");
     }
   });
 
-  // GET /api/developers/keys/usage?days=7|30 - per-key daily request counts,
-  // zero-filled for every day in the window (recent-activity view; no analytics pipeline).
-  app.get("/api/developers/keys/usage", requireAuth, async (req, res) => {
-    try {
-      const days = req.query.days === "30" ? 30 : 7;
-      const userId = req.session.userId!;
-      const dayList: string[] = [];
-      const now = Date.now();
-      for (let i = days - 1; i >= 0; i--) {
-        dayList.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
-      }
-      const [keys, rows] = await Promise.all([
-        storage.listApiKeys(userId),
-        storage.getApiKeyDailyUsage(userId, dayList[0]),
-      ]);
-      const byKey = new Map<string, Map<string, number>>();
-      for (const r of rows) {
-        if (!byKey.has(r.keyId)) byKey.set(r.keyId, new Map());
-        byKey.get(r.keyId)!.set(r.day, r.count);
-      }
-      const usage = keys.map((k) => {
-        const daysMap = byKey.get(k.id);
-        const daily = dayList.map((day) => ({ day, count: daysMap?.get(day) ?? 0 }));
-        return {
-          keyId: k.id,
-          daily,
-          windowTotal: daily.reduce((sum, d) => sum + d.count, 0),
-        };
-      });
-      return res.json({ days, usage });
-    } catch (error: any) {
-      console.error("Key usage error:", error);
-      return res.status(500).json({ error: "Failed to load key usage" });
-    }
-  });
-
-  // POST /api/developers/keys - issue a key. Plaintext appears ONLY in this response.
-  // Live keys require production tenancy readiness (platform service configured AND
-  // the user linked to a tenant) — the UI shows "request access" otherwise.
+  // POST /api/developers/keys - issue via brain-core. Plaintext relayed ONCE.
+  // Live keys still require production tenancy readiness (linked tenant).
   app.post("/api/developers/keys", requireAuth, async (req, res) => {
     const parsed = createKeySchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "invalid_request", details: parsed.error.flatten() });
     }
     const { name, environment, scopes } = parsed.data;
-    const userId = req.session.userId!;
     try {
       if (environment === "live") {
-        const identity = await storage.getBrainIdentity(userId);
+        const identity = await storage.getBrainIdentity(req.session.userId!);
         if (!platformServiceConfigured() || !identity) {
           return res.status(403).json({
             error: "live_not_available",
@@ -238,69 +246,78 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           });
         }
       }
-      const generated = generateApiKey(environment);
-      const tenantId = await resolveKeyTenantId(userId);
-      const created = await storage.createApiKey({
-        userId,
-        tenantId,
-        name,
-        environment,
-        scopes,
-        keyPrefix: generated.keyPrefix,
-        keyLast4: generated.keyLast4,
-        hashedSecret: generated.hashedSecret,
-        rotatedFromId: null,
-      });
-      return res.status(201).json({ key: toMaskedKey(created), plaintext: generated.plaintext });
-    } catch (error: any) {
-      console.error("Create API key error:", error);
-      return res.status(500).json({ error: "Failed to create API key" });
-    }
-  });
-
-  // POST /api/developers/keys/:id/rotate - atomic revoke + reissue (same name/env/scopes).
-  app.post("/api/developers/keys/:id/rotate", requireAuth, async (req, res) => {
-    const userId = req.session.userId!;
-    const id = String(req.params.id);
-    try {
-      const existing = await storage.getApiKey(userId, id);
-      if (!existing) return res.status(404).json({ error: "not_found" });
-      if (existing.revokedAt) {
-        return res.status(409).json({ error: "already_revoked", message: "Revoked keys can't be rotated." });
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const issued = await issueTenantKey(session.token, session.tenantId, { name, environment, scopes });
+      const plaintext = issuedPlaintext(issued);
+      if (!issued.key || !plaintext) {
+        console.error("Issue key: unexpected brain-core response shape", Object.keys(issued ?? {}));
+        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core issued a key but the response shape was unexpected." });
       }
-      const generated = generateApiKey(existing.environment as "sandbox" | "live");
-      const result = await storage.rotateApiKey(userId, id, {
-        userId,
-        tenantId: existing.tenantId,
-        name: existing.name,
-        environment: existing.environment,
-        scopes: existing.scopes,
-        keyPrefix: generated.keyPrefix,
-        keyLast4: generated.keyLast4,
-        hashedSecret: generated.hashedSecret,
-        rotatedFromId: existing.id,
-      });
-      if (!result) return res.status(409).json({ error: "already_revoked" });
-      return res.json({
-        key: toMaskedKey(result.created),
-        revoked: toMaskedKey(result.revoked),
-        plaintext: generated.plaintext,
-      });
-    } catch (error: any) {
-      console.error("Rotate API key error:", error);
-      return res.status(500).json({ error: "Failed to rotate API key" });
+      return res.status(201).json({ key: toDevKey(issued.key), plaintext });
+    } catch (error) {
+      return sendKeyApiError(res, error, "create key");
     }
   });
 
-  // POST /api/developers/keys/:id/revoke - idempotent-safe revoke (409 if already revoked).
-  app.post("/api/developers/keys/:id/revoke", requireAuth, async (req, res) => {
+  // POST /api/developers/keys/:id/rotate - brain-core atomic revoke + reissue.
+  // 404 api_key_not_found on double-rotate (idempotent-unsafe upstream).
+  app.post("/api/developers/keys/:id/rotate", requireAuth, async (req, res) => {
     try {
-      const revoked = await storage.revokeApiKey(req.session.userId!, String(req.params.id));
-      if (!revoked) return res.status(404).json({ error: "not_found_or_already_revoked" });
-      return res.json({ key: toMaskedKey(revoked) });
-    } catch (error: any) {
-      console.error("Revoke API key error:", error);
-      return res.status(500).json({ error: "Failed to revoke API key" });
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const issued = await rotateTenantKey(session.token, String(req.params.id));
+      const plaintext = issuedPlaintext(issued);
+      if (!issued.key || !plaintext) {
+        console.error("Rotate key: unexpected brain-core response shape", Object.keys(issued ?? {}));
+        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core rotated the key but the response shape was unexpected." });
+      }
+      return res.json({ key: toDevKey(issued.key), plaintext });
+    } catch (error) {
+      return sendKeyApiError(res, error, "rotate key");
+    }
+  });
+
+  // DELETE /api/developers/keys/:id - brain-core revoke (204 on success).
+  // 404 api_key_not_found if already revoked (double-click) — handled client-side.
+  app.delete("/api/developers/keys/:id", requireAuth, async (req, res) => {
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      await revokeTenantKey(session.token, String(req.params.id));
+      return res.status(204).end();
+    } catch (error) {
+      return sendKeyApiError(res, error, "revoke key");
+    }
+  });
+
+  // GET /api/developers/key-usage?environment=&keyId= - brain-core per-key
+  // usage attribution (30d window). keyId optional: omit for the tenant-wide
+  // Usage page, include for a single key's detail modal.
+  app.get("/api/developers/key-usage", requireAuth, async (req, res) => {
+    const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
+    if (!envParsed.success) return res.status(400).json({ error: "invalid_environment" });
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const usage = await getTenantKeyUsage(session.token, session.tenantId, {
+        window: "30d",
+        environment: envParsed.data,
+        key_id: typeof req.query.keyId === "string" ? req.query.keyId : undefined,
+      });
+      return res.json({
+        window: usage.window ?? "30d",
+        totalEvents: usage.total_events ?? 0,
+        keys: (usage.keys ?? []).map((k) => ({
+          keyId: k.key_id,
+          environment: k.environment,
+          eventCount: k.event_count ?? 0,
+          firstEventAt: k.first_event_at ?? null,
+          lastEventAt: k.last_event_at ?? null,
+        })),
+      });
+    } catch (error) {
+      return sendKeyApiError(res, error, "load key usage");
     }
   });
 
@@ -416,101 +433,85 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ─────────────────────────────────────────────────────────────
   // KEY-AUTHENTICATED PLATFORM API (v1)
   //
-  // First endpoint that accepts a platform-issued key (Authorization:
-  // Bearer brain_sk_...). Auth is by SHA-256 hash lookup of the FULL
-  // plaintext — active keys only. Every successful call touches the
-  // key's lastUsedAt, which is what flips "Make a key-authenticated
-  // call" on Developers → Overview. Usage attribution can hang off
-  // this same resolution path later.
+  // The raw `Authorization: Bearer brain_sk_...` key is forwarded STRAIGHT
+  // to brain-core, which owns validation, scope enforcement, and per-key
+  // rate limiting (600 req/60s). The platform never stores or resolves
+  // keys locally. brain-core error codes (auth_invalid_key, rate_limited)
+  // pass through with their upstream status.
   // ─────────────────────────────────────────────────────────────
 
-  async function resolveApiKeyFromRequest(req: Parameters<Parameters<typeof app.get>[1]>[0]): Promise<
-    { ok: true; key: ApiKeyRow } | { ok: false; status: number; error: string; message: string }
-  > {
-    return resolveApiKeyFromAuthHeader<ApiKeyRow>(
-      req.headers.authorization,
-      (hash) => storage.getApiKeyByHash(hash),
-    );
+  /** Extract the plaintext brain_sk_ key from the Authorization header. */
+  function extractApiKeyBearer(req: Request):
+    { ok: true; key: string } | { ok: false; status: number; error: string; message: string } {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return { ok: false, status: 401, error: "missing_api_key", message: "Provide an API key: Authorization: Bearer brain_sk_..." };
+    }
+    const plaintext = authHeader.slice("Bearer ".length).trim();
+    if (!plaintext.startsWith("brain_sk_")) {
+      return { ok: false, status: 401, error: "invalid_api_key", message: "Malformed API key." };
+    }
+    return { ok: true, key: plaintext };
   }
 
-  // GET /api/v1/ping — key-authenticated hello. Returns the key's identity
-  // context (never the secret) and marks the key as used.
-  app.get("/api/v1/ping", async (req, res) => {
-    try {
-      const auth = await resolveApiKeyFromRequest(req);
-      if (!auth.ok) {
-        return res.status(auth.status).json({ error: auth.error, message: auth.message });
+  /** Relay a brain-core key-auth failure with its real code/status. */
+  function sendKeyAuthedError(res: Response, error: unknown, path: string): void {
+    if (error instanceof BrainApiError) {
+      const code = brainErrorCode(error);
+      if (code === "route_not_found" || (error.status === 401 && code !== "auth_invalid_key")) {
+        // 401 without auth_invalid_key = brain-core's auth middleware doesn't
+        // recognize brain_sk_ bearers yet (key flag off) — honest 503.
+        res.status(503).json({
+          error: "keys_api_unavailable",
+          message: "brain-core key authentication isn't enabled yet. This endpoint starts working as soon as it is.",
+        });
+        return;
       }
-      const { key } = auth;
-      await storage.touchApiKeyLastUsed(key.userId, key.id);
-      return res.json({
-        ok: true,
-        keyId: key.id,
-        name: key.name,
-        environment: key.environment,
-        scopes: key.scopes,
-        tenantId: key.tenantId,
-        timestamp: new Date().toISOString(),
+      res.status(error.status).json({
+        error: code ?? "brain_upstream_error",
+        message: error.status === 429
+          ? "Rate limit hit (600 requests per 60s per key). Try again shortly."
+          : error.status === 401
+            ? "The key is invalid or revoked."
+            : undefined,
       });
-    } catch (error: any) {
-      console.error("Key-authed ping error:", error);
-      return res.status(500).json({ error: "ping_failed" });
+      return;
+    }
+    console.error(`Key-authed ${path} error:`, error);
+    res.status(500).json({ error: "request_failed" });
+  }
+
+  // GET /api/v1/ping — verifies the key authenticates against brain-core.
+  // Valid = any authenticated response, including 403 insufficient scope
+  // (the key is real, it just wasn't issued that scope).
+  app.get("/api/v1/ping", async (req, res) => {
+    const auth = extractApiKeyBearer(req);
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
+    try {
+      await listAuditEvents(auth.key, { limit: 1 });
+      return res.json({ ok: true, timestamp: new Date().toISOString() });
+    } catch (error) {
+      if (error instanceof BrainApiError && error.status === 403) {
+        // Authenticated but not scoped for audit:read — the key itself works.
+        return res.json({ ok: true, note: "Key is valid (not scoped for audit:read).", timestamp: new Date().toISOString() });
+      }
+      return sendKeyAuthedError(res, error, "/api/v1/ping");
     }
   });
 
-  // Key-authed DATA endpoints. Same auth path as /api/v1/ping
-  // (resolveApiKeyFromRequest → lastUsedAt touch), plus scope enforcement:
-  // a key that didn't request the needed scope gets an honest 403. Data is
-  // read from brain-core via the issuing user's MEMBER token — the key never
-  // grants more than that member could already read.
-  function requireApiKeyScope(
-    key: ApiKeyRow,
-    scope: (typeof API_KEY_SCOPES)[number],
-  ): { ok: true } | { ok: false; status: number; error: string; message: string } {
-    if (!key.scopes.includes(scope)) {
-      return {
-        ok: false,
-        status: 403,
-        error: "insufficient_scope",
-        message: `This API key does not have the '${scope}' scope. Requested scopes: ${key.scopes.join(", ")}.`,
-      };
-    }
-    return { ok: true };
-  }
-
+  // Key-authed DATA endpoints: pure pass-throughs. brain-core enforces the
+  // key's scopes itself (ledger:read / audit:read) and 403s honestly.
   function registerKeyAuthedRead(
     path: string,
-    scope: (typeof API_KEY_SCOPES)[number],
-    fetcher: (memberToken: string, req: Request) => Promise<unknown>,
+    fetcher: (apiKey: string, req: Request) => Promise<unknown>,
   ): void {
     app.get(path, async (req, res) => {
+      const auth = extractApiKeyBearer(req);
+      if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
       try {
-        const auth = await resolveApiKeyFromRequest(req);
-        if (!auth.ok) {
-          return res.status(auth.status).json({ error: auth.error, message: auth.message });
-        }
-        const scoped = requireApiKeyScope(auth.key, scope);
-        if (!scoped.ok) {
-          return res.status(scoped.status).json({ error: scoped.error, message: scoped.message });
-        }
-        if (!brainAuthConfigured()) {
-          return res.status(503).json({
-            error: "brain_unconfigured",
-            message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
-          });
-        }
-        // Member token of the user who issued the key — reads only what that
-        // member can read. Touch lastUsedAt on every authorized call so usage
-        // attribution stays on the single resolveApiKeyFromRequest path.
-        const { token } = await getBrainSession(auth.key.userId);
-        await storage.touchApiKeyLastUsed(auth.key.userId, auth.key.id);
-        return res.json(await fetcher(token, req));
-      } catch (error: any) {
-        console.error(`Key-authed ${path} error:`, error);
-        if (error instanceof BrainApiError) {
-          return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
-        }
-        return res.status(500).json({ error: "request_failed" });
+        return res.json(await fetcher(auth.key, req));
+      } catch (error) {
+        return sendKeyAuthedError(res, error, path);
       }
     });
   }
@@ -518,19 +519,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   const clampLimit = (raw: unknown, fallback: number, max: number): number =>
     Math.min(Math.max(parseInt(String(raw ?? fallback), 10) || fallback, 1), max);
 
-  // GET /api/v1/ledger/accounts — ledger:read
-  registerKeyAuthedRead("/api/v1/ledger/accounts", "ledger:read", (token, req) =>
-    listLedgerAccounts(token, { limit: clampLimit(req.query.limit, 50, 200) }),
+  // GET /api/v1/ledger/accounts — ledger:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/ledger/accounts", (apiKey, req) =>
+    listLedgerAccounts(apiKey, { limit: clampLimit(req.query.limit, 50, 200) }),
   );
 
-  // GET /api/v1/ledger/transactions — ledger:read
-  registerKeyAuthedRead("/api/v1/ledger/transactions", "ledger:read", (token, req) =>
-    listLedgerTransactions(token, { limit: clampLimit(req.query.limit, 50, 200) }),
+  // GET /api/v1/ledger/transactions — ledger:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/ledger/transactions", (apiKey, req) =>
+    listLedgerTransactions(apiKey, { limit: clampLimit(req.query.limit, 50, 200) }),
   );
 
-  // GET /api/v1/audit/events — audit:read
-  registerKeyAuthedRead("/api/v1/audit/events", "audit:read", (token, req) =>
-    listAuditEvents(token, {
+  // GET /api/v1/audit/events — audit:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/audit/events", (apiKey, req) =>
+    listAuditEvents(apiKey, {
       limit: clampLimit(req.query.limit, 50, 200),
       after: typeof req.query.after === "string" ? req.query.after : undefined,
     }),

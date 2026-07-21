@@ -3,13 +3,16 @@
  *
  * Assembled ONLY from existing design patterns (Settings two-column shell,
  * Home metric cards / list rows, existing pill buttons and badges). No mock
- * data: keys come from /api/developers/keys (platform-issued, hashed at rest,
- * plaintext shown exactly once), usage aggregates REAL brain-core audit
- * events, tenants read the existing tenancy layer.
+ * data: keys are issued and stored by brain-core (proxied via
+ * /api/developers/keys; plaintext relayed exactly once), usage aggregates
+ * REAL brain-core audit events plus brain-core's per-key usage attribution,
+ * tenants read the existing tenancy layer. While brain-core's key API flag
+ * is off upstream, the server answers 503 keys_api_unavailable and this page
+ * shows an honest "not yet enabled" state — never a local fallback.
  *
  * Webhooks are deliberately excluded from this section (v2).
  */
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { LayoutGrid, KeyRound, Building2, Gauge, BookOpen, Plus, type LucideIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -22,18 +25,26 @@ type DevEnv = "sandbox" | "live";
 
 interface MaskedKey {
   id: string;
-  tenantId: string | null;
   name: string;
   environment: string;
   scopes: string[];
-  maskedKey: string;
-  createdAt: string;
+  keyPrefix: string;
+  keyLast4: string;
+  createdAt: string | null;
   lastUsedAt: string | null;
-  requestCount: number;
   revokedAt: string | null;
   rotatedFromId: string | null;
   status: "active" | "revoked";
 }
+
+/** Masked display is built CLIENT-side from prefix + last4 (PR #309 contract). */
+const maskKey = (k: Pick<MaskedKey, "keyPrefix" | "keyLast4">): string =>
+  `${k.keyPrefix}\u2022\u2022\u2022\u2022${k.keyLast4}`;
+
+/** True when the server reported 503 keys_api_unavailable (brain-core's
+ *  key API flag is off upstream). The UI shows an honest waiting state. */
+const isKeysApiUnavailable = (e: unknown): boolean =>
+  e instanceof Error && e.message.startsWith("503") && e.message.includes("keys_api_unavailable");
 
 interface TenantsResponse {
   mode: "demo" | "production";
@@ -60,12 +71,17 @@ interface UsageResponse {
   environment: DevEnv;
 }
 
+/** brain-core per-key usage attribution (camelCase wire shape from the
+ *  platform proxy; 30-day window). */
 interface KeyUsageResponse {
-  days: number;
-  usage: Array<{
+  window: string;
+  totalEvents: number;
+  keys: Array<{
     keyId: string;
-    daily: Array<{ day: string; count: number }>;
-    windowTotal: number;
+    environment: string;
+    eventCount: number;
+    firstEventAt: string | null;
+    lastEventAt: string | null;
   }>;
 }
 
@@ -86,9 +102,8 @@ interface AuditEventsResponse {
   events: DevAuditEvent[];
 }
 
-/** The scope set brain-core's policy layer actually recognizes on member
- *  tokens (confirmed from issued test keys). "Requested" until gateway
- *  enforcement ships — see the disclosure line on Overview. */
+/** The only scopes brain-core recognizes on tenant API keys — enforced by
+ *  brain-core's gateway on every key-authenticated call. */
 const SCOPE_OPTIONS = [
   { id: "ledger:read", label: "Ledger read", hint: "Accounts, transactions, invoices" },
   { id: "audit:read", label: "Audit read", hint: "Audit events and anchors" },
@@ -188,6 +203,22 @@ const EnvBadge = ({ env }: { env: string }) => (
   >
     {env === "live" ? "Live" : "Sandbox"}
   </span>
+);
+
+/* Honest waiting state while brain-core's key API flag is off upstream.
+   Shared by Overview / API Keys / Usage — never a local fallback. */
+const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
+  <Card testId={testId ?? "card-keys-unavailable"}>
+    <div className="p-4 flex flex-col gap-2">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">
+        The keys API isn't enabled yet
+      </p>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
+        brain-core's API-key service hasn't been switched on for this environment. Keys become
+        available here automatically as soon as it is — no action needed on your side.
+      </p>
+    </div>
+  </Card>
 );
 
 const EmptyRow = ({ children }: { children: ReactNode }) => (
@@ -469,12 +500,19 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   // Once every active key has a lastUsedAt (or there are no keys), stop.
   const keysQ = useQuery<{ keys: MaskedKey[] }>({
     queryKey: ["/api/developers/keys"],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
     refetchInterval: (query) => {
+      if (isKeysApiUnavailable(query.state.error)) return false;
       const ks = query.state.data?.keys ?? [];
       const awaitingFirstCall = ks.some((k) => k.status === "active" && k.lastUsedAt === null);
       return awaitingFirstCall ? 5000 : false;
     },
   });
+  const keyUsageQ = useQuery<KeyUsageResponse>({
+    queryKey: [`/api/developers/key-usage?environment=${env}`],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
+  });
+  const keysUnavailable = isKeysApiUnavailable(keysQ.error);
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
@@ -488,11 +526,14 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   const hasTenant = (tenantsQ.data?.tenants.length ?? 0) > 0;
   const hasKey = activeKeys.length > 0;
   // "Make a key-authenticated call" completes ONLY once an issued key has
-  // actually been used (lastUsedAt) — never from chat/session-auth activity.
-  // lastUsedAt is touched by the key-authed platform endpoint (GET /api/v1/ping
-  // with Authorization: Bearer brain_sk_...). It can never show done while
-  // step 2 (issue a key) is incomplete.
-  const hasKeyAuthedCall = hasKey && activeKeys.some((k) => k.lastUsedAt !== null);
+  // actually been used — from brain-core's own signals (a key's last_used_at
+  // or a nonzero event count in the key-usage attribution), never from
+  // chat/session-auth activity. It can never show done while step 2 (issue a
+  // key) is incomplete.
+  const hasKeyAuthedCall = hasKey && (
+    activeKeys.some((k) => k.lastUsedAt !== null) ||
+    (keyUsageQ.data?.keys ?? []).some((u) => u.eventCount > 0)
+  );
   const today = usageQ.data?.daily.length ? usageQ.data.daily[usageQ.data.daily.length - 1].count : null;
 
   const steps = [
@@ -580,11 +621,13 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             Build on your Brain ledger.
           </p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]" data-testid="text-enforcement-disclosure">
-            Keys authenticate against platform endpoints (start with GET /api/v1/ping). Brain-core gateway enforcement is rolling out.
+            Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
         <div className="flex-shrink-0">{envControl}</div>
       </div>
+
+      {keysUnavailable && <KeysUnavailableCard testId="card-keys-unavailable-overview" />}
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Get Started</SectionLabel>
@@ -661,8 +704,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         />
         <MetricCard
           label={`Active keys (${env})`}
-          value={keysQ.isLoading ? "…" : String(activeKeys.length)}
-          sub="Platform-issued keys"
+          value={keysQ.isLoading ? "…" : keysQ.isError ? "—" : String(activeKeys.length)}
+          sub={keysUnavailable ? "Keys API not yet enabled" : "Issued by brain-core"}
           testId="metric-active-keys"
           onClick={() => onNavigate("keys")}
         />
@@ -701,32 +744,19 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   );
 }
 
-/** Tiny per-key daily-activity bars (last N days, zeros render as faint stubs). */
-function UsageSparkline({ daily, keyId }: { daily: Array<{ day: string; count: number }>; keyId: string }) {
-  const max = Math.max(1, ...daily.map((d) => d.count));
-  return (
-    <div className="flex items-end gap-[2px] h-[16px]" data-testid={`sparkline-usage-${keyId}`}>
-      {daily.map((d) => (
-        <div
-          key={d.day}
-          title={`${d.day}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}
-          className="w-[5px] rounded-[1px]"
-          style={{
-            height: d.count === 0 ? 2 : Math.max(3, Math.round((d.count / max) * 16)),
-            background: d.count === 0 ? "#1d2132" : "#7631ee",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 /* ─── API Keys ─── */
 function KeysSection({ env }: { env: DevEnv }) {
   const alert = useAppAlert();
-  const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
-  const usageQ = useQuery<KeyUsageResponse>({ queryKey: ["/api/developers/keys/usage"] });
-  const usageByKey = new Map((usageQ.data?.usage ?? []).map((u) => [u.keyId, u]));
+  const keysQ = useQuery<{ keys: MaskedKey[] }>({
+    queryKey: ["/api/developers/keys"],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
+  });
+  const usageQ = useQuery<KeyUsageResponse>({
+    queryKey: [`/api/developers/key-usage?environment=${env}`],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
+  });
+  const usageByKey = new Map((usageQ.data?.keys ?? []).map((u) => [u.keyId, u]));
+  const keysUnavailable = isKeysApiUnavailable(keysQ.error);
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>(["ledger:read"]);
@@ -736,7 +766,7 @@ function KeysSection({ env }: { env: DevEnv }) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/developers/keys"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/developers/keys/usage"] });
+    queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith("/api/developers/key-usage") });
   };
 
   const createMut = useMutation({
@@ -764,18 +794,38 @@ function KeysSection({ env }: { env: DevEnv }) {
       setSelectedKeyId(null);
       invalidate();
     },
-    onError: (e: Error) => alert.error("Couldn't rotate key", e.message),
+    onError: (e: Error) => {
+      // 404 api_key_not_found: already rotated/revoked elsewhere — refresh honestly.
+      if (e.message.startsWith("404") && e.message.includes("api_key_not_found")) {
+        setSelectedKeyId(null);
+        alert.error("Key no longer exists", "This key was already rotated or revoked. The list has been refreshed.");
+        invalidate();
+        return;
+      }
+      alert.error("Couldn't rotate key", e.message);
+    },
   });
 
   const revokeMut = useMutation({
-    mutationFn: async (id: string) => (await apiRequest("POST", `/api/developers/keys/${id}/revoke`)).json(),
+    // brain-core revoke: DELETE, 204 on success (no body to parse).
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/developers/keys/${id}`); },
     onSuccess: () => {
       setConfirmRevoke(null);
       setSelectedKeyId(null);
       alert.success("Key revoked", "The key can no longer be used.");
       invalidate();
     },
-    onError: (e: Error) => alert.error("Couldn't revoke key", e.message),
+    onError: (e: Error) => {
+      setConfirmRevoke(null);
+      // Graceful double-click: 404 api_key_not_found means it's already gone.
+      if (e.message.startsWith("404") && e.message.includes("api_key_not_found")) {
+        setSelectedKeyId(null);
+        alert.success("Key already revoked", "This key was already revoked.");
+        invalidate();
+        return;
+      }
+      alert.error("Couldn't revoke key", e.message);
+    },
   });
 
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
@@ -820,24 +870,26 @@ function KeysSection({ env }: { env: DevEnv }) {
               )
             }
           >
-            <DetailRow label="Key" testId="detail-key-masked"><Mono className="text-white">{k.maskedKey}</Mono></DetailRow>
+            <DetailRow label="Key" testId="detail-key-masked"><Mono className="text-white">{maskKey(k)}</Mono></DetailRow>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px] -mt-2">
-              Keys are stored hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
+              brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
             </p>
             <DetailRow label="Scopes" testId="detail-key-scopes">{k.scopes.length ? k.scopes.join(", ") : "None"}</DetailRow>
             <DetailRow label="Environment">{k.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
-            {k.tenantId && <DetailRow label="Tenant" testId="detail-key-tenant"><Mono className="text-white">{k.tenantId}</Mono></DetailRow>}
             <DetailRow label="Created" testId="detail-key-created"><Mono className="text-white">{formatDateTime(k.createdAt)}</Mono></DetailRow>
             <DetailRow label="Last used" testId="detail-key-last-used"><Mono className="text-white">{formatDateTime(k.lastUsedAt)}</Mono></DetailRow>
-            <DetailRow label="Requests (all-time)" testId="detail-key-requests"><Mono className="text-white">{(k.requestCount ?? 0).toLocaleString()}</Mono></DetailRow>
             {k.rotatedFromId && <DetailRow label="Rotated from"><Mono className="text-white">{k.rotatedFromId}</Mono></DetailRow>}
             {usageByKey.get(k.id) && (
-              <DetailRow label="Last 7 days">
-                <span className="inline-flex items-center gap-2">
-                  <Mono className="text-white">{usageByKey.get(k.id)!.windowTotal.toLocaleString()}</Mono>
-                  <UsageSparkline daily={usageByKey.get(k.id)!.daily} keyId={`modal-${k.id}`} />
-                </span>
-              </DetailRow>
+              <>
+                <DetailRow label={`Requests (${usageQ.data?.window ?? "30d"})`} testId="detail-key-requests">
+                  <Mono className="text-white">{usageByKey.get(k.id)!.eventCount.toLocaleString()}</Mono>
+                </DetailRow>
+                {usageByKey.get(k.id)!.lastEventAt && (
+                  <DetailRow label="Last request" testId="detail-key-last-event">
+                    <Mono className="text-white">{formatDateTime(usageByKey.get(k.id)!.lastEventAt)}</Mono>
+                  </DetailRow>
+                )}
+              </>
             )}
             {k.status === "active" && k.lastUsedAt === null && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
@@ -901,9 +953,9 @@ function KeysSection({ env }: { env: DevEnv }) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Requested scopes</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Scopes</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Enforced on the platform data endpoints (ledger/audit reads). See the API Reference on Overview.
+                Enforced by brain-core on every key-authenticated call. See the API Reference on Overview.
               </p>
               {SCOPE_OPTIONS.map((s) => {
                 const checked = scopes.includes(s.id);
@@ -942,9 +994,14 @@ function KeysSection({ env }: { env: DevEnv }) {
         </Card>
       )}
 
+      {keysUnavailable ? (
+        <KeysUnavailableCard testId="card-keys-unavailable-keys" />
+      ) : (
       <Card testId="card-keys-list">
         {keysQ.isLoading ? (
           <EmptyRow>Loading keys…</EmptyRow>
+        ) : keysQ.isError ? (
+          <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
         ) : keys.length === 0 ? (
           <EmptyRow>No {env} keys yet.{env === "sandbox" ? " Create one to start calling the API." : ""}</EmptyRow>
         ) : (
@@ -964,21 +1021,15 @@ function KeysSection({ env }: { env: DevEnv }) {
                   <ChevronRight />
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <Mono className="text-[#6c779d] text-[13px]" testId={`text-masked-key-${k.id}`}>{k.maskedKey}</Mono>
+                  <Mono className="text-[#6c779d] text-[13px]" testId={`text-masked-key-${k.id}`}>{maskKey(k)}</Mono>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
                     Last used <Mono className="text-[#6c779d]">{formatDateTime(k.lastUsedAt)}</Mono>
                   </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Requests <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>{(k.requestCount ?? 0).toLocaleString()}</Mono>
-                  </span>
-                  <span className="flex items-center gap-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    7d{" "}
-                    <Mono className="text-[#6c779d]" testId={`text-usage-7d-${k.id}`}>
-                      {(usageByKey.get(k.id)?.windowTotal ?? 0).toLocaleString()}
+                    Requests ({usageQ.data?.window ?? "30d"}){" "}
+                    <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>
+                      {(usageByKey.get(k.id)?.eventCount ?? 0).toLocaleString()}
                     </Mono>
-                    {usageByKey.get(k.id) && (
-                      <UsageSparkline daily={usageByKey.get(k.id)!.daily} keyId={k.id} />
-                    )}
                   </span>
                 </div>
               </button>
@@ -986,11 +1037,12 @@ function KeysSection({ env }: { env: DevEnv }) {
           </div>
         )}
       </Card>
+      )}
       </div>
 
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-        Keys are issued by this platform and stored hashed. Enforcement inside brain-core's API gateway is rolling out.
-        Until then, keys authenticate against platform endpoints only.
+        Keys are issued and stored (hashed) by brain-core, and enforced on every key-authenticated call.
+        Rate limit: 600 requests per 60 seconds per key.
       </p>
     </div>
   );
@@ -1021,8 +1073,11 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
   });
 
   const data = tenantsQ.data;
+  // Keys are listed per-tenant by brain-core, and the platform only ever
+  // shows the current session's tenant — so every listed active key is this
+  // tenant's.
   const tenantKeyCount = selectedTenant
-    ? (keysQ.data?.keys ?? []).filter((k) => k.tenantId === selectedTenant.id && k.status === "active").length
+    ? (keysQ.data?.keys ?? []).filter((k) => k.status === "active").length
     : 0;
 
   return (
@@ -1182,13 +1237,23 @@ function UsageSection({ env }: { env: DevEnv }) {
   const usageQ = useQuery<UsageResponse>({
     queryKey: [`/api/developers/usage?window=60&environment=${env}`],
   });
-  // Per-key breakdown from platform-side counters (api_keys.requestCount) —
-  // a DIFFERENT measurement than the brain-core audit events above, so it is
-  // labeled explicitly and never summed with them.
-  const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
+  // Per-key breakdown from brain-core's key-usage attribution (30-day
+  // window) — a DIFFERENT measurement than the tenant-wide audit events
+  // above, so it is labeled explicitly and never summed with them.
+  const keysQ = useQuery<{ keys: MaskedKey[] }>({
+    queryKey: ["/api/developers/keys"],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
+  });
+  const keyUsageQ = useQuery<KeyUsageResponse>({
+    queryKey: [`/api/developers/key-usage?environment=${env}`],
+    retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
+  });
+  const keysUnavailable = isKeysApiUnavailable(keysQ.error) || isKeysApiUnavailable(keyUsageQ.error);
+  const usageByKey = new Map((keyUsageQ.data?.keys ?? []).map((u) => [u.keyId, u]));
+  const keyCount = (id: string) => usageByKey.get(id)?.eventCount ?? 0;
   const envKeys = (keysQ.data?.keys ?? [])
     .filter((k) => k.environment === env)
-    .sort((a, b) => b.requestCount - a.requestCount || (a.name < b.name ? -1 : 1));
+    .sort((a, b) => keyCount(b.id) - keyCount(a.id) || (a.name < b.name ? -1 : 1));
   // Rate-limit tier comes from the SAME plan source as Settings → Billing.
   const planId = usePlanId();
   // In-place accordion for the by-method rows (ONE open at a time).
@@ -1337,17 +1402,21 @@ function UsageSection({ env }: { env: DevEnv }) {
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Key ({env})</SectionLabel>
+        {keysUnavailable ? (
+          <KeysUnavailableCard testId="card-keys-unavailable-usage" />
+        ) : (
         <Card testId="card-usage-by-key">
-          {keysQ.isLoading ? (
-            <EmptyRow>Loading keys…</EmptyRow>
-          ) : keysQ.isError ? (
-            <EmptyRow>Key counters are unavailable right now.</EmptyRow>
+          {keysQ.isLoading || keyUsageQ.isLoading ? (
+            <EmptyRow>Loading key usage…</EmptyRow>
+          ) : keysQ.isError || keyUsageQ.isError ? (
+            <EmptyRow>Key usage is unavailable right now.</EmptyRow>
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[8px] p-[8px]">
               {envKeys.map((k) => {
-                const max = envKeys[0]?.requestCount || 1;
+                const max = keyCount(envKeys[0]?.id ?? "") || 1;
+                const count = keyCount(k.id);
                 return (
                   <div
                     key={k.id}
@@ -1360,27 +1429,27 @@ function UsageSection({ env }: { env: DevEnv }) {
                         <span className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]">Revoked</span>
                       )}
                     </div>
-                    <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{k.maskedKey}</Mono>
+                    <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</Mono>
                     <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
-                      <div className="h-full rounded-full" style={{ width: k.requestCount > 0 ? `${Math.max((k.requestCount / max) * 100, 2)}%` : "0%", background: "#7631ee" }} />
+                      <div className="h-full rounded-full" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%", background: "#7631ee" }} />
                     </div>
-                    <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right" testId={`text-usage-key-count-${k.id}`}>{k.requestCount.toLocaleString()}</Mono>
+                    <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right" testId={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</Mono>
                   </div>
                 );
               })}
             </div>
           )}
         </Card>
+        )}
         <p className="mt-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-          Key counts measure key-authed calls to this platform's API (all-time, per key). They are a different
-          measurement than the brain-core audit events above and won't match those totals.
+          Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window). They
+          are a different measurement than the tenant-wide audit events above and won't match those totals.
         </p>
       </div>
 
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
         Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your tenancy
-        mode runs in (demo → sandbox, production → live). Per-key attribution of brain-core traffic arrives once
-        brain-core enforces platform-issued keys.
+        mode runs in (demo → sandbox, production → live).
       </p>
     </div>
   );

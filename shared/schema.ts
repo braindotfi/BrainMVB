@@ -143,53 +143,6 @@ export const brainAgentTokens = pgTable("brain_agent_tokens", {
 
 export type BrainAgentToken = typeof brainAgentTokens.$inferSelect;
 
-/* ─── Developer API Keys (platform-issued; Developers section) ───
- * Keys are a resource of THIS app's backend: issued, listed (masked), rotated, and
- * revoked here. The secret is SHA-256 hashed at creation; plaintext is returned to
- * the caller exactly once (create/rotate response) and never stored or shown again.
- * FOLLOW-UP (brain-core repo): brain-core's auth middleware does not yet accept
- * these platform-issued keys — enforcement wiring is follow-up work upstream. */
-export const apiKeys = pgTable("api_keys", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: text("user_id").notNull(),                 // issuing app user (session-scoped)
-  tenantId: text("tenant_id"),                       // brain-core tnt_… id when linked (nullable in demo mode)
-  name: text("name").notNull(),
-  environment: text("environment").notNull(),        // sandbox | live
-  scopes: text("scopes").array().notNull(),          // e.g. ledger:read, propose, audit:read
-  keyPrefix: text("key_prefix").notNull(),           // e.g. brain_sk_test_
-  keyLast4: text("key_last4").notNull(),
-  hashedSecret: text("hashed_secret").notNull(),     // SHA-256 hex of the full plaintext key
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsedAt: timestamp("last_used_at"),
-  requestCount: integer("request_count").default(0).notNull(), // key-authed calls attributed to this key
-  revokedAt: timestamp("revoked_at"),
-  rotatedFromId: uuid("rotated_from_id"),            // previous key when this one was minted by rotation
-}, (t) => [
-  index("api_keys_user_id_idx").on(t.userId),
-]);
-
-/* Per-key daily request counters (keyId, day, count) — upserted in the same
- * touch path as lastUsedAt/requestCount so recent activity (7/30-day views)
- * can be shown without an analytics pipeline. `day` is a UTC YYYY-MM-DD string. */
-export const apiKeyDailyUsage = pgTable("api_key_daily_usage", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  keyId: uuid("key_id").notNull(),
-  userId: text("user_id").notNull(),                 // denormalized for session-scoped reads
-  day: text("day").notNull(),                        // UTC calendar day, YYYY-MM-DD
-  count: integer("count").default(0).notNull(),
-}, (t) => [
-  uniqueIndex("api_key_daily_usage_key_day_idx").on(t.keyId, t.day),
-  index("api_key_daily_usage_user_id_idx").on(t.userId),
-]);
-
-export type ApiKeyDailyUsage = typeof apiKeyDailyUsage.$inferSelect;
-
-export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
-  id: true, createdAt: true, lastUsedAt: true, requestCount: true, revokedAt: true,
-});
-export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
-export type ApiKey = typeof apiKeys.$inferSelect;
-
 /* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),

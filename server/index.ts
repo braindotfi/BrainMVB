@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { startDailyUsagePruneSweep } from "./storage";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
@@ -62,10 +61,6 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
-
-  // Retention sweep for API-key daily-usage rows: runs at boot + daily so
-  // stale rows are cleaned up even when no API key sees traffic. Best-effort.
-  startDailyUsagePruneSweep();
 
   // The legacy mock-data daily-insights cron (server/insightsService.ts) is
   // retired: the HomePage insight is now ledger-grounded via brain-core

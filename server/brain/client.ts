@@ -755,3 +755,116 @@ export function listAuditEvents(
 ): Promise<ListAuditEventsResponse> {
   return brainRequest<ListAuditEventsResponse>("/audit/events", { token, query });
 }
+
+// ─── Tenant API keys (brain-core PR #309: /tenants/:id/keys, /keys/:id) ──────
+//
+// Real brain-core-issued keys: brain-core stores the hash, we never see or
+// persist the plaintext beyond relaying the one-time create/rotate response.
+// All calls use the MEMBER token. The routes are feature-flagged upstream
+// (BRAIN_API_KEY_AUTH_ENABLED); while the flag is off they 404 with
+// error.code "route_not_found" — callers surface that as an honest
+// "keys API not yet enabled" state, NOT a local fallback.
+
+export interface BrainTenantKey {
+  id: string;
+  name: string;
+  environment: string;
+  scopes: string[];
+  key_prefix: string;
+  key_last4: string;
+  status?: string | null;
+  created_at?: string | null;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+  rotated_from_id?: string | null;
+}
+
+export interface ListTenantKeysResponse {
+  keys: BrainTenantKey[];
+}
+
+/** brain-core returns the plaintext secret EXACTLY ONCE on issue/rotate.
+ *  Field name tolerated across secret/plaintext/key. */
+export interface IssuedTenantKeyResponse {
+  key?: BrainTenantKey;
+  secret?: string;
+  plaintext?: string;
+  [k: string]: unknown;
+}
+
+/** GET /tenants/{tenantId}/keys — masked list (key_prefix + key_last4 only). */
+export function listTenantKeys(token: string, tenantId: string): Promise<ListTenantKeysResponse> {
+  return brainRequest<ListTenantKeysResponse>(`/tenants/${tenantId}/keys`, { token });
+}
+
+/** POST /tenants/{tenantId}/keys — issue a key. Plaintext in this response ONLY. */
+export function issueTenantKey(
+  token: string,
+  tenantId: string,
+  body: { name: string; environment: "sandbox" | "live"; scopes: string[] },
+): Promise<IssuedTenantKeyResponse> {
+  return brainRequest<IssuedTenantKeyResponse>(`/tenants/${tenantId}/keys`, {
+    token,
+    method: "POST",
+    body,
+  });
+}
+
+/** POST /keys/{id}/rotate — atomic revoke + reissue (same name/env/scopes). */
+export function rotateTenantKey(token: string, keyId: string): Promise<IssuedTenantKeyResponse> {
+  return brainRequest<IssuedTenantKeyResponse>(`/keys/${keyId}/rotate`, {
+    token,
+    method: "POST",
+  });
+}
+
+/** DELETE /keys/{id} — revoke. brain-core replies 204 (empty body → null). */
+export function revokeTenantKey(token: string, keyId: string): Promise<void> {
+  return brainRequest<null>(`/keys/${keyId}`, { token, method: "DELETE" }).then(() => undefined);
+}
+
+/** GET /tenants/{tenantId}/usage?window=30d&environment=…&key_id=… — per-key
+ *  usage attribution (event counts from enforced key-authed calls). */
+export interface TenantKeyUsage {
+  key_id: string;
+  environment: string;
+  event_count: number;
+  first_event_at: string | null;
+  last_event_at: string | null;
+}
+
+export interface TenantUsageResponse {
+  tenant_id: string;
+  window: string;
+  total_events: number;
+  keys: TenantKeyUsage[];
+}
+
+export function getTenantKeyUsage(
+  token: string,
+  tenantId: string,
+  query?: { window?: string; environment?: string; key_id?: string },
+): Promise<TenantUsageResponse> {
+  return brainRequest<TenantUsageResponse>(`/tenants/${tenantId}/usage`, {
+    token,
+    query: {
+      window: query?.window ?? "30d",
+      environment: query?.environment,
+      key_id: query?.key_id,
+    },
+  });
+}
+
+/** Extract brain-core's error envelope code ({error:{code,…}}), if present. */
+export function brainErrorCode(err: unknown): string | null {
+  if (!(err instanceof BrainApiError)) return null;
+  const body = err.body;
+  if (body && typeof body === "object" && "error" in body) {
+    const e = (body as { error: unknown }).error;
+    if (typeof e === "string") return e;
+    if (e && typeof e === "object" && typeof (e as { code?: unknown }).code === "string") {
+      return (e as { code: string }).code;
+    }
+  }
+  return null;
+}

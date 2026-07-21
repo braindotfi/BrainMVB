@@ -1,41 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  generateApiKey,
-  hashSecret,
-  maskKey,
-  aggregateUsage,
-  API_KEY_PREFIXES,
-  type UsageAuditEvent,
-} from "./developers";
-
-describe("generateApiKey", () => {
-  it("mints env-prefixed keys with base62 secrets and matching hash/last4", () => {
-    for (const env of ["sandbox", "live"] as const) {
-      const k = generateApiKey(env);
-      expect(k.plaintext.startsWith(API_KEY_PREFIXES[env])).toBe(true);
-      const secret = k.plaintext.slice(API_KEY_PREFIXES[env].length);
-      expect(secret).toMatch(/^[A-Za-z0-9]{43}$/);
-      expect(k.keyLast4).toBe(k.plaintext.slice(-4));
-      expect(k.hashedSecret).toBe(hashSecret(k.plaintext));
-      expect(k.hashedSecret).toMatch(/^[0-9a-f]{64}$/);
-    }
-  });
-
-  it("never repeats keys (entropy sanity)", () => {
-    const seen = new Set(Array.from({ length: 50 }, () => generateApiKey("sandbox").plaintext));
-    expect(seen.size).toBe(50);
-  });
-
-  it("the generated shape never contains a persistable plaintext beyond the one field", () => {
-    const k = generateApiKey("sandbox");
-    // hash is one-way: hashing the hash differs from the stored hash
-    expect(hashSecret(k.hashedSecret)).not.toBe(k.hashedSecret);
-    // masking never leaks the middle of the secret
-    const masked = maskKey(k.keyPrefix, k.keyLast4);
-    expect(masked).toBe(`${k.keyPrefix}\u2022\u2022\u2022\u2022${k.keyLast4}`);
-    expect(k.plaintext.includes(masked)).toBe(false);
-  });
-});
+import { aggregateUsage, type UsageAuditEvent } from "./developers";
 
 describe("aggregateUsage", () => {
   const now = new Date("2026-07-21T12:00:00.000Z");

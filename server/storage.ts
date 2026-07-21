@@ -12,21 +12,9 @@ import {
   type BrainIdentity, type InsertBrainIdentity,
   brainAgentTokens as brainAgentTokensTable,
   type BrainAgentToken,
-  apiKeys as apiKeysTable,
-  apiKeyDailyUsage as apiKeyDailyUsageTable,
-  type ApiKey, type InsertApiKey, type ApiKeyDailyUsage,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "drizzle-orm";
 
-/* Daily usage rows older than this many days are dead weight (UI shows at most
- * the last 30 days). Pruned opportunistically, at most once per UTC day per
- * process, in the touchApiKeyLastUsed path. */
-export const DAILY_USAGE_RETENTION_DAYS = 90;
-export function dailyUsageRetentionCutoff(): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - DAILY_USAGE_RETENTION_DAYS);
-  return d.toISOString().slice(0, 10);
-}
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
@@ -89,22 +77,6 @@ export interface IStorage {
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
 
-  // Developer API keys (platform-issued; hashed secret only — plaintext never stored)
-  listApiKeys(userId: string): Promise<ApiKey[]>;
-  getApiKey(userId: string, id: string): Promise<ApiKey | undefined>;
-  createApiKey(key: InsertApiKey): Promise<ApiKey>;
-  revokeApiKey(userId: string, id: string): Promise<ApiKey | null>;
-  /** Atomic rotate: revoke `id` and insert its replacement in one transaction. */
-  rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null>;
-  /** Touch path: bumps lastUsedAt/requestCount AND upserts the per-key daily counter. */
-  touchApiKeyLastUsed(userId: string, id: string): Promise<void>;
-  /** Per-key daily counters for this user's keys, days >= sinceDay (UTC YYYY-MM-DD). */
-  getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]>;
-  /** Look up an ACTIVE (non-revoked) key by its SHA-256 secret hash — key-auth path. */
-  getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined>;
-  /** Delete daily-usage rows older than the retention cutoff, regardless of key traffic.
-   *  Returns the number of rows removed (0 when nothing was stale). */
-  pruneDailyUsage(): Promise<number>;
 }
 
 export type ToolConnection = {
@@ -477,92 +449,6 @@ export class MemStorage implements IStorage {
     return row;
   }
 
-  // ─── Developer API keys ───
-  private apiKeysStore = new Map<string, ApiKey>();
-  async listApiKeys(userId: string): Promise<ApiKey[]> {
-    return Array.from(this.apiKeysStore.values())
-      .filter((k) => k.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-  async getApiKey(userId: string, id: string): Promise<ApiKey | undefined> {
-    const row = this.apiKeysStore.get(id);
-    return row && row.userId === userId ? row : undefined;
-  }
-  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
-    const row: ApiKey = {
-      id: randomUUID(),
-      userId: key.userId,
-      tenantId: key.tenantId ?? null,
-      name: key.name,
-      environment: key.environment,
-      scopes: key.scopes,
-      keyPrefix: key.keyPrefix,
-      keyLast4: key.keyLast4,
-      hashedSecret: key.hashedSecret,
-      createdAt: new Date(),
-      lastUsedAt: null,
-      requestCount: 0,
-      revokedAt: null,
-      rotatedFromId: key.rotatedFromId ?? null,
-    };
-    this.apiKeysStore.set(row.id, row);
-    return row;
-  }
-  async revokeApiKey(userId: string, id: string): Promise<ApiKey | null> {
-    const row = this.apiKeysStore.get(id);
-    if (!row || row.userId !== userId || row.revokedAt) return null;
-    const updated: ApiKey = { ...row, revokedAt: new Date() };
-    this.apiKeysStore.set(id, updated);
-    return updated;
-  }
-  async rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null> {
-    const revoked = await this.revokeApiKey(userId, id);
-    if (!revoked) return null;
-    const created = await this.createApiKey(replacement);
-    return { revoked, created };
-  }
-  private apiKeyDailyUsageStore = new Map<string, ApiKeyDailyUsage>(); // `${keyId}|${day}`
-  private lastDailyUsagePruneDay: string | null = null;
-  async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
-    const row = this.apiKeysStore.get(id);
-    if (row && row.userId === userId) {
-      this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date(), requestCount: row.requestCount + 1 });
-      const day = new Date().toISOString().slice(0, 10);
-      if (this.lastDailyUsagePruneDay !== day) {
-        this.lastDailyUsagePruneDay = day;
-        const cutoff = dailyUsageRetentionCutoff();
-        for (const [key, usage] of this.apiKeyDailyUsageStore) {
-          if (usage.day < cutoff) this.apiKeyDailyUsageStore.delete(key);
-        }
-      }
-      const usageKey = `${id}|${day}`;
-      const existing = this.apiKeyDailyUsageStore.get(usageKey);
-      if (existing) {
-        this.apiKeyDailyUsageStore.set(usageKey, { ...existing, count: existing.count + 1 });
-      } else {
-        this.apiKeyDailyUsageStore.set(usageKey, { id: randomUUID(), keyId: id, userId, day, count: 1 });
-      }
-    }
-  }
-  async getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]> {
-    return Array.from(this.apiKeyDailyUsageStore.values())
-      .filter((u) => u.userId === userId && u.day >= sinceDay);
-  }
-  async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
-    return Array.from(this.apiKeysStore.values())
-      .find((k) => k.hashedSecret === hashedSecret && !k.revokedAt);
-  }
-  async pruneDailyUsage(): Promise<number> {
-    const cutoff = dailyUsageRetentionCutoff();
-    let removed = 0;
-    for (const [key, usage] of this.apiKeyDailyUsageStore) {
-      if (usage.day < cutoff) {
-        this.apiKeyDailyUsageStore.delete(key);
-        removed++;
-      }
-    }
-    return removed;
-  }
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -936,107 +822,6 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
-  // ─── Developer API keys ───
-  async listApiKeys(userId: string): Promise<ApiKey[]> {
-    return db
-      .select()
-      .from(apiKeysTable)
-      .where(eq(apiKeysTable.userId, userId))
-      .orderBy(desc(apiKeysTable.createdAt));
-  }
-  async getApiKey(userId: string, id: string): Promise<ApiKey | undefined> {
-    const [row] = await db
-      .select()
-      .from(apiKeysTable)
-      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)))
-      .limit(1);
-    return row ?? undefined;
-  }
-  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
-    const [row] = await db.insert(apiKeysTable).values(key).returning();
-    return row;
-  }
-  async revokeApiKey(userId: string, id: string): Promise<ApiKey | null> {
-    const [row] = await db
-      .update(apiKeysTable)
-      .set({ revokedAt: new Date() })
-      .where(and(
-        eq(apiKeysTable.userId, userId),
-        eq(apiKeysTable.id, id),
-        isNull(apiKeysTable.revokedAt),
-      ))
-      .returning();
-    return row ?? null;
-  }
-  async rotateApiKey(userId: string, id: string, replacement: InsertApiKey): Promise<{ revoked: ApiKey; created: ApiKey } | null> {
-    return db.transaction(async (tx) => {
-      const [revoked] = await tx
-        .update(apiKeysTable)
-        .set({ revokedAt: new Date() })
-        .where(and(
-          eq(apiKeysTable.userId, userId),
-          eq(apiKeysTable.id, id),
-          isNull(apiKeysTable.revokedAt),
-        ))
-        .returning();
-      if (!revoked) return null;
-      const [created] = await tx.insert(apiKeysTable).values(replacement).returning();
-      return { revoked, created };
-    });
-  }
-  async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
-    const [row] = await db
-      .update(apiKeysTable)
-      .set({ lastUsedAt: new Date(), requestCount: sql`${apiKeysTable.requestCount} + 1` })
-      .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)))
-      .returning({ id: apiKeysTable.id });
-    if (!row) return; // key not found / not this user's — don't record usage
-    const day = new Date().toISOString().slice(0, 10);
-    await db
-      .insert(apiKeyDailyUsageTable)
-      .values({ keyId: id, userId, day, count: 1 })
-      .onConflictDoUpdate({
-        target: [apiKeyDailyUsageTable.keyId, apiKeyDailyUsageTable.day],
-        set: { count: sql`${apiKeyDailyUsageTable.count} + 1` },
-      });
-    if (this.lastDailyUsagePruneDay !== day) {
-      this.lastDailyUsagePruneDay = day;
-      try {
-        await db
-          .delete(apiKeyDailyUsageTable)
-          .where(lt(apiKeyDailyUsageTable.day, dailyUsageRetentionCutoff()));
-      } catch (err) {
-        // Pruning is best-effort; never let it break the request path.
-        this.lastDailyUsagePruneDay = null;
-        console.warn("[storage] daily-usage prune failed:", err);
-      }
-    }
-  }
-  private lastDailyUsagePruneDay: string | null = null;
-  async getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]> {
-    return db
-      .select()
-      .from(apiKeyDailyUsageTable)
-      .where(and(
-        eq(apiKeyDailyUsageTable.userId, userId),
-        gte(apiKeyDailyUsageTable.day, sinceDay),
-      ));
-  }
-  async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
-    const [row] = await db
-      .select()
-      .from(apiKeysTable)
-      .where(and(eq(apiKeysTable.hashedSecret, hashedSecret), isNull(apiKeysTable.revokedAt)))
-      .limit(1);
-    return row;
-  }
-  async pruneDailyUsage(): Promise<number> {
-    const deleted = await db
-      .delete(apiKeyDailyUsageTable)
-      .where(lt(apiKeyDailyUsageTable.day, dailyUsageRetentionCutoff()))
-      .returning({ id: apiKeyDailyUsageTable.id });
-    return deleted.length;
-  }
 }
 
 function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {
@@ -1068,25 +853,3 @@ async function createStorage(): Promise<IStorage> {
 
 export const storage: IStorage = await createStorage();
 
-/* Scheduled retention sweep: pruning also happens opportunistically in
- * touchApiKeyLastUsed, but that only fires when a key is used. This sweep runs
- * at boot and then once per day so stale rows are removed even when all keys
- * go quiet. Best-effort: failures log a warning and never crash the server. */
-export const DAILY_USAGE_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
-
-export function startDailyUsagePruneSweep(store: IStorage = storage): NodeJS.Timeout {
-  const runSweep = async () => {
-    try {
-      const removed = await store.pruneDailyUsage();
-      if (removed > 0) {
-        console.log(`[storage] daily-usage sweep removed ${removed} stale row(s)`);
-      }
-    } catch (err) {
-      console.warn("[storage] daily-usage sweep failed:", err);
-    }
-  };
-  void runSweep();
-  const timer = setInterval(runSweep, DAILY_USAGE_SWEEP_INTERVAL_MS);
-  timer.unref?.();
-  return timer;
-}

@@ -102,8 +102,11 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
 - Assistant: `POST /api/assistant/chat` — zod-validated, Claude; 503/402/500 errors each carry
   a user-facing `reply`.
 - Brain proxy: see BFF above; also `GET /api/brain/recommendation`, `/approval-policy`.
-- Key-authed platform API: `GET /api/v1/ping` (Authorization: Bearer `brain_sk_...`, hash
-  lookup of active keys, touches `lastUsedAt` → completes Developers checklist step 3).
+- Developers API keys are brain-core-backed (PR #309): `/api/developers/keys` (+rotate/
+  DELETE-revoke/key-usage) proxy `/v1/tenants/:id/keys` etc. via the member session; upstream
+  flag-off 404 → honest 503 `keys_api_unavailable`, NO local fallback or key storage. Masking
+  is client-side from `keyPrefix`+`keyLast4`. Key-authed platform API: `GET /api/v1/ping`
+  (Authorization: Bearer `brain_sk_...`) validates the key against brain-core directly.
 - Account delete, Contracts read/deploy, Policy evaluate/hash, Integrations
   (documents CRUD + ingest, plaid/stripe/tool connect-disconnect).
 
