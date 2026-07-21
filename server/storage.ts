@@ -15,7 +15,7 @@ import {
   apiKeys as apiKeysTable,
   type ApiKey, type InsertApiKey,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne, isNull } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 
 export interface DeleteAccountIdentifiers {
@@ -484,6 +484,7 @@ export class MemStorage implements IStorage {
       hashedSecret: key.hashedSecret,
       createdAt: new Date(),
       lastUsedAt: null,
+      requestCount: 0,
       revokedAt: null,
       rotatedFromId: key.rotatedFromId ?? null,
     };
@@ -506,7 +507,7 @@ export class MemStorage implements IStorage {
   async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
     const row = this.apiKeysStore.get(id);
     if (row && row.userId === userId) {
-      this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date() });
+      this.apiKeysStore.set(id, { ...row, lastUsedAt: new Date(), requestCount: row.requestCount + 1 });
     }
   }
   async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
@@ -937,7 +938,7 @@ export class DatabaseStorage implements IStorage {
   async touchApiKeyLastUsed(userId: string, id: string): Promise<void> {
     await db
       .update(apiKeysTable)
-      .set({ lastUsedAt: new Date() })
+      .set({ lastUsedAt: new Date(), requestCount: sql`${apiKeysTable.requestCount} + 1` })
       .where(and(eq(apiKeysTable.userId, userId), eq(apiKeysTable.id, id)));
   }
   async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {

@@ -149,6 +149,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     maskedKey: maskKey(k.keyPrefix, k.keyLast4),
     createdAt: k.createdAt.toISOString(),
     lastUsedAt: k.lastUsedAt ? k.lastUsedAt.toISOString() : null,
+    requestCount: k.requestCount,
     revokedAt: k.revokedAt ? k.revokedAt.toISOString() : null,
     rotatedFromId: k.rotatedFromId,
     status: k.revokedAt ? "revoked" : "active",

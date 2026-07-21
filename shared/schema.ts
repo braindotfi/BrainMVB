@@ -161,6 +161,7 @@ export const apiKeys = pgTable("api_keys", {
   hashedSecret: text("hashed_secret").notNull(),     // SHA-256 hex of the full plaintext key
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastUsedAt: timestamp("last_used_at"),
+  requestCount: integer("request_count").default(0).notNull(), // key-authed calls attributed to this key
   revokedAt: timestamp("revoked_at"),
   rotatedFromId: uuid("rotated_from_id"),            // previous key when this one was minted by rotation
 }, (t) => [
@@ -168,7 +169,7 @@ export const apiKeys = pgTable("api_keys", {
 ]);
 
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
-  id: true, createdAt: true, lastUsedAt: true, revokedAt: true,
+  id: true, createdAt: true, lastUsedAt: true, requestCount: true, revokedAt: true,
 });
 export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
