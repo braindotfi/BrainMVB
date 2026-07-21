@@ -83,6 +83,15 @@ const ACTION_LABELS: Record<string, string> = {
 };
 const humanizeAction = (action: string): string => ACTION_LABELS[action] ?? action;
 
+/** Key-authed platform endpoints — paths and scopes MUST mirror the
+ *  registerKeyAuthedRead registrations in server/routes.ts exactly. */
+const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: string }> = [
+  { path: "/api/v1/ping", scope: null, description: "Verify a key works — completes the checklist above" },
+  { path: "/api/v1/ledger/accounts", scope: "ledger:read", description: "Ledger accounts for your tenant" },
+  { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
+  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?after=)" },
+];
+
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div data-testid={testId} className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -293,6 +302,51 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
   );
 };
 
+/* ─── API reference (copy-paste curl examples for key-authed endpoints) ─── */
+const EndpointRow = ({ path, scope, description }: { path: string; scope: string | null; description: string }) => {
+  const [copied, setCopied] = useState(false);
+  const curl = `curl ${window.location.origin}${path} -H "Authorization: Bearer brain_sk_..."`;
+  const slug = path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+  return (
+    <div className="p-4 flex flex-col gap-2" data-testid={`row-endpoint-${slug}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="px-2 py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px]" style={{ background: "#1d2132", color: "#a8b9f4" }}>
+          GET
+        </span>
+        <Mono className="text-white text-[13px] leading-[18px]" testId={`text-endpoint-path-${slug}`}>{path}</Mono>
+        <span
+          data-testid={`badge-endpoint-scope-${slug}`}
+          className="px-2 py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px]"
+          style={scope ? { background: "#1c1132", color: "#a88afa" } : { background: "#1d2132", color: "#6c779d" }}
+        >
+          {scope ? `Requires ${scope}` : "Any active key"}
+        </span>
+      </div>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">{description}</p>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 rounded-[8px] px-3 py-2 break-all min-w-0" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
+          <Mono className="text-[#a8b9f4] text-[12px] leading-[17px]" testId={`text-curl-${slug}`}>{curl}</Mono>
+        </div>
+        <button
+          type="button"
+          data-testid={`button-copy-curl-${slug}`}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(curl);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            } catch { /* clipboard unavailable */ }
+          }}
+          className="flex-shrink-0 rounded-full px-3 py-[6px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+          style={{ background: "#240757", color: "#a8b9f4" }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /* ─── Overview ─── */
 function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
   // Poll keys ONLY while an active key has never been used, so the
@@ -365,6 +419,21 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
             ))}
           </div>
         </Card>
+      </div>
+
+      <div>
+        <SectionLabel>API reference</SectionLabel>
+        <Card testId="card-api-reference">
+          <div className="divide-y divide-[#1d2132]">
+            {API_ENDPOINTS.map((ep) => (
+              <EndpointRow key={ep.path} {...ep} />
+            ))}
+          </div>
+        </Card>
+        <p className="mt-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+          Replace <Mono className="text-[#6c779d]">brain_sk_...</Mono> with an active key from the API Keys tab. Scoped
+          endpoints return 403 if the key wasn't issued with the required scope.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -514,7 +583,7 @@ function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }
             <div className="flex flex-col gap-2">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Requested scopes</p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Recorded on the key now; enforced once brain-core gateway enforcement ships.
+                Enforced on the platform data endpoints (ledger/audit reads) — see the API reference on Overview.
               </p>
               {SCOPE_OPTIONS.map((s) => {
                 const checked = scopes.includes(s.id);
