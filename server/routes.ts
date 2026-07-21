@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
-import { getBrainSession } from "./brain/auth";
+import { getBrainSession, getBrainSessionProvisionedAt } from "./brain/auth";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -297,6 +297,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.json({ mode, canCreate: false, liveKeysAvailable: false, tenants: [] });
       }
       const { tenantId } = await getBrainSession(userId);
+      // Real per-session provision timestamp recorded when the session cache
+      // entry was created — never fabricated (null only if the cache is gone).
+      const provisionedAt = getBrainSessionProvisionedAt(userId);
       return res.json({
         mode,
         canCreate: false,
@@ -305,7 +308,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: tenantId,
           companyName: null,
           environment: "sandbox",
-          createdAt: null, // provision time isn't exposed by brain-core; never fabricated
+          createdAt: provisionedAt ? new Date(provisionedAt).toISOString() : null,
           ephemeral: true,
         }],
       });

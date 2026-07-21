@@ -59,13 +59,28 @@ interface AuditEventsResponse {
   events: Array<{ id: string; layer: string; action: string; created_at: string }>;
 }
 
+/** The scope set brain-core's policy layer actually recognizes on member
+ *  tokens (confirmed from issued test keys). "Requested" until gateway
+ *  enforcement ships — see the disclosure line on Overview. */
 const SCOPE_OPTIONS = [
   { id: "ledger:read", label: "Ledger read", hint: "Accounts, transactions, invoices" },
   { id: "audit:read", label: "Audit read", hint: "Audit events and anchors" },
-  { id: "payment_intent:propose", label: "Propose", hint: "Create PaymentIntents (never executes)" },
 ] as const;
 
 const ENV_STORAGE_KEY = "brain_developers_env";
+
+/** Display-name mapping for raw brain-core audit event names → the SDK-facing
+ *  concept a developer actually called. Raw name stays available on hover. */
+const ACTION_LABELS: Record<string, string> = {
+  "wiki.question": "Ask a question (brain.ask)",
+  "wiki.answer": "Answer generated (brain.ask)",
+  "payment_intent.proposed": "Propose a payment (brain.propose)",
+  "payment_intent.approved": "Approve a payment (brain.approve)",
+  "payment_intent.rejected": "Reject a payment (brain.reject)",
+  "raw.ingested": "Ingest a document (brain.ingest)",
+  "raw.extracted": "Extract a document (brain.extract)",
+};
+const humanizeAction = (action: string): string => ACTION_LABELS[action] ?? action;
 
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
@@ -156,6 +171,19 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Relative time for fresh, per-session timestamps ("just now", "12 min ago"). */
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const mins = Math.floor((Date.now() - t) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? "" : "s"} ago`;
+  return formatDate(iso);
+}
+
 function formatDateTime(iso: string | null): string {
   if (!iso) return "Never";
   const d = new Date(iso);
@@ -182,6 +210,31 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
         {e === "live" ? "Live" : "Sandbox"}
       </button>
     ))}
+  </div>
+);
+
+/* ─── Subpage header row: title left, actions + env toggle top-right ─── */
+const PageHeader = ({ title, eyebrow, actions, envControl }: {
+  title: ReactNode;
+  eyebrow?: ReactNode;
+  actions?: ReactNode;
+  envControl: ReactNode;
+}) => (
+  <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-[2px] min-w-0">
+      {eyebrow && (
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] leading-[18px] uppercase tracking-wide" data-testid="text-page-eyebrow">
+          {eyebrow}
+        </p>
+      )}
+      <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[30px]" data-testid="text-page-title">
+        {title}
+      </h1>
+    </div>
+    <div className="flex items-center gap-2 flex-shrink-0">
+      {actions}
+      {envControl}
+    </div>
   </div>
 );
 
@@ -232,26 +285,46 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
 };
 
 /* ─── Overview ─── */
-function OverviewSection({ env }: { env: DevEnv }) {
+function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
+  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; companyName?: string }>({
+    queryKey: ["/api/brain/tenancy"],
+  });
 
   const activeKeys = (keysQ.data?.keys ?? []).filter((k) => k.status === "active" && k.environment === env);
   const hasTenant = (tenantsQ.data?.tenants.length ?? 0) > 0;
   const hasKey = activeKeys.length > 0;
-  const hasCall = (usageQ.data?.totalEvents ?? 0) > 0;
+  // "Make a key-authenticated call" completes ONLY once an issued key has
+  // actually been used (lastUsedAt) — never from chat/session-auth activity.
+  // Until gateway enforcement ships this honestly stays incomplete, and it can
+  // never show done while step 2 (issue a key) is incomplete.
+  const hasKeyAuthedCall = hasKey && activeKeys.some((k) => k.lastUsedAt !== null);
   const today = usageQ.data?.daily.length ? usageQ.data.daily[usageQ.data.daily.length - 1].count : null;
 
   const steps = [
     { label: "Create a tenant", done: hasTenant },
     { label: "Issue an API key", done: hasKey },
-    { label: "Make your first call", done: hasCall },
+    { label: "Make a key-authenticated call", done: hasKeyAuthedCall },
   ];
+
+  const orgName = tenancy?.companyName;
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <PageHeader
+          eyebrow={`Developers${orgName ? ` · ${orgName}` : ""}`}
+          title="Build on your Brain ledger."
+          envControl={envControl}
+        />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]" data-testid="text-enforcement-disclosure">
+          Keys authenticate against platform endpoints only — brain-core gateway enforcement is rolling out.
+        </p>
+      </div>
+
       <div>
         <SectionLabel>Get started</SectionLabel>
         <Card testId="card-get-started">
@@ -302,7 +375,7 @@ function OverviewSection({ env }: { env: DevEnv }) {
                   <span className="px-2 py-[2px] rounded-[4px] text-[11px] [font-family:'Gilroy',sans-serif] font-semibold" style={{ background: "#1d2132", color: "#a8b9f4" }}>
                     {ev.layer}
                   </span>
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate">{ev.action}</p>
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate" title={ev.action}>{humanizeAction(ev.action)}</p>
                   <Mono className="text-[#6c779d] text-[12px]">{formatDateTime(ev.created_at)}</Mono>
                 </div>
               ))}
@@ -315,7 +388,7 @@ function OverviewSection({ env }: { env: DevEnv }) {
 }
 
 /* ─── API Keys ─── */
-function KeysSection({ env }: { env: DevEnv }) {
+function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
   const alert = useAppAlert();
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
   const [showCreate, setShowCreate] = useState(false);
@@ -371,21 +444,26 @@ function KeysSection({ env }: { env: DevEnv }) {
     <div className="flex flex-col gap-6">
       {plaintext && <PlaintextKeyModal plaintext={plaintext} onClose={() => setPlaintext(null)} />}
 
-      <div className="flex items-center justify-between">
-        <SectionLabel>{env === "live" ? "Live keys" : "Sandbox keys"}</SectionLabel>
-        {env === "sandbox" || liveAvailable ? (
+      <PageHeader
+        title="API Keys"
+        envControl={envControl}
+        actions={env === "sandbox" || liveAvailable ? (
           <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
             {showCreate ? "Cancel" : "+ New key"}
           </PillButton>
         ) : null}
-      </div>
+      />
+
+      <SectionLabel>{env === "live" ? "Live keys" : "Sandbox keys"}</SectionLabel>
 
       {env === "live" && !liveAvailable && (
         <Card testId="card-live-gated">
           <div className="p-4 flex flex-col gap-2">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">Live access not enabled</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">Live key issuance is gated</p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
-              Live keys require a production tenant. This workspace is running in {tenantsQ.data?.mode === "production" ? "production mode without live-key readiness — link your company tenant first" : "demo mode"}.
+              {tenantsQ.data?.mode === "production"
+                ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
+                : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
             </p>
             <div className="mt-1">
               <PillButton tone="neutral" testId="button-request-live-access" onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}>
@@ -413,7 +491,10 @@ function KeysSection({ env }: { env: DevEnv }) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Scopes</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Requested scopes</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+                Recorded on the key now; enforced once brain-core gateway enforcement ships.
+              </p>
               {SCOPE_OPTIONS.map((s) => {
                 const checked = scopes.includes(s.id);
                 return (
@@ -468,7 +549,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                 <div className="flex items-center gap-4 flex-wrap">
                   <Mono className="text-[#a8b9f4] text-[13px]" testId={`text-masked-key-${k.id}`}>{k.maskedKey}</Mono>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Scopes: <span className="text-[#6c779d]">{k.scopes.join(", ")}</span>
+                    Requested scopes: <span className="text-[#6c779d]">{k.scopes.join(", ")}</span>
                   </span>
                   <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
                     Created <Mono className="text-[#6c779d]">{formatDate(k.createdAt)}</Mono>
@@ -509,7 +590,7 @@ function KeysSection({ env }: { env: DevEnv }) {
 }
 
 /* ─── Tenants ─── */
-function TenantsSection() {
+function TenantsSection({ envControl }: { envControl: ReactNode }) {
   const alert = useAppAlert();
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const [companyName, setCompanyName] = useState("");
@@ -532,14 +613,34 @@ function TenantsSection() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <SectionLabel>Tenants</SectionLabel>
-        {data?.canCreate && (
-          <PillButton testId="button-create-tenant" onClick={() => setShowCreate((v) => !v)}>
+      <PageHeader
+        title="Tenants"
+        envControl={envControl}
+        actions={
+          <PillButton
+            testId="button-create-tenant"
+            onClick={() => {
+              if (data?.canCreate) {
+                setShowCreate((v) => !v);
+              } else if (data?.mode === "demo") {
+                alert.info(
+                  "Demo mode — tenants are provisioned automatically",
+                  "This workspace runs in demo mode: your tenant is provisioned fresh for each session (~30 min) and can't be created manually. Production tenant creation unlocks when the platform runs in production tenancy mode.",
+                );
+              } else {
+                alert.info(
+                  "Tenant creation unavailable",
+                  data?.tenants.length
+                    ? "Your company tenant already exists — each workspace has exactly one."
+                    : "Tenant creation isn't available right now. The platform service isn't configured for this workspace.",
+                );
+              }
+            }}
+          >
             {showCreate ? "Cancel" : "+ Create tenant"}
           </PillButton>
-        )}
-      </div>
+        }
+      />
 
       {showCreate && data?.canCreate && (
         <Card testId="card-create-tenant">
@@ -594,8 +695,8 @@ function TenantsSection() {
                   <Mono className="text-[#6c779d] text-[12px]" testId={`text-tenant-id-${t.id}`}>{t.id}</Mono>
                 </div>
                 <EnvBadge env={t.environment} />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                  Created <Mono className="text-[#6c779d]">{formatDate(t.createdAt)}</Mono>
+                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]" data-testid={`text-tenant-created-${t.id}`}>
+                  Created <Mono className="text-[#6c779d]">{t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}</Mono>
                 </span>
               </div>
             ))}
@@ -603,18 +704,12 @@ function TenantsSection() {
         )}
       </Card>
 
-      {data?.mode === "demo" && (
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-          This workspace runs in demo mode: the tenant above is provisioned fresh for your session (~30 min) and can't be
-          created manually. Production tenant creation unlocks when the platform runs in production tenancy mode.
-        </p>
-      )}
     </div>
   );
 }
 
 /* ─── Usage & Limits ─── */
-function UsageSection({ env }: { env: DevEnv }) {
+function UsageSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
   // Environment-scoped usage: the server attributes tenant traffic to the
   // environment implied by the tenancy mode (demo→sandbox, production→live),
   // so the non-matching environment honestly reports zero.
@@ -641,6 +736,8 @@ function UsageSection({ env }: { env: DevEnv }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader title="Usage & Limits" envControl={envControl} />
+
       <div className="grid grid-cols-2 gap-4">
         <MetricCard
           label="Requests this month"
@@ -685,7 +782,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                 const max = data.byAction[0]?.count || 1;
                 return (
                   <div key={a.action} className="px-4 py-3 flex items-center gap-3" data-testid={`row-method-${a.action}`}>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] w-[220px] truncate">{a.action}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
                     <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
                       <div className="h-full rounded-full" style={{ width: `${Math.max((a.count / max) * 100, 2)}%`, background: "#7631ee" }} />
                     </div>
@@ -739,11 +836,15 @@ export function DevelopersPage() {
     localStorage.setItem(ENV_STORAGE_KEY, env);
   }, [env]);
 
+  // ONE shared toggle instance state, rendered in each subpage's header row
+  // (top right) — never duplicated elsewhere, so the two can't drift.
+  const envControl = <EnvToggle env={env} onChange={setEnv} />;
+
   const SectionContent = {
-    overview: <OverviewSection env={env} />,
-    keys: <KeysSection env={env} />,
-    tenants: <TenantsSection />,
-    usage: <UsageSection env={env} />,
+    overview: <OverviewSection env={env} envControl={envControl} />,
+    keys: <KeysSection env={env} envControl={envControl} />,
+    tenants: <TenantsSection envControl={envControl} />,
+    usage: <UsageSection env={env} envControl={envControl} />,
   }[section];
 
   return (
@@ -785,9 +886,6 @@ export function DevelopersPage() {
             </span>
             <ExternalLinkIcon />
           </a>
-        </div>
-        <div className="p-3" style={{ borderTop: "1px solid #1d2132" }}>
-          <EnvToggle env={env} onChange={setEnv} />
         </div>
       </nav>
 

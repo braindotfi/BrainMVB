@@ -83,7 +83,7 @@ const SUGGESTED_QUESTIONS = [
 /** Extra chips shown ONLY while a Developers subpage is active — they submit
  *  real prompts through the same assistant pipe as any typed message. */
 const DEVELOPER_QUESTIONS = [
-  "Run a test brain.ask() call",
+  "Run a test call",
   "Show my usage this month",
 ];
 

@@ -22,8 +22,11 @@ export const API_KEY_PREFIXES: Record<ApiKeyEnvironment, string> = {
   live: "brain_sk_live_",
 };
 
-/** Scopes a platform key can carry (mirrors the read/propose split of the BFF). */
-export const API_KEY_SCOPES = ["ledger:read", "audit:read", "payment_intent:propose"] as const;
+/** Scopes a platform key can REQUEST. These mirror the scopes brain-core's
+ * policy layer actually recognizes on member tokens (ledger:read, audit:read —
+ * confirmed against real issued tokens). Until gateway enforcement ships they
+ * are "requested", not enforced. */
+export const API_KEY_SCOPES = ["ledger:read", "audit:read"] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
 const BASE62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
