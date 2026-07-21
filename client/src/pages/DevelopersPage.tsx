@@ -1,5 +1,5 @@
 /**
- * Developers section — Overview, API Keys, Tenants, Usage & Limits (+ Docs link).
+ * Developers section — Overview, API Keys, Tenants, Usage and Limits (+ Docs link).
  *
  * Assembled ONLY from existing design patterns (Settings two-column shell,
  * Home metric cards / list rows, existing pill buttons and badges). No mock
@@ -232,28 +232,17 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
   </div>
 );
 
-/* ─── Subpage header row: title left, actions + env toggle top-right ─── */
-const PageHeader = ({ title, eyebrow, actions, envControl }: {
+/* ─── Subpage header row: title left, actions top-right.
+   Title matches the Settings subpage header format (e.g. "Members"). ─── */
+const PageHeader = ({ title, actions }: {
   title: ReactNode;
-  eyebrow?: ReactNode;
   actions?: ReactNode;
-  envControl: ReactNode;
 }) => (
-  <div className="flex items-start justify-between gap-4">
-    <div className="flex flex-col gap-[2px] min-w-0">
-      {eyebrow && (
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] leading-[18px] uppercase tracking-wide" data-testid="text-page-eyebrow">
-          {eyebrow}
-        </p>
-      )}
-      <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[30px]" data-testid="text-page-title">
-        {title}
-      </h1>
-    </div>
-    <div className="flex items-center gap-2 flex-shrink-0">
-      {actions}
-      {envControl}
-    </div>
+  <div className="flex items-center justify-between gap-4">
+    <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
+      {title}
+    </h1>
+    {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
   </div>
 );
 
@@ -357,7 +346,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
 };
 
 /* ─── Overview ─── */
-function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
+function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envControl: ReactNode; onNavigate: (s: DevSection) => void }) {
   // Poll keys ONLY while an active key has never been used, so the
   // "Make a key-authenticated call" step lights up in-session when the
   // user makes their first real key-authed call (e.g. curl /api/v1/ping).
@@ -398,15 +387,21 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <PageHeader
-          eyebrow={`Developers${orgName ? ` · ${orgName}` : ""}`}
-          title="Build on your Brain ledger."
-          envControl={envControl}
-        />
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]" data-testid="text-enforcement-disclosure">
-          Keys authenticate against platform endpoints (start with GET /api/v1/ping) — brain-core gateway enforcement is rolling out.
-        </p>
+      <div className="flex items-start justify-between gap-4 w-full">
+        <div className="flex flex-col gap-[4px] min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
+            Developers
+            {orgName && <span className="text-[#a8b9f4]">, {orgName}</span>}
+            .
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]" data-testid="text-page-title">
+            Build on your Brain ledger.
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]" data-testid="text-enforcement-disclosure">
+            Keys authenticate against platform endpoints (start with GET /api/v1/ping) — brain-core gateway enforcement is rolling out.
+          </p>
+        </div>
+        <div className="flex-shrink-0">{envControl}</div>
       </div>
 
       <div>
@@ -414,16 +409,36 @@ function OverviewSection({ env, envControl }: { env: DevEnv; envControl: ReactNo
         <Card testId="card-get-started">
           <div className="flex items-stretch divide-x divide-[#1d2132]">
             {steps.map((s, i) => (
-              <div key={s.label} className="flex-1 p-4 flex items-center gap-3" data-testid={`step-get-started-${i}`}>
+              <div key={s.label} className="flex-1 p-4 flex items-start gap-3" data-testid={`step-get-started-${i}`}>
                 <div
                   className="size-[24px] rounded-full flex items-center justify-center flex-shrink-0 [font-family:'JetBrains_Mono',monospace] text-[12px]"
                   style={s.done ? { background: "#1c1132", color: "#a88afa" } : { background: "#1d2132", color: "#6c779d" }}
                 >
                   {s.done ? "✓" : i + 1}
                 </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px]" style={{ color: s.done ? "#ffffff" : "#6c779d" }}>
-                  {s.label}
-                </p>
+                <div className="flex flex-col gap-2 min-w-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[24px]" style={{ color: s.done ? "#ffffff" : "#6c779d" }}>
+                    {s.label}
+                  </p>
+                  {i === 0 && (
+                    <div>
+                      <PillButton testId="button-overview-add-tenant" onClick={() => onNavigate("tenants")}>
+                        Add Tenant
+                      </PillButton>
+                    </div>
+                  )}
+                  {i === 1 && (
+                    <div>
+                      <PillButton
+                        testId="button-overview-create-key"
+                        onClick={() => onNavigate("keys")}
+                        disabled={!hasTenant}
+                      >
+                        Create Key
+                      </PillButton>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -507,7 +522,7 @@ function UsageSparkline({ daily, keyId }: { daily: Array<{ day: string; count: n
 }
 
 /* ─── API Keys ─── */
-function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
+function KeysSection({ env }: { env: DevEnv }) {
   const alert = useAppAlert();
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
   const usageQ = useQuery<KeyUsageResponse>({ queryKey: ["/api/developers/keys/usage"] });
@@ -570,7 +585,6 @@ function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }
 
       <PageHeader
         title="API Keys"
-        envControl={envControl}
         actions={env === "sandbox" || liveAvailable ? (
           <PillButton testId="button-new-key" onClick={() => setShowCreate((v) => !v)}>
             {showCreate ? "Cancel" : "+ New key"}
@@ -726,7 +740,7 @@ function KeysSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }
 }
 
 /* ─── Tenants ─── */
-function TenantsSection({ envControl }: { envControl: ReactNode }) {
+function TenantsSection() {
   const alert = useAppAlert();
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const [companyName, setCompanyName] = useState("");
@@ -751,7 +765,6 @@ function TenantsSection({ envControl }: { envControl: ReactNode }) {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Tenants"
-        envControl={envControl}
         actions={
           <PillButton
             testId="button-create-tenant"
@@ -844,8 +857,8 @@ function TenantsSection({ envControl }: { envControl: ReactNode }) {
   );
 }
 
-/* ─── Usage & Limits ─── */
-function UsageSection({ env, envControl }: { env: DevEnv; envControl: ReactNode }) {
+/* ─── Usage and Limits ─── */
+function UsageSection({ env }: { env: DevEnv }) {
   // Environment-scoped usage: the server attributes tenant traffic to the
   // environment implied by the tenancy mode (demo→sandbox, production→live),
   // so the non-matching environment honestly reports zero.
@@ -879,7 +892,7 @@ function UsageSection({ env, envControl }: { env: DevEnv; envControl: ReactNode 
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Usage & Limits" envControl={envControl} />
+      <PageHeader title="Usage and Limits" />
 
       <div className="grid grid-cols-2 gap-4">
         <MetricCard
@@ -992,7 +1005,7 @@ const DEV_NAV: { id: DevSection; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "keys", label: "API Keys" },
   { id: "tenants", label: "Tenants" },
-  { id: "usage", label: "Usage & Limits" },
+  { id: "usage", label: "Usage and Limits" },
 ];
 
 const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
@@ -1017,15 +1030,16 @@ export function DevelopersPage() {
     localStorage.setItem(ENV_STORAGE_KEY, env);
   }, [env]);
 
-  // ONE shared toggle instance state, rendered in each subpage's header row
-  // (top right) — never duplicated elsewhere, so the two can't drift.
+  // ONE toggle instance, shown ONLY on Overview (top right). The other
+  // subpages still filter by the same env state — they just don't show
+  // the switch.
   const envControl = <EnvToggle env={env} onChange={setEnv} />;
 
   const SectionContent = {
-    overview: <OverviewSection env={env} envControl={envControl} />,
-    keys: <KeysSection env={env} envControl={envControl} />,
-    tenants: <TenantsSection envControl={envControl} />,
-    usage: <UsageSection env={env} envControl={envControl} />,
+    overview: <OverviewSection env={env} envControl={envControl} onNavigate={setSection} />,
+    keys: <KeysSection env={env} />,
+    tenants: <TenantsSection />,
+    usage: <UsageSection env={env} />,
   }[section];
 
   return (
