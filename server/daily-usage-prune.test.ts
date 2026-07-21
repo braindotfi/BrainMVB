@@ -15,7 +15,10 @@ import {
   MemStorage,
   DatabaseStorage,
   DAILY_USAGE_RETENTION_DAYS,
+  DAILY_USAGE_SWEEP_INTERVAL_MS,
   dailyUsageRetentionCutoff,
+  startDailyUsagePruneSweep,
+  type IStorage,
 } from "./storage";
 import type { InsertApiKey } from "@shared/schema";
 
@@ -178,6 +181,82 @@ describe("DatabaseStorage daily-usage pruning", () => {
     // Because the prune failed, the throttle resets and the next touch retries.
     await storage.touchApiKeyLastUsed("user-1", "key-1");
     expect(dbMock.delete).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it("pruneDailyUsage deletes with the cutoff condition and returns the row count", async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: "a" }, { id: "b" }]);
+    const where = vi.fn().mockReturnValue({ returning });
+    dbMock.delete.mockReturnValue({ where });
+
+    const storage = new DatabaseStorage();
+    await expect(storage.pruneDailyUsage()).resolves.toBe(2);
+
+    const condition = where.mock.calls[0][0];
+    const chunks: any[] = condition.queryChunks ?? [];
+    const params = chunks
+      .filter((c) => c && typeof c === "object" && "value" in c && !("name" in c))
+      .map((c) => c.value);
+    expect(params).toContain(isoDay(90));
+  });
+});
+
+describe("MemStorage.pruneDailyUsage (traffic-independent)", () => {
+  it("removes stale rows without any key being touched", async () => {
+    const storage = new MemStorage();
+    const key = await storage.createApiKey(makeKey());
+
+    // Seed rows directly — no touch traffic on "today".
+    for (const daysAgo of [200, 91, 89, 10]) {
+      const day = isoDay(daysAgo);
+      (storage as any).apiKeyDailyUsageStore.set(`${key.id}|${day}`, {
+        id: `row-${daysAgo}`,
+        keyId: key.id,
+        userId: key.userId,
+        day,
+        count: 1,
+      });
+    }
+
+    await expect(storage.pruneDailyUsage()).resolves.toBe(2);
+    const days = (await storage.getApiKeyDailyUsage(key.userId, "0000-00-00")).map((r) => r.day);
+    expect(days).not.toContain(isoDay(200));
+    expect(days).not.toContain(isoDay(91));
+    expect(days).toContain(isoDay(89));
+    expect(days).toContain(isoDay(10));
+  });
+});
+
+describe("startDailyUsagePruneSweep", () => {
+  function fakeStore(prune: () => Promise<number>): IStorage {
+    return { pruneDailyUsage: prune } as unknown as IStorage;
+  }
+
+  it("sweeps immediately on start and again after the daily interval", async () => {
+    const prune = vi.fn().mockResolvedValue(0);
+    const timer = startDailyUsagePruneSweep(fakeStore(prune));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(prune).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(DAILY_USAGE_SWEEP_INTERVAL_MS);
+    expect(prune).toHaveBeenCalledTimes(2);
+    clearInterval(timer);
+  });
+
+  it("a failing sweep logs a warning, does not throw, and keeps the timer alive", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const prune = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("db down"))
+      .mockResolvedValue(3);
+    const timer = startDailyUsagePruneSweep(fakeStore(prune));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(warn).toHaveBeenCalled();
+
+    // Next tick still runs and succeeds.
+    await vi.advanceTimersByTimeAsync(DAILY_USAGE_SWEEP_INTERVAL_MS);
+    expect(prune).toHaveBeenCalledTimes(2);
+    clearInterval(timer);
     warn.mockRestore();
   });
 });

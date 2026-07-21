@@ -102,6 +102,9 @@ export interface IStorage {
   getApiKeyDailyUsage(userId: string, sinceDay: string): Promise<ApiKeyDailyUsage[]>;
   /** Look up an ACTIVE (non-revoked) key by its SHA-256 secret hash — key-auth path. */
   getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined>;
+  /** Delete daily-usage rows older than the retention cutoff, regardless of key traffic.
+   *  Returns the number of rows removed (0 when nothing was stale). */
+  pruneDailyUsage(): Promise<number>;
 }
 
 export type ToolConnection = {
@@ -548,6 +551,17 @@ export class MemStorage implements IStorage {
   async getApiKeyByHash(hashedSecret: string): Promise<ApiKey | undefined> {
     return Array.from(this.apiKeysStore.values())
       .find((k) => k.hashedSecret === hashedSecret && !k.revokedAt);
+  }
+  async pruneDailyUsage(): Promise<number> {
+    const cutoff = dailyUsageRetentionCutoff();
+    let removed = 0;
+    for (const [key, usage] of this.apiKeyDailyUsageStore) {
+      if (usage.day < cutoff) {
+        this.apiKeyDailyUsageStore.delete(key);
+        removed++;
+      }
+    }
+    return removed;
   }
 }
 
@@ -1016,6 +1030,13 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     return row;
   }
+  async pruneDailyUsage(): Promise<number> {
+    const deleted = await db
+      .delete(apiKeyDailyUsageTable)
+      .where(lt(apiKeyDailyUsageTable.day, dailyUsageRetentionCutoff()))
+      .returning({ id: apiKeyDailyUsageTable.id });
+    return deleted.length;
+  }
 }
 
 function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {
@@ -1046,3 +1067,26 @@ async function createStorage(): Promise<IStorage> {
 }
 
 export const storage: IStorage = await createStorage();
+
+/* Scheduled retention sweep: pruning also happens opportunistically in
+ * touchApiKeyLastUsed, but that only fires when a key is used. This sweep runs
+ * at boot and then once per day so stale rows are removed even when all keys
+ * go quiet. Best-effort: failures log a warning and never crash the server. */
+export const DAILY_USAGE_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+export function startDailyUsagePruneSweep(store: IStorage = storage): NodeJS.Timeout {
+  const runSweep = async () => {
+    try {
+      const removed = await store.pruneDailyUsage();
+      if (removed > 0) {
+        console.log(`[storage] daily-usage sweep removed ${removed} stale row(s)`);
+      }
+    } catch (err) {
+      console.warn("[storage] daily-usage sweep failed:", err);
+    }
+  };
+  void runSweep();
+  const timer = setInterval(runSweep, DAILY_USAGE_SWEEP_INTERVAL_MS);
+  timer.unref?.();
+  return timer;
+}
