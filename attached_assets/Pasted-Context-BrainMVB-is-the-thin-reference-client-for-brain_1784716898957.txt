@@ -1,0 +1,51 @@
+Context: BrainMVB is the thin reference client for brain-core. Codex has produced
+brainmvb_api_surface.json (attached) enumerating every live brain-core endpoint,
+its required scope, and its enforcement mode. Treat this as the sole source of
+truth for what's callable — ignore Brain_API_Specification.yaml where the two
+disagree; the artifact's "drift" section lists exactly where they do.
+
+Before starting: git fetch && git pull on main, then create a feature branch
+(e.g. feat/wire-brain-core-ledger-canonical-wiki-policy-agents-audit).
+
+Scope for this pass — wire ONLY these endpoint groups from the artifact:
+  - ledger_and_canonical
+  - wiki_memory_policy
+  - agents_execution_payments_members (see exclusions below)
+  - audit_proof_tenant
+
+Hard exclusions — do not wire these in this pass, and flag if any existing MVB
+code already calls them:
+  1. Any endpoint whose "auth" field is "X-Platform-Service-Auth"
+     (POST /v1/tenants, POST /v1/orgs/{orgId}/tenants,
+     POST /v1/tenants/{tenantId}/agent-token, POST /v1/sessions).
+     These require a platform secret and must only ever be called from a
+     BrainMVB backend/BFF route holding that secret — never from client-side
+     code. If no BFF exists yet for this, stop and report it as a blocker
+     rather than inventing one.
+  2. POST /v1/execution/execute — always returns 422 gate_no_policy_decision
+     per the artifact. Use POST /v1/payment-intents/{id}/execute instead for
+     any "execute payment" flow.
+  3. POST /v1/execution/mcp — ping-only in HEAD, everything else 501s. Do not
+     build UI flows against it.
+  4. Anything under feature_gated_or_not_stable in the artifact (signup/login/
+     verify-email, wallet creation, API key management/usage, service-token).
+     API Keys/Usage pages in the Developers section stay as-is (partial/staging
+     only) — do not "complete" them against staging behavior.
+
+Task:
+1. Diff BrainMVB's current API calls against the in-scope groups above. List:
+   (a) already correctly wired, (b) wired but pointing at mocked/demo data or
+   an excluded/dead endpoint from the list above, (c) available but not yet
+   called anywhere in MVB.
+2. Wire each gap in (c), using the exact scope/enforcement info from the
+   artifact per endpoint. Do not assume gateway-level enforcement — scope
+   checks are per-route.
+3. For anything found in (b) pointing at an excluded endpoint, replace it with
+   the correct live equivalent (e.g. execution/execute -> payment-intents
+   execute) and note the fix in the PR description.
+4. Do not fall back to demo/synthetic data for anything the artifact marks as
+   route_scope_check_enforced.
+5. Update CLAUDE.md with what's now live-wired vs. still pending, including
+   the BFF blocker if applicable.
+6. Track done/pending against this plan in the PR description.
+7. Open PR against main; do not merge without CI green.
