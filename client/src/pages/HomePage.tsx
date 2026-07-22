@@ -10,6 +10,8 @@ import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { useIntents } from "@/lib/intentsStore";
+import { intentToReview } from "@/lib/intentToReview";
 import {
   useBrainReconciliationInsights,
   useBrainSubscriptionInsights,
@@ -21,8 +23,9 @@ import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { apiRequest } from "@/lib/queryClient";
-import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
+import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
+import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
 import type { Proposal } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import {
@@ -526,6 +529,53 @@ export function HomePage() {
     // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
   };
 
+  /* Session-scoped intents (same browser session as the Inbox). Mirroring the
+     Inbox pattern: these render in Brain Detected and open a ReviewModal. */
+  const { intents, markDeclined, setApprovalState } = useIntents();
+  const sessionReviews = useMemo(
+    () => intents.filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved").map((r) => intentToReview(r, format)),
+    [intents, format],
+  );
+  const [selectedLiveIntent, setSelectedLiveIntent] = useState<ReviewItemType | null>(null);
+  const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
+  const [approvingIntentId, setApprovingIntentId] = useState<string | null>(null);
+  const rejectIntent = useMutation<unknown, Error, string>({
+    mutationFn: async (intentId: string) => {
+      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
+      return res.json();
+    },
+    onSuccess: (_d, intentId) => markDeclined(intentId),
+  });
+  const approveIntent = async (intentId: string, surfaceRejection: boolean) => {
+    setApprovingIntentId(intentId);
+    setLiveRejection(null);
+    try {
+      const res = await fetch(`/api/brain/payment-intents/${intentId}/approve`, { method: "POST", credentials: "include" });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) {
+        const rej = mapApprovalRejection(parseCoreError(body));
+        if (surfaceRejection) setLiveRejection(rej);
+        else toast({ title: rej.title, description: rej.detail, variant: "destructive" });
+        return;
+      }
+      const status: string = body?.intent?.status ?? "";
+      if (status === "awaiting_second_approval" || status === "pending_approval") {
+        setApprovalState(intentId, "awaiting_second");
+        toast({ title: "Approval recorded", description: "One more approver is needed before this can settle.", variant: "default" });
+      } else {
+        setApprovalState(intentId, "approved");
+        toast({ title: "Payment approved", description: "Brain core accepted the approval. It will settle shortly.", variant: "default" });
+      }
+      setSelectedLiveIntent(null);
+    } catch {
+      const rej: ApprovalRejection = { reason: "network_error", title: "Couldn't reach Brain core", detail: "The approval didn't go through. Check your connection and try again. Nothing was changed." };
+      if (surfaceRejection) setLiveRejection(rej);
+      else toast({ title: rej.title, description: rej.detail, variant: "destructive" });
+    } finally {
+      setApprovingIntentId(null);
+    }
+  };
+
   /* Brain Did — live brain-core audit events only. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
   const brainDidItems: WidgetItem[] = useMemo(() => {
@@ -564,6 +614,11 @@ export function HomePage() {
       label: p.title,
       onClick: () => setSelectedReview(p),
     }));
+    const sessionItems = sessionReviews.map((r) => ({
+      id: String(r.intentId ?? r.id),
+      label: r.title,
+      onClick: () => setSelectedLiveIntent(r),
+    }));
     const insightItems = liveInsights.map((i) => ({
       id: i.id,
       label: i.title,
@@ -574,8 +629,8 @@ export function HomePage() {
       label: AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)],
       onClick: () => setSelectedProposal(p),
     }));
-    return [...queueItems, ...insightItems, ...proposalItems];
-  }, [liveNeedsReview, liveInsights, needsReviewProposals]);
+    return [...sessionItems, ...queueItems, ...insightItems, ...proposalItems];
+  }, [liveNeedsReview, sessionReviews, liveInsights, needsReviewProposals]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -807,6 +862,27 @@ export function HomePage() {
             storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
           }
         }}
+      />
+
+      {/* Brain Detected - session-scoped PaymentIntent review (mirrors Inbox) */}
+      <ReviewModal
+        item={selectedLiveIntent}
+        open={selectedLiveIntent !== null}
+        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); } }}
+        onConfirm={() => {
+          if (selectedLiveIntent?.live && selectedLiveIntent.intentId) void approveIntent(selectedLiveIntent.intentId, true);
+          else setSelectedLiveIntent(null);
+        }}
+        onReject={() => {
+          if (selectedLiveIntent?.live && selectedLiveIntent.intentId) {
+            toast({ title: "Rejected", description: "The payment has been rejected.", variant: "default" });
+            rejectIntent.mutate(selectedLiveIntent.intentId);
+          }
+          setSelectedLiveIntent(null);
+          setLiveRejection(null);
+        }}
+        busy={approvingIntentId !== null}
+        rejection={liveRejection}
       />
     </div>
   );
