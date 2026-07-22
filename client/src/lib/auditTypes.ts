@@ -87,6 +87,7 @@ export interface AuditRecord {
 
 /* Filter tabs for the Audit Log page */
 export type AuditLogTab =
+  | "All"
   | "Approvals"
   | "Auto-Approved"
   | "Rejections"
@@ -96,6 +97,7 @@ export type AuditLogTab =
   | "Last 30 Days";
 
 export const AUDIT_TABS: AuditLogTab[] = [
+  "All",
   "Approvals",
   "Auto-Approved",
   "Rejections",

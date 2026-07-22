@@ -62,7 +62,7 @@ export function AuditLogPage() {
     return merged;
   }, [brainRecords, reviewStatuses, user]);
 
-  const [activeTab, setActiveTab] = useState<Tab>("Approvals");
+  const [activeTab, setActiveTab] = useState<Tab>("All");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const [query, setQuery] = useState("");
   /* Records whose anchor the user verified this session (drives the
@@ -249,6 +249,7 @@ export function AuditLogPage() {
                   {filtered.length === 0 ? (
                     <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                        {activeTab === "All" && "No audit records yet."}
                         {activeTab === "Approvals" && "No approval records yet."}
                         {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                         {activeTab === "Rejections" && "No rejected payment records yet."}
