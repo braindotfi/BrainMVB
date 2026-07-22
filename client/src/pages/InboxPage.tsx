@@ -155,58 +155,53 @@ const InboxCard = ({
           onOpen(item);
         }
       }}
-      className={`flex flex-col gap-[8px] p-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] ${
+      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] ${
         rejected ? "border-l-[3px] border-l-[#d20344]" : ""
       }`}
     >
-      <div className="flex gap-[16px] items-start w-full">
-        <div className="flex flex-1 flex-col items-start justify-center min-w-px gap-[4px]">
-          <div className="flex items-center gap-[8px] w-full min-w-0 flex-wrap">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-              {item.title}
-            </p>
-            <span className={`${PILL_BASE} ${item.tagClass}`} data-testid={`tag-inbox-${item.id}`}>
-              {item.tag}
-            </span>
-          </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
-            {item.desc}
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#414965] text-[13px] w-full" data-testid={`why-inbox-${item.id}`}>
-            <span className="text-[#6c779d] font-semibold">Why: </span>
-            {item.why}
-          </p>
-        </div>
-        <div className="flex flex-col items-end justify-start shrink-0 gap-[4px]">
-          {item.amountDisplay && (
-            <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[24px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-              {item.amountDisplay}
-            </p>
-          )}
-          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[12px] text-right whitespace-nowrap">
-            {item.time}
-          </p>
-        </div>
+      {/* Left column: title, desc, why, divider, buttons */}
+      <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
+          {item.title}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
+          {item.desc}
+        </p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
+          Why: {item.why}
+        </p>
+        {item.actionable && (
+          <>
+            <div className="h-[2px] w-full" style={{ background: "#1d2132" }} />
+            <div className="flex items-center gap-[8px] pt-[2px]" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onApprove?.(item)}
+                data-testid={`button-approve-${item.id}`}
+                className="px-[20px] py-[4px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onReject?.(item)}
+                data-testid={`button-reject-${item.id}`}
+                className="px-[20px] py-[4px] rounded-[100px] bg-[#350011] border border-[rgba(210,3,68,0.25)] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                Reject
+              </button>
+            </div>
+          </>
+        )}
       </div>
-      <div className="flex items-center gap-[8px] pt-[2px]" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onApprove?.(item)}
-          data-testid={`button-approve-${item.id}`}
-          className="px-[14px] py-[6px] rounded-[100px] bg-[#7631ee] text-white [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          Approve
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onReject?.(item)}
-          data-testid={`button-reject-${item.id}`}
-          className="px-[14px] py-[6px] rounded-[100px] bg-[#350011] border border-[rgba(210,3,68,0.25)] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          Reject
-        </button>
+
+      {/* Right column: tag pill */}
+      <div className="shrink-0 self-center">
+        <span className={`${PILL_BASE} ${item.tagClass}`} data-testid={`tag-inbox-${item.id}`}>
+          {item.tag}
+        </span>
       </div>
     </div>
   );
