@@ -589,11 +589,9 @@ export function createBrainProxyRouter(): Router {
         const params: Record<string, string> = {};
         for (const [k, v] of Object.entries(req.params)) params[k] = String(v);
         const body =
-          req.method === "DELETE"
-            ? undefined
-            : req.body && typeof req.body === "object" && Object.keys(req.body as object).length > 0
-              ? req.body
-              : {};
+          req.body && typeof req.body === "object" && Object.keys(req.body as object).length > 0
+            ? req.body
+            : {};
         const data = await brainRequest<unknown>(route.upstream(params, session.tenantId), {
           method: route.method.toUpperCase(),
           token,

@@ -134,6 +134,15 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   if (url.includes("/policy/") && url.endsWith("/lint") && method === "POST") {
     return json({ ok: true, issues: [] });
   }
+  if (url.endsWith("/agents/mcp") && method === "POST") {
+    return json({ result: "mcp_ok" });
+  }
+  if (url.includes("/members/") && url.endsWith("/identity-links") && method === "POST") {
+    return json({ id: "link_1", status: "created" });
+  }
+  if (url.includes("/members/") && url.endsWith("/identity-links") && method === "DELETE") {
+    return json({ id: "link_1", status: "revoked" });
+  }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
 
@@ -499,5 +508,52 @@ describe("Invariant 6 - artifact write allowlist (api-surface.brainmvb)", () => 
     expect(lint).toHaveLength(1);
     expect(lint[0].url).toContain(`/policy/${TENANT_ID}/lint`);
     expect(lint[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+  });
+
+  it("/agents/mcp uses the MEMBER token (core-level per-tool scope enforcement)", async () => {
+    const { status } = await post("/api/brain/agents/mcp", { tool: "list_invoices", args: {} });
+    expect(status).toBe(200);
+    const mcp = callsEndingWith("/agents/mcp");
+    expect(mcp).toHaveLength(1);
+    expect(mcp[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+  });
+
+  it("/members/:id/identity-links uses the MEMBER token and never the agent token", async () => {
+    const postRes = await post("/api/brain/members/m1/identity-links", { provider: "google", token: "tok_1" });
+    expect(postRes.status).toBe(200);
+    const delRes = await realFetch(`${baseUrl}/api/brain/members/m1/identity-links`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "google" }),
+    });
+    expect(delRes.status).toBe(200);
+    const links = calls.filter((c) => c.url.includes("/members/") && c.url.includes("/identity-links"));
+    expect(links.length).toBe(2);
+    for (const c of links) expect(c.auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+  });
+
+  it("POST /payment-intents uses the AGENT token and never the member token", async () => {
+    const { status } = await post("/api/brain/payment-intents", { invoice_id: "inv_1", amount: 100, currency: "usd" });
+    expect(status).toBe(200);
+    const create = callsEndingWith("/payment-intents");
+    expect(create).toHaveLength(1);
+    expect(create[0].method).toBe("POST");
+    expect(create[0].auth).toBe(`Bearer ${AGENT_TOKEN}`);
+  });
+
+  it("DELETE /members/:id/identity-links forwards the request body to brain-core", async () => {
+    const delRes = await realFetch(`${baseUrl}/api/brain/members/m1/identity-links`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "google", external_ref: "ext_1" }),
+    });
+    expect(delRes.status).toBe(200);
+    const link = callsEndingWith("/identity-links");
+    expect(link).toHaveLength(1);
+    expect(link[0].method).toBe("DELETE");
+    const parsed = link[0].body as Record<string, unknown>;
+    expect(parsed.provider).toBe("google");
+    expect(parsed.external_ref).toBe("ext_1");
   });
 });
