@@ -170,23 +170,22 @@ const InboxCard = ({
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
           Why: {item.why}
         </p>
-        <div className="h-[2px] w-full" style={{ background: "#1d2132" }} />
         <div className="flex items-center gap-[8px]" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            disabled={busy || !item.actionable}
+            disabled={busy}
             onClick={() => onApprove?.(item)}
             data-testid={`button-approve-${item.id}`}
-            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             Approve
           </button>
           <button
             type="button"
-            disabled={busy || !item.actionable}
+            disabled={busy}
             onClick={() => onReject?.(item)}
             data-testid={`button-reject-${item.id}`}
-            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             Reject
           </button>
