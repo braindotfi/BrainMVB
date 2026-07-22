@@ -165,7 +165,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
           {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
@@ -208,7 +208,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
           {titleCase(rule.summary)}
         </p>
         {pausedFromReport && (
@@ -250,7 +250,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
           {titleCase(rule.summary)}
         </p>
       </button>
@@ -387,7 +387,7 @@ function SuggestionCard({
               </div>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] whitespace-nowrap"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
                   style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
                 >
                   {fact.value}
