@@ -69,6 +69,9 @@ interface CachedSession extends BrainSession {
   exp: number;
   /** PRODUCTION strategy only: rotating refresh token for POST /sessions/refresh. */
   refreshToken?: string;
+  /** epoch ms when THIS tenant's session was first provisioned (kept across
+   *  token refreshes of the same tenant; reset when a new tenant is provisioned). */
+  provisionedAt?: number;
 }
 
 const cache = new Map<string, CachedSession>();
@@ -106,11 +109,36 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   inflight.set(appUserId, create);
   try {
     const session = await create;
+    // Preserve the original provision time across token refreshes of the SAME
+    // tenant; a new tenant id means a fresh provision.
+    session.provisionedAt =
+      cached && cached.tenantId === session.tenantId && cached.provisionedAt
+        ? cached.provisionedAt
+        : Date.now();
     cache.set(appUserId, session);
     return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
   } finally {
     inflight.delete(appUserId);
   }
+}
+
+/**
+ * When the given user's CURRENT cached session was provisioned (epoch ms), or
+ * null if there is no live cached session. Real provision time, never fabricated.
+ */
+export function getBrainSessionProvisionedAt(appUserId: string): number | null {
+  return cache.get(appUserId)?.provisionedAt ?? null;
+}
+
+/**
+ * When the given user's CURRENT cached demo session token expires (epoch ms),
+ * or null if there is no live cached session. On the demo-provision path a
+ * token refresh provisions a fresh tenant, so this is effectively when the
+ * ephemeral demo tenant resets. Real expiry from the token source, never fabricated.
+ */
+export function getBrainSessionExpiresAt(appUserId: string): number | null {
+  const exp = cache.get(appUserId)?.exp;
+  return exp ? exp * 1000 : null;
 }
 
 /** Mint a new session via the configured token source. */

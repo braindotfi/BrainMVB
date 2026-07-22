@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { useAuth } from "@/lib/authContext";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
+import { usePlanId, setPlanId } from "@/lib/planStore";
 import { useUserContact } from "@/lib/userContact";
 import { useCurrency } from "@/lib/currencyContext";
 import { ICONS } from "@/assets/figma-icons";
@@ -215,13 +216,16 @@ const SettingRow = ({
   </div>
 );
 
+/* 16px/24 semibold #414965. Spacing to the card below comes from the
+   parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children }: { children: string }) => (
-  <p
-    className="text-[11px] uppercase px-1 mb-2"
-    style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600 }}
-  >
-    {children}
-  </p>
+  <div className="flex items-center min-h-[36px]">
+    <p
+      style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
+    >
+      {children}
+    </p>
+  </div>
 );
 
 /* ─── Profile section (Figma 3695:38606 / 3957:43974) ─── */
@@ -463,7 +467,7 @@ function ProfileSection() {
       </Card>
 
       {/* Identity card, borderless per Figma 3957:43974 */}
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Identity</SectionLabel>
         <Card noBorder>
           <SettingRow
@@ -484,7 +488,7 @@ function ProfileSection() {
         </Card>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Currency</SectionLabel>
         {/* overflow-visible so the dropdown isn’t clipped by the card */}
         <div className="rounded-[16px]" style={{ background: "#0a0c10" }}>
@@ -564,7 +568,9 @@ const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string;
 function BillingSection() {
   const alert = useAppAlert();
   const { email } = useUserContact();
-  const [planId, setPlanId] = useState<PlanId | null>(null);
+  // Plan lives in the shared plan store (SSOT) — the Developers Usage & Limits
+  // page reads the same source for its rate-limit tier.
+  const planId = usePlanId();
   const [cardLast4, setCardLast4] = useState<string | null>(null);
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [updateCardOpen, setUpdateCardOpen] = useState(false);
@@ -575,7 +581,7 @@ function BillingSection() {
   return (
     <div className="flex flex-col gap-5">
       {/* Current plan summary card */}
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <Card noBorder>
           <div className="p-4 flex flex-col gap-4">
@@ -660,7 +666,7 @@ function BillingSection() {
       </div>
 
       {/* Payment method card */}
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <Card noBorder>
           <div className="p-4 flex items-center gap-4">
@@ -713,7 +719,7 @@ function BillingSection() {
       </div>
 
       {/* Invoice history */}
-      <div>
+      <div className="flex flex-col gap-[4px]">
         <SectionLabel>Invoice History</SectionLabel>
         <Card noBorder>
           <div className="p-4">
@@ -758,8 +764,14 @@ function BillingSection() {
 }
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
+const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "legal", "account"];
+
 export function SettingsPage() {
-  const [section, setSection] = useState<Section>("profile");
+  // Deep-link support: /settings?section=billing opens that section directly.
+  const [section, setSection] = useState<Section>(() => {
+    const s = new URLSearchParams(window.location.search).get("section");
+    return VALID_SECTIONS.includes(s as Section) ? (s as Section) : "profile";
+  });
   const { toast } = useToast();
 
   const SectionContent = {

@@ -171,27 +171,6 @@ const RulesIconInactive = () => (
   </div>
 );
 
-const ActivityIconActive = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[12.5%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_active_base} />
-    </div>
-    <div className="absolute inset-[20.83%_12.5%]">
-      <div className="absolute inset-[-8.04%_-12.5%_-24.11%_-12.5%]">
-        <img alt="" className="block max-w-none size-full" src={ICONS.activity_active_stroke} />
-      </div>
-    </div>
-  </div>
-);
-
-const ActivityIconInactive = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[12.5%_4.17%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_inactive} />
-    </div>
-  </div>
-);
-
 const SettingsIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%]">
@@ -261,10 +240,9 @@ const VendorsIconInactive = () => (
 const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Home", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
   { path: "/finances", label: "Finances", ActiveIcon: FinancesIconActive, InactiveIcon: FinancesIconInactive },
-  { path: "/review", label: "Review", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
+  { path: "/inbox", label: "Inbox", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
   { path: "/vendors", label: "Vendors", ActiveIcon: VendorsIconActive, InactiveIcon: VendorsIconInactive },
   { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
-  { path: "/activity", label: "Activity", ActiveIcon: ActivityIconActive, InactiveIcon: ActivityIconInactive },
 ];
 
 /* Audit Log icon - Figma-matched PNG assets (active/inactive) */
@@ -276,8 +254,28 @@ const AuditLogIconInactive = () => (
   <img alt="" className="shrink-0 size-[24px]" src={auditLogInactiveIcon} />
 );
 
+/* Developers icon - inline SVG code brackets, matching the 24px nav icon frame */
+const DevelopersIconActive = () => (
+  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#a88afa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 4.5L10.5 19.5" stroke="#7631ee" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
+const DevelopersIconInactive = () => (
+  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 4.5L10.5 19.5" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
 const OTHER_NAV: NavItem[] = [
   { path: "/audit-log", label: "Audit Log", ActiveIcon: AuditLogIconActive, InactiveIcon: AuditLogIconInactive },
+  { path: "/developers", label: "Developers", ActiveIcon: DevelopersIconActive, InactiveIcon: DevelopersIconInactive },
   { path: "/settings", label: "Settings", ActiveIcon: SettingsIconActive, InactiveIcon: SettingsIconInactive },
 ];
 
@@ -300,7 +298,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
 
   /** Returns the badge count for a nav item by path, or 0 if no badge applies. */
   const getNavCount = (path: string) => {
-    if (path === "/review") return reviewItemsCount;
+    if (path === "/inbox") return reviewItemsCount;
     return 0;
   };
 
@@ -326,7 +324,33 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               </div>
 
               <div className="flex flex-col gap-1 items-center">
-                {[...MAIN_NAV, ...OTHER_NAV].map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                  const count = getNavCount(path);
+                  return (
+                    <Link key={path} href={path} className="outline-none focus:outline-none">
+                      <button
+                        title={count > 0 ? `${label} (${count} new)` : label}
+                        data-testid={`nav-collapsed-${label.toLowerCase()}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                      >
+                        {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                        {count > 0 && (
+                          <span
+                            data-testid={`badge-collapsed-${label.toLowerCase()}`}
+                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                          />
+                        )}
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Divider between Activity and the items below it */}
+              <div className="w-full h-px bg-[#1d2132]" />
+
+              <div className="flex flex-col gap-1 items-center">
+                {OTHER_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
                   const count = getNavCount(path);
                   return (
                     <Link key={path} href={path} className="outline-none focus:outline-none">

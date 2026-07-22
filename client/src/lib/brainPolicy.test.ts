@@ -49,7 +49,7 @@ describe("mapPolicyRuleToCard", () => {
       execute: "confirm",
       require: "owner_and_cfo",
     });
-    expect(card.scopeSummary).toMatch(/over 10000 USD/);
+    expect(card.scopeSummary).toMatch(/over 10,000\.00/);
   });
 
   it("falls back to 'any action' / 'no conditions' for an empty rule, never guessing", () => {

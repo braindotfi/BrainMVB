@@ -1,0 +1,41 @@
+Here's a scoped prompt you can hand to Replit:
+
+---
+
+**Prompt for Replit:**
+
+> Make two isolated changes to the Brain MVB client. Do not touch anything else — no other pages, no navigation items beyond what's specified, no pop-up/modal components.
+>
+> **1. Merge Review and Activity into a single Inbox page**
+>
+> Remove the standalone Review page and Activity page (including their sidebar nav entries). Replace both with one page called **Inbox**, reachable from primary nav (not under "Other").
+>
+> Inbox tabs: replace the existing Review tabs (Needs Review / Approved Automatically) and Activity tabs (Brain Did / You Approved / You Rejected / You Postponed) with this single set of filter tabs, each showing a live count:
+> - Needs you (default selected)
+> - Auto-approved
+> - Rejected
+> - Rule changes
+>
+> Every record that currently appears on Review or Activity should now appear once in this unified list, tagged with the tab it belongs to. Don't create duplicate entries across tabs.
+>
+> Card layout for each record in the list:
+> - Title, status tag, one-line description/amount, timestamp
+> - A one-line "Why" explanation shown inline on the card (not hidden behind a tap)
+> - For records in the "Needs you" tab only: three inline buttons on the card itself — Approve, Reject, Ask Brain why
+>
+> **Do not modify the existing pop-up/detail modal that opens when a record is tapped** (the Cash Agent-style detail view). That modal stays exactly as it is today — this change only affects the list page behind it (tabs + card layout).
+>
+> **2. Add live search to the Audit Log page**
+>
+> Add a search input directly above the existing tab row on the Audit Log page. Behavior: filter the visible records as the user types (no submit button, no debounce delay beyond what's needed for performance) — matching against record title, description, and amount/vendor text. Search should combine with whichever tab is currently selected (i.e., search within the active tab's records, not the full unfiltered set).
+>
+> **Do not change the existing Audit Log tabs** (Approvals / Auto-Approved / Rejections / Rule Changes / Trusted Changes / Flagged / Last 30 Days) — keep them exactly as they are today.
+>
+> Update the card layout for each audit record to show:
+> - Title, type tag, one-line description, timestamp
+> - Anchor hash inline, with a "verified" indicator once the user has verified it
+> - Three inline actions on the card: Verify anchor, Export entry, View full record
+>
+> **Do not modify the existing Audit Record pop-up** that opens from "View full record" (the one showing Decision Lifecycle, Linked Evidence, and Anchor Proof). That stays exactly as it is today.
+>
+> Scope check before submitting: only the Review/Activity/Inbox pages and the Audit Log page's tab-row-and-above area and card layout should have diffs. No other page, nav structure, or modal/pop-up component should change.

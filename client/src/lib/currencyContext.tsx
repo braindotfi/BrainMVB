@@ -32,7 +32,7 @@ const CurrencyContext = createContext<CurrencyContextType | null>(null);
 function parseAmount(amount: string | number): { sign: "" | "-"; value: number; decimals: number } | null {
   if (typeof amount === "number") {
     if (!isFinite(amount)) return null;
-    return { sign: amount < 0 ? "-" : "", value: Math.abs(amount), decimals: Number.isInteger(amount) ? 0 : 2 };
+    return { sign: amount < 0 ? "-" : "", value: Math.abs(amount), decimals: 2 };
   }
   const s = String(amount).trim();
   if (!s) return null;
@@ -49,7 +49,7 @@ function parseAmount(amount: string | number): { sign: "" | "-"; value: number; 
   const decPart = match[2] ?? "";
   const value = Number(`${intPart}.${decPart || "0"}`);
   if (!isFinite(value)) return null;
-  return { sign, value, decimals: decPart.length };
+  return { sign, value, decimals: Math.max(decPart.length, 2) };
 }
 
 function formatConverted(parsed: { sign: "" | "-"; value: number; decimals: number }, symbol: string, rate: number): string {

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   pgTable, text, varchar, boolean, integer, numeric,
-  timestamp, jsonb, bigint, uuid, index, primaryKey,
+  timestamp, jsonb, bigint, uuid, index, uniqueIndex, primaryKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -59,7 +59,8 @@ export const bankConnections = pgTable("bank_connections", {
   connectedAt: timestamp("connected_at").defaultNow().notNull(),
 }, (t) => [
   index("bank_connections_user_id_idx").on(t.userId),
-  index("bank_connections_user_item_idx").on(t.userId, t.itemId),
+  // UNIQUE: createBankConnection upserts with ON CONFLICT (user_id, item_id)
+  uniqueIndex("bank_connections_user_item_idx").on(t.userId, t.itemId),
 ]);
 
 /* ─── Source Documents (uploaded files registered as an ingestion source) ─── */

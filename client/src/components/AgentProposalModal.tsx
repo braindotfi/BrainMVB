@@ -106,9 +106,9 @@ const RECONCILIATION_CATEGORIES = [
   "Merchant fees",
   "Software",
   "Office supplies",
-  "Travel & meals",
+  "Travel and meals",
   "Professional services",
-  "Rent & utilities",
+  "Rent and utilities",
   "Marketing",
   "Equipment",
   "Insurance",
@@ -833,7 +833,7 @@ export function AgentProposalModal({
               className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full"
               data-testid="text-agent-proposal-demo-note"
             >
-              Demo scenario — illustrative content, not live tenant data.
+              Demo scenario: illustrative content, not live tenant data.
             </p>
           </div>
 

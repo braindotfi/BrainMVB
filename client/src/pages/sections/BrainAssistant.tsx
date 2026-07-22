@@ -80,6 +80,13 @@ const SUGGESTED_QUESTIONS = [
   "Show last 10 transactions",
 ];
 
+/** Extra chips shown ONLY while a Developers subpage is active — they submit
+ *  real prompts through the same assistant pipe as any typed message. */
+const DEVELOPER_QUESTIONS = [
+  "Run a test call",
+  "Show my usage this month",
+];
+
 /** Post-process text so amounts get thousands separators and the active currency symbol.
  *  Matches:
  *    - $-prefixed or €-prefixed numbers (strips trailing .00000000 garbage)
@@ -285,7 +292,8 @@ let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const onDevelopersPage = location.startsWith("/developers");
   const { user, isLoading: authLoading } = useAuth();
   const storageKey = `brain.chat.${user?.id ?? "anon"}`;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -888,7 +896,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
       {/* Suggested questions */}
       <div className="flex items-center gap-[8px] px-[7px] pt-[12px] pb-[8px] overflow-x-auto">
-        {SUGGESTED_QUESTIONS.map((q) => (
+        {(onDevelopersPage ? [...DEVELOPER_QUESTIONS, ...SUGGESTED_QUESTIONS] : SUGGESTED_QUESTIONS).map((q) => (
           <button
             key={q}
             data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
