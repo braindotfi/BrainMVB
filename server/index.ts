@@ -6,7 +6,9 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { assertEncryptionKeyConfigured } from "./tokenCrypto";
 
-assertEncryptionKeyConfigured();
+if (process.env.NODE_ENV === "production") {
+  assertEncryptionKeyConfigured();
+}
 
 const app = express();
 const httpServer = createServer(app)
