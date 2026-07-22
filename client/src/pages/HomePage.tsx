@@ -716,7 +716,7 @@ export function HomePage() {
           {/* Header */}
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
             <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative shrink-0 text-[#6c779d] text-[0px] whitespace-nowrap">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative text-[#6c779d] text-[0px]">
                 <span className="leading-[24px] text-[20px]">{greeting}{greetingName ? ", " : ""}</span>
                 {greetingName && (
                   <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{greetingName}</span>
@@ -725,12 +725,12 @@ export function HomePage() {
               </p>
             </div>
             <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative shrink-0 text-[#a8b9f4] text-[32px] whitespace-nowrap">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative text-[#a8b9f4] text-[32px]">
                 Here's where your money stands today.
               </p>
             </div>
             <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated {updatedLabel}</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
             </div>
           </div>
 

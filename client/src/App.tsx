@@ -164,7 +164,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           onAddSource={() => setAddSourceOpen(true)}
         />
 
-        <div className="flex-1 min-w-0 min-h-0">
+        <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
           <Switch>
             <Route path="/" component={HomePage} />
             <Route path="/finances" component={FinancesPage} />

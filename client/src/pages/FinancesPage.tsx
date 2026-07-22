@@ -531,9 +531,9 @@ export function FinancesPage() {
 
           {/* Header */}
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Finances</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px] whitespace-nowrap">Here's your financial snapshot right now.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Updated {updatedLabel}</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Finances</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your financial snapshot right now.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
