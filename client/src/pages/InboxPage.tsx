@@ -24,7 +24,7 @@ import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brai
 import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
+import { auditEventLabel, auditEventChipClass, isAssistantActivity } from "@/lib/auditTypes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -500,8 +500,12 @@ export function InboxPage() {
       });
     }
 
-    /* Everything from the live audit log (the former Activity feed). */
+    /* Everything from the live audit log (the former Activity feed).
+       Assistant activity (wiki.question) is informational — nothing to
+       approve or reject — so it stays in the Audit Log only and never
+       lands in the actionable Inbox queues. */
     for (const r of auditRecords) {
+      if (isAssistantActivity(r)) continue;
       push({
         id: r.id,
         tab: auditTab(r.eventType),

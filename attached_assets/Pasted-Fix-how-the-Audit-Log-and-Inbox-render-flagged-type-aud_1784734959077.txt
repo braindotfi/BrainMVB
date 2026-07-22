@@ -1,0 +1,10 @@
+Fix how the Audit Log and Inbox render flagged-type audit events, independent of any brain-core changes (these client fixes should hold up regardless of what brain-core sends).
+Changes needed:
+
+In client/src/lib/brainAudit.ts, remove the fallback that renders amount · actor · record.id using raw internal IDs (e.g. user_01KY52DRHFX..., evt_01KY52QNTMDFP...) directly in the visible subtitle. Raw IDs should never appear inline by default — move the event ID behind a small "Copy ID" affordance instead, and if no human-readable actor is available, omit the actor line rather than showing the raw string.
+Stop rendering all flagged-type events with the same red "FLAGGED" badge and severity styling. Until brain-core ships a distinct event type for assistant/wiki activity, add a client-side check: if the event's underlying subtype is wiki.question (or similarly non-risk), render it with a neutral tag (e.g. "Assistant activity") instead of the red Flagged pill. Once brain-core ships the distinct type from their side, this client-side special-case can be removed in favor of branching on the real type.
+Stop routing wiki.question events into Inbox's "Needs you" tab. Nothing is required of the user for these — they're informational. Either exclude them from Inbox entirely (Audit Log only) or, if visibility in Inbox is wanted, add them to a clearly separate, non-actionable section — not the same queue as items with Approve/Reject buttons.
+Fix the "Verify On-Chain" button state: when a record shows "Recorded · anchoring in next batch," the button should render visibly disabled with a tooltip explaining verification isn't available yet — not as a live, enabled purple CTA that does nothing when clicked.
+Replace the "Recorded · anchoring in next batch" / "Hashes pending next batch" copy with plainer language, e.g. "Not yet anchored — usually completes within a few hours." Keep it accurate but drop the batching-mechanics framing.
+
+Scope: this only touches the Audit Log record modal, the Audit Log list card rendering, and Inbox's tab-routing logic for flagged/wiki.question events. No other pages, nav, or modals should change.

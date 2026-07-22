@@ -5,7 +5,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1783385199788.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditEventLabel, linkedRelationship } from "@/lib/auditTypes";
+import { auditRecordLabel, isAssistantActivity, linkedRelationship } from "@/lib/auditTypes";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
@@ -42,7 +42,7 @@ export function AuditRecordPopup({
 
   if (!record) return null;
 
-  const isFlagged = record.eventType === "flagged";
+  const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
   const handleNavigate = (link: LinkedEntity) => {
     const returnTo = `/audit-log?record=${record.id}`;
@@ -67,7 +67,7 @@ export function AuditRecordPopup({
   };
 
   const statusPill = () => {
-    const label = auditEventLabel(record.eventType);
+    const label = auditRecordLabel(record);
     const isApproved = record.eventType === "approved";
     const isAuto = record.eventType === "auto_approved";
     const isRejected = record.eventType === "rejected";

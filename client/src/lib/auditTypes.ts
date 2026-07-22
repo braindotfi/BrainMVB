@@ -83,6 +83,10 @@ export interface AuditRecord {
   invoiceId?: string;
   /* Optional subtitle for the register row (key facts: amount · actor · audit id) */
   rowSubtitle?: string;
+  /* Raw brain-core action id (e.g. "wiki.question") this record was mapped
+     from — carried through so surfaces can special-case non-risk subtypes
+     (assistant activity) until brain-core ships a distinct event type. */
+  subtype?: string;
 }
 
 /* Filter tabs for the Audit Log page */
@@ -132,6 +136,43 @@ export function auditEventChipClass(type: AuditEventType): string {
     default:
       return "bg-[#1d2132] text-[#a8b9f4]";
   }
+}
+
+/* Non-risk assistant/wiki subtypes that brain-core currently emits as generic
+   "flagged" events. Client-side special-case: render these with a neutral
+   "Assistant activity" tag instead of the red FLAGGED pill, and keep them out
+   of actionable review queues. Remove once brain-core ships a distinct event
+   type for assistant activity and classify() can branch on it directly. */
+const ASSISTANT_SUBTYPES: ReadonlyArray<string> = ["wiki.question"];
+
+export function isAssistantActivity(record: Pick<AuditRecord, "eventType" | "subtype">): boolean {
+  return record.eventType === "flagged" && !!record.subtype && ASSISTANT_SUBTYPES.includes(record.subtype);
+}
+
+/* Record-aware label/chip: same as the eventType mapping except assistant
+   activity gets a neutral tag. Prefer these over the raw eventType helpers on
+   any surface that renders live brain-core records. */
+export function auditRecordLabel(record: Pick<AuditRecord, "eventType" | "subtype">): string {
+  return isAssistantActivity(record) ? "ASSISTANT ACTIVITY" : auditEventLabel(record.eventType);
+}
+
+export function auditRecordChipClass(record: Pick<AuditRecord, "eventType" | "subtype">): string {
+  return isAssistantActivity(record) ? "bg-[#1d2132] text-[#a8b9f4]" : auditEventChipClass(record.eventType);
+}
+
+/* Raw internal identifiers (user_01KY…, evt_01KY…, tnt_…, agt_…) must never
+   render inline as if they were names. An actor string is "human-readable"
+   only if it is NOT a prefixed-ULID-style machine id. "system" is allowed
+   (it is honest and meaningful). Returns the actor if displayable, else
+   undefined so callers omit the actor line entirely. */
+const RAW_ID_RE = /^[a-z]+_[0-9A-Za-z]{16,}$/;
+
+export function humanReadableActor(actor: string | undefined): string | undefined {
+  if (!actor) return undefined;
+  const trimmed = actor.trim();
+  if (!trimmed) return undefined;
+  if (RAW_ID_RE.test(trimmed)) return undefined;
+  return trimmed;
 }
 
 /* Payment event types - records that move money to a receiving party. Trust and

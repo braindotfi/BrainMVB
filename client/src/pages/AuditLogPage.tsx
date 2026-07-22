@@ -4,8 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { AUDIT_TABS, auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
-import { Search, ShieldCheck, Download, FileText, Anchor } from "lucide-react";
+import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
+import { Search, ShieldCheck, Download, FileText, Anchor, Copy, Check } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -142,6 +142,17 @@ export function AuditLogPage() {
     });
   };
 
+  /* Copy ID: the raw event id never renders inline — it lives behind this
+     affordance instead. */
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const handleCopyId = (record: AuditRecord) => {
+    navigator.clipboard?.writeText(record.id).catch(() => {});
+    setCopiedId(record.id);
+    window.setTimeout(() => {
+      setCopiedId((prev) => (prev === record.id ? null : prev));
+    }, 1500);
+  };
+
   /* Export entry: download the full audit record as a JSON file. */
   const handleExport = (record: AuditRecord) => {
     const blob = new Blob([JSON.stringify(record, null, 2)], { type: "application/json" });
@@ -262,11 +273,20 @@ export function AuditLogPage() {
                   ) : (
                     <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                       {filtered.map((record, idx) => {
-                        const isFlagged = record.eventType === "flagged";
+                        const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
                         const isRejected = record.eventType === "rejected";
                         const borderLeft = isFlagged || isRejected
                           ? "3px solid #d20344"
                           : undefined;
+                        const actorText = humanReadableActor(record.actor);
+                        const subtitle =
+                          record.rowSubtitle ??
+                          [
+                            typeof record.amount === "number" ? format(record.amount) : "",
+                            actorText ?? "",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
                         const anchorHash = record.anchor.merkleRoot ?? record.anchor.auditId;
                         const isVerified = verifiedIds.has(record.id);
                         return (
@@ -281,8 +301,8 @@ export function AuditLogPage() {
                                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
                                   {record.summary}
                                 </p>
-                                <span className={auditEventChipClass(record.eventType)}>
-                                  {auditEventLabel(record.eventType)}
+                                <span className={auditRecordChipClass(record)}>
+                                  {auditRecordLabel(record)}
                                 </span>
                                 <div className="flex-1" />
                                 {typeof record.amount === "number" && (
@@ -294,9 +314,11 @@ export function AuditLogPage() {
 
                               {/* Description + timestamp */}
                               <div className="flex items-center gap-[8px] w-full min-w-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate min-w-0">
-                                  {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
-                                </p>
+                                {subtitle && (
+                                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate min-w-0">
+                                    {subtitle}
+                                  </p>
+                                )}
                                 <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[12px] whitespace-nowrap shrink-0">
                                   {new Date(record.occurredAtMs).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
                                 </p>
@@ -321,14 +343,30 @@ export function AuditLogPage() {
 
                               {/* Inline actions */}
                               <div className="flex items-center gap-[8px] flex-wrap">
+                                <span title={record.anchor.status === "pending_next_batch" ? "Verification isn't available yet — this record hasn't been anchored on-chain." : undefined}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleVerify(record)}
+                                    disabled={record.anchor.status === "pending_next_batch"}
+                                    data-testid={`button-verify-anchor-${record.id.toLowerCase()}`}
+                                    className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#a8b9f4] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#161a26]"
+                                  >
+                                    <ShieldCheck className="w-[12px] h-[12px]" />
+                                    Verify anchor
+                                  </button>
+                                </span>
                                 <button
                                   type="button"
-                                  onClick={() => handleVerify(record)}
-                                  data-testid={`button-verify-anchor-${record.id.toLowerCase()}`}
+                                  onClick={() => handleCopyId(record)}
+                                  data-testid={`button-copy-id-${record.id.toLowerCase()}`}
                                   className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#a8b9f4] transition-colors"
                                 >
-                                  <ShieldCheck className="w-[12px] h-[12px]" />
-                                  Verify anchor
+                                  {copiedId === record.id ? (
+                                    <Check className="w-[12px] h-[12px] text-[#42bf23]" />
+                                  ) : (
+                                    <Copy className="w-[12px] h-[12px]" />
+                                  )}
+                                  {copiedId === record.id ? "Copied" : "Copy ID"}
                                 </button>
                                 <button
                                   type="button"

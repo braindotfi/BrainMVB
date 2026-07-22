@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
+import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
    Replaces MOCK_AUDIT_RECORDS as the AuditLogPage data source with
@@ -189,16 +190,24 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
       ? event.inputs.destination_counterparty_id
       : undefined;
 
+  const assistantActivity = isAssistantActivity({ eventType, subtype: event.action });
+
   const step: LifecycleStep = {
     label: summary,
     timestamp: label(createdMs),
-    kind: eventType === "flagged" || eventType === "rejected" ? "alert" : "ok",
-    actor: event.actor !== "system" ? event.actor : undefined,
+    kind:
+      (eventType === "flagged" && !assistantActivity) || eventType === "rejected"
+        ? "alert"
+        : "ok",
+    // Raw machine ids (user_01KY…) never render inline as if they were names —
+    // pass the actor through only when it is human-readable.
+    actor: event.actor !== "system" ? humanReadableActor(event.actor) : undefined,
   };
 
   return {
     id: event.id,
     eventType,
+    subtype: event.action,
     summary,
     counterparty,
     amount,

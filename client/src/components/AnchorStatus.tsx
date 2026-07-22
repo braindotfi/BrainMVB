@@ -23,10 +23,10 @@ export function AnchorStatus({
 
   const iconColor = pending ? "#6c779d" : "#42bf23";
   const statusLabel = pending
-    ? "Recorded · anchoring in next batch"
+    ? "Not yet anchored — usually completes within a few hours."
     : "Anchored · tamper-evident";
   const guarantee = pending
-    ? "This record will be anchored on Base in the next batch and then be independently verifiable."
+    ? "Once anchored on Base, this record becomes independently verifiable."
     : "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain.";
 
   return (
@@ -54,7 +54,7 @@ export function AnchorStatus({
           </p>
           {pending ? (
             <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965] w-full">
-              Hashes pending next batch
+              Not yet anchored — usually completes within a few hours.
             </p>
           ) : (
             <>
@@ -78,17 +78,26 @@ export function AnchorStatus({
       {/* Action row - 32px above button (gap-[12px] outer + mt-[20px] here) */}
       {mode === "proof" ? (
         <div className="flex flex-col gap-[6px] w-full mt-[20px]">
-          <button
-            type="button"
-            onClick={pending ? undefined : onVerify}
-            disabled={pending}
-            aria-disabled={pending}
-            data-testid="button-verify-on-chain"
-            className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-            style={{ background: "#240757", color: "#7631ee" }}
+          <span
+            className="w-full"
+            title={pending ? "Verification isn't available yet — this record hasn't been anchored on-chain." : undefined}
           >
-            Verify On-Chain
-          </button>
+            <button
+              type="button"
+              onClick={pending ? undefined : onVerify}
+              disabled={pending}
+              aria-disabled={pending}
+              data-testid="button-verify-on-chain"
+              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              style={
+                pending
+                  ? { background: "#1a1c24", color: "#6c779d" }
+                  : { background: "#240757", color: "#7631ee" }
+              }
+            >
+              Verify On-Chain
+            </button>
+          </span>
           {pending && (
             <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
               Verification opens once anchored.
