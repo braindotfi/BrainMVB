@@ -42,6 +42,7 @@ import {
   API_KEY_SCOPES,
   type UsageAuditEvent,
 } from "./developers";
+import { ANTHROPIC_MODEL } from "./anthropicModel";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -79,7 +80,7 @@ async function humanizeWikiAnswer(raw: string): Promise<string> {
       ? JSON.stringify(parsed.answer)
       : raw;
     const message = await anthropic.messages.create({
-      model: "claude-opus-4-5",
+      model: ANTHROPIC_MODEL,
       max_tokens: 512,
       system:
         "You turn a structured financial result (JSON) into a concise, warm prose answer for a business owner. " +
@@ -592,7 +593,7 @@ Rules:
 - Reference only the real numbers provided (dollars, percentages, months); do not invent figures.
 - Do not greet, do not restate the category. Just the recommendation.`;
 
-  app.get("/api/goals/recommendation", async (req, res) => {
+  app.get("/api/goals/recommendation", requireAuth, async (req, res) => {
     const category = String(req.query.category ?? "").slice(0, 64);
     if (!category) return res.status(400).json({ error: "category required" });
 
@@ -637,7 +638,7 @@ Rules:
         ? `The user's real financial figures from Brain (source of truth. Use only these, do not invent):\n${grounding}`
         : "No live financial figures are available; give general but actionable guidance for the category.";
       const message = await anthropic.messages.create({
-        model: "claude-opus-4-5",
+        model: ANTHROPIC_MODEL,
         max_tokens: 220,
         system: GOAL_REC_SYSTEM,
         messages: [
@@ -935,7 +936,7 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     try {
       const message = await anthropic.messages.create({
-        model: "claude-opus-4-5",
+        model: ANTHROPIC_MODEL,
         max_tokens: 1024,
         system,
         messages: parsed.data.messages,
@@ -981,14 +982,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     try {
       const nonce = generateNonce();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-      await storage.createNotification({
-        userId: `nonce:${nonce}`,
-        type: "NONCE",
-        title: nonce,
-        body: expiresAt.toISOString(),
-        data: {},
-        read: false,
-      });
+      await storage.createSiweNonce({ nonce, expiresAt });
       return res.json({ nonce });
     } catch (error) {
       return res.status(500).json({ error: "Failed to generate nonce" });
@@ -1019,10 +1013,9 @@ You can explain concepts and surface general guidance, but do not give regulated
       // Consume it first so a replay of the same signed message can't re-authenticate.
       const nonce = /^Nonce: (.+)$/m.exec(message)?.[1]?.trim();
       if (!nonce) return res.status(401).json({ error: "Missing nonce" });
-      const [nonceRecord] = await storage.getNotifications(`nonce:${nonce}`, 1);
+      const nonceRecord = await storage.consumeSiweNonce(nonce);
       if (!nonceRecord) return res.status(401).json({ error: "Unknown or already-used nonce" });
-      await storage.deleteNotification(nonceRecord.id);
-      if (nonceRecord.body && new Date(nonceRecord.body) < new Date()) {
+      if (nonceRecord.expiresAt < new Date()) {
         return res.status(401).json({ error: "Nonce expired" });
       }
       // Defense-in-depth: the signed message must name this address.
@@ -1032,6 +1025,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       if (!user) {
         user = await storage.createUser({ username: address.slice(0, 8) + "..." + address.slice(-4), password: "", walletAddress: address });
       }
+      req.session.userId = user.id;
       return res.json({ success: true, user: { id: user.id, walletAddress: user.walletAddress, username: user.username } });
     } catch (error) {
       console.error("SIWE verify error:", error);
@@ -1527,7 +1521,7 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
 
     try {
       const message = await anthropic.messages.create({
-        model: "claude-opus-4-5",
+        model: ANTHROPIC_MODEL,
         max_tokens: 1024,
         system: RULE_SUGGESTIONS_SYSTEM,
         messages: [{ role: "user", content: `Live financial data from Brain:\n${built.text}` }],

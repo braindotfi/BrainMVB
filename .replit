@@ -43,6 +43,7 @@ waitForPort = 5000
 [userenv.shared]
 VITE_CROSSMINT_CLIENT_API_KEY = "USE_SECRET"
 GOOGLE_CLIENT_ID = "391354009777-poq24ohpc1da534j08gvh17srgcisbkb.apps.googleusercontent.com"
+ENCRYPTION_KEY = "4b357d87e80747e59d9966b88d8729f2321487fdd7804cd8176638e3118f9072"
 
 [postMerge]
 path = "scripts/post-merge.sh"

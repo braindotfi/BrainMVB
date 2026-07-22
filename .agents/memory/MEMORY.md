@@ -8,4 +8,5 @@
 - [Activity tap convention](activity-tap-convention.md) — every Activity row opens the record it represents (audit popup / proposal sheet / agent modal receipt); decided records show read-only footers.
 - [Dev DB schema drift](dev-db-schema-drift.md) — "column does not exist"/ON CONFLICT errors usually mean dev Postgres lags schema.ts (db:push hangs); fix via psql, use uniqueIndex() for upsert targets.
 - [Section label spacing](section-label-spacing.md) — subpage labels need a 36px-tall row (like button-bearing headers), not gap tweaks; 4px gap to card stays.
+- [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.

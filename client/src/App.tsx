@@ -16,11 +16,10 @@ import { SignupPage } from "@/pages/SignupPage";
 import { CompanySetupPage } from "@/pages/CompanySetupPage";
 import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
-import { ReviewPage } from "@/pages/ReviewPage";
+import { InboxPage } from "@/pages/InboxPage";
 import { RulesPage } from "@/pages/RulesPage";
 import { RuleDetail } from "@/pages/RuleDetail";
 import { VendorsPage } from "@/pages/VendorsPage";
-import { ActivityPage } from "@/pages/ActivityPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
 import { DevelopersPage } from "@/pages/DevelopersPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
@@ -169,11 +168,13 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           <Switch>
             <Route path="/" component={HomePage} />
             <Route path="/finances" component={FinancesPage} />
-            <Route path="/review" component={ReviewPage} />
+            <Route path="/inbox" component={InboxPage} />
+            {/* Legacy deep-link aliases for the merged Inbox page */}
+            <Route path="/review" component={InboxPage} />
             <Route path="/rules/:id" component={RuleDetail} />
             <Route path="/rules" component={RulesPage} />
             <Route path="/vendors" component={VendorsPage} />
-            <Route path="/activity" component={ActivityPage} />
+            <Route path="/activity" component={InboxPage} />
             <Route path="/audit-log" component={AuditLogPage} />
             <Route path="/developers" component={DevelopersPage} />
             <Route path="/settings" component={SettingsPage} />

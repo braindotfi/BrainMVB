@@ -2,9 +2,34 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { assertEncryptionKeyConfigured } from "./tokenCrypto";
+
+assertEncryptionKeyConfigured();
 
 const app = express();
 const httpServer = createServer(app)
+
+const helmetConfig: Parameters<typeof helmet>[0] = process.env.NODE_ENV === "production"
+  ? {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'sha256-NzvNrqk5jB9YZATwo5BF4JoRlJ02HsnFikbKXgEPdaQ='"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          imgSrc: ["'self'", "data:", "blob:"],
+          fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+          connectSrc: ["'self'", "https://mm-sdk-analytics.api.cx.metamask.io"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+    }
+  : {
+      contentSecurityPolicy: false,
+    };
 
 declare module "http" {
   interface IncomingMessage {
@@ -21,6 +46,29 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+app.use(helmet(helmetConfig));
+
+function envInt(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const authLimiter = rateLimit({
+  windowMs: envInt("AUTH_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
+  limit: envInt("AUTH_RATE_LIMIT_MAX", 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const llmLimiter = rateLimit({
+  windowMs: envInt("LLM_RATE_LIMIT_WINDOW_MS", 60 * 1000),
+  limit: envInt("LLM_RATE_LIMIT_MAX", 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(["/api/auth/login", "/api/auth/register"], authLimiter);
+app.use(["/api/goals/recommendation", "/api/assistant/chat", "/api/rules/suggestions"], llmLimiter);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -36,11 +84,12 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const logBodies = process.env.NODE_ENV !== "production" && process.env.API_LOG_RESPONSE_BODY === "true";
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
+    if (logBodies) capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
@@ -95,14 +144,18 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  const listenOptions: {
+    port: number;
+    host: string;
+    reusePort?: boolean;
+  } = {
+    port,
+    host: "0.0.0.0",
+  };
+  if (process.platform === "linux") {
+    listenOptions.reusePort = true;
+  }
+  httpServer.listen(listenOptions, () => {
+    log(`serving on port ${port}`);
+  });
 })();
