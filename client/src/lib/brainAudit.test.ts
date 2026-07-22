@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, extractActorName, type BrainAuditEvent, type BrainAnchor } from "./brainAudit";
+import { mapAuditEventToRecord, extractActorName, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -128,6 +128,43 @@ describe("mapAuditEventToRecord", () => {
     expect(r.lifecycle[0].kind).toBe("ok");
   });
 
+  it("surfaces the real question as the wiki.question title (short question = whole title)", () => {
+    const r = mapAuditEventToRecord(
+      ev({ action: "wiki.question", inputs: { question: "What do I owe AWS this month?" } }),
+      anchor(),
+    );
+    expect(r.summary).toBe("What do I owe AWS this month?");
+    // No truncation happened → no redundant note repeating the title
+    expect(r.lifecycle[0].note).toBeUndefined();
+  });
+
+  it("truncates a long wiki.question title for cards and carries the FULL text on the lifecycle note", () => {
+    const long =
+      "Can you walk me through every outstanding vendor obligation we have for Q3, including anything already scheduled but not yet settled?";
+    const r = mapAuditEventToRecord(
+      ev({ action: "wiki.question", inputs: { question: long } }),
+      anchor(),
+    );
+    expect(r.summary.endsWith("…")).toBe(true);
+    expect(r.summary.length).toBeLessThanOrEqual(CARD_TITLE_MAX + 1);
+    expect(r.lifecycle[0].note).toBe(long);
+  });
+
+  it("falls back to the generic wiki.question title when inputs.question is missing or not a string", () => {
+    const missing = mapAuditEventToRecord(ev({ action: "wiki.question", inputs: {} }), anchor());
+    expect(missing.summary).toBe("Assistant asked a question");
+    const wrongType = mapAuditEventToRecord(
+      ev({ action: "wiki.question", inputs: { question: 42 } }),
+      anchor(),
+    );
+    expect(wrongType.summary).toBe("Assistant asked a question");
+    const blank = mapAuditEventToRecord(
+      ev({ action: "wiki.question", inputs: { question: "   " } }),
+      anchor(),
+    );
+    expect(blank.summary).toBe("Assistant asked a question");
+  });
+
   it("maps raw.ingest.deduplicated to its human summary as system activity", () => {
     const r = mapAuditEventToRecord(ev({ action: "raw.ingest.deduplicated" }), anchor());
     expect(r.eventType).toBe("system_activity");
@@ -198,6 +235,16 @@ describe("mapAuditEventToRecord", () => {
       { "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ": null },
     );
     expect(r.lifecycle[0].actor).toBeUndefined();
+  });
+});
+
+describe("truncateForCard", () => {
+  it("returns short text unchanged and truncates long text with an ellipsis", () => {
+    expect(truncateForCard("short question")).toBe("short question");
+    const long = "x".repeat(200);
+    const t = truncateForCard(long);
+    expect(t.length).toBe(CARD_TITLE_MAX + 1);
+    expect(t.endsWith("…")).toBe(true);
   });
 });
 

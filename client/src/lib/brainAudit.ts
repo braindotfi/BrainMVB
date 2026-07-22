@@ -103,11 +103,38 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
   "approval_rejected": { eventType: "rejected", summary: () => "Approval attempt rejected" },
   "execution.approve": { eventType: "approved", summary: () => "Payment approved" },
   "execution.escalate": { eventType: "flagged", summary: () => "Payment escalated for review" },
-  "wiki.question": { eventType: "flagged", summary: () => "Assistant asked a question" },
+  "wiki.question": {
+    eventType: "flagged",
+    // brain-core guarantees inputs.question on wiki.question events (see
+    // api-surface contract: audit_event_contract…action_guarantees). The
+    // question IS the record's identity, so it is the title — truncated to
+    // card length here; the full text rides on the lifecycle step's note.
+    summary: (e) => {
+      const q = wikiQuestionText(e);
+      return q ? truncateForCard(q) : "Assistant asked a question";
+    },
+  },
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
   "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested — Brain pulled in new records to process" },
   "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data — already ingested previously, skipped" },
 };
+
+/** Card-friendly single-line truncation for titles sourced from free text
+ *  (currently the wiki.question question). Exported for tests. */
+export const CARD_TITLE_MAX = 72;
+export function truncateForCard(text: string, max: number = CARD_TITLE_MAX): string {
+  const t = text.trim();
+  return t.length <= max ? t : `${t.slice(0, max).trimEnd()}…`;
+}
+
+/** The real question text on a wiki.question event, when present and usable.
+ *  Defensive: the contract guarantees inputs.question, but older records may
+ *  predate it — fall back to the generic title rather than rendering junk. */
+function wikiQuestionText(e: BrainAuditEvent): string | undefined {
+  if (e.action !== "wiki.question") return undefined;
+  const q = e.inputs?.question;
+  return typeof q === "string" && q.trim() ? q.trim() : undefined;
+}
 
 /** `proposal.decided` (services/execution/src/proposals/decision-service.ts)
  *  emits `inputs: { proposal_id, decision }` - NOT outputs - and carries its
@@ -305,6 +332,11 @@ export function mapAuditEventToRecord(
     undefined;
   const displayActor = resolvedName ?? event.actor;
 
+  /* Full, untruncated question for wiki.question records: carried on the
+     lifecycle step's note so the popup can show the whole thing while list
+     cards keep the truncated title. Only set when truncation actually
+     dropped text — otherwise the note would just repeat the title. */
+  const fullQuestion = wikiQuestionText(event);
   const step: LifecycleStep = {
     label: summary,
     timestamp: label(createdMs),
@@ -313,6 +345,7 @@ export function mapAuditEventToRecord(
         ? "alert"
         : "ok",
     actor: event.actor !== "system" ? resolvedName ?? humanReadableActor(event.actor) : undefined,
+    note: fullQuestion && fullQuestion !== summary ? fullQuestion : undefined,
   };
 
   return {

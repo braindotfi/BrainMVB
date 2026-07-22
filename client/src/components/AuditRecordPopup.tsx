@@ -5,7 +5,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1783385199788.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditRecordLabel, isAssistantActivity, linkedRelationship } from "@/lib/auditTypes";
+import { auditRecordLabel, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
@@ -206,6 +206,24 @@ export function AuditRecordPopup({
                                   {step.note && (
                                     <p className="relative shrink-0 text-[#414965] w-full">{step.note}</p>
                                   )}
+                                  {(() => {
+                                    /* Actor line — honest omission: only renders when a
+                                       human-readable actor is available (raw machine ids are
+                                       filtered upstream by humanReadableActor), and skipped
+                                       when the step label already names the actor. */
+                                    const actorName = humanReadableActor(step.actor);
+                                    if (!actorName || step.label.includes(actorName)) return null;
+                                    return (
+                                      <p
+                                        data-testid={`text-step-actor-${idx}`}
+                                        className="relative shrink-0 text-[#6c779d] w-full"
+                                      >
+                                        {isAssistantActivity(record)
+                                          ? `Asked on behalf of ${actorName}`
+                                          : `By ${actorName}`}
+                                      </p>
+                                    );
+                                  })()}
                                   <p className="relative shrink-0 text-[#6c779d] text-[12px] w-full">{step.timestamp}</p>
                                 </div>
                               </div>
