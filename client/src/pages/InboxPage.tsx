@@ -170,7 +170,7 @@ const InboxCard = ({
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
           Why: {item.why}
         </p>
-        <div className="flex items-center gap-[8px] mt-[8px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-[8px] mt-[16px]" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             disabled={busy}
