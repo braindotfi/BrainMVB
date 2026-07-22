@@ -182,7 +182,7 @@ export function setupAuth(app: Express) {
     if (brainTenancyMode() === "production") {
       return res.status(404).json({ error: "Not found" });
     }
-    const DEMO_EMAIL = "demo@brain.finance";
+    const DEMO_EMAIL = "demo@brain.fi";
     let user = await storage.getUserByEmail(DEMO_EMAIL);
     if (!user) {
       user = await storage.createUser({

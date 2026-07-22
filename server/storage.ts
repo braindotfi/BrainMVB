@@ -14,7 +14,8 @@ import {
   brainAgentTokens as brainAgentTokensTable,
   type BrainAgentToken,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "drizzle-orm";
+
 import { db } from "./db";
 import { encryptPlaidAccessToken, readPlaidAccessToken } from "./tokenCrypto";
 
@@ -88,6 +89,7 @@ export interface IStorage {
   // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
+
 }
 
 export type ToolConnection = {
@@ -652,6 +654,7 @@ export class MemStorage implements IStorage {
     this.brainAgentTokensStore.set(tenantId, row);
     return row;
   }
+
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -1210,6 +1213,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return row;
   }
+
 }
 
 function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {
@@ -1240,3 +1244,4 @@ async function createStorage(): Promise<IStorage> {
 }
 
 export const storage: IStorage = await createStorage();
+

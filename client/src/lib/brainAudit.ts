@@ -75,7 +75,7 @@ export interface BrainAnchor {
  *  No `auto_approved` or `postponed` action exists anywhere in brain-core —
  *  see the ponytail note below for what that means for those two tabs. */
 const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: BrainAuditEvent) => string }> = {
-  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed — awaiting decision" },
+  "payment_intent.created": { eventType: "flagged", summary: () => "Payment proposed, awaiting decision" },
   "proposal.awaiting_second_approval": { eventType: "flagged", summary: () => "Payment awaiting second approval" },
   "payment_intent.approved": { eventType: "approved", summary: () => "Payment approved" },
   "payment_intent.rejected": { eventType: "rejected", summary: () => "Payment rejected" },

@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
-import { getBrainSession } from "./brain/auth";
+import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -22,12 +22,26 @@ import {
   ingestRawDocument,
   extractRawDocument,
   askWikiQuestion,
+  listTenantKeys,
+  issueTenantKey,
+  rotateTenantKey,
+  revokeTenantKey,
+  getTenantKeyUsage,
+  brainErrorCode,
   BrainApiError,
+  type BrainTenantKey,
+  type IssuedTenantKeyResponse,
   type RawSourceType,
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
 import { generateNonce } from "./nonce";
+import { brainAuthConfigured, platformServiceConfigured } from "./brain/config";
+import {
+  aggregateUsage,
+  API_KEY_SCOPES,
+  type UsageAuditEvent,
+} from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -87,13 +101,13 @@ const GOAL_REC_FALLBACK_DEFAULT =
   "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and Brain will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
   "Pay Off Debt":
-    "Target your highest-interest debt first — paying it down fastest frees up the most monthly cash flow.",
+    "Target your highest-interest debt first. Paying it down fastest frees up the most monthly cash flow.",
   "Build Reserve":
     "Base your reserve target on a multiple of your monthly operating burn (e.g. 3-6 months) so it tracks real runway.",
   "Hit Milestone":
     "Pick a growth number tied to a metric you actually track (revenue, ARR, users) and Brain will pace agent activity toward it.",
   "Cut Spend":
-    "Start with your largest recurring expense categories — trimming there usually has the biggest monthly impact.",
+    "Start with your largest recurring expense categories. Trimming there usually has the biggest monthly impact.",
   "Capital Deploy":
     "Point idle operating cash at a yield vault or a specific agent budget instead of letting it sit unused.",
   "Other":
@@ -112,6 +126,417 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Reads flow through here; the browser never sees a brain-core JWT.
   // ─────────────────────────────────────────────────────────────
   app.use("/api/brain", createBrainProxyRouter());
+
+  // ─────────────────────────────────────────────────────────────
+  // DEVELOPERS (API keys, tenants read, usage aggregation)
+  //
+  // API keys are brain-core-issued (PR #309: POST/GET /tenants/:id/keys,
+  // POST /keys/:id/rotate, DELETE /keys/:id, GET /tenants/:id/usage).
+  // The platform stores NOTHING key-related: list/issue/rotate/revoke and
+  // per-key usage all proxy to brain-core over the MEMBER token, and the
+  // plaintext secret is relayed from the create/rotate response exactly
+  // once. While brain-core's key flag (BRAIN_API_KEY_AUTH_ENABLED) is off
+  // the routes 404 route_not_found — surfaced honestly as 503
+  // keys_api_unavailable, never a local fallback.
+  // Webhooks are explicitly excluded from this section (v2).
+  // ─────────────────────────────────────────────────────────────
+
+  const createKeySchema = z.object({
+    name: z.string().trim().min(1).max(80),
+    environment: z.enum(["sandbox", "live"]),
+    scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
+  });
+
+  /** brain-core key → camelCase wire shape. Masked display is built
+   * CLIENT-side from keyPrefix + keyLast4 (per the PR #309 contract). */
+  const toDevKey = (k: BrainTenantKey) => ({
+    id: k.id,
+    name: k.name,
+    environment: k.environment,
+    scopes: k.scopes ?? [],
+    keyPrefix: k.key_prefix,
+    keyLast4: k.key_last4,
+    createdAt: k.created_at ?? null,
+    lastUsedAt: k.last_used_at ?? null,
+    revokedAt: k.revoked_at ?? null,
+    rotatedFromId: k.rotated_from_id ?? null,
+    status: (k.status === "revoked" || k.revoked_at) ? "revoked" : "active",
+  });
+
+  /** The one-time plaintext from an issue/rotate response (field name tolerant). */
+  const issuedPlaintext = (r: IssuedTenantKeyResponse): string | null => {
+    for (const f of ["secret", "plaintext", "key_secret", "api_key"]) {
+      const v = (r as Record<string, unknown>)[f];
+      if (typeof v === "string" && v.startsWith("brain_sk_")) return v;
+    }
+    const keyObj = r.key as unknown as Record<string, unknown> | undefined;
+    return keyObj && typeof keyObj.secret === "string" ? keyObj.secret : null;
+  };
+
+  /** Map brain-core key-API errors to honest platform responses.
+   * route_not_found = the upstream key flag is off → 503 keys_api_unavailable
+   * (the UI shows a "not yet enabled" state and auto-recovers when it flips). */
+  function sendKeyApiError(res: Response, error: unknown, action: string): void {
+    if (error instanceof BrainApiError) {
+      const code = brainErrorCode(error);
+      if (code === "route_not_found") {
+        res.status(503).json({
+          error: "keys_api_unavailable",
+          message: "The brain-core API-key service isn't enabled yet. Keys become available as soon as it is — no action needed on your side.",
+        });
+        return;
+      }
+      if (code === "api_key_not_found" || error.status === 404) {
+        res.status(404).json({ error: "api_key_not_found", message: "This key no longer exists — it may already have been rotated or revoked." });
+        return;
+      }
+      if (code === "rate_limited" || error.status === 429) {
+        res.status(429).json({ error: "rate_limited", message: "Rate limit hit (600 requests per 60s per key). Try again shortly." });
+        return;
+      }
+      if (code === "auth_invalid_key" || error.status === 401) {
+        res.status(401).json({ error: "auth_invalid_key", message: "The key is invalid or revoked." });
+        return;
+      }
+      res.status(error.status >= 500 ? 502 : error.status).json({ error: code ?? "brain_upstream_error", status: error.status });
+      return;
+    }
+    console.error(`Developers ${action} error:`, error);
+    res.status(500).json({ error: `Failed to ${action}` });
+  }
+
+  /** Member session (token + tenantId) or an honest 503 if unconfigured. */
+  async function requireBrainMemberSession(req: Request, res: Response): Promise<{ token: string; tenantId: string } | null> {
+    if (!brainAuthConfigured()) {
+      res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+      return null;
+    }
+    return await getBrainSession(req.session.userId!);
+  }
+
+  // GET /api/developers/keys - brain-core key list (masked fields only).
+  app.get("/api/developers/keys", requireAuth, async (req, res) => {
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const { keys } = await listTenantKeys(session.token, session.tenantId);
+      return res.json({ keys: (keys ?? []).map(toDevKey) });
+    } catch (error) {
+      return sendKeyApiError(res, error, "list keys");
+    }
+  });
+
+  // POST /api/developers/keys - issue via brain-core. Plaintext relayed ONCE.
+  // Live keys still require production tenancy readiness (linked tenant).
+  app.post("/api/developers/keys", requireAuth, async (req, res) => {
+    const parsed = createKeySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "invalid_request", details: parsed.error.flatten() });
+    }
+    const { name, environment, scopes } = parsed.data;
+    try {
+      if (environment === "live") {
+        const identity = await storage.getBrainIdentity(req.session.userId!);
+        if (!platformServiceConfigured() || !identity) {
+          return res.status(403).json({
+            error: "live_not_available",
+            message: "Live keys require a production tenant. Request access to go live.",
+          });
+        }
+      }
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const issued = await issueTenantKey(session.token, session.tenantId, { name, environment, scopes });
+      const plaintext = issuedPlaintext(issued);
+      if (!issued.key || !plaintext) {
+        console.error("Issue key: unexpected brain-core response shape", Object.keys(issued ?? {}));
+        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core issued a key but the response shape was unexpected." });
+      }
+      return res.status(201).json({ key: toDevKey(issued.key), plaintext });
+    } catch (error) {
+      return sendKeyApiError(res, error, "create key");
+    }
+  });
+
+  // POST /api/developers/keys/:id/rotate - brain-core atomic revoke + reissue.
+  // 404 api_key_not_found on double-rotate (idempotent-unsafe upstream).
+  app.post("/api/developers/keys/:id/rotate", requireAuth, async (req, res) => {
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const issued = await rotateTenantKey(session.token, String(req.params.id));
+      const plaintext = issuedPlaintext(issued);
+      if (!issued.key || !plaintext) {
+        console.error("Rotate key: unexpected brain-core response shape", Object.keys(issued ?? {}));
+        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core rotated the key but the response shape was unexpected." });
+      }
+      return res.json({ key: toDevKey(issued.key), plaintext });
+    } catch (error) {
+      return sendKeyApiError(res, error, "rotate key");
+    }
+  });
+
+  // DELETE /api/developers/keys/:id - brain-core revoke (204 on success).
+  // 404 api_key_not_found if already revoked (double-click) — handled client-side.
+  app.delete("/api/developers/keys/:id", requireAuth, async (req, res) => {
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      await revokeTenantKey(session.token, String(req.params.id));
+      return res.status(204).end();
+    } catch (error) {
+      return sendKeyApiError(res, error, "revoke key");
+    }
+  });
+
+  // GET /api/developers/key-usage?environment=&keyId= - brain-core per-key
+  // usage attribution (30d window). keyId optional: omit for the tenant-wide
+  // Usage page, include for a single key's detail modal.
+  app.get("/api/developers/key-usage", requireAuth, async (req, res) => {
+    const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
+    if (!envParsed.success) return res.status(400).json({ error: "invalid_environment" });
+    try {
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const usage = await getTenantKeyUsage(session.token, session.tenantId, {
+        window: "30d",
+        environment: envParsed.data,
+        key_id: typeof req.query.keyId === "string" ? req.query.keyId : undefined,
+      });
+      return res.json({
+        window: usage.window ?? "30d",
+        totalEvents: usage.total_events ?? 0,
+        keys: (usage.keys ?? []).map((k) => ({
+          keyId: k.key_id,
+          environment: k.environment,
+          eventCount: k.event_count ?? 0,
+          firstEventAt: k.first_event_at ?? null,
+          lastEventAt: k.last_event_at ?? null,
+        })),
+      });
+    } catch (error) {
+      return sendKeyApiError(res, error, "load key usage");
+    }
+  });
+
+  // GET /api/developers/tenants - read over the EXISTING tenancy layer. Demo mode
+  // shows the live demo tenant honestly (ephemeral, creation N/A); production mode
+  // shows the durable brain_identities mapping. Creation stays on the existing
+  // POST /api/brain/tenants path (NOT idempotent — never duplicated here).
+  app.get("/api/developers/tenants", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const mode = brainTenancyMode();
+    try {
+      if (mode === "production") {
+        const identity = await storage.getBrainIdentity(userId);
+        return res.json({
+          mode,
+          canCreate: platformServiceConfigured() && !identity,
+          // Single readiness signal for live keys — MUST match the gate on
+          // POST /api/developers/keys so the UI never offers a create that 403s.
+          liveKeysAvailable: platformServiceConfigured() && !!identity,
+          tenants: identity
+            ? [{
+                id: identity.tenantId,
+                companyName: identity.companyName,
+                environment: "live",
+                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                ephemeral: false,
+              }]
+            : [],
+        });
+      }
+      // Demo mode: the tenant is the provisioned demo tenant of the current session.
+      if (!brainAuthConfigured()) {
+        return res.json({ mode, canCreate: false, liveKeysAvailable: false, tenants: [] });
+      }
+      const { tenantId } = await getBrainSession(userId);
+      // Real per-session provision timestamp recorded when the session cache
+      // entry was created — never fabricated (null only if the cache is gone).
+      const provisionedAt = getBrainSessionProvisionedAt(userId);
+      // Demo tenants are ephemeral: the session token expiry is when the tenant
+      // effectively resets (a refresh provisions a fresh tenant). Real expiry
+      // from the token source — null if the cache is gone.
+      const expiresAt = getBrainSessionExpiresAt(userId);
+      return res.json({
+        mode,
+        canCreate: false,
+        liveKeysAvailable: false,
+        tenants: [{
+          id: tenantId,
+          companyName: null,
+          environment: "sandbox",
+          createdAt: provisionedAt ? new Date(provisionedAt).toISOString() : null,
+          ephemeral: true,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        }],
+      });
+    } catch (error: any) {
+      console.error("List tenants error:", error);
+      return res.status(500).json({ error: "Failed to load tenants" });
+    }
+  });
+
+  // GET /api/developers/usage?window=30 - server-side aggregation over REAL
+  // brain-core audit events (member token via the BFF session). No analytics
+  // pipeline, no mock data; empty tenant → honest zeros.
+  app.get("/api/developers/usage", requireAuth, async (req, res) => {
+    const windowDays = Math.min(Math.max(parseInt(String(req.query.window ?? "30"), 10) || 30, 1), 90);
+    const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
+    if (!envParsed.success) {
+      return res.status(400).json({ error: "invalid_environment" });
+    }
+    const environment = envParsed.data;
+    // Environment attribution: brain-core doesn't tag audit events with an API
+    // environment, but the tenancy mode determines it unambiguously — demo-mode
+    // tenants are sandbox, production-mode tenants are live. The non-matching
+    // environment therefore honestly has zero traffic (not "unknown").
+    const tenantEnvironment = brainTenancyMode() === "production" ? "live" : "sandbox";
+    if (environment !== tenantEnvironment) {
+      return res.json({ ...aggregateUsage([], windowDays), environment });
+    }
+    if (!brainAuthConfigured()) {
+      return res.status(503).json({
+        error: "brain_unconfigured",
+        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
+      });
+    }
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      // Page through audit events (bounded: 5 pages × 200 = 1000 events max —
+      // plenty for a 90-day demo/POC window; older events fall out of the window).
+      const events: UsageAuditEvent[] = [];
+      let after: string | undefined = undefined;
+      for (let page = 0; page < 5; page++) {
+        const batch = await listAuditEvents(token, { limit: 200, after });
+        events.push(...batch.events.map((e) => ({
+          id: e.id,
+          layer: e.layer,
+          action: e.action,
+          created_at: e.created_at,
+        })));
+        if (!batch.next_cursor || batch.events.length === 0) break;
+        after = batch.next_cursor;
+      }
+      return res.json({ ...aggregateUsage(events, windowDays), environment });
+    } catch (error: any) {
+      console.error("Developers usage error:", error);
+      if (error instanceof BrainApiError) {
+        return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
+      }
+      return res.status(502).json({ error: "Failed to aggregate usage" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // KEY-AUTHENTICATED PLATFORM API (v1)
+  //
+  // The raw `Authorization: Bearer brain_sk_...` key is forwarded STRAIGHT
+  // to brain-core, which owns validation, scope enforcement, and per-key
+  // rate limiting (600 req/60s). The platform never stores or resolves
+  // keys locally. brain-core error codes (auth_invalid_key, rate_limited)
+  // pass through with their upstream status.
+  // ─────────────────────────────────────────────────────────────
+
+  /** Extract the plaintext brain_sk_ key from the Authorization header. */
+  function extractApiKeyBearer(req: Request):
+    { ok: true; key: string } | { ok: false; status: number; error: string; message: string } {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return { ok: false, status: 401, error: "missing_api_key", message: "Provide an API key: Authorization: Bearer brain_sk_..." };
+    }
+    const plaintext = authHeader.slice("Bearer ".length).trim();
+    if (!plaintext.startsWith("brain_sk_")) {
+      return { ok: false, status: 401, error: "invalid_api_key", message: "Malformed API key." };
+    }
+    return { ok: true, key: plaintext };
+  }
+
+  /** Relay a brain-core key-auth failure with its real code/status. */
+  function sendKeyAuthedError(res: Response, error: unknown, path: string): void {
+    if (error instanceof BrainApiError) {
+      const code = brainErrorCode(error);
+      if (code === "route_not_found" || (error.status === 401 && code !== "auth_invalid_key")) {
+        // 401 without auth_invalid_key = brain-core's auth middleware doesn't
+        // recognize brain_sk_ bearers yet (key flag off) — honest 503.
+        res.status(503).json({
+          error: "keys_api_unavailable",
+          message: "brain-core key authentication isn't enabled yet. This endpoint starts working as soon as it is.",
+        });
+        return;
+      }
+      res.status(error.status).json({
+        error: code ?? "brain_upstream_error",
+        message: error.status === 429
+          ? "Rate limit hit (600 requests per 60s per key). Try again shortly."
+          : error.status === 401
+            ? "The key is invalid or revoked."
+            : undefined,
+      });
+      return;
+    }
+    console.error(`Key-authed ${path} error:`, error);
+    res.status(500).json({ error: "request_failed" });
+  }
+
+  // GET /api/v1/ping — verifies the key authenticates against brain-core.
+  // Valid = any authenticated response, including 403 insufficient scope
+  // (the key is real, it just wasn't issued that scope).
+  app.get("/api/v1/ping", async (req, res) => {
+    const auth = extractApiKeyBearer(req);
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
+    try {
+      await listAuditEvents(auth.key, { limit: 1 });
+      return res.json({ ok: true, timestamp: new Date().toISOString() });
+    } catch (error) {
+      if (error instanceof BrainApiError && error.status === 403) {
+        // Authenticated but not scoped for audit:read — the key itself works.
+        return res.json({ ok: true, note: "Key is valid (not scoped for audit:read).", timestamp: new Date().toISOString() });
+      }
+      return sendKeyAuthedError(res, error, "/api/v1/ping");
+    }
+  });
+
+  // Key-authed DATA endpoints: pure pass-throughs. brain-core enforces the
+  // key's scopes itself (ledger:read / audit:read) and 403s honestly.
+  function registerKeyAuthedRead(
+    path: string,
+    fetcher: (apiKey: string, req: Request) => Promise<unknown>,
+  ): void {
+    app.get(path, async (req, res) => {
+      const auth = extractApiKeyBearer(req);
+      if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
+      try {
+        return res.json(await fetcher(auth.key, req));
+      } catch (error) {
+        return sendKeyAuthedError(res, error, path);
+      }
+    });
+  }
+
+  const clampLimit = (raw: unknown, fallback: number, max: number): number =>
+    Math.min(Math.max(parseInt(String(raw ?? fallback), 10) || fallback, 1), max);
+
+  // GET /api/v1/ledger/accounts — ledger:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/ledger/accounts", (apiKey, req) =>
+    listLedgerAccounts(apiKey, { limit: clampLimit(req.query.limit, 50, 200) }),
+  );
+
+  // GET /api/v1/ledger/transactions — ledger:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/ledger/transactions", (apiKey, req) =>
+    listLedgerTransactions(apiKey, { limit: clampLimit(req.query.limit, 50, 200) }),
+  );
+
+  // GET /api/v1/audit/events — audit:read (enforced by brain-core)
+  registerKeyAuthedRead("/api/v1/audit/events", (apiKey, req) =>
+    listAuditEvents(apiKey, {
+      limit: clampLimit(req.query.limit, 50, 200),
+      after: typeof req.query.after === "string" ? req.query.after : undefined,
+    }),
+  );
 
   // ─────────────────────────────────────────────────────────────
   // ACCOUNT / BANKING
@@ -483,7 +908,7 @@ You can explain concepts and surface general guidance, but do not give regulated
     if (!process.env.ANTHROPIC_API_KEY) {
       if (grounding) {
         return res.json({
-          reply: `Assistant is offline (no API key configured) — here is your live data snapshot instead:\n\n${grounding}`,
+          reply: `Assistant is offline (no API key configured), so here is your live data snapshot instead:\n\n${grounding}`,
           sources,
           grounded: true,
           assistantOffline: true,

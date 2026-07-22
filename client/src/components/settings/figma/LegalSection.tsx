@@ -11,7 +11,7 @@ const openExternal = (url: string) => {
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
-        <div className="content-stretch flex flex-col h-[24px] items-start relative shrink-0 w-full">
+        <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
           <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Account Activity
           </p>

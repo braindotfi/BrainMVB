@@ -97,13 +97,14 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
         type="button"
         onClick={() => openMemberDetail(member.id)}
         data-testid={`row-member-${member.id}`}
-        className="bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#0d1018] transition-colors"
+        className="flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
       >
-        <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
-          <img alt="" className="size-full object-cover" src={memberIcon} />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-[4px] items-start justify-center">
-          <div className="flex gap-[8px] items-start shrink-0">
+        <div className="flex flex-[1_0_0] gap-[8px] items-center min-w-px">
+          <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
+            <img alt="" className="size-full object-cover" src={memberIcon} />
+          </div>
+          <div className="min-w-0 flex flex-col gap-[4px] items-start justify-center">
+          <div className="flex gap-[8px] items-center shrink-0">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
               {member.displayName}
             </p>
@@ -126,16 +127,17 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               </span>
             )}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
+          </div>
         </div>
         <div className="relative rounded-[100px] shrink-0 size-[40px] overflow-hidden">
           <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
         </div>
       </button>
       {invited && inviteActions && (
-        <div className="flex gap-[8px] items-center pl-[64px]">
+        <div className="flex gap-[8px] items-center pl-[48px]">
           <button
             type="button"
             disabled={busy !== null}
@@ -386,27 +388,29 @@ export default function TeamSection() {
 
   return (
     <div className="flex flex-col gap-[20px] w-full">
-      {/* Header */}
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
-        Members
-      </p>
+      {/* Header + panel: 4px gap, matching Account subpage */}
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex items-center min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            Members
+          </p>
+        </div>
 
-      {/* Members list panel */}
-      <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+        <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
         {isLoading && (
-          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+          <div className="flex gap-[16px] h-[40px] items-center">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">Loading members…</p>
           </div>
         )}
         {isError && (
-          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+          <div className="flex gap-[16px] h-[40px] items-center">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#d20344] text-[16px]" data-testid="text-members-error">
               Couldn't load your team from Brain core.
             </p>
           </div>
         )}
         {!isLoading && !isError && members.length === 0 && (
-          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
+          <div className="flex gap-[16px] h-[40px] items-center">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">No members yet.</p>
           </div>
         )}
@@ -416,6 +420,7 @@ export default function TeamSection() {
             <MemberRow member={m} inviteActions={production} />
           </div>
         ))}
+        </div>
       </div>
 
       <button

@@ -316,12 +316,13 @@ function PolicySection() {
 }
 
 /* Title case helper, used for all labels platform-wide */
+const ALWAYS_UPPER = new Set(["ap", "ar", "cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
 function titleCase(str: string) {
   return str
     .replace(/(^| )&($| )/g, "$1and$2")
     .replace(/\w\S*/g, (txt) => {
       const lower = txt.toLowerCase();
-      if (lower === "ap" || lower === "ar") return lower.toUpperCase();
+      if (ALWAYS_UPPER.has(lower)) return lower.toUpperCase();
       return txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase();
     });
 }
@@ -1014,7 +1015,7 @@ export function RulesPage() {
               {suggestions.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    Brain suggests policies as it sees patterns in your activity — nothing yet.
+                    Brain suggests policies as it sees patterns in your activity. Nothing yet.
                   </p>
                 </div>
               ) : (

@@ -4,7 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { AUDIT_TABS } from "@/lib/auditTypes";
+import { AUDIT_TABS, auditEventLabel, auditEventChipClass } from "@/lib/auditTypes";
+import { Search, ShieldCheck, Download, FileText, Anchor } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -63,6 +64,10 @@ export function AuditLogPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("Approvals");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
+  const [query, setQuery] = useState("");
+  /* Records whose anchor the user verified this session (drives the
+     "verified" indicator next to the inline anchor hash). */
+  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
   const search = useSearch();
   const [, navigate] = useLocation();
 
@@ -86,7 +91,7 @@ export function AuditLogPage() {
   const now = Date.now();
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-  const filtered = useMemo(() => {
+  const tabRecords = useMemo(() => {
     if (activeTab === "Last 30 Days") {
       return records.filter((r) => r.occurredAtMs >= thirtyDaysAgo);
     }
@@ -101,6 +106,52 @@ export function AuditLogPage() {
     }
     return records;
   }, [activeTab, records]);
+
+  /* Live search filters WITHIN the active tab, matching title, description,
+     amount text, actor/vendor, and record id. */
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tabRecords;
+    return tabRecords.filter((r) => {
+      const haystack = [
+        r.summary,
+        r.rowSubtitle ?? "",
+        r.actor,
+        r.id,
+        r.counterparty ?? "",
+        ...r.linked.map((l) => l.label),
+        typeof r.amount === "number" ? format(r.amount) : "",
+        typeof r.amount === "number" ? String(r.amount) : "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [tabRecords, query, format]);
+
+  /* Verify anchor: open the on-chain verification link when available and mark
+     the record as verified for this session. */
+  const handleVerify = (record: AuditRecord) => {
+    if (record.anchor.verifyHref) {
+      window.open(record.anchor.verifyHref, "_blank", "noopener,noreferrer");
+    }
+    setVerifiedIds((prev) => {
+      const next = new Set(prev);
+      next.add(record.id);
+      return next;
+    });
+  };
+
+  /* Export entry: download the full audit record as a JSON file. */
+  const handleExport = (record: AuditRecord) => {
+    const blob = new Blob([JSON.stringify(record, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-${record.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   /* Header pager - cycle (wrap-around) through the records in the active tab. */
   const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
@@ -123,6 +174,29 @@ export function AuditLogPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+            {/* Live search - filters within the active tab */}
+            <div className="flex gap-[10px] items-center bg-[#0a0c10] border border-[#1d2132] border-solid rounded-[100px] px-[16px] py-[10px] w-full max-w-[480px]">
+              <Search className="w-[16px] h-[16px] text-[#414965] shrink-0" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search this tab — title, description, amount, vendor…"
+                data-testid="input-audit-search"
+                className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] placeholder:text-[#414965]"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  data-testid="button-clear-audit-search"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] shrink-0"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
             {/* Tab bar - active tab is ORANGE */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {AUDIT_TABS.map((tab) => {
@@ -192,33 +266,89 @@ export function AuditLogPage() {
                         const borderLeft = isFlagged || isRejected
                           ? "3px solid #d20344"
                           : undefined;
+                        const anchorHash = record.anchor.merkleRoot ?? record.anchor.auditId;
+                        const isVerified = verifiedIds.has(record.id);
                         return (
                           <div key={record.id} className="flex flex-col gap-[8px] w-full">
-                            <button
-                              type="button"
-                              onClick={() => setActiveRecord(record)}
+                            <div
                               data-testid={`row-audit-${record.id.toLowerCase()}`}
-                              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                              className="flex flex-col gap-[8px] p-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132]"
                               style={borderLeft ? { borderLeft } : undefined}
                             >
-                              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                                <div className="flex items-center gap-[8px] w-full min-w-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap truncate">
-                                    {record.summary}
-                                  </p>
-                                </div>
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap w-full">
-                                  {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
+                              {/* Title + type tag + amount */}
+                              <div className="flex items-center gap-[8px] w-full min-w-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+                                  {record.summary}
                                 </p>
-                              </div>
-                              <div className="flex flex-col items-end justify-center relative shrink-0 gap-[4px]">
+                                <span className={auditEventChipClass(record.eventType)}>
+                                  {auditEventLabel(record.eventType)}
+                                </span>
+                                <div className="flex-1" />
                                 {typeof record.amount === "number" && (
-                                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+                                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap shrink-0">
                                     {format(record.amount)}
                                   </p>
                                 )}
                               </div>
-                            </button>
+
+                              {/* Description + timestamp */}
+                              <div className="flex items-center gap-[8px] w-full min-w-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate min-w-0">
+                                  {record.rowSubtitle ?? `${typeof record.amount === "number" ? format(record.amount) : ""} · ${record.actor} · ${record.id}`}
+                                </p>
+                                <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[12px] whitespace-nowrap shrink-0">
+                                  {new Date(record.occurredAtMs).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                                </p>
+                              </div>
+
+                              {/* Inline anchor hash + verified indicator */}
+                              <div className="flex items-center gap-[6px] w-full min-w-0">
+                                <Anchor className="w-[12px] h-[12px] text-[#414965] shrink-0" />
+                                <p
+                                  className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate min-w-0"
+                                  data-testid={`text-anchor-hash-${record.id.toLowerCase()}`}
+                                >
+                                  {anchorHash}
+                                </p>
+                                {isVerified && (
+                                  <span className="inline-flex items-center gap-[4px] shrink-0" data-testid={`status-verified-${record.id.toLowerCase()}`}>
+                                    <ShieldCheck className="w-[12px] h-[12px] text-[#7631ee]" />
+                                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-[#7631ee]">verified</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Inline actions */}
+                              <div className="flex items-center gap-[8px] flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerify(record)}
+                                  data-testid={`button-verify-anchor-${record.id.toLowerCase()}`}
+                                  className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#a8b9f4] transition-colors"
+                                >
+                                  <ShieldCheck className="w-[12px] h-[12px]" />
+                                  Verify anchor
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleExport(record)}
+                                  data-testid={`button-export-entry-${record.id.toLowerCase()}`}
+                                  className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#a8b9f4] transition-colors"
+                                >
+                                  <Download className="w-[12px] h-[12px]" />
+                                  Export entry
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveRecord(record)}
+                                  data-testid={`button-view-record-${record.id.toLowerCase()}`}
+                                  className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#a8b9f4] transition-colors"
+                                >
+                                  <FileText className="w-[12px] h-[12px]" />
+                                  View full record
+                                </button>
+                              </div>
+                            </div>
                             {idx < filtered.length - 1 && <Divider />}
                           </div>
                         );
