@@ -643,7 +643,7 @@ export function InboxPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Tab bar with live counts */}
+            {/* Tab bar */}
             <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
               {INBOX_TABS.map((tab) => {
                 const isActive = activeTab === tab;
@@ -661,16 +661,6 @@ export function InboxPage() {
                     >
                       {tab}
                     </p>
-                    <span
-                      className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[14px] text-[11px] px-[6px] py-[1px] rounded-[100px]"
-                      style={{
-                        color: isActive ? "#ff9500" : "#6c779d",
-                        background: isActive ? "rgba(255,149,0,0.15)" : "#11141b",
-                      }}
-                      data-testid={`count-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      {counts[tab]}
-                    </span>
                   </button>
                 );
               })}
