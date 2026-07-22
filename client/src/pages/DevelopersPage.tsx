@@ -15,18 +15,18 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { Plus } from "lucide-react";
-import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784673358525.png";
-import overviewInactiveIcon from "@assets/Icon=Overview,_State=Inactive_1784673358525.png";
+import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784755235082.png";
+import overviewInactiveIcon from "@assets/Icon=Overview,_State=Normal_1784755235083.png";
 // NOTE: the attached filenames for Keys are swapped relative to their actual
 // visual content. The file named "Active" is gray/inactive; "Inactive" is
 // purple/active. We import them into correctly-named variables here.
 import keysActiveIcon from "@assets/Icon=Keys_State=Inactive_1784673358523.png";
 import keysInactiveIcon from "@assets/Icon=Keys_State=Active_1784673358524.png";
-import tenantsActiveIcon from "@assets/Icon=Tenant,_State=Active_1784673358525.png";
-import tenantsInactiveIcon from "@assets/Icon=Tenant,_State=Inactive_1784673358525.png";
+import tenantsActiveIcon from "@assets/Icon=Tenants,_State=Active_1784755235083.png";
+import tenantsInactiveIcon from "@assets/Icon=Tenants,_State=Normal_1784755235083.png";
 import usageActiveIcon from "@assets/Icon=Usage,_State=Active_1784673358525.png";
 import usageInactiveIcon from "@assets/Icon=Usage,_State=Inactive_1784673358525.png";
-import docsInactiveIcon from "@assets/Icon=Docs,_State=Inactive_1784673358525.png";
+import docsInactiveIcon from "@assets/Icon=Docs,_State=Normal_1784755235083.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
