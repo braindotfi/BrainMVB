@@ -118,13 +118,13 @@ type InboxItem = {
 };
 
 const PILL_BASE =
-  "inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap shrink-0";
+  "inline-flex items-center justify-center px-[10px] py-[4px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] whitespace-nowrap shrink-0 border border-solid";
 
-const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500]";
-const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4]";
-const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa]";
-const TAG_REJECTED = "bg-[#350011] text-[#d20344]";
-const TAG_DETECTED = "bg-[#1a1c24] text-[#6c779d]";
+const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
+const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
+const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
+const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
@@ -170,31 +170,27 @@ const InboxCard = ({
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
           Why: {item.why}
         </p>
-        {item.actionable && (
-          <>
-            <div className="h-[2px] w-full" style={{ background: "#1d2132" }} />
-            <div className="flex items-center gap-[8px] pt-[2px]" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onApprove?.(item)}
-                data-testid={`button-approve-${item.id}`}
-                className="px-[20px] py-[4px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onReject?.(item)}
-                data-testid={`button-reject-${item.id}`}
-                className="px-[20px] py-[4px] rounded-[100px] bg-[#350011] border border-[rgba(210,3,68,0.25)] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                Reject
-              </button>
-            </div>
-          </>
-        )}
+        <div className="h-[2px] w-full" style={{ background: "#1d2132" }} />
+        <div className="flex items-center gap-[8px]" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            disabled={busy || !item.actionable}
+            onClick={() => onApprove?.(item)}
+            data-testid={`button-approve-${item.id}`}
+            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            disabled={busy || !item.actionable}
+            onClick={() => onReject?.(item)}
+            data-testid={`button-reject-${item.id}`}
+            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            Reject
+          </button>
+        </div>
       </div>
 
       {/* Right column: tag pill */}
