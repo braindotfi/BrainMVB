@@ -36,6 +36,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
+import infoIcon from "@assets/Icons_1783346130548.png";
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 type InboxTab = "Needs Review" | "Auto-Approved" | "Rejected" | "Rule Changes";
@@ -699,14 +700,16 @@ export function InboxPage() {
               </div>
             </div>
 
-            {/* Helper banner (unchanged copy from the Review surface) */}
+            {/* Helper banner */}
             {activeTab === "Needs Review" && (
-              <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                <div className="flex flex-1 items-start min-w-px relative">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#7631ee] text-[14px]">
-                    Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
-                  </p>
-                </div>
+              <div
+                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+              >
+                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                  Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+                </p>
               </div>
             )}
 

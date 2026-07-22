@@ -1385,9 +1385,6 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
         </p>
       </div>
 
-      {/* Q&A over the wiki */}
-      <WikiQuestionBox />
-
       {/* Results */}
       <div className="flex items-center gap-[10px]">
         <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13px] leading-[16px] whitespace-nowrap">
@@ -1479,75 +1476,6 @@ function FoundScreen({ onFinish }: { onFinish: () => void }) {
       >
         Finish
       </button>
-    </div>
-  );
-}
-
-/* Ask a question over the ingested documents (POST /api/brain/wiki/question). */
-function WikiQuestionBox() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<WikiAnswer | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const askMut = useMutation({
-    mutationFn: async (q: string) => {
-      const res = await apiRequest("POST", "/api/brain/wiki/question", { question: q });
-      return (await res.json()) as WikiAnswer;
-    },
-    onSuccess: (data) => { setAnswer(data); setError(null); },
-    onError: (err: Error) => { setError(err.message.replace(/^\d+:\s*/, "")); setAnswer(null); },
-  });
-
-  const submit = () => {
-    const q = question.trim();
-    if (!q || askMut.isPending) return;
-    askMut.mutate(q);
-  };
-
-  return (
-    <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px]">
-        Ask About Your Documents
-      </p>
-      <div className="flex items-center gap-[8px]">
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-          placeholder="e.g. What do I owe AWS this month?"
-          data-testid="input-wiki-question"
-          className="flex-1 min-w-0 bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] placeholder:text-[#6c779d] outline-none border-none transition-colors"
-        />
-        <button
-          type="button"
-          onClick={submit}
-          disabled={askMut.isPending || !question.trim()}
-          data-testid="button-wiki-ask"
-          className="shrink-0 px-[20px] py-[10px] rounded-[100px] bg-[#240757] hover:bg-[#2e0a6b] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px]"
-        >
-          {askMut.isPending ? "Asking…" : "Ask"}
-        </button>
-      </div>
-      {error && (
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#fca5a5] text-[13px] leading-[18px]" data-testid="text-wiki-error">
-          {error}
-        </p>
-      )}
-      {answer && (
-        <div className="bg-[#06070a] rounded-[10px] p-[12px] flex flex-col gap-[6px]" data-testid="text-wiki-answer">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px] whitespace-pre-wrap">
-            {answer.raw}
-          </p>
-          <div className="flex items-center gap-[8px]">
-            <ConfidencePill confidence={answer.confidence} />
-            {answer.evidenceIds.length > 0 && (
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px]">
-                {answer.evidenceIds.length} source{answer.evidenceIds.length === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
