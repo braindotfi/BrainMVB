@@ -196,6 +196,23 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
+  // ─── Demo fresh user (no credentials) - creates a NEW account each time ───
+  app.post("/api/auth/demo-fresh", async (req, res) => {
+    if (brainTenancyMode() === "production") {
+      return res.status(404).json({ error: "Not found" });
+    }
+    const freshId = crypto.randomUUID().slice(0, 8);
+    const email = `demo-fresh-${freshId}@brain.fi`;
+    const user = await storage.createUser({
+      username: email,
+      email,
+      password: null,
+      name: "Demo Business",
+    });
+    req.session.userId = user.id;
+    return res.json({ user: publicUser(user) });
+  });
+
   // ─── Current session user ───
   app.get("/api/auth/user", async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });

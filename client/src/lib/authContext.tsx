@@ -17,6 +17,7 @@ interface AuthContextType {
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginDemo: () => Promise<void>;
+  loginDemoFresh: () => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -83,13 +84,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Demo login failed");
     const u = data.user;
-    // Demo login always skips the onboarding flow.
+    // Shared demo login always skips the onboarding flow.
     try {
       localStorage.setItem(`brain_onboarding_complete_${u.id}`, "1");
     } catch {
       /* ignore storage errors */
     }
     setUser(u);
+  }, []);
+
+  const loginDemoFresh = useCallback(async () => {
+    const res = await fetch("/api/auth/demo-fresh", {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "Demo login failed");
+    // Fresh demo does NOT skip onboarding - user will see the full onboarding flow.
+    setUser(data.user);
   }, []);
 
   const loginWithGoogle = useCallback(() => {
@@ -158,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithPassword,
       register,
       loginDemo,
+      loginDemoFresh,
       loginWithGoogle,
       logout,
       deleteAccount,

@@ -7,7 +7,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
 type Mode = "login" | "register";
 
 export function SignupPage() {
-  const { isLoggedIn, loginWithPassword, register, loginDemo, loginWithGoogle } = useAuth();
+  const { isLoggedIn, loginWithPassword, register, loginDemo, loginDemoFresh, loginWithGoogle } = useAuth();
   const [, navigate] = useLocation();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -156,6 +156,21 @@ export function SignupPage() {
     setSubmitting(true);
     try {
       await loginDemo();
+      navigate("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Demo login failed.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDemoFresh = async () => {
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await loginDemoFresh();
       navigate("/");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Demo login failed.";
@@ -341,6 +356,15 @@ export function SignupPage() {
               className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
             >
               Continue with Demo
+            </button>
+            <button
+              type="button"
+              data-testid="button-demo-fresh"
+              onClick={handleDemoFresh}
+              disabled={submitting}
+              className="w-full py-3 px-6 rounded-2xl bg-[#240757] hover:bg-[#2e0a6b] border border-[rgba(118,49,238,0.2)] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[15px] flex items-center justify-center gap-3"
+            >
+              Demo — Fresh User
             </button>
           </div>
 
