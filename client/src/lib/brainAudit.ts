@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
@@ -26,11 +27,24 @@ import { isAssistantActivity, humanReadableActor } from "./auditTypes";
    (rule/vendor/document/proposal ids). We do not fabricate any of that - see
    mapAuditEventToRecord below for exactly what is real vs honestly omitted. */
 
+/** brain-core's actor reference on every audit event: display_name/email are
+ *  present when the emitting service captured them inline; `lookup` is a
+ *  relative resolution path (/v1/members/{id} for user actors, /v1/agents/{id}
+ *  for agent actors) when it wasn't. */
+export interface BrainActorRef {
+  id: string;
+  type: string;
+  display_name?: string;
+  email?: string;
+  lookup?: string;
+}
+
 export interface BrainAuditEvent {
   id: string;
   tenant_id: string;
   layer: string;
   actor: string;
+  actor_ref?: BrainActorRef;
   action: string;
   inputs: Record<string, unknown>;
   outputs: Record<string, unknown>;
@@ -181,7 +195,56 @@ function amountFrom(e: BrainAuditEvent): number | undefined {
  *    approval_id), which don't resolve against the still-mock rule/vendor/
  *    document stores. Fabricating a linked[] entry from them would make
  *    tappable evidence that resolves to the wrong (or no) record. */
-export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: BrainAnchor | undefined): AuditRecord {
+/** Inline display data on an actor_ref, when the emitting service captured it. */
+function inlineActorDisplay(ref: BrainActorRef | undefined): string | undefined {
+  const name = ref?.display_name?.trim() || ref?.email?.trim();
+  return name || undefined;
+}
+
+/** Extract a display name from an actor-lookup response. Handles both shapes
+ *  brain-core returns: a member object with top-level display_name/name/email,
+ *  and an agent detail payload nested as { definition, registration }. Exported
+ *  for tests. Returns null when no display data is present — never a raw id. */
+export function extractActorName(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  const pick = (o: Record<string, unknown>): string | null => {
+    const name = o.display_name ?? o.name ?? o.email;
+    return typeof name === "string" && name.trim() ? name.trim() : null;
+  };
+  const direct = pick(obj);
+  if (direct) return direct;
+  for (const key of ["definition", "registration", "member", "agent"]) {
+    const nested = obj[key];
+    if (nested && typeof nested === "object") {
+      const found = pick(nested as Record<string, unknown>);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** Resolve an actor_ref.lookup path (/v1/members/{id} or /v1/agents/{id})
+ *  through the BFF's generic GET passthrough (same route /audit/events uses,
+ *  member/session token). Returns null on any failure — callers then fall back
+ *  to omitting the actor rather than showing a raw id. */
+async function fetchActorName(lookup: string): Promise<string | null> {
+  try {
+    const path = `/api/brain${lookup.replace(/^\/v1/, "")}`;
+    const resp = await fetch(path, { credentials: "include" });
+    if (!resp.ok) return null;
+    const data = await resp.json().catch(() => null);
+    return extractActorName(data);
+  } catch {
+    return null;
+  }
+}
+
+export function mapAuditEventToRecord(
+  event: BrainAuditEvent,
+  latestAnchor: BrainAnchor | undefined,
+  resolvedActors?: Record<string, string | null>,
+): AuditRecord {
   const { eventType, summary } = classify(event);
   const createdMs = new Date(event.created_at).getTime();
   const amount = amountFrom(event);
@@ -192,6 +255,18 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
 
   const assistantActivity = isAssistantActivity({ eventType, subtype: event.action });
 
+  /* Actor resolution order (raw ids NEVER render as a substitute):
+     1. actor_ref.display_name / .email captured inline by the emitting service;
+     2. the cached result of resolving actor_ref.lookup via the BFF;
+     3. last resort: the raw actor string, which downstream surfaces filter
+        through humanReadableActor() (so machine ids get omitted, not shown). */
+  const ref = event.actor_ref;
+  const resolvedName =
+    inlineActorDisplay(ref) ??
+    (ref?.lookup ? resolvedActors?.[ref.lookup] ?? undefined : undefined) ??
+    undefined;
+  const displayActor = resolvedName ?? event.actor;
+
   const step: LifecycleStep = {
     label: summary,
     timestamp: label(createdMs),
@@ -199,9 +274,7 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
       (eventType === "flagged" && !assistantActivity) || eventType === "rejected"
         ? "alert"
         : "ok",
-    // Raw machine ids (user_01KY…) never render inline as if they were names —
-    // pass the actor through only when it is human-readable.
-    actor: event.actor !== "system" ? humanReadableActor(event.actor) : undefined,
+    actor: event.actor !== "system" ? resolvedName ?? humanReadableActor(event.actor) : undefined,
   };
 
   return {
@@ -211,7 +284,7 @@ export function mapAuditEventToRecord(event: BrainAuditEvent, latestAnchor: Brai
     summary,
     counterparty,
     amount,
-    actor: event.actor,
+    actor: displayActor,
     occurredAtLabel: label(createdMs),
     occurredAtMs: createdMs,
     // rowSubtitle left unset - AuditLogPage's own fallback formats amount
@@ -235,9 +308,38 @@ export function useBrainAuditRecords() {
     retry: false,
   });
 
-  const records = (events.data?.events ?? [])
-    .map((e) => mapAuditEventToRecord(e, anchor.data))
-    .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+  /* Distinct actor_ref.lookup paths that still need resolution (no inline
+     display_name/email). Deduped + sorted so the query key is stable and each
+     actor is fetched once per session, not per record or per render. */
+  const lookups = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of events.data?.events ?? []) {
+      const ref = e.actor_ref;
+      if (ref?.lookup && !inlineActorDisplay(ref)) set.add(ref.lookup);
+    }
+    return Array.from(set).sort();
+  }, [events.data]);
+
+  const actorLookups = useQuery<Record<string, string | null>>({
+    queryKey: ["brain-actor-lookups", lookups],
+    enabled: lookups.length > 0,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async () => {
+      const entries = await Promise.all(
+        lookups.map(async (l) => [l, await fetchActorName(l)] as const),
+      );
+      return Object.fromEntries(entries);
+    },
+  });
+
+  const records = useMemo(
+    () =>
+      (events.data?.events ?? [])
+        .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data))
+        .sort((a, b) => b.occurredAtMs - a.occurredAtMs),
+    [events.data, anchor.data, actorLookups.data],
+  );
 
   return {
     isLoading: events.isLoading || anchor.isLoading,

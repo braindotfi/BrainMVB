@@ -24,7 +24,7 @@ import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brai
 import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { auditEventLabel, auditEventChipClass, isAssistantActivity } from "@/lib/auditTypes";
+import { auditEventLabel, auditEventChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -68,8 +68,8 @@ function auditWhy(r: AuditRecord): string {
     case "auto_approved":
       return "Cleared by your standing rules without needing a human decision.";
     case "approved":
-      return r.actor && r.actor !== "system"
-        ? `Approved by ${r.actor} after review.`
+      return r.actor && r.actor !== "system" && humanReadableActor(r.actor)
+        ? `Approved by ${humanReadableActor(r.actor)} after review.`
         : "Approved after review.";
     case "rejected":
       return "Rejected — this payment was declined and nothing moved.";
@@ -512,7 +512,7 @@ export function InboxPage() {
         title: r.summary,
         tag: auditEventLabel(r.eventType),
         tagClass: auditEventChipClass(r.eventType),
-        desc: r.rowSubtitle ?? [typeof r.amount === "number" ? format(r.amount) : "", r.actor, r.id].filter(Boolean).join(" · "),
+        desc: r.rowSubtitle ?? [typeof r.amount === "number" ? format(r.amount) : "", humanReadableActor(r.actor) ?? ""].filter(Boolean).join(" · "),
         time: r.occurredAtLabel,
         why: auditWhy(r),
         amountDisplay: typeof r.amount === "number" ? format(r.amount) : undefined,

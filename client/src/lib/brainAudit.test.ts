@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, type BrainAuditEvent, type BrainAnchor } from "./brainAudit";
+import { mapAuditEventToRecord, extractActorName, type BrainAuditEvent, type BrainAnchor } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -86,5 +86,81 @@ describe("mapAuditEventToRecord", () => {
     expect(systemRec.lifecycle[0].actor).toBeUndefined();
     const humanRec = mapAuditEventToRecord(ev({ actor: "sarah@meridian" }), anchor());
     expect(humanRec.lifecycle[0].actor).toBe("sarah@meridian");
+  });
+
+  it("prefers actor_ref.display_name/email over the raw actor string", () => {
+    const withName = mapAuditEventToRecord(
+      ev({
+        actor: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+        actor_ref: { id: "user_01KY52DRHFX1707ECARCY6Z8VJ", type: "user", display_name: "Sarah Chen" },
+      }),
+      anchor(),
+    );
+    expect(withName.actor).toBe("Sarah Chen");
+    expect(withName.lifecycle[0].actor).toBe("Sarah Chen");
+
+    const withEmail = mapAuditEventToRecord(
+      ev({
+        actor: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+        actor_ref: { id: "user_01KY52DRHFX1707ECARCY6Z8VJ", type: "user", email: "sarah@meridian.co" },
+      }),
+      anchor(),
+    );
+    expect(withEmail.actor).toBe("sarah@meridian.co");
+  });
+
+  it("uses the resolved lookup name when inline display data is absent", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        actor: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+        actor_ref: {
+          id: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+          type: "user",
+          lookup: "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ",
+        },
+      }),
+      anchor(),
+      { "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ": "Sarah Chen" },
+    );
+    expect(r.actor).toBe("Sarah Chen");
+    expect(r.lifecycle[0].actor).toBe("Sarah Chen");
+  });
+
+  it("keeps the honest omit-fallback when resolution failed: raw machine id never becomes a lifecycle actor", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        actor: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+        actor_ref: {
+          id: "user_01KY52DRHFX1707ECARCY6Z8VJ",
+          type: "user",
+          lookup: "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ",
+        },
+      }),
+      anchor(),
+      { "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ": null },
+    );
+    expect(r.lifecycle[0].actor).toBeUndefined();
+  });
+});
+
+describe("extractActorName", () => {
+  it("reads a member payload's top-level display fields", () => {
+    expect(extractActorName({ display_name: "Sarah Chen", email: "s@x.co" })).toBe("Sarah Chen");
+    expect(extractActorName({ email: "s@x.co" })).toBe("s@x.co");
+    expect(extractActorName({ name: "Sarah" })).toBe("Sarah");
+  });
+
+  it("reads an agent payload nested under definition/registration", () => {
+    expect(extractActorName({ definition: { display_name: "Collections Agent" }, registration: {} })).toBe(
+      "Collections Agent",
+    );
+    expect(extractActorName({ registration: { name: "AP Agent" } })).toBe("AP Agent");
+  });
+
+  it("returns null (never a raw id) when no display data exists", () => {
+    expect(extractActorName({ id: "agt_01ABC" })).toBeNull();
+    expect(extractActorName(null)).toBeNull();
+    expect(extractActorName("agt_01ABC")).toBeNull();
+    expect(extractActorName({ definition: { id: "agt_01ABC" } })).toBeNull();
   });
 });
