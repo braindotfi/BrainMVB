@@ -128,6 +128,12 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   if (url.includes("/proposals/") && url.endsWith("/decide") && method === "POST") {
     return json(decideResponse, decideStatus);
   }
+  if (url.endsWith("/agents/run") && method === "POST") {
+    return json({ run_id: "run_1", status: "accepted" });
+  }
+  if (url.includes("/policy/") && url.endsWith("/lint") && method === "POST") {
+    return json({ ok: true, issues: [] });
+  }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
 
@@ -465,5 +471,33 @@ describe("Invariant 5 - secrets never returned to the browser", () => {
     const prov = callsEndingWith("/demo/provision-run");
     expect(prov.length).toBeGreaterThan(0);
     expect(prov[0].provAuth).toBe(PROVISION_SECRET);
+  });
+});
+
+describe("Invariant 6 - artifact write allowlist (api-surface.brainmvb)", () => {
+  it("excluded endpoints stay unreachable: POST /execution/execute and /execution/mcp return 405 and never reach brain-core", async () => {
+    const exec = await post("/api/brain/execution/execute", {});
+    expect(exec.status).toBe(405);
+    const mcp = await post("/api/brain/execution/mcp", {});
+    expect(mcp.status).toBe(405);
+    expect(calls.filter((c) => c.url.includes("/execution/execute")).length).toBe(0);
+    expect(calls.filter((c) => c.url.includes("/execution/mcp")).length).toBe(0);
+  });
+
+  it("/agents/run is an AGENT action (payment_intent:propose) - signed with the agent token, never the member token", async () => {
+    const { status } = await post("/api/brain/agents/run", { goal: "pay open invoices" });
+    expect(status).toBe(200);
+    const run = callsEndingWith("/agents/run");
+    expect(run).toHaveLength(1);
+    expect(run[0].auth).toBe(`Bearer ${AGENT_TOKEN}`);
+  });
+
+  it("tenant-scoped policy writes derive the tenant from the SESSION (never the client) and use the MEMBER token", async () => {
+    const { status } = await post("/api/brain/policy/lint", { policy_content: {} });
+    expect(status).toBe(200);
+    const lint = callsEndingWith("/lint");
+    expect(lint).toHaveLength(1);
+    expect(lint[0].url).toContain(`/policy/${TENANT_ID}/lint`);
+    expect(lint[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
   });
 });

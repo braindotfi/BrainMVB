@@ -492,6 +492,120 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
+  // ── Artifact-driven write allowlist (brainmvb_api_surface v1) ──────────────
+  //
+  // Wires the remaining in-scope WRITE endpoints from the api-surface artifact
+  // groups: ledger_and_canonical, wiki_memory_policy,
+  // agents_execution_payments_members, audit_proof_tenant. Every route here is
+  // `route_scope_check_enforced` upstream (scopes noted per row are checked by
+  // brain-core inside the handler — there is NO gateway matrix); the BFF adds no
+  // demo/synthetic fallback: upstream errors (incl. 403 auth_scope_insufficient)
+  // relay verbatim.
+  //
+  // Token rule (BFF invariant): MEMBER token for everything except agent-side
+  // proposal ingestion (`/agents/run`, `/agents/events`, scope
+  // payment_intent:propose) which — like /propose — is an AGENT action.
+  //
+  // DELIBERATELY ABSENT (excluded by the wiring plan):
+  //   POST /execution/execute      — permanently disabled upstream (422
+  //                                  gate_no_policy_decision); use
+  //                                  POST /payment-intents/:id/execute instead.
+  //   POST /execution/mcp          — deprecated ping-only stub.
+  //   X-Platform-Service-Auth routes — only via tenancy.ts (never a session).
+  //   DELETE /tenants/:id          — destructive; needs its own confirm flow.
+  //   POST /audit/anchor/publish   — audit:admin + conditional dependency.
+  interface BrainWriteRoute {
+    method: "post" | "patch" | "delete";
+    /** Express mount under /api/brain (params relayed into the upstream path). */
+    mount: string;
+    /** Build the upstream brain-core path (tenantId comes from the SESSION, never the client). */
+    upstream: (params: Record<string, string>, tenantId: string) => string;
+    /** Which minted principal signs the upstream call. */
+    principal: "member" | "agent";
+    /** Upstream scope (documentation; brain-core enforces via requireScope). */
+    scope: string;
+  }
+
+  const esc = encodeURIComponent;
+  const WRITE_ROUTES: BrainWriteRoute[] = [
+    // ledger_and_canonical
+    { method: "patch", mount: "/ledger/counterparties/:id", upstream: (p) => `/ledger/counterparties/${esc(p.id)}`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/normalize", upstream: () => "/ledger/normalize", principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/reconcile", upstream: () => "/ledger/reconcile", principal: "member", scope: "ledger:write" },
+    // wiki_memory_policy
+    { method: "post", mount: "/memory/regenerate", upstream: () => "/memory/regenerate", principal: "member", scope: "wiki:read" },
+    { method: "post", mount: "/wiki/annotate", upstream: () => "/wiki/annotate", principal: "member", scope: "wiki:write" },
+    { method: "post", mount: "/policy/compose", upstream: (_p, t) => `/policy/${esc(t)}/compose`, principal: "member", scope: "policy:write" },
+    { method: "post", mount: "/policy/sign", upstream: (_p, t) => `/policy/${esc(t)}/sign`, principal: "member", scope: "policy:sign" },
+    { method: "post", mount: "/policy/evaluate", upstream: (_p, t) => `/policy/${esc(t)}/evaluate`, principal: "member", scope: "policy:read" },
+    { method: "post", mount: "/policy/simulate", upstream: (_p, t) => `/policy/${esc(t)}/simulate`, principal: "member", scope: "policy:read" },
+    { method: "post", mount: "/policy/lint", upstream: (_p, t) => `/policy/${esc(t)}/lint`, principal: "member", scope: "policy:read" },
+    { method: "post", mount: "/policy/diff", upstream: (_p, t) => `/policy/${esc(t)}/diff`, principal: "member", scope: "policy:read" },
+    { method: "post", mount: "/policy/simulate-historical", upstream: (_p, t) => `/policy/${esc(t)}/simulate-historical`, principal: "member", scope: "policy:read" },
+    // agents_execution_payments_members
+    { method: "post", mount: "/agents/route", upstream: () => "/agents/route", principal: "member", scope: "execution:read" },
+    { method: "post", mount: "/agents/run", upstream: () => "/agents/run", principal: "agent", scope: "payment_intent:propose" },
+    { method: "post", mount: "/agents/events", upstream: () => "/agents/events", principal: "agent", scope: "payment_intent:propose" },
+    { method: "post", mount: "/agents/halt-category", upstream: () => "/agents/halt-category", principal: "member", scope: "payment_intent:approve" },
+    { method: "post", mount: "/agents/:id/halt", upstream: (p) => `/agents/${esc(p.id)}/halt`, principal: "member", scope: "payment_intent:approve" },
+    { method: "post", mount: "/agents/:id/restore", upstream: (p) => `/agents/${esc(p.id)}/restore`, principal: "member", scope: "payment_intent:approve" },
+    { method: "post", mount: "/agents/:id/contribution-hold/release", upstream: (p) => `/agents/${esc(p.id)}/contribution-hold/release`, principal: "member", scope: "payment_intent:approve" },
+    // Generic PaymentIntent create — agent action (payment_intent:propose), same
+    // principal rule as /propose; core's §6 gate + policy decide the outcome.
+    { method: "post", mount: "/payment-intents", upstream: () => "/payment-intents", principal: "agent", scope: "payment_intent:propose" },
+    // MCP tool calls: bearer auth at the route, then per-tool scope checks inside
+    // core (auth_then_mcp_tool_scope_checks) — member token, core decides per tool.
+    { method: "post", mount: "/agents/mcp", upstream: () => "/agents/mcp", principal: "member", scope: "per MCP tool" },
+    { method: "post", mount: "/members/:id/identity-links", upstream: (p) => `/members/${esc(p.id)}/identity-links`, principal: "member", scope: "execution:admin" },
+    { method: "delete", mount: "/members/:id/identity-links", upstream: (p) => `/members/${esc(p.id)}/identity-links`, principal: "member", scope: "execution:admin" },
+    { method: "post", mount: "/evidence/resolve", upstream: () => "/evidence/resolve", principal: "member", scope: "execution:read" },
+    { method: "post", mount: "/payment-intents/:id/pause", upstream: (p) => `/payment-intents/${esc(p.id)}/pause`, principal: "member", scope: "payment_intent:approve" },
+    { method: "post", mount: "/payment-intents/:id/resume", upstream: (p) => `/payment-intents/${esc(p.id)}/resume`, principal: "member", scope: "payment_intent:approve" },
+    // Execute: the ONLY money-moving path per the artifact (execution/execute is
+    // dead). Wired honestly: if the session token lacks payment_intent:execute
+    // (true for demo tokens), core answers 403 auth_scope_insufficient verbatim.
+    { method: "post", mount: "/payment-intents/:id/execute", upstream: (p) => `/payment-intents/${esc(p.id)}/execute`, principal: "member", scope: "payment_intent:execute" },
+    { method: "post", mount: "/execution/propose", upstream: () => "/execution/propose", principal: "member", scope: "execution:propose" },
+    { method: "post", mount: "/execution/approve", upstream: () => "/execution/approve", principal: "member", scope: "execution:write" },
+    { method: "post", mount: "/execution/escalate", upstream: () => "/execution/escalate", principal: "member", scope: "execution:propose" },
+    { method: "post", mount: "/execution/agents/register", upstream: () => "/execution/agents/register", principal: "member", scope: "execution:admin" },
+    // audit_proof_tenant
+    { method: "post", mount: "/audit/export", upstream: () => "/audit/export", principal: "member", scope: "audit:read" },
+    { method: "post", mount: "/audit/verify", upstream: () => "/audit/verify", principal: "member", scope: "public" },
+    { method: "post", mount: "/audit/webhooks/endpoints", upstream: () => "/audit/webhooks/endpoints", principal: "member", scope: "audit:write" },
+    { method: "delete", mount: "/audit/webhooks/endpoints/:id", upstream: (p) => `/audit/webhooks/endpoints/${esc(p.id)}`, principal: "member", scope: "audit:write" },
+    { method: "post", mount: "/webhooks/:endpointId/replay", upstream: (p) => `/webhooks/${esc(p.endpointId)}/replay`, principal: "member", scope: "audit:write" },
+    // Tenant export: upstream path is /tenants/{id}/export but the id ALWAYS
+    // comes from the session's tenant (own-tenant contract) — never the client.
+    { method: "post", mount: "/tenants/export", upstream: (_p, t) => `/tenants/${esc(t)}/export`, principal: "member", scope: "own_tenant_user" },
+  ];
+
+  for (const route of WRITE_ROUTES) {
+    router[route.method](route.mount, async (req: Request, res: Response) => {
+      if (!brainAuthConfigured()) return unconfigured(res);
+      try {
+        const session = await getBrainSession(req.session.userId!);
+        const token = route.principal === "agent" ? session.agentToken : session.token;
+        const params: Record<string, string> = {};
+        for (const [k, v] of Object.entries(req.params)) params[k] = String(v);
+        const body =
+          req.method === "DELETE"
+            ? undefined
+            : req.body && typeof req.body === "object" && Object.keys(req.body as object).length > 0
+              ? req.body
+              : {};
+        const data = await brainRequest<unknown>(route.upstream(params, session.tenantId), {
+          method: route.method.toUpperCase(),
+          token,
+          body,
+        });
+        return res.json(data);
+      } catch (err) {
+        return relayError(res, err);
+      }
+    });
+  }
+
   // Generic read passthrough: GET /api/brain/<brain-core path>
   router.get(/.*/, async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) {

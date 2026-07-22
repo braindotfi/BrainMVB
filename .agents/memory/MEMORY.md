@@ -10,3 +10,4 @@
 - [Section label spacing](section-label-spacing.md) — subpage labels need a 36px-tall row (like button-bearing headers), not gap tweaks; 4px gap to card stays.
 - [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
+- [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist in proxy.ts; /actions is known live drift.

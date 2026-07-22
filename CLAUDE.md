@@ -332,6 +332,49 @@ is mocked at the fetch boundary, so the suite never touches the live API. Run it
 `npm test`. Any change to `server/brain/*` must keep these green; if the behavior is
 meant to change, update the test in the same commit so the invariant stays explicit.
 
+## brain-core API surface wiring (artifact: attached_assets/api-surface.brainmvb_*.json)
+The api-surface artifact is the SOLE source of truth for what's callable on brain-core —
+it wins over Brain_API_Specification.yaml wherever the artifact's `drift` section says they
+disagree. Scope checks are PER-ROUTE (`requireScope` inside handlers); there is no gateway
+matrix. State of wiring for the in-scope groups (ledger_and_canonical, wiki_memory_policy,
+agents_execution_payments_members, audit_proof_tenant):
+- **Reads (all in-scope GETs)**: reachable through the generic member-token GET passthrough
+  in `server/brain/proxy.ts`. Actively consumed today: ledger accounts/transactions/
+  counterparties/invoices/obligations/cash_flows/reconciliation-matches, members,
+  policy (via `/api/brain/approval-policy`), proposals, payment-intents/:id, wiki/schema,
+  audit/events, audit/anchor/latest. The rest (balances, per-id ledger reads, `/resolved`
+  views, canonical/*, memory/pages|search, wiki/entity|search, policy/versions, agents/*
+  reads, execution reads, audit event/entity, proof/*, tenant export status) are callable
+  but have no UI consumer yet.
+- **Writes**: explicit per-endpoint allowlist only (generic non-GET is 405). Bespoke routes:
+  propose (AGENT token), reject/approve, members CRUD + invites, counterparties create,
+  proposals/:id/decide, wiki/question. The `WRITE_ROUTES` table in proxy.ts wires the
+  remaining in-scope writes with the artifact's exact scope per row: ledger counterparty
+  PATCH/normalize/reconcile, memory/regenerate, wiki/annotate, policy compose/sign/evaluate/
+  simulate/lint/diff/simulate-historical (tenantId ALWAYS from the session, never the
+  client), agents route/run/events (run+events on the AGENT token — payment_intent:propose)/
+  mcp (per-tool scopes checked by core)/halt/restore/contribution-hold-release/halt-category,
+  generic payment-intents create (AGENT token), evidence/resolve, members identity-links
+  POST/DELETE, payment-intents pause/resume/execute, execution propose/approve/escalate/
+  agents-register, audit export/verify/webhook endpoints/replay, tenant export (session
+  tenant only). No demo/synthetic fallback anywhere on `route_scope_check_enforced` routes —
+  upstream errors relay verbatim. Invariant 6 in `bff-invariants.test.ts` pins the allowlist
+  (excluded routes 405, agents/run on the agent token, policy tenant from the session).
+- **Excluded (do NOT wire)**: `POST /execution/execute` (always 422 gate_no_policy_decision;
+  the live execute path is `POST /payment-intents/:id/execute`), `POST /execution/mcp`
+  (deprecated ping-only), all X-Platform-Service-Auth routes (BFF-only via
+  `server/brain/tenancy.ts` — verified nothing else calls them), everything under
+  `feature_gated_or_not_stable` (signup/login/verify-email, wallets, API keys/usage —
+  the Developers pages stay as-is, service-token, demo/* provisioning).
+- **Deliberately pending**: `DELETE /tenants/:id` (destructive — needs its own confirm
+  flow), `POST /audit/anchor/publish` (audit:admin + conditional dependency),
+  tenant export `download` (binary relay, brainRequest is JSON-only).
+- **Known drift to flag**: the Inbox review queue lists via `GET /actions`
+  (`listActions` in client.ts, `useBrainReviewQueue`/`useBrainAutoApproved`) — that route is
+  NOT in the artifact's endpoint groups, but it is the only tenant-scoped PaymentIntent list
+  we have and works in production today. Left wired; confirm with brain-core owners whether
+  `/actions` is stable or the artifact should list it.
+
 ## CI gate
 `.github/workflows/test.yml` runs `npm test` (the vitest suite) on every pull request and
 on push to `main` (Node 20, npm cache). The workflow is green only when the suite passes,
