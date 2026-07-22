@@ -34,6 +34,8 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal, LiveInsightRow } from "@/components/LiveInsightModal";
+import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brainProposals";
+import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -194,6 +196,17 @@ export function ReviewPage() {
   const { insights: disputeInsights } = useBrainDisputeInsights();
   const { insight: cashFlowInsight } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+
+  /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
+     treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
+     above. Merges into both tabs alongside the existing payment-intent rows. */
+  const { proposals: liveProposals } = useBrainProposals();
+  const needsReviewProposals = liveProposals.filter(isNeedsReview);
+  // ponytail: the auto-approved live-proposal bucket is deferred - the merged
+  // read model carries no decider-identity field (no `decided_by`), so there's
+  // no honest way to tell an agent decision from a human one here.
+  const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+
   const liveInsights: LiveInsight[] = [
     ...reconInsights,
     ...subscriptionInsights,
@@ -479,9 +492,9 @@ export function ReviewPage() {
             {/* Needs Review: live brain-core queue */}
             {showNeedsReview && (
             <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <WidgetHeader title="Needs Review" count={queue.length} />
+              <WidgetHeader title="Needs Review" count={queue.length + needsReviewProposals.length} />
               <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
-                {queue.length === 0 && (
+                {queue.length === 0 && needsReviewProposals.length === 0 && (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {liveQueueLoading ? "Checking for anything that needs your attention…" : "Nothing needs your attention right now. Brain is keeping things moving."}
@@ -512,6 +525,10 @@ export function ReviewPage() {
                     })()}
                     {idx < arr.length - 1 && <Divider />}
                   </div>
+                ))}
+
+                {needsReviewProposals.map((p) => (
+                  <LiveProposalRow key={p.id} proposal={p} onClick={() => setSelectedProposal(p)} />
                 ))}
               </div>
             </div>
@@ -628,6 +645,13 @@ export function ReviewPage() {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+      />
+
+      {/* Live brain-core agent proposal (vendor risk, collections, treasury, etc.) */}
+      <LiveProposalModal
+        proposal={selectedProposal}
+        open={selectedProposal !== null}
+        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
       />
 
     </div>

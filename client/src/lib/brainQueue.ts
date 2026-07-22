@@ -30,6 +30,10 @@ export interface BrainPaymentIntent {
   status: string;
   confidence?: number;
   created_at: string;
+  /** Present only when the detail was fetched with `?expand=agent`; null if
+   *  `created_by_agent_id` is null or the lookup misses (Brain_API_Specification.yaml
+   *  GET /payment-intents/{id}). */
+  agent?: { display_name: string } | null;
 }
 
 interface CounterpartyLite {
@@ -61,7 +65,10 @@ export function useBrainReviewQueue() {
   // dedupes/caches each by its own key.
   const details = useQueries({
     queries: pendingIds.map((id) => ({
-      queryKey: [`/api/brain/payment-intents/${id}`],
+      // expand=agent: attaches the real proposing agent's display_name when
+      // brain-core can resolve created_by_agent_id (null otherwise) - see
+      // mapIntentToProposal's rowSubtitle below.
+      queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean }[];
@@ -105,7 +112,7 @@ export function useBrainAutoApproved() {
 
   const details = useQueries({
     queries: autoIds.map((id) => ({
-      queryKey: [`/api/brain/payment-intents/${id}`],
+      queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean }[];
@@ -144,7 +151,9 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     agent: "invoice",
     surface: "business",
     title: `Approve payment to ${vendor}?`,
-    rowSubtitle: `${vendor} · awaiting approval`,
+    // ponytail: agent.display_name only renders when expand=agent resolved a real
+    // creating agent (see BrainPaymentIntent above) - no fallback name invented.
+    rowSubtitle: `${vendor} · awaiting approval${intent.agent?.display_name ? ` · proposed by ${intent.agent.display_name}` : ""}`,
     actionStatement: `Propose paying ${vendor} ${intent.currency} ${intent.amount}`,
     actionMeta: intent.invoice_id ? `invoice ${intent.invoice_id}` : "no linked invoice",
     executionLabel: "Executes after approval",
@@ -189,7 +198,7 @@ export function mapIntentToAutoApprovedProposal(intent: BrainPaymentIntent, vend
   return {
     ...base,
     title: `Payment to ${vendor}`,
-    rowSubtitle: `${vendor} · cleared automatically by policy`,
+    rowSubtitle: `${vendor} · cleared automatically by policy${intent.agent?.display_name ? ` · proposed by ${intent.agent.display_name}` : ""}`,
     dueLabel: "Approved automatically",
     rationale: "Brain core's §6 policy gate cleared this payment automatically — no human approval was required.",
     whatHappensNext: "This clears through its payment rail without further review.",

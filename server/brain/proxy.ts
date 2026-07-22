@@ -461,6 +461,37 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
+  // POST /api/brain/proposals/:id/decide - human records a decision on an agent
+  // proposal (services/execution/src/proposals/{read-model,decision-service}.ts;
+  // MERGED via brain-core #268-271 and LIVE on api.brain.fi). Relayed error codes:
+  // execution_proposal_not_found -> 404, execution_proposal_invalid_state -> 409.
+  //
+  // MEMBER token (route accepts payment_intent:approve OR execution:read; core
+  // resolves the actor from the token subject via ActorResolver - ACTOR=SESSION).
+  // Only {decision} is ever forwarded, exactly mirroring approve/reject: never a
+  // client-supplied actor field.
+  router.post("/proposals/:id/decide", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    const id = String(req.params.id);
+    const raw = req.body as { decision?: unknown } | undefined;
+    const decision = typeof raw?.decision === "string" ? raw.decision : undefined;
+    if (!decision) {
+      return res.status(400).json({ error: "invalid_request", message: "decision is required" });
+    }
+    const body = { decision };
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const result = await brainRequest<unknown>(`/proposals/${encodeURIComponent(id)}/decide`, {
+        token,
+        method: "POST",
+        body,
+      });
+      return res.json(result);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
   // Generic read passthrough: GET /api/brain/<brain-core path>
   router.get(/.*/, async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) {
