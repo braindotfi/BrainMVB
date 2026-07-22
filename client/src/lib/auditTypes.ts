@@ -9,7 +9,11 @@ export type AuditEventType =
   | "rule_change"
   | "trust_granted"
   | "trust_revoked"
-  | "flagged";
+  | "flagged"
+  /* Routine, non-actionable platform activity (data ingestion, background
+     jobs). Mirrors brain-core's own `system_activity` event_type default —
+     nothing to approve/reject, Audit Log only, neutral chip. */
+  | "system_activity";
 
 export type AnchorStatus = "pending_next_batch" | "anchored";
 
@@ -87,6 +91,11 @@ export interface AuditRecord {
      from — carried through so surfaces can special-case non-risk subtypes
      (assistant activity) until brain-core ships a distinct event type. */
   subtype?: string;
+  /* brain-core's OWN authoritative event_type from /audit/events
+     (system_activity | assistant_activity | flagged). Carried through raw so
+     isAssistantActivity/isSystemActivity read the wire value instead of a
+     hand-maintained per-action allowlist. */
+  coreEventType?: string;
 }
 
 /* Filter tabs for the Audit Log page */
@@ -122,6 +131,7 @@ export function auditEventLabel(type: AuditEventType): string {
     case "trust_granted": return "TRUST GRANTED";
     case "trust_revoked": return "TRUST REVOKED";
     case "flagged": return "FLAGGED";
+    case "system_activity": return "SYSTEM ACTIVITY";
   }
 }
 
@@ -138,25 +148,44 @@ export function auditEventChipClass(type: AuditEventType): string {
   }
 }
 
-/* Non-risk assistant/wiki subtypes that brain-core currently emits as generic
-   "flagged" events. Client-side special-case: render these with a neutral
-   "Assistant activity" tag instead of the red FLAGGED pill, and keep them out
-   of actionable review queues. Remove once brain-core ships a distinct event
-   type for assistant activity and classify() can branch on it directly. */
+/* Legacy allowlist of assistant subtypes, kept ONLY as a fallback for events
+   that predate brain-core's authoritative event_type field. When
+   `coreEventType` is present on the record it wins — brain-core decides what
+   is assistant activity, not this list. */
 const ASSISTANT_SUBTYPES: ReadonlyArray<string> = ["wiki.question"];
 
-export function isAssistantActivity(record: Pick<AuditRecord, "eventType" | "subtype">): boolean {
-  return record.eventType === "flagged" && !!record.subtype && ASSISTANT_SUBTYPES.includes(record.subtype);
+export function isAssistantActivity(
+  record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
+): boolean {
+  if (record.coreEventType === "assistant_activity") return true;
+  return (
+    (record.eventType === "flagged" || record.eventType === "system_activity") &&
+    !!record.subtype &&
+    ASSISTANT_SUBTYPES.includes(record.subtype)
+  );
+}
+
+/* Routine platform activity (ingestion, background jobs): informational,
+   never actionable — excluded from Inbox queues, shown in Audit Log with a
+   neutral chip. Assistant activity has its own label, so it's carved out. */
+export function isSystemActivity(
+  record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
+): boolean {
+  return record.eventType === "system_activity" && !isAssistantActivity(record);
 }
 
 /* Record-aware label/chip: same as the eventType mapping except assistant
    activity gets a neutral tag. Prefer these over the raw eventType helpers on
    any surface that renders live brain-core records. */
-export function auditRecordLabel(record: Pick<AuditRecord, "eventType" | "subtype">): string {
+export function auditRecordLabel(
+  record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
+): string {
   return isAssistantActivity(record) ? "ASSISTANT ACTIVITY" : auditEventLabel(record.eventType);
 }
 
-export function auditRecordChipClass(record: Pick<AuditRecord, "eventType" | "subtype">): string {
+export function auditRecordChipClass(
+  record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
+): string {
   return isAssistantActivity(record) ? "bg-[#1d2132] text-[#a8b9f4]" : auditEventChipClass(record.eventType);
 }
 

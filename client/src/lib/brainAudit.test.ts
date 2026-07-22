@@ -76,6 +76,64 @@ describe("mapAuditEventToRecord", () => {
     expect(r.summary).toBe("ledger.reconciliation.matched");
   });
 
+  it("classifies an unmapped action as system_activity (brain-core's default), NOT flagged", () => {
+    const r = mapAuditEventToRecord(ev({ action: "ledger.reconciliation.matched" }), anchor());
+    expect(r.eventType).toBe("system_activity");
+    expect(r.lifecycle[0].kind).toBe("ok");
+  });
+
+  it("honors brain-core's authoritative event_type over the local map for flagged-vs-informational", () => {
+    // core says system_activity → informational even though unmapped
+    const sys = mapAuditEventToRecord(
+      ev({ action: "raw.ingest.new", event_type: "system_activity" }),
+      anchor(),
+    );
+    expect(sys.eventType).toBe("system_activity");
+    expect(sys.summary).toBe("New data ingested — Brain pulled in new records to process");
+    expect(sys.coreEventType).toBe("system_activity");
+
+    // core explicitly flags an unmapped action → it IS flagged, raw action id as summary
+    const flagged = mapAuditEventToRecord(
+      ev({ action: "policy.violation.detected", event_type: "flagged" }),
+      anchor(),
+    );
+    expect(flagged.eventType).toBe("flagged");
+    expect(flagged.summary).toBe("policy.violation.detected");
+    expect(flagged.lifecycle[0].kind).toBe("alert");
+
+    // core demotes a locally mapped-flagged action → informational wins
+    const demoted = mapAuditEventToRecord(
+      ev({ action: "member.changed", event_type: "system_activity" }),
+      anchor(),
+    );
+    expect(demoted.eventType).toBe("system_activity");
+    expect(demoted.summary).toBe("Team member updated");
+  });
+
+  it("keeps mapped DECISION types (approved/rejected) authoritative regardless of core buckets", () => {
+    const r = mapAuditEventToRecord(
+      ev({ action: "payment_intent.approved", event_type: "system_activity" }),
+      anchor(),
+    );
+    expect(r.eventType).toBe("approved");
+  });
+
+  it("preserves legacy wiki.question behavior when event_type is absent (assistant activity, neutral)", () => {
+    const r = mapAuditEventToRecord(ev({ action: "wiki.question" }), anchor());
+    expect(r.eventType).toBe("flagged"); // legacy mapping retained
+    expect(r.summary).toBe("Assistant asked a question");
+    // subtype allowlist still marks it assistant activity → neutral rendering,
+    // non-alert lifecycle, excluded from Inbox queues
+    expect(r.subtype).toBe("wiki.question");
+    expect(r.lifecycle[0].kind).toBe("ok");
+  });
+
+  it("maps raw.ingest.deduplicated to its human summary as system activity", () => {
+    const r = mapAuditEventToRecord(ev({ action: "raw.ingest.deduplicated" }), anchor());
+    expect(r.eventType).toBe("system_activity");
+    expect(r.summary).toBe("Duplicate data — already ingested previously, skipped");
+  });
+
   it("never fabricates linked evidence - linked[] is always empty from a live event", () => {
     const r = mapAuditEventToRecord(ev(), anchor());
     expect(r.linked).toEqual([]);

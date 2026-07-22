@@ -46,6 +46,12 @@ export interface BrainAuditEvent {
   actor: string;
   actor_ref?: BrainActorRef;
   action: string;
+  /* brain-core's authoritative classification, present on every event —
+     unset events default to system_activity server-side. This, not the local
+     ACTION_MAP, decides flagged vs. informational. */
+  event_type?: "system_activity" | "assistant_activity" | "flagged" | string;
+  category?: string;
+  severity?: string;
   inputs: Record<string, unknown>;
   outputs: Record<string, unknown>;
   policy_version: number | null;
@@ -99,6 +105,8 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
   "execution.escalate": { eventType: "flagged", summary: () => "Payment escalated for review" },
   "wiki.question": { eventType: "flagged", summary: () => "Assistant asked a question" },
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
+  "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested — Brain pulled in new records to process" },
+  "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data — already ingested previously, skipped" },
 };
 
 /** `proposal.decided` (services/execution/src/proposals/decision-service.ts)
@@ -116,16 +124,43 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
   return { eventType, summary: `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}` };
 }
 
-/** Honest event-type + summary derivation: use the known mapping, otherwise
- *  render the raw action id as the summary rather than guessing a category. */
+/** brain-core's own event_type mapped onto the client bucket, when present.
+ *  assistant_activity records get eventType system_activity here (both are
+ *  informational, non-actionable); the ASSISTANT ACTIVITY tag itself is driven
+ *  by coreEventType via isAssistantActivity, not the eventType bucket. */
+function coreBucket(e: BrainAuditEvent): AuditEventType | undefined {
+  switch (e.event_type) {
+    case "flagged":
+      return "flagged";
+    case "system_activity":
+    case "assistant_activity":
+      return "system_activity";
+    default:
+      return undefined;
+  }
+}
+
+/** Event-type + summary derivation. Risk classification (flagged vs.
+ *  informational) is brain-core's job — its authoritative `event_type` field
+ *  is the primary signal. The local ACTION_MAP only (a) supplies richer
+ *  DECISION types (approved/rejected/…) that core's 3-bucket field cannot
+ *  express, and (b) provides human-readable summaries per action; unmapped
+ *  actions keep the raw action id as their honest summary. */
 function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   if (e.action === "proposal.decided") return classifyProposalDecided(e);
   const known = ACTION_MAP[e.action];
-  if (known) return { eventType: known.eventType, summary: known.summary(e) };
-  // ponytail: no fabricated category for unmapped actions - the raw action id
-  // is the honest label until this map grows to cover more of brain-core's
-  // action vocabulary.
-  //
+  const summary = known ? known.summary(e) : e.action;
+  // Mapped decision types (approved/rejected/etc) are richer than core's
+  // buckets and stay authoritative for their tabs.
+  if (known && known.eventType !== "flagged" && known.eventType !== "system_activity") {
+    return { eventType: known.eventType, summary };
+  }
+  // Otherwise brain-core's event_type decides flagged vs. informational.
+  // Events missing the field (older records): a mapped-flagged action keeps
+  // its mapping; an UNMAPPED action defaults to system_activity — matching
+  // brain-core's own server-side default, never a fabricated "flagged".
+  const fallback: AuditEventType = known ? known.eventType : "system_activity";
+  return { eventType: coreBucket(e) ?? fallback, summary };
   // "Auto-Approved" and "Postponed" tabs stay honestly near-empty: brain-core
   // has NO `auto_approved` or `postponed` audit action (verified above) —
   // "auto" clearance is a derived /actions status (proposed|approved
@@ -135,9 +170,8 @@ function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: str
   // paused`/`.cancelled` DO exist but are a different concept (an ops
   // kill-switch hold and a pre-approval agent cancel, respectively) — mapping
   // either to "postponed" would be inventing an equivalence brain-core
-  // doesn't make, so they're left unmapped (raw action id) until brain-core
-  // grows a real auto-approval / postpone event to key off of.
-  return { eventType: "flagged", summary: e.action };
+  // doesn't make, so they're left unmapped until brain-core grows a real
+  // auto-approval / postpone event to key off of.
 }
 
 function label(ms: number): string {
@@ -253,7 +287,11 @@ export function mapAuditEventToRecord(
       ? event.inputs.destination_counterparty_id
       : undefined;
 
-  const assistantActivity = isAssistantActivity({ eventType, subtype: event.action });
+  const assistantActivity = isAssistantActivity({
+    eventType,
+    subtype: event.action,
+    coreEventType: event.event_type,
+  });
 
   /* Actor resolution order (raw ids NEVER render as a substitute):
      1. actor_ref.display_name / .email captured inline by the emitting service;
@@ -281,6 +319,7 @@ export function mapAuditEventToRecord(
     id: event.id,
     eventType,
     subtype: event.action,
+    coreEventType: event.event_type,
     summary,
     counterparty,
     amount,

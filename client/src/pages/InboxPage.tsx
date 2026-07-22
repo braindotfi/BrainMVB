@@ -24,7 +24,7 @@ import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brai
 import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { auditEventLabel, auditEventChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
+import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -82,7 +82,15 @@ function auditWhy(r: AuditRecord): string {
     case "trust_revoked":
       return "Trust was revoked, narrowing what Brain can clear automatically.";
     case "flagged":
-      return "Flagged for attention — Brain saw something that didn't fit the usual pattern.";
+      /* Only genuinely mapped flagged events earn the risk line. An unmapped
+         action's summary IS the raw action id (classify()'s honest fallback) —
+         repeat that instead of fabricating "didn't fit the usual pattern"
+         boilerplate that doesn't describe what happened. */
+      return r.subtype && r.summary === r.subtype
+        ? `Recorded as ${r.subtype} — flagged by Brain core for review.`
+        : "Flagged for attention — Brain saw something that didn't fit the usual pattern.";
+    case "system_activity":
+      return "Routine system activity — recorded for the audit trail, no decision needed.";
   }
 }
 
@@ -505,7 +513,10 @@ export function InboxPage() {
        approve or reject — so it stays in the Audit Log only and never
        lands in the actionable Inbox queues. */
     for (const r of auditRecords) {
-      if (isAssistantActivity(r)) continue;
+      /* Assistant activity AND routine system activity (data ingestion,
+         background jobs) are informational — nothing to approve or reject —
+         so they stay in the Audit Log only, never in Inbox queues. */
+      if (isAssistantActivity(r) || isSystemActivity(r)) continue;
       push({
         id: r.id,
         tab: auditTab(r.eventType),
