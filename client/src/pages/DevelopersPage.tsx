@@ -577,7 +577,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   };
 
   return (
-    <div className="flex flex-col gap-[40px] pt-[40px]">
+    <div className="flex flex-col gap-[40px] items-start pt-[20px]">
       {selectedEvent && (
         <DetailModal
           title={humanizeAction(selectedEvent.action)}
@@ -630,8 +630,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           )}
         </DetailModal>
       )}
-      {/* Header: text left, env toggle top-right — matches the previous layout. */}
-      <div className="flex items-start justify-between gap-4 w-full pb-[16px]">
+      {/* Header: text left, env toggle top-right. No bottom padding — root gap handles spacing. */}
+      <div className="flex items-start justify-between gap-4 w-full">
         <div className="flex flex-col gap-[4px] min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
             Developers
