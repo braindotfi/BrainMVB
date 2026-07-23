@@ -14,7 +14,7 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784755235082.png";
 import overviewInactiveIcon from "@assets/Icon=Overview,_State=Normal_1784755235083.png";
 // NOTE: the attached filenames for Keys are swapped relative to their actual
@@ -197,7 +197,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap border"
     style={status === "active"
       ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
       : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
@@ -221,11 +221,11 @@ const EnvBadge = ({ env }: { env: string }) => (
    Shared by Overview / API Keys / Usage — never a local fallback. */
 const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
   <Card testId={testId ?? "card-keys-unavailable"}>
-    <div className="p-4 flex flex-col gap-2">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">
+    <div className="p-[16px] flex flex-col gap-[4px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
         The keys API isn't enabled yet
       </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
         brain-core's API-key service hasn't been switched on for this environment. Keys become
         available here automatically as soon as it is — no action needed on your side.
       </p>
@@ -920,8 +920,8 @@ function KeysSection({ env }: { env: DevEnv }) {
         );
       })()}
 
-      <div className="flex flex-col gap-[4px]">
-        <div className="flex items-center justify-between gap-4 min-h-[36px]">
+      <div className="flex flex-col gap-[12px]">
+        <div className="flex h-[24px] items-center justify-between gap-4">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
             {env === "live" ? "Live Keys" : "Sandbox Keys"}
           </p>
@@ -933,7 +933,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
-              {showCreate ? "Cancel" : "New Key"}
+              {showCreate ? "Cancel" : "Create Key"}
             </button>
           )}
         </div>
@@ -1023,36 +1023,55 @@ function KeysSection({ env }: { env: DevEnv }) {
         ) : keysQ.isError ? (
           <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
         ) : keys.length === 0 ? (
-          <EmptyRow>No {env} keys yet.{env === "sandbox" ? " Create one to start calling the API." : ""}</EmptyRow>
+          <div className="p-[16px] flex flex-col gap-[4px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]" data-testid="text-no-keys-title">
+              No {env} keys yet
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+              {env === "sandbox"
+                ? "Create one to start calling the API."
+                : "Live keys appear here once issued."}
+            </p>
+          </div>
         ) : (
-          <div className="flex flex-col gap-[8px] p-[8px]">
-            {keys.map((k) => (
-              <button
-                key={k.id}
-                type="button"
-                onClick={() => setSelectedKeyId(k.id)}
-                className="flex flex-col gap-2 p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors cursor-pointer text-left w-full"
-                data-testid={`row-key-${k.id}`}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] flex-1 truncate">{k.name}</p>
-                  <EnvBadge env={k.environment} />
-                  <StatusBadge status={k.status} />
-                  <ChevronRight />
-                </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Mono className="text-[#6c779d] text-[13px]" testId={`text-masked-key-${k.id}`}>{maskKey(k)}</Mono>
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Last used <Mono className="text-[#6c779d]">{formatDateTime(k.lastUsedAt)}</Mono>
-                  </span>
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]">
-                    Requests ({usageQ.data?.window ?? "30d"}){" "}
-                    <Mono className="text-[#6c779d]" testId={`text-request-count-${k.id}`}>
-                      {(usageByKey.get(k.id)?.eventCount ?? 0).toLocaleString()}
-                    </Mono>
-                  </span>
-                </div>
-              </button>
+          <div className="flex flex-col gap-[16px] p-[16px]">
+            {keys.map((k, i) => (
+              <div key={k.id} className="flex flex-col gap-[16px] w-full">
+                {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                <button
+                  type="button"
+                  onClick={() => setSelectedKeyId(k.id)}
+                  className="flex flex-col gap-[16px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                  data-testid={`row-key-${k.id}`}
+                >
+                  <div className="flex flex-col gap-[4px] justify-center w-full">
+                    <div className="flex gap-[12px] items-start w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">{k.name}</p>
+                      <StatusBadge status={k.status} />
+                    </div>
+                    <div className="flex items-center w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
+                    </div>
+                  </div>
+                  <div className="bg-[#06070a] border border-[#1d2132] rounded-[12px] flex flex-col w-full overflow-hidden">
+                    {[
+                      { label: "Requested Scopes", value: k.scopes.length ? k.scopes.join(", ") : "None" },
+                      { label: "Created", value: formatDate(k.createdAt), testId: `text-key-created-${k.id}` },
+                      { label: "Last Used", value: k.lastUsedAt ? formatDateTime(k.lastUsedAt) : "Never", testId: `text-key-last-used-${k.id}` },
+                      { label: `Requests (${usageQ.data?.window ?? "30d"})`, value: (usageByKey.get(k.id)?.eventCount ?? 0).toLocaleString(), testId: `text-request-count-${k.id}` },
+                    ].map((row, ri, arr) => (
+                      <div key={row.label} className={`flex items-start w-full ${ri < arr.length - 1 ? "border-b border-[#1d2132]" : ""}`}>
+                        <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[20px] whitespace-nowrap">{row.label}</p>
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-px items-start justify-center px-[12px] py-[8px]">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px] w-full truncate" data-testid={row.testId}>{row.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -1060,10 +1079,15 @@ function KeysSection({ env }: { env: DevEnv }) {
       )}
       </div>
 
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-        Keys are issued and stored (hashed) by brain-core, and enforced on every key-authenticated call.
-        Rate limit: 600 requests per 60 seconds per key.
-      </p>
+      <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
+        <div className="flex flex-1 min-w-px gap-[8px] items-start">
+          <Info className="shrink-0 size-[16px] text-[#6c779d]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+            Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
+            Rate limit: 600 requests per 60 seconds per key.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
