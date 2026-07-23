@@ -13,6 +13,7 @@
 
 import { randomUUID } from "node:crypto";
 import { brainConfig } from "./config";
+import { hasMeaningfulScalar } from "../wikiAnswerGuard";
 
 export class BrainApiError extends Error {
   public constructor(
@@ -508,8 +509,15 @@ export async function askWikiQuestion(token: string, question: string): Promise<
     method: "POST",
     body: { question },
   });
-  const answerStr = typeof resp.answer === "string" ? resp.answer : JSON.stringify(resp.answer ?? resp);
-  const raw = stripFence(answerStr);
+  // A null/absent/degenerate answer must yield raw="" so the chat handler's
+  // `wiki.raw.trim().length > 0` check falls through to ledger grounding.
+  // NEVER stringify the whole response envelope — it always contains
+  // meaningful scalars (usage, model, question echo) and would leak downstream.
+  let raw = "";
+  if (resp.answer !== null && resp.answer !== undefined && hasMeaningfulScalar(resp.answer)) {
+    const answerStr = typeof resp.answer === "string" ? resp.answer : JSON.stringify(resp.answer);
+    raw = stripFence(answerStr);
+  }
 
   // Dedup evidence by id; the richest record (one that carries an excerpt) wins.
   const byId = new Map<string, WikiEvidence>();
