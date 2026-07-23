@@ -110,7 +110,8 @@ export function statusOverrideToAuditRecord(
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }) + " ET";
+    timeZoneName: "short",
+  });
   return {
     id: `${proposal.id}--audit-${status}`,
     eventType,

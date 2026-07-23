@@ -208,7 +208,8 @@ function label(ms: number): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }) + " ET";
+    timeZoneName: "short",
+  });
 }
 
 /** A record is anchored iff its created_at falls within the latest anchor's

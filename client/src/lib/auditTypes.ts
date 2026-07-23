@@ -201,6 +201,13 @@ export function humanReadableActor(actor: string | undefined): string | undefine
   const trimmed = actor.trim();
   if (!trimmed) return undefined;
   if (RAW_ID_RE.test(trimmed)) return undefined;
+  /* Synthetic bootstrap identities (machine-generated placeholders, not people):
+     any actor at the reserved .invalid TLD or with a `bootstrap+` local-part
+     prefix. Omit honestly rather than substitute. If brain-core later supplies
+     a real display_name for these members, it wins via the resolution order. */
+  const lower = trimmed.toLowerCase();
+  if (/@[^@\s]+\.invalid$/.test(lower)) return undefined;
+  if (lower.startsWith("bootstrap+")) return undefined;
   return trimmed;
 }
 
