@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation, useRoute } from "wouter";
-import { SiGoogle } from "react-icons/si";
+import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 
 type Mode = "login" | "register";
 
 export function SignupPage() {
-  const { isLoggedIn, loginWithPassword, register, loginDemo, loginDemoFresh, loginWithGoogle } = useAuth();
+  const { isLoggedIn, loginWithPassword, register, loginDemo, loginWithGoogle } = useAuth();
   const [, navigate] = useLocation();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -165,21 +165,6 @@ export function SignupPage() {
     }
   };
 
-  const handleDemoFresh = async () => {
-    if (submitting) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await loginDemoFresh();
-      navigate("/");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Demo login failed.";
-      setError(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
       {/* Ambient glow */}
@@ -211,7 +196,7 @@ export function SignupPage() {
                 onClick={loginWithGoogle}
                 className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
               >
-                <SiGoogle className="text-[18px]" />
+                <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
                 Continue with Google
               </button>
 
@@ -347,26 +332,15 @@ export function SignupPage() {
             <div className="flex-1 h-px bg-[#1d2132]" />
           </div>
 
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              data-testid="button-demo-login"
-              onClick={handleDemo}
-              disabled={submitting}
-              className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
-            >
-              Continue with Demo
-            </button>
-            <button
-              type="button"
-              data-testid="button-demo-fresh"
-              onClick={handleDemoFresh}
-              disabled={submitting}
-              className="w-full py-3 px-6 rounded-2xl bg-[#240757] hover:bg-[#2e0a6b] border border-[rgba(118,49,238,0.2)] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[15px] flex items-center justify-center gap-3"
-            >
-              Demo — Fresh User
-            </button>
-          </div>
+          <button
+            type="button"
+            data-testid="button-demo-login"
+            onClick={handleDemo}
+            disabled={submitting}
+            className="w-full py-3 px-6 rounded-2xl bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
+          >
+            Continue with Demo
+          </button>
 
           <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
             {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
