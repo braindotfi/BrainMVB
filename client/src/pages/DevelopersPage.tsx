@@ -891,7 +891,7 @@ function KeysSection({ env }: { env: DevEnv }) {
   const keys = (keysQ.data?.keys ?? []).filter((k) => k.environment === env);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[16px]">
       {plaintext && <PlaintextKeyModal plaintext={plaintext} onClose={() => setPlaintext(null)} />}
       {(() => {
         const k = selectedKeyId ? (keysQ.data?.keys ?? []).find((x) => x.id === selectedKeyId) : undefined;
@@ -1074,9 +1074,12 @@ function KeysSection({ env }: { env: DevEnv }) {
               );
             })}
           </PopupSection>
-          <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
-            <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+          <div
+            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+          >
+            <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
               out — until then, keys authenticate against platform endpoints only.
             </p>
@@ -1149,9 +1152,12 @@ function KeysSection({ env }: { env: DevEnv }) {
       )}
       </div>
 
-      <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
-        <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+      <div
+        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+        style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+      >
+        <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
           Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
           Rate limit: 600 requests per 60 seconds per key.
         </p>
@@ -1193,7 +1199,7 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
     : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[16px]">
       {selectedTenant && (
         <DetailModal
           title={selectedTenant.companyName ?? (selectedTenant.ephemeral ? "Demo tenant" : "Your company")}
@@ -1388,7 +1394,7 @@ function UsageSection({ env }: { env: DevEnv }) {
   const trend = priorMonth > 0 ? Math.round(((thisMonth - priorMonth) / priorMonth) * 100) : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[4px]">
         <SectionLabel testId="text-usage-title">Usage and Limits</SectionLabel>
         <Card testId="card-usage-metrics">
@@ -1569,14 +1575,17 @@ function UsageSection({ env }: { env: DevEnv }) {
         )}
       </div>
 
-      <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
-        <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
-        <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] flex-1 min-w-px">
-          <p className="leading-[16px] mb-[12px]">
+      <div
+        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+        style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+      >
+        <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+        <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
+          <p className="leading-[18px] mb-[12px]">
             Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
             They are a different measurement than the tenant-wide audit events above and won't match those totals.
           </p>
-          <p className="leading-[16px]">
+          <p className="leading-[18px]">
             Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
             tenancy mode runs in (demo → sandbox, production → live).
           </p>
