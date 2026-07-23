@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
+import type { AssistantQuestion } from "@shared/schema";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
    Replaces MOCK_AUDIT_RECORDS as the AuditLogPage data source with
@@ -384,6 +385,39 @@ export function mapAuditEventToRecord(
     // see BrainMVB-data-integration/CLAUDE.md's linked-evidence contract.
     linked: [],
     anchor: anchorFor(event, latestAnchor),
+    rawQuestion: fullQuestion,
+  };
+}
+
+/* Local assistant questions that missed brain-core audit (Anthropic fallback) */
+interface LocalQuestionsResponse {
+  questions: AssistantQuestion[];
+}
+
+function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
+  const createdMs = new Date(q.createdAt ?? 0).getTime();
+  const question = q.question.trim();
+  const canned = matchCannedPrompt(question);
+  const summary = canned ? canned.title : truncateForCard(question);
+  const step: LifecycleStep = {
+    label: summary,
+    timestamp: label(createdMs),
+    kind: "ok",
+    note: question !== summary ? question : undefined,
+  };
+  return {
+    id: `local-question-${q.id}`,
+    eventType: "system_activity",
+    subtype: "wiki.question",
+    coreEventType: "assistant_activity",
+    summary,
+    actor: "Assistant",
+    occurredAtLabel: label(createdMs),
+    occurredAtMs: createdMs,
+    lifecycle: [step],
+    linked: [],
+    anchor: { status: "pending_next_batch", auditId: `local-question-${q.id}` },
+    rawQuestion: question,
   };
 }
 
@@ -394,6 +428,10 @@ export function useBrainAuditRecords() {
   });
   const anchor = useQuery<BrainAnchor>({
     queryKey: ["/api/brain/audit/anchor/latest"],
+    retry: false,
+  });
+  const localQuestions = useQuery<LocalQuestionsResponse>({
+    queryKey: ["/api/assistant/questions"],
     retry: false,
   });
 
@@ -422,16 +460,47 @@ export function useBrainAuditRecords() {
     },
   });
 
-  const records = useMemo(
-    () =>
-      (events.data?.events ?? [])
-        .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data))
-        .sort((a, b) => b.occurredAtMs - a.occurredAtMs),
-    [events.data, anchor.data, actorLookups.data],
-  );
+  /* Merge brain-core audit events with locally-recorded assistant questions.
+     Deduplication: suppress a local synthetic record when its raw question
+     text matches a brain-core wiki.question event within a 5-minute window.
+     Uses `rawQuestion` (never truncated, always present on assistant records)
+     so short questions and canned prompts dedup correctly. Per-question
+     timestamp matching prevents false positives from unrelated wiki events.
+     The local id prefix `local-question-` ensures no collision with brain-core ids. */
+  const records = useMemo(() => {
+    const brainRecords = (events.data?.events ?? [])
+      .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data));
+    /* Map: normalized question text → Set of timestamps from brain-core wiki.question events */
+    const wikiTsByQuestion = new Map<string, Set<number>>();
+    for (const r of brainRecords) {
+      if (r.subtype === "wiki.question" && r.rawQuestion) {
+        const key = r.rawQuestion.trim().toLowerCase();
+        const set = wikiTsByQuestion.get(key) ?? new Set();
+        set.add(r.occurredAtMs);
+        wikiTsByQuestion.set(key, set);
+      }
+    }
+    const FIVE_MIN_MS = 5 * 60 * 1000;
+    const localRecords = (localQuestions.data?.questions ?? [])
+      .map(localQuestionToRecord)
+      .filter((r) => {
+        if (!r.rawQuestion) return true;
+        const key = r.rawQuestion.trim().toLowerCase();
+        const coreTs = wikiTsByQuestion.get(key);
+        if (!coreTs) return true;
+        // Drop local record only when a same-question brain-core event exists
+        // within 5 minutes — wide enough to cover upstream audit latency.
+        for (const t of coreTs) {
+          if (Math.abs(t - r.occurredAtMs) <= FIVE_MIN_MS) return false;
+        }
+        return true;
+      });
+    return [...brainRecords, ...localRecords]
+      .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+  }, [events.data, anchor.data, actorLookups.data, localQuestions.data]);
 
   return {
-    isLoading: events.isLoading || anchor.isLoading,
+    isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
     isError: events.isError,
     records,
   };

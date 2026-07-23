@@ -13,6 +13,8 @@ import {
   type BrainIdentity, type InsertBrainIdentity,
   brainAgentTokens as brainAgentTokensTable,
   type BrainAgentToken,
+  assistantQuestions as assistantQuestionsTable,
+  type AssistantQuestion, type InsertAssistantQuestion,
 } from "@shared/schema";
 import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "drizzle-orm";
 
@@ -35,6 +37,7 @@ export interface DeleteAccountResult {
   userRulesDeleted: number;
   brainIdentitiesDeleted: number;
   brainAgentTokensDeleted: number;
+  assistantQuestionsDeleted: number;
 }
 
 export interface IStorage {
@@ -90,6 +93,9 @@ export interface IStorage {
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
 
+  // Assistant question audit trail (local — guarantees every question is recorded)
+  recordAssistantQuestion(q: InsertAssistantQuestion): Promise<AssistantQuestion>;
+  listAssistantQuestions(userId: string, limit?: number): Promise<AssistantQuestion[]>;
 }
 
 export type ToolConnection = {
@@ -346,6 +352,13 @@ export class MemStorage implements IStorage {
       }
     }
 
+    let assistantQuestionsDeleted = 0;
+    const qList = this.assistantQuestionsStore.get(user?.id ?? ids.userId ?? "");
+    if (qList && ownerKeys.has(qList[0]?.userId ?? "")) {
+      this.assistantQuestionsStore.delete(qList[0].userId);
+      assistantQuestionsDeleted = qList.length;
+    }
+
     let noncesDeleted = 0;
     for (const [nonce, row] of Array.from(this.siweNoncesStore.entries())) {
       if (row.walletAddress && ownerKeys.has(row.walletAddress)) {
@@ -365,6 +378,7 @@ export class MemStorage implements IStorage {
       userRulesDeleted,
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
+      assistantQuestionsDeleted,
     };
   }
 
@@ -446,6 +460,14 @@ export class MemStorage implements IStorage {
       }
     }
 
+    let assistantQuestionsDeleted = 0;
+    for (const [uid, qList] of Array.from(this.assistantQuestionsStore.entries())) {
+      if (ownerKeys.has(uid)) {
+        this.assistantQuestionsStore.delete(uid);
+        assistantQuestionsDeleted += qList.length;
+      }
+    }
+
     let noncesDeleted = 0;
     for (const [nonce, row] of Array.from(this.siweNoncesStore.entries())) {
       if (row.walletAddress && ownerKeys.has(row.walletAddress)) {
@@ -464,6 +486,7 @@ export class MemStorage implements IStorage {
       userRulesDeleted,
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
+      assistantQuestionsDeleted,
     };
   }
 
@@ -655,6 +678,24 @@ export class MemStorage implements IStorage {
     return row;
   }
 
+  // ─── Assistant question audit trail ───
+  private assistantQuestionsStore = new Map<string, AssistantQuestion[]>();
+  async recordAssistantQuestion(q: InsertAssistantQuestion): Promise<AssistantQuestion> {
+    const row: AssistantQuestion = {
+      id: randomUUID(),
+      ...q,
+      engine: q.engine ?? null,
+      createdAt: new Date(),
+    };
+    const list = this.assistantQuestionsStore.get(q.userId) ?? [];
+    list.unshift(row);
+    this.assistantQuestionsStore.set(q.userId, list);
+    return row;
+  }
+  async listAssistantQuestions(userId: string, limit = 100): Promise<AssistantQuestion[]> {
+    return (this.assistantQuestionsStore.get(userId) ?? []).slice(0, limit);
+  }
+
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -734,6 +775,7 @@ export class DatabaseStorage implements IStorage {
     let userRulesDeleted = 0;
     let brainIdentitiesDeleted = 0;
     let brainAgentTokensDeleted = 0;
+    let assistantQuestionsDeleted = 0;
 
     const walletForNonces = ids.walletAddress ?? user?.walletAddress;
     const identities = ownerKeyList.length > 0
@@ -778,6 +820,12 @@ export class DatabaseStorage implements IStorage {
           .where(inArray(brainIdentitiesTable.userId, ownerKeyList))
           .returning({ userId: brainIdentitiesTable.userId });
         brainIdentitiesDeleted = identitiesDel.length;
+
+        const qDel = await tx
+          .delete(assistantQuestionsTable)
+          .where(inArray(assistantQuestionsTable.userId, ownerKeyList))
+          .returning({ id: assistantQuestionsTable.id });
+        assistantQuestionsDeleted = qDel.length;
       }
 
       if (walletForNonces) {
@@ -828,6 +876,7 @@ export class DatabaseStorage implements IStorage {
       userRulesDeleted,
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
+      assistantQuestionsDeleted,
     };
   }
 
@@ -857,6 +906,7 @@ export class DatabaseStorage implements IStorage {
     let userRulesDeleted = 0;
     let brainIdentitiesDeleted = 0;
     let brainAgentTokensDeleted = 0;
+    let assistantQuestionsDeleted = 0;
     const walletForNonces = ids.walletAddress ?? user?.walletAddress;
     const identities = ownerKeyList.length > 0
       ? await db.select().from(brainIdentitiesTable).where(inArray(brainIdentitiesTable.userId, ownerKeyList))
@@ -900,6 +950,12 @@ export class DatabaseStorage implements IStorage {
           .where(inArray(brainIdentitiesTable.userId, ownerKeyList))
           .returning({ userId: brainIdentitiesTable.userId });
         brainIdentitiesDeleted = identitiesDel.length;
+
+        const qDel = await tx
+          .delete(assistantQuestionsTable)
+          .where(inArray(assistantQuestionsTable.userId, ownerKeyList))
+          .returning({ id: assistantQuestionsTable.id });
+        assistantQuestionsDeleted = qDel.length;
       }
 
       if (walletForNonces) {
@@ -946,6 +1002,7 @@ export class DatabaseStorage implements IStorage {
       userRulesDeleted,
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
+      assistantQuestionsDeleted,
     };
   }
 
@@ -1214,6 +1271,22 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
+  // ─── Assistant question audit trail ───
+  async recordAssistantQuestion(q: InsertAssistantQuestion): Promise<AssistantQuestion> {
+    const [row] = await db
+      .insert(assistantQuestionsTable)
+      .values({ ...q, engine: q.engine ?? null })
+      .returning();
+    return row;
+  }
+  async listAssistantQuestions(userId: string, limit = 100): Promise<AssistantQuestion[]> {
+    return db
+      .select()
+      .from(assistantQuestionsTable)
+      .where(eq(assistantQuestionsTable.userId, userId))
+      .orderBy(desc(assistantQuestionsTable.createdAt))
+      .limit(limit);
+  }
 }
 
 function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {

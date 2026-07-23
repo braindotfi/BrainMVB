@@ -144,6 +144,28 @@ export const brainAgentTokens = pgTable("brain_agent_tokens", {
 export type BrainAgentToken = typeof brainAgentTokens.$inferSelect;
 
 /* ─── SIWE Sessions ─── */
+/* ─── Assistant Question Audit Trail ───
+ * Lightweight local record of every question asked through the Brain
+ * Assistant panel. Brain-core also emits wiki.question audit events, but
+ * when the Anthropic fallback path is taken there is no brain-core
+ * interaction → no upstream audit. This table guarantees a record for
+ * every question regardless of engine. */
+export const assistantQuestions = pgTable("assistant_questions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  question: text("question").notNull(),
+  engine: text("engine"),           // "wiki" | "anthropic" | "grounding-fallback"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [
+  index("assistant_questions_user_id_idx").on(t.userId),
+  index("assistant_questions_created_at_idx").on(t.createdAt),
+]);
+
+export const insertAssistantQuestionSchema = createInsertSchema(assistantQuestions).omit({ id: true, createdAt: true });
+export type InsertAssistantQuestion = z.infer<typeof insertAssistantQuestionSchema>;
+export type AssistantQuestion = typeof assistantQuestions.$inferSelect;
+
+/* ─── SIWE Sessions ─── */
 export const siweNonces = pgTable("siwe_nonces", {
   nonce: text("nonce").primaryKey(),
   walletAddress: text("wallet_address"),

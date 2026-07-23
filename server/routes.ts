@@ -874,6 +874,18 @@ You can explain concepts and surface general guidance, but do not give regulated
 
     const lastUserContent = parsed.data.messages[parsed.data.messages.length - 1].content;
 
+    // Record every question locally so the audit trail is complete even when
+    // the Anthropic fallback (no brain-core interaction) is taken.
+    // Best-effort: a local write failure must never break the assistant.
+    try {
+      await storage.recordAssistantQuestion({
+        userId: req.session.userId!,
+        question: lastUserContent,
+      });
+    } catch (err) {
+      console.warn("[Assistant] local question record failed (non-fatal):", (err as Error).message);
+    }
+
     // ─── PRIMARY: brain-core wiki/question — per-answer cited evidence, grounded
     // server-side with brain-core's own key. ponytail: wiki/question takes a
     // single question, so multi-turn follow-up context (earlier messages) is
@@ -988,6 +1000,13 @@ You can explain concepts and surface general guidance, but do not give regulated
         sources: [],
       });
     }
+  });
+
+  // GET local assistant questions (covers Anthropic fallback where brain-core
+  // emits no audit event). Merged client-side with brain-core audit events.
+  app.get("/api/assistant/questions", requireAuth, async (req, res) => {
+    const questions = await storage.listAssistantQuestions(req.session.userId!, 100);
+    return res.json({ questions });
   });
 
   // ─────────────────────────────────────────────────────────────

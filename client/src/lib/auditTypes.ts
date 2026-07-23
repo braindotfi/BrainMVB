@@ -96,6 +96,10 @@ export interface AuditRecord {
      isAssistantActivity/isSystemActivity read the wire value instead of a
      hand-maintained per-action allowlist. */
   coreEventType?: string;
+  /* Original question text (for assistant activity records) — always set so
+     dedup between brain-core events and locally-recorded fallback rows can
+     use the raw text, independent of truncation or lifecycle-step formatting. */
+  rawQuestion?: string;
 }
 
 /* Filter tabs for the Audit Log page */
