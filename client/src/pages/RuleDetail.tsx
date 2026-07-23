@@ -39,7 +39,6 @@ import infoIcon from "@assets/Icons_1783346130548.png";
 import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
-import infoCircleIcon from "@assets/Icons_1783625224759.png";
 
 const ALERT = "#d20344";
 
@@ -793,22 +792,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
   const execute = rule.execute ?? "confirm";
 
   return (
-    <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
-      {/* Info banner - matches Figma "Inputfields / Dropdowns" row */}
-      <div
-        className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full"
-        data-testid="text-policy-info"
-      >
-        <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-          <img src={infoCircleIcon} alt="" className="relative shrink-0 size-[16px] mt-[1px]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-            <span className="leading-[16px]">This rule is part of your Brain core </span>
-            <span className="leading-[16px] text-[#a8b9f4] font-semibold">default policy</span>
-            <span className="leading-[16px]">. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.</span>
-          </p>
-        </div>
-      </div>
-
+    <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
       {/* DSL fields panel - matches Figma "Popup - Search Results" */}
       <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
         {/* Panel header */}
@@ -904,6 +888,18 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Info banner — moved below the table; matches Inbox purple style */}
+      <div
+        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+        style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+        data-testid="text-policy-info"
+      >
+        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+          This rule is part of your Brain core default policy. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
+        </p>
       </div>
     </div>
   );
