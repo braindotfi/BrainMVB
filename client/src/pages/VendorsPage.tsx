@@ -139,7 +139,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
             </DialogPrimitive.Close>
           </div>
 
-          <div className="content-stretch flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+          <div className="content-stretch flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
             <div className="relative shrink-0 w-full">
               <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[24px] items-start relative size-full">
                 {/* Name */}
@@ -201,16 +201,15 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               </div>
             )}
 
-            {/* Info banner */}
-            <div className="border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
-              <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex items-center p-[8px] relative size-full">
-                <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-                  <Info className="relative shrink-0 size-[16px] text-[#6c779d]" />
-                  <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
-                    Added to your current Brain session. This demo tenant is temporary.
-                  </p>
-                </div>
-              </div>
+            {/* Info banner — matches the Inbox helper banner style */}
+            <div
+              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+            >
+              <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
+                Added to your current Brain session. This demo tenant is temporary.
+              </p>
             </div>
 
             <button
