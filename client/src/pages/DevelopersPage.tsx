@@ -473,7 +473,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
           <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
             GET
           </span>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap" data-testid={`text-endpoint-path-${slug}`}>
+          <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
             {path}
           </p>
           <span
@@ -489,7 +489,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">{description}</p>
       </div>
       <div className="bg-[#06070a] border border-[#1d2132] flex gap-[12px] items-center p-[12px] rounded-[12px] w-full">
-        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-bold leading-[16px] text-[#a8b9f4] text-[12px] truncate" data-testid={`text-curl-${slug}`}>
+        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-bold leading-[20px] text-[#a8b9f4] text-[14px] truncate" data-testid={`text-curl-${slug}`}>
           {curl}
         </p>
         <button
@@ -713,7 +713,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 w-full min-w-0">
         <MetricCard
           label={`Requests today (${env})`}
           value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
@@ -1300,7 +1300,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       <div className="flex flex-col gap-[4px]">
       <PageHeader title="Usage and Limits" />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 w-full min-w-0">
         <MetricCard
           label="Requests this month"
           value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(thisMonth)}
