@@ -270,9 +270,20 @@ function inlineActorDisplay(ref: BrainActorRef | undefined): string | undefined 
 export function extractActorName(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
+  /* Synthetic bootstrap identities (machine-generated placeholders, not
+     people): emails at the reserved .invalid TLD or with a bootstrap+
+     local-part prefix. Never render these — omit honestly instead. */
+  const isSynthetic = (value: string): boolean => {
+    const lower = value.toLowerCase();
+    return /@[^@\s]+\.invalid$/.test(lower) || lower.startsWith("bootstrap+");
+  };
   const pick = (o: Record<string, unknown>): string | null => {
-    const name = o.display_name ?? o.name ?? o.email;
-    return typeof name === "string" && name.trim() ? name.trim() : null;
+    /* brain-core /v1/members/{id} returns camelCase displayName; older
+       shapes use display_name. Check both before falling back to email. */
+    const name = o.display_name ?? o.displayName ?? o.name ?? o.email;
+    if (typeof name !== "string" || !name.trim()) return null;
+    const trimmed = name.trim();
+    return isSynthetic(trimmed) ? null : trimmed;
   };
   const direct = pick(obj);
   if (direct) return direct;
