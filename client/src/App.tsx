@@ -130,15 +130,6 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [accountCollapsed, setAccountCollapsed] = useState(false);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
-  const [location] = useLocation();
-
-  /* The chat panel IS the "make your first call" mechanism for Developers —
-     auto-expand it when entering /developers so it's never an icon-only rail
-     there. The user can still collapse it manually afterwards. */
-  const onDevelopers = location.startsWith("/developers");
-  useEffect(() => {
-    if (onDevelopers) setAccountCollapsed(false);
-  }, [onDevelopers]);
 
   const handleLogout = onLogout;
 

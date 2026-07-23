@@ -1312,29 +1312,29 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
               : "No tenant available."}
           </EmptyRow>
         ) : (
-          <div className="flex flex-col gap-[16px] p-[16px]">
-            {data.tenants.map((t, i) => (
-              <div key={t.id} className="flex flex-col gap-[16px] w-full">
-                {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
-                <button
-                  type="button"
-                  onClick={() => setSelectedTenantId(t.id)}
-                  className="flex flex-col gap-[4px] justify-center w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors p-[12px]"
-                  data-testid={`row-tenant-${t.id}`}
-                >
-                  <div className="flex gap-[12px] items-start w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">
-                      {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
-                    </p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px] flex-1 min-w-px text-right" data-testid={`text-tenant-created-${t.id}`}>
-                      Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-tenant-id-${t.id}`}>{t.id}</p>
-                  </div>
-                </button>
-              </div>
+          <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+            {data.tenants.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedTenantId(t.id)}
+                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                data-testid={`row-tenant-${t.id}`}
+              >
+                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                    {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap" data-testid={`text-tenant-id-${t.id}`}>
+                    {t.id}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end justify-center relative shrink-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
+                    Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
+                  </p>
+                </div>
+              </button>
             ))}
           </div>
         )}
