@@ -79,6 +79,21 @@ async function humanizeWikiAnswer(raw: string): Promise<string> {
     const payload = parsed && typeof parsed === "object" && "answer" in parsed
       ? JSON.stringify(parsed.answer)
       : raw;
+    /* Degenerate payload (null/empty answer): calling the summarizer with
+       nothing to summarize makes the model ask for input ("I don't see any
+       JSON data…"), which would then be shown to the user. Return "" to
+       signal "no usable answer" so the chat handler falls through to the
+       ledger-grounding fallback instead. */
+    const trimmedPayload = (payload ?? "").trim();
+    if (
+      trimmedPayload === "" ||
+      trimmedPayload === "null" ||
+      trimmedPayload === '""' ||
+      trimmedPayload === "{}" ||
+      trimmedPayload === "[]"
+    ) {
+      return "";
+    }
     const message = await anthropic.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 512,
@@ -873,12 +888,18 @@ You can explain concepts and surface general guidance, but do not give regulated
       const { token } = await getBrainSession(req.session.userId!);
       const wiki = await askWikiQuestion(token, lastUserContent);
       if (wiki.raw.trim().length > 0) {
-        return res.json({
-          reply: await humanizeWikiAnswer(wiki.raw),
-          sources: wiki.evidence,
-          grounded: true,
-          engine: "wiki",
-        });
+        /* Only return the wiki result when there is real content. An envelope
+           with an empty/null answer humanizes to "" — treat that as "wiki
+           could not answer" and fall through to ledger grounding below. */
+        const reply = await humanizeWikiAnswer(wiki.raw);
+        if (reply.trim().length > 0) {
+          return res.json({
+            reply,
+            sources: wiki.evidence,
+            grounded: true,
+            engine: "wiki",
+          });
+        }
       }
     } catch (e) {
       console.warn("[Assistant] wiki/question failed, falling back to ledger grounding:", (e as Error)?.message);
