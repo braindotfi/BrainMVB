@@ -125,7 +125,7 @@ function sourceTypeForFile(file: File): "pdf_upload" | "csv_upload" {
 /** Human label + tone for an extraction status. */
 function extractStatusMeta(s: ExtractStatus | null): { label: string; tone: "ok" | "progress" | "warn" | "muted" } {
   switch (s) {
-    case "extracted":   return { label: "Read by Brain", tone: "ok" };
+    case "extracted":   return { label: "Read", tone: "ok" };
     case "extracting":  return { label: "Extracting…", tone: "progress" };
     case "ingested":    return { label: "Stored · awaiting extraction", tone: "progress" };
     case "pending":     return { label: "Uploading…", tone: "progress" };
@@ -563,7 +563,7 @@ function SourceRow({
 }
 
 /* ───────────────────────────── Screen: Category picker ───────────────────────────── */
-function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => void; onContinue: () => void }) {
+export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => void; onContinue: () => void }) {
   const banksQuery = useQuery<BankConnectionInfo[]>({ queryKey: ["/api/integrations/plaid/connections"] });
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
@@ -1190,7 +1190,7 @@ function StepDots({ total, current }: { total: number; current: number }) {
  * document is still being read by brain-core). No fabricated stats. */
 const IN_PROGRESS_STATUSES: ReadonlyArray<ExtractStatus> = ["pending", "ingested", "extracting"];
 
-function ReadingScreen({
+export function ReadingScreen({
   onViewWiki, onContinue, onAddMore,
 }: { onViewWiki: () => void; onContinue: () => void; onAddMore: () => void }) {
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
@@ -1214,7 +1214,7 @@ function ReadingScreen({
     <div className="flex flex-col gap-[20px]">
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Reading your sources
+          Reading Your Sources
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
           Brain is reviewing your uploaded documents. Anything it reads is advisory until you confirm it.
@@ -1335,7 +1335,7 @@ function formatDue(due: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function FoundScreen({ onFinish }: { onFinish: () => void }) {
+export function FoundScreen({ onFinish }: { onFinish: () => void }) {
   const [activeTab, setActiveTab] = useState<FoundTab>("all");
 
   const obligationsQuery = useQuery<Obligation[]>({
