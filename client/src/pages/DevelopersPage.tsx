@@ -1512,7 +1512,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                               </div>
                             ))}
                           </div>
-                          <div className="flex justify-between [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px]">
+                          <div className="flex justify-between [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
                             <span>{trend[0]?.date ?? ""}</span>
                             <span>{trend[trend.length - 1]?.date ?? ""}</span>
                           </div>
