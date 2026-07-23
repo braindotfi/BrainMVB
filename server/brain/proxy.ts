@@ -39,11 +39,7 @@ import {
   type CreateCounterpartyBody,
 } from "./client";
 
-/** Canned prompt for the HomePage "Brain's take" line - one specific, numeric insight. */
-const RECOMMENDATION_PROMPT =
-  "In one sentence, give me the single most important and specific thing to know about my " +
-  "money right now (a cash-flow, spending, or receivable item). Be concrete and numeric; do " +
-  "not greet or add commentary.";
+import { RECOMMENDATION_PROMPT } from "@shared/cannedPrompts";
 
 export function createBrainProxyRouter(): Router {
   const router = Router();

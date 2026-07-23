@@ -18,6 +18,7 @@ import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
+import { matchCannedPrompt } from "@shared/cannedPrompts";
 
 export function AuditRecordPopup({
   record,
@@ -203,9 +204,28 @@ export function AuditRecordPopup({
                                       </span>
                                     )}
                                   </p>
-                                  {step.note && (
-                                    <p className="relative shrink-0 text-[#414965] w-full">{step.note}</p>
-                                  )}
+                                  {(() => {
+                                    /* App-generated canned prompts (matched by exact text)
+                                       lead with the human description; the exact prompt sent
+                                       is still shown below — the audit log never hides what
+                                       was actually sent, it just stops leading with it. */
+                                    const canned = matchCannedPrompt(step.note);
+                                    if (!canned) {
+                                      return step.note ? (
+                                        <p className="relative shrink-0 text-[#414965] w-full">{step.note}</p>
+                                      ) : null;
+                                    }
+                                    return (
+                                      <>
+                                        <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-[#414965] w-full">
+                                          {canned.description}
+                                        </p>
+                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] text-[12px] w-full">
+                                          <span className="text-[#6c779d]">Exact prompt used:</span> {canned.prompt}
+                                        </p>
+                                      </>
+                                    );
+                                  })()}
                                   {(() => {
                                     /* Actor line — honest omission: only renders when a
                                        human-readable actor is available (raw machine ids are
@@ -213,13 +233,16 @@ export function AuditRecordPopup({
                                        when the step label already names the actor. */
                                     const actorName = humanReadableActor(step.actor);
                                     if (!actorName || step.label.includes(actorName)) return null;
+                                    const canned = matchCannedPrompt(step.note);
                                     return (
                                       <p
                                         data-testid={`text-step-actor-${idx}`}
                                         className="relative shrink-0 text-[#6c779d] w-full"
                                       >
                                         {isAssistantActivity(record)
-                                          ? `Asked on behalf of ${actorName}`
+                                          ? canned
+                                            ? `Run automatically on behalf of ${actorName}`
+                                            : `Asked on behalf of ${actorName}`
                                           : `By ${actorName}`}
                                       </p>
                                     );

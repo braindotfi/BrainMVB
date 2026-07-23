@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
+import { matchCannedPrompt } from "@shared/cannedPrompts";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
    Replaces MOCK_AUDIT_RECORDS as the AuditLogPage data source with
@@ -111,7 +112,11 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
     // card length here; the full text rides on the lifecycle step's note.
     summary: (e) => {
       const q = wikiQuestionText(e);
-      return q ? truncateForCard(q) : "Assistant asked a question";
+      if (!q) return "Assistant asked a question";
+      /* App-generated canned prompts get their human title; user-typed
+         questions keep rendering their own text, truncated for the card. */
+      const canned = matchCannedPrompt(q);
+      return canned ? canned.title : truncateForCard(q);
     },
   },
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
