@@ -320,20 +320,6 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
   </div>
 );
 
-/* ─── Subpage header row: title left, actions top-right.
-   Title matches the Settings subpage header format (e.g. "Members"). ─── */
-const PageHeader = ({ title, actions }: {
-  title: ReactNode;
-  actions?: ReactNode;
-}) => (
-  <div className="flex items-center justify-between gap-4 min-h-[36px]">
-    <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
-      {title}
-    </h1>
-    {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
-  </div>
-);
-
 /* ─── One-time plaintext key modal ─── */
 const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose: () => void }) => {
   const [copied, setCopied] = useState(false);
@@ -1323,65 +1309,68 @@ function UsageSection({ env }: { env: DevEnv }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-[4px]">
-      <PageHeader title="Usage and Limits" />
+      <Card testId="card-usage-metrics">
+        <div className="flex gap-[16px] items-stretch p-[16px]">
+          <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-requests-month">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+              Requests This Month
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
+              {usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(thisMonth)}
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+              {usageQ.isError
+                ? "Usage unavailable"
+                : trend === null
+                  ? "No prior-month data to compare"
+                  : `${trend >= 0 ? "+" : ""}${trend}% vs. last month`}
+            </p>
+          </div>
+          <div className="w-px shrink-0 self-stretch bg-[#1d2132]" />
+          <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-rate-limit-tier">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+              Rate-Limit Tier
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
+              {tier ? tier.tier : "No plan selected"}
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+              {tier ? (
+                <>
+                  {tier.requestsPerMin} req/min, burst {tier.burst}. From your{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/settings?section=billing")}
+                    className="text-[#7631ee] hover:underline cursor-pointer"
+                    data-testid="link-settings-billing"
+                  >
+                    Settings → Billing
+                  </button>{" "}
+                  plan.
+                </>
+              ) : (
+                <>
+                  Choose a plan in{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/settings?section=billing")}
+                    className="text-[#7631ee] hover:underline cursor-pointer"
+                    data-testid="link-settings-billing"
+                  >
+                    Settings → Billing
+                  </button>{" "}
+                  to set your tier
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      </Card>
 
-      <div className="grid grid-cols-2 gap-4 w-full min-w-0">
-        <MetricCard
-          label="Requests this month"
-          value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(thisMonth)}
-          sub={
-            usageQ.isError
-              ? "Usage unavailable"
-              : trend === null
-                ? "No prior-month data to compare"
-                : `${trend >= 0 ? "+" : ""}${trend}% vs. last month`
-          }
-          testId="metric-requests-month"
-        />
-        <MetricCard
-          label="Rate-limit tier"
-          value={
-            tier
-              ? <span className="text-[18px] leading-[24px]">{tier.tier}</span>
-              : <span className="text-[18px] leading-[24px]">No plan selected</span>
-          }
-          sub={
-            tier ? (
-              <>
-                {tier.requestsPerMin} req/min, burst {tier.burst}. From your{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/settings?section=billing")}
-                  className="text-[#7631ee] hover:underline cursor-pointer"
-                  data-testid="link-settings-billing"
-                >
-                  Settings → Billing
-                </button>{" "}
-                plan.
-              </>
-            ) : (
-              <>
-                Choose a plan in{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/settings?section=billing")}
-                  className="text-[#7631ee] hover:underline cursor-pointer"
-                  data-testid="link-settings-billing"
-                >
-                  Settings → Billing
-                </button>{" "}
-                to set your tier
-              </>
-            )
-          }
-          testId="metric-rate-limit-tier"
-        />
-      </div>
-      </div>
-
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Requests by Method ({env})</SectionLabel>
+        <div className="flex h-[24px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Requests by Method</p>
+        </div>
         <Card testId="card-usage-by-method">
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
@@ -1390,8 +1379,8 @@ function UsageSection({ env }: { env: DevEnv }) {
           ) : !data?.byAction.length ? (
             <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
           ) : (
-            <div className="flex flex-col gap-[8px] p-[8px]">
-              {data.byAction.map((a) => {
+            <div className="flex flex-col gap-[16px] p-[16px]">
+              {data.byAction.map((a, i) => {
                 const max = data.byAction[0]?.count || 1;
                 const isOpen = expandedAction === a.action;
                 // Show the trailing 14 days of the per-action series so the
@@ -1399,45 +1388,49 @@ function UsageSection({ env }: { env: DevEnv }) {
                 const trend = (a.daily ?? []).slice(-14);
                 const trendMax = Math.max(1, ...trend.map((d) => d.count));
                 return (
-                  <div key={a.action} className={`rounded-[8px] bg-[#0a0c10] border transition-colors ${isOpen ? "border-[#1d2132] bg-[#11141b]" : "border-transparent hover:bg-[#11141b] hover:border-[#1d2132]"}`}>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedAction(isOpen ? null : a.action)}
-                      className="p-[8px] flex items-center gap-3 w-full text-left cursor-pointer"
-                      data-testid={`row-method-${a.action}`}
-                      aria-expanded={isOpen}
-                    >
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-[220px] truncate" title={a.action}>{humanizeAction(a.action)}</p>
-                      <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
-                        <div className="h-full rounded-full" style={{ width: `${Math.max((a.count / max) * 100, 2)}%`, background: "#7631ee" }} />
-                      </div>
-                      <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right">{a.count}</Mono>
-                      <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}><ChevronRight /></span>
-                    </button>
-                    {isOpen && (
-                      <div className="px-[8px] pb-[10px] flex flex-col gap-2" data-testid={`panel-method-daily-${a.action}`}>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                          Daily requests, last {trend.length} days: <Mono className="text-[#6c779d]">{a.action}</Mono>
-                        </p>
-                        <div className="flex items-end gap-[3px] h-[48px]">
-                          {trend.map((d) => (
-                            <div key={d.date} className="flex-1 flex flex-col items-center gap-[3px] min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
-                              <div
-                                className="w-full rounded-[2px]"
-                                style={{
-                                  height: d.count === 0 ? 2 : Math.max(4, Math.round((d.count / trendMax) * 40)),
-                                  background: d.count === 0 ? "#1d2132" : "#7631ee",
-                                }}
-                              />
-                            </div>
-                          ))}
+                  <div key={a.action} className="flex flex-col gap-[16px] w-full">
+                    {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                    <div className="flex flex-col gap-[8px] w-full">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAction(isOpen ? null : a.action)}
+                        className="flex flex-col gap-[8px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                        data-testid={`row-method-${a.action}`}
+                        aria-expanded={isOpen}
+                      >
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-full break-words group-hover:text-white transition-colors" title={a.action}>{humanizeAction(a.action)}</p>
+                        <div className="flex gap-[7px] items-center w-full">
+                          <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-[#222737] overflow-hidden">
+                            <div className="h-full rounded-[3px] bg-[#7631ee]" style={{ width: `${Math.max((a.count / max) * 100, 2)}%` }} />
+                          </div>
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[#6c779d] text-[14px] leading-[14px] text-right min-w-[24px] shrink-0">{a.count.toLocaleString()}</p>
                         </div>
-                        <div className="flex justify-between">
-                          <Mono className="text-[#414965] text-[10px]">{trend[0]?.date ?? ""}</Mono>
-                          <Mono className="text-[#414965] text-[10px]">{trend[trend.length - 1]?.date ?? ""}</Mono>
+                      </button>
+                      {isOpen && (
+                        <div className="flex flex-col gap-2" data-testid={`panel-method-daily-${a.action}`}>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
+                            Daily requests, last {trend.length} days: <Mono className="text-[#6c779d]">{a.action}</Mono>
+                          </p>
+                          <div className="flex items-end gap-[3px] h-[48px]">
+                            {trend.map((d) => (
+                              <div key={d.date} className="flex-1 flex flex-col items-center gap-[3px] min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
+                                <div
+                                  className="w-full rounded-[2px]"
+                                  style={{
+                                    height: d.count === 0 ? 2 : Math.max(4, Math.round((d.count / trendMax) * 40)),
+                                    background: d.count === 0 ? "#1d2132" : "#7631ee",
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-between">
+                            <Mono className="text-[#414965] text-[10px]">{trend[0]?.date ?? ""}</Mono>
+                            <Mono className="text-[#414965] text-[10px]">{trend[trend.length - 1]?.date ?? ""}</Mono>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1447,7 +1440,9 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Requests by Key ({env})</SectionLabel>
+        <div className="flex h-[24px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Requests by Key</p>
+        </div>
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-usage" />
         ) : (
@@ -1459,27 +1454,30 @@ function UsageSection({ env }: { env: DevEnv }) {
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (
-            <div className="flex flex-col gap-[8px] p-[8px]">
-              {envKeys.map((k) => {
+            <div className="flex flex-col gap-[16px] p-[16px]">
+              {envKeys.map((k, i) => {
                 const max = keyCount(envKeys[0]?.id ?? "") || 1;
                 const count = keyCount(k.id);
                 return (
-                  <div
-                    key={k.id}
-                    className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-3"
-                    data-testid={`row-usage-key-${k.id}`}
-                  >
-                    <div className="w-[220px] flex items-center gap-2 min-w-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate" title={k.name}>{k.name}</p>
-                      {k.status === "revoked" && (
-                        <span className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]">Revoked</span>
-                      )}
+                  <div key={k.id} className="flex flex-col gap-[16px] w-full">
+                    {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                    <div className="flex flex-col gap-[8px] justify-center w-full" data-testid={`row-usage-key-${k.id}`}>
+                      <div className="flex flex-col gap-[4px] w-full">
+                        <div className="flex gap-[12px] items-start w-full">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words" title={k.name}>{k.name}</p>
+                          {k.status === "revoked" && <StatusBadge status="revoked" />}
+                        </div>
+                        <div className="flex items-center w-full">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-[7px] items-center w-full">
+                        <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-[#222737] overflow-hidden">
+                          <div className="h-full rounded-[3px] bg-[#7631ee]" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%" }} />
+                        </div>
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[#6c779d] text-[14px] leading-[14px] text-right min-w-[24px] shrink-0" data-testid={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</p>
+                      </div>
                     </div>
-                    <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</Mono>
-                    <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "#11141b" }}>
-                      <div className="h-full rounded-full" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%", background: "#7631ee" }} />
-                    </div>
-                    <Mono className="text-[#a8b9f4] text-[13px] w-[48px] text-right" testId={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</Mono>
                   </div>
                 );
               })}
@@ -1487,16 +1485,23 @@ function UsageSection({ env }: { env: DevEnv }) {
           )}
         </Card>
         )}
-        <p className="mt-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-          Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window). They
-          are a different measurement than the tenant-wide audit events above and won't match those totals.
-        </p>
       </div>
 
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-        Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your tenancy
-        mode runs in (demo → sandbox, production → live).
-      </p>
+      <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
+        <div className="flex flex-1 min-w-px gap-[8px] items-start">
+          <Info className="shrink-0 size-[16px] text-[#6c779d]" />
+          <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] flex-1 min-w-px">
+            <p className="leading-[16px] mb-[12px]">
+              Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
+              They are a different measurement than the tenant-wide audit events above and won't match those totals.
+            </p>
+            <p className="leading-[16px]">
+              Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
+              tenancy mode runs in (demo → sandbox, production → live).
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
