@@ -239,33 +239,6 @@ const EmptyRow = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-const MetricCard = ({ label, value, sub, testId, onClick }: { label: string; value: ReactNode; sub?: ReactNode; testId?: string; onClick?: () => void }) => {
-  const body = (
-    <div className="p-4 flex flex-col gap-1 relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]">{label}</p>
-      <Mono className="text-white text-[28px] leading-[34px] font-semibold">{value}</Mono>
-      {sub && <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">{sub}</p>}
-      {onClick && (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2">
-          <ChevronRight />
-        </span>
-      )}
-    </div>
-  );
-  if (!onClick) return <Card testId={testId}>{body}</Card>;
-  return (
-    <button
-      type="button"
-      data-testid={testId}
-      onClick={onClick}
-      className="rounded-[16px] overflow-hidden text-left cursor-pointer border border-transparent hover:border-[#1d2132] hover:bg-[#11141b] transition-colors"
-      style={{ background: "#0a0c10" }}
-    >
-      {body}
-    </button>
-  );
-};
-
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -699,47 +672,76 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 w-full min-w-0">
-        <MetricCard
-          label={`Requests today (${env})`}
-          value={usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
-          sub={usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
-          testId="metric-requests-today"
-          onClick={() => onNavigate("usage")}
-        />
-        <MetricCard
-          label={`Active keys (${env})`}
-          value={keysQ.isLoading ? "…" : keysQ.isError ? "—" : String(activeKeys.length)}
-          sub={keysUnavailable ? "Keys API not yet enabled" : "Issued by brain-core"}
-          testId="metric-active-keys"
-          onClick={() => onNavigate("keys")}
-        />
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex h-[24px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Usage and Limits</p>
+        </div>
+        <Card testId="card-overview-usage">
+          <div className="flex gap-[16px] items-stretch p-[16px]">
+            <button
+              type="button"
+              onClick={() => onNavigate("usage")}
+              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+              data-testid="metric-requests-today"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] group-hover:text-white transition-colors">
+                Requests Today ({env === "sandbox" ? "Sandbox" : "Live"})
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
+                {usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+                {usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
+              </p>
+            </button>
+            <div className="w-px shrink-0 self-stretch bg-[#1d2132]" />
+            <button
+              type="button"
+              onClick={() => onNavigate("keys")}
+              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+              data-testid="metric-active-keys"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] group-hover:text-white transition-colors">
+                Active Keys ({env === "sandbox" ? "Sandbox" : "Live"})
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
+                {keysQ.isLoading ? "…" : keysQ.isError ? "—" : String(activeKeys.length)}
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+                {keysUnavailable ? "Keys API not yet enabled" : "Issued by brain-core"}
+              </p>
+            </button>
+          </div>
+        </Card>
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Recent Activity</SectionLabel>
+        <div className="flex h-[24px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Recent Activity</p>
+        </div>
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
           ) : activityQ.isError || !activityQ.data?.events?.length ? (
             <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
           ) : (
-            <div className="divide-y divide-[#1d2132]">
-              {activityQ.data.events.slice(0, 8).map((ev) => (
-                <button
-                  key={ev.id}
-                  type="button"
-                  onClick={() => setSelectedEvent(ev)}
-                  className="flex items-center gap-3 px-4 py-3 w-full text-left cursor-pointer hover:bg-[#11141b] transition-colors"
-                  data-testid={`row-activity-${ev.id}`}
-                >
-                  <span className="px-2 py-[2px] rounded-[4px] text-[11px] [font-family:'Gilroy',sans-serif] font-semibold" style={{ background: "#1d2132", color: "#a8b9f4" }}>
-                    {ev.layer}
-                  </span>
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px] truncate" title={ev.action}>{humanizeAction(ev.action)}</p>
-                  <Mono className="text-[#6c779d] text-[12px]">{formatDateTime(ev.created_at)}</Mono>
-                  <ChevronRight />
-                </button>
+            <div className="flex flex-col gap-[16px] p-[16px]">
+              {activityQ.data.events.slice(0, 8).map((ev, i) => (
+                <div key={ev.id} className="flex flex-col gap-[16px] w-full">
+                  {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEvent(ev)}
+                    className="flex gap-[12px] items-start w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                    data-testid={`row-activity-${ev.id}`}
+                  >
+                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap shrink-0">
+                      {ev.layer}
+                    </span>
+                    <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px] text-right shrink-0">{formatDateTime(ev.created_at)}</p>
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -1309,7 +1311,11 @@ function UsageSection({ env }: { env: DevEnv }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card testId="card-usage-metrics">
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex h-[24px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-usage-title">Usage and Limits</p>
+        </div>
+        <Card testId="card-usage-metrics">
         <div className="flex gap-[16px] items-stretch p-[16px]">
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-requests-month">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
@@ -1365,7 +1371,8 @@ function UsageSection({ env }: { env: DevEnv }) {
             </p>
           </div>
         </div>
-      </Card>
+        </Card>
+      </div>
 
       <div className="flex flex-col gap-[4px]">
         <div className="flex h-[24px] items-center w-full">
