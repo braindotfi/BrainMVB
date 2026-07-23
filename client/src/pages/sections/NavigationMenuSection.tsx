@@ -5,6 +5,8 @@ import vendorsActiveIcon from "@assets/VendorsActive_1782953370194.png";
 import vendorsInactiveIcon from "@assets/VendorsInactive_1782953370194.png";
 import auditLogActiveIcon from "@assets/AuditLogActive_1782953603161.png";
 import auditLogInactiveIcon from "@assets/AuditLogInactive_1782953603162.png";
+import devActiveIcon from "@assets/dev_active_1784836119565.png";
+import devInactiveIcon from "@assets/dev_inactive_1784836119564.png";
 import { useIntents } from "@/lib/intentsStore";
 
 interface Props {
@@ -254,23 +256,13 @@ const AuditLogIconInactive = () => (
   <img alt="" className="shrink-0 size-[24px]" src={auditLogInactiveIcon} />
 );
 
-/* Developers icon - inline SVG code brackets, matching the 24px nav icon frame */
+/* Developers icon — Figma-matched PNG assets (active/inactive) */
 const DevelopersIconActive = () => (
-  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#a88afa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.5 4.5L10.5 19.5" stroke="#7631ee" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  </div>
+  <img alt="" className="shrink-0 size-[24px]" src={devActiveIcon} />
 );
 
 const DevelopersIconInactive = () => (
-  <div className="relative shrink-0 size-[24px] flex items-center justify-center">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M8 6L2.5 12L8 18M16 6L21.5 12L16 18" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.5 4.5L10.5 19.5" stroke="#6c779d" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  </div>
+  <img alt="" className="shrink-0 size-[24px]" src={devInactiveIcon} />
 );
 
 const OTHER_NAV: NavItem[] = [
