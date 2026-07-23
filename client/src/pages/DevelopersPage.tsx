@@ -489,7 +489,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">{description}</p>
       </div>
       <div className="bg-[#06070a] border border-[#1d2132] flex gap-[12px] items-center p-[12px] rounded-[12px] w-full">
-        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-bold leading-[20px] text-[#a8b9f4] text-[14px] truncate" data-testid={`text-curl-${slug}`}>
+        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[14px] truncate" data-testid={`text-curl-${slug}`}>
           {curl}
         </p>
         <button
@@ -577,7 +577,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   };
 
   return (
-    <div className="flex flex-col gap-[40px] items-start pt-[20px]">
+    <div className="flex flex-col gap-[40px] w-full pt-[20px]">
       {selectedEvent && (
         <DetailModal
           title={humanizeAction(selectedEvent.action)}
@@ -648,7 +648,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         <div className="flex-shrink-0">{envControl}</div>
       </div>
 
-      <div className="flex flex-col gap-[24px]">
+      <div className="flex flex-col gap-[24px] w-full">
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Get Started</SectionLabel>
@@ -1579,7 +1579,7 @@ export function DevelopersPage() {
 
       {/* ── Content area ── */}
       <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="px-6 py-5">{SectionContent}</div>
+        <div className="px-[16px] py-5">{SectionContent}</div>
       </div>
     </div>
   );
