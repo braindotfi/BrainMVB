@@ -1119,7 +1119,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                 <button
                   type="button"
                   onClick={() => setSelectedKeyId(k.id)}
-                  className="flex flex-col gap-[16px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                  className="flex flex-col gap-[16px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors p-[12px]"
                   data-testid={`row-key-${k.id}`}
                 >
                   <div className="flex flex-col gap-[4px] justify-center w-full">
@@ -1327,7 +1327,7 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
                 <button
                   type="button"
                   onClick={() => setSelectedTenantId(t.id)}
-                  className="flex flex-col gap-[4px] justify-center w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                  className="flex flex-col gap-[4px] justify-center w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors p-[12px]"
                   data-testid={`row-tenant-${t.id}`}
                 >
                   <div className="flex gap-[12px] items-start w-full">
