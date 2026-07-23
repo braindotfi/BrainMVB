@@ -1475,7 +1475,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                 return (
                   <div key={a.action} className="flex flex-col gap-[16px] w-full">
                     {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
-                    <div className="flex flex-col gap-[8px] w-full">
+                    <div className="flex flex-col gap-[16px] w-full">
                       <button
                         type="button"
                         onClick={() => setExpandedAction(isOpen ? null : a.action)}
@@ -1492,26 +1492,29 @@ function UsageSection({ env }: { env: DevEnv }) {
                         </div>
                       </button>
                       {isOpen && (
-                        <div className="flex flex-col gap-2" data-testid={`panel-method-daily-${a.action}`}>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                            Daily requests, last {trend.length} days: <Mono className="text-[#6c779d]">{a.action}</Mono>
-                          </p>
-                          <div className="flex items-end gap-[3px] h-[48px]">
+                        <div className="flex flex-col gap-[16px]" data-testid={`panel-method-daily-${a.action}`}>
+                          <div className="flex gap-[8px] items-center w-full">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap shrink-0">
+                              <span>Daily requests, last {trend.length} days: </span>
+                              <span className="text-[#a8b9f4]">{a.action}</span>
+                            </p>
+                            <div className="flex-1 min-w-px h-px bg-[#1d2132]" />
+                          </div>
+                          <div className="flex items-end gap-[8px] h-[48px]">
                             {trend.map((d) => (
-                              <div key={d.date} className="flex-1 flex flex-col items-center gap-[3px] min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
+                              <div key={d.date} className="flex-1 flex flex-col items-center min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
                                 <div
-                                  className="w-full rounded-[2px]"
+                                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)]"
                                   style={{
-                                    height: d.count === 0 ? 2 : Math.max(4, Math.round((d.count / trendMax) * 40)),
-                                    background: d.count === 0 ? "#1d2132" : "#7631ee",
+                                    height: Math.max(4, Math.round((d.count / trendMax) * 40)),
                                   }}
                                 />
                               </div>
                             ))}
                           </div>
-                          <div className="flex justify-between">
-                            <Mono className="text-[#414965] text-[10px]">{trend[0]?.date ?? ""}</Mono>
-                            <Mono className="text-[#414965] text-[10px]">{trend[trend.length - 1]?.date ?? ""}</Mono>
+                          <div className="flex justify-between [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px]">
+                            <span>{trend[0]?.date ?? ""}</span>
+                            <span>{trend[trend.length - 1]?.date ?? ""}</span>
                           </div>
                         </div>
                       )}
