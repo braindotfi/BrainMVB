@@ -1166,9 +1166,11 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
         </DetailModal>
       )}
       <div className="flex flex-col gap-[4px]">
-      <PageHeader
-        title="Tenants"
-        actions={
+      <div className="flex h-[24px] items-center justify-between gap-4">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
+          Tenants
+        </p>
+        {(
           <button
             type="button"
             data-testid="button-create-tenant"
@@ -1194,8 +1196,8 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
             {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
             {showCreate ? "Cancel" : "Create Tenant"}
           </button>
-        }
-      />
+        )}
+      </div>
 
       {showCreate && data?.canCreate && (
         <Card testId="card-create-tenant">
@@ -1240,29 +1242,29 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
               : "No tenant available."}
           </EmptyRow>
         ) : (
-          <div className="flex flex-col gap-[8px] p-[8px]">
-            {data.tenants.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setSelectedTenantId(t.id)}
-                className="p-[8px] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors flex items-center gap-4 w-full text-left cursor-pointer"
-                data-testid={`row-tenant-${t.id}`}
-              >
-                <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+          <div className="flex flex-col gap-[16px] p-[16px]">
+            {data.tenants.map((t, i) => (
+              <div key={t.id} className="flex flex-col gap-[16px] w-full">
+                {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                <button
+                  type="button"
+                  onClick={() => setSelectedTenantId(t.id)}
+                  className="flex flex-col gap-[4px] justify-center w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                  data-testid={`row-tenant-${t.id}`}
+                >
+                  <div className="flex gap-[12px] items-start w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">
                       {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
                     </p>
-                    <EnvBadge env={t.environment} />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px] flex-1 min-w-px text-right" data-testid={`text-tenant-created-${t.id}`}>
+                      Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
+                    </p>
                   </div>
-                  <Mono className="block truncate text-[#6c779d] text-[12px]" testId={`text-tenant-id-${t.id}`}>{t.id}</Mono>
-                  <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px]" data-testid={`text-tenant-created-${t.id}`}>
-                    Created <Mono className="text-[#6c779d]">{t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}</Mono>
-                  </span>
-                </div>
-                <ChevronRight />
-              </button>
+                  <div className="flex items-center w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-tenant-id-${t.id}`}>{t.id}</p>
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         )}
