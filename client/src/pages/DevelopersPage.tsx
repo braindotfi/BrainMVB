@@ -459,31 +459,39 @@ function useCountdown(targetIso: string | null | undefined): string | null {
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
-/* ─── API reference (copy-paste curl examples for key-authed endpoints) ─── */
+/* ─── API reference (copy-paste curl examples for key-authed endpoints).
+   Figma frame 5985:65819: pill tags (GET / scope), 16px path in baby blue,
+   curl inside a #06070a bordered box with the Copy pill INSIDE the box. ─── */
 const EndpointRow = ({ path, scope, description }: { path: string; scope: string | null; description: string }) => {
   const [copied, setCopied] = useState(false);
   const curl = `curl ${window.location.origin}${path} -H "Authorization: Bearer brain_sk_..."`;
   const slug = path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
   return (
-    <div className="p-4 flex flex-col gap-2" data-testid={`row-endpoint-${slug}`}>
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="px-2 py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px]" style={{ background: "#1d2132", color: "#a8b9f4" }}>
-          GET
-        </span>
-        <Mono className="text-white text-[13px] leading-[18px]" testId={`text-endpoint-path-${slug}`}>{path}</Mono>
-        <span
-          data-testid={`badge-endpoint-scope-${slug}`}
-          className="px-2 py-[2px] rounded-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px]"
-          style={scope ? { background: "#1c1132", color: "#a88afa" } : { background: "#1d2132", color: "#6c779d" }}
-        >
-          {scope ? `Requires ${scope}` : "Any active key"}
-        </span>
-      </div>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">{description}</p>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-[8px] px-3 py-2 break-all min-w-0" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
-          <Mono className="text-[#a8b9f4] text-[12px] leading-[17px]" testId={`text-curl-${slug}`}>{curl}</Mono>
+    <div className="flex flex-col gap-[16px] w-full" data-testid={`row-endpoint-${slug}`}>
+      <div className="flex flex-col gap-[4px] justify-center w-full">
+        <div className="flex gap-[12px] items-start w-full flex-wrap">
+          <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+            GET
+          </span>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap" data-testid={`text-endpoint-path-${slug}`}>
+            {path}
+          </p>
+          <span
+            data-testid={`badge-endpoint-scope-${slug}`}
+            className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap"
+            style={scope
+              ? { background: "#240757", color: "#7631ee", borderColor: "rgba(118,49,238,0.2)" }
+              : { background: "#222737", color: "#6c779d", borderColor: "rgba(108,119,157,0.2)" }}
+          >
+            {scope ? `Requires ${scope}` : "Any Active Key"}
+          </span>
         </div>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">{description}</p>
+      </div>
+      <div className="bg-[#06070a] border border-[#1d2132] flex gap-[12px] items-center p-[12px] rounded-[12px] w-full">
+        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-bold leading-[16px] text-[#a8b9f4] text-[12px] truncate" data-testid={`text-curl-${slug}`}>
+          {curl}
+        </p>
         <button
           type="button"
           data-testid={`button-copy-curl-${slug}`}
@@ -494,9 +502,12 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
               setTimeout(() => setCopied(false), 1500);
             } catch { /* clipboard unavailable */ }
           }}
-          className="flex-shrink-0 rounded-full px-3 py-[6px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
-          style={{ background: "#240757", color: "#a8b9f4" }}
+          className="bg-[#222737] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap"
         >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+            <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" stroke="#6c779d" strokeWidth="1.2" />
+            <path d="M10.5 5.5V4.2C10.5 3.54 9.96 3 9.3 3H4.2C3.54 3 3 3.54 3 4.2V9.3C3 9.96 3.54 10.5 4.2 10.5H5.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
@@ -634,25 +645,31 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
-        <div className="flex-shrink-0">{envControl}</div>
+        <div className="self-start">{envControl}</div>
       </div>
 
       <div className="flex flex-col gap-[24px]">
-      {keysUnavailable && <KeysUnavailableCard testId="card-keys-unavailable-overview" />}
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Get Started</SectionLabel>
-        <Card testId="card-get-started">
-          <div className="divide-y divide-[#1d2132]">
-            {steps.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-3 px-4 py-4 w-full" data-testid={`step-get-started-${i}`}>
+        <div data-testid="card-get-started" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+          {steps.map((s, i) => (
+            <div key={s.label} className="contents">
+              {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+              <div className="flex gap-[8px] items-center w-full" data-testid={`step-get-started-${i}`}>
                 <div
-                  className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0 [font-family:'JetBrains_Mono',monospace] font-semibold text-[13px]"
-                  style={s.done ? { background: "#4a2300", color: "#ff9400" } : { background: "#1d2132", color: "#6c779d" }}
+                  className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
+                  style={s.done ? { background: "#4a2300" } : { background: "#222737" }}
                 >
-                  {s.done ? "✓" : i + 1}
+                  {s.done ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">{i + 1}</span>
+                  )}
                 </div>
-                <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]" style={{ color: s.done ? "#ff9400" : "#6c779d" }}>
+                <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]" style={{ color: s.done ? "#ff9400" : "#a8b9f4" }}>
                   {s.label}
                 </p>
                 {i === 0 && (
@@ -660,10 +677,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     type="button"
                     data-testid="button-overview-add-tenant"
                     onClick={() => onNavigate("tenants")}
-                    className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee]"
-                    style={{ background: "#7631ee" }}
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <Plus className="shrink-0 size-[12px]" />
+                    <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Add Tenant
                   </button>
                 )}
@@ -673,32 +689,28 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: "#7631ee" }}
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <Plus className="shrink-0 size-[12px]" />
+                    <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Create Key
                   </button>
                 )}
               </div>
-            ))}
-          </div>
-        </Card>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>API Reference</SectionLabel>
-        <Card testId="card-api-reference">
-          <div className="divide-y divide-[#1d2132]">
-            {API_ENDPOINTS.map((ep) => (
-              <EndpointRow key={ep.path} {...ep} />
-            ))}
-          </div>
-        </Card>
-        <p className="mt-2 [font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-          Replace <Mono className="text-[#6c779d]">brain_sk_...</Mono> with an active key from the API Keys tab. Scoped
-          endpoints return 403 if the key wasn't issued with the required scope.
-        </p>
+        <div data-testid="card-api-reference" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+          {API_ENDPOINTS.map((ep, i) => (
+            <div key={ep.path} className="contents">
+              {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+              <EndpointRow {...ep} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
