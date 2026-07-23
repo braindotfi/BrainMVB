@@ -12,7 +12,6 @@ import payrollIcon from "@assets/payroll_1783619257499.png";
 import taxIcon from "@assets/tax_1783619257500.png";
 import paymentsIcon from "@assets/payments_1783619257499.png";
 import docsIcon from "@assets/docs_1783621224017.png";
-import infoIcon from "@assets/Icons_1783346130548.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Add Source - paginated wizard for connecting data sources to Brain.
@@ -1143,7 +1142,11 @@ function DocumentUpload({ category, onDone }: { category: string; onDone: () => 
 function InfoNotice({ title, body, uppercase = true }: { title: string; body: React.ReactNode; uppercase?: boolean }) {
   return (
     <div className="flex items-start gap-[8px] rounded-[12px] border border-[rgba(255,148,0,0.2)] bg-[#4a2300] p-[8px]">
-      <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
+        <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
+      </svg>
       <div className="flex-1 min-w-0">
         <p className={`[font-family:'Gilroy',sans-serif] font-bold text-[#ff9400] text-[13px] leading-[18px] ${uppercase ? "uppercase" : ""}`}>{title}</p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[13px] leading-[18px] mt-[2px]">{body}</p>
