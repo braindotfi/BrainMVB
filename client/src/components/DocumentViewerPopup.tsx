@@ -11,8 +11,8 @@ import {
   Package,
   ExternalLink,
   ArrowLeftRight,
-  Info,
 } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 import invoiceImg from "@assets/invoice_1783385090730.png";
 import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
 import closeIcon from "@assets/Close_1783293571882.png";
@@ -256,7 +256,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       {/* Info box, Figma 5573:97923. Between provenance and Open Original */}
       <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] w-full">
         <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
-          <Info size={16} className="text-[#6c779d] shrink-0 mt-[1px]" />
+          <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
             A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.
           </p>

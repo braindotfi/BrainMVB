@@ -9,7 +9,8 @@ import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import closeIcon from "@assets/Close_1783293571882.png";
-import { Plus, Info } from "lucide-react";
+import { Plus } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
@@ -206,7 +207,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+              <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
                 Added to your current Brain session. This demo tenant is temporary.
               </p>

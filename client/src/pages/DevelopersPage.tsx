@@ -14,7 +14,8 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { Info, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784755235082.png";
 import overviewInactiveIcon from "@assets/Icon=Overview,_State=Normal_1784755235083.png";
 // NOTE: the attached filenames for Keys are swapped relative to their actual
@@ -383,7 +384,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
     >
       <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] rounded-[12px] flex items-center p-[8px] w-full">
         <div className="flex flex-1 min-w-px gap-[8px] items-start">
-          <Info className="shrink-0 size-[16px] text-[#ff9400]" />
+          <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
             Copy it now — for your security, it will never be shown again.
           </p>
@@ -1078,7 +1079,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
           >
-            <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+            <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
               out — until then, keys authenticate against platform endpoints only.
@@ -1156,7 +1157,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
       >
-        <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
           Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
           Rate limit: 600 requests per 60 seconds per key.
@@ -1579,7 +1580,7 @@ function UsageSection({ env }: { env: DevEnv }) {
         className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
       >
-        <Info className="shrink-0 size-[16px] text-[#7631ee] mt-[2px]" />
+        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
         <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
           <p className="leading-[18px] mb-[12px]">
             Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).

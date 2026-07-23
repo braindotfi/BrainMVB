@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
-import { Info, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -197,7 +198,7 @@ const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => str
   return (
     <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
       <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-        <Info className="relative shrink-0 size-[16px] text-[#ff9400]" />
+        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
         <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[#ff9400] text-[14px]">
           <p className="[font-family:'Gilroy',sans-serif] font-bold relative shrink-0 uppercase w-full">
             {overdue.length} invoice{overdue.length === 1 ? "" : "s"} overdue!
@@ -271,7 +272,7 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   return (
     <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
       <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-        <Info className="relative shrink-0 size-[16px] text-[#6c779d]" />
+        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
         <p className="[word-break:break-word] flex-[1_0_0] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
           {text}
         </p>

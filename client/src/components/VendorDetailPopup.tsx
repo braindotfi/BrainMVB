@@ -17,8 +17,8 @@ import {
   Clock,
   ChevronRight,
   ChevronLeft,
-  Info,
 } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
@@ -210,7 +210,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
@@ -222,7 +222,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
@@ -234,7 +234,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
@@ -246,7 +246,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <Info size={16} className="shrink-0 mt-[1px] text-[#6c779d]" />
+                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
                         Brain suggests trusting this vendor.

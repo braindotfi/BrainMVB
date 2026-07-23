@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info } from "lucide-react";
+import infoIcon from "@assets/Icons_1783346130548.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/currencyContext";
 import arrowIcon from "@assets/arrow_1783201262245.png";
@@ -275,7 +275,7 @@ export function AccountDetailPopup({
                 {/* Info banner */}
                 <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
-                    <Info size={16} className="text-[#6c779d] shrink-0 mt-[2px]" />
+                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
