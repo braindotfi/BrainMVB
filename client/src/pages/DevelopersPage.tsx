@@ -154,9 +154,9 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
 
 /* 16px/24 semibold #414965. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
-const SectionLabel = ({ children }: { children: ReactNode }) => (
+const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
   </div>
@@ -727,9 +727,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex h-[24px] items-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Usage and Limits</p>
-        </div>
+        <SectionLabel>Usage and Limits</SectionLabel>
         <Card testId="card-overview-usage">
           <div className="flex gap-[16px] items-stretch p-[16px]">
             <button
@@ -770,9 +768,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex h-[24px] items-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Recent Activity</p>
-        </div>
+        <SectionLabel>Recent Activity</SectionLabel>
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
@@ -972,10 +968,8 @@ function KeysSection({ env }: { env: DevEnv }) {
       })()}
 
       <div className="flex flex-col gap-[12px]">
-        <div className="flex h-[24px] items-center justify-between gap-4">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
-            {env === "live" ? "Live Keys" : "Sandbox Keys"}
-          </p>
+        <div className="flex min-h-[36px] items-center justify-between gap-4">
+          <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
           <button
             type="button"
             data-testid="button-new-key"
@@ -1244,10 +1238,8 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
         </DetailModal>
       )}
       <div className="flex flex-col gap-[4px]">
-      <div className="flex h-[24px] items-center justify-between gap-4">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
-          Tenants
-        </p>
+      <div className="flex min-h-[36px] items-center justify-between gap-4">
+        <SectionLabel testId="text-page-title">Tenants</SectionLabel>
         {(
           <button
             type="button"
@@ -1402,9 +1394,7 @@ function UsageSection({ env }: { env: DevEnv }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-[4px]">
-        <div className="flex h-[24px] items-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-usage-title">Usage and Limits</p>
-        </div>
+        <SectionLabel testId="text-usage-title">Usage and Limits</SectionLabel>
         <Card testId="card-usage-metrics">
         <div className="flex gap-[16px] items-stretch p-[16px]">
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-requests-month">
@@ -1465,9 +1455,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex h-[24px] items-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Requests by Method</p>
-        </div>
+        <SectionLabel>Requests by Method</SectionLabel>
         <Card testId="card-usage-by-method">
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
@@ -1537,9 +1525,7 @@ function UsageSection({ env }: { env: DevEnv }) {
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex h-[24px] items-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">Requests by Key</p>
-        </div>
+        <SectionLabel>Requests by Key</SectionLabel>
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-usage" />
         ) : (
