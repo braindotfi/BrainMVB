@@ -35,7 +35,6 @@ import { useCurrency } from "@/lib/currencyContext";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
-import infoIcon from "@assets/Icons_1783346130548.png";
 import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
@@ -225,7 +224,11 @@ export function RuleDetail() {
             className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
             data-testid="text-what-changed"
           >
-            <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+      </svg>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
@@ -896,7 +899,11 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
         data-testid="text-policy-info"
       >
-        <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+      </svg>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
           This rule is part of your Brain core default policy. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
         </p>

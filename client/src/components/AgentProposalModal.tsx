@@ -4,7 +4,6 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import approveIcon from "@assets/approve_1784154649123.png";
 import editIcon from "@assets/edit_1784154649123.png";
 import rejectIcon from "@assets/reject_1784154649120.png";
-import infoIcon from "@assets/Icons_1783346130548.png";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1122,7 +1121,11 @@ export function AgentProposalModal({
                 className="border border-[#1d2132] rounded-[12px] p-[8px] flex items-start gap-[8px] w-full"
                 data-testid="box-risk-info"
               >
-                <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+      </svg>
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-0"
                   data-testid="text-risk-note"

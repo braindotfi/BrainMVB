@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import infoIcon from "@assets/info_1779540800272.png";
 import errorIcon from "@assets/errors_1779540800271.png";
 import successIcon from "@assets/success_1779540800270.png";
 import approvedIcon from "@assets/approved_1784058164235.png";
@@ -47,8 +46,7 @@ const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> 
   rejected:  { ring: "#d20344", bg: "#350011", title: "#d20344" },
 };
 
-const ICONS: Record<AlertVariant, string> = {
-  info:      infoIcon,
+const ICONS: Record<Exclude<AlertVariant, "info">, string> = {
   error:     errorIcon,
   success:   successIcon,
   approved:  approvedIcon,
@@ -56,14 +54,25 @@ const ICONS: Record<AlertVariant, string> = {
   rejected:  rejectedIcon,
 };
 
-const Glyph = ({ variant }: { variant: AlertVariant }) => (
-  <img
-    src={ICONS[variant]}
-    alt=""
-    aria-hidden="true"
-    className="shrink-0 size-[24px] rounded-full object-cover"
-  />
+const InfoGlyph = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden>
+    <circle cx="12" cy="12" r="12" fill="#a8b9f4" />
+    <circle cx="12" cy="7.5" r="1.5" fill="#0a0c10" />
+    <path d="M12 11v7" stroke="#0a0c10" strokeWidth="2" strokeLinecap="round" />
+  </svg>
 );
+
+const Glyph = ({ variant }: { variant: AlertVariant }) => {
+  if (variant === "info") return <InfoGlyph />;
+  return (
+    <img
+      src={ICONS[variant]}
+      alt=""
+      aria-hidden="true"
+      className="shrink-0 size-[24px] rounded-full object-cover"
+    />
+  );
+};
 
 /* Single alert card. Matches the Figma frame exactly: same outer
    chrome, same icon disc, same typography rhythm. The card itself

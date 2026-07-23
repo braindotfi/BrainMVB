@@ -18,7 +18,6 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
-import infoIcon from "@assets/Icons_1783346130548.png";
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/currencyContext";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
@@ -210,7 +209,11 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+      </svg>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
@@ -222,7 +225,11 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+      </svg>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
@@ -234,7 +241,11 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+      </svg>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
@@ -246,7 +257,11 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#a8b9f4" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#a8b9f4" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#a8b9f4" />
+      </svg>
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
                         Brain suggests trusting this vendor.

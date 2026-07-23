@@ -10,7 +10,6 @@ import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { Plus } from "lucide-react";
-import infoIcon from "@assets/Icons_1783346130548.png";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
@@ -207,7 +206,11 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <img src={infoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+      </svg>
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
                 Added to your current Brain session. This demo tenant is temporary.
               </p>
