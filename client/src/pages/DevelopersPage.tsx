@@ -293,57 +293,111 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
   </div>
 );
 
-/* ─── One-time plaintext key modal ─── */
-const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose: () => void }) => {
-  const [copied, setCopied] = useState(false);
+/* ─── Figma popup shell: rounded-24 card, 56px blurred header with centered
+   title + circular close button, blurred bordered footer. (Figma 6053-69793/69539) ─── */
+const PopupShell = ({ title, onClose, children, footer, testId }: {
+  title: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  testId?: string;
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      data-testid={testId}
     >
-      <div className="flex flex-col rounded-[16px] w-[440px] overflow-hidden" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
-        <div className="flex flex-col gap-2 p-5">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px] leading-[22px]">Your new API key</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[13px] leading-[18px]">
-            Copy it now. For your security, it will never be shown again.
+      <div className="flex flex-col rounded-[24px] w-[480px] max-h-[85vh] overflow-hidden bg-[#11141b] border border-[#1d2132]">
+        <div className="relative h-[56px] shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132]">
+          <p className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap max-w-[380px] truncate text-center" data-testid="text-popup-title">
+            {title}
           </p>
-          <div className="rounded-[8px] p-3 mt-1 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <Mono className="text-white text-[13px] leading-[18px]" testId="text-plaintext-key">{plaintext}</Mono>
-          </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-2">
-            Try it now to complete "Make a key-authenticated call":
-          </p>
-          <div className="rounded-[8px] p-3 break-all" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-            <Mono className="text-[#a8b9f4] text-[12px] leading-[17px]" testId="text-curl-example">
-              {`curl ${window.location.origin}/api/v1/ping -H "Authorization: Bearer ${plaintext}"`}
-            </Mono>
-          </div>
-        </div>
-        <div className="flex gap-2 p-3 pt-0">
           <button
             type="button"
-            data-testid="button-copy-key"
-            onClick={async () => {
-              try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
-            }}
-            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px]"
-            style={{ background: "#7631ee", color: "#ffffff" }}
-          >
-            {copied ? "Copied" : "Copy key"}
-          </button>
-          <button
-            type="button"
-            data-testid="button-close-key-modal"
+            data-testid="button-close-popup"
             onClick={onClose}
-            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px]"
-            style={{ background: "#222737" }}
+            aria-label="Close"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2a3046] transition-colors text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
-            Done
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
+        <div className="flex flex-col gap-[32px] p-[24px] overflow-y-auto">{children}</div>
+        {footer && (
+          <div className="shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] p-[24px]">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
+  );
+};
+
+/* Labelled section inside a PopupShell: small label + hairline, then content. */
+const PopupSection = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-[16px] w-full">
+    <div className="flex gap-[8px] items-center w-full">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap">{label}</p>
+      <div className="flex-1 min-w-px border-t border-[#1d2132]" />
+    </div>
+    {children}
+  </div>
+);
+
+/* Code box used for keys / curl examples inside popups. */
+const PopupCodeBox = ({ children, testId }: { children: ReactNode; testId?: string }) => (
+  <div className="bg-[#06070a] border border-[#1d2132] rounded-[12px] p-[12px] w-full">
+    <p className="[font-family:'JetBrains_Mono',monospace] font-bold text-[#a8b9f4] text-[12px] leading-[16px] break-all" data-testid={testId}>{children}</p>
+  </div>
+);
+
+/* ─── One-time plaintext key modal (Figma 6053-69539 "Your New API Key") ─── */
+const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose: () => void }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <PopupShell
+      title="Your New API Key"
+      onClose={onClose}
+      testId="modal-plaintext-key"
+      footer={
+        <button
+          type="button"
+          data-testid="button-copy-key"
+          onClick={async () => {
+            try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
+          }}
+          className="w-full bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        >
+          {copied ? "Copied" : "Copy Key"}
+        </button>
+      }
+    >
+      <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] rounded-[12px] flex items-center p-[8px] w-full">
+        <div className="flex flex-1 min-w-px gap-[8px] items-start">
+          <Info className="shrink-0 size-[16px] text-[#ff9400]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
+            Copy it now — for your security, it will never be shown again.
+          </p>
+        </div>
+      </div>
+      <PopupSection label="API Key">
+        <PopupCodeBox testId="text-plaintext-key">{plaintext}</PopupCodeBox>
+      </PopupSection>
+      <PopupSection label="Try it now">
+        <PopupCodeBox testId="text-curl-example">
+          {`curl ${window.location.origin}/api/v1/ping -H "Authorization: Bearer ${plaintext}"`}
+        </PopupCodeBox>
+      </PopupSection>
+    </PopupShell>
   );
 };
 
@@ -848,14 +902,13 @@ function KeysSection({ env }: { env: DevEnv }) {
         if (!k) return null;
         const close = () => { setSelectedKeyId(null); setConfirmRevoke(null); };
         return (
-          <DetailModal
+          <PopupShell
             title={k.name}
-            badges={<><EnvBadge env={k.environment} /><StatusBadge status={k.status} /></>}
             onClose={close}
             testId="modal-key-detail"
             footer={
               k.status === "active" ? (
-                <>
+                <div className="flex items-center gap-2 w-full">
                   <PillButton tone="neutral" testId={`button-rotate-${k.id}`} onClick={() => rotateMut.mutate(k.id)} disabled={rotateMut.isPending || revokeMut.isPending}>
                     {rotateMut.isPending ? "Rotating…" : "Rotate"}
                   </PillButton>
@@ -870,7 +923,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   ) : (
                     <PillButton tone="danger" testId={`button-revoke-${k.id}`} onClick={() => setConfirmRevoke(k.id)}>Revoke</PillButton>
                   )}
-                </>
+                </div>
               ) : (
                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]" data-testid="text-key-revoked-footer">
                   Revoked {formatDateTime(k.revokedAt)}. This key can no longer be used.
@@ -878,33 +931,43 @@ function KeysSection({ env }: { env: DevEnv }) {
               )
             }
           >
-            <DetailRow label="Key" testId="detail-key-masked"><Mono className="text-white">{maskKey(k)}</Mono></DetailRow>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px] -mt-2">
-              brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
-            </p>
-            <DetailRow label="Scopes" testId="detail-key-scopes">{k.scopes.length ? k.scopes.join(", ") : "None"}</DetailRow>
-            <DetailRow label="Environment">{k.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
-            <DetailRow label="Created" testId="detail-key-created"><Mono className="text-white">{formatDateTime(k.createdAt)}</Mono></DetailRow>
-            <DetailRow label="Last used" testId="detail-key-last-used"><Mono className="text-white">{formatDateTime(k.lastUsedAt)}</Mono></DetailRow>
-            {k.rotatedFromId && <DetailRow label="Rotated from"><Mono className="text-white">{k.rotatedFromId}</Mono></DetailRow>}
-            {usageByKey.get(k.id) && (
-              <>
-                <DetailRow label={`Requests (${usageQ.data?.window ?? "30d"})`} testId="detail-key-requests">
-                  <Mono className="text-white">{usageByKey.get(k.id)!.eventCount.toLocaleString()}</Mono>
-                </DetailRow>
-                {usageByKey.get(k.id)!.lastEventAt && (
-                  <DetailRow label="Last request" testId="detail-key-last-event">
-                    <Mono className="text-white">{formatDateTime(usageByKey.get(k.id)!.lastEventAt)}</Mono>
-                  </DetailRow>
+            <div className="flex items-center gap-2">
+              <EnvBadge env={k.environment} />
+              <StatusBadge status={k.status} />
+            </div>
+            <PopupSection label="API Key">
+              <PopupCodeBox testId="detail-key-masked">{maskKey(k)}</PopupCodeBox>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[14px] leading-[16px] -mt-2">
+                brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
+              </p>
+            </PopupSection>
+            <PopupSection label="Details">
+              <div className="flex flex-col gap-3 w-full">
+                <DetailRow label="Scopes" testId="detail-key-scopes">{k.scopes.length ? k.scopes.join(", ") : "None"}</DetailRow>
+                <DetailRow label="Environment">{k.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
+                <DetailRow label="Created" testId="detail-key-created"><Mono className="text-white">{formatDateTime(k.createdAt)}</Mono></DetailRow>
+                <DetailRow label="Last used" testId="detail-key-last-used"><Mono className="text-white">{formatDateTime(k.lastUsedAt)}</Mono></DetailRow>
+                {k.rotatedFromId && <DetailRow label="Rotated from"><Mono className="text-white">{k.rotatedFromId}</Mono></DetailRow>}
+                {usageByKey.get(k.id) && (
+                  <>
+                    <DetailRow label={`Requests (${usageQ.data?.window ?? "30d"})`} testId="detail-key-requests">
+                      <Mono className="text-white">{usageByKey.get(k.id)!.eventCount.toLocaleString()}</Mono>
+                    </DetailRow>
+                    {usageByKey.get(k.id)!.lastEventAt && (
+                      <DetailRow label="Last request" testId="detail-key-last-event">
+                        <Mono className="text-white">{formatDateTime(usageByKey.get(k.id)!.lastEventAt)}</Mono>
+                      </DetailRow>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </PopupSection>
             {k.status === "active" && k.lastUsedAt === null && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
                 This key has never authenticated a call yet. Try GET /api/v1/ping from the API Reference.
               </p>
             )}
-          </DetailModal>
+          </PopupShell>
         );
       })()}
 
@@ -917,11 +980,11 @@ function KeysSection({ env }: { env: DevEnv }) {
             <button
               type="button"
               data-testid="button-new-key"
-              onClick={() => setShowCreate((v) => !v)}
+              onClick={() => setShowCreate(true)}
               className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
-              {showCreate ? "Cancel" : "Create Key"}
+              <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+              Create Key
             </button>
           )}
         </div>
@@ -945,61 +1008,79 @@ function KeysSection({ env }: { env: DevEnv }) {
       )}
 
       {showCreate && (env === "sandbox" || liveAvailable) && (
-        <Card testId="card-create-key">
-          <div className="p-4 flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]" htmlFor="key-name">Key name</label>
+        <PopupShell
+          title="Create Key"
+          onClose={() => setShowCreate(false)}
+          testId="modal-create-key"
+          footer={
+            <button
+              type="button"
+              data-testid="button-create-key"
+              onClick={() => createMut.mutate()}
+              disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {createMut.isPending ? "Creating…" : "Create Key"}
+            </button>
+          }
+        >
+          <PopupSection label="Key Name">
+            <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px] w-full">
               <input
                 id="key-name"
                 data-testid="input-key-name"
+                aria-label="Key Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Backend service"
                 maxLength={80}
-                className="rounded-[8px] px-3 py-2 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-[#414965] text-[14px]"
-                style={{ background: "#11141b", border: "1px solid #1d2132" }}
+                autoFocus
+                className="w-full bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-[#6c779d] text-[16px] leading-[20px]"
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Scopes</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Enforced by brain-core on every key-authenticated call. See the API Reference on Overview.
-              </p>
-              {SCOPE_OPTIONS.map((s) => {
-                const checked = scopes.includes(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    data-testid={`checkbox-scope-${s.id.replace(/[^a-z]+/g, "-")}`}
-                    onClick={() => setScopes((prev) => checked ? prev.filter((x) => x !== s.id) : [...prev, s.id])}
-                    className="flex items-center gap-3 rounded-[8px] p-2 text-left transition-colors hover:bg-[rgba(168,185,244,0.05)]"
+          </PopupSection>
+          <PopupSection label="Requested Scopes">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-full">
+              Enforced on the platform data endpoints (ledger/audit reads) — see the API reference on Overview.
+            </p>
+            {SCOPE_OPTIONS.map((s) => {
+              const checked = scopes.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  data-testid={`checkbox-scope-${s.id.replace(/[^a-z]+/g, "-")}`}
+                  onClick={() => setScopes((prev) => checked ? prev.filter((x) => x !== s.id) : [...prev, s.id])}
+                  className="flex gap-[8px] items-start w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                  aria-pressed={checked}
+                >
+                  <span
+                    className={`size-[20px] rounded-[4px] border flex items-center justify-center shrink-0 ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
                   >
-                    <div
-                      className="size-[18px] rounded-[4px] flex items-center justify-center flex-shrink-0 text-[12px]"
-                      style={checked ? { background: "#7631ee", color: "#fff" } : { background: "transparent", border: "1px solid #414965" }}
-                    >
-                      {checked ? "✓" : ""}
-                    </div>
-                    <div>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[18px]">{s.label}</p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">{s.hint}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div>
-              <PillButton
-                testId="button-create-key"
-                onClick={() => createMut.mutate()}
-                disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              >
-                {createMut.isPending ? "Creating…" : "Create Key"}
-              </PillButton>
+                    {checked && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6.5L5 9L9.5 3.5" stroke="#7631ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="flex flex-col gap-[4px] flex-1 min-w-px">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">{s.label}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[14px] leading-[16px]">{s.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </PopupSection>
+          <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
+            <div className="flex flex-1 min-w-px gap-[8px] items-start">
+              <Info className="shrink-0 size-[16px] text-[#6c779d]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+                Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
+                out — until then, keys authenticate against platform endpoints only.
+              </p>
             </div>
           </div>
-        </Card>
+        </PopupShell>
       )}
 
       {keysUnavailable ? (
