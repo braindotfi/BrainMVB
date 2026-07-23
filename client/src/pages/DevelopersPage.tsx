@@ -976,33 +976,42 @@ function KeysSection({ env }: { env: DevEnv }) {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid="text-page-title">
             {env === "live" ? "Live Keys" : "Sandbox Keys"}
           </p>
-          {(env === "sandbox" || liveAvailable) && (
-            <button
-              type="button"
-              data-testid="button-new-key"
-              onClick={() => setShowCreate(true)}
+          <button
+            type="button"
+            data-testid="button-new-key"
+              onClick={() => {
+                if (env === "live" && !liveAvailable) {
+                  alert.info("Live keys are gated", "Live key issuance unlocks when this workspace has a production tenant.");
+                  return;
+                }
+                setShowCreate(true);
+              }}
               className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
               Create Key
             </button>
-          )}
         </div>
 
         {env === "live" && !liveAvailable && (
         <Card testId="card-live-gated">
-          <div className="p-4 flex flex-col gap-2">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] leading-[20px]">Live key issuance is gated</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
-              {tenantsQ.data?.mode === "production"
-                ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
-                : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
-            </p>
-            <div className="mt-1">
-              <PillButton tone="neutral" testId="button-request-live-access" onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}>
-                Request access
-              </PillButton>
+          <div className="p-[16px] flex flex-col gap-[16px]">
+            <div className="flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">Live key issuance is gated</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+                {tenantsQ.data?.mode === "production"
+                  ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
+                  : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
+              </p>
             </div>
+            <button
+              type="button"
+              data-testid="button-request-live-access"
+              onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}
+              className="bg-[#222737] hover:bg-[#2a3046] transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-[100px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            >
+              Request Access
+            </button>
           </div>
         </Card>
       )}
