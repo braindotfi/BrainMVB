@@ -20,8 +20,9 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { useBrainProposals, isNeedsReview, type BrainProposal } from "@/lib/brainProposals";
-import { LiveProposalModal, LiveProposalRow } from "@/components/AgentProposalModal";
+import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { RISK_META } from "@/lib/agentProposals";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -106,7 +107,9 @@ type InboxItem = {
   /* One-line description (may carry vendor / rule / audit-id facts) */
   desc: string;
   time: string;
-  why: string;
+  /* "Why:" line — only real recorded reasoning; omitted (honest omission) when
+     the source record carries no rationale. */
+  why?: string;
   amountDisplay?: string;
   /* Approve / Reject / Ask Brain why buttons (Needs you tab, decidable records only) */
   actionable: boolean;
@@ -116,6 +119,7 @@ type InboxItem = {
   intent?: ReviewItemType;
   insight?: LiveInsight;
   record?: AuditRecord;
+  liveAgentProposal?: BrainProposal;
 };
 
 const PILL_BASE =
@@ -168,9 +172,11 @@ const InboxCard = ({
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
           {item.desc}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
-          Why: {item.why}
-        </p>
+        {item.why && (
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
+            Why: {item.why}
+          </p>
+        )}
         <div className="flex items-center gap-[8px] mt-[12px]" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
@@ -245,7 +251,15 @@ export function InboxPage() {
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
   const { proposals: liveProposals } = useBrainProposals();
-  const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
+  /* Decidable agent proposals only: notify_only records are informational agent
+     insights — nothing to approve or reject — so they stay out of Needs Review
+     (same pattern as isSystemActivity/isAssistantActivity) and surface through
+     the Audit Log feed instead. */
+  const needsReviewProposals = useMemo(
+    () => liveProposals.filter((p) => isNeedsReview(p) && p.mode !== "notify_only"),
+    [liveProposals],
+  );
+  const decideProposal = useDecideProposal();
   // ponytail: the auto-approved live-proposal bucket is deferred - the merged
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
@@ -442,6 +456,28 @@ export function InboxPage() {
       });
     }
 
+    /* Needs you: live brain-core agent proposals (collections, treasury, cash
+       forecast, etc. — GET /v1/proposals via the BFF). The tag carries the
+       originating agent's identity; the "Why:" line is the agent's own
+       narrative — omitted when the record carries none (honest omission). */
+    for (const p of needsReviewProposals) {
+      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      const riskLabel = p.risk_band ? RISK_META[p.risk_band].label : null;
+      const confidenceLabel = typeof p.confidence === "number" ? `${Math.round(p.confidence * 100)}% confidence` : null;
+      push({
+        id: p.id,
+        tab: "Needs Review",
+        title: `${agentName} proposal`,
+        tag: agentName,
+        tagClass: TAG_NEEDS_YOU,
+        desc: [riskLabel, confidenceLabel].filter(Boolean).join(" · ") || "Awaiting your decision",
+        time: "",
+        why: p.narrative ?? undefined,
+        actionable: true,
+        liveAgentProposal: p,
+      });
+    }
+
     /* Needs you: read-only live ledger facts Brain detected (not decidable —
        there is nothing to approve; "Ask Brain why" opens the insight). */
     for (const i of liveInsights) {
@@ -524,19 +560,22 @@ export function InboxPage() {
     }
 
     return out;
-  }, [liveReviews, queue, liveInsights, liveAutoApproved, statuses, auditRecords, format]);
+  }, [liveReviews, queue, needsReviewProposals, liveInsights, liveAutoApproved, statuses, auditRecords, format]);
 
   const counts: Record<InboxTab, number> = useMemo(() => {
     const c: Record<InboxTab, number> = { "Needs Review": 0, "Auto-Approved": 0, "Rejected": 0, "Rule Changes": 0 };
     for (const it of items) c[it.tab] += 1;
-    c["Needs Review"] += needsReviewProposals.length;
     return c;
-  }, [items, needsReviewProposals]);
+  }, [items]);
 
   const visible = items.filter((it) => it.tab === activeTab);
 
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
+    if (item.liveAgentProposal) {
+      setSelectedProposal(item.liveAgentProposal);
+      return;
+    }
     if (item.intent) {
       setLiveRejection(null);
       setActiveLive(item.intent);
@@ -558,6 +597,10 @@ export function InboxPage() {
   };
 
   const approveItem = (item: InboxItem) => {
+    if (item.liveAgentProposal) {
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "approve" });
+      return;
+    }
     if (item.intent?.intentId) {
       alert.approved("Approving…", "Sending your approval to Brain core.", 1_500);
       void approveIntent(item.intent.intentId, false);
@@ -575,6 +618,10 @@ export function InboxPage() {
   };
 
   const rejectItem = (item: InboxItem) => {
+    if (item.liveAgentProposal) {
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "reject" });
+      return;
+    }
     if (item.intent?.intentId) {
       alert.rejected("Rejected", "The payment has been rejected.", 2_000);
       rejectIntent.mutate(item.intent.intentId);
@@ -593,7 +640,8 @@ export function InboxPage() {
 
   const itemBusy = (item: InboxItem) =>
     (item.intent?.intentId != null && approvingIntentId === item.intent.intentId) ||
-    (item.proposal != null && item.proposalIsLive === true && (approveLive.isPending || rejectLive.isPending));
+    (item.proposal != null && item.proposalIsLive === true && (approveLive.isPending || rejectLive.isPending)) ||
+    (item.liveAgentProposal != null && decideProposal.isPending);
 
   /* Header pager for the ProposalDetail sheet — cycles the live queue. */
   const pagerList: Proposal[] | null = !active
@@ -685,16 +733,9 @@ export function InboxPage() {
                           onReject={rejectItem}
                           busy={itemBusy(item)}
                         />
-                        {(idx < visible.length - 1 || (activeTab === "Needs Review" && needsReviewProposals.length > 0)) && <Divider />}
+                        {idx < visible.length - 1 && <Divider />}
                       </div>
                     ))}
-                    {activeTab === "Needs Review" &&
-                      needsReviewProposals.map((p, idx) => (
-                        <div key={p.id} className="flex flex-col gap-[8px] w-full">
-                          <LiveProposalRow proposal={p} onClick={() => setSelectedProposal(p)} />
-                          {idx < needsReviewProposals.length - 1 && <Divider />}
-                        </div>
-                      ))}
                   </div>
                 )}
               </div>
