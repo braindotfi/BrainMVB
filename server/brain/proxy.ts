@@ -137,13 +137,41 @@ export function createBrainProxyRouter(): Router {
   // HomePage, synthesized from Wiki Q&A (read-only). Replaces the old mock-data
   // daily-insights cron (server/insightsService.ts). Returns {} on any failure
   // so the page falls back to its static line.
+  //
+  // Per-tenant TTL cache. Deliberate tradeoff: the dashboard insight can be up
+  // to 15 minutes stale, and each audit record corresponds to ONE actual
+  // generation - which is the honest audit-trail behavior (no duplicate
+  // "Brain generated your money insight" records per page load), not a
+  // workaround. Failures are never cached.
+  const RECOMMENDATION_TTL_MS = 15 * 60 * 1000;
+  const recommendationCache = new Map<
+    string,
+    { text: string; evidenceIds: string[]; expiresAt: number }
+  >();
   router.get("/recommendation", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) {
       return res.json({}); // not configured → caller uses its static fallback
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
+      const { token, tenantId } = await getBrainSession(req.session.userId!);
+      const cacheKey = tenantId ?? req.session.userId!;
+      const cached = recommendationCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return res.json({ text: cached.text, evidenceIds: cached.evidenceIds });
+      }
+      if (cached) recommendationCache.delete(cacheKey);
+      // Sweep all expired entries on each regeneration so tenants that never
+      // return don't accumulate forever in a long-lived process.
+      const now = Date.now();
+      for (const [key, entry] of recommendationCache) {
+        if (entry.expiresAt <= now) recommendationCache.delete(key);
+      }
       const answer = await askWikiQuestion(token, RECOMMENDATION_PROMPT);
+      recommendationCache.set(cacheKey, {
+        text: answer.raw,
+        evidenceIds: answer.evidenceIds,
+        expiresAt: Date.now() + RECOMMENDATION_TTL_MS,
+      });
       return res.json({ text: answer.raw, evidenceIds: answer.evidenceIds });
     } catch (err) {
       console.warn(

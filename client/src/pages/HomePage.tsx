@@ -671,6 +671,9 @@ export function HomePage() {
   const { data: brainRec } = useQuery<{ text?: string }>({
     queryKey: ["/api/brain/recommendation"],
     retry: false,
+    // Matches the BFF's 15-minute recommendation cache: tab switches and
+    // remounts within a session don't re-hit the BFF at all.
+    staleTime: 15 * 60 * 1000,
   });
   /* Post-process the recommendation text: comma-format amounts, locale-format
      dates (USD → US date style, EUR → European), and detect sentiment for color.
