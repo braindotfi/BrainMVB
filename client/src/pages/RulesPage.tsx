@@ -12,7 +12,6 @@ import {
 import alertIcon from "@assets/Icons_1783274957589.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import defaultInfoIcon from "@assets/Icons_1783346458429.png";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
 import {
   useRules,
@@ -945,7 +944,11 @@ export function RulesPage() {
                 className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
                 style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
               >
-                <img src={defaultInfoIcon} alt="info" className="shrink-0 mt-[2px] w-[15px] h-[15px]" />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+      </svg>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                   These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
                 </p>
