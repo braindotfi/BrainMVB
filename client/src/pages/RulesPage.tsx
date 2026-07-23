@@ -711,7 +711,7 @@ export function RulesPage() {
                   type="button"
                   onClick={cancelCreate}
                   data-testid="button-create-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
                 >
                   Not yet
                 </button>
@@ -719,7 +719,7 @@ export function RulesPage() {
                   type="button"
                   onClick={onConfirmCreate}
                   data-testid="button-create-confirm"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
                 >
                   Create rule
                 </button>
@@ -919,7 +919,7 @@ export function RulesPage() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
                 >
                   Cancel
                 </button>
@@ -928,7 +928,7 @@ export function RulesPage() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
                   Create Rule
                 </button>

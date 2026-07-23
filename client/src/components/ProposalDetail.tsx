@@ -236,7 +236,7 @@ export function ProposalDetail({
               const BadgeIcon = badge.Icon;
               return (
                 <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
-                  <span className={`inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
+                  <span className={`inline-flex items-center justify-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
                     {BadgeIcon && <BadgeIcon size={12} className="shrink-0" />}
                     {badge.label}
                   </span>
@@ -663,7 +663,7 @@ function AutoHandledReceipt({
       <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
         <span
           data-testid="chip-auto-handled"
-          className="inline-flex items-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap bg-[#123509] text-[#42bf23] border border-[rgba(66,191,35,0.2)]"
+          className="inline-flex items-center justify-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap bg-[#123509] text-[#42bf23] border border-[rgba(66,191,35,0.2)]"
         >
           <CircleCheckBig size={12} className="shrink-0" />
           Auto-Approved
@@ -892,7 +892,7 @@ function AutoHandledReceipt({
                     onClick={() => setPreset(selected ? "" : p)}
                     data-testid={`chip-report-reason-${p.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}`}
                     aria-pressed={selected}
-                    className="px-[12px] py-[6px] rounded-[100px] border transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
+                    className="px-[12px] py-[6px] rounded-[100px] border transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
                     style={
                       selected
                         ? { backgroundColor: "rgba(210,3,68,0.15)", borderColor: ALERT, color: ALERT, ["--tw-ring-color" as string]: ALERT }
@@ -917,7 +917,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => { setReportStep("idle"); setPreset(""); setNote(""); }}
                 data-testid="button-report-cancel"
-                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
               >
                 Cancel
               </button>
@@ -926,7 +926,7 @@ function AutoHandledReceipt({
                 disabled={!reasonReady}
                 onClick={() => setReportStep("confirm")}
                 data-testid="button-report-continue"
-                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-50 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
+                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
                 style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
               >
                 Continue
@@ -965,7 +965,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => setReportStep("reason")}
                 data-testid="button-report-back"
-                className="self-center mt-[2px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px]"
+                className="self-center mt-[2px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] flex items-center justify-center"
               >
                 Back
               </button>

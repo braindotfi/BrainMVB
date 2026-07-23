@@ -156,7 +156,7 @@ export function CompanySetupPage() {
       type="button"
       data-testid={testId}
       onClick={() => { setTab(key); setError(null); }}
-      className="flex-1 py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors"
+      className="flex-1 py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors flex items-center justify-center"
       style={{
         background: tab === key ? "#240757" : "#0c0f14",
         color: tab === key ? "#7631ee" : "#414965",

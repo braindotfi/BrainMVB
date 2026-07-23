@@ -1258,7 +1258,7 @@ export function ReadingScreen({
               type="button"
               onClick={onAddMore}
               data-testid="button-reading-add-more"
-              className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
+              className="flex items-center justify-center gap-[4px] px-[12px] py-[6px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px]"
             >
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
                 <path d="M6 1.5V10.5M1.5 6H10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />

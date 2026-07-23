@@ -162,7 +162,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               <button
                 onClick={handleCopyLink}
                 data-testid="copy-referral-link"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
                   copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
@@ -183,7 +183,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               <button
                 onClick={handleCopyCode}
                 data-testid="copy-referral-code"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
                   codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
                 }`}
               >
@@ -210,7 +210,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 onClick={handleEmailSend}
                 disabled={!email.trim()}
                 data-testid="send-invite-email"
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
                   emailSent
                     ? "bg-[#0d3320] text-[#22c55e]"
                     : email.trim()

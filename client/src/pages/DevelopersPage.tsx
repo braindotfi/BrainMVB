@@ -184,7 +184,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
       data-testid={testId}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-full px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap"
+      className="rounded-full px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap"
       style={styles}
     >
       {children}
@@ -197,7 +197,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
     style={status === "active"
       ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
       : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
@@ -208,7 +208,7 @@ const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
 
 const EnvBadge = ({ env }: { env: string }) => (
   <span
-    className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
     style={env === "live"
       ? { background: "#4a2300", color: "#ff9500", borderColor: "rgba(255,149,0,0.2)" }
       : { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }}
@@ -368,7 +368,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
             onClick={async () => {
               try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
             }}
-            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px]"
+            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px]"
             style={{ background: "#7631ee", color: "#ffffff" }}
           >
             {copied ? "Copied" : "Copy key"}
@@ -377,7 +377,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
             type="button"
             data-testid="button-close-key-modal"
             onClick={onClose}
-            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px]"
+            className="flex-1 rounded-full px-4 py-2 hover:opacity-80 transition-opacity flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px]"
             style={{ background: "#222737" }}
           >
             Done
@@ -630,8 +630,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           )}
         </DetailModal>
       )}
-      {/* Header: text block above, env toggle below */}
-      <div className="flex flex-col gap-[16px] w-full">
+      {/* Header: text left, env toggle top-right — matches the previous layout. */}
+      <div className="flex items-start justify-between gap-4 w-full pb-[16px]">
         <div className="flex flex-col gap-[4px] min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
             Developers
@@ -645,7 +645,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
-        <div className="self-start">{envControl}</div>
+        <div className="flex-shrink-0">{envControl}</div>
       </div>
 
       <div className="flex flex-col gap-[24px]">
@@ -1446,7 +1446,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                     <div className="w-[220px] flex items-center gap-2 min-w-0">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate" title={k.name}>{k.name}</p>
                       {k.status === "revoked" && (
-                        <span className="inline-flex items-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]">Revoked</span>
+                        <span className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]">Revoked</span>
                       )}
                     </div>
                     <Mono className="text-[#6c779d] text-[12px] w-[150px] truncate flex-shrink-0" testId={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</Mono>

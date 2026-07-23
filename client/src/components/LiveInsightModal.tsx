@@ -183,7 +183,7 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       )}
     </div>
     <span
-      className="inline-flex items-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0"
+      className="inline-flex items-center justify-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0"
       style={{ color: "#6c779d", background: "#1d2132" }}
     >
       {insight.badge}

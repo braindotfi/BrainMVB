@@ -143,7 +143,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             disabled={busy !== null}
             onClick={() => inviteCall("resend")}
             data-testid={`button-resend-invite-${member.id}`}
-            className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40"
+            className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
           >
             {busy === "resend" ? "Resending…" : "Resend invite"}
           </button>
@@ -152,7 +152,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             disabled={busy !== null}
             onClick={() => inviteCall("revoke")}
             data-testid={`button-revoke-invite-${member.id}`}
-            className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40"
+            className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40 flex items-center justify-center"
             style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
           >
             {busy === "revoke" ? "Revoking…" : "Revoke invite"}
@@ -427,7 +427,7 @@ export default function TeamSection() {
         type="button"
         onClick={() => setAddOpen(true)}
         data-testid="button-add-member"
-        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
       >
         {production ? "+ Invite member" : "+ Add member"}
       </button>

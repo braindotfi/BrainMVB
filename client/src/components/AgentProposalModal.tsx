@@ -1076,7 +1076,7 @@ export function AgentProposalModal({
                       })
                     }
                     data-testid="link-outcome-record"
-                    className="inline-flex items-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#240757] hover:bg-[#2e0a6e] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="inline-flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#240757] hover:bg-[#2e0a6e] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#7631ee] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <ArrowUpRight size={20} className="text-[#7631ee] shrink-0" />
                     View{" "}
@@ -1150,7 +1150,7 @@ export function AgentProposalModal({
                             type="button"
                             onClick={() => setUndoConfirmOpen(false)}
                             data-testid="button-undo-cancel"
-                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                           >
                             Cancel
                           </button>
@@ -1161,7 +1161,7 @@ export function AgentProposalModal({
                               onAction("undo", proposal);
                             }}
                             data-testid="button-undo-confirm"
-                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                            className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                           >
                             Undo
                           </button>
@@ -1172,7 +1172,7 @@ export function AgentProposalModal({
                         type="button"
                         onClick={() => setUndoConfirmOpen(true)}
                         data-testid="button-agent-undo"
-                        className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                       >
                         Undo
                       </button>
@@ -1201,7 +1201,7 @@ export function AgentProposalModal({
                 type="button"
                 onClick={() => onAction("acknowledge", proposal)}
                 data-testid="button-agent-acknowledge"
-                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
+                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
               >
                 Acknowledge
               </button>
@@ -1219,7 +1219,7 @@ export function AgentProposalModal({
                     })
                   }
                   data-testid="button-agent-reject"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 >
                   Reject
                 </button>
@@ -1227,7 +1227,7 @@ export function AgentProposalModal({
                   type="button"
                   onClick={() => setEditing((e) => !e)}
                   data-testid="button-agent-edit"
-                  className={`flex-1 px-[20px] py-[10px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${
+                  className={`flex-1 px-[20px] py-[10px] rounded-[100px] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${
                     editing
                       ? "bg-[#240757] border border-[rgba(118,49,238,0.4)] text-[#7631ee]"
                       : "bg-[#222737] hover:bg-[#2a3050] text-[#6c779d]"
@@ -1247,7 +1247,7 @@ export function AgentProposalModal({
                     })
                   }
                   data-testid="button-agent-approve"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                 >
                   Approve
                 </button>
@@ -1266,7 +1266,7 @@ export function AgentProposalModal({
                   disabled={pagerDisabled}
                   aria-label="Previous record"
                   data-testid="button-agent-proposal-prev"
-                  className="flex items-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <ArrowLeft size={20} />
                   Previous
@@ -1277,7 +1277,7 @@ export function AgentProposalModal({
                   disabled={pagerDisabled}
                   aria-label="Next record"
                   data-testid="button-agent-proposal-next"
-                  className="flex items-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3050] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   Next
                   <ArrowRight size={20} />
@@ -1451,7 +1451,7 @@ export function LiveProposalModal({
                 onClick={() => act("acknowledge")}
                 disabled={decide.isPending}
                 data-testid="button-live-proposal-acknowledge"
-                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
+                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
               >
                 Acknowledge
               </button>
@@ -1462,7 +1462,7 @@ export function LiveProposalModal({
                   onClick={() => act("reject")}
                   disabled={decide.isPending}
                   data-testid="button-live-proposal-reject"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 >
                   Reject
                 </button>
@@ -1471,7 +1471,7 @@ export function LiveProposalModal({
                   onClick={() => act("approve")}
                   disabled={decide.isPending}
                   data-testid="button-live-proposal-approve"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors disabled:opacity-50 disabled:pointer-events-none [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                 >
                   Approve
                 </button>

@@ -50,7 +50,7 @@ const PrimaryButton = ({ children, onClick, disabled, testId }: { children: Reac
     onClick={onClick}
     disabled={disabled}
     data-testid={testId}
-    className="w-full rounded-full px-6 py-3 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed hover-elevate"
+    className="w-full rounded-full px-6 py-3 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed hover-elevate flex items-center justify-center"
     style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
   >
     {children}

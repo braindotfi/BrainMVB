@@ -73,7 +73,7 @@ export function RuleDetail() {
           type="button"
           onClick={() => navigate("/rules?tab=default")}
           data-testid="button-back-to-rules"
-          className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
+          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
           <ArrowLeft size={16} /> Back to rules
         </button>
@@ -98,7 +98,7 @@ export function RuleDetail() {
           type="button"
           onClick={() => navigate(isPolicy ? "/rules?tab=default" : "/rules")}
           data-testid="button-back-to-rules"
-          className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
+          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
           <ArrowLeft size={16} /> Back to rules
         </button>
@@ -163,7 +163,7 @@ export function RuleDetail() {
                 navigate(`/rules?tab=${tab}`);
               }}
               data-testid="button-back-to-rules"
-              className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
+              className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
             >
               <ArrowLeft size={16} /> Back to Rules
             </button>
@@ -251,7 +251,7 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => (rule.active ? pauseRule(rule.id) : setResumeModalOpen(true))}
                   data-testid="button-toggle-rule"
-                  className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={
                     rule.active
                       ? { backgroundColor: "#4a2300", color: "#ff9400", ["--tw-ring-color" as string]: "#ff9400" }
@@ -265,7 +265,7 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   data-testid="button-delete-rule"
-                  className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
                   <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
@@ -332,7 +332,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={() => setResumeModalOpen(false)}
                       data-testid="button-resume-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
                       Keep Paused
                     </button>
@@ -340,7 +340,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
                     >
                       Resume
                     </button>
@@ -388,7 +388,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
                       data-testid="button-delete-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
                       Edit
                     </button>
@@ -396,7 +396,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                     >
                       Delete
                     </button>
@@ -618,7 +618,7 @@ function ReportCard({
               type="button"
               onClick={() => onOpenReceipt(report.proposalId)}
               data-testid={`button-report-receipt-${report.id}`}
-              className="shrink-0 flex items-center px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+              className="shrink-0 flex items-center justify-center px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
             >
               View the Receipt
             </button>
@@ -751,7 +751,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         type="button"
         onClick={() => navigate("/rules?tab=default")}
         data-testid="button-back-to-rules"
-        className="flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
+        className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
       >
         <ArrowLeft size={16} /> Back to Rules
       </button>
