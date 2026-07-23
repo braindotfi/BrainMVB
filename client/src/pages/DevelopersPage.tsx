@@ -566,7 +566,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   };
 
   return (
-    <div className="flex flex-col gap-6 pt-[20px]">
+    <div className="flex flex-col gap-[40px] pt-[40px]">
       {selectedEvent && (
         <DetailModal
           title={humanizeAction(selectedEvent.action)}
@@ -619,10 +619,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           )}
         </DetailModal>
       )}
-      {/* Header spacing matches the Finances page: 40px above the kicker
-         (20px page padding + 20px here) and 40px below the text (24px
-         root gap + 16px padding here). */}
-      <div className="flex items-start justify-between gap-4 w-full pb-[16px]">
+      {/* Header: text block above, env toggle below */}
+      <div className="flex flex-col gap-[16px] w-full">
         <div className="flex flex-col gap-[4px] min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
             Developers
@@ -639,52 +637,49 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         <div className="flex-shrink-0">{envControl}</div>
       </div>
 
+      <div className="flex flex-col gap-[24px]">
       {keysUnavailable && <KeysUnavailableCard testId="card-keys-unavailable-overview" />}
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Get Started</SectionLabel>
         <Card testId="card-get-started">
-          <div className="flex items-stretch divide-x divide-[#1d2132]">
+          <div className="divide-y divide-[#1d2132]">
             {steps.map((s, i) => (
-              <div key={s.label} className="flex-1 p-4 flex items-start gap-3" data-testid={`step-get-started-${i}`}>
+              <div key={s.label} className="flex items-center gap-3 px-4 py-4 w-full" data-testid={`step-get-started-${i}`}>
                 <div
-                  className="size-[24px] rounded-full flex items-center justify-center flex-shrink-0 [font-family:'JetBrains_Mono',monospace] text-[12px]"
-                  style={s.done ? { background: "#1c1132", color: "#a88afa" } : { background: "#1d2132", color: "#6c779d" }}
+                  className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0 [font-family:'JetBrains_Mono',monospace] font-semibold text-[13px]"
+                  style={s.done ? { background: "#4a2300", color: "#ff9400" } : { background: "#1d2132", color: "#6c779d" }}
                 >
                   {s.done ? "✓" : i + 1}
                 </div>
-                <div className="flex flex-col gap-2 min-w-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[24px]" style={{ color: s.done ? "#ffffff" : "#6c779d" }}>
-                    {s.label}
-                  </p>
-                  {i === 0 && (
-                    <div>
-                      <button
-                        type="button"
-                        data-testid="button-overview-add-tenant"
-                        onClick={() => onNavigate("tenants")}
-                        className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                      >
-                        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
-                        Add Tenant
-                      </button>
-                    </div>
-                  )}
-                  {i === 1 && (
-                    <div>
-                      <button
-                        type="button"
-                        data-testid="button-overview-create-key"
-                        onClick={() => onNavigate("keys")}
-                        disabled={!hasTenant}
-                        className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
-                        Create Key
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]" style={{ color: s.done ? "#ff9400" : "#6c779d" }}>
+                  {s.label}
+                </p>
+                {i === 0 && (
+                  <button
+                    type="button"
+                    data-testid="button-overview-add-tenant"
+                    onClick={() => onNavigate("tenants")}
+                    className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee]"
+                    style={{ background: "#7631ee" }}
+                  >
+                    <Plus className="shrink-0 size-[12px]" />
+                    Add Tenant
+                  </button>
+                )}
+                {i === 1 && (
+                  <button
+                    type="button"
+                    data-testid="button-overview-create-key"
+                    onClick={() => onNavigate("keys")}
+                    disabled={!hasTenant}
+                    className="flex-shrink-0 flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: "#7631ee" }}
+                  >
+                    <Plus className="shrink-0 size-[12px]" />
+                    Create Key
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -751,6 +746,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             </div>
           )}
         </Card>
+      </div>
       </div>
     </div>
   );
