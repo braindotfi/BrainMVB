@@ -1074,14 +1074,12 @@ function KeysSection({ env }: { env: DevEnv }) {
               );
             })}
           </PopupSection>
-          <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
-            <div className="flex flex-1 min-w-px gap-[8px] items-start">
-              <Info className="shrink-0 size-[16px] text-[#6c779d]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
-                Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
-                out — until then, keys authenticate against platform endpoints only.
-              </p>
-            </div>
+          <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
+            <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+              Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
+              out — until then, keys authenticate against platform endpoints only.
+            </p>
           </div>
         </PopupShell>
       )}
@@ -1151,14 +1149,12 @@ function KeysSection({ env }: { env: DevEnv }) {
       )}
       </div>
 
-      <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
-        <div className="flex flex-1 min-w-px gap-[8px] items-start">
-          <Info className="shrink-0 size-[16px] text-[#6c779d]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
-            Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
-            Rate limit: 600 requests per 60 seconds per key.
-          </p>
-        </div>
+      <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
+        <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px">
+          Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
+          Rate limit: 600 requests per 60 seconds per key.
+        </p>
       </div>
     </div>
   );
@@ -1573,19 +1569,17 @@ function UsageSection({ env }: { env: DevEnv }) {
         )}
       </div>
 
-      <div className="border border-[#1d2132] rounded-[12px] flex items-center p-[8px] w-full">
-        <div className="flex flex-1 min-w-px gap-[8px] items-start">
-          <Info className="shrink-0 size-[16px] text-[#6c779d]" />
-          <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] flex-1 min-w-px">
-            <p className="leading-[16px] mb-[12px]">
-              Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
-              They are a different measurement than the tenant-wide audit events above and won't match those totals.
-            </p>
-            <p className="leading-[16px]">
-              Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
-              tenancy mode runs in (demo → sandbox, production → live).
-            </p>
-          </div>
+      <div className="border border-[#1d2132] rounded-[12px] flex items-start gap-[10px] p-[12px] w-full">
+        <Info className="shrink-0 size-[16px] text-[#6c779d] mt-[2px]" />
+        <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] flex-1 min-w-px">
+          <p className="leading-[16px] mb-[12px]">
+            Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
+            They are a different measurement than the tenant-wide audit events above and won't match those totals.
+          </p>
+          <p className="leading-[16px]">
+            Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
+            tenancy mode runs in (demo → sandbox, production → live).
+          </p>
         </div>
       </div>
     </div>
