@@ -43,6 +43,7 @@ import {
   type UsageAuditEvent,
 } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
+import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -79,19 +80,12 @@ async function humanizeWikiAnswer(raw: string): Promise<string> {
     const payload = parsed && typeof parsed === "object" && "answer" in parsed
       ? JSON.stringify(parsed.answer)
       : raw;
-    /* Degenerate payload (null/empty answer): calling the summarizer with
-       nothing to summarize makes the model ask for input ("I don't see any
-       JSON data…"), which would then be shown to the user. Return "" to
+    /* Degenerate payload (structurally empty answer): calling the summarizer
+       with nothing to summarize makes the model ask for input ("I don't see
+       any JSON data…"), which would then be shown to the user. Return "" to
        signal "no usable answer" so the chat handler falls through to the
        ledger-grounding fallback instead. */
-    const trimmedPayload = (payload ?? "").trim();
-    if (
-      trimmedPayload === "" ||
-      trimmedPayload === "null" ||
-      trimmedPayload === '""' ||
-      trimmedPayload === "{}" ||
-      trimmedPayload === "[]"
-    ) {
+    if (isDegenerateWikiPayload(payload)) {
       return "";
     }
     const message = await anthropic.messages.create({
