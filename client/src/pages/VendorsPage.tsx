@@ -218,7 +218,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-vendor"
-              className="w-full bg-[#240757] flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[16px] leading-[20px] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Vendor"}
             </button>
