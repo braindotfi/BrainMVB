@@ -505,8 +505,8 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
           className="bg-[#222737] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-            <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" stroke="#6c779d" strokeWidth="3.2" />
-            <path d="M10.5 5.5V4.2C10.5 3.54 9.96 3 9.3 3H4.2C3.54 3 3 3.54 3 4.2V9.3C3 9.96 3.54 10.5 4.2 10.5H5.5" stroke="#6c779d" strokeWidth="3.2" strokeLinecap="round" />
+            <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" stroke="#6c779d" strokeWidth="1.2" />
+            <path d="M10.5 5.5V4.2C10.5 3.54 9.96 3 9.3 3H4.2C3.54 3 3 3.54 3 4.2V9.3C3 9.96 3.54 10.5 4.2 10.5H5.5" stroke="#6c779d" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
           {copied ? "Copied" : "Copy"}
         </button>
