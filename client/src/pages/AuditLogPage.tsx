@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
-import { Search, ShieldCheck, Download, FileText, Anchor, Copy, Check } from "lucide-react";
+import { Search, ShieldCheck, Download, FileText, Anchor, Copy, Check, RefreshCw } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -30,6 +31,33 @@ export function AuditLogPage() {
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
   const { user } = useAuth();
   const reviewStatuses = useReviewStatuses();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+
+  /* Auto-refresh: while this page is mounted, re-fetch the audit events every
+     30 seconds so events that arrive after page load become visible without
+     navigating away and back. This observer shares the cache entry used by
+     useBrainAuditRecords, so refetchInterval applies to the same data. */
+  useQuery({
+    queryKey: ["/api/brain/audit/events?limit=100"],
+    retry: false,
+    refetchInterval: 30_000,
+  });
+
+  /* Manual refresh: immediately re-fetch every query backing the audit log. */
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/brain/audit/events?limit=100"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/brain/audit/anchor/latest"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/assistant/questions"] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   /* Merge live brain-core audit records with client-side review-status overrides
      so the Audit Log captures rejected actions made on the Review
@@ -178,10 +206,22 @@ export function AuditLogPage() {
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
+          <div className="flex items-start justify-between gap-[16px] relative shrink-0 w-full">
+            <div className="flex flex-col items-start gap-[4px] relative min-w-px">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              data-testid="button-refresh-audit-log"
+              className="inline-flex items-center gap-[6px] px-[14px] py-[8px] rounded-[100px] bg-[#161a26] hover:bg-[#1d2132] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-[#a8b9f4] transition-colors disabled:opacity-60 shrink-0"
+            >
+              <RefreshCw className={`w-[13px] h-[13px] ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
