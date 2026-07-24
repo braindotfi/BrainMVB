@@ -71,15 +71,28 @@ export function looksLikeStructuredJson(s: string): boolean {
  * the raw JSON on any failure so this step can never make the response worse
  * than today.
  */
-async function humanizeWikiAnswer(raw: string): Promise<string> {
+async function humanizeWikiAnswer(raw: string, lastUserMessage?: string): Promise<string> {
   if (!looksLikeStructuredJson(raw)) return raw;
   if (!process.env.ANTHROPIC_API_KEY) return raw;
 
   try {
     const parsed = JSON.parse(raw.trim());
-    const payload = parsed && typeof parsed === "object" && "answer" in parsed
-      ? JSON.stringify(parsed.answer)
-      : raw;
+    let payload = raw;
+    if (parsed && typeof parsed === "object" && "answer" in parsed) {
+      const answer = (parsed as Record<string, unknown>).answer;
+      /* A bare primitive answer (e.g. {"answer": 0}) would stringify to "0" —
+         the summarizer then has no question, no units, no entity type and
+         either asks for more JSON or replies nonsense. Wrap it with the
+         user's question so it can say "You have 0 … matching that query". */
+      const isMeaningfulPrimitive =
+        typeof answer === "number" ||
+        typeof answer === "boolean" ||
+        (typeof answer === "string" && answer.trim() !== "");
+      payload =
+        isMeaningfulPrimitive && lastUserMessage
+          ? JSON.stringify({ answer, question: lastUserMessage })
+          : JSON.stringify(answer);
+    }
     /* Degenerate payload (structurally empty answer): calling the summarizer
        with nothing to summarize makes the model ask for input ("I don't see
        any JSON data…"), which would then be shown to the user. Return "" to
@@ -916,7 +929,7 @@ You can explain concepts and surface general guidance, but do not give regulated
         /* Only return the wiki result when there is real content. An envelope
            with an empty/null answer humanizes to "" — treat that as "wiki
            could not answer" and fall through to ledger grounding below. */
-        const reply = await humanizeWikiAnswer(wiki.raw);
+        const reply = await humanizeWikiAnswer(wiki.raw, lastUserContent);
         if (reply.trim().length > 0) {
           return res.json({
             reply,
