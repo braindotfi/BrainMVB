@@ -721,6 +721,16 @@ export function InboxPage() {
                     >
                       {tab}
                     </p>
+                    {counts[tab] > 0 && (
+                      <div className="flex flex-col items-center justify-center min-w-[16px] p-[2px] rounded-[4px] shrink-0" style={{ background: isActive ? "#4a2300" : "#414965" }}>
+                        <p
+                          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[12px] text-center whitespace-nowrap"
+                          style={{ color: isActive ? "#ff9500" : "#a8b9f4" }}
+                        >
+                          {counts[tab]}
+                        </p>
+                      </div>
+                    )}
                   </button>
                 );
               })}
