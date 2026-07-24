@@ -1213,43 +1213,136 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
   return (
     <div className="flex flex-col gap-[16px]">
       {selectedTenant && (
-        <DetailModal
-          title={selectedTenant.companyName ?? (selectedTenant.ephemeral ? "Demo tenant" : "Your company")}
-          badges={<EnvBadge env={selectedTenant.environment} />}
-          onClose={() => setSelectedTenantId(null)}
-          testId="modal-tenant-detail"
-          footer={
-            <PillButton
-              tone="neutral"
-              testId="button-tenant-view-keys"
-              onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
-            >
-              View API Keys
-            </PillButton>
-          }
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedTenantId(null); }}
+          data-testid="modal-tenant-detail"
         >
-          <DetailRow label="Tenant id" testId="detail-tenant-id"><Mono className="text-white">{selectedTenant.id}</Mono></DetailRow>
-          <DetailRow label="Environment">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</DetailRow>
-          <DetailRow label="Active keys" testId="detail-tenant-key-count">
-            <Mono className="text-white">{keysQ.isLoading ? "…" : String(tenantKeyCount)}</Mono>
-          </DetailRow>
-          <DetailRow label="Created" testId="detail-tenant-created">
-            <Mono className="text-white">
-              {selectedTenant.ephemeral ? formatRelative(selectedTenant.createdAt) : formatDate(selectedTenant.createdAt)}
-            </Mono>
-          </DetailRow>
-          {selectedTenant.ephemeral && (
-            <>
-              <DetailRow label="Resets in" testId="detail-tenant-expiry">
-                <Mono className="text-[#ff9500]">{countdown ?? "—"}</Mono>
-              </DetailRow>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[12px] leading-[16px]">
-                Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is
-                provisioned automatically. Ids and data don't carry over.
+          <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+
+            {/* ── Header ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
+              {/* Centred title */}
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+                Tenant
               </p>
-            </>
-          )}
-        </DetailModal>
+              {/* Environment badge — left */}
+              <div
+                className="absolute flex items-center justify-center px-[10px] py-[4px] rounded-[22px]"
+                style={{
+                  left: 23, top: 17,
+                  background: selectedTenant.environment === "live" ? "#0d2a1a" : "#4a2300",
+                  border: selectedTenant.environment === "live" ? "1px solid rgba(66,191,35,0.2)" : "1px solid rgba(255,149,0,0.2)",
+                }}
+              >
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
+                  style={{ color: selectedTenant.environment === "live" ? "#42bf23" : "#ff9400" }}
+                >
+                  {selectedTenant.environment === "live" ? "Live" : "Sandbox"}
+                </p>
+              </div>
+              {/* Close button — right */}
+              <button
+                type="button"
+                data-testid="button-close-detail-modal"
+                onClick={() => setSelectedTenantId(null)}
+                aria-label="Close"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-[#1d2132] hover:bg-[#262b3d] transition-colors text-[#6c779d]"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+
+              {/* Two-column table card */}
+              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+                {/* Tenant ID */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Tenant ID</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-id">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedTenant.id}</p>
+                  </div>
+                </div>
+                {/* Environment */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Environment</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px] w-full">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</p>
+                  </div>
+                </div>
+                {/* Active Keys */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Active Keys</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-key-count">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full">{keysQ.isLoading ? "…" : String(tenantKeyCount)}</p>
+                  </div>
+                </div>
+                {/* Created */}
+                <div className={`${selectedTenant.ephemeral ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Created</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-created">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full">
+                      {selectedTenant.ephemeral ? formatRelative(selectedTenant.createdAt) : formatDate(selectedTenant.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {/* Resets In — ephemeral only */}
+                {selectedTenant.ephemeral && (
+                  <div className="flex items-start relative shrink-0 w-full">
+                    <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Resets In</p>
+                    </div>
+                    <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-expiry">
+                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#ff9500] text-[13px] w-full">{countdown ?? "—"}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Info box — ephemeral/sandbox only */}
+              {selectedTenant.ephemeral && (
+                <div className="border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
+                  <div className="flex items-center gap-[8px] p-[8px]">
+                    <svg className="shrink-0 size-[16px] text-[#6c779d]" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+                      <circle cx="8" cy="5.5" r="0.75" fill="currentColor" />
+                      <path d="M8 7.5V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                    </svg>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-[1_0_0] min-w-px">
+                      Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is provisioned automatically. IDs and data don't carry over.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Footer ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <button
+                type="button"
+                data-testid="button-tenant-view-keys"
+                onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
+                className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-opacity"
+              >
+                View API Keys
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       <div className="flex flex-col gap-[4px]">
       <div className="flex min-h-[36px] items-center justify-between gap-4">
