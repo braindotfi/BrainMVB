@@ -69,33 +69,38 @@ export function AuditRecordPopup({
 
   const statusPill = () => {
     const label = auditRecordLabel(record);
+    const isAssistant = isAssistantActivity(record);
     const isApproved = record.eventType === "approved";
     const isAuto = record.eventType === "auto_approved";
     const isRejected = record.eventType === "rejected";
     const isPostponed = record.eventType === "postponed";
     return (
       <div
-        className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid"
+        className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${isAssistant ? "bg-[#222737] border-[rgba(108,119,157,0.2)]" : ""}`}
         style={
-          isApproved || isAuto
-            ? { background: "#123509", borderColor: "rgba(66,191,35,0.2)" }
-            : isFlagged || isRejected
-              ? { background: "#350011", borderColor: "rgba(210,3,68,0.2)" }
-              : isPostponed
-                ? { background: "#1a1c24", borderColor: "rgba(108,119,157,0.2)" }
-                : { background: "#222737", borderColor: "rgba(108,119,157,0.2)" }
+          isAssistant
+            ? undefined
+            : isApproved || isAuto
+              ? { background: "#123509", borderColor: "rgba(66,191,35,0.2)" }
+              : isFlagged || isRejected
+                ? { background: "#350011", borderColor: "rgba(210,3,68,0.2)" }
+                : isPostponed
+                  ? { background: "#1a1c24", borderColor: "rgba(108,119,157,0.2)" }
+                  : { background: "#222737", borderColor: "rgba(108,119,157,0.2)" }
         }
       >
         <p
           className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
           style={
-            isApproved || isAuto
-              ? { color: "#42bf23" }
-              : isFlagged || isRejected
-                ? { color: "#d20344" }
-                : isPostponed
-                  ? { color: "#6c779d" }
-                  : { color: "#6c779d" }
+            isAssistant
+              ? { color: "#6c779d" }
+              : isApproved || isAuto
+                ? { color: "#42bf23" }
+                : isFlagged || isRejected
+                  ? { color: "#d20344" }
+                  : isPostponed
+                    ? { color: "#6c779d" }
+                    : { color: "#6c779d" }
           }
         >
           {label}
@@ -135,18 +140,16 @@ export function AuditRecordPopup({
               </DialogPrimitive.Close>
             </div>
 
-            {/* Summary */}
+            {/* Summary — Figma 6070:18107: tag pill, title, timestamp */}
             <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                {statusPill()}
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
                   {record.summary}
                 </p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-                  {typeof record.amount === "number" ? format(record.amount) : ""}
-                  {typeof record.amount === "number" && record.occurredAtLabel ? " · " : ""}
                   {record.occurredAtLabel}
                 </p>
-                {statusPill()}
               </div>
             </div>
 

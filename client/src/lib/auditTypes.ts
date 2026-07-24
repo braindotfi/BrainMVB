@@ -184,13 +184,15 @@ export function isSystemActivity(
 export function auditRecordLabel(
   record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
 ): string {
-  return isAssistantActivity(record) ? "ASSISTANT ACTIVITY" : auditEventLabel(record.eventType);
+  return isAssistantActivity(record) ? "Assistant Activity" : auditEventLabel(record.eventType);
 }
 
 export function auditRecordChipClass(
   record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
 ): string {
-  return isAssistantActivity(record) ? "bg-[#1d2132] text-[#a8b9f4]" : auditEventChipClass(record.eventType);
+  return isAssistantActivity(record)
+    ? "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]"
+    : auditEventChipClass(record.eventType);
 }
 
 /* Raw internal identifiers (user_01KY…, evt_01KY…, tnt_…, agt_…) must never

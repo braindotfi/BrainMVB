@@ -23,7 +23,7 @@ export function AnchorStatus({
 
   const iconColor = pending ? "#6c779d" : "#42bf23";
   const statusLabel = pending
-    ? "Not yet anchored — usually completes within a few hours."
+    ? "Not yet anchored. It usually completes within a few hours."
     : "Anchored · tamper-evident";
   const guarantee = pending
     ? "Once anchored on Base, this record becomes independently verifiable."
