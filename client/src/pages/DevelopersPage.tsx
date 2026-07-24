@@ -1179,7 +1179,7 @@ function KeysSection({ env }: { env: DevEnv }) {
 }
 
 /* ─── Tenants ─── */
-function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void }) {
+function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevSection) => void }) {
   const alert = useAppAlert();
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const keysQ = useQuery<{ keys: MaskedKey[] }>({ queryKey: ["/api/developers/keys"] });
@@ -1233,20 +1233,20 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
               <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 Tenant
               </p>
-              {/* Environment badge — left */}
+              {/* Environment badge — left; tracks the page-level env toggle */}
               <div
                 className="absolute flex items-center justify-center px-[10px] py-[4px] rounded-[22px]"
                 style={{
                   left: 23, top: 17,
-                  background: selectedTenant.environment === "live" ? "#4a2300" : "#222737",
-                  border: selectedTenant.environment === "live" ? "1px solid rgba(255,149,0,0.2)" : "1px solid rgba(168,185,244,0.2)",
+                  background: env === "live" ? "#4a2300" : "#222737",
+                  border: env === "live" ? "1px solid rgba(255,149,0,0.2)" : "1px solid rgba(168,185,244,0.2)",
                 }}
               >
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
-                  style={{ color: selectedTenant.environment === "live" ? "#ff9500" : "#a8b9f4" }}
+                  style={{ color: env === "live" ? "#ff9500" : "#a8b9f4" }}
                 >
-                  {selectedTenant.environment === "live" ? "Live" : "Sandbox"}
+                  {env === "live" ? "Live" : "Sandbox"}
                 </p>
               </div>
               {/* Close button — right */}
@@ -1792,7 +1792,7 @@ export function DevelopersPage() {
   const SectionContent = {
     overview: <OverviewSection env={env} envControl={envControl} onNavigate={setSection} />,
     keys: <KeysSection env={env} />,
-    tenants: <TenantsSection onNavigate={setSection} />,
+    tenants: <TenantsSection env={env} onNavigate={setSection} />,
     usage: <UsageSection env={env} />,
   }[section];
 
