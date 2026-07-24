@@ -687,15 +687,6 @@ export function FinancesPage() {
             {activeTab === "Liabilities" && (
               <WidgetCard title="Liabilities" count={liabilitiesCount}>
                 <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
-                <button
-                  type="button"
-                  data-testid="link-liabilities-bills"
-                  onClick={() => setActiveTab("Bills")}
-                  className="bg-[#240757] content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  View Bills to Pay
-                  <ChevronRight className="relative shrink-0 size-[16px] text-[#7631ee]" />
-                </button>
               </WidgetCard>
             )}
 

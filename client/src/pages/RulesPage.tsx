@@ -288,19 +288,25 @@ function PolicySection() {
       </div>
       <div className="flex flex-col items-start p-[8px] gap-[8px] relative shrink-0 w-full">
         {isLoading && (
-          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-            Loading your active policy from Brain…
-          </p>
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              Loading your active policy from Brain…
+            </p>
+          </div>
         )}
         {!isLoading && isError && (
-          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-            Couldn't load your active policy from Brain right now.
-          </p>
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              Couldn't load your active policy from Brain right now.
+            </p>
+          </div>
         )}
         {!isLoading && !isError && rules.length === 0 && (
-          <p className="w-full p-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-            No active policy found for your account yet.
-          </p>
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              No active policy found for your account yet.
+            </p>
+          </div>
         )}
         {!isLoading && !isError && rules.map((r, idx) => (
           <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -1021,27 +1027,21 @@ export function RulesPage() {
           )}
 
           {activeTab === "Suggested" && (
-            <div className="flex flex-col gap-[16px] items-start w-full">
-              {suggestions.length === 0 ? (
-                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    Brain suggests policies as it sees patterns in your activity. Nothing yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-                  {suggestions.map((s) => (
-                    <SuggestionCard
-                      key={s.id}
-                      suggestion={s}
-                      onAccept={() => onAcceptSuggestion(s)}
-                      onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                      onDismiss={() => dismissSuggestion(s.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <Section
+              title="Suggested"
+              count={suggestions.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Brain suggests policies as it sees patterns in your activity. Nothing yet.</p>}
+            >
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.id}
+                  suggestion={s}
+                  onAccept={() => onAcceptSuggestion(s)}
+                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                  onDismiss={() => dismissSuggestion(s.id)}
+                />
+              ))}
+            </Section>
           )}
 
           </div>
