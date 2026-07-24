@@ -121,8 +121,8 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
     },
   },
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
-  "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested — Brain pulled in new records to process" },
-  "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data — already ingested previously, skipped" },
+  "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested: Brain pulled in new records to process" },
+  "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data: already ingested previously, skipped" },
 };
 
 /** Card-friendly single-line truncation for titles sourced from free text

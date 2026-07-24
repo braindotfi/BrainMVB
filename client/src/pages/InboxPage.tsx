@@ -73,9 +73,9 @@ function auditWhy(r: AuditRecord): string {
         ? `Approved by ${humanReadableActor(r.actor)} after review.`
         : "Approved after review.";
     case "rejected":
-      return "Rejected — this payment was declined and nothing moved.";
+      return "Rejected: this payment was declined and nothing moved.";
     case "postponed":
-      return "Postponed — parked for a later decision.";
+      return "Postponed: parked for a later decision.";
     case "rule_change":
       return "A standing rule was changed, so Brain's future behavior changes too.";
     case "trust_granted":
@@ -88,10 +88,10 @@ function auditWhy(r: AuditRecord): string {
          repeat that instead of fabricating "didn't fit the usual pattern"
          boilerplate that doesn't describe what happened. */
       return r.subtype && r.summary === r.subtype
-        ? `Recorded as ${r.subtype} — flagged by Brain core for review.`
-        : "Flagged for attention — Brain saw something that didn't fit the usual pattern.";
+        ? `Recorded as ${r.subtype}, flagged by Brain for review.`
+        : "Flagged for attention. Brain saw something that didn't fit the usual pattern.";
     case "system_activity":
-      return "Routine system activity — recorded for the audit trail, no decision needed.";
+      return "Routine system activity, recorded for the audit trail. No decision needed.";
   }
 }
 
@@ -186,7 +186,7 @@ const InboxCard = ({
             className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] mt-[12px]"
             data-testid={`text-detection-note-${item.id}`}
           >
-            Detected from your ledger — no action needed. Tap to view details.
+            Detected from your ledger. No action needed. Tap to view details.
           </p>
         ) : (
           <div className="flex items-center gap-[8px] mt-[12px]" onClick={(e) => e.stopPropagation()}>

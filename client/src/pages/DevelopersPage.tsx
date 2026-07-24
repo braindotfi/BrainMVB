@@ -227,7 +227,7 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
       </p>
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
         brain-core's API-key service hasn't been switched on for this environment. Keys become
-        available here automatically as soon as it is — no action needed on your side.
+        available here automatically as soon as it is. No action needed on your side.
       </p>
     </div>
   </Card>
@@ -240,17 +240,17 @@ const EmptyRow = ({ children }: { children: ReactNode }) => (
 );
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** Relative time for fresh, per-session timestamps ("just now", "12 min ago"). */
 function formatRelative(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
+  if (Number.isNaN(t)) return "";
   const mins = Math.floor((Date.now() - t) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} min ago`;
@@ -928,7 +928,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 Requests Today ({env === "sandbox" ? "Sandbox" : "Live"})
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
-                {usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(today ?? 0)}
+                {usageQ.isLoading ? "…" : usageQ.isError ? "?" : String(today ?? 0)}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
                 {usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
@@ -945,7 +945,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 Active Keys ({env === "sandbox" ? "Sandbox" : "Live"})
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
-                {keysQ.isLoading ? "…" : keysQ.isError ? "—" : String(activeKeys.length)}
+                {keysQ.isLoading ? "…" : keysQ.isError ? "?" : String(activeKeys.length)}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
                 {keysUnavailable ? "Keys API not yet enabled" : "Issued by brain-core"}
@@ -1232,7 +1232,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           </PopupSection>
           <PopupSection label="Requested Scopes">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-full">
-              Enforced on the platform data endpoints (ledger/audit reads) — see the API reference on Overview.
+              Enforced on the platform data endpoints (ledger/audit reads). See the API reference on Overview.
             </p>
             {SCOPE_OPTIONS.map((s) => {
               const checked = scopes.includes(s.id);
@@ -1273,7 +1273,7 @@ function KeysSection({ env }: { env: DevEnv }) {
       </svg>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
-              out — until then, keys authenticate against platform endpoints only.
+              out. Until then, keys authenticate against platform endpoints only.
             </p>
           </div>
         </PopupShell>
@@ -1497,7 +1497,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Resets In</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-expiry">
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#ff9500] text-[13px] w-full">{countdown ?? "—"}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#ff9500] text-[13px] w-full">{countdown ?? ""}</p>
                     </div>
                   </div>
                 )}

@@ -89,7 +89,7 @@ describe("mapAuditEventToRecord", () => {
       anchor(),
     );
     expect(sys.eventType).toBe("system_activity");
-    expect(sys.summary).toBe("New data ingested — Brain pulled in new records to process");
+    expect(sys.summary).toBe("New data ingested: Brain pulled in new records to process");
     expect(sys.coreEventType).toBe("system_activity");
 
     // core explicitly flags an unmapped action → it IS flagged, raw action id as summary
@@ -168,7 +168,7 @@ describe("mapAuditEventToRecord", () => {
   it("maps raw.ingest.deduplicated to its human summary as system activity", () => {
     const r = mapAuditEventToRecord(ev({ action: "raw.ingest.deduplicated" }), anchor());
     expect(r.eventType).toBe("system_activity");
-    expect(r.summary).toBe("Duplicate data — already ingested previously, skipped");
+    expect(r.summary).toBe("Duplicate data: already ingested previously, skipped");
   });
 
   it("never fabricates linked evidence - linked[] is always empty from a live event", () => {
