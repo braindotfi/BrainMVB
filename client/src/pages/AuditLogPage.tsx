@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
+import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity } from "@/lib/auditTypes";
 import refreshIcon from "@assets/refresh_1784933925263.png";
 import searchIcon from "@assets/Vector_1784933720094.png";
 import { useCurrency } from "@/lib/currencyContext";
@@ -127,15 +126,15 @@ export function AuditLogPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full min-w-0">
 
           {/* Header — text/title/spacing unchanged per design brief */}
           <div className="flex items-start justify-between gap-[16px] relative w-full min-w-0">
             <div className="flex flex-col items-start gap-[4px] relative min-w-px flex-1">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Audit Log</p>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px] whitespace-nowrap">Every decision is recorded, anchored, and verifiable.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
             </div>
             {/* Refresh button — Figma: bg-[#222737] pill, 12px SemiBold #6c779d */}
             <button
@@ -248,7 +247,6 @@ export function AuditLogPage() {
                         const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
                         const isRejected = record.eventType === "rejected";
                         const borderLeft = isFlagged || isRejected ? "3px solid #d20344" : undefined;
-                        const actorText = humanReadableActor(record.actor);
                         const timestampText = new Date(record.occurredAtMs).toLocaleString(undefined, {
                           month: "short", day: "numeric", year: "numeric",
                           hour: "numeric", minute: "2-digit",
@@ -257,7 +255,6 @@ export function AuditLogPage() {
                           record.rowSubtitle ??
                           [
                             typeof record.amount === "number" ? format(record.amount) : "",
-                            actorText ?? "",
                             timestampText,
                           ].filter(Boolean).join(" · ");
 
@@ -319,7 +316,7 @@ export function AuditLogPage() {
 
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       <AuditRecordPopup
         record={activeRecord}
