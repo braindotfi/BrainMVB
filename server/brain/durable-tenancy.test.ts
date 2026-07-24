@@ -96,6 +96,12 @@ beforeAll(async () => {
     let body: unknown;
     if (typeof init?.body === "string") {
       try { body = JSON.parse(init.body); } catch { body = init.body; }
+    } else if (init?.body instanceof FormData) {
+      // Record multipart fields (file blobs recorded by name only) so tests can
+      // assert on form fields like source_schema.
+      const fields: Record<string, unknown> = {};
+      for (const [k, v] of init.body.entries()) fields[k] = typeof v === "string" ? v : `<file:${(v as File).name}>`;
+      body = fields;
     }
     calls.push({
       url,
@@ -151,7 +157,12 @@ describe("durable tenancy invariants", () => {
     await waitForSeed(3);
     const ingests = calls.filter((c) => c.url.endsWith("/raw/ingest"));
     expect(ingests.length).toBe(3);
-    for (const call of ingests) expect(call.auth).toBe(`Bearer ${AGENT_TOKEN}`);
+    for (const call of ingests) {
+      expect(call.auth).toBe(`Bearer ${AGENT_TOKEN}`);
+      // source_schema must be sent explicitly - without it artifacts land with
+      // source_schema NULL upstream and the interpret worker never matches them.
+      expect((call.body as Record<string, unknown>).source_schema).toBe("brain.upload.document.v1");
+    }
     const docs = await storage.listSourceDocuments(userId);
     expect(docs.length).toBe(3);
   });

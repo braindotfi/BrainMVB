@@ -600,6 +600,9 @@ export async function ingestRawDocument(
   const form = new FormData();
   form.set("source_type", input.sourceType);
   form.set("mime_type", input.mimeType);
+  // Explicit schema so the interpret worker's registered-schema match can never miss:
+  // brain.upload.document.v1 is the correct schema for ALL upload types (PDF/XLSX/CSV).
+  form.set("source_schema", "brain.upload.document.v1");
   const blob = new Blob([input.bytes as unknown as BlobPart], { type: input.mimeType });
   form.set("file", blob, input.filename);
 
