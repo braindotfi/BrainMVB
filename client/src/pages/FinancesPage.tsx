@@ -273,17 +273,15 @@ const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => st
   }, [count, onCount]);
 
   return (
-    <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
-      <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
+    <div className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full" style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
       </svg>
-        <p className="[word-break:break-word] flex-[1_0_0] [font-family:'Gilroy',sans-serif] font-medium leading-[16px] min-w-px not-italic relative text-[#6c779d] text-[14px]">
-          {text}
-        </p>
-      </div>
+      <p className="[word-break:break-word] flex-[1_0_0] [font-family:'Gilroy',sans-serif] font-medium leading-[18px] min-w-px not-italic relative text-[#7631ee] text-[14px]">
+        {text}
+      </p>
     </div>
   );
 };
@@ -588,7 +586,7 @@ export function FinancesPage() {
                             },
                           }
                         : {})}
-                      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : ""}`}
+                      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : ""}`}
                     >
                       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
@@ -611,11 +609,13 @@ export function FinancesPage() {
                   );
                 })}
                 {accounts.length === 0 && (
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    {accountsLoading
-                      ? "Loading your accounts from the ledger…"
-                      : "No connected accounts yet. Link an account to see your balances here."}
-                  </p>
+                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                      {accountsLoading
+                        ? "Loading your accounts from the ledger…"
+                        : "No connected accounts yet. Link an account to see your balances here."}
+                    </p>
+                  </div>
                 )}
               </WidgetCard>
             )}
@@ -665,10 +665,10 @@ export function FinancesPage() {
             {activeTab === "Income" && (
               <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
                 <OverdueInvoicesBanner format={format} />
-                <IncomeSummary format={format} onCount={setIncomeCount} />
                 <WidgetCard title="Income" count={incomeCount}>
                   <IncomeTxList format={format} onOpen={setOpenTxId} />
                 </WidgetCard>
+                <IncomeSummary format={format} onCount={setIncomeCount} />
               </div>
             )}
 
