@@ -1188,6 +1188,12 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const selectedTenant = tenantsQ.data?.tenants.find((t) => t.id === selectedTenantId) ?? null;
   const countdown = useCountdown(selectedTenant?.ephemeral ? selectedTenant.expiresAt : null);
+  const tenantList = tenantsQ.data?.tenants ?? [];
+  const selectedIdx = tenantList.findIndex((t) => t.id === selectedTenantId);
+  const hasPrev = selectedIdx > 0;
+  const hasNext = selectedIdx >= 0 && selectedIdx < tenantList.length - 1;
+  const goPrev = () => { if (hasPrev) setSelectedTenantId(tenantList[selectedIdx - 1].id); };
+  const goNext = () => { if (hasNext) setSelectedTenantId(tenantList[selectedIdx + 1].id); };
 
   // Uses the EXISTING production tenant-creation path. NOT idempotent — never retried.
   const createMut = useMutation({
@@ -1332,14 +1338,40 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
 
             {/* ── Footer ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <button
-                type="button"
-                data-testid="button-tenant-view-keys"
-                onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
-                className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-opacity"
-              >
-                View API Keys
-              </button>
+              <div className="flex items-center gap-[8px] relative shrink-0 w-full">
+                <button
+                  type="button"
+                  data-testid="button-tenant-view-keys"
+                  onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
+                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
+                >
+                  View API Keys
+                </button>
+                <button
+                  type="button"
+                  data-testid="button-tenant-prev"
+                  onClick={goPrev}
+                  disabled={!hasPrev}
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="button-tenant-next"
+                  onClick={goNext}
+                  disabled={!hasNext}
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                    <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
