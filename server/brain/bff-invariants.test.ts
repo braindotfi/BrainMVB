@@ -36,6 +36,10 @@ process.env.BRAIN_DEMO_PROVISION_SECRET = PROVISION_SECRET;
 process.env.BRAIN_API_BASE_URL = "https://api.brain.fi/v1";
 // Ensure the local-key path can't be selected.
 delete process.env.BRAIN_AUTH_SIGN_KEY;
+// This suite pins the DEMO (provision-run) path: neither production nor durable
+// tenancy may leak in from the workspace environment.
+delete process.env.BRAIN_TENANCY_MODE;
+delete process.env.BRAIN_PLATFORM_SERVICE_SECRET;
 delete process.env.BRAIN_AUTH_JWT_SECRET;
 
 interface RecordedCall {

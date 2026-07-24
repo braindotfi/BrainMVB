@@ -18,10 +18,11 @@
 
 import { SignJWT, importJWK, type JWK } from "jose";
 import { randomUUID } from "node:crypto";
-import { brainConfig, brainTokenMode, brainTenancyMode } from "./config";
+import { brainConfig, brainTokenMode, brainTenancyMode, brainDurableTenancy } from "./config";
 import { brainUserSubject } from "./ids";
-import { exchangeSession, refreshSession, mintAgentToken, TenancyApiError, type TenantSessionShape } from "./tenancy";
+import { exchangeSession, refreshSession, mintAgentToken, createTenant, TenancyApiError, type TenantSessionShape } from "./tenancy";
 import { storage } from "../storage";
+import { seedTenantDocuments } from "./seed";
 
 /**
  * Thrown by the PRODUCTION strategy when the app user has no durable
@@ -148,6 +149,11 @@ function createSession(appUserId: string, now: number, prior?: CachedSession): P
   if (brainTenancyMode() === "production") {
     return createProductionSession(appUserId, prior);
   }
+  // DURABLE tenancy: one persistent production tenant per app user, auto-created on
+  // first use (see createDurableSession). Data survives logouts/restarts/redeploys.
+  if (brainDurableTenancy()) {
+    return createDurableSession(appUserId, prior);
+  }
   const mode = brainTokenMode();
   if (mode === "staging-demo-token") {
     return provisionStagingDemoToken();
@@ -209,6 +215,118 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
     }
     throw err;
   }
+}
+
+/**
+ * DURABLE strategy (BRAIN_TENANCY_MODE=durable): the persistent twin of the demo path.
+ *
+ *  1. brain_identities row exists → EXACT production session flow (refresh-then-exchange,
+ *     per-tenant agent token). The user re-attaches to the SAME tenant every login,
+ *     restart, and redeploy — documents, audit events, and proposals all persist.
+ *  2. No row → auto-create a production tenant ONCE (upstream creation is NOT idempotent
+ *     and is never retried), store the durable mapping + agent token, then fire the
+ *     one-time starter seed (bundled demo documents through the real ingestion pipeline)
+ *     WITHOUT blocking the session. Ledger figures come from whatever brain-core derives.
+ *
+ * Why not reuse the demo tenant, as originally requested: verified live 2026-07-24 that
+ * brain-core's demo fence cannot re-attach to an existing demo tenant (provision-run
+ * always mints a fresh one; there is no token-for-tenant route; the platform agent-token
+ * route answers 403 "tenant is not production"). Durable data requires this path.
+ *
+ * Concurrency: getBrainSession's inflight map already coalesces concurrent first
+ * requests per user onto one createSession call, so a request burst cannot create
+ * two tenants for one user.
+ */
+/**
+ * Tombstone tenantId sentinel: written BEFORE the non-idempotent POST /tenants. If a
+ * previous attempt crashed between a successful create and finalizing the mapping, the
+ * row still exists with this sentinel — we must NEVER call /tenants again for that user
+ * (the tenant may exist upstream). Recovery is manual: find the tenant id in the server
+ * log line "durable tenant … created" and repair the row.
+ */
+const PENDING_TENANT_SENTINEL = "pending:create";
+
+async function createDurableSession(appUserId: string, prior?: CachedSession): Promise<CachedSession> {
+  const identity = await storage.getBrainIdentity(appUserId);
+  if (identity?.tenantId === PENDING_TENANT_SENTINEL) {
+    // A create attempt was started and never finalized - refuse to re-create (upstream
+    // creation is NOT idempotent; the tenant may already exist). Loud, manual recovery.
+    throw new Error(
+      `brain durable tenancy: tenant creation for user ${appUserId} was started but never ` +
+        `finalized (pending tombstone). NOT retrying - check server logs for the created ` +
+        `tenant id and repair the brain_identities row manually.`,
+    );
+  }
+  if (identity) {
+    // Re-attach to the existing tenant - same code path as production tenancy.
+    return createProductionSession(appUserId, prior);
+  }
+
+  const user = await storage.getUser(appUserId);
+  const displayName = user?.name || user?.username || "Workspace Owner";
+  // brain-core requires a founder email; some app accounts (e.g. the shared demo login)
+  // have none, so synthesize a stable, clearly-non-routable one from the user id.
+  const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
+  const companyName = `${displayName}'s Workspace`;
+
+  // Anti-retry guard for the NON-idempotent upstream create: persist a tombstone row
+  // FIRST, so that if we crash after a successful POST /tenants but before finalizing,
+  // the next request refuses to create again (see PENDING_TENANT_SENTINEL above).
+  await storage.createBrainIdentity({
+    userId: appUserId,
+    externalRef: appUserId,
+    tenantId: PENDING_TENANT_SENTINEL,
+    memberId: null,
+    companyName,
+  });
+
+  let result;
+  try {
+    result = await createTenant({
+      companyName,
+      founderEmail,
+      founderDisplayName: displayName,
+      founderExternalRef: appUserId, // external_ref = stable platform user id, never an email
+    });
+  } catch (err) {
+    // The create PROVABLY failed upstream - roll the tombstone back so a later login
+    // may try again. (If this delete itself fails, the tombstone blocks re-creation,
+    // which errs on the safe side.)
+    await storage.deleteBrainIdentity(appUserId).catch(() => undefined);
+    throw err;
+  }
+
+  const finalized = await storage.updateBrainIdentityTenant(appUserId, {
+    tenantId: result.tenant_id,
+    memberId: result.member?.id ?? null,
+  });
+  if (!finalized) {
+    // Should be impossible (we just wrote the tombstone) - but never proceed silently.
+    throw new Error(
+      `brain durable tenancy: created tenant ${result.tenant_id} for user ${appUserId} but ` +
+        `could not finalize the brain_identities row - repair it manually before next login.`,
+    );
+  }
+  if (result.agent?.token) {
+    await storage.upsertBrainAgentToken(
+      result.tenant_id,
+      result.agent.token,
+      new Date(Date.now() + (result.agent.expires_in ?? 900) * 1000),
+    );
+  }
+  console.log(`[brain-auth] durable tenant ${result.tenant_id} created for user ${appUserId} - seeding starter documents`);
+
+  // One-time starter seed - fire and forget so login is never blocked on ingestion.
+  // Runs ONLY here (the create-tenant branch), so an existing tenant is never re-seeded.
+  // Raw ingestion needs the raw:write scope, which the durable MEMBER token does not
+  // hold (verified live 2026-07-24: member /raw/ingest → 403 auth_scope_insufficient,
+  // agent token → 201). Fall back to the member token only if no agent token exists,
+  // so the failure surfaces as an honest 403 in the document status.
+  void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token).catch((err) =>
+    console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
+  );
+
+  return toProductionCached(result.session, result.tenant_id, result.agent?.token ?? null);
 }
 
 /** Refresh the stored agent token this many seconds before it expires. */

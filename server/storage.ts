@@ -88,6 +88,13 @@ export interface IStorage {
   // Brain identities (production tenancy: durable appUserId → external_ref/tenant mapping)
   getBrainIdentity(userId: string): Promise<BrainIdentity | undefined>;
   createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity>;
+  /** Finalize a pending-create tombstone with the real tenant/member ids (durable tenancy). */
+  updateBrainIdentityTenant(
+    userId: string,
+    patch: { tenantId: string; memberId?: string | null },
+  ): Promise<BrainIdentity | undefined>;
+  /** Remove an identity row — ONLY for rolling back a tombstone after a provably failed create. */
+  deleteBrainIdentity(userId: string): Promise<void>;
 
   // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
@@ -665,6 +672,23 @@ export class MemStorage implements IStorage {
     };
     this.brainIdentitiesStore.set(row.userId, row);
     return row;
+  }
+  async updateBrainIdentityTenant(
+    userId: string,
+    patch: { tenantId: string; memberId?: string | null },
+  ): Promise<BrainIdentity | undefined> {
+    const row = this.brainIdentitiesStore.get(userId);
+    if (!row) return undefined;
+    const updated: BrainIdentity = {
+      ...row,
+      tenantId: patch.tenantId,
+      memberId: patch.memberId !== undefined ? patch.memberId : row.memberId,
+    };
+    this.brainIdentitiesStore.set(userId, updated);
+    return updated;
+  }
+  async deleteBrainIdentity(userId: string): Promise<void> {
+    this.brainIdentitiesStore.delete(userId);
   }
 
   // ─── Brain agent tokens ───
@@ -1248,6 +1272,22 @@ export class DatabaseStorage implements IStorage {
   async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
     const [row] = await db.insert(brainIdentitiesTable).values(identity).returning();
     return row;
+  }
+  async updateBrainIdentityTenant(
+    userId: string,
+    patch: { tenantId: string; memberId?: string | null },
+  ): Promise<BrainIdentity | undefined> {
+    const values: Partial<BrainIdentity> = { tenantId: patch.tenantId };
+    if (patch.memberId !== undefined) values.memberId = patch.memberId;
+    const [row] = await db
+      .update(brainIdentitiesTable)
+      .set(values)
+      .where(eq(brainIdentitiesTable.userId, userId))
+      .returning();
+    return row ?? undefined;
+  }
+  async deleteBrainIdentity(userId: string): Promise<void> {
+    await db.delete(brainIdentitiesTable).where(eq(brainIdentitiesTable.userId, userId));
   }
 
   // ─── Brain agent tokens ───

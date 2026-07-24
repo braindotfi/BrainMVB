@@ -36,7 +36,7 @@ import {
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
 import { generateNonce } from "./nonce";
-import { brainAuthConfigured, platformServiceConfigured } from "./brain/config";
+import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
   aggregateUsage,
   API_KEY_SCOPES,
@@ -361,6 +361,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Demo mode: the tenant is the provisioned demo tenant of the current session.
       if (!brainAuthConfigured()) {
         return res.json({ mode, canCreate: false, liveKeysAvailable: false, tenants: [] });
+      }
+      // Durable tenancy: the tenant is persistent (per-user, stored in brain_identities),
+      // so it is NOT ephemeral and never "resets" — no expiry countdown.
+      if (brainDurableTenancy()) {
+        const identity = await storage.getBrainIdentity(userId);
+        return res.json({
+          mode,
+          canCreate: false,
+          liveKeysAvailable: false,
+          tenants: identity
+            ? [{
+                id: identity.tenantId,
+                companyName: identity.companyName,
+                environment: "sandbox",
+                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                ephemeral: false,
+              }]
+            : [],
+        });
       }
       const { tenantId } = await getBrainSession(userId);
       // Real per-session provision timestamp recorded when the session cache
@@ -1347,8 +1366,11 @@ You can explain concepts and surface general guidance, but do not give regulated
       // 2. Ingest bytes to brain-core.
       let rawId: string;
       try {
-        const { token } = await getBrainSession(userId);
-        const ingest = await ingestRawDocument(token, {
+        // Raw ingest/extract need the raw:write scope. In demo mode agentToken === the
+        // member token; in durable/production mode only the AGENT token holds raw:write
+        // (verified live 2026-07-24: member → 403 auth_scope_insufficient, agent → 201).
+        const { agentToken } = await getBrainSession(userId);
+        const ingest = await ingestRawDocument(agentToken, {
           sourceType: sourceType as RawSourceType,
           bytes: new Uint8Array(bytes),
           filename,
@@ -1385,8 +1407,8 @@ You can explain concepts and surface general guidance, but do not give regulated
       let parsedId: string | null = null;
       let confidence: string | null = null;
       try {
-        const { token } = await getBrainSession(userId);
-        const extract = await extractRawDocument(token, rawId);
+        const { agentToken } = await getBrainSession(userId);
+        const extract = await extractRawDocument(agentToken, rawId);
         extractStatus = "extracted";
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;

@@ -59,6 +59,32 @@ authority (Settings → Team, NO mock fallback); Audit Log (`useBrainAuditRecord
 `/audit/events` + latest anchor, NO demo-record fallback); document ingestion (AddSource).
 MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts`).
 
+## Durable tenancy (`BRAIN_TENANCY_MODE=durable` — the CURRENT mode in this workspace)
+- At first brain-core use per app user, `createDurableSession` (`server/brain/auth.ts`)
+  auto-creates a REAL production tenant (platform-service `POST /tenants`,
+  `external_ref` = userId, email fallback `<userId>@users.brainmvb.invalid`, company
+  "`<name>`'s Workspace"), persists `brain_identities` + `brain_agent_tokens`, then later
+  sessions re-attach via exchange/refresh — data survives logout/login and republish.
+- **Never delete a `brain_identities` row**: re-creating a tenant with the same founder
+  email 500s upstream (email already registered, verified 2026-07-24) and the user's data
+  lives in the orphaned tenant. Tenant creation is NOT idempotent — never auto-retry.
+- Anti-retry tombstone: a `brain_identities` row with `tenant_id = "pending:create"` is
+  written BEFORE `POST /tenants` and finalized after. A leftover tombstone (crash mid-create)
+  BLOCKS re-creation with a loud error — recover manually from the "durable tenant … created"
+  server log line. A provably failed create rolls the tombstone back.
+- One-time starter seed (`server/brain/seed.ts`, create-tenant branch only, fire-and-forget):
+  ingests 3 bundled docs from `server/assets/demo-seed/` (regen: `scripts/generate-demo-seed.ts`)
+  through the standard ingest→extract pipeline. Manual re-run: `scripts/run-seed-once.ts`.
+- **raw:write scope**: the durable MEMBER token cannot `/raw/ingest` (403); the AGENT token
+  can (verified live 2026-07-24). Seed + the Add Source ingest route use `agentToken` (in
+  demo mode `agentToken` === member token, so demo behavior is unchanged).
+- brain-core does NOT project uploaded docs into ledger entities — extraction is advisory,
+  so a seeded tenant's ledger endpoints return empty; the UI renders that honestly.
+- `/api/brain/tenancy` still reports demo/linked (TenancyGate unaffected); Developers →
+  Tenants reports the identity tenant with `ephemeral:false` (no expiry countdown).
+- Pinned by `server/brain/durable-tenancy.test.ts` (one create; re-attach via /sessions;
+  demo fence never called; failed create writes no identity; seed uses agent token).
+
 ## Production tenancy (`BRAIN_TENANCY_MODE=production`; full contract in CLAUDE.md)
 - Demo mode (default) is byte-identical to before (`/api/brain/tenancy` → demo/linked).
 - `brain_identities` maps app userId → tenantId/userPrincipalId (`external_ref` = userId, never

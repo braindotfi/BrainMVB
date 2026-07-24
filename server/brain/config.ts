@@ -92,9 +92,10 @@ export function brainTokenMode(): BrainTokenMode {
 
 /** True when the BFF has a way to obtain a token brain-core will accept. */
 export function brainAuthConfigured(): boolean {
-  return brainTenancyMode() === "production"
-    ? brainConfig.platformServiceSecret !== undefined
-    : brainTokenMode() !== "unconfigured";
+  if (brainTenancyMode() === "production" || brainDurableTenancy()) {
+    return brainConfig.platformServiceSecret !== undefined;
+  }
+  return brainTokenMode() !== "unconfigured";
 }
 
 /**
@@ -109,6 +110,30 @@ export function brainTenancyMode(): BrainTenancyMode {
     return "production";
   }
   return "demo";
+}
+
+/**
+ * DURABLE tenancy (BRAIN_TENANCY_MODE=durable): every app user gets ONE persistent
+ * production tenant, auto-created at first brain-core use and stored in brain_identities
+ * (external_ref = app user id). Later sessions re-attach via POST /v1/sessions /
+ * /sessions/refresh, so documents, audit events, and proposals survive logouts,
+ * restarts, and redeploys. Requires the platform service credential.
+ *
+ * This is deliberately distinct from "production" mode, whose contract FORBIDS
+ * auto-provisioning (explicit company signup / invite only). Durable mode auto-creates
+ * exactly once per user, then never again (tenant creation is not idempotent upstream).
+ * To the client this still reports as demo tenancy (no company-setup gate).
+ *
+ * Verified live 2026-07-24: brain-core's demo fence cannot re-attach to an existing
+ * demo tenant (provision-run always creates a fresh one; the platform agent-token
+ * route rejects demo tenants), so durable data REQUIRES the production tenant path.
+ */
+export function brainDurableTenancy(): boolean {
+  return (
+    env("BRAIN_TENANCY_MODE") === "durable" &&
+    brainConfig.platformServiceSecret !== undefined &&
+    brainTenancyMode() !== "production"
+  );
 }
 
 /** True when the platform service credential is configured (signup/invite consume need it
