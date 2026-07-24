@@ -7,6 +7,29 @@ import type { AnchorProof } from "@/lib/auditTypes";
    mode="status" means quiet status line for operational surfaces
    mode="proof" means full merkle/tx/block block for the canonical audit record */
 
+function HashRow({
+  label,
+  value,
+  dim = false,
+  first = false,
+}: {
+  label: string;
+  value: string | undefined;
+  dim?: boolean;
+  first?: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-[8px] px-[12px] py-[8px]${first ? "" : " border-t border-[#1d2132]"}`}>
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] text-[#414965] shrink-0 whitespace-nowrap">
+        {label}
+      </span>
+      <span className={`[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] break-all min-w-0 ${dim ? "text-[#414965]" : "text-[#6c779d]"}`}>
+        {value ?? "—"}
+      </span>
+    </div>
+  );
+}
+
 export function AnchorStatus({
   anchor,
   mode = "status",
@@ -46,36 +69,24 @@ export function AnchorStatus({
         {guarantee}
       </p>
 
-      {/* Hash block - shown only in proof mode */}
+      {/* Hash table — proof mode only; row-divided, label dim / value muted */}
       {mode === "proof" && (
-        <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[8px] p-[12px] flex flex-col gap-[8px] w-full">
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
-            Audit ID: {anchor.auditId}
-          </p>
+        <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[8px] overflow-hidden w-full">
+          <HashRow first label="Audit ID" value={anchor.auditId} />
           {pending ? (
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
-              Not yet anchored. It usually completes within a few hours.
-            </p>
+            <HashRow label="Status" value="Not yet anchored" dim />
           ) : (
             <>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
-                Merkle root: {anchor.merkleRoot}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
-                Base tx: {anchor.baseTx}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
-                Block: {anchor.block?.toLocaleString()}
-              </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#414965] w-full">
-                Anchored at {anchor.anchoredAtLabel}
-              </p>
+              <HashRow label="Merkle root" value={anchor.merkleRoot} />
+              <HashRow label="Base tx" value={anchor.baseTx} />
+              <HashRow label="Block" value={anchor.block?.toLocaleString()} />
+              <HashRow label="Anchored at" value={anchor.anchoredAtLabel} dim />
             </>
           )}
         </div>
       )}
 
-      {/* Action row - 32px above button (gap-[12px] outer + mt-[20px] here) */}
+      {/* Action row */}
       {mode === "proof" ? (
         <div className="flex flex-col gap-[12px] w-full mt-[20px]">
           <span
