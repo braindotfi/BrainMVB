@@ -109,6 +109,9 @@ type InboxItem = {
   /* "Why:" line — only real recorded reasoning; omitted (honest omission) when
      the source record carries no rationale. */
   why?: string;
+  /* "proposal" items are decidable (Approve/Reject); "detection" items are
+     ledger-derived observations — nothing is proposed, no decision buttons. */
+  kind: "proposal" | "detection";
   amountDisplay?: string;
   /* Approve / Reject / Ask Brain why buttons (Needs you tab, decidable records only) */
   actionable: boolean;
@@ -176,26 +179,37 @@ const InboxCard = ({
             Why: {item.why}
           </p>
         )}
-        <div className="flex items-center gap-[8px] mt-[12px]" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onApprove?.(item)}
-            data-testid={`button-approve-${item.id}`}
-            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
+        {item.kind === "detection" ? (
+          /* Detections are observations, not proposals — nothing to approve or
+             reject. Tapping the card opens the insight detail. */
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] mt-[12px]"
+            data-testid={`text-detection-note-${item.id}`}
           >
-            Approve
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onReject?.(item)}
-            data-testid={`button-reject-${item.id}`}
-            className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
+            Detected from your ledger — no action needed. Tap to view details.
+          </p>
+        ) : (
+          <div className="flex items-center gap-[8px] mt-[12px]" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onApprove?.(item)}
+              data-testid={`button-approve-${item.id}`}
+              className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onReject?.(item)}
+              data-testid={`button-reject-${item.id}`}
+              className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Reject
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right column: tag pill */}
@@ -424,6 +438,7 @@ export function InboxPage() {
     for (const item of liveReviews) {
       push({
         id: String(item.id),
+        kind: "proposal",
         tab: "Needs Review",
         title: item.title,
         tag: "Needs approval",
@@ -441,6 +456,7 @@ export function InboxPage() {
     for (const p of queue) {
       push({
         id: p.id,
+        kind: "proposal",
         tab: "Needs Review",
         title: p.title,
         tag: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
@@ -465,6 +481,7 @@ export function InboxPage() {
       const confidenceLabel = typeof p.confidence === "number" ? `${Math.round(p.confidence * 100)}% confidence` : null;
       push({
         id: p.id,
+        kind: "proposal",
         tab: "Needs Review",
         title: `${agentName} proposal`,
         tag: agentName,
@@ -482,13 +499,15 @@ export function InboxPage() {
     for (const i of liveInsights) {
       push({
         id: i.id,
+        kind: "detection",
         tab: "Needs Review",
         title: i.title,
         tag: i.badge || "Detected",
         tagClass: TAG_DETECTED,
         desc: i.subtitle ?? "Brain noticed this in your ledger.",
         time: "",
-        why: i.explanation ?? i.subtitle ?? "Brain surfaced this from live ledger data.",
+        /* Only real recorded reasoning — never echo the subtitle as "Why". */
+        why: i.explanation,
         actionable: false,
         insight: i,
       });
@@ -498,6 +517,7 @@ export function InboxPage() {
     for (const p of liveAutoApproved) {
       push({
         id: p.id,
+        kind: "proposal",
         tab: "Auto-Approved",
         title: p.title,
         tag: "Auto-Approved",
@@ -520,6 +540,7 @@ export function InboxPage() {
       const approved = status === "executing" || status === "executed";
       push({
         id: `${p.id}--${status}`,
+        kind: "proposal",
         tab: approved ? "Auto-Approved" : status === "rejected" ? "Rejected" : "Needs Review",
         title: p.title,
         tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
@@ -545,6 +566,7 @@ export function InboxPage() {
       if (isAssistantActivity(r) || isSystemActivity(r)) continue;
       push({
         id: r.id,
+        kind: "proposal",
         tab: auditTab(r.eventType),
         title: r.summary,
         tag: auditEventLabel(r.eventType),
@@ -563,11 +585,20 @@ export function InboxPage() {
 
   const counts: Record<InboxTab, number> = useMemo(() => {
     const c: Record<InboxTab, number> = { "Needs Review": 0, "Auto-Approved": 0, "Rejected": 0, "Rule Changes": 0 };
-    for (const it of items) c[it.tab] += 1;
+    /* Detections live in their own "Detected" section, so they don't count
+       toward the actionable Needs Review badge. */
+    for (const it of items) {
+      if (it.tab === "Needs Review" && it.kind === "detection") continue;
+      c[it.tab] += 1;
+    }
     return c;
   }, [items]);
 
-  const visible = items.filter((it) => it.tab === activeTab);
+  const allVisible = items.filter((it) => it.tab === activeTab);
+  /* On Needs Review, detections render in their own "Detected" section below
+     the actionable queue — they are observations, not pending decisions. */
+  const visible = activeTab === "Needs Review" ? allVisible.filter((it) => it.kind !== "detection") : allVisible;
+  const detected = activeTab === "Needs Review" ? allVisible.filter((it) => it.kind === "detection") : [];
 
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
@@ -715,7 +746,7 @@ export function InboxPage() {
                 </div>
               </div>
               <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {counts[activeTab] === 0 ? (
+                {visible.length === 0 ? (
                   <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                     <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                       {emptyText}
@@ -739,6 +770,38 @@ export function InboxPage() {
                 )}
               </div>
             </div>
+
+            {/* Detected — ledger-derived observations, separate from the
+                actionable review queue. Nothing here awaits a decision. */}
+            {detected.length > 0 && (
+              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full" data-testid="section-detected">
+                <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+                  <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">Detected</p>
+                    <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{detected.length}</p>
+                    </div>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[13px] truncate">
+                      Observations from your ledger — no decision needed.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                    {detected.map((item, idx) => (
+                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                        <InboxCard
+                          item={item}
+                          onOpen={openItem}
+                          busy={itemBusy(item)}
+                        />
+                        {idx < detected.length - 1 && <Divider />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Helper banner */}
             {activeTab === "Needs Review" && (

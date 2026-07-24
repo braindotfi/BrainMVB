@@ -36,6 +36,10 @@ export type LiveInsightKind = "reconciliation" | "subscription" | "dispute" | "c
 export interface LiveInsight {
   id: string;
   kind: LiveInsightKind;
+  /** Discriminant vs brain-core proposal items: these are ledger-derived
+   *  observations — nothing is proposed for execution, so they must never
+   *  render Approve/Reject. */
+  itemKind: "detection";
   badge: string;
   title: string;
   subtitle?: string;
@@ -93,6 +97,7 @@ export function useBrainReconciliationInsights() {
     .map((m) => ({
       id: `recon-${m.id}`,
       kind: "reconciliation",
+      itemKind: "detection",
       badge: "Reconciliation",
       title: MATCH_TYPE_LABEL[m.match_type] ?? m.match_type,
       subtitle: RECON_STATUS_LABEL[m.status] ?? m.status,
@@ -161,6 +166,7 @@ export function useBrainSubscriptionInsights() {
       return {
         id: `sub-${o.id}`,
         kind: "subscription",
+        itemKind: "detection",
         badge: "Subscription",
         title: `Subscription: ${vendor}`,
         subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
@@ -190,6 +196,7 @@ export function useBrainDisputeInsights() {
       return {
         id: `dispute-${o.id}`,
         kind: "dispute",
+        itemKind: "detection",
         badge: "Dispute",
         title: `Disputed: ${vendor}`,
         subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
@@ -242,12 +249,24 @@ export function useBrainCashFlowInsight() {
     label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     value: Number(d.net) || 0,
   }));
+  // Meaningful comparison from the same endpoint (not an echo of the subtitle):
+  // average daily net across the trailing window vs the latest day's net.
+  const dayCount = currency.by_day.length;
+  const avgDailyNet = points.reduce((s, p) => s + p.value, 0) / dayCount;
+  const latest = currency.by_day[dayCount - 1];
+  const latestNet = Number(latest.net) || 0;
+  const explanation =
+    dayCount > 1
+      ? `Latest day netted ${format(latestNet.toFixed(2))} vs a ${format(avgDailyNet.toFixed(2))} daily average across the trailing ${dayCount}-day window.`
+      : undefined;
   const insight: LiveInsight = {
     id: "cashflow-trailing",
     kind: "cashflow",
+    itemKind: "detection",
     badge: "Cash flow",
     title: `Trailing cash flow (${currency.currency})`,
     subtitle: `Net ${format(currency.net)} over ${currency.transaction_count} transactions`,
+    explanation,
     chart: {
       points,
       unit: currency.currency,
