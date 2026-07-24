@@ -557,6 +557,12 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
   const [selectedEvent, setSelectedEvent] = useState<DevAuditEvent | null>(null);
+  const eventList = activityQ.data?.events ?? [];
+  const selectedEventIdx = selectedEvent ? eventList.findIndex((e) => e.id === selectedEvent.id) : -1;
+  const hasPrevEvent = selectedEventIdx > 0;
+  const hasNextEvent = selectedEventIdx >= 0 && selectedEventIdx < eventList.length - 1;
+  const goPrevEvent = () => { if (hasPrevEvent) setSelectedEvent(eventList[selectedEventIdx - 1]); };
+  const goNextEvent = () => { if (hasNextEvent) setSelectedEvent(eventList[selectedEventIdx + 1]); };
   const navigate = useLocation()[1];
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; companyName?: string }>({
     queryKey: ["/api/brain/tenancy"],
@@ -596,56 +602,170 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   return (
     <div className="flex flex-col gap-[40px] w-full pt-[20px]">
       {selectedEvent && (
-        <DetailModal
-          title={humanizeAction(selectedEvent.action)}
-          badges={
-            <span className="px-2 py-[2px] rounded-[4px] text-[11px] [font-family:'Gilroy',sans-serif] font-semibold" style={{ background: "#1d2132", color: "#a8b9f4" }}>
-              {selectedEvent.layer}
-            </span>
-          }
-          onClose={() => setSelectedEvent(null)}
-          testId="modal-activity-detail"
-          footer={
-            <PillButton
-              tone="neutral"
-              testId="button-open-audit-log"
-              onClick={() => { setSelectedEvent(null); navigate("/audit-log"); }}
-            >
-              View in Audit Log
-            </PillButton>
-          }
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}
+          data-testid="modal-activity-detail"
         >
-          <DetailRow label="Event" testId="detail-activity-action"><Mono className="text-white">{selectedEvent.action}</Mono></DetailRow>
-          <DetailRow label="When" testId="detail-activity-when"><Mono className="text-white">{formatDateTime(selectedEvent.created_at)}</Mono></DetailRow>
-          <DetailRow label="Authenticated as" testId="detail-activity-actor">
-            <span className="inline-flex flex-col items-end gap-[2px]">
-              <span>{selectedEvent.actor.startsWith("agent") ? "Agent token" : "Member session"}</span>
-              <Mono className="text-[#6c779d] text-[12px]">{selectedEvent.actor}</Mono>
-            </span>
-          </DetailRow>
-          <DetailRow label="Tenant" testId="detail-activity-tenant"><Mono className="text-white">{selectedEvent.tenant_id}</Mono></DetailRow>
-          <DetailRow label="Event id"><Mono className="text-[#6c779d] text-[12px]">{selectedEvent.id}</Mono></DetailRow>
-          {str(selectedEvent.inputs, "question") && (
-            <div className="flex flex-col gap-1">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">Question</p>
-              <div className="rounded-[8px] p-3" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] whitespace-pre-wrap break-words" data-testid="text-activity-question">
-                  {str(selectedEvent.inputs, "question")}
+          <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+
+            {/* ── Header ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
+              {/* Centred title */}
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-detail-modal-title">
+                {humanizeAction(selectedEvent.action)}
+              </p>
+              {/* Layer badge — left */}
+              <div className="absolute flex items-center justify-center left-[23px] top-[17px] bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid px-[8px] py-[3px] rounded-[22px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap capitalize">
+                  {selectedEvent.layer}
                 </p>
               </div>
+              {/* Close button — right */}
+              <button
+                type="button"
+                data-testid="button-close-detail-modal"
+                onClick={() => setSelectedEvent(null)}
+                aria-label="Close"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-[#1d2132] hover:bg-[#262b3d] transition-colors text-[#6c779d]"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
-          )}
-          {(str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")) && (
-            <div className="flex flex-col gap-1">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">Response</p>
-              <div className="rounded-[8px] p-3" style={{ background: "#0a0c10", border: "1px solid #1d2132" }}>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] whitespace-pre-wrap break-words" data-testid="text-activity-response">
-                  {str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")}
-                </p>
+
+            {/* ── Body ── */}
+            <div className="flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+
+                {/* Event */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Event</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-action">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.action}</p>
+                  </div>
+                </div>
+
+                {/* When */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">When</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-when">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{formatDateTime(selectedEvent.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Authenticated As */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Authenticated As</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-actor">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.actor}</p>
+                  </div>
+                </div>
+
+                {/* Tenant */}
+                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Tenant</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-tenant">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.tenant_id}</p>
+                  </div>
+                </div>
+
+                {/* Event ID */}
+                <div className={`${str(selectedEvent.inputs, "question") || str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                  <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Event ID</p>
+                  </div>
+                  <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.id}</p>
+                  </div>
+                </div>
+
+                {/* Question — wiki events only */}
+                {str(selectedEvent.inputs, "question") && (
+                  <div className={`${str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                    <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Question</p>
+                    </div>
+                    <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] w-full" data-testid="text-activity-question">
+                        {str(selectedEvent.inputs, "question")}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Response — wiki events only */}
+                {(str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")) && (
+                  <div className="flex items-start relative shrink-0 w-full">
+                    <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Response</p>
+                    </div>
+                    <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] w-full" data-testid="text-activity-response">
+                        {str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </DetailModal>
+
+            {/* ── Footer row 1: View in Audit Log ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="flex items-center relative shrink-0 w-full">
+                <button
+                  type="button"
+                  data-testid="button-open-audit-log"
+                  onClick={() => { setSelectedEvent(null); navigate("/audit-log"); }}
+                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
+                >
+                  View in Audit Log
+                </button>
+              </div>
+            </div>
+
+            {/* ── Footer row 2: Previous / Next ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="flex items-center justify-between relative shrink-0 w-full">
+                <button
+                  type="button"
+                  data-testid="button-activity-prev"
+                  onClick={goPrevEvent}
+                  disabled={!hasPrevEvent}
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="button-activity-next"
+                  onClick={goNextEvent}
+                  disabled={!hasNextEvent}
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                    <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
       )}
       {/* Header: text left, env toggle top-right. No bottom padding — root gap handles spacing. */}
       <div className="flex items-start justify-between gap-4 w-full">
