@@ -9,6 +9,7 @@ const PHONE_NOT_SET = "Not set";
 const EMAIL_NOT_SET = "Not set";
 
 let emailOverride: string | null = null;
+let phoneOverride: string | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -17,6 +18,13 @@ function emit() {
 
 export function setUserEmail(next: string) {
   emailOverride = next;
+  try { localStorage.setItem("brain_profile_email", next); } catch {}
+  emit();
+}
+
+export function setUserPhone(next: string) {
+  phoneOverride = next;
+  try { localStorage.setItem("brain_profile_phone", next); } catch {}
   emit();
 }
 
@@ -26,14 +34,32 @@ function subscribe(cb: () => void) {
 }
 
 function getSnapshot() {
-  return emailOverride ?? "";
+  return `${emailOverride ?? ""}|${phoneOverride ?? ""}`;
 }
+
+let hydrated = false;
 
 export function useUserContact() {
   const { user } = useAuth();
+  // One-time global rehydration from localStorage
+  if (!hydrated) {
+    hydrated = true;
+    try {
+      const storedEmail = localStorage.getItem("brain_profile_email");
+      if (storedEmail && storedEmail !== (emailOverride ?? "")) {
+        emailOverride = storedEmail;
+      }
+    } catch {}
+    try {
+      const storedPhone = localStorage.getItem("brain_profile_phone");
+      if (storedPhone && storedPhone !== (phoneOverride ?? "")) {
+        phoneOverride = storedPhone;
+      }
+    } catch {}
+  }
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
     email: emailOverride ?? user?.email ?? EMAIL_NOT_SET,
-    phone: PHONE_NOT_SET,
+    phone: phoneOverride ?? PHONE_NOT_SET,
   };
 }

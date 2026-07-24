@@ -5,7 +5,7 @@ import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { useAuth } from "@/lib/authContext";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
 import { usePlanId, setPlanId } from "@/lib/planStore";
-import { useUserContact } from "@/lib/userContact";
+import { useUserContact, setUserEmail, setUserPhone } from "@/lib/userContact";
 import { useCurrency } from "@/lib/currencyContext";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
@@ -171,6 +171,7 @@ const SettingRow = ({
   onClick,
   testId,
   useCircleIcon,
+  children,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -180,6 +181,7 @@ const SettingRow = ({
   onClick?: () => void;
   testId?: string;
   useCircleIcon?: boolean;
+  children?: React.ReactNode;
 }) => (
   <div
     data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
@@ -210,6 +212,7 @@ const SettingRow = ({
           {sublabel}
         </p>
       )}
+      {children}
     </div>
     {right && <div className="flex-shrink-0">{right}</div>}
     {onClick && !right && !useCircleIcon && <ChevronRight color={danger ? "#6b1a2a" : "#414965"} />}
@@ -277,18 +280,19 @@ const BriefcaseRowCircle = () => (
   </div>
 );
 
-/* Right-side action button: 40px circle with chevron-right glyph,
-   dimmed and inert. There is no backend endpoint to update email yet
-   (see server/routes.ts), so this renders disabled rather than opening
-   a fake OTP-verification flow. */
-const ChevronActionButton = ({ label, testId }: { label: string; testId?: string }) => (
+/* Right-side action button: 40px circle with chevron-right glyph.
+   When `onClick` is provided the button is active and fully opaque,
+   matching the Legal section row buttons. When omitted it falls back
+   to dimmed/inert (no backend endpoint to persist the change). */
+const ChevronActionButton = ({ label, testId, onClick }: { label: string; testId?: string; onClick?: () => void }) => (
   <button
     type="button"
-    disabled
+    onClick={onClick}
+    disabled={!onClick}
     aria-label={label}
-    aria-disabled="true"
+    aria-disabled={!onClick}
     data-testid={testId}
-    className="relative rounded-[100px] shrink-0 size-[40px] opacity-40 cursor-not-allowed"
+    className={`relative rounded-[100px] shrink-0 size-[40px] transition-opacity ${onClick ? "cursor-pointer hover:opacity-90" : "opacity-40 cursor-not-allowed"}`}
   >
     <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_action_circle_bg} />
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
@@ -324,6 +328,13 @@ function ProfileSection() {
   const name = nameOverride ?? liveName;
   const setName = setNameOverride;
   const [editing, setEditing] = useState(false);
+  const [editField, setEditField] = useState<"email" | "phone" | null>(null);
+  const [editEmail, setEditEmail] = useState(() => {
+    try { return localStorage.getItem("brain_profile_email") ?? email; } catch { return email; }
+  });
+  const [editPhone, setEditPhone] = useState(() => {
+    try { return localStorage.getItem("brain_profile_phone") ?? phone; } catch { return phone; }
+  });
   const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
   const avatarFileRef = useRef<HTMLInputElement | null>(null);
 
@@ -473,18 +484,84 @@ function ProfileSection() {
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Email"
-            sublabel={email}
-            right={<ChevronActionButton label="Edit email" testId="button-edit-email" />}
+            sublabel={editField === "email" ? undefined : email}
+            right={
+              editField === "email" ? (
+                <button
+                  type="button"
+                  data-testid="button-save-email"
+                  onClick={() => {
+                    setUserEmail(editEmail);
+                    try { localStorage.setItem("brain_profile_email", editEmail); } catch {}
+                    alert.success("Email updated", "Your email has been saved.");
+                    setEditField(null);
+                  }}
+                  className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#ff9500] whitespace-nowrap hover:opacity-90 transition-opacity"
+                >
+                  Save
+                </button>
+              ) : (
+                <ChevronActionButton
+                  label="Edit email"
+                  testId="button-edit-email"
+                  onClick={() => { setEditField("email"); setEditEmail(email); }}
+                />
+              )
+            }
             useCircleIcon
-          />
+          >
+            {editField === "email" && (
+              <input
+                data-testid="input-email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="bg-transparent outline-none border-b w-full mt-[4px]"
+                style={{ borderColor: "#7631ee", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
+                autoFocus
+              />
+            )}
+          </SettingRow>
           <Divider />
-          {/* No phone field or SMS provider exists yet — read-only, no fake verification flow. */}
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
-            sublabel={phone}
+            sublabel={editField === "phone" ? undefined : phone}
+            right={
+              editField === "phone" ? (
+                <button
+                  type="button"
+                  data-testid="button-save-phone"
+                  onClick={() => {
+                    setUserPhone(editPhone);
+                    try { localStorage.setItem("brain_profile_phone", editPhone); } catch {}
+                    alert.success("Phone updated", "Your phone number has been saved.");
+                    setEditField(null);
+                  }}
+                  className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#ff9500] whitespace-nowrap hover:opacity-90 transition-opacity"
+                >
+                  Save
+                </button>
+              ) : (
+                <ChevronActionButton
+                  label="Edit phone"
+                  testId="button-edit-phone"
+                  onClick={() => { setEditField("phone"); setEditPhone(phone); }}
+                />
+              )
+            }
             useCircleIcon
-          />
+          >
+            {editField === "phone" && (
+              <input
+                data-testid="input-phone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="bg-transparent outline-none border-b w-full mt-[4px]"
+                style={{ borderColor: "#7631ee", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
+                autoFocus
+              />
+            )}
+          </SettingRow>
         </Card>
       </div>
 
