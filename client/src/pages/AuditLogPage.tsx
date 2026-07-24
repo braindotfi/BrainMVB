@@ -5,8 +5,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
-import { AUDIT_TABS, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
-import { Search, RefreshCw } from "lucide-react";
+import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity, humanReadableActor } from "@/lib/auditTypes";
+import refreshIcon from "@assets/refresh_1784933925263.png";
+import searchIcon from "@assets/Vector_1784933720094.png";
 import { useCurrency } from "@/lib/currencyContext";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
@@ -125,12 +126,12 @@ export function AuditLogPage() {
   };
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col min-w-0">
-      <ScrollArea className="flex-1 min-w-0">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full min-w-0">
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] w-full h-full flex flex-col min-w-0">
+      <ScrollArea className="flex-1 min-w-0 w-full">
+        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full min-w-0 overflow-x-hidden">
 
           {/* Header — text/title/spacing unchanged per design brief */}
-          <div className="flex items-start justify-between gap-[16px] relative shrink-0 w-full min-w-0">
+          <div className="flex items-start justify-between gap-[16px] relative w-full min-w-0">
             <div className="flex flex-col items-start gap-[4px] relative min-w-px flex-1">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Audit Log</p>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
@@ -144,7 +145,7 @@ export function AuditLogPage() {
               data-testid="button-refresh-audit-log"
               className="inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-[100px] bg-[#222737] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] transition-colors hover:bg-[#2a3047] disabled:opacity-60 shrink-0"
             >
-              <RefreshCw className={`w-[14px] h-[14px] ${refreshing ? "animate-spin" : ""}`} />
+              <img src={refreshIcon} alt="" className={`size-[16px] object-contain shrink-0${refreshing ? " animate-spin" : ""}`} />
               {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
@@ -176,7 +177,7 @@ export function AuditLogPage() {
 
             {/* Search — Figma: bg-[#222737] rounded-[8px] p-[8px] w-full, 24px icon, 16px #6c779d placeholder */}
             <div className="bg-[#222737] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full gap-[8px]">
-              <Search className="w-[24px] h-[24px] text-[#6c779d] shrink-0" />
+              <img src={searchIcon} alt="" className="size-[24px] object-contain shrink-0" />
               <input
                 type="text"
                 value={query}
@@ -266,11 +267,17 @@ export function AuditLogPage() {
                               className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] hover:bg-[#11141b] transition-colors text-left min-w-0"
                               style={borderLeft ? { borderLeft } : undefined}
                             >
-                              {/* Left: title + subtitle */}
+                              {/* Left: title+pill row / subtitle */}
                               <div className="flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center min-w-px">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full truncate">
-                                  {record.summary}
-                                </p>
+                                {/* Title + type pill inline */}
+                                <div className="flex gap-[8px] items-center w-full min-w-0">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+                                    {record.summary}
+                                  </p>
+                                  <span className={`inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] whitespace-nowrap ${auditRecordChipClass(record)}`}>
+                                    {auditRecordLabel(record)}
+                                  </span>
+                                </div>
                                 {subtitle && (
                                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full truncate">
                                     {subtitle}
