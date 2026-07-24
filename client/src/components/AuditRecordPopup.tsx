@@ -2,7 +2,7 @@ import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
-import checkIcon from "@assets/check_1783385199788.png";
+import checkIcon from "@assets/check_1784935340999.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
 import { auditRecordLabel, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
@@ -223,7 +223,7 @@ export function AuditRecordPopup({
                                         <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-[#414965] w-full">
                                           {canned.description}
                                         </p>
-                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] text-[12px] w-full">
+                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] w-full">
                                           <span className="text-[#6c779d]">Exact prompt used:</span> {canned.prompt}
                                         </p>
                                       </>
@@ -250,7 +250,7 @@ export function AuditRecordPopup({
                                       </p>
                                     );
                                   })()}
-                                  <p className="relative shrink-0 text-[#6c779d] text-[12px] w-full">{step.timestamp}</p>
+                                  <p className="relative shrink-0 text-[#6c779d] w-full">{step.timestamp}</p>
                                 </div>
                               </div>
                             );
