@@ -46,28 +46,28 @@ export function AnchorStatus({
         {guarantee}
       </p>
 
-      {/* Hash block - shown only in proof mode when anchored */}
+      {/* Hash block - shown only in proof mode */}
       {mode === "proof" && (
-        <div className="bg-[#0a0c10] rounded-[8px] p-[12px] flex flex-col gap-[8px] w-full">
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d] w-full">
+        <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[8px] p-[12px] flex flex-col gap-[8px] w-full">
+          <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
             Audit ID: {anchor.auditId}
           </p>
           {pending ? (
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965] w-full">
-              Not yet anchored — usually completes within a few hours.
+            <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
+              Not yet anchored. It usually completes within a few hours.
             </p>
           ) : (
             <>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d] w-full">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
                 Merkle root: {anchor.merkleRoot}
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d] w-full">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
                 Base tx: {anchor.baseTx}
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#6c779d] w-full">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#6c779d] w-full">
                 Block: {anchor.block?.toLocaleString()}
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#414965] w-full">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-[#414965] w-full">
                 Anchored at {anchor.anchoredAtLabel}
               </p>
             </>
@@ -77,7 +77,7 @@ export function AnchorStatus({
 
       {/* Action row - 32px above button (gap-[12px] outer + mt-[20px] here) */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[6px] w-full mt-[20px]">
+        <div className="flex flex-col gap-[12px] w-full mt-[20px]">
           <span
             className="w-full"
             title={pending ? "Verification isn't available yet — this record hasn't been anchored on-chain." : undefined}
