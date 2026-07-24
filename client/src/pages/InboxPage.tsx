@@ -39,8 +39,8 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
-type InboxTab = "Needs Review" | "Auto-Approved" | "Rejected" | "Rule Changes";
-const INBOX_TABS: InboxTab[] = ["Needs Review", "Auto-Approved", "Rejected", "Rule Changes"];
+type InboxTab = "Needs Review" | "Insights" | "Auto-Approved" | "Rejected" | "Rule Changes";
+const INBOX_TABS: InboxTab[] = ["Needs Review", "Insights", "Auto-Approved", "Rejected", "Rule Changes"];
 
 /* Map an audit event type onto its Inbox tab. */
 function auditTab(eventType: AuditEventType): InboxTab {
@@ -500,7 +500,7 @@ export function InboxPage() {
       push({
         id: i.id,
         kind: "detection",
-        tab: "Needs Review",
+        tab: "Insights",
         title: i.title,
         tag: i.badge || "Detected",
         tagClass: TAG_DETECTED,
@@ -584,21 +584,12 @@ export function InboxPage() {
   }, [liveReviews, queue, needsReviewProposals, liveInsights, liveAutoApproved, statuses, auditRecords, format]);
 
   const counts: Record<InboxTab, number> = useMemo(() => {
-    const c: Record<InboxTab, number> = { "Needs Review": 0, "Auto-Approved": 0, "Rejected": 0, "Rule Changes": 0 };
-    /* Detections live in their own "Detected" section, so they don't count
-       toward the actionable Needs Review badge. */
-    for (const it of items) {
-      if (it.tab === "Needs Review" && it.kind === "detection") continue;
-      c[it.tab] += 1;
-    }
+    const c: Record<InboxTab, number> = { "Needs Review": 0, Insights: 0, "Auto-Approved": 0, Rejected: 0, "Rule Changes": 0 };
+    for (const it of items) c[it.tab] += 1;
     return c;
   }, [items]);
 
-  const allVisible = items.filter((it) => it.tab === activeTab);
-  /* On Needs Review, detections render in their own "Detected" section below
-     the actionable queue — they are observations, not pending decisions. */
-  const visible = activeTab === "Needs Review" ? allVisible.filter((it) => it.kind !== "detection") : allVisible;
-  const detected = activeTab === "Needs Review" ? allVisible.filter((it) => it.kind === "detection") : [];
+  const visible = items.filter((it) => it.tab === activeTab);
 
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
@@ -770,38 +761,6 @@ export function InboxPage() {
                 )}
               </div>
             </div>
-
-            {/* Detected — ledger-derived observations, separate from the
-                actionable review queue. Nothing here awaits a decision. */}
-            {detected.length > 0 && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full" data-testid="section-detected">
-                <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                  <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">Detected</p>
-                    <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{detected.length}</p>
-                    </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[13px] truncate">
-                      Observations from your ledger — no decision needed.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {detected.map((item, idx) => (
-                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                        <InboxCard
-                          item={item}
-                          onOpen={openItem}
-                          busy={itemBusy(item)}
-                        />
-                        {idx < detected.length - 1 && <Divider />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Helper banner */}
             {activeTab === "Needs Review" && (
