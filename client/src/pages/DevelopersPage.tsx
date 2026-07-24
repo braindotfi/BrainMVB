@@ -363,45 +363,109 @@ const PopupCodeBox = ({ children, testId }: { children: ReactNode; testId?: stri
 /* ─── One-time plaintext key modal (Figma 6053-69539 "Your New API Key") ─── */
 const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose: () => void }) => {
   const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
-    <PopupShell
-      title="Your New API Key"
-      onClose={onClose}
-      testId="modal-plaintext-key"
-      footer={
-        <button
-          type="button"
-          data-testid="button-copy-key"
-          onClick={async () => {
-            try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
-          }}
-          className="w-full bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-        >
-          {copied ? "Copied" : "Copy Key"}
-        </button>
-      }
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      data-testid="modal-plaintext-key"
     >
-      <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] rounded-[12px] flex items-center p-[8px] w-full">
-        <div className="flex flex-1 min-w-px gap-[8px] items-start">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-      </svg>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
-            Copy it now — for your security, it will never be shown again.
+      <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+
+        {/* ── Header ── */}
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
+          <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-popup-title">
+            API Key
           </p>
+          <button
+            type="button"
+            data-testid="button-close-popup"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2a3046] transition-colors text-[#6c779d] focus:outline-none"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
+
+        {/* ── Body ── */}
+        <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
+          {/* Warning info box */}
+          <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid rounded-[12px] flex items-center p-[8px] w-full">
+            <div className="flex flex-1 min-w-px gap-[8px] items-start">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
+                <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
+                <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
+                <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
+              </svg>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
+                Store it safely. For your security, it will never be shown again.
+              </p>
+            </div>
+          </div>
+          {/* API Key section */}
+          <PopupSection label="API Key">
+            <PopupCodeBox testId="text-plaintext-key">{plaintext}</PopupCodeBox>
+          </PopupSection>
+          {/* Try it now section */}
+          <PopupSection label="Try it now">
+            <PopupCodeBox testId="text-curl-example">
+              {`curl ${window.location.origin}/api/v1/ping -H "Authorization: Bearer ${plaintext}"`}
+            </PopupCodeBox>
+          </PopupSection>
+        </div>
+
+        {/* ── Footer row 1: Copy Key ── */}
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+          <div className="flex items-center relative shrink-0 w-full">
+            <button
+              type="button"
+              data-testid="button-copy-key"
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
+              }}
+              className="bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] whitespace-nowrap focus:outline-none"
+            >
+              {copied ? "Copied!" : "Copy Key"}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Footer row 2: Previous / Next (disabled — no list context for plaintext) ── */}
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+          <div className="flex items-center justify-between relative shrink-0 w-full">
+            <button
+              type="button"
+              disabled
+              className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] opacity-40 cursor-not-allowed"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+            </button>
+            <button
+              type="button"
+              disabled
+              className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] opacity-40 cursor-not-allowed"
+            >
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
       </div>
-      <PopupSection label="API Key">
-        <PopupCodeBox testId="text-plaintext-key">{plaintext}</PopupCodeBox>
-      </PopupSection>
-      <PopupSection label="Try it now">
-        <PopupCodeBox testId="text-curl-example">
-          {`curl ${window.location.origin}/api/v1/ping -H "Authorization: Bearer ${plaintext}"`}
-        </PopupCodeBox>
-      </PopupSection>
-    </PopupShell>
+    </div>
   );
 };
 
