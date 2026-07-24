@@ -58,7 +58,7 @@ export function AnchorStatus({
     <div className="flex flex-col gap-[16px] w-full">
 
       {/* Status line: icon + label */}
-      <div className="content-stretch flex gap-[4px] items-start relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full">
         {pending ? (
           <img src={clockIcon} alt="Pending" className="size-[16px] shrink-0 object-contain" />
         ) : (
