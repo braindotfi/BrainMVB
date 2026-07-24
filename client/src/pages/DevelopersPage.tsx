@@ -1238,13 +1238,13 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
                 className="absolute flex items-center justify-center px-[10px] py-[4px] rounded-[22px]"
                 style={{
                   left: 23, top: 17,
-                  background: selectedTenant.environment === "live" ? "#0d2a1a" : "#4a2300",
-                  border: selectedTenant.environment === "live" ? "1px solid rgba(66,191,35,0.2)" : "1px solid rgba(255,149,0,0.2)",
+                  background: selectedTenant.environment === "live" ? "#4a2300" : "#222737",
+                  border: selectedTenant.environment === "live" ? "1px solid rgba(255,149,0,0.2)" : "1px solid rgba(168,185,244,0.2)",
                 }}
               >
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
-                  style={{ color: selectedTenant.environment === "live" ? "#42bf23" : "#ff9400" }}
+                  style={{ color: selectedTenant.environment === "live" ? "#ff9500" : "#a8b9f4" }}
                 >
                   {selectedTenant.environment === "live" ? "Live" : "Sandbox"}
                 </p>
@@ -1336,9 +1336,9 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
               )}
             </div>
 
-            {/* ── Footer ── */}
+            {/* ── Footer row 1: View API Keys ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="flex items-center gap-[8px] relative shrink-0 w-full">
+              <div className="flex items-center relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-tenant-view-keys"
@@ -1347,6 +1347,11 @@ function TenantsSection({ onNavigate }: { onNavigate: (s: DevSection) => void })
                 >
                   View API Keys
                 </button>
+              </div>
+            </div>
+            {/* ── Footer row 2: Previous / Next ── */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="flex items-center justify-between relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-tenant-prev"
