@@ -308,7 +308,15 @@ const IncomeTxList = ({
   const inflows = (txData?.transactions ?? [])
     .filter((t) => t.direction === "inflow")
     .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
-  if (inflows.length === 0) return null;
+  if (inflows.length === 0) {
+    return (
+      <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+        <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+          No income recorded yet. This populates from your ledger as money comes in.
+        </p>
+      </div>
+    );
+  }
   const nameOf = (id?: string | null) =>
     (id && cpData?.counterparties.find((c) => c.id === id)?.name) || null;
   const shortDate = (iso: string) => {
@@ -329,10 +337,10 @@ const IncomeTxList = ({
               data-testid={`income-tx-${t.id}`}
               onClick={() => onOpen(t.id)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
-              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
             >
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{label}</p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
               </div>
               <div className="flex flex-col items-end justify-center relative shrink-0">
