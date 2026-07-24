@@ -15,6 +15,7 @@ import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
+import { ContactUpdateModal } from "@/components/ContactUpdateModal";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import TeamFigma from "@/components/settings/figma/TeamSection";
@@ -328,13 +329,7 @@ function ProfileSection() {
   const name = nameOverride ?? liveName;
   const setName = setNameOverride;
   const [editing, setEditing] = useState(false);
-  const [editField, setEditField] = useState<"email" | "phone" | null>(null);
-  const [editEmail, setEditEmail] = useState(() => {
-    try { return localStorage.getItem("brain_profile_email") ?? email; } catch { return email; }
-  });
-  const [editPhone, setEditPhone] = useState(() => {
-    try { return localStorage.getItem("brain_profile_phone") ?? phone; } catch { return phone; }
-  });
+  const [contactModal, setContactModal] = useState<"email" | "phone" | null>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
   const avatarFileRef = useRef<HTMLInputElement | null>(null);
 
@@ -484,86 +479,52 @@ function ProfileSection() {
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Email"
-            sublabel={editField === "email" ? undefined : email}
+            sublabel={email}
             right={
-              editField === "email" ? (
-                <button
-                  type="button"
-                  data-testid="button-save-email"
-                  onClick={() => {
-                    setUserEmail(editEmail);
-                    try { localStorage.setItem("brain_profile_email", editEmail); } catch {}
-                    alert.success("Email updated", "Your email has been saved.");
-                    setEditField(null);
-                  }}
-                  className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#ff9500] whitespace-nowrap hover:opacity-90 transition-opacity"
-                >
-                  Save
-                </button>
-              ) : (
-                <ChevronActionButton
-                  label="Edit email"
-                  testId="button-edit-email"
-                  onClick={() => { setEditField("email"); setEditEmail(email); }}
-                />
-              )
+              <ChevronActionButton
+                label="Edit email"
+                testId="button-edit-email"
+                onClick={() => setContactModal("email")}
+              />
             }
             useCircleIcon
-          >
-            {editField === "email" && (
-              <input
-                data-testid="input-email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                className="bg-transparent outline-none border-b w-full mt-[4px]"
-                style={{ borderColor: "#7631ee", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
-                autoFocus
-              />
-            )}
-          </SettingRow>
+          />
           <Divider />
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_phone_icon} inset="8.33% 25%" innerInset="-5% -8.33%" overflowClip />}
             label="Phone Number"
-            sublabel={editField === "phone" ? undefined : phone}
+            sublabel={phone}
             right={
-              editField === "phone" ? (
-                <button
-                  type="button"
-                  data-testid="button-save-phone"
-                  onClick={() => {
-                    setUserPhone(editPhone);
-                    try { localStorage.setItem("brain_profile_phone", editPhone); } catch {}
-                    alert.success("Phone updated", "Your phone number has been saved.");
-                    setEditField(null);
-                  }}
-                  className="bg-[#4a2300] flex items-center justify-center px-[12px] py-[6px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#ff9500] whitespace-nowrap hover:opacity-90 transition-opacity"
-                >
-                  Save
-                </button>
-              ) : (
-                <ChevronActionButton
-                  label="Edit phone"
-                  testId="button-edit-phone"
-                  onClick={() => { setEditField("phone"); setEditPhone(phone); }}
-                />
-              )
+              <ChevronActionButton
+                label="Edit phone"
+                testId="button-edit-phone"
+                onClick={() => setContactModal("phone")}
+              />
             }
             useCircleIcon
-          >
-            {editField === "phone" && (
-              <input
-                data-testid="input-phone"
-                value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                className="bg-transparent outline-none border-b w-full mt-[4px]"
-                style={{ borderColor: "#7631ee", color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
-                autoFocus
-              />
-            )}
-          </SettingRow>
+          />
         </Card>
       </div>
+
+      {/* Two-step email / phone update modals */}
+      <ContactUpdateModal
+        open={contactModal === "email"}
+        onOpenChange={(o) => !o && setContactModal(null)}
+        type="email"
+        onComplete={(v) => {
+          setUserEmail(v);
+          alert.success("Email updated", "Your email has been verified and saved.");
+        }}
+      />
+      <ContactUpdateModal
+        open={contactModal === "phone"}
+        onOpenChange={(o) => !o && setContactModal(null)}
+        type="phone"
+        onComplete={(v) => {
+          setUserPhone(v);
+          alert.success("Phone updated", "Your phone number has been verified and saved.");
+        }}
+      />
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Currency</SectionLabel>
