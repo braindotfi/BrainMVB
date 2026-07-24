@@ -1,4 +1,4 @@
-import { Clock, ExternalLink } from "lucide-react";
+import clockIcon from "@assets/clock_1784932797624.png";
 import anchoredIcon from "@assets/anchored_1783385308122.png";
 import type { AnchorProof } from "@/lib/auditTypes";
 
@@ -10,22 +10,28 @@ import type { AnchorProof } from "@/lib/auditTypes";
 function HashRow({
   label,
   value,
-  dim = false,
   first = false,
+  valueDim = false,
 }: {
   label: string;
   value: string | undefined;
-  dim?: boolean;
   first?: boolean;
+  valueDim?: boolean;
 }) {
   return (
-    <div className={`flex items-start gap-[8px] px-[12px] py-[8px]${first ? "" : " border-t border-[#1d2132]"}`}>
-      <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] text-[#414965] shrink-0 whitespace-nowrap">
-        {label}
-      </span>
-      <span className={`[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[18px] break-all min-w-0 ${dim ? "text-[#414965]" : "text-[#6c779d]"}`}>
-        {value ?? "—"}
-      </span>
+    <div className={`content-stretch flex items-start relative shrink-0 w-full${first ? "" : " border-t border-[#1d2132]"}`}>
+      {/* Label column — fixed 140px, Gilroy SemiBold 12px #6c779d */}
+      <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+          {label}
+        </p>
+      </div>
+      {/* Value column — Gilroy Medium 13px #a8b9f4 (or #6c779d when dim) */}
+      <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
+        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all ${valueDim ? "text-[#6c779d]" : "text-[#a8b9f4]"}`}>
+          {value ?? "—"}
+        </p>
+      </div>
     </div>
   );
 }
@@ -44,43 +50,44 @@ export function AnchorStatus({
   const isAnchored = anchor.status === "anchored";
   const pending = !isAnchored;
 
-  const iconColor = pending ? "#6c779d" : "#42bf23";
-  const statusLabel = pending
-    ? "Not yet anchored. It usually completes within a few hours."
-    : "Anchored · tamper-evident";
   const guarantee = pending
     ? "Once anchored on Base, this record becomes independently verifiable."
     : "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain.";
 
   return (
-    <div className="flex flex-col gap-[12px] w-full">
-      <div className="flex items-center gap-[8px] w-full">
+    <div className="flex flex-col gap-[16px] w-full">
+
+      {/* Status line: icon + label */}
+      <div className="content-stretch flex gap-[4px] items-start relative shrink-0 w-full">
         {pending ? (
-          <Clock size={16} style={{ color: iconColor }} className="shrink-0" />
+          <img src={clockIcon} alt="Pending" className="h-[20px] w-[16px] shrink-0" />
         ) : (
-          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
+          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0 mt-[2px]" />
         )}
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px]" style={{ color: iconColor }}>
-          {statusLabel}
-        </span>
+        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] flex-[1_0_0] min-w-px ${pending ? "text-[#a8b9f4]" : "text-[#42bf23]"}`}>
+          {pending
+            ? "Not yet anchored. It usually completes within a few hours."
+            : "Anchored · tamper-evident"}
+        </p>
       </div>
 
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d] w-full">
-        {guarantee}
-      </p>
+      {/* Guarantee sub-line */}
+      <div className="content-stretch flex items-center relative shrink-0 w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] flex-[1_0_0] min-w-px">
+          {guarantee}
+        </p>
+      </div>
 
-      {/* Hash table — proof mode only; row-divided, label dim / value muted */}
+      {/* Hash table — proof mode only; two-column label/value rows */}
       {mode === "proof" && (
-        <div className="bg-[#0a0c10] border border-[#1d2132] rounded-[8px] overflow-hidden w-full">
+        <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
           <HashRow first label="Audit ID" value={anchor.auditId} />
-          {pending ? (
-            <HashRow label="Status" value="Not yet anchored" dim />
-          ) : (
+          {!pending && (
             <>
               <HashRow label="Merkle root" value={anchor.merkleRoot} />
               <HashRow label="Base tx" value={anchor.baseTx} />
               <HashRow label="Block" value={anchor.block?.toLocaleString()} />
-              <HashRow label="Anchored at" value={anchor.anchoredAtLabel} dim />
+              <HashRow label="Anchored at" value={anchor.anchoredAtLabel} valueDim />
             </>
           )}
         </div>
@@ -88,7 +95,7 @@ export function AnchorStatus({
 
       {/* Action row */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[12px] w-full mt-[20px]">
+        <div className="flex flex-col gap-[12px] w-full mt-[4px]">
           <span
             className="w-full"
             title={pending ? "Verification isn't available yet — this record hasn't been anchored on-chain." : undefined}
