@@ -126,9 +126,9 @@ export function AuditLogPage() {
   };
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] w-full h-full flex flex-col min-w-0">
-      <ScrollArea className="flex-1 min-w-0 w-full">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full min-w-0 overflow-x-hidden">
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
           {/* Header — text/title/spacing unchanged per design brief */}
           <div className="flex items-start justify-between gap-[16px] relative w-full min-w-0">
@@ -249,12 +249,16 @@ export function AuditLogPage() {
                         const isRejected = record.eventType === "rejected";
                         const borderLeft = isFlagged || isRejected ? "3px solid #d20344" : undefined;
                         const actorText = humanReadableActor(record.actor);
+                        const timestampText = new Date(record.occurredAtMs).toLocaleString(undefined, {
+                          month: "short", day: "numeric", year: "numeric",
+                          hour: "numeric", minute: "2-digit",
+                        });
                         const subtitle =
                           record.rowSubtitle ??
                           [
                             typeof record.amount === "number" ? format(record.amount) : "",
                             actorText ?? "",
-                            record.id,
+                            timestampText,
                           ].filter(Boolean).join(" · ");
 
                         return (

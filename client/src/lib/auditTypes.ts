@@ -147,6 +147,8 @@ export function auditEventChipClass(type: AuditEventType): string {
       return "bg-[#350011] text-[#d20344]";
     case "postponed":
       return "bg-[#1a1c24] text-[#6c779d]";
+    case "system_activity":
+      return "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]";
     default:
       return "bg-[#1d2132] text-[#a8b9f4]";
   }
