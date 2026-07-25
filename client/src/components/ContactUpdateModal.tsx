@@ -323,7 +323,7 @@ export function ContactUpdateModal({
                   {isEmail ? (
                     <div className="flex flex-col gap-[4px]">
                       <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
-                        Enter New Email Address
+                        Email Address
                       </p>
                       <TextInput
                         value={email}
