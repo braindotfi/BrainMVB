@@ -48,7 +48,7 @@ const STEP_INDEX: Record<Screen, number> = {
 };
 const TOTAL_STEPS = 4;
 
-type CategoryId = "bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents";
+export type CategoryId = "bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents";
 
 interface AddSourceModalProps {
   open: boolean;
@@ -665,7 +665,7 @@ function CategoryIcon({ cat }: { cat: CategoryId }) {
 }
 
 /* ───────────────────────────── Screen: Bank (Plaid) ───────────────────────────── */
-function BankConnect({ onDone }: { onDone: () => void }) {
+export function BankConnect({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const statusQuery = useQuery<{ configured: boolean; env: string }>({
@@ -859,7 +859,7 @@ function PlaidConnectButton({
 }
 
 /* ───────────────────────────── Screen: Provider picker ───────────────────────────── */
-function ProviderPicker({ category }: { category: CategoryId }) {
+export function ProviderPicker({ category }: { category: CategoryId }) {
   const providers = PROVIDERS[category] ?? [];
   const [connecting, setConnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -984,7 +984,7 @@ function ProviderPicker({ category }: { category: CategoryId }) {
 }
 
 /* ───────────────────────────── Screen: Document upload ───────────────────────────── */
-function DocumentUpload({ category, onDone }: { category: string; onDone: () => void }) {
+export function DocumentUpload({ category, onDone }: { category: string; onDone: () => void }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);

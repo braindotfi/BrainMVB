@@ -1,9 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
-import { CategoryPicker, ReadingScreen, FoundScreen } from "./AddSourceModal";
+import {
+  CategoryPicker,
+  ReadingScreen,
+  FoundScreen,
+  BankConnect,
+  ProviderPicker,
+  DocumentUpload,
+  type CategoryId,
+} from "./AddSourceModal";
 
 const TOTAL_STEPS = 4;
+
+type SubScreen = "categories" | "bank" | "providers" | "documents";
+
+function categoryTarget(cat: CategoryId): SubScreen {
+  if (cat === "bank") return "bank";
+  if (cat === "tax" || cat === "documents") return "documents";
+  return "providers";
+}
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -13,6 +29,8 @@ interface OnboardingFlowProps {
 
 export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
+  const [subScreen, setSubScreen] = useState<SubScreen>("categories");
+  const [activeCategory, setActiveCategory] = useState<CategoryId>("accounting");
 
   const goNext = useCallback(() => {
     setStep((s) => {
@@ -24,10 +42,26 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
     });
   }, [onComplete]);
 
-  const goBack = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+  const goBack = useCallback(() => {
+    if (step === 1 && subScreen !== "categories") {
+      setSubScreen("categories");
+      return;
+    }
+    setStep((s) => Math.max(0, s - 1));
+  }, [step, subScreen]);
+
+  const openCategory = useCallback((cat: CategoryId) => {
+    setActiveCategory(cat);
+    setSubScreen(categoryTarget(cat));
+  }, []);
+
+  const backToCategories = useCallback(() => setSubScreen("categories"), []);
 
   useEffect(() => {
-    if (open) setStep(0);
+    if (open) {
+      setStep(0);
+      setSubScreen("categories");
+    }
   }, [open]);
 
   return (
@@ -44,7 +78,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
         >
           {/* Header */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            {step > 0 && (
+            {(step > 0) && (
               <button
                 type="button"
                 onClick={goBack}
@@ -110,24 +144,36 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                 </>
               )}
 
-              {/* Step 2: Connect a source (CategoryPicker from AddSourceModal) */}
-              {step === 1 && (
+              {/* Step 2: Connect a source */}
+              {step === 1 && subScreen === "categories" && (
                 <CategoryPicker
-                  onPick={() => {}}
+                  onPick={openCategory}
                   onContinue={goNext}
                 />
               )}
+              {step === 1 && subScreen === "bank" && (
+                <BankConnect onDone={backToCategories} />
+              )}
+              {step === 1 && subScreen === "providers" && (
+                <ProviderPicker category={activeCategory} />
+              )}
+              {step === 1 && subScreen === "documents" && (
+                <DocumentUpload
+                  category={activeCategory === "tax" ? "tax" : "general"}
+                  onDone={backToCategories}
+                />
+              )}
 
-              {/* Step 3: Reading (ReadingScreen from AddSourceModal) */}
+              {/* Step 3: Reading */}
               {step === 2 && (
                 <ReadingScreen
                   onViewWiki={goBack}
                   onContinue={goNext}
-                  onAddMore={() => setStep(1)}
+                  onAddMore={() => { setStep(1); setSubScreen("categories"); }}
                 />
               )}
 
-              {/* Step 4: Everything Brain Found (FoundScreen from AddSourceModal) */}
+              {/* Step 4: Everything Brain Found */}
               {step === 3 && (
                 <FoundScreen onFinish={onComplete} />
               )}
@@ -140,7 +186,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
   );
 }
 
-/* ─── Step indicator ─── */
+/* Step indicator */
 function StepDots({ total, current }: { total: number; current: number }) {
   return (
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-[8px] px-[12px] py-[6px] rounded-full bg-[#1a0d33]">
@@ -156,7 +202,7 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-/* ─── Step 1: Welcome ─── */
+/* Step 1: Welcome */
 function StepWelcome() {
   return (
     <div className="flex flex-col gap-[8px]">
