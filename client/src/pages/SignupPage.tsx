@@ -245,7 +245,7 @@ export function SignupPage() {
             {mode === "login" ? (
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
-                  Username or email
+                  Username or Email
                 </label>
                 <input
                   data-testid="input-identifier"
