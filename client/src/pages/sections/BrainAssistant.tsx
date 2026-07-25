@@ -875,7 +875,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                             (resolvedType === "transaction" && txIds.has(s.entityId)) ||
                             (resolvedType === "invoice" && invIds.has(s.entityId)) ||
                             resolvedType === "member" ||
-                            (resolvedType === "counterparty" && !!resolveVendor(s.entityId));
+                            (resolvedType === "counterparty" && !!resolveVendor(s.entityId)) ||
+                            resolvedType === "audit_event" ||
+                            resolvedType === "obligation" ||
+                            resolvedType === "payment_intent" ||
+                            resolvedType === "wiki.question";
                           return isClickable ? (
                             <button
                               key={`${s.entityId}-${i}`}
@@ -887,6 +891,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "invoice") setOpenBillId(s.entityId);
                                 else if (resolvedType === "member") openMemberDetail(s.entityId);
                                 else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
+                                else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
+                                else if (resolvedType === "obligation") navigate("/bills");
+                                else if (resolvedType === "payment_intent") navigate("/review");
+                                else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
                               title={s.entityId}
                               className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
