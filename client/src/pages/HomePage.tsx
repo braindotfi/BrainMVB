@@ -739,7 +739,7 @@ export function HomePage() {
 
           {/* Stat cards row */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex gap-[16px] items-stretch relative shrink-0 w-full">
+            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
               <div
                 className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px] cursor-pointer transition-colors hover:bg-[#11141b] border border-transparent hover:border-[#1d2132]"
                 role="button"
@@ -779,10 +779,9 @@ export function HomePage() {
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Middle row: Brain Detected (left) + Brain Did (right).
-                items-stretch + h-full keep both cards the same height regardless
-                of how many rows each side has. */}
-            <div className="flex gap-[16px] items-stretch relative shrink-0 w-full">
+            {/* Middle row: Brain Detected (top/left) + Brain Did (bottom/right).
+                On mobile they stack vertically; on sm+ they sit side-by-side. */}
+            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Detected"

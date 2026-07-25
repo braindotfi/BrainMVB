@@ -127,8 +127,8 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
 }
 
 function MainShell({ onLogout }: { onLogout: () => void }) {
-  const [navCollapsed, setNavCollapsed] = useState(false);
-  const [accountCollapsed, setAccountCollapsed] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => window.innerWidth < 768);
+  const [accountCollapsed, setAccountCollapsed] = useState(() => window.innerWidth < 768);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
 
   const handleLogout = onLogout;
