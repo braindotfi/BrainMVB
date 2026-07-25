@@ -838,6 +838,8 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 )}
                 {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
                   <div className="flex flex-col items-start gap-[6px] w-full">
+                    {/* Toggle — NOT a wrapper for the evidence list (nested buttons
+                       are invalid and suppress inner click events). */}
                     <button
                       type="button"
                       data-testid="assistant-sources"
@@ -847,6 +849,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       Grounded in {msg.sources.length} record{msg.sources.length === 1 ? "" : "s"} from your ledger
                       {openEvidenceFor === msg.id ? " ▾" : " ▸"}
                     </button>
+                    {/* Evidence list — sibling of the toggle, never nested inside it */}
                     {openEvidenceFor === msg.id && (
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
