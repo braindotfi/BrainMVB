@@ -1335,6 +1335,9 @@ function formatDue(due: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** How long after an upload we treat empty results as "still extracting" rather than "nothing found". */
+const EXTRACTING_WINDOW_MS = 3 * 60 * 1000;
+
 export function FoundScreen({ onFinish }: { onFinish: () => void }) {
   const [activeTab, setActiveTab] = useState<FoundTab>("all");
 
@@ -1347,6 +1350,26 @@ export function FoundScreen({ onFinish }: { onFinish: () => void }) {
     queryKey: ["/api/brain/ledger/counterparties"],
     queryFn: fetchCounterparties,
   });
+  /* Upload recency: if the newest document was uploaded within the last few
+     minutes, an empty obligations list means "extraction still running", not
+     "nothing found". Uses the same documents cache as the rest of the modal. */
+  const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
+  const latestUploadMs = useMemo(() => {
+    let latest = 0;
+    for (const d of docsQuery.data ?? []) {
+      const t = new Date(d.uploadedAt).getTime();
+      if (Number.isFinite(t) && t > latest) latest = t;
+    }
+    return latest;
+  }, [docsQuery.data]);
+  /* Ticking clock so the extracting state flips to the genuine empty state
+     on its own once the window passes, without any user action. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
+  const recentlyUploaded = latestUploadMs > 0 && now - latestUploadMs < EXTRACTING_WINDOW_MS;
 
   const obligations = obligationsQuery.data ?? [];
   const cpMap = counterpartiesQuery.data ?? new Map<string, string>();
@@ -1402,6 +1425,14 @@ export function FoundScreen({ onFinish }: { onFinish: () => void }) {
         <div className="bg-[#0a0c10] rounded-[16px] p-[20px] text-center" data-testid="status-obligations-error">
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#fca5a5] text-[14px] leading-[20px]">
             Couldn't load obligations right now. You can finish and check back later.
+          </p>
+        </div>
+      ) : obligations.length === 0 && recentlyUploaded ? (
+        <div className="flex items-start gap-[10px] bg-[#0a0c10] rounded-[12px] px-[14px] py-[12px]" data-testid="status-obligations-extracting">
+          <span className="size-[16px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0 mt-[2px]" aria-hidden />
+          <p className="[font-family:'Gilroy',sans-serif] leading-[20px] text-[14px]">
+            <span className="font-semibold text-[#a8b9f4]">Brain is reading your documents.</span>{" "}
+            <span className="font-medium text-[#6c779d]">This usually takes 1 to 2 minutes. Check back shortly, or stay here and we'll update automatically.</span>
           </p>
         </div>
       ) : obligations.length === 0 ? (
