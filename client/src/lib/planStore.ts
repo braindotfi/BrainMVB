@@ -9,16 +9,20 @@
 
 import { useSyncExternalStore } from "react";
 
-export type PlanId = "free" | "pro" | "business";
+export type PlanId = "free" | "personal" | "professional" | "business";
 
 const STORAGE_KEY = "brain_billing_plan";
-const VALID: PlanId[] = ["free", "pro", "business"];
+const VALID: PlanId[] = ["free", "personal", "professional", "business"];
+
+/** Older builds stored "pro" — map it to the closest current plan. */
+const LEGACY_MAP: Record<string, PlanId> = { pro: "professional" };
 
 /** Rate-limit tier for each plan — the Developers Usage page renders this. */
 export const PLAN_RATE_LIMITS: Record<PlanId, { tier: string; requestsPerMin: number; burst: number }> = {
-  free:     { tier: "Starter",  requestsPerMin: 60,   burst: 100 },
-  pro:      { tier: "Standard", requestsPerMin: 600,  burst: 1200 },
-  business: { tier: "Scale",    requestsPerMin: 3000, burst: 6000 },
+  free:         { tier: "Starter",  requestsPerMin: 60,   burst: 100 },
+  personal:     { tier: "Standard", requestsPerMin: 300,  burst: 600 },
+  professional: { tier: "Scale",    requestsPerMin: 600,  burst: 1200 },
+  business:     { tier: "Enterprise", requestsPerMin: 3000, burst: 6000 },
 };
 
 type Listener = () => void;
@@ -27,7 +31,9 @@ const listeners = new Set<Listener>();
 export function getPlanId(): PlanId | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw && (VALID as string[]).includes(raw) ? (raw as PlanId) : null;
+    if (!raw) return null;
+    if ((VALID as string[]).includes(raw)) return raw as PlanId;
+    return LEGACY_MAP[raw] ?? null;
   } catch {
     return null;
   }

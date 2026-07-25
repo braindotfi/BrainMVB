@@ -598,9 +598,10 @@ function ProfileSection() {
    backend yet, so plan / card / history all start honestly empty rather
    than defaulting to a fabricated subscription. */
 const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string; cadence: string }> = {
-  free:     { label: "Free plan",     tagline: "Try Brain: 1 agent, $10k monthly cap.",                  price: "$0",   cadence: "per month" },
-  pro:      { label: "Pro plan",      tagline: "Unlimited agents, $5M monthly volume cap, priority support.", price: "$24",  cadence: "per month" },
-  business: { label: "Business plan", tagline: "Dedicated infra, SLAs, custom policy signers.",           price: "$199", cadence: "per month" },
+  free:         { label: "Free plan",         tagline: "Try Brain: 1 agent, 1 source.",                 price: "$0",     cadence: "per month" },
+  personal:     { label: "Personal plan",     tagline: "6 agents, 3 sources.",                          price: "$49",    cadence: "per month" },
+  professional: { label: "Professional plan", tagline: "Unlimited agents, unlimited sources.",          price: "$99",    cadence: "per month" },
+  business:     { label: "Business plan",     tagline: "Dedicated infra, SLAs, custom policy signers.", price: "Custom", cadence: "contact us" },
 };
 
 function BillingSection() {
@@ -622,78 +623,61 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <Card noBorder>
-          <div className="p-4 flex flex-col gap-4">
-            {plan ? (
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p
-                      data-testid="text-plan-name"
-                      style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
-                    >
-                      {plan.label}
-                    </p>
-                    <span
-                      className="px-2 py-[3px] rounded-[22px]"
-                      style={{
-                        background: cancelled ? "#4a2300" : "#240757",
-                        color:      cancelled ? "#ff9500" : "#a8b9f4",
-                        fontFamily: "'Gilroy', sans-serif",
-                        fontWeight: 600,
-                        fontSize: "12px",
-                        lineHeight: "14px",
-                        border: `1px solid ${cancelled ? "rgba(255,149,0,0.2)" : "rgba(118,49,238,0.3)"}`,
-                      }}
-                    >
-                      {cancelled ? "Cancelling" : "Active"}
-                    </span>
-                  </div>
-                  <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}>
-                    {plan.tagline}
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p
-                    data-testid="text-plan-price"
-                    style={{ color: "#fff", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "24px", lineHeight: "28px" }}
+          <div className="p-4 flex items-center gap-4">
+            <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
+              <div className="flex items-center gap-2">
+                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}>
+                  {plan ? plan.tagline : "No plan selected yet."}
+                </p>
+                {plan && cancelled && (
+                  <span
+                    className="px-2 py-[3px] rounded-[22px]"
+                    style={{
+                      background: "#4a2300",
+                      color: "#ff9500",
+                      fontFamily: "'Gilroy', sans-serif",
+                      fontWeight: 600,
+                      fontSize: "12px",
+                      lineHeight: "14px",
+                      border: "1px solid rgba(255,149,0,0.2)",
+                    }}
                   >
-                    {plan.price}
-                  </p>
-                  <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "12px", lineHeight: "16px" }}>
-                    {plan.cadence}
-                  </p>
-                </div>
+                    Cancelling
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="flex flex-col gap-1 min-w-0">
+              <p
+                data-testid="text-plan-name"
+                style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
+              >
+                {plan ? plan.label : "Not Configured"}
+              </p>
+              {plan && (
                 <p
-                  data-testid="text-plan-name"
-                  style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
+                  data-testid="text-plan-price"
+                  style={{ color: "#6c779d", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
                 >
-                  Not configured
+                  {plan.price} {plan.cadence}
                 </p>
-                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}>
-                  No plan selected yet.
-                </p>
-              </div>
-            )}
-            <div className="flex gap-2">
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
               <button
                 type="button"
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
-                className="flex-1 rounded-full px-4 py-2 hover-elevate"
-                style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
+                className="rounded-full px-[20px] py-[10px] hover-elevate"
+                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
               >
-                {plan ? "Change plan" : "Choose a plan"}
+                {plan ? "Change Plan" : "Choose a Plan"}
               </button>
-              {plan && (
+              {plan && !cancelled && (
                 <button
                   type="button"
                   data-testid="button-cancel-plan"
                   onClick={() => setCancelSubOpen(true)}
-                  className="flex-1 rounded-full px-4 py-2 hover-elevate"
-                  style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132" }}
+                  className="rounded-full px-[20px] py-[10px] hover-elevate"
+                  style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132", whiteSpace: "nowrap" }}
                 >
                   Cancel subscription
                 </button>
@@ -708,49 +692,51 @@ function BillingSection() {
         <SectionLabel>Payment Method</SectionLabel>
         <Card noBorder>
           <div className="p-4 flex items-center gap-4">
-            <div
-              className="size-[40px] rounded-[8px] flex items-center justify-center flex-shrink-0"
-              style={{ background: "#1d2132" }}
-            >
-              <svg width="24" height="16" viewBox="0 0 24 16" fill="none" aria-hidden="true">
-                <rect width="24" height="16" rx="2" fill="#7631ee"/>
-                <rect y="4" width="24" height="2" fill="#0a0c10"/>
-                <rect x="2" y="10" width="6" height="3" rx="0.5" fill="#a8b9f4"/>
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              {cardLast4 ? (
-                <>
+            <div className="flex-1 min-w-0 flex items-center gap-[12px]">
+              <div
+                className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "#161b28" }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="5.5" width="18" height="13" rx="2.5" stroke="#a8b9f4" strokeWidth="1.5"/>
+                  <rect x="3" y="9" width="18" height="2" fill="#a8b9f4"/>
+                  <rect x="6" y="14" width="5" height="1.6" rx="0.8" fill="#a8b9f4"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                {cardLast4 ? (
+                  <>
+                    <p
+                      data-testid="text-card-brand"
+                      style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
+                    >
+                      Card •••• {cardLast4}
+                    </p>
+                    <p
+                      data-testid="text-card-meta"
+                      style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", marginTop: 2 }}
+                    >
+                      Receipts to {email}
+                    </p>
+                  </>
+                ) : (
                   <p
                     data-testid="text-card-brand"
-                    style={{ color: "#fff", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px" }}
+                    style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
                   >
-                    Visa •••• {cardLast4}
+                    No Payment Method on File
                   </p>
-                  <p
-                    data-testid="text-card-meta"
-                    style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", marginTop: 2 }}
-                  >
-                    Receipts to {email}
-                  </p>
-                </>
-              ) : (
-                <p
-                  data-testid="text-card-brand"
-                  style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
-                >
-                  No payment method on file
-                </p>
-              )}
+                )}
+              </div>
             </div>
             <button
               type="button"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-full px-4 py-2 hover-elevate flex-shrink-0"
-              style={{ background: "#240757", color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px" }}
+              className="rounded-full px-[20px] py-[10px] hover-elevate flex-shrink-0"
+              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
-              {cardLast4 ? "Update" : "Add card"}
+              {cardLast4 ? "Update Card" : "Add Card"}
             </button>
           </div>
         </Card>
@@ -760,9 +746,19 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Invoice History</SectionLabel>
         <Card noBorder>
-          <div className="p-4">
-            <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}>
-              No billing history yet.
+          <div className="p-4 flex flex-col items-center justify-center gap-[12px]">
+            <div
+              className="size-[40px] rounded-full flex items-center justify-center"
+              style={{ background: "#161b28" }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7 3.5h7.5L18.5 7v13a.5.5 0 0 1-.5.5H7a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round"/>
+                <path d="M14.5 3.5V7H18" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round"/>
+                <path d="M9.5 12h5.5M9.5 15.5h5.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px", textAlign: "center" }}>
+              No billing history
             </p>
           </div>
         </Card>
@@ -771,7 +767,7 @@ function BillingSection() {
       <ChangePlanModal
         open={changePlanOpen}
         onOpenChange={setChangePlanOpen}
-        currentPlan={planId ?? "free"}
+        currentPlan={planId}
         onConfirm={(next) => {
           setPlanId(next);
           setCancelled(false);
@@ -785,7 +781,7 @@ function BillingSection() {
         onConfirm={(last4) => {
           setCardLast4(last4);
           setUpdateCardOpen(false);
-          alert.success("Card updated", `Your card on file is now Visa •••• ${last4}.`);
+          alert.success("Card updated", `Your card on file now ends in ${last4}.`);
         }}
       />
       <CancelSubscriptionModal
