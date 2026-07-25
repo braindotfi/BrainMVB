@@ -40,11 +40,37 @@ function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
 }
 
 describe("mapAuditEventToRecord", () => {
-  it("marks a record anchored only when created_at falls inside the latest anchor window", () => {
+  it("marks a record anchored only when covered by the window AND a confirmed tx hash exists", () => {
     const r = mapAuditEventToRecord(ev(), anchor());
     expect(r.anchor.status).toBe("anchored");
     expect(r.anchor.merkleRoot).toBe("0xroot");
     expect(r.anchor.baseTx).toBe("0xtx");
+    expect(r.anchor.verifyHref).toBe("https://sepolia.basescan.org/tx/0xtx");
+    expect(r.anchor.anchoredAtLabel).toBeDefined();
+  });
+
+  it("0x-prefixes a bare-hex tx hash from the API in both baseTx and the verify URL", () => {
+    const r = mapAuditEventToRecord(ev(), anchor({ onchain_tx_hash: "deadbeef" }));
+    expect(r.anchor.baseTx).toBe("0xdeadbeef");
+    expect(r.anchor.verifyHref).toBe("https://sepolia.basescan.org/tx/0xdeadbeef");
+  });
+
+  it("marks recorded_pending_anchor (NOT anchored) when the merkle root exists but anchor tx is null", () => {
+    const r = mapAuditEventToRecord(ev(), anchor({ onchain_tx_hash: null, onchain_block_number: null }));
+    expect(r.anchor.status).toBe("recorded_pending_anchor");
+    expect(r.anchor.merkleRoot).toBe("0xroot");
+    // Pending state must NEVER carry tx/block/verify link or an "Anchored at" label
+    expect(r.anchor.baseTx).toBeUndefined();
+    expect(r.anchor.block).toBeUndefined();
+    expect(r.anchor.verifyHref).toBeUndefined();
+    expect(r.anchor.anchoredAtLabel).toBeUndefined();
+    expect(r.anchor.recordedAtLabel).toBeDefined();
+  });
+
+  it("treats an empty-string tx hash the same as null (recorded, no verify link)", () => {
+    const r = mapAuditEventToRecord(ev(), anchor({ onchain_tx_hash: "  " }));
+    expect(r.anchor.status).toBe("recorded_pending_anchor");
+    expect(r.anchor.verifyHref).toBeUndefined();
   });
 
   it("marks pending_next_batch with NO hashes when created_at is after the anchor window", () => {

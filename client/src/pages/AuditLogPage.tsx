@@ -286,11 +286,19 @@ export function AuditLogPage() {
                                 )}
                               </div>
 
-                              {/* Right: anchor status badge */}
+                              {/* Right: anchor status badge — "Anchored" ONLY with a
+                                  confirmed on-chain tx; a merkle-covered record without
+                                  one reads "Recorded" (amber), never "Anchored". */}
                               {isAnchored ? (
                                 <div className="bg-[#123509] border border-[rgba(66,191,35,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
                                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[14px] text-center whitespace-nowrap">
                                     Anchored
+                                  </p>
+                                </div>
+                              ) : record.anchor.status === "recorded_pending_anchor" ? (
+                                <div className="bg-[#3a2a05] border border-[rgba(245,158,11,0.25)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#f59e0b] text-[14px] text-center whitespace-nowrap">
+                                    Recorded
                                   </p>
                                 </div>
                               ) : (

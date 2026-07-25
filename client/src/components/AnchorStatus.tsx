@@ -47,12 +47,30 @@ export function AnchorStatus({
   onVerify?: () => void;
   onViewFullRecord?: () => void;
 }) {
-  const isAnchored = anchor.status === "anchored";
+  /* Three honest states (see AnchorStatus type in auditTypes.ts):
+     anchored                → green, immutability claim, Verify On-Chain rendered.
+     recorded_pending_anchor → amber, "verifiable, on-chain anchor pending", NO Verify button.
+     pending_next_batch      → neutral, proof incomplete, NO Verify button. */
+  const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
+  const isRecorded = anchor.status === "recorded_pending_anchor";
   const pending = !isAnchored;
 
-  const guarantee = pending
-    ? "Once anchored on Base, this record becomes independently verifiable."
-    : "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain.";
+  const statusLabel = isAnchored
+    ? "Anchored · tamper-evident"
+    : isRecorded
+      ? "Recorded & verifiable — on-chain anchor pending."
+      : "Proof incomplete. Anchoring usually completes within a few hours.";
+
+  const statusColor = isAnchored ? "text-[#42bf23]" : isRecorded ? "text-[#f59e0b]" : "text-[#a8b9f4]";
+
+  /* The on-chain-immutability claim is ONLY made when a real, linkable tx
+     exists. The recorded state claims exactly what is true: sealed in the
+     append-only audit chain, cryptographically verifiable, anchor pending. */
+  const guarantee = isAnchored
+    ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain."
+    : isRecorded
+      ? "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
+      : "Once anchored on Base, this record becomes independently verifiable.";
 
   return (
     <div className="flex flex-col gap-[16px] w-full">
@@ -64,10 +82,8 @@ export function AnchorStatus({
         ) : (
           <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0 mt-[2px]" />
         )}
-        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] flex-[1_0_0] min-w-px ${pending ? "text-[#a8b9f4]" : "text-[#42bf23]"}`}>
-          {pending
-            ? "Not yet anchored. It usually completes within a few hours."
-            : "Anchored · tamper-evident"}
+        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] flex-[1_0_0] min-w-px ${statusColor}`}>
+          {statusLabel}
         </p>
       </div>
 
@@ -82,13 +98,18 @@ export function AnchorStatus({
       {mode === "proof" && (
         <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
           <HashRow first label="Audit ID" value={anchor.auditId} />
-          {!pending && (
+          {(isAnchored || isRecorded) && (
+            <HashRow label="Merkle root" value={anchor.merkleRoot} />
+          )}
+          {isAnchored && (
             <>
-              <HashRow label="Merkle root" value={anchor.merkleRoot} />
               <HashRow label="Base tx" value={anchor.baseTx} />
               <HashRow label="Block" value={anchor.block?.toLocaleString()} />
               <HashRow label="Anchored at" value={anchor.anchoredAtLabel} valueDim />
             </>
+          )}
+          {isRecorded && (
+            <HashRow label="Recorded at" value={anchor.recordedAtLabel} valueDim />
           )}
         </div>
       )}
@@ -96,29 +117,22 @@ export function AnchorStatus({
       {/* Action row */}
       {mode === "proof" ? (
         <div className="flex flex-col gap-[12px] w-full mt-[4px]">
-          <span
-            className="w-full"
-            title={pending ? "Verification isn't available yet — this record hasn't been anchored on-chain." : undefined}
-          >
+          {/* Verify On-Chain is CONDITIONALLY RENDERED, never a dead/disabled
+              link — it only exists when a confirmed tx hash backs it. */}
+          {isAnchored && (
             <button
               type="button"
-              onClick={pending ? undefined : onVerify}
-              disabled={pending}
-              aria-disabled={pending}
+              onClick={onVerify}
               data-testid="button-verify-on-chain"
-              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              style={
-                pending
-                  ? { background: "#1a1c24", color: "#6c779d" }
-                  : { background: "#240757", color: "#7631ee" }
-              }
+              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              style={{ background: "#240757", color: "#7631ee" }}
             >
               Verify On-Chain
             </button>
-          </span>
+          )}
           {pending && (
             <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-              Verification opens once anchored.
+              On-chain verification opens once anchored.
             </p>
           )}
         </div>

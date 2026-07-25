@@ -15,16 +15,26 @@ export type AuditEventType =
      nothing to approve/reject, Audit Log only, neutral chip. */
   | "system_activity";
 
-export type AnchorStatus = "pending_next_batch" | "anchored";
+/* Three honest anchor states, gated on brain-core's actual signals:
+   - "anchored"                → a confirmed on-chain anchor tx exists (anchor_tx_hash
+                                 non-null). Only this state may claim on-chain immutability
+                                 or render a Verify link.
+   - "recorded_pending_anchor" → a Merkle root exists (record is sealed in the append-only
+                                 audit chain, cryptographically verifiable) but the on-chain
+                                 anchor() tx has NOT mined yet. No Verify link, no
+                                 immutability claim.
+   - "pending_next_batch"      → no proof material yet (no Merkle root covers this record). */
+export type AnchorStatus = "pending_next_batch" | "recorded_pending_anchor" | "anchored";
 
 export interface AnchorProof {
   status: AnchorStatus;
   auditId: string;
-  merkleRoot?: string; // present when anchored
-  baseTx?: string; // present when anchored
-  block?: number;
-  anchoredAtLabel?: string;
-  verifyHref?: string;
+  merkleRoot?: string; // present when recorded OR anchored
+  baseTx?: string; // ONLY when anchored (confirmed on-chain tx, 0x-prefixed)
+  block?: number; // ONLY when anchored
+  anchoredAtLabel?: string; // ONLY when anchored
+  recordedAtLabel?: string; // for the recorded-pending state ("Recorded at")
+  verifyHref?: string; // ONLY when anchored — never built without a real tx hash
 }
 
 export interface LifecycleStep {

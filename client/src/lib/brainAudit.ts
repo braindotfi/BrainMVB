@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
+import { explorerTxUrl, normalizeTxHash } from "./explorer";
 import type { AssistantQuestion } from "@shared/schema";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
@@ -72,8 +73,11 @@ export interface BrainAnchor {
   event_count: number;
   period_start: string;
   period_end: string;
-  onchain_tx_hash: string;
-  onchain_block_number: number;
+  /* NULL until the on-chain anchor() tx has actually mined — a merkle_root is
+     computed when the audit window's tree is built, BEFORE anything is
+     broadcast to Base. brain-core only writes these on a confirmed receipt. */
+  onchain_tx_hash: string | null;
+  onchain_block_number: number | null;
 }
 
 /** action → (eventType, plain-language summary prefix). Anything not listed
@@ -218,26 +222,41 @@ function label(ms: number): string {
   });
 }
 
-/** A record is anchored iff its created_at falls within the latest anchor's
- *  period (the only per-record signal brain-core's anchor endpoint gives us -
- *  no per-record merkle proof from this list; that requires the separate
- *  GET /audit/event/{id} inclusion-proof endpoint, out of scope for a list view). */
+/** Anchor state for a record, gated on brain-core's REAL signals:
+ *  - The record is covered by the latest anchor window (its created_at falls
+ *    within [period_start, period_end]) → the Merkle tree includes it, so it is
+ *    "recorded & cryptographically verifiable".
+ *  - It is ANCHORED only when onchain_tx_hash is additionally non-null — a
+ *    merkle_root exists the moment the window's tree is built, BEFORE anything
+ *    is broadcast; brain-core writes the tx hash/block only on a confirmed
+ *    on-chain receipt. Covered-but-no-tx → "recorded_pending_anchor": no
+ *    Verify link, no immutability claim, "Recorded at" (not "Anchored at"). */
 function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): AnchorProof {
   const auditId = event.id;
-  if (!latest) return { status: "pending_next_batch", auditId };
+  if (!latest || !latest.merkle_root) return { status: "pending_next_batch", auditId };
   const createdMs = new Date(event.created_at).getTime();
-  const anchored =
+  const covered =
     createdMs <= new Date(latest.period_end).getTime() &&
     createdMs >= new Date(latest.period_start).getTime();
-  if (!anchored) return { status: "pending_next_batch", auditId };
+  if (!covered) return { status: "pending_next_batch", auditId };
+  const txHash = latest.onchain_tx_hash?.trim() || null;
+  if (!txHash) {
+    return {
+      status: "recorded_pending_anchor",
+      auditId,
+      merkleRoot: latest.merkle_root,
+      recordedAtLabel: label(new Date(latest.period_end).getTime()),
+    };
+  }
+  const baseTx = normalizeTxHash(txHash);
   return {
     status: "anchored",
     auditId,
     merkleRoot: latest.merkle_root,
-    baseTx: latest.onchain_tx_hash,
-    block: latest.onchain_block_number,
+    baseTx,
+    block: latest.onchain_block_number ?? undefined,
     anchoredAtLabel: label(new Date(latest.period_end).getTime()),
-    verifyHref: `https://sepolia.basescan.org/tx/${latest.onchain_tx_hash}`,
+    verifyHref: explorerTxUrl(baseTx),
   };
 }
 
