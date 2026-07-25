@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Check, X } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -124,9 +125,6 @@ type InboxItem = {
   liveAgentProposal?: BrainProposal;
 };
 
-const PILL_BASE =
-  "inline-flex items-center justify-center px-[10px] py-[4px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] whitespace-nowrap shrink-0 border border-solid";
-
 const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
 const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
 const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
@@ -150,6 +148,9 @@ const InboxCard = ({
   busy?: boolean;
 }) => {
   const rejected = item.tab === "Rejected";
+  /* Second-row text: prefer "Why: …" if the record has it, else desc. */
+  const secondLine = item.why ? `Why: ${item.why}` : item.desc;
+
   return (
     <div
       data-testid={`card-inbox-${item.id}`}
@@ -166,58 +167,68 @@ const InboxCard = ({
         rejected ? "border-l-[3px] border-l-[#d20344]" : ""
       }`}
     >
-      {/* Left column: title, desc, why, divider, buttons */}
-      <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
+      {/* Left column: title + second row (why/desc + tag pill inline) */}
+      <div className="flex flex-1 flex-col gap-[4px] items-start min-w-px">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
           {item.title}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] truncate w-full">
-          {item.desc}
-        </p>
-        {item.why && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] w-full" data-testid={`why-inbox-${item.id}`}>
-            Why: {item.why}
-          </p>
-        )}
-        {item.kind === "detection" ? (
-          /* Detections are observations, not proposals — nothing to approve or
-             reject. Tapping the card opens the insight detail. */
-          <p
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] mt-[12px]"
-            data-testid={`text-detection-note-${item.id}`}
+        <div className="flex items-center gap-[8px] w-full min-w-px">
+          {secondLine && (
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate shrink min-w-0"
+              data-testid={`why-inbox-${item.id}`}
+            >
+              {secondLine}
+            </p>
+          )}
+          <span
+            className="bg-[#222737] border border-[rgba(108,119,157,0.2)] rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] whitespace-nowrap shrink-0"
+            data-testid={`tag-inbox-${item.id}`}
           >
-            Detected from your ledger. No action needed. Tap to view details.
-          </p>
-        ) : (
-          <div className="flex items-center gap-[8px] mt-[12px]" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onApprove?.(item)}
-              data-testid={`button-approve-${item.id}`}
-              className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              Approve
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onReject?.(item)}
-              data-testid={`button-reject-${item.id}`}
-              className="flex items-center justify-center h-[24px] w-[104px] px-[20px] py-[10px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              Reject
-            </button>
-          </div>
-        )}
+            {item.tag}
+          </span>
+        </div>
       </div>
 
-      {/* Right column: tag pill */}
-      <div className="shrink-0 self-center">
-        <span className={`${PILL_BASE} ${item.tagClass}`} data-testid={`tag-inbox-${item.id}`}>
-          {item.tag}
-        </span>
-      </div>
+      {/* Right column: action buttons (approval or acknowledge) or nothing */}
+      {item.actionable ? (
+        /* Approval row: Approve + Decline */
+        <div className="flex gap-[8px] items-start shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onApprove?.(item)}
+            data-testid={`button-approve-${item.id}`}
+            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
+          >
+            <Check className="size-[16px] shrink-0" />
+            Approve
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onReject?.(item)}
+            data-testid={`button-decline-${item.id}`}
+            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
+          >
+            <X className="size-[16px] shrink-0" />
+            Decline
+          </button>
+        </div>
+      ) : item.kind === "detection" ? (
+        /* Acknowledge row: single Acknowledge button (opens insight detail) */
+        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => onOpen(item)}
+            data-testid={`button-acknowledge-${item.id}`}
+            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#240757] text-[#7631ee] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0"
+          >
+            <Check className="size-[16px] shrink-0" />
+            Acknowledge
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };
