@@ -135,7 +135,7 @@ export function auditEventLabel(type: AuditEventType): string {
     case "trust_granted": return "TRUST GRANTED";
     case "trust_revoked": return "TRUST REVOKED";
     case "flagged": return "FLAGGED";
-    case "system_activity": return "SYSTEM ACTIVITY";
+    case "system_activity": return "System Activity";
   }
 }
 
