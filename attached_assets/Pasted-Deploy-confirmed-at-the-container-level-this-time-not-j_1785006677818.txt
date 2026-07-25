@@ -1,0 +1,26 @@
+Deploy confirmed at the container level this time, not just via /health
+
+brain-core confirmed PR #337 (76eb857) is deployed to production, and this time the promote log explicitly shows the worker container specifically was recreated, not just inferred from api's /health:
+
+Staging /health: 76eb8571da9b6b63c9216f91fff8b70fa0bb21c4
+promote-prod.yml run (blank sha, resolved/promoted 76eb857), production environment gate approved: https://github.com/braindotfi/brain-core/actions/runs/30169064940
+The promote job's step was literally "Migrate + recreate api/worker/agents on VM" — so tools/migrate up ran (the 0020_requeue_zero_row_upload_extractions.sql repair migration included) and the worker container was recreated as part of the same step, addressing the specific gap we flagged last time (that /health only vouches for api, not worker).
+Production /health: 76eb8571da9b6b63c9216f91fff8b70fa0bb21c4
+
+Codex couldn't complete the tenant-level reprobe themselves (no production auth material in their workspace — /v1/ledger/accounts, /v1/demo/provision-run, and /v1/auth/service-token all 401 without credentials they don't have there). That's fine — you have what you need via BrainMVB's normal demo-provisioning path and member-token BFF reads, no raw admin secrets required.
+
+Re-run the same two checks as the last two rounds
+
+1. Repaired tenant — tnt_01KYD4PBEF96DH9NK3B5ZCN04D (the one from both prior probes). This is the one that actually proves the fix, not just that new documents route correctly. Check whether the migration's requeue-and-reprocess has now landed:
+
+extraction_jobs status/parsed_id for its three raw ids (should show a new parsed_id distinct from the old ones the migration cleared, since it was requeued)
+GET /ledger/accounts and /ledger/transactions for that tenant — should now be non-empty
+
+2. Fresh tenant — new demo-fresh-* account, same 3-file seed as always. Confirms forward-going correctness (new documents route through the deterministic in-process interpreter, not the external agent, on the first pass).
+
+What to look for either way
+If confidence scores are still exactly 0.5/0.5/0.9 with the same ~75-90s batch-drain pattern: that's the old external-agent fingerprint again, meaning something is still off despite the container recreation being confirmed this time — a more serious finding, since the deployment-gap explanation would now be ruled out.
+If confidences/timing look different (faster, no external-agent-shaped batch drain) but the ledger is still empty: that's a distinct, narrower bug — the in-process interpreter running but not actually producing ledger-projectable output.
+If both come back clean: you're unblocked — proceed straight into Steps 2 and 3 (broadening SEED_FILES, wiring source badges) without waiting for another round-trip.
+
+Report the result either way before proceeding.
