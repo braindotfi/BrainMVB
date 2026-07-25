@@ -13,6 +13,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
  *   E. The one-time starter seed ingests the bundled documents into the new tenant
  *      (POST /raw/ingest with the raw:write-capable AGENT token) and never runs for
  *      an existing tenant.
+ *   F. The seed runs ONLY for demo accounts (demo@brain.fi / demo-fresh-*): a real
+ *      signup's tenant is created with ZERO raw-layer ingestion - genuinely empty.
  */
 
 const SERVICE_SECRET = "test-platform-service-secret-DO-NOT-LEAK";
@@ -136,8 +138,19 @@ async function waitForSeed(expectedIngests: number): Promise<void> {
 }
 
 describe("durable tenancy invariants", () => {
-  it("A+E: first use auto-creates ONE tenant, persists the mapping, and seeds documents once", async () => {
-    const userId = "durable-user-a";
+  /** The starter seed is gated on the app user's email being a demo address. */
+  async function createDemoAppUser(): Promise<string> {
+    const u = await storage.createUser({
+      username: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
+      email: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
+      password: null,
+      name: "Demo Business",
+    });
+    return u.id;
+  }
+
+  it("A+E: first DEMO use auto-creates ONE tenant, persists the mapping, and seeds documents once", async () => {
+    const userId = await createDemoAppUser();
     const session = await getBrainSession(userId);
     expect(session.tenantId).toBe(TENANT_ID);
     expect(session.token).toBe(MEMBER_TOKEN);
@@ -168,7 +181,7 @@ describe("durable tenancy invariants", () => {
   });
 
   it("B+C+E: later sessions re-attach via /sessions - never /tenants, never the demo fence, never re-seed", async () => {
-    const userId = "durable-user-b";
+    const userId = await createDemoAppUser();
     await getBrainSession(userId);
     await waitForSeed(3);
     clearBrainTokenCache(); // simulate restart/redeploy: cache gone, identity row remains
@@ -186,6 +199,24 @@ describe("durable tenancy invariants", () => {
     // No re-seed for an existing tenant.
     await new Promise((r) => setTimeout(r, 100));
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
+  });
+
+  it("F: a REAL (non-demo) user's tenant is created with ZERO seed ingestion", async () => {
+    const real = await storage.createUser({
+      username: "founder@realco.com",
+      email: "founder@realco.com",
+      password: "x.x",
+      name: "Real Founder",
+    });
+    const session = await getBrainSession(real.id);
+    expect(session.tenantId).toBe(TENANT_ID);
+
+    // Tenant IS created for the real user...
+    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(1);
+    // ...but the raw layer stays untouched: no seed, no documents, genuinely empty.
+    await new Promise((r) => setTimeout(r, 150));
+    expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
+    expect((await storage.listSourceDocuments(real.id)).length).toBe(0);
   });
 
   it("D: a failed tenant creation rolls the tombstone back and is not auto-retried in-call", async () => {

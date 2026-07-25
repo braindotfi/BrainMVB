@@ -50,6 +50,13 @@ protocol (brain-core) executes. Settlement is anchored on Base L2.
 - Fonts: Gilroy (headings), JetBrains Mono (numbers/amounts/ids/dates).
 - Panel: `rounded-[16px] bg-[#11141b] border-[#1d2132]`. Cards: `bg-[#0a0c10]` (no border).
 
+## Demo vs real accounts
+Real signups start genuinely EMPTY (no seed, no mock). Demo accounts (demo@brain.fi,
+demo-fresh-*) are the only ones that get the starter raw-layer seed and demo-only client
+surfaces (`MOCK_PROPOSALS` resolution, HomePage `DEMO_GOALS`). Single source of truth:
+`server/demoUsers.ts` → `publicUser.isDemo` → `client/src/lib/demoMode.ts`. Full contract
+in CLAUDE.md ("Demo vs real accounts — synthetic data fence").
+
 ## Data Sources — core-backed vs mock
 CORE-BACKED (live `/api/brain/*`, mock only as fallback unless noted): Finances tab ledger
 surfaces; Brain's take / Assistant chat (Claude, ledger-grounded); Bills inbox read path;

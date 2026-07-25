@@ -9,6 +9,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
+import { isDemoEmail, SHARED_DEMO_EMAIL } from "./demoUsers";
 
 const scryptAsync = promisify(scrypt);
 
@@ -44,6 +45,10 @@ export function publicUser(u: User) {
     email: u.email,
     name: u.name,
     walletAddress: u.walletAddress,
+    // Demo accounts (and ONLY demo accounts) may see seeded/synthetic data.
+    // The client gates every demo-only surface on this flag (see
+    // client/src/lib/demoMode.ts); real accounts start genuinely empty.
+    isDemo: isDemoEmail(u.email),
   };
 }
 
@@ -182,12 +187,11 @@ export function setupAuth(app: Express) {
     if (brainTenancyMode() === "production") {
       return res.status(404).json({ error: "Not found" });
     }
-    const DEMO_EMAIL = "demo@brain.fi";
-    let user = await storage.getUserByEmail(DEMO_EMAIL);
+    let user = await storage.getUserByEmail(SHARED_DEMO_EMAIL);
     if (!user) {
       user = await storage.createUser({
-        username: DEMO_EMAIL,
-        email: DEMO_EMAIL,
+        username: SHARED_DEMO_EMAIL,
+        email: SHARED_DEMO_EMAIL,
         password: null,
         name: "ACME Inc.",
       });

@@ -3,6 +3,32 @@
 Working notes for agents. The full project overview lives in `replit.md`; this file
 captures contracts that are easy to break silently. Keep it short and current.
 
+## Demo vs real accounts — synthetic data fence
+
+Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
+ingestion, zero ledger, no disguised mock data. Only the demo accounts may ever see
+seeded/synthetic data.
+
+- **Who is demo:** decided ONLY by `server/demoUsers.ts` (`isDemoEmail`) —
+  `demo@brain.fi` (shared, `POST /api/auth/demo`) and `demo-fresh-*@brain.fi`
+  (`POST /api/auth/demo-fresh`). `publicUser` (server/auth.ts) exposes it to the
+  client as `user.isDemo`; never re-derive it anywhere else.
+- **Server fence:** the one-time starter seed (`server/brain/seed.ts`, durable-mode
+  create-tenant branch in `server/brain/auth.ts`) runs ONLY when the app user's email
+  is a demo address. A real user's tenant is created with NO `/raw/ingest` calls.
+  Pinned by `server/brain/durable-tenancy.test.ts` invariant F.
+- **Client fence:** `client/src/lib/demoMode.ts` holds a module-level flag set
+  exclusively by `AuthProvider` from `user.isDemo`. Gated surfaces: the synthetic
+  proposal corpus (`openProposalDetail.allProposals()` → `[]` for real accounts, so
+  proposal refs fall back to plain text) and the HomePage starter goals
+  (`DEMO_GOALS`). Everything else (rules, suggestions, documents, vendors, audit,
+  finances, review queue) is live-backed and starts empty.
+- **Demo stays real downstream of ingestion:** the demo seed goes through the real
+  ingest→extract pipeline; ledger/wiki/policy/agent/audit responses are never faked
+  in the frontend. Where mock data used to leak: the starter seed ran for EVERY new
+  durable user, `MOCK_PROPOSALS` resolved for everyone, and `SEED_GOALS` rendered
+  for everyone — all now demo-gated.
+
 ## Rule references (RuleDetail links)
 
 Every "rule reference" surface in the app — auto-handled receipt, Audit Log record

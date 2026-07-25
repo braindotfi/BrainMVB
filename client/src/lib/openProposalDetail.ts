@@ -10,6 +10,7 @@ import {
   USDC_SWEEP_SETTLED,
 } from "./mockProposals";
 import type { Proposal } from "./proposalTypes";
+import { isDemoDataEnabled } from "./demoMode";
 
 /* ── Single source of truth for opening a proposal's detail sheet ─────────────
    Every PROPOSAL REFERENCE across the app (Audit Log record popup, and any other
@@ -28,6 +29,11 @@ import type { Proposal } from "./proposalTypes";
    dev guards (ruleConsistencyCheck) can assert coherence over the SAME complete
    set of proposals - otherwise standalone twins escape the lifecycle checks. */
 export function allProposals(): Proposal[] {
+  // The synthetic proposal corpus exists ONLY for the demo accounts. For a
+  // real account this resolver returns nothing, so proposal references fall
+  // back to honest plain text (resolve-or-plain-text contract) instead of
+  // opening mock records that were never the tenant's data.
+  if (!isDemoDataEnabled()) return [];
   return [
     ...MOCK_PROPOSALS,
     ADOBE_SETTLED,

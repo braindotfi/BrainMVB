@@ -6,6 +6,7 @@ import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
+import { useIsDemoData } from "@/lib/demoMode";
 import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
@@ -57,10 +58,11 @@ type GoalRow = {
   color: string;
 };
 
-/* Initial four goals matching the original Figma mock-up. New goals
-   created via the modal are appended to local state; nothing is
-   persisted yet. The wiring will land when brain-core is integrated. */
-const SEED_GOALS: GoalRow[] = [
+/* DEMO-ONLY starter goals matching the original Figma mock-up — shown only
+   when the signed-in account is a demo account (demoMode.ts). Real accounts
+   start with zero goals and a genuine empty state. New goals created via the
+   modal are appended to local state; nothing is persisted yet. */
+const DEMO_GOALS: GoalRow[] = [
   { id: "tax",       name: "Q2 tax reserve",       vault: "USDC Vault", saved: 60_000, target: 100_000, color: "#42bf23" },
   { id: "runway",    name: "Operating runway",     vault: "USDC",       saved:  4_000, target:  10_000, color: "#ff9500" },
   { id: "marketing", name: "Q4 marketing budget",  vault: "USDC Vault", saved:    400, target:   2_000, color: "#7631EE" },
@@ -159,8 +161,16 @@ const GoalsSection = () => {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
   /* Local-only state: new goals live in memory until the brain-core
-     wiring lands. They reset on refresh by design. */
-  const [goals, setGoals] = useState<GoalRow[]>(SEED_GOALS);
+     wiring lands. They reset on refresh by design. Demo accounts start
+     with the Figma starter goals; real accounts start with none. */
+  const isDemo = useIsDemoData();
+  const [goals, setGoals] = useState<GoalRow[]>(() => (isDemo ? DEMO_GOALS : []));
+
+  /* If the account changes without a remount (demo → real login in one
+     session), never carry demo goals across. */
+  useEffect(() => {
+    setGoals(isDemo ? DEMO_GOALS : []);
+  }, [isDemo]);
 
   const handleCreate = (payload: AddGoalPayload) => {
     const target = parseAmount(payload.amount);
@@ -191,7 +201,16 @@ const GoalsSection = () => {
         <AddGoalButton onClick={() => setAddOpen(true)} />
       </div>
       <div className="flex flex-col gap-[16px] items-start p-[16px] w-full">
-        {goals.map((g) => <GoalProgress key={g.id} goal={g} />)}
+        {goals.length === 0 ? (
+          <p
+            data-testid="text-goals-empty"
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
+          >
+            No goals yet — add one to start tracking progress.
+          </p>
+        ) : (
+          goals.map((g) => <GoalProgress key={g.id} goal={g} />)
+        )}
       </div>
       <AddGoalModal
         open={addOpen}

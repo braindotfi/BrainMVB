@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { queryClient } from "./queryClient";
 import { clearMembers } from "./membersStore";
+import { setDemoDataEnabled } from "./demoMode";
 
 export interface AuthUser {
   id: string;
@@ -8,6 +9,9 @@ export interface AuthUser {
   email?: string | null;
   name?: string | null;
   walletAddress?: string | null;
+  /** Server-decided (publicUser): true ONLY for the demo accounts. Gates every
+      demo-only synthetic-data surface via demoMode.ts. */
+  isDemo?: boolean;
 }
 
 interface AuthContextType {
@@ -27,8 +31,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUserState] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Single funnel for user changes so the demo-data gate can NEVER drift from
+  // the signed-in user. Real accounts (isDemo false/absent) disable all
+  // demo-only synthetic data surfaces.
+  const setUser = useCallback((u: AuthUser | null) => {
+    setDemoDataEnabled(!!u?.isDemo);
+    setUserState(u);
+  }, []);
 
   // Bootstrap the session from the server cookie on mount.
   useEffect(() => {

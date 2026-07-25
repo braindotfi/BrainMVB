@@ -23,6 +23,7 @@ import { brainUserSubject } from "./ids";
 import { exchangeSession, refreshSession, mintAgentToken, createTenant, TenancyApiError, type TenantSessionShape } from "./tenancy";
 import { storage } from "../storage";
 import { seedTenantDocuments } from "./seed";
+import { isDemoEmail } from "../demoUsers";
 
 /**
  * Thrown by the PRODUCTION strategy when the app user has no durable
@@ -314,17 +315,26 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
       new Date(Date.now() + (result.agent.expires_in ?? 900) * 1000),
     );
   }
-  console.log(`[brain-auth] durable tenant ${result.tenant_id} created for user ${appUserId} - seeding starter documents`);
-
-  // One-time starter seed - fire and forget so login is never blocked on ingestion.
-  // Runs ONLY here (the create-tenant branch), so an existing tenant is never re-seeded.
+  // One-time starter seed — DEMO ACCOUNTS ONLY. Real signups must start genuinely
+  // empty (zero sources, zero raw-layer ingestion, zero ledger); only the
+  // "Continue with Demo" accounts (demo@brain.fi / demo-fresh-*) get the bundled
+  // synthetic raw-layer scenario, which then flows through the REAL brain-core
+  // pipeline (ingest → extract → ledger/wiki/policy/agent/audit).
+  // Fire and forget so login is never blocked on ingestion. Runs ONLY here (the
+  // create-tenant branch), so an existing tenant is never re-seeded.
   // Raw ingestion needs the raw:write scope, which the durable MEMBER token does not
   // hold (verified live 2026-07-24: member /raw/ingest → 403 auth_scope_insufficient,
   // agent token → 201). Fall back to the member token only if no agent token exists,
   // so the failure surfaces as an honest 403 in the document status.
-  void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token).catch((err) =>
-    console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
-  );
+  const appUser = await storage.getUser(appUserId);
+  if (isDemoEmail(appUser?.email)) {
+    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for DEMO user ${appUserId} - seeding starter documents`);
+    void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token).catch((err) =>
+      console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
+    );
+  } else {
+    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for user ${appUserId} - real account, NO seed (starts empty)`);
+  }
 
   return toProductionCached(result.session, result.tenant_id, result.agent?.token ?? null);
 }
