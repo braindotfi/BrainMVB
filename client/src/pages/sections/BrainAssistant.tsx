@@ -854,23 +854,39 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
                           const text = formatAmountsInText(s.excerpt ?? s.entityId, symbol);
+                          /* Brain-core wiki/question returns a variety of entityType values.
+                             Normalize aliases (user → member, vendor → counterparty) and,
+                             when the type is missing entirely, infer it from the id by
+                             matching against the local caches — every resolvable record
+                             should be tappable. */
+                          const raw =
+                            s.entityType === "user" ? "member" :
+                            s.entityType === "vendor" ? "counterparty" :
+                            s.entityType;
+                          const resolvedType = raw ?? (
+                            acctIds.has(s.entityId) ? "account"
+                            : txIds.has(s.entityId) ? "transaction"
+                            : invIds.has(s.entityId) ? "invoice"
+                            : resolveVendor(s.entityId) ? "counterparty"
+                            : null
+                          );
                           const isClickable =
-                            (s.entityType === "account" && acctIds.has(s.entityId)) ||
-                            (s.entityType === "transaction" && txIds.has(s.entityId)) ||
-                            (s.entityType === "invoice" && invIds.has(s.entityId)) ||
-                            s.entityType === "member" ||
-                            (s.entityType === "counterparty" && !!resolveVendor(s.entityId));
+                            (resolvedType === "account" && acctIds.has(s.entityId)) ||
+                            (resolvedType === "transaction" && txIds.has(s.entityId)) ||
+                            (resolvedType === "invoice" && invIds.has(s.entityId)) ||
+                            resolvedType === "member" ||
+                            (resolvedType === "counterparty" && !!resolveVendor(s.entityId));
                           return isClickable ? (
                             <button
                               key={`${s.entityId}-${i}`}
                               type="button"
                               data-testid={`evidence-link-${i}`}
                               onClick={() => {
-                                if (s.entityType === "account") setOpenAccountId(s.entityId);
-                                else if (s.entityType === "transaction") setOpenTxId(s.entityId);
-                                else if (s.entityType === "invoice") setOpenBillId(s.entityId);
-                                else if (s.entityType === "member") openMemberDetail(s.entityId);
-                                else if (s.entityType === "counterparty") openVendorDetail(s.entityId, navigate);
+                                if (resolvedType === "account") setOpenAccountId(s.entityId);
+                                else if (resolvedType === "transaction") setOpenTxId(s.entityId);
+                                else if (resolvedType === "invoice") setOpenBillId(s.entityId);
+                                else if (resolvedType === "member") openMemberDetail(s.entityId);
+                                else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
                               }}
                               title={s.entityId}
                               className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
