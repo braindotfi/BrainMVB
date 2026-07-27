@@ -48,6 +48,7 @@ waitForPort = 5000
 VITE_CROSSMINT_CLIENT_API_KEY = "USE_SECRET"
 GOOGLE_CLIENT_ID = "391354009777-poq24ohpc1da534j08gvh17srgcisbkb.apps.googleusercontent.com"
 BRAIN_TENANCY_MODE = "durable"
+BRAIN_PROVISION_SECRET = "fb6e50818f98255daac0588c341406623cc5230717c4971d49d52ad8576227fe"
 
 [postMerge]
 path = "scripts/post-merge.sh"
