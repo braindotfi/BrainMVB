@@ -250,15 +250,30 @@ export function useBrainCashFlowInsight() {
     value: Number(d.net) || 0,
   }));
   // Meaningful comparison from the same endpoint (not an echo of the subtitle):
-  // average daily net across the trailing window vs the latest day's net.
-  const dayCount = currency.by_day.length;
-  const avgDailyNet = points.reduce((s, p) => s + p.value, 0) / dayCount;
-  const latest = currency.by_day[dayCount - 1];
+  // the latest day's net vs a 30-day rolling daily average. A short window is
+  // noise, not signal, so with fewer than 3 data points the Why line is omitted
+  // entirely; with 3-29 days we fall back to the available window and say so.
+  const windowDays = currency.by_day.slice(-30);
+  const windowCount = windowDays.length;
+  const latest = currency.by_day[currency.by_day.length - 1];
   const latestNet = Number(latest.net) || 0;
-  const explanation =
-    dayCount > 1
-      ? `Latest day netted ${format(latestNet.toFixed(2))} vs a ${format(avgDailyNet.toFixed(2))} daily average across the trailing ${dayCount}-day window.`
-      : undefined;
+  let explanation: string | undefined;
+  if (windowCount >= 3) {
+    const windowNet = windowDays.reduce((s, d) => s + (Number(d.net) || 0), 0);
+    const avgDailyNet = windowNet / windowCount;
+    const windowLabel =
+      windowCount >= 30 ? "30-day" : `${windowCount}-day (all available data)`;
+    const avgStr = format(avgDailyNet.toFixed(2));
+    if (windowNet < 0) {
+      explanation = `Cash flow is trending negative — outflows exceeded inflows by ${format(Math.abs(windowNet).toFixed(2))} over the past ${windowCount} days.`;
+    } else if (avgDailyNet > 0 && latestNet > 2 * avgDailyNet) {
+      explanation = `Latest day netted ${format(latestNet.toFixed(2))}, well above your ${avgStr} ${windowLabel} daily average — check for a one-time item before reading this as a trend.`;
+    } else if (avgDailyNet > 0 && latestNet < 0.5 * avgDailyNet) {
+      explanation = `Latest day netted ${format(latestNet.toFixed(2))}, well below your ${avgStr} ${windowLabel} daily average.`;
+    } else {
+      explanation = `Latest day netted ${format(latestNet.toFixed(2))}, in line with your ${avgStr} ${windowLabel} daily average.`;
+    }
+  }
   const insight: LiveInsight = {
     id: "cashflow-trailing",
     kind: "cashflow",
