@@ -126,6 +126,15 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   tenant creation and invite consume. The current Bills UI does **not** call the propose route;
   re-wire it before documenting the end-user propose flow as working.
 
+## Known upstream gaps (brain-core)
+- **No batched anchor-coverage endpoint**: `/audit/anchor/latest` returns only the single most
+  recent anchor window, so list-level anchor state (`anchorFor()` in `client/src/lib/brainAudit.ts`)
+  misclassifies events covered by EARLIER windows as pending — coverage appears to regress as new
+  windows open. The detail popup fixes this per-record via `GET /audit/event/{id}` inclusion_proof,
+  but at 90+ list rows that's impractical and N requests is not acceptable. Needs brain-core to
+  ship a list-all-anchor-windows or bulk coverage lookup; until then the list under-claims
+  (Pending for covered events) but never over-claims.
+
 ## API Endpoints (details in `server/routes.ts` / `server/auth.ts`)
 - Auth: `POST /api/auth/register|login|logout|demo`, `GET /api/auth/user`, Google OAuth +
   `/callback`, SIWE `GET /api/auth/nonce` (CSPRNG, pinned by `server/nonce.test.ts`) +

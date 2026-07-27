@@ -134,7 +134,7 @@ export function AuditLogPage() {
             <div className="flex flex-col items-start gap-[4px] relative min-w-px flex-1">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Audit Log</p>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, anchored, and verifiable.</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, verifiable, and anchored on-chain.</p>
             </div>
             {/* Refresh button — Figma: bg-[#222737] pill, 12px SemiBold #6c779d */}
             <button

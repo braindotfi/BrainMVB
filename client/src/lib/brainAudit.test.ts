@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, extractActorName, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor } from "./brainAudit";
+import { mapAuditEventToRecord, anchorFromInclusionProof, extractActorName, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -88,6 +88,56 @@ describe("mapAuditEventToRecord", () => {
     const r = mapAuditEventToRecord(ev(), undefined);
     expect(r.anchor.status).toBe("pending_next_batch");
     expect(r.anchor.merkleRoot).toBeUndefined();
+  });
+
+  /* Multi-window regression: /audit/anchor/latest only returns the single
+     most recent window, so an event covered by an EARLIER window is
+     misclassified pending by the list-level anchorFor(). The per-event
+     inclusion_proof (anchorFromInclusionProof) must resolve it correctly. */
+  it("multi-window: an event preceding the latest window but covered by an earlier anchor renders anchored via its inclusion proof, not pending", () => {
+    // Event from June; the latest anchor window is July — list-level state regresses to pending…
+    const juneEvent = ev({ created_at: "2026-06-15T12:00:00.000Z" });
+    const latestJulyAnchor = anchor(); // period 2026-07-01 → 2026-07-01
+    const listLevel = mapAuditEventToRecord(juneEvent, latestJulyAnchor);
+    expect(listLevel.anchor.status).toBe("pending_next_batch");
+
+    // …but the per-event proof (computed by brain-core against the June
+    // window that actually contains the event) says anchored — and wins.
+    const proof: BrainInclusionProof = {
+      merkle_root: "0xjuneroot",
+      merkle_proof: ["0xsib"],
+      anchor_tx_hash: "junetx",
+      anchor_block: 999,
+    };
+    const a = anchorFromInclusionProof(juneEvent.id, proof, juneEvent.created_at);
+    expect(a.status).toBe("anchored");
+    expect(a.merkleRoot).toBe("0xjuneroot");
+    expect(a.baseTx).toBe("0xjunetx");
+    expect(a.block).toBe(999);
+    expect(a.verifyHref).toBe("https://sepolia.basescan.org/tx/0xjunetx");
+  });
+
+  it("inclusion proof with null anchor_tx_hash is recorded_pending_anchor — no verify link, no tx/block", () => {
+    const proof: BrainInclusionProof = {
+      merkle_root: "0xroot",
+      merkle_proof: [],
+      anchor_tx_hash: null,
+      anchor_block: null,
+    };
+    const a = anchorFromInclusionProof("evt_x", proof, "2026-06-15T12:00:00.000Z");
+    expect(a.status).toBe("recorded_pending_anchor");
+    expect(a.merkleRoot).toBe("0xroot");
+    expect(a.baseTx).toBeUndefined();
+    expect(a.block).toBeUndefined();
+    expect(a.verifyHref).toBeUndefined();
+    expect(a.anchoredAtLabel).toBeUndefined();
+    expect(a.recordedAtLabel).toBeDefined();
+  });
+
+  it("inclusion proof with no merkle root (or missing proof) is pending_next_batch", () => {
+    expect(anchorFromInclusionProof("evt_x", { merkle_root: null, anchor_tx_hash: null, anchor_block: null }).status).toBe("pending_next_batch");
+    expect(anchorFromInclusionProof("evt_x", null).status).toBe("pending_next_batch");
+    expect(anchorFromInclusionProof("evt_x", undefined).status).toBe("pending_next_batch");
   });
 
   it("maps a known action to its eventType/summary with alert lifecycle for rejected", () => {

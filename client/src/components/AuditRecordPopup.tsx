@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
@@ -19,6 +20,7 @@ import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
+import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
 
 export function AuditRecordPopup({
   record,
@@ -41,7 +43,34 @@ export function AuditRecordPopup({
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
 
+  /* Per-event inclusion proof — authoritative anchor state for the detail
+     view. The list-level anchor (record.anchor) is derived from
+     /audit/anchor/latest, which only knows the MOST RECENT anchor window and
+     therefore misclassifies events covered by earlier windows as pending
+     (see anchorFor() in brainAudit.ts). GET /audit/event/{id} computes the
+     inclusion proof against the window that actually contains the event.
+     Only real brain-core events (evt_… ids) have this endpoint — synthetic
+     local records (local-question-…, review-status overrides) keep their
+     list-derived state. While loading / on error we fall back to the
+     list-derived value, which may under-claim but never over-claims. */
+  const isBrainEvent = !!record && open && /^evt_/.test(record.id);
+  const eventDetail = useQuery<BrainAuditEventDetail>({
+    queryKey: [`/api/brain/audit/event/${record?.id}`],
+    enabled: isBrainEvent,
+    retry: false,
+    staleTime: 60_000,
+  });
+
   if (!record) return null;
+
+  const anchor =
+    isBrainEvent && eventDetail.data
+      ? anchorFromInclusionProof(
+          record.id,
+          eventDetail.data.inclusion_proof,
+          eventDetail.data.event?.created_at,
+        )
+      : record.anchor;
 
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
@@ -62,8 +91,8 @@ export function AuditRecordPopup({
   };
 
   const handleVerify = () => {
-    if (record.anchor.verifyHref) {
-      window.open(record.anchor.verifyHref, "_blank", "noopener,noreferrer");
+    if (anchor.verifyHref) {
+      window.open(anchor.verifyHref, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -337,7 +366,7 @@ export function AuditRecordPopup({
               <div className="relative shrink-0 w-full">
                 <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
                   <SectionHeader>Anchor Proof</SectionHeader>
-                  <AnchorStatus anchor={record.anchor} mode="proof" onVerify={handleVerify} />
+                  <AnchorStatus anchor={anchor} mode="proof" onVerify={handleVerify} />
                 </div>
               </div>
 

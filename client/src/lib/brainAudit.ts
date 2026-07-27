@@ -222,6 +222,55 @@ function label(ms: number): string {
   });
 }
 
+/** Per-event inclusion proof from GET /audit/event/{id} — computed by
+ *  brain-core against the anchor window that ACTUALLY contains the event
+ *  (not just the latest one). Same null-until-mined semantics as BrainAnchor:
+ *  anchor_tx_hash/anchor_block are null until the on-chain anchor() tx has a
+ *  confirmed receipt. */
+export interface BrainInclusionProof {
+  merkle_root: string | null;
+  merkle_proof?: string[];
+  anchor_tx_hash: string | null;
+  anchor_block: number | null;
+}
+export interface BrainAuditEventDetail {
+  event: BrainAuditEvent;
+  inclusion_proof: BrainInclusionProof | null;
+}
+
+/** AnchorProof from a per-event inclusion proof. Authoritative when available:
+ *  brain-core resolves coverage against the correct (possibly older) anchor
+ *  window, so this never suffers anchorFor()'s latest-window-only limitation.
+ *  Same three-state gate: anchored ⇔ anchor_tx_hash !== null, never a Merkle
+ *  root or timestamp. */
+export function anchorFromInclusionProof(
+  auditId: string,
+  proof: BrainInclusionProof | null | undefined,
+  eventCreatedAt?: string,
+): AnchorProof {
+  if (!proof || !proof.merkle_root) return { status: "pending_next_batch", auditId };
+  const recordedLabel = eventCreatedAt ? label(new Date(eventCreatedAt).getTime()) : undefined;
+  const txHash = proof.anchor_tx_hash?.trim() || null;
+  if (!txHash) {
+    return {
+      status: "recorded_pending_anchor",
+      auditId,
+      merkleRoot: proof.merkle_root,
+      recordedAtLabel: recordedLabel,
+    };
+  }
+  const baseTx = normalizeTxHash(txHash);
+  return {
+    status: "anchored",
+    auditId,
+    merkleRoot: proof.merkle_root,
+    baseTx,
+    block: proof.anchor_block ?? undefined,
+    anchoredAtLabel: recordedLabel,
+    verifyHref: explorerTxUrl(baseTx),
+  };
+}
+
 /** Anchor state for a record, gated on brain-core's REAL signals:
  *  - The record is covered by the latest anchor window (its created_at falls
  *    within [period_start, period_end]) → the Merkle tree includes it, so it is
@@ -230,7 +279,20 @@ function label(ms: number): string {
  *    merkle_root exists the moment the window's tree is built, BEFORE anything
  *    is broadcast; brain-core writes the tx hash/block only on a confirmed
  *    on-chain receipt. Covered-but-no-tx → "recorded_pending_anchor": no
- *    Verify link, no immutability claim, "Recorded at" (not "Anchored at"). */
+ *    Verify link, no immutability claim, "Recorded at" (not "Anchored at").
+ *
+ *  KNOWN LIMITATION (list view only): coverage is computed against ONLY the
+ *  most recent anchor window (/audit/anchor/latest returns a single row).
+ *  Events covered by an EARLIER window are misclassified pending_next_batch
+ *  here — coverage appears to "regress" as new windows open, which is
+ *  impossible in reality. The detail popup avoids this by fetching the
+ *  per-event /audit/event/{id} inclusion_proof (anchorFromInclusionProof
+ *  above), but at 90+ list rows that endpoint is impractical and N requests
+ *  is not an acceptable workaround. Correct list-level coverage needs a
+ *  brain-core batched endpoint (all anchor windows for the tenant, or a bulk
+ *  coverage lookup) — tracked in replit.md "Known upstream gaps". Until then
+ *  the list may UNDER-claim (show Pending for covered events) but never
+ *  over-claims. */
 function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): AnchorProof {
   const auditId = event.id;
   if (!latest || !latest.merkle_root) return { status: "pending_next_batch", auditId };
