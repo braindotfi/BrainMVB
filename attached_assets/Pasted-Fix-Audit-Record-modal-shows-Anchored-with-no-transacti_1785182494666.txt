@@ -1,0 +1,33 @@
+Fix: Audit Record modal shows "Anchored" with no transaction, and "Verify On-Chain" produces a broken URL
+
+In the Audit Record detail modal (the one with "Decision Lifecycle" and "Anchor Proof" sections), the anchor status is being displayed incorrectly. It shows a green "Anchored · tamper-evident" badge with the copy "This record is anchored on Base and can't be altered" while the Base tx and Block fields are both empty (—). Tapping "Verify On-Chain" opens https://sepolia.basescan.org/error because the tx hash is null and the URL is being built as .../tx/undefined.
+
+Root cause: the UI is treating "an anchor row exists / a Merkle root has been computed" as "anchored on-chain." Those are different states in brain-core.
+
+The actual backend contract. GET /v1/audit/event/{id} returns:
+
+json
+{
+  "event": { ... },
+  "inclusion_proof": {
+    "merkle_root": "1e1efb5b...",
+    "merkle_proof": ["..."],
+    "anchor_tx_hash": null,
+    "anchor_block": null
+  }
+}
+
+A merkle_root is populated the moment the audit window's Merkle tree is built — before anything is broadcast to Base. anchor_tx_hash and anchor_block are only non-null once the on-chain anchor() transaction has actually mined successfully (brain-core writes them via setAnchorTxHash() only on a confirmed receipt). So merkle_root != null means "recorded and cryptographically verifiable"; it does not mean "on-chain."
+
+Required changes:
+
+Gate the anchored state on inclusion_proof.anchor_tx_hash !== null — not on the presence of a Merkle root, not on any boolean or timestamp field. Three display states:
+anchor_tx_hash != null → green badge "Anchored · tamper-evident", existing copy, Base tx + Block populated, "Verify On-Chain" enabled.
+anchor_tx_hash == null && merkle_root != null → amber/pending badge: "Recorded & verifiable — on-chain anchor pending." Copy: "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending." Hide or disable the "Verify On-Chain" button entirely.
+merkle_root == null → neutral/warn badge "Proof incomplete." No Verify button.
+(This mirrors the badge logic brain-core already uses in its own HTML proof viewer at GET /v1/proof/{id}/view — match that wording for consistency.)
+Never render a Verify link without a tx hash. The button must be conditionally rendered, not just conditionally styled. When it does render, the URL is https://sepolia.basescan.org/tx/0x{anchor_tx_hash} for Base Sepolia (note: prepend 0x — the API returns the hash as bare hex without the prefix) and https://basescan.org/tx/0x{...} for Base mainnet. Pick the host from the configured chain, not a hardcoded value.
+Fix the "Anchored at" row. It's currently showing a timestamp (Jul 25, 5:58 AM) even though nothing was anchored — it's almost certainly rendering the anchor row's created_at (when the root was computed). Only show "Anchored at" when a confirmed on-chain anchor exists. If the pending state needs a timestamp, label it "Recorded at" instead.
+Don't fabricate reassurance in the pending state. The phrase "can't be altered … Confirm it independently, without trusting Brain" must not appear unless there's a real, linkable on-chain transaction. This is a compliance-facing surface; an unverifiable claim of on-chain immutability is worse than showing "pending."
+
+Please add a test/story covering all three states with a null anchor_tx_hash fixture, so the pending case doesn't regress.
