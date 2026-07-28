@@ -11,7 +11,13 @@ const ScrollArea = React.forwardRef<
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    {/* Radix renders an inner wrapper div with `display: table; min-width: 100%`,
+        which sizes content to its intrinsic width. That breaks `truncate`/`w-full`
+        descendants: when the container narrows (Brain Assistant or the left nav
+        expands), content keeps its intrinsic width and overflows instead of
+        shrinking. Force the wrapper back to a normal block that tracks the
+        viewport's width so every page's tables/lists stay size-responsive. */}
+    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] [&>div]:!block [&>div]:!min-w-0 [&>div]:w-full">
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
