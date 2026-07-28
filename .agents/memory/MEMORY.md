@@ -15,6 +15,7 @@
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
-- [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist in proxy.ts; /actions is known live drift.
-- [Verifying the demo seed](demo-seed-verification.md) — our Brightline fixture is authoritative (brain-core's __fixtures__ copy is a different company); tenant+seed only start on a call needing a brain session.
+- [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
+- [Replit git branch tracking](replit-git-branch-tracking.md) — `checkout -b X origin/main` tracks main, and auto-checkpoints then push your feature work straight onto main; unset upstream first.
+- [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); read facts back via PDF /Keywords; avoid tautological asserts.

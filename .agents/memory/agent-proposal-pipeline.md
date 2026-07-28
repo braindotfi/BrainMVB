@@ -17,6 +17,23 @@ them means there is nothing to display.
 are `agent.router.selected` (carries `execution_mode` and `selected_agent_id`) and
 `agent.upload_projection.run` / `.run_failed` (carries `status` and `proposal_id`).
 
+## Re-verified after the upstream policy + APAR fix (api commit d7b5acec)
+
+Both upstream bugs were reported fixed and prod-verified; a fresh demo tenant showed neither
+fully resolved. Re-probe on a fresh tenant before trusting a "deployed and verified" claim.
+
+- **Policy:** `"no active policy for tenant"` is gone — a policy is now provisioned. But
+  propose/execute agents fail one step later with `null value in column "subject_id" of
+  relation "policy_decisions" violates not-null constraint`. Different error, same outcome:
+  no proposal.
+- **APAR:** `apar_projection.rebuilt` still reports `obligations: 0` while counterparties
+  climb normally, so `ledger/obligations` and `ledger/invoices` stay empty. Counterparty
+  links resolve fine, so a "null counterparty link" repair does not address it.
+
+**How to apply:** the failure signature to compare against is the pair
+(`upload.projected` obligations > 0) vs (`apar_projection.rebuilt` obligations == 0). Also
+check `/health` for the api commit, but remember it does not vouch for the worker container.
+
 ## The two failure modes observed
 
 - **`"no active policy for tenant"`** — agents routed to `execution_mode: propose` or
@@ -54,6 +71,24 @@ drop above.
 **How to apply:** fixing the tenant-policy gap alone will populate Brain Did but only
 partially populate Brain Detected. Both upstream bugs must land before that widget reflects
 a seeded tenant honestly. Check each source endpoint separately before blaming one cause.
+
+## An agent that is "enabled" can still never be selected — check evidence gates
+
+The router only selects an agent whose `required_evidence` is satisfiable from the read
+model. Collections requires `invoice` + `counterparty`, so while the apar rebuild drops
+obligations (above), `ledger/invoices` stays empty, no `invoice.overdue` or
+`receivable.aging_threshold_crossed` ever fires, and Collections is never selected — the
+router falls back to a lower-confidence agent on the shared `ledger.upload.projected`
+trigger instead.
+
+**Why:** a Collections proposal was assumed missing because of Inbox filtering. The agent had
+in fact never run: the audit log contained no collections entry at all, only `vendor_risk`,
+`treasury` and `cash_forecast` selections.
+
+**How to apply:** before suspecting routing, group `agent.router.selected` by
+`selected_agent_id`. If the agent you expect is absent, it was never selected — compare its
+registry `required_evidence` against what the read model actually holds. Absence from the
+audit log is the signal; a missing proposal is only the downstream symptom.
 
 ## `/v1/agents/proposals` does not exist
 

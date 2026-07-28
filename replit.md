@@ -80,8 +80,11 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   BLOCKS re-creation with a loud error — recover manually from the "durable tenant … created"
   server log line. A provably failed create rolls the tombstone back.
 - One-time starter seed (`server/brain/seed.ts`, create-tenant branch only, fire-and-forget):
-  ingests 3 bundled docs from `server/assets/demo-seed/` (regen: `scripts/generate-demo-seed.ts`)
-  through the standard ingest→extract pipeline. Manual re-run: `scripts/run-seed-once.ts`.
+  ingests 5 docs through the standard ingest→extract pipeline. The docs are GENERATED at
+  seed time (`server/brain/demo-seed/`), not read from disk, so their dates are always
+  relative to tenant creation — a fixed period slides out of the trailing windows the UI
+  queries. Inspect them with `npx tsx scripts/generate-demo-seed.ts [YYYY-MM-DD]` (writes
+  to a gitignored dir). Manual re-run: `scripts/run-seed-once.ts`.
 - **raw:write scope**: the durable MEMBER token cannot `/raw/ingest` (403); the AGENT token
   can (verified live 2026-07-24). Seed + the Add Source ingest route use `agentToken` (in
   demo mode `agentToken` === member token, so demo behavior is unchanged).

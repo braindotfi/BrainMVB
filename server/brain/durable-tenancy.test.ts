@@ -90,7 +90,7 @@ function routeBrainCore(fullUrl: string, method: string): Response {
 let getBrainSession: typeof import("./auth").getBrainSession;
 let clearBrainTokenCache: typeof import("./auth").clearBrainTokenCache;
 let storage: typeof import("../storage").storage;
-let SEED_FILES: typeof import("./seed").SEED_FILES;
+let SEED_MANIFEST: typeof import("./seed").SEED_MANIFEST;
 let whenSeedsSettle: typeof import("./seed").whenSeedsSettle;
 
 beforeAll(async () => {
@@ -121,7 +121,7 @@ beforeAll(async () => {
 
   ({ getBrainSession, clearBrainTokenCache } = await import("./auth"));
   ({ storage } = await import("../storage"));
-  ({ SEED_FILES, whenSeedsSettle } = await import("./seed"));
+  ({ SEED_MANIFEST, whenSeedsSettle } = await import("./seed"));
 });
 
 afterAll(() => {
@@ -170,7 +170,7 @@ describe("durable tenancy invariants", () => {
     // the durable member token lacks the raw:write scope (verified live 2026-07-24).
     await whenSeedsSettle();
     const ingests = calls.filter((c) => c.url.endsWith("/raw/ingest"));
-    expect(ingests.length).toBe(SEED_FILES.length);
+    expect(ingests.length).toBe(SEED_MANIFEST.length);
     for (const call of ingests) {
       expect(call.auth).toBe(`Bearer ${AGENT_TOKEN}`);
       // source_schema must be sent explicitly - without it artifacts land with
@@ -178,7 +178,7 @@ describe("durable tenancy invariants", () => {
       expect((call.body as Record<string, unknown>).source_schema).toBe("brain.upload.document.v1");
     }
     const docs = await storage.listSourceDocuments(userId);
-    expect(docs.length).toBe(SEED_FILES.length);
+    expect(docs.length).toBe(SEED_MANIFEST.length);
     // The seed must wait for the extraction JOB to settle before claiming "extracted" -
     // recording the first 202/"queued" response left parsedId null forever.
     for (const d of docs) {

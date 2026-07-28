@@ -85,21 +85,23 @@ account holder Brightline Systems Inc., closing balance 165,087.55. Never swap t
 the strength of a count alone; the other four documents are derived from it and a swap
 silently rebases the entire bundle onto another company.
 
-## The seed is a fixed June-2026 statement, so trailing-window surfaces decay over time
+## Seed dates are relative to the seeding date — never re-pin them to a fixed period
 
-Seed transactions are dated 2026-06-01..06-30 and never shift. Any surface using a trailing
-window relative to *now* therefore sees less of the seed as real time advances. Observed on
-2026-07-28: `/ledger/cash_flows` (trailing 30 days) caught only 3 of the 15 transactions —
-the 06/30 payroll, tax debit and interest credit — and reported net -48,335.63, which looks
-alarming but is just the tail of the month in isolation.
+The seed period is a rolling 30 days ending on the day the tenant is seeded, generated in
+memory at seed time. It is deliberately NOT a calendar month.
 
-**Why:** this reads as a data bug, and it gets worse silently. Once wall-clock passes ~30
-days after 2026-06-30, trailing-window surfaces show nothing at all from the seed.
+**Why:** the seed used to be a static June-2026 bundle. Trailing-window surfaces ask for
+`[now - 30d, now]`, so a fixed period slides out of view as wall-clock advances — on
+2026-07-28 a 30-day window caught 3 of 15 transactions and reported a net that looked
+alarming but was just the tail of the month in isolation. Anchoring to "the most recently
+completed calendar month" does not fix this: a completed month ends *before* now, so it
+decays the same way — full on the 1st, half by the 15th, gone by the 31st. Only a period
+ending at `now` keeps a trailing window complete.
 
 **How to apply:** when a windowed surface looks wrong or empty, check the window bounds
-against the fixed seed dates before investigating projection. If the demo needs to survive
-indefinitely, the seed dates have to become relative to the tenant's creation date — that is
-a real change to the generator, not a display tweak.
+against the seed period first. Do not commit generated seed documents — a committed
+snapshot re-introduces exactly this decay. Seeding on 2026-06-30 reproduces the original
+hand-authored June figures, which is the regression anchor worth keeping.
 
 ## Document `category` is BFF-local and silently couples to the UI
 
