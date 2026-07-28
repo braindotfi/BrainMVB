@@ -31,25 +31,51 @@ interface SeedFile {
   category: string;
 }
 
-/** The bundled June-2026 starter scenario (internally consistent figures). */
-const SEED_FILES: SeedFile[] = [
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/**
+ * The bundled June-2026 starter scenario (internally consistent figures - see the
+ * reconciliation rules at the top of scripts/generate-demo-seed.ts).
+ *
+ * `category` MUST be one of the CategoryId values the Add Source modal knows
+ * ("bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents"),
+ * because the category badges group real documents by exactly that field. It is a
+ * BFF-local label: brain-core is only ever sent sourceType + mimeType + source_schema,
+ * so there is no upstream category vocabulary to match.
+ *
+ * `sourceType` is brain-core's own: only "pdf_upload" and "csv_upload" exist, and
+ * "csv_upload" is the correct value for XLSX too.
+ */
+export const SEED_FILES: SeedFile[] = [
   {
     filename: "bank_statement_2026-06.pdf",
     mimeType: "application/pdf",
     sourceType: "pdf_upload",
-    category: "bank_statement",
+    category: "bank",
   },
   {
     filename: "ar_aging_2026-06-30.xlsx",
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType: XLSX_MIME,
     sourceType: "csv_upload",
-    category: "ar_aging",
+    category: "accounting",
   },
   {
     filename: "payroll_register_2026-06.xlsx",
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType: XLSX_MIME,
     sourceType: "csv_upload",
     category: "payroll",
+  },
+  {
+    filename: "crypto_wallet_2026-06.csv",
+    mimeType: "text/csv",
+    sourceType: "csv_upload",
+    category: "crypto",
+  },
+  {
+    filename: "form_1120_2025.pdf",
+    mimeType: "application/pdf",
+    sourceType: "pdf_upload",
+    category: "tax",
   },
 ];
 
@@ -61,6 +87,56 @@ const SEED_FILES: SeedFile[] = [
  * file is independent — one failure does not stop the others.
  */
 export async function seedTenantDocuments(appUserId: string, ingestToken: string): Promise<void> {
+  const run = runSeed(appUserId, ingestToken);
+  inFlightSeeds.add(run);
+  try {
+    await run;
+  } finally {
+    inFlightSeeds.delete(run);
+  }
+}
+
+/**
+ * Seeding is fire-and-forget off the login path, so nothing normally awaits it. This
+ * handle lets a caller that DOES need it to be finished - a test asserting on the
+ * resulting documents, or a graceful-shutdown path - wait for every in-flight run to
+ * settle instead of racing it with a sleep.
+ */
+const inFlightSeeds = new Set<Promise<unknown>>();
+
+/** Wall-clock budget for whenSeedsSettle(). Comfortably longer than a real seed run
+ *  (5 files x brain-core's async extract poll) so only a genuinely stuck run trips it. */
+const SETTLE_TIMEOUT_MS = 5 * 60_000;
+
+export async function whenSeedsSettle(timeoutMs = SETTLE_TIMEOUT_MS): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  // Each pass drains the current set, then yields so the `finally` blocks above can
+  // remove the settled entries before we look for runs that started in the meantime.
+  // Bounded by wall clock, not by pass count: a seed whose fetch stalls would otherwise
+  // park the caller (a test barrier, a shutdown hook) forever.
+  while (inFlightSeeds.size > 0) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      Promise.allSettled([...inFlightSeeds]),
+      new Promise((r) => {
+        timer = setTimeout(r, remaining);
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  if (inFlightSeeds.size > 0) {
+    // Never return silently as if the work were done - a caller that assumes a clean
+    // slate would otherwise attribute the stalled run's side effects to whatever runs next.
+    console.warn(`[brain-seed] ${inFlightSeeds.size} seed run(s) still in flight after ${timeoutMs}ms`);
+    return false;
+  }
+  return true;
+}
+
+async function runSeed(appUserId: string, ingestToken: string): Promise<void> {
   for (const file of SEED_FILES) {
     const path = join(SEED_DIR, file.filename);
     if (!existsSync(path)) {

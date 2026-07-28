@@ -13,3 +13,4 @@
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist in proxy.ts; /actions is known live drift.
+- [Verifying the demo seed](demo-seed-verification.md) — tenant+seed only start on a call needing a brain session; fire-and-forget seeding leaks across tests; doc category is BFF-local but couples to the UI badges.

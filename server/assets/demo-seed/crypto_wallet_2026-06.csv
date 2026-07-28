@@ -1,0 +1,15 @@
+Brightline Systems Inc. - Treasury Wallet Export
+Wallet address,0x8Fd2a41c7B90e5D316aC4f0b27e93Cd5A16b7F42
+Network,Ethereum mainnet
+Statement period,2026-06-01 to 2026-06-30
+ETH/USD reference rate,3200.00
+
+Date,Type,Asset,Quantity,USD Value,Counterparty,Memo,Tx Hash,USDC Balance,ETH Balance,Wallet Value USD
+2026-06-01,Opening balance,,,,,Opening wallet balance,,45000.00,12.5000,85000.00
+2026-06-04,Receive,USDC,18500.00,18500.00,Vertex Robotics,INV-1043 settled in USDC,0x7a1c4e02b98d5f3610ac77d2e4b5091f83cc6ad4,63500.00,12.5000,103500.00
+2026-06-11,Network fee,ETH,-0.0142,-45.44,,Gas - USDC transfer,0x2f9b60d71ee34c8a05f1b7ca9d3820e64af17c55,63500.00,12.4858,103454.56
+2026-06-18,Receive,USDC,9250.00,9250.00,Helios Data Co,INV-1050 settled in USDC,0xc4e83a5719b06d2fa87c1e40db95f37206ae8b13,72750.00,12.4858,112704.56
+2026-06-22,Staking reward,ETH,0.3125,1000.00,Lido stETH,Validator rewards - June,0x91d27fb4630ae85c07f2ab63d418e5920cc7d6fa,72750.00,12.7983,113704.56
+2026-06-26,Send,USDC,-6400.00,-6400.00,Halcyon Security,Q3 audit retainer,0x5b30ce8241f79ad06e3b1c95f7d240a86ef31b70,66350.00,12.7983,107304.56
+2026-06-29,Network fee,ETH,-0.0098,-31.36,,Gas - USDC transfer,0xe07f92a315c48b6017da39e2fc84b5106d3a92c8,66350.00,12.7885,107273.20
+2026-06-30,Closing balance,,,,,Closing wallet balance,,66350.00,12.7885,107273.20

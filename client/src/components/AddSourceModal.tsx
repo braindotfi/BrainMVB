@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { categoryCounts, CATEGORY_ORDER, type CategoryId } from "@/lib/sourceCategories";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
 import closeIcon from "@assets/close_1783619312132.png";
 import backIcon from "@assets/Back_1783893317104.png";
@@ -48,7 +49,7 @@ const STEP_INDEX: Record<Screen, number> = {
 };
 const TOTAL_STEPS = 4;
 
-export type CategoryId = "bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents";
+export type { CategoryId };
 
 interface AddSourceModalProps {
   open: boolean;
@@ -220,7 +221,6 @@ const CATEGORY_META: Record<CategoryId, { label: string; sub: string; target: Sc
   documents:  { label: "Documents",      sub: "Statements, contracts, spreadsheets",   target: "documents", accent: "#ff9500" },
 };
 
-const CATEGORY_ORDER: CategoryId[] = ["bank", "crypto", "accounting", "payroll", "payments", "tax", "documents"];
 
 const PROVIDERS: Partial<Record<CategoryId, Provider[]>> = {
   crypto: [
@@ -572,15 +572,8 @@ export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryI
   const tools = toolsQuery.data ?? [];
   const docs = docsQuery.data ?? [];
 
-  const counts: Record<CategoryId, number> = {
-    bank: banks.length,
-    crypto: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "crypto").length,
-    accounting: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "accounting").length,
-    payroll: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payroll").length,
-    payments: tools.filter((t) => TOOL_CATEGORY[t.toolId] === "payments").length,
-    tax: docs.filter((d) => d.category === "tax").length,
-    documents: docs.filter((d) => d.category !== "tax").length,
-  };
+  // Real, live-derived badge counts - see client/src/lib/sourceCategories.ts.
+  const counts = categoryCounts(banks, tools, docs, TOOL_CATEGORY);
 
   return (
     <div className="flex flex-col gap-[20px]">

@@ -90,6 +90,8 @@ function routeBrainCore(fullUrl: string, method: string): Response {
 let getBrainSession: typeof import("./auth").getBrainSession;
 let clearBrainTokenCache: typeof import("./auth").clearBrainTokenCache;
 let storage: typeof import("../storage").storage;
+let SEED_FILES: typeof import("./seed").SEED_FILES;
+let whenSeedsSettle: typeof import("./seed").whenSeedsSettle;
 
 beforeAll(async () => {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -119,25 +121,22 @@ beforeAll(async () => {
 
   ({ getBrainSession, clearBrainTokenCache } = await import("./auth"));
   ({ storage } = await import("../storage"));
+  ({ SEED_FILES, whenSeedsSettle } = await import("./seed"));
 });
 
 afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
-beforeEach(() => {
+beforeEach(async () => {
+  // The seed is fire-and-forget, so a previous test's run can still be issuing
+  // /raw/ingest calls. Drain it BEFORE clearing `calls`, or its ingests leak into the
+  // next test and invariant F ("real users are never seeded") fails on borrowed calls.
+  expect(await whenSeedsSettle(10_000), "a seed run never settled - later assertions would see its ingests").toBe(true);
   calls = [];
   failTenantCreation = false;
   clearBrainTokenCache();
 });
-
-/** Wait for the fire-and-forget seed to finish (bounded). */
-async function waitForSeed(expectedIngests: number): Promise<void> {
-  for (let i = 0; i < 100; i++) {
-    if (calls.filter((c) => c.url.endsWith("/raw/ingest")).length >= expectedIngests) return;
-    await new Promise((r) => setTimeout(r, 20));
-  }
-}
 
 describe("durable tenancy invariants", () => {
   /** The starter seed is gated on the app user's email being a demo address. */
@@ -167,11 +166,11 @@ describe("durable tenancy invariants", () => {
     expect(identity?.tenantId).toBe(TENANT_ID);
     expect(identity?.externalRef).toBe(userId);
 
-    // The one-time seed streams the three bundled documents with the AGENT token -
+    // The one-time seed streams every bundled document with the AGENT token -
     // the durable member token lacks the raw:write scope (verified live 2026-07-24).
-    await waitForSeed(3);
+    await whenSeedsSettle();
     const ingests = calls.filter((c) => c.url.endsWith("/raw/ingest"));
-    expect(ingests.length).toBe(3);
+    expect(ingests.length).toBe(SEED_FILES.length);
     for (const call of ingests) {
       expect(call.auth).toBe(`Bearer ${AGENT_TOKEN}`);
       // source_schema must be sent explicitly - without it artifacts land with
@@ -179,7 +178,7 @@ describe("durable tenancy invariants", () => {
       expect((call.body as Record<string, unknown>).source_schema).toBe("brain.upload.document.v1");
     }
     const docs = await storage.listSourceDocuments(userId);
-    expect(docs.length).toBe(3);
+    expect(docs.length).toBe(SEED_FILES.length);
     // The seed must wait for the extraction JOB to settle before claiming "extracted" -
     // recording the first 202/"queued" response left parsedId null forever.
     for (const d of docs) {
@@ -192,7 +191,7 @@ describe("durable tenancy invariants", () => {
   it("B+C+E: later sessions re-attach via /sessions - never /tenants, never the demo fence, never re-seed", async () => {
     const userId = await createDemoAppUser();
     await getBrainSession(userId);
-    await waitForSeed(3);
+    await whenSeedsSettle();
     clearBrainTokenCache(); // simulate restart/redeploy: cache gone, identity row remains
     calls = [];
 
