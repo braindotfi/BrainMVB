@@ -176,26 +176,28 @@ const InboxCard = ({
         rejected ? "border-l-[3px] border-l-[#d20344]" : ""
       }`}
     >
-      {/* Left column: title + second row (why/desc + tag pill inline) */}
+      {/* Left column: title + tag on the first line, then the supporting detail. */}
       <div className="flex flex-1 flex-col gap-[4px] items-start min-w-px">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">
-          {item.title}
-        </p>
-        <div className="flex items-center gap-[8px] w-full min-w-px">
+        <div className="flex items-center gap-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0 flex-1">
+            {item.title}
+          </p>
+          <span
+            className={`${item.tagClass} rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap shrink-0`}
+            data-testid={`tag-inbox-${item.id}`}
+          >
+            {item.tag}
+          </span>
+        </div>
+        <div className="flex items-center gap-[8px] w-full min-w-0">
           {secondLine && (
             <p
-              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate shrink min-w-0"
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate min-w-0"
               data-testid={`why-inbox-${item.id}`}
             >
               {secondLine}
             </p>
           )}
-          <span
-            className="bg-[#222737] border border-[rgba(108,119,157,0.2)] rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] whitespace-nowrap shrink-0"
-            data-testid={`tag-inbox-${item.id}`}
-          >
-            {item.tag}
-          </span>
         </div>
       </div>
 
