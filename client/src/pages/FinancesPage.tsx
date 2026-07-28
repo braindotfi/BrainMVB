@@ -427,7 +427,7 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
                   <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-{format(item.amount)}</p>
                 </div>
               </div>
-              <Divider />
+              {idx < rows.length - 1 && <Divider />}
             </div>
           ))}
         </>
