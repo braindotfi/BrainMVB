@@ -80,19 +80,13 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   BLOCKS re-creation with a loud error — recover manually from the "durable tenant … created"
   server log line. A provably failed create rolls the tombstone back.
 - One-time starter seed (`server/brain/seed.ts`, create-tenant branch only, fire-and-forget):
-  ingests 5 bundled docs from `server/assets/demo-seed/` (regen: `scripts/generate-demo-seed.ts`)
+  ingests 3 bundled docs from `server/assets/demo-seed/` (regen: `scripts/generate-demo-seed.ts`)
   through the standard ingest→extract pipeline. Manual re-run: `scripts/run-seed-once.ts`.
-- The bank statement is **brain-core's own interpreter fixture, vendored byte-for-byte** — it
-  is NOT generated, and the other four documents are built to reconcile against it (payroll
-  debits, the Helios partial payment, on-chain-only crypto, the 1120's monthly lines).
-  `server/brain/seed-assets.test.ts` pins its SHA-256 and re-checks those ties.
 - **raw:write scope**: the durable MEMBER token cannot `/raw/ingest` (403); the AGENT token
   can (verified live 2026-07-24). Seed + the Add Source ingest route use `agentToken` (in
   demo mode `agentToken` === member token, so demo behavior is unchanged).
-- brain-core DOES project the seeded bank statement into ledger entities: a freshly seeded
-  tenant reports 19 transactions, net −14,586.02 (verified 2026-07-28), with counterparties
-  and a `/monthly-summaries/2026-06` memory page. Other document types remain advisory —
-  `ledger/invoices` still returns `[]`, so invoice-backed surfaces stay empty.
+- brain-core does NOT project uploaded docs into ledger entities — extraction is advisory,
+  so a seeded tenant's ledger endpoints return empty; the UI renders that honestly.
 - `/api/brain/tenancy` still reports demo/linked (TenancyGate unaffected); Developers →
   Tenants reports the identity tenant with `ephemeral:false` (no expiry countdown).
 - Pinned by `server/brain/durable-tenancy.test.ts` (one create; re-attach via /sessions;
@@ -186,8 +180,7 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   reasons; `awaiting_second` toasts and stays queued.
 - **Finances tab**: detail sheets are read-only, data-derived, NO setTimeout. Currency honesty:
   fiat via `useCurrency().format`; non-USD tokens in NATIVE units (never USD-converted).
-  The demo seed carries real outflows (165,292.01 against 150,705.99 of inflows), so Expenses
-  renders populated — do not reintroduce an "inflows only" assumption.
+  Demo seed is all inflows so Expenses honestly renders empty.
 - **Needs Review** (`/review`): data-driven queue; ONE `ProposalDetail.tsx` for all scenarios;
   status overrides in `reviewStatusStore.ts` (SSOT, user-driven, no setTimeout). Invariant:
   `ACCOUNT_SUMMARY.pendingAPTotal` must equal the sum of money-mover AP proposals; `sweepMath`

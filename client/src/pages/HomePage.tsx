@@ -667,9 +667,9 @@ export function HomePage() {
   const totalWhole = totalParts ? totalParts[1] : totalFormatted;
   const totalCents = totalParts ? `.${totalParts[2]}` : "";
 
-  // Net cash flow per month from the live Ledger. The demo seed carries both
-  // directions (150,705.99 in / 165,292.01 out), so this nets NEGATIVE for 2026-06 -
-  // that is correct, not a bug. null when no transactions are reachable at all.
+  // Net cash flow per month from the live Ledger. With only inflows seeded today
+  // this reads as positive income; it nets real expenses automatically once money
+  // -out transactions land. null when no transactions are reachable at all.
   const { data: brainTx } = useQuery<{
     transactions?: { amount?: string; direction?: string; transaction_date?: string }[];
   }>({

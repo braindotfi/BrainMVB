@@ -36,9 +36,8 @@ don't assert on a count that a slower run can satisfy from the wrong test.
 ## The seed generator rewrites every fixture on every run
 
 The generator script's entry point calls each document generator unconditionally, so adding
-a new one also rewrites all the pre-existing files, and they come back byte-different even
-when their content is identical (see the generated-fixture-guards note for why pinning the
-timestamps does not fix this).
+a new one also rewrites all the pre-existing files. PDF and XLSX both embed a build
+timestamp, so those files come back byte-different even when their content is identical.
 
 **Why:** silently churning a fixture invalidates any prior end-to-end verification against
 it, and the churn is invisible in a diff (binary blobs). This turned into a real dispute
@@ -63,6 +62,28 @@ where possible (the bank statement prints its own opening and closing balance, s
 sum can be validated without trusting the counter). Then test the cheap hypotheses
 mechanically — does dropping any single row, or flipping any single sign, reproduce their
 number? — before escalating.
+
+## Our seed fixture is authoritative; brain-core's `__fixtures__` copy is not
+
+The demo bank statement is **Brightline Systems Inc.** (First Meridian Bank ****7302),
+15 transactions, opening 187,450.23 → closing 165,087.55, net **-22,362.68**. That is what
+production tenants actually store and parse. brain-core's test harness carries its own file
+at the same-sounding path (`services/raw/src/interpreters/__fixtures__/bank_statement_2026-06.pdf`)
+describing a *different* company — Northlight Manufacturing, 19 transactions, net -14,586.02.
+
+**Why:** an upstream instruction, believing our fixture was stale, asked us to adopt their
+`__fixtures__` file as the anchor and rebuild the other four seed documents around it. It was
+done — and it was backwards: their local copy was the stale one, and the whole bundle had to
+be reverted to a different fictional company. The two files are easy to confuse because the
+filename and month are identical.
+
+**How to apply:** when an upstream team reports a mismatch against "the fixture", establish
+*which artifact they actually queried* before changing anything — a bundled local test
+fixture and the production tenant's stored raw artifact are different objects. Ask them to
+re-run against the stored production artifact. Identify our file by content, not filename:
+account holder Brightline Systems Inc., closing balance 165,087.55. Never swap the anchor on
+the strength of a count alone; the other four documents are derived from it and a swap
+silently rebases the entire bundle onto another company.
 
 ## Document `category` is BFF-local and silently couples to the UI
 
