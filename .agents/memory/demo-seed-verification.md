@@ -33,6 +33,36 @@ grew past three files and stopped finishing incidentally.
 `beforeEach` *before* resetting any recorded state. Don't paper over it with a sleep, and
 don't assert on a count that a slower run can satisfy from the wrong test.
 
+## The seed generator rewrites every fixture on every run
+
+The generator script's entry point calls each document generator unconditionally, so adding
+a new one also rewrites all the pre-existing files. PDF and XLSX both embed a build
+timestamp, so those files come back byte-different even when their content is identical.
+
+**Why:** silently churning a fixture invalidates any prior end-to-end verification against
+it, and the churn is invisible in a diff (binary blobs). This turned into a real dispute
+with the upstream team over whose transaction count was wrong.
+
+**How to apply:** after running the generator, diff the git *blob hashes* of the fixtures
+you did not intend to touch and revert the ones whose content is unchanged. Never claim a
+fixture is unchanged from memory — `git rev-parse <ref>:<path>` on both sides is the proof.
+
+## Reconciling a count dispute: compare the aggregate, not just the count
+
+When an external service reports a different row count than a fixture contains, compare a
+*sum* (net amount, closing balance) as well as the count before concluding anything.
+
+**Why:** a miscount alone — counting header or opening-balance lines as rows — leaves the
+aggregate intact. If the aggregate ALSO differs, the other side is not misparsing your
+document, it is reading a different document, and a "your count is wrong" bug report would
+send them chasing the wrong thing.
+
+**How to apply:** derive the aggregate from something self-checking inside the artifact
+where possible (the bank statement prints its own opening and closing balance, so the row
+sum can be validated without trusting the counter). Then test the cheap hypotheses
+mechanically — does dropping any single row, or flipping any single sign, reproduce their
+number? — before escalating.
+
 ## Document `category` is BFF-local and silently couples to the UI
 
 brain-core is only ever sent `source_type`, `mime_type`, and `source_schema` — never a
