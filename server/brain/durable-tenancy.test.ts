@@ -80,7 +80,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
     return json({ raw_id: `raw_${calls.filter((c) => c.url.endsWith("/raw/ingest")).length}`, sha256: "deadbeef", deduplicated: false });
   }
   if (/\/raw\/[^/]+\/extract$/.test(url) && method === "POST") {
-    return json({ parsed_id: "parsed_1", confidence: 0.4 });
+    // brain-core's real shape is a JOB envelope; only status:"succeeded" carries a
+    // final parsed_id. The seed polls until terminal, so answer terminal immediately.
+    return json({ job_id: "rexj_1", status: "succeeded", parsed_id: "parsed_1", confidence: 0.4, error: null });
   }
   return json({ error: { code: "not_found" } }, 404);
 }
@@ -178,6 +180,13 @@ describe("durable tenancy invariants", () => {
     }
     const docs = await storage.listSourceDocuments(userId);
     expect(docs.length).toBe(3);
+    // The seed must wait for the extraction JOB to settle before claiming "extracted" -
+    // recording the first 202/"queued" response left parsedId null forever.
+    for (const d of docs) {
+      expect(d.extractStatus).toBe("extracted");
+      expect(d.parsedId).toBe("parsed_1");
+      expect(d.confidence).toBe("0.4");
+    }
   });
 
   it("B+C+E: later sessions re-attach via /sessions - never /tenants, never the demo fence, never re-seed", async () => {

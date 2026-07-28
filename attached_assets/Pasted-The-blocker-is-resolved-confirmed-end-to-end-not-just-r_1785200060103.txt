@@ -1,0 +1,16 @@
+The blocker is resolved — confirmed end to end, not just reported
+
+Commit d79dd204fe82e8a93f0a90fdbc5ca0ce47bb644e is deployed and verified in production. A fresh tenant's real upload flow (POST /raw/ingest → POST /raw/{id}/extract, the same calls seedTenantDocuments makes) now completes correctly end to end:
+
+All three seed documents (bank statement, AR aging, payroll) parse successfully with real confidence values (bank 0.9, AR 0.72, payroll 0.72) — no jobs stuck queued.
+GET /v1/ledger/accounts and /v1/ledger/transactions independently verified to return the real uploaded bank account and its 19 June transactions, with source_ids/evidence_ids matching the actual raw/parsed ids — confirmed genuinely derived from the uploaded document, not baseline demo-provisioning seed data.
+
+This took a long diagnostic chain on brain-core's side (parsing bugs, a routing gap, and finally a worker hang in the ledger-projection callback that could block the whole worker indefinitely) — all resolved now.
+
+You're clear to proceed with Steps 2 and 3 from the original prompt
+Confirm on your end first: run the existing demo-fresh-* seed flow once against current production and verify GET /api/brain/ledger/accounts (via the BFF) now returns real data for the bank statement, same as brain-core's direct verification. This closes the loop on your side before building further.
+Step 2: broaden SEED_FILES in server/brain/seed.ts to cover the additional source categories from the original prompt (crypto wallet, tax return, etc.), reconciled against the existing bank/AR/payroll figures.
+Step 3: wire the "Sources: Connected" badges to real source_documents data, as originally scoped.
+One known, non-blocking gap on brain-core's side
+
+ledger_invoices/ledger_obligations (the compact ledger tables) still return 0 rows for AR aging and payroll specifically, even though both parse correctly and canonical projection logs real writes for them. This doesn't affect the bank-statement/accounts path your demo experience depends on, so it shouldn't block Steps 2/3 — just something to be aware of if a Finances tab that reads from invoices/obligations specifically still looks empty after seeding those document types.

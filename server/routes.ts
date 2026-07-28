@@ -35,6 +35,7 @@ import {
   type WikiEvidence,
 } from "./brain/client";
 import type { ExtractStatus } from "./storage";
+import { extractStatusForJob } from "./brain/extractStatus";
 import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
@@ -1294,10 +1295,70 @@ You can explain concepts and surface general guidance, but do not give regulated
    *  NOTE: only file metadata is persisted here - raw bytes are not stored.
    * ────────────────────────────────────────────────────────────────────── */
 
+  /**
+   * Settle any document still mid-extraction before answering. brain-core's extract job is
+   * async, so the upload route can only record "extracting"; re-POSTing /raw/{id}/extract is
+   * idempotent (same job) and returns its current state, which is how a document reaches
+   * "extracted" with a real parsed_id. The Reading screen polls this endpoint every 15s while
+   * anything is in progress, so that poll drives the settle. Failures are swallowed: this is a
+   * read endpoint and a stuck job must not break the documents list.
+   *
+   * Two bounds keep a permanently-stuck job from generating upstream calls forever:
+   * SETTLE_MAX_AGE_MS stops chasing documents that are long past any plausible completion
+   * (they stay "extracting" - we genuinely don't know, and inventing a terminal status would
+   * be a lie), and the per-request cap limits fan-out.
+   */
+  const SETTLE_MAX_AGE_MS = 60 * 60 * 1000;
+  const SETTLE_MAX_PER_REQUEST = 10;
+
+  async function settleInFlightExtractions(userId: string, docs: Awaited<ReturnType<typeof storage.listSourceDocuments>>) {
+    const now = Date.now();
+    const pending = docs
+      .filter((d) => d.extractStatus === "extracting" && d.rawId)
+      .filter((d) => now - new Date(d.uploadedAt).getTime() < SETTLE_MAX_AGE_MS)
+      .slice(0, SETTLE_MAX_PER_REQUEST);
+    if (pending.length === 0) return;
+    let agentToken: string;
+    try {
+      ({ agentToken } = await getBrainSession(userId));
+    } catch {
+      return;
+    }
+    await Promise.all(
+      pending.map(async (d) => {
+        let patch: { extractStatus: ExtractStatus; parsedId?: string | null; confidence?: string | null };
+        try {
+          const extract = await extractRawDocument(agentToken, d.rawId!);
+          const extractStatus = extractStatusForJob(extract);
+          if (extractStatus === "extracting") return; // still running - nothing to write
+          patch = {
+            extractStatus,
+            parsedId: extract.parsed_id,
+            confidence: extract.confidence !== null ? String(extract.confidence) : null,
+          };
+        } catch (err) {
+          // Same mapping the write paths use, so a document can't sit at "extracting"
+          // forever because of an error that is itself terminal.
+          if (err instanceof BrainApiError && err.status === 422) {
+            patch = { extractStatus: "unsupported" };
+          } else if (err instanceof BrainApiError && err.status === 404) {
+            patch = { extractStatus: "unavailable" };
+          } else {
+            console.warn(`[document-extract] settle failed for rawId=${d.rawId}:`, (err as Error).message);
+            return;
+          }
+        }
+        await storage.updateSourceDocumentExtraction(userId, d.id, patch).catch(() => undefined);
+      }),
+    );
+  }
+
   app.get("/api/integrations/documents", requireAuth, async (req, res) => {
     try {
-      const list = await storage.listSourceDocuments(req.session.userId!);
-      res.json(list);
+      const userId = req.session.userId!;
+      const list = await storage.listSourceDocuments(userId);
+      await settleInFlightExtractions(userId, list);
+      res.json(await storage.listSourceDocuments(userId));
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
@@ -1416,13 +1477,17 @@ You can explain concepts and surface general guidance, but do not give regulated
       }
 
       // 3. Trigger extraction - non-fatal; record the outcome as a status.
+      // brain-core's extract is ASYNC: the first response is 202/"queued" with a null
+      // parsed_id, and the parsed record lands ~15-90s later. A user is waiting on this
+      // request, so DON'T poll here - record "extracting" and let the documents list
+      // settle it (the Reading screen already polls while anything is in progress).
       let extractStatus: ExtractStatus = "extracting";
       let parsedId: string | null = null;
       let confidence: string | null = null;
       try {
         const { agentToken } = await getBrainSession(userId);
         const extract = await extractRawDocument(agentToken, rawId);
-        extractStatus = "extracted";
+        extractStatus = extractStatusForJob(extract);
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
       } catch (err) {

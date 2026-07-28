@@ -18,7 +18,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { storage } from "../storage";
-import { ingestRawDocument, extractRawDocument, BrainApiError, type RawSourceType } from "./client";
+import { ingestRawDocument, pollRawExtraction, BrainApiError, type RawSourceType } from "./client";
+import { extractStatusForJob } from "./extractStatus";
 import type { ExtractStatus } from "../storage";
 
 const SEED_DIR = join(process.cwd(), "server", "assets", "demo-seed");
@@ -93,14 +94,24 @@ export async function seedTenantDocuments(appUserId: string, ingestToken: string
         extractStatus: "ingested",
       });
 
-      // 3. Trigger extraction - mirrors the /api/integrations/documents/ingest route's
-      // status mapping (422 → unsupported; 404/other → unavailable).
+      // 3. Trigger extraction and WAIT for brain-core's job to settle. The extract call is
+      // async (first response is 202/"queued" with parsed_id: null), so returning on the
+      // first response recorded "extracted" with a null parsed_id forever. Nobody is waiting
+      // on this seed (fire-and-forget after tenant create), so polling here is free.
+      // Status mapping mirrors the /api/integrations/documents/ingest route
+      // (422 → unsupported; 404/other → unavailable).
       let extractStatus: ExtractStatus = "extracting";
       let parsedId: string | null = null;
       let confidence: string | null = null;
       try {
-        const extract = await extractRawDocument(ingestToken, ingest.raw_id);
-        extractStatus = "extracted";
+        const extract = await pollRawExtraction(ingestToken, ingest.raw_id);
+        extractStatus = extractStatusForJob(extract);
+        if (extractStatus === "failed") {
+          console.warn(`[brain-seed] extraction ${extract.status} for ${file.filename}: ${extract.error ?? "no detail"}`);
+        } else if (extractStatus === "extracting") {
+          // Budget exhausted while still queued/running - say so instead of claiming success.
+          console.warn(`[brain-seed] extraction still ${extract.status ?? "pending"} for ${file.filename} after poll budget`);
+        }
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
       } catch (err) {

@@ -637,12 +637,28 @@ export async function ingestRawDocument(
 export interface RawExtractResult {
   parsed_id: string | null;
   confidence: number | null;
+  /** Extraction JOB state: queued | running | succeeded | failed (brain-core's own wording). */
+  status: string | null;
+  /** Failure detail brain-core attaches when status === "failed". */
+  error: string | null;
+}
+
+/** True once brain-core's extraction job has settled - parsed_id/confidence are final. */
+export function isTerminalExtractStatus(status: string | null): boolean {
+  return status === "succeeded" || status === "failed" || status === "cancelled";
 }
 
 /**
- * POST /raw/{raw_id}/extract - trigger extraction. Empty body. Returns the parsed
- * record id + a (capped) confidence. The endpoint is being built brain-side, so
- * callers MUST handle BrainApiError 404 (not deployed yet) and 422 (unsupported
+ * POST /raw/{raw_id}/extract - trigger extraction. Empty body.
+ *
+ * IMPORTANT (verified live 2026-07-28): this is ASYNC despite earlier reports of a
+ * synchronous drain. The first call returns 202 with `{status: "queued", parsed_id: null,
+ * confidence: null}`; the parsed record materializes ~15-90s later. The call is idempotent
+ * per raw_id - re-POSTing returns the SAME job's current state (200 + succeeded +
+ * parsed_id/confidence once it settles), so it doubles as the poll. Callers that record
+ * parsed_id must poll (see pollRawExtraction) instead of trusting the first response.
+ *
+ * Callers MUST also handle BrainApiError 404 (not deployed yet) and 422 (unsupported
  * file type / scanned image needing OCR) gracefully.
  */
 export async function extractRawDocument(token: string, rawId: string): Promise<RawExtractResult> {
@@ -655,7 +671,34 @@ export async function extractRawDocument(token: string, rawId: string): Promise<
   const parsedId =
     typeof o.parsed_id === "string" ? o.parsed_id : typeof o.id === "string" ? (o.id as string) : null;
   const confidence = typeof o.confidence === "number" ? o.confidence : null;
-  return { parsed_id: parsedId, confidence };
+  return {
+    parsed_id: parsedId,
+    confidence,
+    status: typeof o.status === "string" ? o.status : null,
+    error: typeof o.error === "string" ? o.error : null,
+  };
+}
+
+/**
+ * Trigger extraction and keep re-POSTing (idempotent - same job) until brain-core's job
+ * settles or the budget runs out. Returns the LAST observed state: a non-terminal status
+ * means "still running", not "done with no output", and callers must record it honestly.
+ * Errors propagate to the caller unchanged so 404/422 keep their existing meaning.
+ */
+export async function pollRawExtraction(
+  token: string,
+  rawId: string,
+  opts: { budgetMs?: number; intervalMs?: number } = {},
+): Promise<RawExtractResult> {
+  const budgetMs = opts.budgetMs ?? 120_000;
+  const intervalMs = opts.intervalMs ?? 5_000;
+  const deadline = Date.now() + budgetMs;
+  let last = await extractRawDocument(token, rawId);
+  while (!isTerminalExtractStatus(last.status) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    last = await extractRawDocument(token, rawId);
+  }
+  return last;
 }
 
 // ─── Ledger obligations (what Brain read back out of the documents) ──────────
