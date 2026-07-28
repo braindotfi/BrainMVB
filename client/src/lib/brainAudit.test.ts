@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, anchorFromInclusionProof, extractActorName, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, anchorFromInclusionProof, extractActorName, bffPathForActorLookup, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -355,5 +355,33 @@ describe("extractActorName", () => {
     expect(extractActorName(null)).toBeNull();
     expect(extractActorName("agt_01ABC")).toBeNull();
     expect(extractActorName({ definition: { id: "agt_01ABC" } })).toBeNull();
+  });
+});
+
+/**
+ * Actor-lookup routing. brain-core emits `actor_ref.lookup` as
+ * `/v1/agents/{id}` for agent actors, but that route is its agent CATALOG,
+ * keyed by agent_key ("collections", "treasury", …) — it answers 404
+ * `agent_not_found` for the runtime ULIDs (`agent_01…`) audit events actually
+ * carry. Runtime agents resolve at `/v1/execution/agents/{id}`. This pins the
+ * re-point so agent-attributed audit rows keep their names instead of silently
+ * falling back to "omit the actor" on every single row.
+ */
+describe("bffPathForActorLookup", () => {
+  it("re-points agent lookups at the runtime registry, not the catalog", () => {
+    expect(bffPathForActorLookup("/v1/agents/agent_01KYAT7A1V54DA2153R0NHE1YR")).toBe(
+      "/api/brain/execution/agents/agent_01KYAT7A1V54DA2153R0NHE1YR",
+    );
+  });
+
+  it("passes member lookups through unchanged", () => {
+    expect(bffPathForActorLookup("/v1/members/user_01KYAT7A1QN8CBFP6S0SAY241F")).toBe(
+      "/api/brain/members/user_01KYAT7A1QN8CBFP6S0SAY241F",
+    );
+  });
+
+  it("only rewrites the bare /agents/{id} shape, never its sub-resources", () => {
+    // /agents/{id}/actions is a real, different route - leave it alone.
+    expect(bffPathForActorLookup("/v1/agents/collections/actions")).toBe("/api/brain/agents/collections/actions");
   });
 });

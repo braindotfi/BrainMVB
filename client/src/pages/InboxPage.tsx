@@ -321,7 +321,7 @@ export function InboxPage() {
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
-    void queryClient.invalidateQueries({ queryKey: ["/api/brain/actions"] });
+    void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/proposals") });
     void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/payment-intents/") });
   };
   const approveLive = useMutation<unknown, Error, string>({

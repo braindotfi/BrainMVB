@@ -790,19 +790,31 @@ function s2(v: unknown): string | null {
 
 // ─── PaymentIntents / Approval queue ───
 
-/** Action summary from brain-core /actions (approval-queue IDs + status). */
-export interface BrainActionSummary {
+export interface BrainProposalRow {
   id: string;
   status: string;
+  /** Non-null marks a money-path row (a ledger_payment_intent), as opposed to
+   *  an agent proposal. */
+  payment_intent_id: string | null;
+}
+export interface ListProposalsResponse {
+  proposals: BrainProposalRow[];
+  next_cursor: string | null;
 }
 
-export interface ListActionsResponse {
-  data: BrainActionSummary[];
-}
-
-/** GET /actions - approval-queue summaries (MEMBER token, execution:read). */
-export function listActions(token: string): Promise<ListActionsResponse> {
-  return brainRequest<ListActionsResponse>("/actions", { token });
+/** GET /proposals - the merged agent-proposal + money-path page (MEMBER token,
+ *  execution:read).
+ *
+ *  There is NO tenant-scoped `GET /actions` on brain-core - it 404s
+ *  `route_not_found`, the only actions route on the surface being the per-agent
+ *  `GET /agents/{agent_id}/actions`. /proposals is a UNION ALL of the proposals
+ *  table and ledger_payment_intents, so it is the approval queue's real list
+ *  source; fan out to GET /payment-intents/{id} for amount/currency/counterparty. */
+export function listProposals(token: string, opts?: { limit?: number }): Promise<ListProposalsResponse> {
+  return brainRequest<ListProposalsResponse>("/proposals", {
+    token,
+    query: { limit: String(opts?.limit ?? 100) },
+  });
 }
 
 /** GET /payment-intents/{id} - full PaymentIntent detail. */

@@ -2,21 +2,45 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import type { Proposal, ProposalStatus } from "./proposalTypes";
 
 /* ── Durable "Needs Review" queue - live brain-core PaymentIntents ─────────
-   brain-core has no bulk list of full PaymentIntents: `GET /actions` is the
-   only tenant-scoped list, but its wire shape (`Action`) strips amount/
-   currency/counterparty/invoice_id (see brain-core services/execution/src/
-   actions/mapper.ts - deliberate: /actions is the docs-vocabulary summary).
-   So this hook fans out: list ids+status from /actions, then fetch each
-   candidate's full record from GET /payment-intents/{id} (already exposed,
-   passthrough-safe, execution:read scope). Bounded to a handful of pending
-   items so the fan-out stays cheap. */
+   brain-core has no bulk list of full PaymentIntents, and no tenant-scoped
+   `GET /actions` either: that path 404s `route_not_found` (the only actions
+   route on the whole surface is the per-agent `GET /agents/{agent_id}/actions`,
+   which is a different resource). The money-path list lives on GET /v1/proposals,
+   a UNION ALL of the proposals table and ledger_payment_intents (brain-core
+   read-model.ts) - rows with a non-null payment_intent_id ARE this queue, and
+   are deliberately excluded from useBrainProposals for exactly that reason
+   (see selectNonFinancialProposals).
 
-interface BrainAction {
-  id: string;
-  status: "auto" | "needs_approval" | "approved" | "paused" | "dispatching" | "rejected" | "executed" | "failed" | "cancelled";
+   So this hook fans out: take payment_intent_ids from /proposals, then fetch
+   each candidate's full record from GET /payment-intents/{id} (already exposed,
+   passthrough-safe, execution:read scope).
+
+   The authoritative status filter is on the DETAIL record, never the list row:
+   the proposal row's own status is a merged read-model value whose mapping onto
+   PaymentIntent statuses isn't part of the published contract, so trusting it to
+   pre-narrow a queue would silently empty one if the mapping shifted. Both hooks
+   share one list query key, so react-query issues a single list request and
+   dedupes the detail fetches between them. */
+
+/** Same key brainProposals.ts uses, so the two surfaces share one fetch. */
+const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
+
+interface ProposalsPage {
+  proposals: { payment_intent_id: string | null }[];
 }
-interface ActionsListResponse {
-  data: BrainAction[];
+
+/** The money-path payment_intent_ids on a /proposals page, de-duplicated and
+ *  capped so a large page can't fan out unboundedly. Exported for tests. */
+export function selectMoneyPathIntentIds(
+  proposals: { payment_intent_id: string | null }[],
+  cap = 25,
+): string[] {
+  const ids = new Set<string>();
+  for (const p of proposals) {
+    if (p.payment_intent_id) ids.add(p.payment_intent_id);
+    if (ids.size >= cap) break;
+  }
+  return [...ids];
 }
 
 /** Raw brain-core PaymentIntent (subset - see shared/src/contracts/IPaymentIntentService.ts). */
@@ -50,15 +74,11 @@ interface CounterpartiesLiteResponse {
  * only knows about intents proposed in THIS browser session).
  */
 export function useBrainReviewQueue() {
-  const actions = useQuery<ActionsListResponse>({
-    queryKey: ["/api/brain/actions"],
+  const list = useQuery<ProposalsPage>({
+    queryKey: [PROPOSALS_QUERY_KEY],
     retry: false,
   });
-  // /actions maps both pending_approval + awaiting_second_approval to its
-  // own "needs_approval" status - that's the only signal it carries.
-  const pendingIds = (actions.data?.data ?? [])
-    .filter((a) => a.status === "needs_approval")
-    .map((a) => a.id);
+  const pendingIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
 
   // Fan out to the full record per candidate. useQueries (not useQuery-in-a-
   // loop, which breaks Rules of Hooks once the id list's length changes)
@@ -87,7 +107,7 @@ export function useBrainReviewQueue() {
   const nameOf = (id: string) => counterparties.data?.counterparties.find((c) => c.id === id)?.name ?? undefined;
 
   return {
-    isLoading: actions.isLoading || details.some((d) => d.isLoading),
+    isLoading: list.isLoading || details.some((d) => d.isLoading),
     proposals: intents.map((i) => mapIntentToProposal(i, nameOf(i.destination_counterparty_id))),
   };
 }
@@ -102,13 +122,11 @@ export function useBrainReviewQueue() {
  * "paid" — see mapIntentToAutoApprovedProposal below.
  */
 export function useBrainAutoApproved() {
-  const actions = useQuery<ActionsListResponse>({
-    queryKey: ["/api/brain/actions"],
+  const list = useQuery<ProposalsPage>({
+    queryKey: [PROPOSALS_QUERY_KEY],
     retry: false,
   });
-  const autoIds = (actions.data?.data ?? [])
-    .filter((a) => a.status === "auto")
-    .map((a) => a.id);
+  const autoIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
 
   const details = useQueries({
     queries: autoIds.map((id) => ({
@@ -131,7 +149,7 @@ export function useBrainAutoApproved() {
   const nameOf = (id: string) => counterparties.data?.counterparties.find((c) => c.id === id)?.name ?? undefined;
 
   return {
-    isLoading: actions.isLoading || details.some((d) => d.isLoading),
+    isLoading: list.isLoading || details.some((d) => d.isLoading),
     proposals: intents.map((i) => mapIntentToAutoApprovedProposal(i, nameOf(i.destination_counterparty_id))),
   };
 }

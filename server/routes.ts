@@ -16,7 +16,7 @@ import {
   listObligations,
   listMembers,
   getApprovalPolicyFacts,
-  listActions,
+  listProposals,
   getPaymentIntent,
   listAuditEvents,
   ingestRawDocument,
@@ -745,7 +745,7 @@ You can explain concepts and surface general guidance, but do not give regulated
    */
   async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
     // Fetch ALL tenant data in parallel - the assistant should have the full picture.
-    const [accounts, txs, cps, invoices, obligations, members, policy, actions, auditEvents] = await Promise.allSettled([
+    const [accounts, txs, cps, invoices, obligations, members, policy, proposalsPage, auditEvents] = await Promise.allSettled([
       listLedgerAccounts(token, { limit: 50 }),
       listLedgerTransactions(token, { limit: 50 }),
       listLedgerCounterparties(token),
@@ -753,7 +753,7 @@ You can explain concepts and surface general guidance, but do not give regulated
       listObligations(token, { limit: 20 }),
       listMembers(token),
       getApprovalPolicyFacts(token, tenantId),
-      listActions(token),
+      listProposals(token, { limit: 100 }),
       listAuditEvents(token, { limit: 20 }),
     ]);
 
@@ -844,30 +844,41 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
 
     // ─── Pending approvals (Needs Review queue) ───
-    if (actions.status === "fulfilled" && actions.value && actions.value.data.length > 0) {
-      const pending = actions.value.data.filter((a) => a.status === "needs_approval" || a.status === "pending_approval").slice(0, 5);
-      if (pending.length > 0) {
+    // Money-path rows only: /proposals is a UNION of agent proposals and
+    // ledger_payment_intents, and a non-null payment_intent_id marks the latter.
+    //
+    // The proposal row's OWN status is a merged read-model value whose mapping
+    // onto PaymentIntent statuses is not part of the published contract, so it
+    // is never trusted to decide "pending". That check happens on the fetched
+    // DETAIL record below - and a candidate whose detail can't be fetched is
+    // dropped rather than reported to the assistant as pending on a guess.
+    // Telling the model a settled payment still needs approval is exactly the
+    // kind of confident-but-wrong grounding this path exists to prevent.
+    if (proposalsPage.status === "fulfilled" && proposalsPage.value) {
+      const candidates = proposalsPage.value.proposals
+        .filter((p): p is typeof p & { payment_intent_id: string } => p.payment_intent_id !== null)
+        .slice(0, 10);
+      if (candidates.length > 0) {
         // Fan out to full PaymentIntent details (bounded by the slice above).
         const piResults = await Promise.allSettled(
-          pending.map((a) => getPaymentIntent(token, a.id)),
+          candidates.map((a) => getPaymentIntent(token, a.payment_intent_id)),
         );
-        const piLines: string[] = [];
-        for (let i = 0; i < pending.length; i++) {
-          const a = pending[i];
-          const pi = piResults[i];
-          if (pi.status === "fulfilled" && pi.value) {
-            const p = pi.value;
+        const PENDING_STATUSES = new Set(["pending_approval", "awaiting_second_approval"]);
+        const pending = piResults
+          .flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []))
+          .filter((p) => PENDING_STATUSES.has(p.status))
+          .slice(0, 5);
+        if (pending.length > 0) {
+          const piLines: string[] = [];
+          for (const p of pending) {
             const amt = Number(p.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
             const cpNote = p.destination_counterparty_id ? ` to counterparty ${p.destination_counterparty_id}` : "";
             const invNote = p.invoice_id ? ` (invoice ${p.invoice_id})` : "";
             piLines.push(`  • PaymentIntent ${p.id} - ${p.action_type} - ${p.currency} ${amt}${cpNote}${invNote} - status: ${p.status}`);
             sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${p.currency} ${p.amount} - ${p.status}` });
-          } else {
-            piLines.push(`  • PaymentIntent ${a.id} - status: ${a.status}`);
-            sources.push({ entityId: a.id, entityType: "payment_intent", excerpt: `PaymentIntent ${a.id} - ${a.status}` });
           }
+          text += `Pending approvals (${pending.length} items in review queue):\n${piLines.join("\n")}\n\n`;
         }
-        text += `Pending approvals (${pending.length} items in review queue):\n${piLines.join("\n")}\n\n`;
       }
     }
 

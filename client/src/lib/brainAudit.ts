@@ -390,14 +390,29 @@ export function extractActorName(data: unknown): string | null {
   return null;
 }
 
+/** Map an actor_ref.lookup path to the BFF path that can actually resolve it.
+ *
+ *  Member lookups (`/v1/members/{id}`) pass straight through. AGENT lookups do
+ *  NOT: brain-core emits `/v1/agents/{id}` carrying a runtime ULID
+ *  (`agent_01J…`), but its own `/v1/agents/{agent_id}` route is the agent
+ *  *catalog*, keyed by agent_key ("collections", "treasury", …) — it answers
+ *  404 `agent_not_found` for every ULID. Registered runtime agents live at
+ *  `/v1/execution/agents/{id}`, which resolves those ULIDs and returns
+ *  display_name. So the emitted lookup is upstream-wrong and we re-point it.
+ *  Exported for tests. */
+export function bffPathForActorLookup(lookup: string): string {
+  const path = lookup.replace(/^\/v1/, "");
+  const agent = /^\/agents\/([^/]+)\/?$/.exec(path);
+  return `/api/brain${agent ? `/execution/agents/${agent[1]}` : path}`;
+}
+
 /** Resolve an actor_ref.lookup path (/v1/members/{id} or /v1/agents/{id})
  *  through the BFF's generic GET passthrough (same route /audit/events uses,
  *  member/session token). Returns null on any failure — callers then fall back
  *  to omitting the actor rather than showing a raw id. */
 async function fetchActorName(lookup: string): Promise<string | null> {
   try {
-    const path = `/api/brain${lookup.replace(/^\/v1/, "")}`;
-    const resp = await fetch(path, { credentials: "include" });
+    const resp = await fetch(bffPathForActorLookup(lookup), { credentials: "include" });
     if (!resp.ok) return null;
     const data = await resp.json().catch(() => null);
     return extractActorName(data);

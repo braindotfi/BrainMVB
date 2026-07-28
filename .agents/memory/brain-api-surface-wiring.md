@@ -64,6 +64,34 @@ for *absence* — brain-core ships response fields ahead of its published schema
 a tenant that should have it, rather than grepping the spec. A spec miss is a reason to probe,
 not a reason to conclude.
 
-**Known drift:** GET /actions (Inbox review queue's only tenant-scoped PaymentIntent
-list) is absent from the artifact but live — kept wired, flagged in CLAUDE.md; confirm
-with brain-core owners before removing or relying on it further.
+**GET /actions does not exist — an earlier note here claimed it was "absent from the
+artifact but live". That was wrong.** brain-core answers `404 route_not_found` for
+`/v1/actions`, and the artifact has zero entries for it. The only actions route on the
+surface is the per-agent `GET /agents/{agent_id}/actions`.
+
+**Why:** the absence-from-artifact signal was explained away as drift instead of being
+probed, so a permanently-404ing call sat behind the Inbox review queue and the assistant's
+pending-approval grounding — both silently empty, and the emptiness was later mis-attributed
+to seeding and policy problems. The artifact was right; the assumption of drift was not.
+
+**How to apply:** the tenant-scoped money-path list is **GET /proposals**, a UNION ALL of
+the proposals table and `ledger_payment_intents`. Rows with a non-null `payment_intent_id`
+are the PaymentIntent queue (and are deliberately excluded from the non-financial proposals
+hook for that reason); take ids from there and fan out to `GET /payment-intents/{id}`.
+Filter queue membership on the **detail** status only — the merged row's own status has no
+published mapping onto PaymentIntent statuses. Beware `/agents/{id}/actions` as an existence
+probe: it returns `{actions: []}` for any string, including garbage, so a 200 proves nothing.
+
+**Agent actor lookups: the catalog and the runtime registry are different namespaces.**
+`GET /agents` and `GET /agents/{agent_id}` are a *catalog* keyed by agent_key
+(`collections`, `treasury`, …) with no ULID field anywhere. Registered runtime agents live
+at `GET /execution/agents/{id}`, keyed by ULID (`agent_01…`), and carry `display_name`.
+
+**Why:** audit events emit `actor_ref.lookup = /v1/agents/{ULID}` — a path brain-core's own
+catalog route cannot serve, so every agent-attributed audit row 404s and loses its name.
+The BFF proxy was correct; the emitted lookup is upstream-wrong. Diagnosing this as "our
+proxy has a bad prefix" wastes the investigation.
+
+**How to apply:** re-point bare agent lookups to `/execution/agents/{id}` rather than
+following the emitted path. Keep member lookups (`/v1/members/{id}`) as-is, and do not
+rewrite sub-resources like `/agents/{id}/actions`.

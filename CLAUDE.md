@@ -513,11 +513,26 @@ agents_execution_payments_members, audit_proof_tenant):
 - **Deliberately pending**: `DELETE /tenants/:id` (destructive — needs its own confirm
   flow), `POST /audit/anchor/publish` (audit:admin + conditional dependency),
   tenant export `download` (binary relay, brainRequest is JSON-only).
-- **Known drift to flag**: the Inbox review queue lists via `GET /actions`
-  (`listActions` in client.ts, `useBrainReviewQueue`/`useBrainAutoApproved`) — that route is
-  NOT in the artifact's endpoint groups, but it is the only tenant-scoped PaymentIntent list
-  we have and works in production today. Left wired; confirm with brain-core owners whether
-  `/actions` is stable or the artifact should list it.
+- **Resolved drift — `GET /actions` never existed.** This was previously flagged as
+  "not in the artifact but works in production". It does not: brain-core answers
+  `404 route_not_found` for `/v1/actions`, and the artifact has zero entries for it.
+  The only actions route on the whole surface is the per-agent
+  `GET /agents/{agent_id}/actions`, a different resource (and one that returns
+  `{actions: []}` for any string, validated or not — do not use it as an existence check).
+  The Inbox review queue (`useBrainReviewQueue`/`useBrainAutoApproved`) and the assistant's
+  pending-approval grounding now list via **`GET /proposals`**, which brain-core's
+  read-model implements as a UNION ALL of the proposals table and `ledger_payment_intents`:
+  rows with a non-null `payment_intent_id` ARE the money path, and are deliberately excluded
+  from `useBrainProposals` (`selectNonFinancialProposals`) for exactly that reason. Both
+  paths take ids from there and fan out to `GET /payment-intents/{id}`, then filter on the
+  **detail** status — the merged row's own status has no published mapping onto PaymentIntent
+  statuses and must never be trusted to decide queue membership.
+- **Agent actor lookups are re-pointed.** Audit events emit
+  `actor_ref.lookup = /v1/agents/{runtime ULID}`, but `GET /agents/{agent_id}` is the agent
+  *catalog*, keyed by agent_key (`collections`, `treasury`, …) and 404s `agent_not_found` for
+  every ULID. `bffPathForActorLookup` (client.ts → brainAudit.ts) rewrites bare agent lookups
+  to `/v1/execution/agents/{id}`, the runtime registry, which resolves them and returns
+  `display_name`. The emitted lookup path is upstream-wrong; flag it to brain-core owners.
 
 ## CI gate
 `.github/workflows/test.yml` runs `npm test` (the vitest suite) on every pull request and
