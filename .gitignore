@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+# Demo seed documents are generated at seed time (server/brain/demo-seed/).
+# scripts/generate-demo-seed.ts writes here only as a local debugging aid.
+server/assets/demo-seed/
