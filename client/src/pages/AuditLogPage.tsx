@@ -12,6 +12,7 @@ import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { statusOverrideToAuditRecord } from "@/lib/brainFeed";
 import { useAuth } from "@/lib/authContext";
+import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 
 type Tab = (typeof AUDIT_TABS)[number];
 
@@ -19,7 +20,7 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approvals: "approved",
   "Auto-Approved": "auto_approved",
   Rejections: "rejected",
-  Acknowledge: "acknowledged",
+  Acknowledged: "acknowledged",
   "Rule Changes": "rule_change",
   "Trusted Changes": "trust_granted",
   Flagged: "flagged",
@@ -28,6 +29,7 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
 export function AuditLogPage() {
   const { format } = useCurrency();
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
+  const acknowledgedRecords = useAcknowledgedRecords();
   const { user } = useAuth();
   const reviewStatuses = useReviewStatuses();
   const queryClient = useQueryClient();
@@ -60,6 +62,7 @@ export function AuditLogPage() {
       if (!seen.has(r.id)) { seen.add(r.id); merged.push(r); }
     };
     brainRecords.forEach(add);
+    acknowledgedRecords.forEach(add);
     for (const [id, status] of Object.entries(reviewStatuses)) {
       if (status !== "executing" && status !== "executed" && status !== "rejected") continue;
       const p = resolveProposal(id);
@@ -67,7 +70,7 @@ export function AuditLogPage() {
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
     return merged;
-  }, [brainRecords, reviewStatuses, user]);
+  }, [acknowledgedRecords, brainRecords, reviewStatuses, user]);
 
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
@@ -235,7 +238,7 @@ export function AuditLogPage() {
                         {activeTab === "Approvals" && "No approval records yet."}
                         {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                         {activeTab === "Rejections" && "No rejected payment records yet."}
-                        {activeTab === "Acknowledge" && "No acknowledged records yet."}
+                         {activeTab === "Acknowledged" && "No acknowledged records yet."}
                         {activeTab === "Rule Changes" && "No rule changes recorded yet."}
                         {activeTab === "Trusted Changes" && "No trust status changes yet."}
                         {activeTab === "Flagged" && "No flagged transactions yet."}

@@ -38,6 +38,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
+import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 type InboxTab = "Needs Review" | "Insights" | "Auto-Approved" | "Rejected" | "Rule Changes";
@@ -235,7 +236,7 @@ const InboxCard = ({
             }`}
           >
             {acknowledged && <Check className="size-[16px] shrink-0" />}
-            Acknowledge
+            {acknowledged ? "Acknowledged" : "Acknowledge"}
           </button>
         </div>
       ) : null}
@@ -261,7 +262,7 @@ export function InboxPage() {
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
   const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
-  const [acknowledgedInsightIds, setAcknowledgedInsightIds] = useState<Set<string>>(() => new Set());
+  const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
 
@@ -281,6 +282,12 @@ export function InboxPage() {
     ...disputeInsights,
     ...(cashFlowInsight ? [cashFlowInsight] : []),
   ];
+  const acknowledgedRecords = useAcknowledgedRecords();
+  const acknowledgedIds = useMemo(
+    () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
+    [acknowledgedRecords],
+  );
+  const visibleLiveInsights = liveInsights.filter((insight) => !acknowledgedIds.has(insight.id));
 
   /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
@@ -408,12 +415,17 @@ export function InboxPage() {
   };
 
   const acknowledgeItem = (item: InboxItem) => {
-    if (item.kind !== "detection") return;
-    setAcknowledgedInsightIds((current) => {
-      const next = new Set(current);
-      next.add(item.id);
-      return next;
-    });
+    if (item.kind !== "detection" || !item.insight) return;
+    if (pendingAcknowledgedIds.has(item.id) || acknowledgedIds.has(item.id)) return;
+    setPendingAcknowledgedIds((current) => new Set(current).add(item.id));
+    window.setTimeout(() => {
+      acknowledgeInsight(item.insight!);
+      setPendingAcknowledgedIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }, 250);
   };
 
   /* Rule plumbing for the ProposalDetail sheet. */
@@ -527,7 +539,7 @@ export function InboxPage() {
 
     /* Needs you: read-only live ledger facts Brain detected (not decidable —
        there is nothing to approve; "Ask Brain why" opens the insight). */
-    for (const i of liveInsights) {
+    for (const i of visibleLiveInsights) {
       push({
         id: i.id,
         kind: "detection",
@@ -612,7 +624,7 @@ export function InboxPage() {
     }
 
     return out;
-  }, [liveReviews, queue, needsReviewProposals, liveInsights, liveAutoApproved, statuses, auditRecords, format]);
+  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format]);
 
   const counts: Record<InboxTab, number> = useMemo(() => {
     const c: Record<InboxTab, number> = { "Needs Review": 0, Insights: 0, "Auto-Approved": 0, Rejected: 0, "Rule Changes": 0 };
@@ -794,7 +806,7 @@ export function InboxPage() {
                           onApprove={approveItem}
                           onReject={rejectItem}
                           onAcknowledge={acknowledgeItem}
-                          acknowledged={item.kind === "detection" && acknowledgedInsightIds.has(item.id)}
+                          acknowledged={item.kind === "detection" && pendingAcknowledgedIds.has(item.id)}
                           busy={itemBusy(item)}
                         />
                         {idx < visible.length - 1 && <Divider />}
