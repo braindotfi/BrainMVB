@@ -55,6 +55,24 @@ drop above.
 partially populate Brain Detected. Both upstream bugs must land before that widget reflects
 a seeded tenant honestly. Check each source endpoint separately before blaming one cause.
 
+## An agent that is "enabled" can still never be selected — check evidence gates
+
+The router only selects an agent whose `required_evidence` is satisfiable from the read
+model. Collections requires `invoice` + `counterparty`, so while the apar rebuild drops
+obligations (above), `ledger/invoices` stays empty, no `invoice.overdue` or
+`receivable.aging_threshold_crossed` ever fires, and Collections is never selected — the
+router falls back to a lower-confidence agent on the shared `ledger.upload.projected`
+trigger instead.
+
+**Why:** a Collections proposal was assumed missing because of Inbox filtering. The agent had
+in fact never run: the audit log contained no collections entry at all, only `vendor_risk`,
+`treasury` and `cash_forecast` selections.
+
+**How to apply:** before suspecting routing, group `agent.router.selected` by
+`selected_agent_id`. If the agent you expect is absent, it was never selected — compare its
+registry `required_evidence` against what the read model actually holds. Absence from the
+audit log is the signal; a missing proposal is only the downstream symptom.
+
 ## `/v1/agents/proposals` does not exist
 
 The real endpoint is `/v1/proposals` (a UNION of the proposals table and
