@@ -5,12 +5,17 @@ import type { LiveInsight } from "./brainAgentSurfaces";
 let records: AuditRecord[] = [];
 const listeners = new Set<() => void>();
 
-function subscribe(listener: () => void) {
+/* The external-store seam `useAcknowledgedRecords` is built on. Exported so the
+   reset behaviour can be asserted exactly as the hook would see it (snapshot
+   contents AND that subscribers are notified) without needing a DOM. */
+export function subscribeToAcknowledgedRecords(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
-function snapshot() {
+export function acknowledgedRecordsSnapshot(): AuditRecord[] {
   return records;
 }
 
@@ -46,7 +51,11 @@ function insightToRecord(insight: LiveInsight): AuditRecord {
 }
 
 export function useAcknowledgedRecords(): AuditRecord[] {
-  return useSyncExternalStore(subscribe, snapshot, snapshot);
+  return useSyncExternalStore(
+    subscribeToAcknowledgedRecords,
+    acknowledgedRecordsSnapshot,
+    acknowledgedRecordsSnapshot,
+  );
 }
 
 export function acknowledgedInsightIds(): ReadonlySet<string> {
@@ -57,5 +66,22 @@ export function acknowledgeInsight(insight: LiveInsight): void {
   const record = insightToRecord(insight);
   if (records.some((existing) => existing.id === record.id)) return;
   records = [record, ...records];
+  listeners.forEach((listener) => listener());
+}
+
+/** Drop every acknowledged record. These are user-scoped and must NEVER survive
+    an auth transition: this is a single-page app, so switching accounts does not
+    remount the module, and a record acknowledged by one account would otherwise
+    render in a freshly created account's Audit Log as activity it never had.
+    Called from `applyUserScopedResets` (authContext.tsx) on every user change.
+
+    Deliberately in-memory only — no localStorage/sessionStorage — so there is no
+    second channel for this state to leak across accounts or browser tabs.
+
+    Early-returns when already empty so subscribers aren't re-rendered for a
+    no-op (same guard as membersStore's `clearMembers`). */
+export function resetAcknowledgedStore(): void {
+  if (records.length === 0) return;
+  records = [];
   listeners.forEach((listener) => listener());
 }

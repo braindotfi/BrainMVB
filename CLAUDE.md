@@ -29,6 +29,35 @@ seeded/synthetic data.
   durable user, `MOCK_PROPOSALS` resolved for everyone, and `SEED_GOALS` rendered
   for everyone — all now demo-gated.
 
+### The auth-transition reset funnel (`applyUserScopedResets`)
+
+This is a single-page app: an auth transition does **not** remount JS modules, so
+any module-level state keyed to nothing survives into the next account. That is a
+data-integrity bug, not just a staleness one — a freshly created account rendering
+another account's activity as its own.
+
+`applyUserScopedResets(u)` in `client/src/lib/authContext.tsx` is the single funnel.
+`setUser` calls it and nothing else re-implements it, so it covers every path —
+`loginWithPassword`, `register`, `loginDemo`, `loginDemoFresh`, session bootstrap,
+and `logout` (via `setUser(null)`).
+
+Currently resets:
+
+| State | Module | Why it's user-scoped |
+| --- | --- | --- |
+| `demoDataEnabled` | `demoMode.ts` | gates every synthetic-data surface (above) |
+| acknowledged insights | `acknowledgedStore.ts` | `Acknowledged: …` rows merged into the Audit Log by `AuditLogPage`/`InboxPage` |
+
+**Add new module-level, user-scoped stores to `applyUserScopedResets`, not to an
+individual caller.** Wiring a reset into `logout()` alone is the bug this funnel
+exists to prevent — it misses account→account switches, which never call `logout`.
+`acknowledgedStore` was originally missed exactly this way (fixed 2026-07;
+`membersStore.clearMembers()` is still logout-only and is a known remaining gap).
+
+Keep these stores in-memory. Persisting them (localStorage/sessionStorage) just
+moves the leak to a channel the funnel can't reach, e.g. across browser tabs.
+Pinned by `client/src/lib/acknowledgedStore.test.ts`.
+
 ### The bundled starter scenario
 
 `SEED_MANIFEST` (`server/brain/demo-seed/documents.ts`, re-exported from

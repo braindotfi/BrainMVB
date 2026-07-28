@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { queryClient } from "./queryClient";
 import { clearMembers } from "./membersStore";
 import { setDemoDataEnabled } from "./demoMode";
+import { resetAcknowledgedStore } from "./acknowledgedStore";
 
 export interface AuthUser {
   id: string;
@@ -30,6 +31,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/** Every piece of module-level, user-scoped client state that must be re-pointed
+    or cleared when the signed-in user changes. Because this is a single-page app,
+    an auth transition (logout → new account, demo → fresh account) does NOT
+    remount these modules, so anything left here silently carries over and renders
+    on the next account as activity it never had.
+
+    Runs on EVERY transition — `loginWithPassword`, `register`, `loginDemo`,
+    `loginDemoFresh`, session bootstrap, and `logout` (via `setUser(null)`) — not
+    just the paths that happen to call `logout()`. Exported so tests can pin the
+    funnel without mounting the provider. Add new user-scoped stores HERE, not to
+    an individual caller. */
+export function applyUserScopedResets(u: AuthUser | null): void {
+  setDemoDataEnabled(!!u?.isDemo);
+  resetAcknowledgedStore();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the signed-in user. Real accounts (isDemo false/absent) disable all
   // demo-only synthetic data surfaces.
   const setUser = useCallback((u: AuthUser | null) => {
-    setDemoDataEnabled(!!u?.isDemo);
+    applyUserScopedResets(u);
     setUserState(u);
   }, []);
 
