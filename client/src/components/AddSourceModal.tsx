@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { categoryCounts, CATEGORY_ORDER, type CategoryId } from "@/lib/sourceCategories";
+import { fetchObligations, isReceivable, type Obligation } from "@/lib/brainObligations";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
 import closeIcon from "@assets/close_1783619312132.png";
 import backIcon from "@assets/Back_1783893317104.png";
@@ -98,20 +99,6 @@ type SourceDocument = {
   uploadedAt: string;
 };
 
-/** brain-core obligation Brain derived from ingested documents (GET /ledger/obligations). */
-type Obligation = {
-  id: string;
-  direction: string;            // payable | receivable
-  counterparty_id: string | null;
-  amount_due: string;
-  currency: string;
-  due_date: string | null;
-  status: string;
-  provenance: string | null;
-  confidence: number | null;    // ≤0.5, advisory
-};
-
-type ObligationsResponse = { obligations: Obligation[]; next_cursor: string | null };
 type CounterpartyLite = { id: string; display_name?: string; name?: string };
 type CounterpartiesResponse = { counterparties: CounterpartyLite[] };
 type WikiAnswer = { raw: string; evidenceIds: string[]; confidence: number | null };
@@ -202,10 +189,6 @@ function ConfidencePill({ confidence }: { confidence: number | null }) {
 function counterpartyName(id: string | null, map: Map<string, string>): string {
   if (!id) return "Unknown counterparty";
   return map.get(id) ?? id;
-}
-
-function isReceivable(o: Obligation): boolean {
-  return o.direction.toLowerCase().startsWith("receiv");
 }
 
 /* ─── Catalog ─── */
@@ -1292,15 +1275,6 @@ export function ReadingScreen({
 /* ───────────────────────────── Screen 4: Everything Brain found ─────────────────────────────
  * Real obligations from GET /api/brain/ledger/obligations (advisory, conf ≤0.5). No pay path. */
 type FoundTab = "all" | "payable" | "receivable";
-
-/** Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner. */
-async function fetchObligations(): Promise<Obligation[]> {
-  const res = await fetch("/api/brain/ledger/obligations", { credentials: "include" });
-  if (res.status === 404) return [];
-  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()) || res.statusText}`);
-  const json = (await res.json()) as ObligationsResponse | Obligation[];
-  return Array.isArray(json) ? json : (json.obligations ?? []);
-}
 
 async function fetchCounterparties(): Promise<Map<string, string>> {
   const res = await fetch("/api/brain/ledger/counterparties", { credentials: "include" });
