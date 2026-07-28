@@ -362,21 +362,30 @@ const IncomeTxList = ({
 // carries only inflows, so this renders an honest empty state today and will
 // populate automatically when real money-out data lands. Never faked.
 // See deliverables/DATA-LIMITATIONS.md.
-type ExpenseRow = { category: string; amount: number };
+type ExpenseRow = { category: string; amount: number; date: string };
 
 function summarizeExpenses(
   txs: BrainTransactionDTO[],
   nameOf: (id: string) => string,
 ): ExpenseRow[] {
-  const byKey = new Map<string, number>();
+  const byKey = new Map<string, { amount: number; date: string }>();
   for (const t of txs) {
     if (t.direction !== "outflow") continue;
     const amt = Number(t.amount);
     if (!Number.isFinite(amt)) continue;
     const key = t.description_normalized || (t.counterparty_id ? nameOf(t.counterparty_id) : "Other");
-    byKey.set(key, (byKey.get(key) ?? 0) + amt);
+    const current = byKey.get(key);
+    byKey.set(key, {
+      amount: (current?.amount ?? 0) + amt,
+      // Keep the most recent transaction date when multiple outflows share a category.
+      date: !current || new Date(t.transaction_date).getTime() > new Date(current.date).getTime()
+        ? t.transaction_date
+        : current.date,
+    });
   }
-  return Array.from(byKey.entries()).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
+  return Array.from(byKey.entries())
+    .map(([category, value]) => ({ category, ...value }))
+    .sort((a, b) => b.amount - a.amount);
 }
 
 const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) => {
@@ -392,6 +401,10 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
   const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
   const rows = txData?.transactions ? summarizeExpenses(txData.transactions, nameOf) : [];
   const total = rows.reduce((s, r) => s + r.amount, 0);
+  const shortDate = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <WidgetCard title="Expenses" count={rows.length}>
@@ -409,9 +422,10 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
               >
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{item.category}</p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(item.date)}</p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0">
-                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{format(item.amount)}</p>
+                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-{format(item.amount)}</p>
                 </div>
               </div>
               <Divider />
