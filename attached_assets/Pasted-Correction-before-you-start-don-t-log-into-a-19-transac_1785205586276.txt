@@ -1,0 +1,17 @@
+Correction before you start: don't log into a "19-transaction tenant" — 19 is the stale number
+
+The original version of this ask said to "log out and back in to get the corrected 19-transaction tenant." That's backwards — 19 was the wrong number (from brain-core's stale Northlight test fixture); 15 (Brightline Systems Inc.) is the correct, current figure, per the seed bundle you already reverted to. Use your current, correct tenant/session — don't seek out a 19-transaction one.
+
+Step 0 — confirm the receivable actually exists in the current bundle first
+
+Before investigating anything about proposal routing: check whether "Helios NL-2417" (or whatever the overdue receivable in question actually is) exists in the current, reverted AR aging fixture — the Brightline-era bundle, not the Northlight one you rebuilt and then reverted. It's possible this specific receivable was part of the AR aging file you regenerated around the wrong company before reverting, and may not exist in the correct bundle at all. If it doesn't exist, the missing-proposal investigation below doesn't apply — check whatever overdue receivable actually exists in your current AR aging seed instead, and substitute it throughout.
+
+Then investigate the routing gap
+
+agent.router.selected and agent.router.started appear in the audit log, confirming the agent triggers fired after ledger projection. But the Inbox Needs Review tab shows no Collections proposal for the overdue receivable despite the AR aging file having projected receivables into the ledger.
+
+Check whether the Collections agent's output is arriving as a proposal with mode: "propose" (routes to Needs Review) or mode: "notify_only" (correctly excluded from Needs Review — check the Auto-Approved or Insights tab instead if so).
+If the proposal exists in brain-core's proposals endpoint (GET /v1/agents/proposals) but isn't appearing in the Inbox at all, the issue is in the BFF's proposal fetch or the Inbox mapping — confirm the BFF is fetching from the right endpoint and the Inbox's isNeedsReview filter includes agent proposals.
+If no proposal exists at all in brain-core, the Collections agent ran but produced no output — check the agent.router.selected audit record's detail view for which agent was selected and what its output was.
+
+Scope: Inbox mapping and BFF proposal fetch only. Do not change agent logic or brain-core.
