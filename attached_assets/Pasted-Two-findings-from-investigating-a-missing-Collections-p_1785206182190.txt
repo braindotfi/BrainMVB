@@ -1,0 +1,13 @@
+Two findings from investigating a missing Collections proposal in BrainMVB's Inbox. Neither is fixable on BrainMVB's side — both are brain-core issues.
+
+1. ledger.apar_projection.rebuilt drops obligations — precise mechanism for the known empty-table gap
+
+For a tenant where AR aging correctly projected into canonical (ledger.upload.projected reports receivables: 7, obligations: 7), the follow-up ledger.apar_projection.rebuilt reports obligations: 0 — every time — while counterparties pass through fine (22). This narrows the already-logged empty ledger_invoices/ ledger_obligations ticket from "returns empty" to a specific mechanism: the APAR rebuild step is dropping obligations somewhere between canonical and the read model, while the same rebuild correctly carries counterparties through. Worth tracing that one function/query directly rather than the broader canonical-projection path (which is confirmed working — receivables/ obligations do land in canonical correctly).
+
+2. Durable/seeded tenants have no agent policy — blocks every propose/execute-mode agent regardless of ledger state
+
+Separately, and likely more significant: on the same tenant, treasury (routed propose) and cash_forecast (routed execute) both failed immediately with "no active policy for tenant" before producing any output. vendor_risk (routed notify_only) got further but returned missing_evidence. No proposal existed anywhere in /v1/proposals as a result — confirmed correctly reflected by BrainMVB's Inbox (checked and confirmed correct: isNeedsReview, notify_only exclusion, and the BFF's proposal fetch are all working as intended; this is not an Inbox bug).
+
+This means no propose/execute-mode agent can ever produce a reviewable proposal on a freshly seeded/demo tenant, independent of whether the ledger is populated — durable tenants simply aren't being provisioned with an agent policy. This is likely the actual explanation for "Brain Detected: 0 / Brain Did: 0" showing up on fresh demo tenants from the very start of this investigation, not just the ledger being empty. Worth prioritizing — this blocks the entire agent/proposal side of the demo experience, not just the financial-data side.
+
+(Also confirmed while investigating: there is no Collections agent — only vendor_risk, treasury, and cash_forecast have ever been routed, per the audit log. If a Collections agent is expected to exist, that's a separate question from the two bugs above.)

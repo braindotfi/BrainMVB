@@ -85,6 +85,22 @@ account holder Brightline Systems Inc., closing balance 165,087.55. Never swap t
 the strength of a count alone; the other four documents are derived from it and a swap
 silently rebases the entire bundle onto another company.
 
+## The seed is a fixed June-2026 statement, so trailing-window surfaces decay over time
+
+Seed transactions are dated 2026-06-01..06-30 and never shift. Any surface using a trailing
+window relative to *now* therefore sees less of the seed as real time advances. Observed on
+2026-07-28: `/ledger/cash_flows` (trailing 30 days) caught only 3 of the 15 transactions —
+the 06/30 payroll, tax debit and interest credit — and reported net -48,335.63, which looks
+alarming but is just the tail of the month in isolation.
+
+**Why:** this reads as a data bug, and it gets worse silently. Once wall-clock passes ~30
+days after 2026-06-30, trailing-window surfaces show nothing at all from the seed.
+
+**How to apply:** when a windowed surface looks wrong or empty, check the window bounds
+against the fixed seed dates before investigating projection. If the demo needs to survive
+indefinitely, the seed dates have to become relative to the tenant's creation date — that is
+a real change to the generator, not a display tweak.
+
 ## Document `category` is BFF-local and silently couples to the UI
 
 brain-core is only ever sent `source_type`, `mime_type`, and `source_schema` — never a
