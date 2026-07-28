@@ -30,6 +30,7 @@ import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
 import { MemberDetailHost } from "@/components/MemberDetailPopup";
 import { hydrateDocuments } from "@/lib/documentsStore";
+import { useBrainProjectionRefresh } from "@/lib/brainRefresh";
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -138,6 +139,11 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     void hydrateDocuments();
   }, []);
+
+  /* Refresh brain data once uploaded documents finish being read. Anchored here rather
+     than in the upload UI so that closing the Add Source modal — or leaving onboarding —
+     mid-extraction does not cancel the refresh. */
+  useBrainProjectionRefresh();
 
   return (
     <NavContext.Provider value={{

@@ -39,8 +39,23 @@ that screen unmounts.** Two realistic flows defeat it entirely:
   ref re-initialises to the current value, no transition edge is observed,
   and the window does not resume.
 
-**How to apply:** if the settle-window approach needs to be reliable rather
-than best-effort, it has to be anchored to a lifecycle that outlives the
-modal. Note the related hazard first: module-level state in this SPA is not
-reset by account switches, so a module-scoped coordinator must register with
-the user-scoped reset funnel or it will leak across accounts.
+**How to apply:** anchor the whole mechanism to the authenticated shell, which
+outlives every upload surface (both the Add Source modal and the onboarding
+flow render beneath it).
+
+The non-obvious part: **you have to move the document polling up too, not just
+the settle window.** Completion is only observable by polling the document
+list, so if polling stays with the modal, closing it early means the
+completion edge is never seen and the relocated settle window never fires.
+Moving both also collapses the duplicate-instance problem to a single mount.
+
+Prefer a component-scoped hook over a module-scoped coordinator here: refs and
+timers inside the shell reset naturally when it unmounts on logout, whereas
+module-level state in this SPA survives account switches and would have to
+register with the user-scoped reset funnel to avoid leaking.
+
+Keep the in-progress predicate a pure exported function so the status
+semantics stay unit-testable — a missing status must read as *pending*, or a
+just-uploaded document is mistaken for a finished one and fires the edge
+immediately; terminal failures must read as *settled*, or a batch containing
+an unreadable document never completes.

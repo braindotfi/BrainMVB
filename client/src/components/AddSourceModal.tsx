@@ -1164,57 +1164,16 @@ function StepDots({ total, current }: { total: number; current: number }) {
 /* ───────────────────────────── Screen 3: Reading the sources ─────────────────────────────
  * Real document extraction status from GET /api/integrations/documents (polled while any
  * document is still being read by brain-core). No fabricated stats. */
-const IN_PROGRESS_STATUSES: ReadonlyArray<ExtractStatus> = ["pending", "ingested", "extracting"];
-
-/* "extracted" only means brain-core's /raw/{id}/extract job succeeded. The ledger projection
- * behind it (APAR rebuild -> account/transaction rebuild -> wiki regen -> agent trigger) is a
- * separate async chain, and there is no per-document "projected" signal exposed to the client
- * today. So we re-invalidate across a settle window rather than once, to catch projection
- * results that land after extraction reports done. */
-const BRAIN_SETTLE_INTERVAL_MS = 20_000;
-const BRAIN_SETTLE_WINDOW_MS = 3 * 60_000;
+/* Polling this list, and refreshing /api/brain/* once reading finishes, both live in
+ * lib/brainRefresh.ts and are mounted once at the shell. They deliberately do not live here:
+ * the user can close this modal mid-extraction, and the refresh still has to fire. The
+ * status pills below stay live because they observe the same query key the shell polls. */
 
 export function ReadingScreen({
   onViewWiki, onContinue, onAddMore,
 }: { onViewWiki: () => void; onContinue: () => void; onAddMore: () => void }) {
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
   const docs = docsQuery.data ?? [];
-
-  const anyInProgress = docs.some((d) => IN_PROGRESS_STATUSES.includes((d.extractStatus ?? "pending") as ExtractStatus));
-
-  // Poll every 15s while any document is still being read.
-  useEffect(() => {
-    if (!anyInProgress) return;
-    const t = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
-    }, 15000);
-    return () => clearInterval(t);
-  }, [anyInProgress]);
-
-  // The poll above only refreshes the in-modal document list. Home/Finances/Inbox read
-  // /api/brain/* keys, and the global query defaults (staleTime: Infinity, no refetch on
-  // focus or interval) mean nothing refreshes them on its own -- which is why they stayed
-  // stale until a logout/login remount. Invalidate that namespace once reading completes,
-  // then keep re-invalidating over the settle window described above.
-  const prevInProgress = useRef(anyInProgress);
-  useEffect(() => {
-    const justFinished = prevInProgress.current && !anyInProgress;
-    prevInProgress.current = anyInProgress;
-    if (!justFinished) return;
-
-    const invalidateBrain = () =>
-      void queryClient.invalidateQueries({
-        predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/"),
-      });
-
-    invalidateBrain();
-    const t = setInterval(invalidateBrain, BRAIN_SETTLE_INTERVAL_MS);
-    const stop = setTimeout(() => clearInterval(t), BRAIN_SETTLE_WINDOW_MS);
-    return () => {
-      clearInterval(t);
-      clearTimeout(stop);
-    };
-  }, [anyInProgress]);
 
   const readCount = docs.filter((d) => d.extractStatus === "extracted").length;
   const warnCount = docs.filter((d) => d.extractStatus === "unsupported" || d.extractStatus === "failed").length;
