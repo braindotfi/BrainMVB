@@ -54,6 +54,37 @@ just ingested and is actively tracking, never for one discovered in an existing
 list. Bound the wait with a deadline regardless, so a stalled or never-updated
 status cannot wedge the refresh permanently.
 
+## The shape that satisfies both traps at once
+
+Three rules, worth keeping if this is ever refactored:
+
+1. **Absent is not a state.** Normalise any unrecognised or missing upstream
+   value to null at the boundary, and make null mean "no information" everywhere
+   downstream. This is what lets the code ship before the field deploys and light
+   up on its own afterwards, with no flag to flip and no follow-up release.
+2. **Only record a status for a document being actively chased.** Scope it by
+   age from upload, so historical rows keep a null mirror locally and the
+   upstream backfill can never leak in. This makes the backfill trap structurally
+   impossible rather than something a later reader has to remember.
+3. **Both ends bound the wait against the same `uploadedAt` clock.** The server
+   stops refreshing the mirror and the client stops honouring it at the same age,
+   so they cannot disagree about whether a document is still waiting.
+
+**Why:** the two traps push in opposite directions — before deploy, gating on the
+field freezes the refresh; after deploy, trusting `pending` freezes it again for a
+different reason. Rules 1 and 2 each neutralise one, and rule 3 stops the fix
+itself from becoming a third failure mode.
+
+**Watch out:** a deadline that expires is not the same event as a projection
+reporting done, and the UI should not treat them alike — one means "it finished",
+the other means "we gave up", which is exactly when the old timing heuristic is
+still the best guess available.
+
+**React Query gotcha:** a poll that returns deep-equal data hands back the same
+object via structural sharing and causes no re-render, so a purely time-based
+transition like a deadline expiring is never noticed. Drive it with an explicit
+tick rather than computing it during render.
+
 ## The trap: tying the settle window to a modal's lifetime
 
 **A refresh window driven by a `useEffect` inside the upload UI dies the moment

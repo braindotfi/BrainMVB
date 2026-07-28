@@ -21,6 +21,7 @@ import {
   listAuditEvents,
   ingestRawDocument,
   extractRawDocument,
+  getRawArtifact,
   askWikiQuestion,
   listTenantKeys,
   issueTenantKey,
@@ -34,8 +35,10 @@ import {
   type RawSourceType,
   type WikiEvidence,
 } from "./brain/client";
-import type { ExtractStatus } from "./storage";
+import type { ExtractStatus, SourceDocumentExtractionPatch } from "./storage";
 import { extractStatusForJob } from "./brain/extractStatus";
+import { projectionStatusFrom, isTerminalProjectionStatus } from "./brain/projectionStatus";
+import { shouldSettle, needsExtractSettle } from "./brain/settleTargets";
 import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
@@ -1308,14 +1311,14 @@ You can explain concepts and surface general guidance, but do not give regulated
    * (they stay "extracting" - we genuinely don't know, and inventing a terminal status would
    * be a lie), and the per-request cap limits fan-out.
    */
-  const SETTLE_MAX_AGE_MS = 60 * 60 * 1000;
   const SETTLE_MAX_PER_REQUEST = 10;
 
   async function settleInFlightExtractions(userId: string, docs: Awaited<ReturnType<typeof storage.listSourceDocuments>>) {
     const now = Date.now();
+    // Selection rules (and the two very different age bounds behind them) live in
+    // ./brain/settleTargets so they can be tested without a route harness.
     const pending = docs
-      .filter((d) => d.extractStatus === "extracting" && d.rawId)
-      .filter((d) => now - new Date(d.uploadedAt).getTime() < SETTLE_MAX_AGE_MS)
+      .filter((d) => shouldSettle(d, now))
       .slice(0, SETTLE_MAX_PER_REQUEST);
     if (pending.length === 0) return;
     let agentToken: string;
@@ -1326,28 +1329,52 @@ You can explain concepts and surface general guidance, but do not give regulated
     }
     await Promise.all(
       pending.map(async (d) => {
-        let patch: { extractStatus: ExtractStatus; parsedId?: string | null; confidence?: string | null };
-        try {
-          const extract = await extractRawDocument(agentToken, d.rawId!);
-          const extractStatus = extractStatusForJob(extract);
-          if (extractStatus === "extracting") return; // still running - nothing to write
-          patch = {
-            extractStatus,
-            parsedId: extract.parsed_id,
-            confidence: extract.confidence !== null ? String(extract.confidence) : null,
-          };
-        } catch (err) {
-          // Same mapping the write paths use, so a document can't sit at "extracting"
-          // forever because of an error that is itself terminal.
-          if (err instanceof BrainApiError && err.status === 422) {
-            patch = { extractStatus: "unsupported" };
-          } else if (err instanceof BrainApiError && err.status === 404) {
-            patch = { extractStatus: "unavailable" };
-          } else {
-            console.warn(`[document-extract] settle failed for rawId=${d.rawId}:`, (err as Error).message);
-            return;
+        const patch: SourceDocumentExtractionPatch = {};
+        let extractStatus: ExtractStatus | null = d.extractStatus;
+
+        if (needsExtractSettle(d, now)) {
+          try {
+            const extract = await extractRawDocument(agentToken, d.rawId!);
+            const next = extractStatusForJob(extract);
+            if (next !== "extracting") {
+              // still running -> leave it alone; anything else is final and worth writing
+              extractStatus = next;
+              patch.extractStatus = next;
+              patch.parsedId = extract.parsed_id;
+              patch.confidence = extract.confidence !== null ? String(extract.confidence) : null;
+            }
+          } catch (err) {
+            // Same mapping the write paths use, so a document can't sit at "extracting"
+            // forever because of an error that is itself terminal.
+            if (err instanceof BrainApiError && err.status === 422) {
+              extractStatus = "unsupported";
+              patch.extractStatus = extractStatus;
+            } else if (err instanceof BrainApiError && err.status === 404) {
+              extractStatus = "unavailable";
+              patch.extractStatus = extractStatus;
+            } else {
+              console.warn(`[document-extract] settle failed for rawId=${d.rawId}:`, (err as Error).message);
+            }
           }
         }
+
+        // Read the projection half once extraction has landed - including when it landed
+        // in THIS pass, which is the earliest moment projection can be running. A failure
+        // here, or a deployment that simply omits the field, leaves the mirror untouched
+        // at NULL; that is a supported state, not an error worth failing the request over.
+        if (extractStatus === "extracted" && !isTerminalProjectionStatus(d.projectionStatus)) {
+          try {
+            const artifact = await getRawArtifact(agentToken, d.rawId!);
+            const projection = projectionStatusFrom(artifact.projection_status);
+            if (projection !== null && projection !== d.projectionStatus) {
+              patch.projectionStatus = projection;
+            }
+          } catch (err) {
+            console.warn(`[document-projection] read failed for rawId=${d.rawId}:`, (err as Error).message);
+          }
+        }
+
+        if (Object.keys(patch).length === 0) return;
         await storage.updateSourceDocumentExtraction(userId, d.id, patch).catch(() => undefined);
       }),
     );

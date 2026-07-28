@@ -160,6 +160,21 @@ export type ExtractStatus =
   | "unavailable"  // extraction endpoint not deployed yet (404)
   | "failed";      // ingest/extract errored
 
+/**
+ * Where the uploaded file is in Brain's PROJECTION pipeline - the side-effect chain that
+ * runs AFTER extraction and turns a parsed record into ledger rows.
+ *
+ * `null` (the absence of this type) is a meaningful third state: no signal. It is what we
+ * store for documents uploaded before brain-core exposed the field, and for anything we
+ * were not actively tracking. It must never be interpreted as "still projecting".
+ */
+export type ProjectionStatus =
+  | "pending"               // queued, projection chain not started
+  | "projecting"            // chain running
+  | "projected"             // chain completed end to end
+  | "projection_timed_out"  // a step exceeded its timeout
+  | "projection_failed";    // a step errored
+
 export type SourceDocument = {
   id: string;
   userId: string;
@@ -171,6 +186,7 @@ export type SourceDocument = {
   sha256: string | null;
   sourceType: string | null;     // pdf_upload | csv_upload
   extractStatus: ExtractStatus | null;
+  projectionStatus: ProjectionStatus | null;  // null = no signal (see type)
   parsedId: string | null;
   confidence: string | null;     // ≤0.5, stored as string
   uploadedAt: string;      // ISO
@@ -186,6 +202,7 @@ export type InsertSourceDocument = {
   sha256?: string | null;
   sourceType?: string | null;
   extractStatus?: ExtractStatus | null;
+  projectionStatus?: ProjectionStatus | null;
   parsedId?: string | null;
   confidence?: string | null;
 };
@@ -196,6 +213,7 @@ export type SourceDocumentExtractionPatch = {
   sha256?: string | null;
   sourceType?: string | null;
   extractStatus?: ExtractStatus | null;
+  projectionStatus?: ProjectionStatus | null;
   parsedId?: string | null;
   confidence?: string | null;
 };
@@ -599,6 +617,7 @@ export class MemStorage implements IStorage {
       sha256: doc.sha256 ?? null,
       sourceType: doc.sourceType ?? null,
       extractStatus: doc.extractStatus ?? null,
+      projectionStatus: doc.projectionStatus ?? null,
       parsedId: doc.parsedId ?? null,
       confidence: doc.confidence ?? null,
       uploadedAt: new Date().toISOString(),
@@ -615,6 +634,7 @@ export class MemStorage implements IStorage {
       sha256: patch.sha256 !== undefined ? patch.sha256 : existing.sha256,
       sourceType: patch.sourceType !== undefined ? patch.sourceType : existing.sourceType,
       extractStatus: patch.extractStatus !== undefined ? patch.extractStatus : existing.extractStatus,
+      projectionStatus: patch.projectionStatus !== undefined ? patch.projectionStatus : existing.projectionStatus,
       parsedId: patch.parsedId !== undefined ? patch.parsedId : existing.parsedId,
       confidence: patch.confidence !== undefined ? patch.confidence : existing.confidence,
     };
@@ -736,6 +756,7 @@ function mapSourceDocumentRow(r: typeof sourceDocumentsTable.$inferSelect): Sour
     sha256: r.sha256,
     sourceType: r.sourceType,
     extractStatus: (r.extractStatus as ExtractStatus | null) ?? null,
+    projectionStatus: (r.projectionStatus as ProjectionStatus | null) ?? null,
     parsedId: r.parsedId,
     confidence: r.confidence,
     uploadedAt: r.uploadedAt.toISOString(),
@@ -1166,6 +1187,7 @@ export class DatabaseStorage implements IStorage {
         sha256: doc.sha256 ?? null,
         sourceType: doc.sourceType ?? null,
         extractStatus: doc.extractStatus ?? null,
+        projectionStatus: doc.projectionStatus ?? null,
         parsedId: doc.parsedId ?? null,
         confidence: doc.confidence ?? null,
       })
@@ -1178,6 +1200,7 @@ export class DatabaseStorage implements IStorage {
     if (patch.sha256 !== undefined) values.sha256 = patch.sha256;
     if (patch.sourceType !== undefined) values.sourceType = patch.sourceType;
     if (patch.extractStatus !== undefined) values.extractStatus = patch.extractStatus;
+    if (patch.projectionStatus !== undefined) values.projectionStatus = patch.projectionStatus;
     if (patch.parsedId !== undefined) values.parsedId = patch.parsedId;
     if (patch.confidence !== undefined) values.confidence = patch.confidence;
     if (Object.keys(values).length === 0) {

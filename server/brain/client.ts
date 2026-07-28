@@ -701,6 +701,36 @@ export async function pollRawExtraction(
   return last;
 }
 
+export interface RawArtifact {
+  raw_id: string | null;
+  /**
+   * Per-document projection lifecycle. Null when brain-core omits the field, which is
+   * the case on every deployment that predates it - callers MUST treat null as "no
+   * information" rather than as a state. See server/brain/projectionStatus.ts.
+   */
+  projection_status: string | null;
+}
+
+/**
+ * GET /raw/{raw_id} - read an ingested artifact's current state.
+ *
+ * We call this purely for `projection_status`; the extraction half of the pipeline is
+ * tracked separately by re-POSTing /raw/{id}/extract. The endpoint itself is deployed,
+ * but the field is not everywhere yet, so a successful response with no
+ * `projection_status` is normal and must not be treated as an error.
+ */
+export async function getRawArtifact(token: string, rawId: string): Promise<RawArtifact> {
+  const resp = await brainRequest<Record<string, unknown>>(`/raw/${encodeURIComponent(rawId)}`, {
+    token,
+    method: "GET",
+  });
+  const o = resp ?? {};
+  return {
+    raw_id: typeof o.raw_id === "string" ? o.raw_id : typeof o.id === "string" ? (o.id as string) : null,
+    projection_status: typeof o.projection_status === "string" ? o.projection_status : null,
+  };
+}
+
 // ─── Ledger obligations (what Brain read back out of the documents) ──────────
 
 /** Subset of brain-core's Obligation schema we render in the ingestion results. */

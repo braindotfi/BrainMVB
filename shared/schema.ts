@@ -77,6 +77,12 @@ export const sourceDocuments = pgTable("source_documents", {
   sourceType: text("source_type"),          // pdf_upload | csv_upload
   // pending | ingested | extracting | extracted | unsupported | unavailable | failed
   extractStatus: text("extract_status"),
+  // Mirror of brain-core's per-document projection lifecycle, refreshed only while we are
+  // actively chasing a recent upload: pending | projecting | projected |
+  // projection_timed_out | projection_failed. NULL means "no signal at all" - either
+  // brain-core has not deployed the field yet, or this document predates us tracking it.
+  // NULL must never be read as "still projecting" (see server/brain/projectionStatus.ts).
+  projectionStatus: text("projection_status"),
   parsedId: text("parsed_id"),              // brain-core parsed record id (from extract)
   confidence: text("confidence"),           // model-read confidence (≤0.5), stored as string
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
