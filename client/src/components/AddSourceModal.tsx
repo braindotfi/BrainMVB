@@ -1166,6 +1166,14 @@ function StepDots({ total, current }: { total: number; current: number }) {
  * document is still being read by brain-core). No fabricated stats. */
 const IN_PROGRESS_STATUSES: ReadonlyArray<ExtractStatus> = ["pending", "ingested", "extracting"];
 
+/* "extracted" only means brain-core's /raw/{id}/extract job succeeded. The ledger projection
+ * behind it (APAR rebuild -> account/transaction rebuild -> wiki regen -> agent trigger) is a
+ * separate async chain, and there is no per-document "projected" signal exposed to the client
+ * today. So we re-invalidate across a settle window rather than once, to catch projection
+ * results that land after extraction reports done. */
+const BRAIN_SETTLE_INTERVAL_MS = 20_000;
+const BRAIN_SETTLE_WINDOW_MS = 3 * 60_000;
+
 export function ReadingScreen({
   onViewWiki, onContinue, onAddMore,
 }: { onViewWiki: () => void; onContinue: () => void; onAddMore: () => void }) {
@@ -1181,6 +1189,31 @@ export function ReadingScreen({
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
     }, 15000);
     return () => clearInterval(t);
+  }, [anyInProgress]);
+
+  // The poll above only refreshes the in-modal document list. Home/Finances/Inbox read
+  // /api/brain/* keys, and the global query defaults (staleTime: Infinity, no refetch on
+  // focus or interval) mean nothing refreshes them on its own -- which is why they stayed
+  // stale until a logout/login remount. Invalidate that namespace once reading completes,
+  // then keep re-invalidating over the settle window described above.
+  const prevInProgress = useRef(anyInProgress);
+  useEffect(() => {
+    const justFinished = prevInProgress.current && !anyInProgress;
+    prevInProgress.current = anyInProgress;
+    if (!justFinished) return;
+
+    const invalidateBrain = () =>
+      void queryClient.invalidateQueries({
+        predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/"),
+      });
+
+    invalidateBrain();
+    const t = setInterval(invalidateBrain, BRAIN_SETTLE_INTERVAL_MS);
+    const stop = setTimeout(() => clearInterval(t), BRAIN_SETTLE_WINDOW_MS);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
   }, [anyInProgress]);
 
   const readCount = docs.filter((d) => d.extractStatus === "extracted").length;
