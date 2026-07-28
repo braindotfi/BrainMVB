@@ -143,12 +143,16 @@ const InboxCard = ({
   onOpen,
   onApprove,
   onReject,
+  onAcknowledge,
+  acknowledged,
   busy,
 }: {
   item: InboxItem;
   onOpen: (item: InboxItem) => void;
   onApprove?: (item: InboxItem) => void;
   onReject?: (item: InboxItem) => void;
+  onAcknowledge?: (item: InboxItem) => void;
+  acknowledged?: boolean;
   busy?: boolean;
 }) => {
   const rejected = item.tab === "Rejected";
@@ -220,15 +224,17 @@ const InboxCard = ({
           </button>
         </div>
       ) : item.kind === "detection" ? (
-        /* Acknowledge row: single Acknowledge button (opens insight detail) */
+        /* Acknowledge row: starts active, then turns orange once acknowledged. */
         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => onOpen(item)}
+            onClick={() => onAcknowledge?.(item)}
             data-testid={`button-acknowledge-${item.id}`}
-            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#240757] text-[#7631ee] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0"
+            className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0 ${
+              acknowledged ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#7631ee]"
+            }`}
           >
-            <Check className="size-[16px] shrink-0" />
+            {acknowledged && <Check className="size-[16px] shrink-0" />}
             Acknowledge
           </button>
         </div>
@@ -255,6 +261,7 @@ export function InboxPage() {
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
   const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  const [acknowledgedInsightIds, setAcknowledgedInsightIds] = useState<Set<string>>(() => new Set());
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
 
@@ -398,6 +405,15 @@ export function InboxPage() {
     setReviewStatus(active.id, next);
     setActive(null);
     setReturnTo(null);
+  };
+
+  const acknowledgeItem = (item: InboxItem) => {
+    if (item.kind !== "detection") return;
+    setAcknowledgedInsightIds((current) => {
+      const next = new Set(current);
+      next.add(item.id);
+      return next;
+    });
   };
 
   /* Rule plumbing for the ProposalDetail sheet. */
@@ -777,6 +793,8 @@ export function InboxPage() {
                           onOpen={openItem}
                           onApprove={approveItem}
                           onReject={rejectItem}
+                          onAcknowledge={acknowledgeItem}
+                          acknowledged={item.kind === "detection" && acknowledgedInsightIds.has(item.id)}
                           busy={itemBusy(item)}
                         />
                         {idx < visible.length - 1 && <Divider />}
