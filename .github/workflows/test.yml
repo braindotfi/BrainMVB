@@ -10,9 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
-      - run: npm ci
+
+      - name: Use npm 11
+        run: npm install -g npm@^11
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify the install actually completed
+        run: npx --no-install vitest --version
+
       - run: npm test
