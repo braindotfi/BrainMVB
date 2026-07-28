@@ -51,3 +51,29 @@ The "Add Source" sidebar button opens a paginated, source-agnostic connector wiz
 
 - **Plaid access_token is stripped server-side** before any client response (`/plaid/connections`,
   `/plaid/exchange`). Keep it that way for any new bank route.
+
+## Two different "connected" indicators — do not conflate them
+
+The Add Source modal shows connection state in two places, one screen apart, and they read
+from different data:
+
+- **Category picker** (`CategoryPicker`, screen `"categories"`, titled "Add a Source") renders
+  the **"N connected" pill badges** via `categoryCounts()` in `lib/sourceCategories.ts`. It
+  merges Plaid items + tool connections + **uploaded documents**, so a document-only demo
+  tenant legitimately shows bank/crypto/accounting/payroll/tax = 1 each. A count of 0 renders
+  no badge at all.
+- **Sources home** (`ConnectedSources`, screen `"home"`, titled "Your Sources") is one screen
+  shallower and lists Plaid banks and tool connections with a `Connected · <label>` subtitle,
+  with uploaded documents in a *separate* DOCUMENTS group labelled `Category · size`. With no
+  OAuth/Plaid records this screen shows **no "Connected" text at all** — correctly.
+
+**Why:** a walkthrough opened the modal, landed on Sources home, saw a plain DOCUMENTS list with
+no "Connected" anywhere, and reported the category badges as a regression. They were fine one
+click deeper under "Add New Source". The false alarm cost a round of investigation.
+
+**How to apply:** to check the badges you must reach the category picker, not just open the
+modal. Empty `/api/integrations/connections` and `/api/integrations/plaid/connections` are the
+*expected* state for any demo tenant — they are written only by real `plaid/exchange` and
+`stripe/connect` flows, never by the seed. Do not "fix" that by seeding fake connection rows:
+it would advertise live bank connectivity the demo does not have and attach remove/disconnect
+affordances to records that disconnect nothing.
