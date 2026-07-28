@@ -26,6 +26,18 @@ fully resolved. Re-probe on a fresh tenant before trusting a "deployed and verif
   propose/execute agents fail one step later with `null value in column "subject_id" of
   relation "policy_decisions" violates not-null constraint`. Different error, same outcome:
   no proposal.
+
+**Third state (later observation): proposals are now created, then auto-rejected.** The
+`subject_id` crash is gone. A fresh tenant records `agent.action.proposed` with
+`outcome: reject` alongside `policy.evaluate` → `outcome: reject`, `matched_rule_id: null`,
+and `/api/brain/proposals` returns real rows with `status: "rejected"`. Needs Review is still
+empty, but for a *third* reason: the provisioned policy is effectively default-deny with no
+matching rule, so nothing ever reaches a reviewable state.
+
+**How to apply:** "Needs Review is empty" has now had three distinct upstream causes in
+sequence. Never carry forward the previous diagnosis — re-read `policy.evaluate` /
+`agent.action.proposed` outcomes on a fresh tenant each time. `matched_rule_id: null` with
+`outcome: reject` means the tenant has a policy but no rule that admits the proposal.
 - **APAR:** `apar_projection.rebuilt` still reports `obligations: 0` while counterparties
   climb normally, so `ledger/obligations` and `ledger/invoices` stay empty. Counterparty
   links resolve fine, so a "null counterparty link" repair does not address it.

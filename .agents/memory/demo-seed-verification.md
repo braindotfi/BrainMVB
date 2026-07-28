@@ -20,6 +20,24 @@ tenant had never been created. Confirm by grepping the workflow log for the
 proxy read immediately after login, then poll. Budget ~3-4 minutes: each seed file waits
 for brain-core's async extract job to settle.
 
+## The seed is flaky run-to-run — judge it across tenants, not from one
+
+Two `demo-fresh` tenants seeded minutes apart produced very different results. The first hit
+brain-core `502`s on `/raw/ingest` for 3 of 5 documents (leaving them `failed`, plus one
+`unavailable` from a 502 on extract); the second ingested all 5 but left 2 at
+`projection_failed`. brain-core `/health` was 200 throughout and a manual re-ingest
+immediately afterwards succeeded, so these are transient upstream faults, not an outage and
+not a code regression.
+
+**Why:** the first tenant's near-empty state looked like a broken product and would have been
+reported as one. It was upstream flakiness that did not reproduce on the next attempt.
+
+**How to apply:** before reporting "the demo is empty", re-seed a second tenant and compare.
+Distinguish the three failure layers by document status — `failed` (ingest never landed),
+`unavailable` (ingest ok, extract failed), `projection_failed` (extract ok, ledger projection
+failed) — since only the third leaves a document looking healthy in the Sources list while
+contributing nothing to any financial surface.
+
 ## Fire-and-forget background work leaks between tests
 
 The seed is deliberately not awaited in production. In a test suite that means a previous

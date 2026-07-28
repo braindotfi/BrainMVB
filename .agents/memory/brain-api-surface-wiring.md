@@ -50,6 +50,20 @@ byte-identical specs, so staging is not a preview of what is coming.
 then confirm deployment by grepping the live spec. Treat those as two separate facts. If
 a field is merged but not deployed, gate on its *presence*, never assume its arrival.
 
+**But the live spec UNDER-reports — absence from it does not prove a field is undeployed.**
+`projection_status` on the raw-document read was absent from the published
+`https://api.brain.fi/v1/openapi.yaml` yet is served by the deployed API, returning real
+`projected` / `projection_failed` / `pending` values on a freshly seeded tenant.
+
+**Why:** a spec grep was treated as proof the field had not shipped, and the conclusion
+"our mirror is dormant" was reported to the user. The mirror was in fact live and already
+populating. The spec is authoritative for *presence* (if it is there, it is callable) but not
+for *absence* — brain-core ships response fields ahead of its published schema.
+
+**How to apply:** to decide whether a response field is live, observe an actual response for
+a tenant that should have it, rather than grepping the spec. A spec miss is a reason to probe,
+not a reason to conclude.
+
 **Known drift:** GET /actions (Inbox review queue's only tenant-scoped PaymentIntent
 list) is absent from the artifact but live — kept wired, flagged in CLAUDE.md; confirm
 with brain-core owners before removing or relying on it further.
