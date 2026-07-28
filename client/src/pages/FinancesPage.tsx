@@ -358,10 +358,9 @@ const IncomeTxList = ({
 };
 
 // ─── Expenses (live) - outflow transactions grouped from the Ledger ──────────
-// Derived from brain-core ledger outflow transactions. The demo seed currently
-// carries only inflows, so this renders an honest empty state today and will
-// populate automatically when real money-out data lands. Never faked.
-// See deliverables/DATA-LIMITATIONS.md.
+// Derived from brain-core ledger outflow transactions - never faked. The demo seed
+// projects 13 outflows (165,292.01) from the bank statement, so this renders populated;
+// the empty state below is still the honest fallback for a tenant with no money-out yet.
 type ExpenseRow = { category: string; amount: number };
 
 function summarizeExpenses(

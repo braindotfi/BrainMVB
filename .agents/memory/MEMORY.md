@@ -16,3 +16,5 @@
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist in proxy.ts; /actions is known live drift.
 - [Verifying the demo seed](demo-seed-verification.md) — tenant+seed only start on a call needing a brain session; fire-and-forget seeding leaks across tests; doc category is BFF-local but couples to the UI badges.
+- [Demo seed bank statement is vendored](demo-seed-bank-anchor.md) — it's brain-core's interpreter fixture, never generated; the other four docs are built to reconcile against it.
+- [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); guard content, mirror PDF facts into /Keywords, avoid tautological asserts.

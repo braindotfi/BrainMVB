@@ -36,8 +36,9 @@ don't assert on a count that a slower run can satisfy from the wrong test.
 ## The seed generator rewrites every fixture on every run
 
 The generator script's entry point calls each document generator unconditionally, so adding
-a new one also rewrites all the pre-existing files. PDF and XLSX both embed a build
-timestamp, so those files come back byte-different even when their content is identical.
+a new one also rewrites all the pre-existing files, and they come back byte-different even
+when their content is identical (see the generated-fixture-guards note for why pinning the
+timestamps does not fix this).
 
 **Why:** silently churning a fixture invalidates any prior end-to-end verification against
 it, and the churn is invisible in a diff (binary blobs). This turned into a real dispute
