@@ -35,6 +35,21 @@ is honest. Mirror whatever defaults `server/brain/client.ts` already applies to 
 except synthesized ids: the server's `randomUUID()` fallback would break React keys on the
 client, since normalization re-runs on every refetch. Derive a stable id instead.
 
+**Check the DEPLOYED spec before building against a new field.** brain-core serves its
+live OpenAPI unauthenticated at `<baseUrl>/openapi.yaml` (e.g.
+https://api.brain.fi/v1/openapi.yaml) — no token needed, so it is the cheapest possible
+way to answer "is this actually callable yet". Grep it for the field or schema name.
+
+**Why:** a merged brain-core PR is not a deployed one, and the gap has been days. Building
+against a merged-but-undeployed field yields code where the value is permanently absent —
+which, depending on how you treat "absent", either silently no-ops or deadlocks a state
+machine. Staging does not necessarily lead prod: both have been observed serving
+byte-identical specs, so staging is not a preview of what is coming.
+
+**How to apply:** confirm merge state via `gh api repos/braindotfi/brain-core/pulls/N`,
+then confirm deployment by grepping the live spec. Treat those as two separate facts. If
+a field is merged but not deployed, gate on its *presence*, never assume its arrival.
+
 **Known drift:** GET /actions (Inbox review queue's only tenant-scoped PaymentIntent
 list) is absent from the artifact but live — kept wired, flagged in CLAUDE.md; confirm
 with brain-core owners before removing or relying on it further.
