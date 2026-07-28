@@ -713,9 +713,9 @@ export function InboxPage() {
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
           </div>
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            {/* Tab bar */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
+            {/* Tab bar — keep tabs on one row; scroll when the shell narrows. */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-x-auto p-[2px] relative rounded-[400px] shrink-0 w-full">
               {INBOX_TABS.map((tab) => {
                 const isActive = activeTab === tab;
                 return (
