@@ -552,8 +552,9 @@ export function FinancesPage() {
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
 
-            {/* Tab bar: active tab is ORANGE; keep one row and scroll when narrow. */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-x-auto p-[2px] relative rounded-[400px] shrink-0 w-full">
+            {/* Tab bar: active tab is ORANGE. Hugs its tabs (matches
+                Vendors/Rules) rather than stretching the section width. */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
               {FINANCE_TABS.map((tab) => {
                 const isActive = activeTab === tab;
                 return (

@@ -178,12 +178,15 @@ const InboxCard = ({
     >
       {/* Left column: title + tag on the first line, then the supporting detail. */}
       <div className="flex flex-1 flex-col gap-[4px] items-start min-w-px">
-        <div className="flex items-center gap-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0 flex-1">
+        {/* Title and tag sit together: the tag hugs the end of the title rather
+            than being pushed to the far edge of the column. A long title
+            truncates so the tag stays visible beside it. */}
+        <div className="flex items-center gap-[8px] max-w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
             {item.title}
           </p>
           <span
-            className={`${item.tagClass} rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] whitespace-nowrap shrink-0`}
+            className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
             data-testid={`tag-inbox-${item.id}`}
           >
             {item.tag}
@@ -237,7 +240,7 @@ const InboxCard = ({
               acknowledged ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#7631ee]"
             }`}
           >
-            {acknowledged && <Check className="size-[16px] shrink-0" />}
+            <Check className="size-[16px] shrink-0" />
             {acknowledged ? "Acknowledged" : "Acknowledge"}
           </button>
         </div>
@@ -748,8 +751,9 @@ export function InboxPage() {
           </div>
 
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
-            {/* Tab bar — keep tabs on one row; scroll when the shell narrows. */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-x-auto p-[2px] relative rounded-[400px] shrink-0 w-full">
+            {/* Tab bar — hugs its tabs (matches Vendors/Rules) rather than
+                stretching the section width; wraps when the shell narrows. */}
+            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
               {INBOX_TABS.map((tab) => {
                 const isActive = activeTab === tab;
                 return (
