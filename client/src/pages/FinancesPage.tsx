@@ -400,7 +400,6 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
 
   const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
   const rows = txData?.transactions ? summarizeExpenses(txData.transactions, nameOf) : [];
-  const total = rows.reduce((s, r) => s + r.amount, 0);
   const shortDate = (iso: string) => {
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -431,14 +430,6 @@ const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) 
               <Divider />
             </div>
           ))}
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Total</p>
-            </div>
-            <div className="flex flex-col items-end justify-center relative shrink-0 w-[140px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-{format(total)}</p>
-            </div>
-          </div>
         </>
       )}
     </WidgetCard>
