@@ -19,6 +19,7 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approvals: "approved",
   "Auto-Approved": "auto_approved",
   Rejections: "rejected",
+  Acknowledge: "acknowledged",
   "Rule Changes": "rule_change",
   "Trusted Changes": "trust_granted",
   Flagged: "flagged",
@@ -234,6 +235,7 @@ export function AuditLogPage() {
                         {activeTab === "Approvals" && "No approval records yet."}
                         {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                         {activeTab === "Rejections" && "No rejected payment records yet."}
+                        {activeTab === "Acknowledge" && "No acknowledged records yet."}
                         {activeTab === "Rule Changes" && "No rule changes recorded yet."}
                         {activeTab === "Trusted Changes" && "No trust status changes yet."}
                         {activeTab === "Flagged" && "No flagged transactions yet."}

@@ -157,7 +157,13 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
   const decision = typeof e.inputs.decision === "string" ? e.inputs.decision : "decided";
   const proposalId = typeof e.inputs.proposal_id === "string" ? e.inputs.proposal_id : undefined;
   const eventType: AuditEventType =
-    decision === "reject" ? "rejected" : decision === "undo" ? "flagged" : "approved";
+    decision === "reject"
+      ? "rejected"
+      : decision === "acknowledge"
+        ? "acknowledged"
+        : decision === "undo"
+          ? "flagged"
+          : "approved";
   return { eventType, summary: `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}` };
 }
 

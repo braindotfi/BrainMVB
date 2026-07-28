@@ -40,6 +40,18 @@ function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
 }
 
 describe("mapAuditEventToRecord", () => {
+  it("classifies an Inbox acknowledge decision into the Acknowledge audit bucket", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_01ABC", decision: "acknowledge" },
+      }),
+      anchor(),
+    );
+    expect(r.eventType).toBe("acknowledged");
+    expect(r.summary).toContain("acknowledge");
+  });
+
   it("marks a record anchored only when covered by the window AND a confirmed tx hash exists", () => {
     const r = mapAuditEventToRecord(ev(), anchor());
     expect(r.anchor.status).toBe("anchored");

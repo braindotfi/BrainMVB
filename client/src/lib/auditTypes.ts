@@ -5,6 +5,7 @@ export type AuditEventType =
   | "approved"
   | "auto_approved"
   | "rejected"
+  | "acknowledged"
   | "postponed"
   | "rule_change"
   | "trust_granted"
@@ -118,6 +119,7 @@ export type AuditLogTab =
   | "Approvals"
   | "Auto-Approved"
   | "Rejections"
+  | "Acknowledge"
   | "Rule Changes"
   | "Trusted Changes"
   | "Flagged"
@@ -128,6 +130,7 @@ export const AUDIT_TABS: AuditLogTab[] = [
   "Approvals",
   "Auto-Approved",
   "Rejections",
+  "Acknowledge",
   "Rule Changes",
   "Trusted Changes",
   "Flagged",
@@ -140,6 +143,7 @@ export function auditEventLabel(type: AuditEventType): string {
     case "approved": return "APPROVED";
     case "auto_approved": return "AUTO-APPROVED";
     case "rejected": return "REJECTED";
+    case "acknowledged": return "ACKNOWLEDGED";
     case "postponed": return "POSTPONED";
     case "rule_change": return "RULE CHANGE";
     case "trust_granted": return "TRUST GRANTED";

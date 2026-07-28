@@ -48,6 +48,8 @@ function auditTab(eventType: AuditEventType): InboxTab {
   switch (eventType) {
     case "rejected":
       return "Rejected" as InboxTab;
+    case "acknowledged":
+      return "Auto-Approved" as InboxTab;
     case "rule_change":
     case "trust_granted":
     case "trust_revoked":
@@ -75,6 +77,8 @@ function auditWhy(r: AuditRecord): string {
         : "Approved after review.";
     case "rejected":
       return "Rejected: this payment was declined and nothing moved.";
+    case "acknowledged":
+      return "Acknowledged from the Inbox; no payment was initiated.";
     case "postponed":
       return "Postponed: parked for a later decision.";
     case "rule_change":
