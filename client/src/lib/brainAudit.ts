@@ -146,6 +146,31 @@ function wikiQuestionText(e: BrainAuditEvent): string | undefined {
   return typeof q === "string" && q.trim() ? q.trim() : undefined;
 }
 
+/** `proposal.decided`'s decision-time snapshot of what the proposal was about
+ *  (services/execution/src/proposals/decision-service.ts's
+ *  proposalActionSnapshot, carried in `outputs.proposal_summary` - the only
+ *  place GET /audit/events actually returns it; beforeState/afterState exist
+ *  server-side but serializeEvent() never surfaces them). Absent on audit
+ *  events emitted before this shipped, and on decisions taken on the
+ *  money-path (payment_intent.*), which doesn't emit this key at all -
+ *  always optional, never assumed present. */
+interface ProposalDecisionSummary {
+  proposing_agent?: string;
+  narrative?: string;
+  summary?: string;
+  risk_band?: string;
+  finding_type?: string;
+  severity?: string;
+  rule_id?: string;
+  recommended_remediation?: string;
+  affected_entities?: Array<{ kind?: string; ref?: string }>;
+}
+
+function proposalSummaryFrom(e: BrainAuditEvent): ProposalDecisionSummary | undefined {
+  const raw = e.outputs?.["proposal_summary"];
+  return raw !== null && typeof raw === "object" ? (raw as ProposalDecisionSummary) : undefined;
+}
+
 /** `proposal.decided` (services/execution/src/proposals/decision-service.ts)
  *  emits `inputs: { proposal_id, decision }` - NOT outputs - and carries its
  *  eventType in the decision itself (approve|reject|acknowledge|undo), not a
@@ -164,7 +189,12 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
         : decision === "undo"
           ? "flagged"
           : "approved";
-  return { eventType, summary: `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}` };
+  const fallback = `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}`;
+  // Prefer the real narrative brain-core now snapshots at decision time
+  // (e.g. "Compliance review found policy_violation with high severity...").
+  // Falls back to the old opaque id-only line for events predating this.
+  const narrative = proposalSummaryFrom(e)?.narrative;
+  return { eventType, summary: narrative && narrative.trim() ? narrative.trim() : fallback };
 }
 
 /** brain-core's own event_type mapped onto the client bucket, when present.
@@ -457,6 +487,23 @@ export function mapAuditEventToRecord(
      cards keep the truncated title. Only set when truncation actually
      dropped text — otherwise the note would just repeat the title. */
   const fullQuestion = wikiQuestionText(event);
+
+  /* proposal.decided-only: the decision-time snapshot (see
+     proposalSummaryFrom above) - undefined for every other action, and for
+     proposal.decided events emitted before brain-core started attaching it. */
+  const proposalSummary = event.action === "proposal.decided" ? proposalSummaryFrom(event) : undefined;
+  const proposalId =
+    event.action === "proposal.decided" && typeof event.inputs.proposal_id === "string"
+      ? event.inputs.proposal_id
+      : undefined;
+  /* Remediation/rule context reads as a second line under the narrative
+     headline - only set when it says something the summary doesn't already. */
+  const proposalNote =
+    proposalSummary?.recommended_remediation &&
+    proposalSummary.recommended_remediation !== summary
+      ? proposalSummary.recommended_remediation
+      : undefined;
+
   const step: LifecycleStep = {
     label: summary,
     timestamp: label(createdMs),
@@ -465,7 +512,7 @@ export function mapAuditEventToRecord(
         ? "alert"
         : "ok",
     actor: event.actor !== "system" ? resolvedName ?? humanReadableActor(event.actor) : undefined,
-    note: fullQuestion && fullQuestion !== summary ? fullQuestion : undefined,
+    note: fullQuestion && fullQuestion !== summary ? fullQuestion : proposalNote,
   };
 
   return {
@@ -482,10 +529,19 @@ export function mapAuditEventToRecord(
     // rowSubtitle left unset - AuditLogPage's own fallback formats amount
     // through useCurrency(), which this module has no access to.
     lifecycle: [step],
-    // ponytail: rich linked-evidence (documents/vendors/rules resolved from a
-    // live audit event) stays a follow-up until those stores are also live -
-    // see BrainMVB-data-integration/CLAUDE.md's linked-evidence contract.
-    linked: [],
+    // Real linked-evidence for proposal.decided only (documents/vendors/rules
+    // resolved from a live audit event otherwise stays a follow-up until
+    // those stores are also live - see BrainMVB-data-integration/CLAUDE.md's
+    // linked-evidence contract). The popup already gracefully falls back to
+    // a plain, non-tappable "(proposal unavailable)" chip when the id
+    // doesn't resolve against the demo proposal store (AuditRecordPopup.tsx),
+    // so populating this for live tenants is safe today even though it
+    // won't be tappable there until openProposalDetail/resolveProposal
+    // learns to resolve live GET /v1/proposals/{id} data, not just the
+    // demo-only mock corpus.
+    linked: proposalId
+      ? [{ kind: "proposal" as const, label: proposalId, refId: proposalId }]
+      : [],
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
   };

@@ -52,6 +52,46 @@ describe("mapAuditEventToRecord", () => {
     expect(r.summary).toContain("acknowledge");
   });
 
+  it("uses the real narrative + links the proposal when brain-core attaches a proposal_summary", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_01KYN94C1GRDBQA5J4KM517143", decision: "acknowledge" },
+        outputs: {
+          status: "acknowledged",
+          proposal_summary: {
+            finding_type: "policy_violation",
+            severity: "high",
+            rule_id: "cmp_policy_violation",
+            narrative: "Compliance review found policy_violation with high severity.",
+            recommended_remediation: "Review the rejected policy decision and keep the action blocked.",
+          },
+        },
+      }),
+      anchor(),
+    );
+    expect(r.summary).toBe("Compliance review found policy_violation with high severity.");
+    expect(r.lifecycle[0].note).toBe("Review the rejected policy decision and keep the action blocked.");
+    expect(r.linked).toEqual([
+      { kind: "proposal", label: "prop_01KYN94C1GRDBQA5J4KM517143", refId: "prop_01KYN94C1GRDBQA5J4KM517143" },
+    ]);
+  });
+
+  it("falls back to the opaque id-only summary for proposal.decided events predating the snapshot", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_01OLD", decision: "approve" },
+        outputs: { status: "approved" }, // no proposal_summary key at all
+      }),
+      anchor(),
+    );
+    expect(r.summary).toBe("Proposal decided - approve (prop_01OLD)");
+    expect(r.lifecycle[0].note).toBeUndefined();
+    // still links the id even without a summary - resolves-or-plain-text on the popup side
+    expect(r.linked).toEqual([{ kind: "proposal", label: "prop_01OLD", refId: "prop_01OLD" }]);
+  });
+
   it("marks a record anchored only when covered by the window AND a confirmed tx hash exists", () => {
     const r = mapAuditEventToRecord(ev(), anchor());
     expect(r.anchor.status).toBe("anchored");
