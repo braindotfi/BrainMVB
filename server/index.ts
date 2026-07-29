@@ -5,6 +5,7 @@ import { createServer } from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { assertEncryptionKeyConfigured } from "./tokenCrypto";
+import { storage } from "./storage";
 
 if (process.env.NODE_ENV === "production") {
   assertEncryptionKeyConfigured();
@@ -130,6 +131,34 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+
+  // ── Demo tenant cleanup ──────────────────────────────────────────────────
+  // Each "Continue with Demo" tap provisions a real brain-core tenant + an
+  // on-chain audit anchor. Without expiry, demo tenants accumulate indefinitely.
+  // We cannot delete the brain-core tenant (no delete-tenant API endpoint), but
+  // dropping the local user + all its linked rows prevents BrainMVB from ever
+  // re-authenticating as that tenant again, bounds local row growth, and limits
+  // exposure to any future cost-per-tenant billing.
+  //
+  // Both values are env-overridable so an ops team can tune without a deploy:
+  //   DEMO_TENANT_TTL_HOURS       (default 24)
+  //   DEMO_CLEANUP_INTERVAL_HOURS (default 1)
+  const demoTtlMs = envInt("DEMO_TENANT_TTL_HOURS", 24) * 60 * 60 * 1000;
+  const demoCleanupIntervalMs = envInt("DEMO_CLEANUP_INTERVAL_HOURS", 1) * 60 * 60 * 1000;
+
+  async function runDemoCleanup() {
+    try {
+      const count = await storage.deleteExpiredDemoUsers(demoTtlMs);
+      if (count > 0) log(`demo cleanup: removed ${count} expired demo tenant(s)`, "cleanup");
+    } catch (err) {
+      console.error("[cleanup] demo tenant cleanup error:", err);
+    }
+  }
+
+  // Run immediately at startup to sweep tenants that expired during downtime,
+  // then on a regular interval.
+  runDemoCleanup();
+  setInterval(runDemoCleanup, demoCleanupIntervalMs);
 
   // The legacy mock-data daily-insights cron (server/insightsService.ts) is
   // retired: the HomePage insight is now ledger-grounded via brain-core

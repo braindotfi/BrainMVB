@@ -16,10 +16,11 @@ import {
   assistantQuestions as assistantQuestionsTable,
   type AssistantQuestion, type InsertAssistantQuestion,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, like, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import { encryptPlaidAccessToken, readPlaidAccessToken } from "./tokenCrypto";
+import { isDemoEmail, SHARED_DEMO_EMAIL } from "./demoUsers";
 
 export interface DeleteAccountIdentifiers {
   userId?: string;          // app user id (free-form)
@@ -103,6 +104,10 @@ export interface IStorage {
   // Assistant question audit trail (local — guarantees every question is recorded)
   recordAssistantQuestion(q: InsertAssistantQuestion): Promise<AssistantQuestion>;
   listAssistantQuestions(userId: string, limit?: number): Promise<AssistantQuestion[]>;
+
+  /** Delete all demo-fresh users whose createdAt is older than ttlMs milliseconds.
+   *  Returns the count deleted. Never touches demo@brain.fi (the shared legacy account). */
+  deleteExpiredDemoUsers(ttlMs: number): Promise<number>;
 }
 
 export type ToolConnection = {
@@ -740,6 +745,22 @@ export class MemStorage implements IStorage {
     return (this.assistantQuestionsStore.get(userId) ?? []).slice(0, limit);
   }
 
+  // ─── Demo tenant cleanup ───
+  async deleteExpiredDemoUsers(ttlMs: number): Promise<number> {
+    const cutoff = new Date(Date.now() - ttlMs);
+    const expired = Array.from(this.users.values()).filter(
+      (u) =>
+        isDemoEmail(u.email) &&
+        u.email !== SHARED_DEMO_EMAIL &&
+        u.createdAt != null &&
+        u.createdAt < cutoff,
+    );
+    for (const u of expired) {
+      await this.deleteUserAccount({ userId: u.id });
+    }
+    return expired.length;
+  }
+
 }
 
 // ─── PostgreSQL-backed implementation ───
@@ -1349,6 +1370,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assistantQuestionsTable.userId, userId))
       .orderBy(desc(assistantQuestionsTable.createdAt))
       .limit(limit);
+  }
+
+  // ─── Demo tenant cleanup ───
+  async deleteExpiredDemoUsers(ttlMs: number): Promise<number> {
+    const cutoff = new Date(Date.now() - ttlMs);
+    // The shared demo@brain.fi account is excluded by the LIKE pattern
+    // (it has no "demo-fresh-" prefix), so it is never touched.
+    const expired = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          like(usersTable.email, "demo-fresh-%@brain.fi"),
+          lt(usersTable.createdAt, cutoff),
+        ),
+      );
+    for (const { id } of expired) {
+      await this.deleteUserAccount({ userId: id });
+    }
+    return expired.length;
   }
 }
 
