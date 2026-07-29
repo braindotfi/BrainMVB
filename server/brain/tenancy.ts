@@ -89,17 +89,35 @@ async function serviceCall<T>(path: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-/** Create a company tenant + bootstrap admin. NOT idempotent - call exactly once per signup. */
+/**
+ * Create a company tenant + bootstrap admin. NOT idempotent - call exactly once per signup.
+ *
+ * `demoSeed` opts the new tenant into brain-core's `seedBrainSaasDemo` while keeping
+ * tenant.kind = 'production', so durable tenancy and demo seeding can coexist. Pass it ONLY
+ * for the "Continue with Demo" flow - a real company signup must start genuinely empty.
+ * The key is omitted entirely when false, so real signups send the same body as before and
+ * a core that predates the flag is unaffected.
+ */
 export function createTenant(params: {
   companyName: string;
   founderEmail: string;
   founderDisplayName: string;
   founderExternalRef: string;
-}): Promise<{ tenant_id: string; member: BrainMemberShape; session: TenantSessionShape; agent?: AgentTokenShape }> {
+  demoSeed?: boolean;
+}): Promise<{
+  tenant_id: string;
+  member: BrainMemberShape;
+  session: TenantSessionShape;
+  agent?: AgentTokenShape;
+  /** Present only when demo_seed was requested AND the core supports it. Core owns the
+   *  shape, so it stays opaque here - we surface it verbatim for confirmation. */
+  demo_seed?: Record<string, unknown>;
+}> {
   return serviceCall("/tenants", {
     company_name: params.companyName,
     founder: { email: params.founderEmail, display_name: params.founderDisplayName },
     founder_external_ref: params.founderExternalRef,
+    ...(params.demoSeed ? { demo_seed: true } : {}),
   });
 }
 

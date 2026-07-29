@@ -26,21 +26,25 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
 - Seed-side quirk to fix when unblocked: `seedTenantDocuments` persists the FIRST extract
   response, so an async upstream leaves parsed_id/confidence null in source_documents even
   when the job later succeeds — poll or re-fetch the job before finalizing.
-- **"Continue with Demo" does NOT hit brain-core's demo seed path.** Durable mode is checked
-  BEFORE the token-mode strategies in createSession, so even with the demo-provision secret
-  still set, the button provisions a *production* tenant (POST /v1/tenants +
-  /tenants/{id}/agent-token) and `/demo/provision-run` is never called. brain-core's own demo
-  seeder therefore never runs, and nothing gated on `tenant.kind='demo'` upstream can appear.
-  What fills the tenant instead is this repo's own `seedTenantDocuments`, which ingests
-  generated documents through /raw/ingest — documents only, never connector/source rows.
-  **Why:** durable mode was chosen deliberately — provision-run always mints a *fresh* tenant
-  and cannot re-attach, and the platform agent-token route rejects demo tenants, so persistence
-  across logins was impossible on the demo fence.
+- **"Continue with Demo" never touches `/demo/provision-run`.** Durable mode is checked BEFORE
+  the token-mode strategies in createSession, so even with the demo-provision secret still set,
+  the button provisions a *production* tenant (POST /v1/tenants + /tenants/{id}/agent-token).
+  Core-side demo seeding is requested via a `demo_seed: true` flag on tenant create, which
+  seeds while keeping `kind='production'` — that flag is the ONLY way seeded demo data can
+  reach this app. Gate it on the demo-email predicate, the same one guarding the local seed,
+  and omit the key entirely (never `false`) for real signups.
+  **Why:** provision-run always mints a *fresh* tenant and cannot re-attach, and the platform
+  agent-token route rejects demo tenants, so persistence across logins was impossible on the
+  demo fence; durable mode was the deliberate trade, and the flag is what un-breaks seeding
+  without giving that up. Between 2026-07-24 (durable mode) and the flag landing, the demo
+  button was silently unseeded — treat any walkthrough-based verification from that window as
+  never having exercised the seed path.
   **How to apply:** before verifying any brain-core demo-seeded feature from this app, confirm
-  which path a login actually takes (workflow log line `durable tenant ... created`, or the
-  `auth.production_agent_token.minted` audit event). Reverting to provision-run to get seeded
-  data would re-break durability — the fix belongs upstream (seed production/durable tenants,
-  or accept a demo flag on tenant create).
+  which path a login takes (workflow log `durable tenant ... created`, or the
+  `auth.production_agent_token.minted` audit event) AND that the create response carried a
+  `demo_seed` summary — its absence means the core predates the flag, not that the UI is broken.
+  Note the app's own `seedTenantDocuments` also runs for demo accounts; once core-side seeding
+  is live, check whether the two overlap before assuming duplicated data is a bug.
 - Suites in server/brain/*.test.ts read env at module-eval: any workspace-set
   BRAIN_TENANCY_MODE / BRAIN_PLATFORM_SERVICE_SECRET leaks into vitest and flips code
   paths — demo-path suites must explicitly `delete` those vars at the top.

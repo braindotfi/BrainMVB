@@ -269,6 +269,10 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
   // have none, so synthesize a stable, clearly-non-routable one from the user id.
   const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
   const companyName = `${displayName}'s Workspace`;
+  // The ONE gate for every demo-only behaviour below: the "Continue with Demo" accounts
+  // (demo@brain.fi / demo-fresh-*). A real signup must never trip any of it. Resolved once
+  // here so the upstream demo_seed flag and the local starter seed can never disagree.
+  const isDemo = isDemoEmail(user?.email);
 
   // Anti-retry guard for the NON-idempotent upstream create: persist a tombstone row
   // FIRST, so that if we crash after a successful POST /tenants but before finalizing,
@@ -288,6 +292,9 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
       founderEmail,
       founderDisplayName: displayName,
       founderExternalRef: appUserId, // external_ref = stable platform user id, never an email
+      // Run brain-core's own seedBrainSaasDemo during creation (tenant.kind stays
+      // 'production', so durability is unaffected). Demo accounts only.
+      demoSeed: isDemo,
     });
   } catch (err) {
     // The create PROVABLY failed upstream - roll the tombstone back so a later login
@@ -326,8 +333,19 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
   // hold (verified live 2026-07-24: member /raw/ingest → 403 auth_scope_insufficient,
   // agent token → 201). Fall back to the member token only if no agent token exists,
   // so the failure surfaces as an honest 403 in the document status.
-  const appUser = await storage.getUser(appUserId);
-  if (isDemoEmail(appUser?.email)) {
+  if (isDemo) {
+    // Confirmation that core's own seeder ran. Absent means the core predates the flag (or
+    // ignored it) - the tenant will have no fake-connected sources, so say so plainly rather
+    // than letting a silently-unseeded demo look like a UI bug.
+    if (result.demo_seed) {
+      console.log(`[brain-auth] tenant ${result.tenant_id} demo_seed summary:`, JSON.stringify(result.demo_seed));
+    } else {
+      console.warn(
+        `[brain-auth] tenant ${result.tenant_id} was created with demo_seed: true but the response ` +
+          `carried no demo_seed summary - core may predate the flag. Expect NO core-side seed ` +
+          `(no fake-connected sources, empty ledger); the local document seed below still runs.`,
+      );
+    }
     console.log(`[brain-auth] durable tenant ${result.tenant_id} created for DEMO user ${appUserId} - seeding starter documents`);
     void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token).catch((err) =>
       console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),

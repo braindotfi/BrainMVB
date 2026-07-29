@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import express, { type Express } from "express";
+import { type Server } from "node:http";
+import { type AddressInfo } from "node:net";
 
 /**
  * Durable tenancy invariants (BRAIN_TENANCY_MODE=durable).
@@ -15,6 +18,10 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
  *      an existing tenant.
  *   F. The seed runs ONLY for demo accounts (demo@brain.fi / demo-fresh-*): a real
  *      signup's tenant is created with ZERO raw-layer ingestion - genuinely empty.
+ *   G. The demo flow sends demo_seed: true on POST /tenants (core seeds the tenant while
+ *      keeping kind='production'); a real signup omits the key entirely.
+ *   H. The EXPLICIT company-signup route never sends demo_seed - not even for an account
+ *      whose email happens to be a demo address. Only "Continue with Demo" seeds.
  */
 
 const SERVICE_SECRET = "test-platform-service-secret-DO-NOT-LEAK";
@@ -60,6 +67,7 @@ function routeBrainCore(fullUrl: string, method: string): Response {
       member: { id: "m1", tenantId: TENANT_ID, email: "u@co.com", displayName: "User", role: "admin" },
       session: { token: MEMBER_TOKEN, refresh_token: "rt_1", expires_in: 900 },
       agent: { id: "agt_1", token: AGENT_TOKEN, expires_in: 900 },
+      demo_seed: { sources: 6, invoices: 12 },
     }, 201);
   }
   if (url.endsWith(`/tenants/${TENANT_ID}/agent-token`) && method === "POST") {
@@ -93,6 +101,12 @@ let storage: typeof import("../storage").storage;
 let SEED_MANIFEST: typeof import("./seed").SEED_MANIFEST;
 let whenSeedsSettle: typeof import("./seed").whenSeedsSettle;
 
+/** Express harness for the EXPLICIT company-signup route (invariant H). The session user
+ *  is mutable so a test can sign in as a freshly created storage user. */
+let signupServer: Server;
+let signupBaseUrl: string;
+let sessionUserId = "durable-signup-user";
+
 beforeAll(async () => {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -122,10 +136,24 @@ beforeAll(async () => {
   ({ getBrainSession, clearBrainTokenCache } = await import("./auth"));
   ({ storage } = await import("../storage"));
   ({ SEED_MANIFEST, whenSeedsSettle } = await import("./seed"));
+
+  const { createBrainProxyRouter } = await import("./proxy");
+  const app: Express = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    (req as unknown as { session: { userId: string } }).session = { userId: sessionUserId };
+    next();
+  });
+  app.use("/api/brain", createBrainProxyRouter());
+  await new Promise<void>((resolve) => {
+    signupServer = app.listen(0, resolve);
+  });
+  signupBaseUrl = `http://127.0.0.1:${(signupServer.address() as AddressInfo).port}`;
 });
 
 afterAll(() => {
   globalThis.fetch = realFetch;
+  signupServer?.close();
 });
 
 beforeEach(async () => {
@@ -161,6 +189,9 @@ describe("durable tenancy invariants", () => {
     expect(tenantCalls.length).toBe(1);
     expect(tenantCalls[0].svcAuth).toBe(SERVICE_SECRET);
     expect((tenantCalls[0].body as { founder_external_ref?: string }).founder_external_ref).toBe(userId);
+    // G: the demo flow opts into core's own seedBrainSaasDemo. Without this, the tenant is
+    // created but carries none of the fake-connected sources the demo is supposed to show.
+    expect((tenantCalls[0].body as { demo_seed?: unknown }).demo_seed).toBe(true);
 
     const identity = await storage.getBrainIdentity(userId);
     expect(identity?.tenantId).toBe(TENANT_ID);
@@ -220,7 +251,11 @@ describe("durable tenancy invariants", () => {
     expect(session.tenantId).toBe(TENANT_ID);
 
     // Tenant IS created for the real user...
-    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(1);
+    const realTenantCalls = calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST");
+    expect(realTenantCalls.length).toBe(1);
+    // ...with NO demo_seed key at all - not `false`. A real signup's request body must stay
+    // byte-identical to the pre-flag one, so a core that predates #364 cannot misread it.
+    expect((realTenantCalls[0].body as Record<string, unknown>)).not.toHaveProperty("demo_seed");
     // ...but the raw layer stays untouched: no seed, no documents, genuinely empty.
     await new Promise((r) => setTimeout(r, 150));
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
@@ -234,6 +269,33 @@ describe("durable tenancy invariants", () => {
     expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(1);
     // Create provably failed upstream → tombstone rolled back, so a LATER login may retry.
     expect(await storage.getBrainIdentity(userId)).toBeUndefined();
+  });
+
+  it("H: the EXPLICIT company-signup route never sends demo_seed - even for a demo-address account", async () => {
+    // Deliberately the hostile case: a demo EMAIL going through the real signup surface.
+    // Only the "Continue with Demo" path may seed, so the email alone must not be enough.
+    const u = await storage.createUser({
+      username: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
+      email: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
+      password: null,
+      name: "Demo Business",
+    });
+    sessionUserId = u.id;
+    calls = [];
+
+    const res = await realFetch(`${signupBaseUrl}/api/brain/tenants`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ company_name: "Realco Inc." }),
+    });
+    expect(res.status).toBe(201);
+
+    const tenantCalls = calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST");
+    expect(tenantCalls).toHaveLength(1);
+    expect(tenantCalls[0].body as Record<string, unknown>).not.toHaveProperty("demo_seed");
+    // And it stays a genuinely empty tenant: the signup route never triggers the local seed.
+    await new Promise((r) => setTimeout(r, 150));
+    expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
   });
 
   it("F: a leftover pending tombstone (crash between create and finalize) BLOCKS re-creation", async () => {
