@@ -26,6 +26,21 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
 - Seed-side quirk to fix when unblocked: `seedTenantDocuments` persists the FIRST extract
   response, so an async upstream leaves parsed_id/confidence null in source_documents even
   when the job later succeeds — poll or re-fetch the job before finalizing.
+- **"Continue with Demo" does NOT hit brain-core's demo seed path.** Durable mode is checked
+  BEFORE the token-mode strategies in createSession, so even with the demo-provision secret
+  still set, the button provisions a *production* tenant (POST /v1/tenants +
+  /tenants/{id}/agent-token) and `/demo/provision-run` is never called. brain-core's own demo
+  seeder therefore never runs, and nothing gated on `tenant.kind='demo'` upstream can appear.
+  What fills the tenant instead is this repo's own `seedTenantDocuments`, which ingests
+  generated documents through /raw/ingest — documents only, never connector/source rows.
+  **Why:** durable mode was chosen deliberately — provision-run always mints a *fresh* tenant
+  and cannot re-attach, and the platform agent-token route rejects demo tenants, so persistence
+  across logins was impossible on the demo fence.
+  **How to apply:** before verifying any brain-core demo-seeded feature from this app, confirm
+  which path a login actually takes (workflow log line `durable tenant ... created`, or the
+  `auth.production_agent_token.minted` audit event). Reverting to provision-run to get seeded
+  data would re-break durability — the fix belongs upstream (seed production/durable tenants,
+  or accept a demo flag on tenant create).
 - Suites in server/brain/*.test.ts read env at module-eval: any workspace-set
   BRAIN_TENANCY_MODE / BRAIN_PLATFORM_SERVICE_SECRET leaks into vitest and flips code
   paths — demo-path suites must explicitly `delete` those vars at the top.
