@@ -1,0 +1,23 @@
+Done and pushed — origin/main at 77830d0.
+
+What changed
+
+The public "Continue with Demo" button now calls loginDemoFresh({ skipOnboarding: true }) instead of loginDemo(). Each visitor gets their own demo-fresh-*@brain.fi identity and their own freshly-seeded tenant. /api/auth/demo still exists for internal/debug use, just not behind a button.
+
+The skipOnboarding flag is new. loginDemoFresh deliberately showed onboarding, so a straight swap would have dropped visitors into the onboarding flow instead of a populated app — the opposite of what you wanted. The flag is opt-in at the call site, so the internal behavior is preserved.
+
+The one thing I added beyond the ask: /api/auth/demo-fresh had no rate limit — only login and register did. As the public CTA that's an unauthenticated endpoint where every tap mints a tenant and an on-chain anchor, feeding straight into the wallet backlog. It now has a dedicated limiter, default 5 per 15 min per IP, DEMO_RATE_LIMIT_MAX to override. Verified: 5 through, then 429. I put the legacy /api/auth/demo on the same budget so the ceiling can't be bypassed by calling it directly.
+
+Verified live, through the real button in a virgin browser session
+
+Isolated identity each time (never demo@brain.fi), 6 seeded sources with 0 remove buttons, local docs keep theirs, no onboarding, Home at $2,887,200.01 with cash flow and a named upcoming inflow, Finances showing 4 accounts. 340 tests pass, plus the 2 known auth-security failures that always occur with DATABASE_URL set.
+
+Two honest caveats:
+
+Inbox renders but Needs Review is 0. That's the pre-existing upstream proposal-pipeline gap, not this change — but it's a visible soft spot in a walkthrough.
+A code review flagged the shared-IP case: several people demoing from one office share an IP, and 5 per 15 min could throttle them. Raise DEMO_RATE_LIMIT_MAX before a live session.
+Sequencing risk, before you publish
+
+This makes tenant creation a public, unauthenticated path while the anchoring wallet is already underfunded with a growing backlog. The rate limit bounds it per-IP but does nothing about breadth across many IPs, and nothing reclaims tenants once created. Publishing before demo-tenant TTL exists means demo traffic spends real funds with no cleanup. You accepted that tradeoff in principle — but the limiter is a ceiling, not a fix, so it's worth deciding deliberately whether to publish now or hold until the TTL PR lands.
+
+Still parked on your call: the seedTenantDocuments overlap. Worth noting Crypto shows 1 despite both a seeded alchemy_wallet and a local crypto_wallet.csv, so dedupe may already be collapsing some of it — which changes what removing the local seed actually buys.

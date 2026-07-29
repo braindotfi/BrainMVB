@@ -466,9 +466,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
                   <SourceRow
                     key={s.id}
                     testId={`source-brain-${s.id}`}
-                    badge={brainSourceLabel(s).slice(0, 2).toUpperCase()}
-                    badgeBg="#240757"
-                    badgeColor="#a78bfa"
+                    icon={CATEGORY_ICON_SRC[categoryForBrainSource(s)]}
                     title={brainSourceLabel(s)}
                     subtitle={brainSourceSubtitle(s)}
                     removing={disconnectSource.isPending}
@@ -605,6 +603,25 @@ function SourceRow({
   );
 }
 
+/* ─── Category icon assets (used on both the category picker and the connected-sources home screen) ─── */
+const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
+  bank: bankIcon,
+  crypto: cryptoIcon,
+  accounting: accountingIcon,
+  payroll: payrollIcon,
+  tax: taxIcon,
+  payments: paymentsIcon,
+  documents: docsIcon,
+};
+
+function CategoryIcon({ cat, size = 40 }: { cat: CategoryId; size?: number }) {
+  return (
+    <div className="rounded-full shrink-0 overflow-hidden" style={{ width: size, height: size }}>
+      <img src={CATEGORY_ICON_SRC[cat]} alt="" style={{ width: size, height: size }} />
+    </div>
+  );
+}
+
 /* ───────────────────────────── Screen: Category picker ───────────────────────────── */
 export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryId) => void; onContinue: () => void }) {
   const banksQuery = useQuery<BankConnectionInfo[]>({ queryKey: ["/api/integrations/plaid/connections"] });
@@ -688,23 +705,6 @@ export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryI
   );
 }
 
-const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
-  bank: bankIcon,
-  crypto: cryptoIcon,
-  accounting: accountingIcon,
-  payroll: payrollIcon,
-  tax: taxIcon,
-  payments: paymentsIcon,
-  documents: docsIcon,
-};
-
-function CategoryIcon({ cat }: { cat: CategoryId }) {
-  return (
-    <div className="size-[40px] rounded-full shrink-0 overflow-hidden">
-      <img src={CATEGORY_ICON_SRC[cat]} alt="" className="size-[40px]" />
-    </div>
-  );
-}
 
 /* ───────────────────────────── Screen: Bank (Plaid) ───────────────────────────── */
 export function BankConnect({ onDone }: { onDone: () => void }) {
