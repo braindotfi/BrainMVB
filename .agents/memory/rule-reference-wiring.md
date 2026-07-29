@@ -26,6 +26,8 @@ reference is a tappable link or plain, non-tappable text with a muted
   own in-page back button is hardcoded to `/rules`, and RuleDetail must not be
   modified.
 - Vendor references stay plain text until a vendor detail page exists.
-- Shipped mock data has ZERO dangling refs (dev guard `ruleConsistencyCheck.ts`,
-  wired in main.tsx under import.meta.env.DEV, asserts every mock ref resolves).
+- Shipped mock data must have ZERO dangling refs. Note the dev guard that was supposed to
+  assert this (`ruleConsistencyCheck.ts`) DOES NOT EXIST — verified 2026-07-29, no such file
+  in the repo and main.tsx imports nothing of the sort, despite replit.md/CLAUDE.md still
+  describing it as running. Check refs by hand; see linked-references-contract.md.
   The "(rule unavailable)" fallback is only for rules deleted at runtime.
