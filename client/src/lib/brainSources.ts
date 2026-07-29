@@ -44,21 +44,44 @@ export interface BrainSource {
   metadata: BrainSourceMetadata;
 }
 
-/** Connector type → the Add-a-Source category its badge counts under. */
+/** Connector type → the Add-a-Source category its badge counts under.
+ *
+ *  Both the bare and the qualified spellings are listed on purpose: the seeded registry
+ *  emits `merge_accounting` / `alchemy_wallet`, while the shorter forms appear elsewhere.
+ *  Verified against a real seeded tenant 2026-07-29 - the live rows are plaid, stripe,
+ *  finch, merge_accounting, alchemy_wallet, email_inbound. */
 export const SOURCE_TYPE_CATEGORY: Readonly<Record<string, CategoryId>> = {
   plaid: "bank",
   alchemy: "crypto",
+  alchemy_wallet: "crypto",
   merge: "accounting",
+  merge_accounting: "accounting",
   finch: "payroll",
   stripe: "payments",
   email_inbound: "tax",
+};
+
+/** Upstream's own taxonomy (metadata.source_category) → our category. FALLBACK ONLY:
+ *  the type map above wins, because it encodes our product's deliberate placement (e.g.
+ *  the tax mailbox counts under Tax, not Documents, even though upstream files it as
+ *  `documents_email`). This exists so an unrecognised future connector type still lands
+ *  somewhere sensible instead of defaulting to Documents. */
+const SOURCE_CATEGORY_ALIASES: Readonly<Record<string, CategoryId>> = {
+  banking_cash: "bank",
+  digital_assets: "crypto",
+  accounting_erp: "accounting",
+  payroll_hr: "payroll",
+  payments_revenue: "payments",
+  documents_email: "documents",
 };
 
 /** Fallback display names. Real metadata (below) wins whenever upstream sends it. */
 const SOURCE_TYPE_LABELS: Readonly<Record<string, string>> = {
   plaid: "Bank Account",
   alchemy: "Crypto Wallet",
+  alchemy_wallet: "Crypto Wallet",
   merge: "Accounting",
+  merge_accounting: "Accounting",
   finch: "Payroll",
   stripe: "Stripe",
   email_inbound: "Tax Return",
@@ -144,9 +167,17 @@ export function isProviderRemoveHidden(
   return undisconnectableTypes.has(providerId);
 }
 
-/** Category a source's badge counts under; unmapped connectors fall through to Documents. */
+/** Category a source's badge counts under. Known connector type first (our deliberate
+ *  placement), then upstream's own source_category, then Documents. */
 export function categoryForBrainSource(s: BrainSource): CategoryId {
-  return SOURCE_TYPE_CATEGORY[s.type] ?? "documents";
+  const byType = SOURCE_TYPE_CATEGORY[s.type];
+  if (byType) return byType;
+  const upstream = s.metadata.source_category;
+  if (typeof upstream === "string") {
+    const alias = SOURCE_CATEGORY_ALIASES[upstream.toLowerCase()];
+    if (alias) return alias;
+  }
+  return "documents";
 }
 
 /** Human label: upstream metadata first, then a per-type fallback, then the raw type. */

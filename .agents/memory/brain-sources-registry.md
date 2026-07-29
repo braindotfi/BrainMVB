@@ -41,17 +41,25 @@ connection hides the control.
 **How to apply:** any time you fold per-record state into a type-keyed UI row, ask what
 happens when one record of that type says yes and another says no.
 
-# Upstream reality check (as of 2026-07-29)
+# Live connector types are the QUALIFIED spellings
 
-`GET /v1/sources` returns an empty list for **every** BrainMVB-reachable tenant on
-`api.brain.fi`, including a freshly provisioned one whose seed had demonstrably completed.
-200-with-empty (not 403) means the member token does hold `raw:read` — the tenant genuinely
-has zero sources. The seeding either isn't deployed there or doesn't fire for
-BrainMVB-provisioned tenants; tenant creation sends no demo flag, so brain-core can only
-infer demo-ness from the founder email.
+A real seeded tenant returns these six types: `plaid`, `stripe`, `finch`, `merge_accounting`,
+`alchemy_wallet`, `email_inbound`. Note the last-but-two: **not** `merge`, **not** `alchemy`.
+Rows also carry upstream's own taxonomy in `metadata.source_category`
+(`banking_cash` / `payments_revenue` / `payroll_hr` / `accounting_erp` / `digital_assets` /
+`documents_email`) plus `display_name`, `provider_name`, and the demo restriction flags.
 
-**How to apply:** don't burn time re-diagnosing an empty sources list client-side. Verify
-render logic against injected fixtures and confirm deployment status with brain-core owners.
+**Why:** hand-written fixtures used the short spellings, every unit test passed, and two of
+six connectors silently fell through to the "Documents" catch-all in production — wrong
+category counts with no error anywhere. A type→category map is a guess about an external
+vocabulary; only real payloads confirm it.
+
+**How to apply:** key category lookup off the connector type FIRST (that map encodes our own
+deliberate placement — e.g. the tax mailbox belongs under Tax even though upstream files it
+as `documents_email`), then fall back to `source_category` so an unrecognised future type
+still lands somewhere sensible instead of the catch-all. Pin at least one test to a
+byte-faithful capture of a real payload; a catch-all default will otherwise absorb every
+vocabulary drift in silence.
 
 # Disconnect is an agent-token call
 

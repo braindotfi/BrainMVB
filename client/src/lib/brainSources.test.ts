@@ -177,3 +177,71 @@ describe("labels", () => {
     expect(brainSourceSubtitle(src({ metadata: { account_mask: "4821" } }))).toBe("Connected · ····4821");
   });
 });
+
+/**
+ * Regression guard pinned to a REAL seeded tenant's /v1/sources payload (captured
+ * 2026-07-29, the first durable tenant created with demo_seed: true).
+ *
+ * The earlier unit tests were written against hand-made fixtures that used the SHORT
+ * connector spellings ("merge", "alchemy"). Live rows are "merge_accounting" and
+ * "alchemy_wallet", so those two silently fell through to Documents - wrong counts and
+ * wrong badges - and no fixture caught it. Keep this table byte-faithful to upstream.
+ */
+describe("real seeded /v1/sources payload", () => {
+  const LIVE_ROWS = [
+    { type: "plaid", source_category: "banking_cash", display_name: "First Meridian Bank", category: "bank" },
+    { type: "stripe", source_category: "payments_revenue", display_name: "Brightline Stripe", category: "payments" },
+    { type: "finch", source_category: "payroll_hr", display_name: "Brightline Payroll", category: "payroll" },
+    { type: "merge_accounting", source_category: "accounting_erp", display_name: "Brightline Accounting", category: "accounting" },
+    { type: "alchemy_wallet", source_category: "digital_assets", display_name: "Brightline Treasury Wallet", category: "crypto" },
+    { type: "email_inbound", source_category: "documents_email", display_name: "Brightline Tax Portal", category: "tax" },
+  ] as const;
+
+  const payload = {
+    data: LIVE_ROWS.map((r, i) => ({
+      id: `src_live_${i}`,
+      tenantId: "tnt_live",
+      type: r.type,
+      status: "active",
+      metadata: {
+        display_name: r.display_name,
+        source_category: r.source_category,
+        provider_name: "Provider",
+        demo_fake_connected: true,
+        demo_seed_kind: "fake_connected_source",
+        disconnectable: false,
+        disconnect_hidden: true,
+        sync_disabled: true,
+      },
+    })),
+    next_cursor: null,
+  };
+
+  const parsed = parseBrainSources(payload);
+
+  it("parses all six seeded rows", () => {
+    expect(parsed).toHaveLength(6);
+  });
+
+  it("maps every live connector type to its category - no silent Documents fallback", () => {
+    const got = parsed.map((s) => categoryForBrainSource(s));
+    expect(got).toEqual(LIVE_ROWS.map((r) => r.category));
+    // The bug this pins: merge_accounting/alchemy_wallet must NOT land in documents.
+    expect(got.filter((c) => c === "documents")).toHaveLength(0);
+  });
+
+  it("hides the disconnect control on every seeded row", () => {
+    for (const s of parsed) expect(isDisconnectHidden(s)).toBe(true);
+  });
+
+  it("prefers upstream display_name for the row label", () => {
+    expect(parsed.map((s) => brainSourceLabel(s))).toEqual(LIVE_ROWS.map((r) => r.display_name));
+  });
+
+  it("falls back to upstream source_category for an unrecognised connector type", () => {
+    const [unknown] = parseBrainSources([
+      { id: "src_x", type: "some_future_connector", status: "active", metadata: { source_category: "banking_cash" } },
+    ]);
+    expect(categoryForBrainSource(unknown)).toBe("bank");
+  });
+});
