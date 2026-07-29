@@ -3,6 +3,7 @@ import { queryClient } from "./queryClient";
 import { clearMembers } from "./membersStore";
 import { setDemoDataEnabled } from "./demoMode";
 import { resetAcknowledgedStore } from "./acknowledgedStore";
+import { markOnboardingComplete } from "./onboarding";
 
 export interface AuthUser {
   id: string;
@@ -114,11 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data?.error || "Demo login failed");
     const u = data.user;
     // Shared demo login always skips the onboarding flow.
-    try {
-      localStorage.setItem(`brain_onboarding_complete_${u.id}`, "1");
-    } catch {
-      /* ignore storage errors */
-    }
+    markOnboardingComplete(u.id);
     setUser(u);
   }, []);
 
@@ -140,13 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Demo login failed");
     const u = data.user;
-    if (opts?.skipOnboarding) {
-      try {
-        localStorage.setItem(`brain_onboarding_complete_${u.id}`, "1");
-      } catch {
-        /* ignore storage errors */
-      }
-    }
+    if (opts?.skipOnboarding) markOnboardingComplete(u.id);
     setUser(u);
   }, []);
 

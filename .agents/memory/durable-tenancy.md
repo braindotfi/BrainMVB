@@ -45,6 +45,21 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
   `demo_seed` summary — its absence means the core predates the flag, not that the UI is broken.
   Note the app's own `seedTenantDocuments` also runs for demo accounts; once core-side seeding
   is live, check whether the two overlap before assuming duplicated data is a bug.
+- **The public demo entry point must mint a FRESH identity per visitor, never a shared one.**
+  A shared demo account backed by durable tenancy means every visitor lands in one persistent
+  tenant and inherits whatever the last person did. The subtler failure: because that tenant
+  already exists, login re-attaches instead of creating, so it **silently never picks up any
+  fix that only takes effect at tenant-creation time** — a create-time seed flag can be
+  correct, deployed, and provably working, and the shared button still shows the old state.
+  **Why:** this exact combination made a verified-working seed fix look like it had changed
+  nothing. Re-attach is the default path for any returning identity; only creation runs
+  creation-time logic.
+  **How to apply:** when a create-time flag "doesn't work", first ask whether the account
+  under test is creating a tenant or re-attaching to an existing one. For demo surfaces,
+  prefer a per-visitor identity and keep the shared account for internal/debug only. Budget
+  for the cost: each fresh tenant provisions upstream AND emits an on-chain audit anchor, so
+  a public unauthenticated create path needs its own tight rate limit (separate from ordinary
+  auth limits) and a TTL/expiry story, or demo traffic quietly spends real funds.
 - Suites in server/brain/*.test.ts read env at module-eval: any workspace-set
   BRAIN_TENANCY_MODE / BRAIN_PLATFORM_SERVICE_SECRET leaks into vitest and flips code
   paths — demo-path suites must explicitly `delete` those vars at the top.

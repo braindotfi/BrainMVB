@@ -84,7 +84,10 @@ const demoLimiter = rateLimit({
 });
 
 app.use(["/api/auth/login", "/api/auth/register"], authLimiter);
-app.use("/api/auth/demo-fresh", demoLimiter);
+// Both demo routes share this budget. /api/auth/demo is no longer behind any button, but it
+// stays unauthenticated, so leaving it unthrottled would let a caller bypass the ceiling above
+// and re-introduce shared-tenant behaviour by hitting the endpoint directly.
+app.use(["/api/auth/demo", "/api/auth/demo-fresh"], demoLimiter);
 app.use(["/api/goals/recommendation", "/api/assistant/chat", "/api/rules/suggestions"], llmLimiter);
 
 export function log(message: string, source = "express") {

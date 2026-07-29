@@ -6,6 +6,7 @@ import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
+import { onboardingKey as onboardingKeyFor, isOnboardingComplete, markOnboardingComplete } from "@/lib/onboarding";
 import { useIsDemoData } from "@/lib/demoMode";
 import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
@@ -709,24 +710,17 @@ export function HomePage() {
         : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
-  const onboardingKey = user ? `brain_onboarding_complete_${user.id}` : null;
+  const onboardingKey = onboardingKeyFor(user?.id);
   useEffect(() => {
     if (!onboardingKey) {
       setShowOnboarding(false);
       return;
     }
-    try {
-      const done = localStorage.getItem(onboardingKey);
-      setShowOnboarding(!done);
-    } catch {
-      setShowOnboarding(true);
-    }
-  }, [onboardingKey]);
+    setShowOnboarding(!isOnboardingComplete(user?.id));
+  }, [onboardingKey, user?.id]);
 
   const finishOnboarding = () => {
-    if (onboardingKey) {
-      try { localStorage.setItem(onboardingKey, "1"); } catch {}
-    }
+    markOnboardingComplete(user?.id);
     setShowOnboarding(false);
   };
 
