@@ -37,14 +37,13 @@ const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
  */
 export interface SeedManifestEntry {
   /** Stable identity for a seed document across periods, unlike its dated filename. */
-  key: "bank_statement" | "ar_aging" | "payroll_register" | "crypto_wallet" | "form_1120";
+  key: "ar_aging" | "payroll_register" | "crypto_wallet" | "form_1120";
   category: string;
   sourceType: SeedSourceType;
   mimeType: string;
 }
 
 export const SEED_MANIFEST: SeedManifestEntry[] = [
-  { key: "bank_statement", category: "bank", sourceType: "pdf_upload", mimeType: "application/pdf" },
   { key: "ar_aging", category: "accounting", sourceType: "csv_upload", mimeType: XLSX_MIME },
   { key: "payroll_register", category: "payroll", sourceType: "csv_upload", mimeType: XLSX_MIME },
   { key: "crypto_wallet", category: "crypto", sourceType: "csv_upload", mimeType: "text/csv" },
@@ -63,8 +62,6 @@ export interface SeedDocument extends SeedManifestEntry {
  */
 export function filenameFor(key: SeedManifestEntry["key"], s: SeedScenario): string {
   switch (key) {
-    case "bank_statement":
-      return `bank_statement_${s.periodEnd}.pdf`;
     case "ar_aging":
       return `ar_aging_${s.periodEnd}.xlsx`;
     case "payroll_register":
@@ -100,52 +97,6 @@ async function workbookToBuffer(wb: ExcelJS.Workbook): Promise<Buffer> {
 
 const money = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-// ── bank statement (PDF) ────────────────────────────────────────────────────
-
-function bankStatement(s: SeedScenario): Promise<Buffer> {
-  return pdfToBuffer((doc) => {
-    doc.fontSize(16).font("Helvetica-Bold").text("First Meridian Bank");
-    doc.fontSize(9).font("Helvetica").text("PO Box 4410, Wilmington, DE 19801");
-    doc.moveDown();
-    doc.fontSize(12).font("Helvetica-Bold").text("Business Checking Statement");
-    doc.fontSize(10).font("Helvetica");
-    doc.text(`Account holder: ${s.company}`);
-    doc.text(`Account number: ****7302   |   Statement period: ${s.periodStart} to ${s.periodEnd}`);
-    doc.moveDown();
-
-    doc.font("Helvetica-Bold").text(`Opening balance (${s.periodStart}): $${s.openingBalance.toFixed(2)}`);
-    doc.moveDown(0.5);
-
-    const col = { date: 54, desc: 130, amt: 420, bal: 500 };
-    doc.font("Helvetica-Bold").fontSize(9);
-    doc.text("Date", col.date, doc.y, { continued: false });
-    const headerY = doc.y - 11;
-    doc.text("Description", col.desc, headerY);
-    doc.text("Amount", col.amt, headerY, { width: 70, align: "right" });
-    doc.text("Balance", col.bal, headerY, { width: 60, align: "right" });
-    doc.moveDown(0.3);
-    doc.font("Helvetica").fontSize(9);
-
-    for (const t of s.transactions) {
-      const y = doc.y;
-      doc.text(t.date, col.date, y);
-      doc.text(t.description, col.desc, y, { width: 280 });
-      doc.text(
-        t.amount < 0 ? `-$${Math.abs(t.amount).toFixed(2)}` : `$${t.amount.toFixed(2)}`,
-        col.amt,
-        y,
-        { width: 70, align: "right" },
-      );
-      doc.text(`$${t.balance.toFixed(2)}`, col.bal, y, { width: 60, align: "right" });
-      doc.moveDown(0.2);
-    }
-
-    doc.moveDown();
-    doc.font("Helvetica-Bold").fontSize(10);
-    doc.text(`Closing balance (${s.periodEnd}): $${s.closingBalance.toFixed(2)}`, 54);
-  });
-}
 
 // ── AR aging (XLSX) ─────────────────────────────────────────────────────────
 
@@ -285,10 +236,9 @@ function taxReturn(s: SeedScenario): Promise<Buffer> {
 
 // ── public API ──────────────────────────────────────────────────────────────
 
-/** Render all five documents for a scenario, in manifest order. */
+/** Render all four documents for a scenario, in manifest order. */
 export async function renderSeedDocuments(s: SeedScenario): Promise<SeedDocument[]> {
   const bytesByKey: Record<SeedManifestEntry["key"], Buffer> = {
-    bank_statement: await bankStatement(s),
     ar_aging: await arAging(s),
     payroll_register: await payrollRegister(s),
     crypto_wallet: cryptoWallet(s),

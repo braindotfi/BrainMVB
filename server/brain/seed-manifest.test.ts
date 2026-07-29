@@ -65,7 +65,6 @@ describe("demo seed manifest", () => {
 
   it("keeps the filename prefixes stable so an upstream parser match cannot drift", () => {
     const names = SEED_MANIFEST.map((e) => filenameFor(e.key, buildScenario(at("2030-06-15"))));
-    expect(names.some((n) => n.startsWith("bank_statement_"))).toBe(true);
     expect(names.some((n) => n.startsWith("ar_aging_"))).toBe(true);
     expect(names.some((n) => n.startsWith("payroll_register_"))).toBe(true);
     expect(names.some((n) => n.startsWith("crypto_wallet_"))).toBe(true);
