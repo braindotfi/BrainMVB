@@ -7,7 +7,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
 type Mode = "login" | "register";
 
 export function SignupPage() {
-  const { isLoggedIn, loginWithPassword, register, loginDemo, loginWithGoogle } = useAuth();
+  const { isLoggedIn, loginWithPassword, register, loginDemoFresh, loginWithGoogle } = useAuth();
   const [, navigate] = useLocation();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -155,7 +155,11 @@ export function SignupPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await loginDemo();
+      // Fresh, ISOLATED demo tenant per visitor - never the shared demo@brain.fi identity.
+      // A shared tenant accumulates whatever the previous visitor did, which is exactly
+      // what makes an investor walkthrough untrustworthy. /api/auth/demo remains available
+      // for internal/debug use, just not behind this button.
+      await loginDemoFresh({ skipOnboarding: true });
       navigate("/");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Demo login failed.";

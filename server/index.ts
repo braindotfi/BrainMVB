@@ -69,7 +69,22 @@ const llmLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Fresh-demo creation is DELIBERATELY tighter than ordinary auth: it is unauthenticated,
+// it is now the public "Continue with Demo" button, and every call provisions a real
+// brain-core tenant AND an on-chain audit anchor transaction. Unbounded taps therefore
+// burn real funds from the anchoring wallet, not just database rows. Keep a hard ceiling
+// here until demo-tenant TTL/expiry exists; raise DEMO_RATE_LIMIT_MAX temporarily if a
+// live walkthrough needs more headroom from one venue's IP.
+const demoLimiter = rateLimit({
+  windowMs: envInt("DEMO_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
+  limit: envInt("DEMO_RATE_LIMIT_MAX", 5),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many demo sessions from this network. Please try again shortly." },
+});
+
 app.use(["/api/auth/login", "/api/auth/register"], authLimiter);
+app.use("/api/auth/demo-fresh", demoLimiter);
 app.use(["/api/goals/recommendation", "/api/assistant/chat", "/api/rules/suggestions"], llmLimiter);
 
 export function log(message: string, source = "express") {

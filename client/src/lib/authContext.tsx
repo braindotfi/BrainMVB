@@ -22,7 +22,7 @@ interface AuthContextType {
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginDemo: () => Promise<void>;
-  loginDemoFresh: () => Promise<void>;
+  loginDemoFresh: (opts?: { skipOnboarding?: boolean }) => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -122,15 +122,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
-  const loginDemoFresh = useCallback(async () => {
+  /**
+   * Fresh demo identity: a brand-new demo-fresh-<id>@brain.fi user, which durable tenancy
+   * then backs with a brand-new seeded tenant. Isolated per visitor - nobody inherits the
+   * previous visitor's state.
+   *
+   * `skipOnboarding` controls where the visitor lands. The PUBLIC "Continue with Demo"
+   * button passes true so the walkthrough opens directly on a populated Home; without it
+   * HomePage shows the first-visit onboarding flow instead (the default kept here for
+   * internal use, where seeing onboarding is the point).
+   */
+  const loginDemoFresh = useCallback(async (opts?: { skipOnboarding?: boolean }) => {
     const res = await fetch("/api/auth/demo-fresh", {
       method: "POST",
       credentials: "include",
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Demo login failed");
-    // Fresh demo does NOT skip onboarding - user will see the full onboarding flow.
-    setUser(data.user);
+    const u = data.user;
+    if (opts?.skipOnboarding) {
+      try {
+        localStorage.setItem(`brain_onboarding_complete_${u.id}`, "1");
+      } catch {
+        /* ignore storage errors */
+      }
+    }
+    setUser(u);
   }, []);
 
   const loginWithGoogle = useCallback(() => {
