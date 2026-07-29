@@ -1,8 +1,9 @@
 /* ── Source category grouping ──────────────────────────────────────────────────
    The "N connected" badges on the Add Source category picker are derived here, from
-   the tenant's three REAL connection surfaces: Plaid bank items, tool connections,
-   and uploaded source documents (GET /api/integrations/documents). Nothing in this
-   module invents a count - a category with no live source reads 0 and renders no badge.
+   the tenant's REAL connection surfaces: Plaid bank items, tool connections, uploaded
+   source documents (GET /api/integrations/documents), and brain-core's own connector
+   registry (GET /v1/sources, via brainSources.ts). Nothing in this module invents a
+   count - a category with no live source reads 0 and renders no badge.
 
    Kept out of AddSourceModal.tsx so the grouping rules are unit-testable without
    pulling in React and the modal's icon assets. */
@@ -22,6 +23,12 @@ export interface CountableDoc {
   category: string | null;
   rawId: string | null;
   extractStatus: string | null;
+}
+/** A brain-core connector source, already mapped to its category by brainSources.ts. */
+export interface CountableBrainSource {
+  /** Connector type ("plaid", "stripe", …) - also the dedupe key against local tools. */
+  type: string;
+  category: CategoryId;
 }
 
 /**
@@ -45,6 +52,7 @@ export function categoryCounts(
   tools: readonly CountableTool[],
   docs: readonly CountableDoc[],
   toolCategory: Readonly<Record<string, CategoryId>>,
+  brainSources: readonly CountableBrainSource[] = [],
 ): Record<CategoryId, number> {
   const counts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0])) as Record<CategoryId, number>;
   counts.bank += banks.length;
@@ -56,6 +64,19 @@ export function categoryCounts(
     if (!isConnectedSourceDoc(d)) continue;
     const cat = d.category as CategoryId | null;
     counts[cat !== null && cat in counts ? cat : "documents"] += 1;
+  }
+
+  // brain-core connector sources. These are a SEPARATE registry from the three local
+  // surfaces above (uploads don't become sources; a locally-connected tool isn't
+  // registered upstream), so today the two populations never overlap. The dedupe key
+  // below keeps the badge honest if that ever changes - one real connector must count
+  // once, whichever side we learned about it from, and the local record wins because
+  // it is the one the user can actually act on.
+  const localConnectorKeys = new Set<string>(tools.map((t) => t.toolId));
+  if (banks.length > 0) localConnectorKeys.add("plaid");
+  for (const s of brainSources) {
+    if (localConnectorKeys.has(s.type)) continue;
+    counts[s.category] += 1;
   }
   return counts;
 }

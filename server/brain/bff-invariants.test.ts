@@ -147,6 +147,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   if (url.includes("/members/") && url.endsWith("/identity-links") && method === "DELETE") {
     return json({ id: "link_1", status: "revoked" });
   }
+  if (url.includes("/sources/") && method === "DELETE") {
+    return json({ id: "src_1", status: "disconnected" });
+  }
   throw new Error(`unexpected brain-core call in test: ${method} ${url}`);
 }
 
@@ -535,6 +538,16 @@ describe("Invariant 6 - artifact write allowlist (api-surface.brainmvb)", () => 
     expect(links.length).toBe(2);
     for (const c of links) expect(c.auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
+  });
+
+  it("DELETE /sources/:id uses the AGENT token (raw:write is not a member scope)", async () => {
+    const res = await realFetch(`${baseUrl}/api/brain/sources/src_1`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const disconnect = callsEndingWith("/sources/src_1");
+    expect(disconnect).toHaveLength(1);
+    expect(disconnect[0].method).toBe("DELETE");
+    expect(disconnect[0].auth).toBe(`Bearer ${AGENT_TOKEN}`);
+    expect(calls.some((c) => c.auth === `Bearer ${MEMBER_TOKEN}`)).toBe(false);
   });
 
   it("POST /payment-intents uses the AGENT token and never the member token", async () => {

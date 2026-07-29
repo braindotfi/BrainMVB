@@ -3,6 +3,16 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { categoryCounts, CATEGORY_ORDER, type CategoryId } from "@/lib/sourceCategories";
+import {
+  parseBrainSources,
+  isConnectedBrainSource,
+  isDisconnectHidden,
+  isProviderRemoveHidden,
+  categoryForBrainSource,
+  brainSourceLabel,
+  brainSourceSubtitle,
+  type BrainSource,
+} from "@/lib/brainSources";
 import { fetchObligations, isReceivable, type Obligation } from "@/lib/brainObligations";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
 import closeIcon from "@assets/close_1783619312132.png";
@@ -98,6 +108,19 @@ type SourceDocument = {
   confidence: string | null;
   uploadedAt: string;
 };
+
+/**
+ * brain-core's connector registry (GET /v1/sources), relayed verbatim by the BFF's
+ * generic GET passthrough - hence the `unknown` and the defensive parse. This is a
+ * different population from the three local surfaces above; see lib/brainSources.ts.
+ *
+ * An upstream failure (unconfigured token source, no tenant) must never blank the
+ * Sources screen, so an errored query simply yields an empty list.
+ */
+function useBrainSources(enabled: boolean): BrainSource[] {
+  const query = useQuery<unknown>({ queryKey: ["/api/brain/sources"], enabled });
+  return useMemo(() => parseBrainSources(query.data).filter(isConnectedBrainSource), [query.data]);
+}
 
 type CounterpartyLite = { id: string; display_name?: string; name?: string };
 type CounterpartiesResponse = { counterparties: CounterpartyLite[] };
@@ -351,10 +374,19 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
     enabled: open,
   });
 
+  const brainSources = useBrainSources(open);
+
   const banks = banksQuery.data ?? [];
   const tools = toolsQuery.data ?? [];
   const docs = docsQuery.data ?? [];
 
+  const disconnectSource = useMutation({
+    mutationFn: async (sourceId: string) => {
+      const res = await apiRequest("DELETE", `/api/brain/sources/${encodeURIComponent(sourceId)}`);
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/brain/sources"] }),
+  });
   const disconnectBank = useMutation({
     mutationFn: async (itemId: string) => {
       const res = await apiRequest("POST", "/api/integrations/plaid/disconnect", { itemId });
@@ -378,7 +410,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
   });
 
   const isLoading = banksQuery.isLoading || toolsQuery.isLoading || docsQuery.isLoading;
-  const total = banks.length + tools.length + docs.length;
+  const total = banks.length + tools.length + docs.length + brainSources.length;
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -420,6 +452,31 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
                   removeTestId={`button-remove-bank-${b.itemId}`}
                 />
               ))}
+            </SourceGroup>
+          )}
+
+          {brainSources.length > 0 && (
+            <SourceGroup label="Connected Accounts">
+              {brainSources.map((s) => {
+                // Seeded demo connections carry disconnect_hidden/disconnectable metadata:
+                // omit onRemove entirely so SourceRow renders no button at all. A real
+                // source carries neither key and keeps its normal control.
+                const hidden = isDisconnectHidden(s);
+                return (
+                  <SourceRow
+                    key={s.id}
+                    testId={`source-brain-${s.id}`}
+                    badge={brainSourceLabel(s).slice(0, 2).toUpperCase()}
+                    badgeBg="#240757"
+                    badgeColor="#a78bfa"
+                    title={brainSourceLabel(s)}
+                    subtitle={brainSourceSubtitle(s)}
+                    removing={disconnectSource.isPending}
+                    onRemove={hidden ? undefined : () => disconnectSource.mutate(s.id)}
+                    removeTestId={`button-remove-source-${s.id}`}
+                  />
+                );
+              })}
             </SourceGroup>
           )}
 
@@ -500,8 +557,9 @@ function SourceRow({
   icon?: string;
   title: string;
   subtitle: string;
-  onRemove: () => void;
-  removing: boolean;
+  /** Omit to render NO disconnect control at all (not a disabled one) - see brainSources.ts. */
+  onRemove?: () => void;
+  removing?: boolean;
   removeTestId: string;
 }) {
   return (
@@ -529,18 +587,20 @@ function SourceRow({
           {subtitle}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={removing}
-        data-testid={removeTestId}
-        aria-label="Remove"
-        className="shrink-0 size-[36px] rounded-full bg-[#350011] hover:bg-[#4a0018] flex items-center justify-center transition-colors disabled:opacity-50"
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-          <path d="M3 4.5h12M7 4.5V3.3c0-.44.36-.8.8-.8h2.4c.44 0 .8.36.8.8v1.2M14 4.5l-.56 9.13c-.04.6-.54 1.07-1.14 1.07H5.7c-.6 0-1.1-.47-1.14-1.07L4 4.5M7.3 7.6v4.1M10.7 7.6v4.1" stroke="#D20344" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={removing}
+          data-testid={removeTestId}
+          aria-label="Remove"
+          className="shrink-0 size-[36px] rounded-full bg-[#350011] hover:bg-[#4a0018] flex items-center justify-center transition-colors disabled:opacity-50"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+            <path d="M3 4.5h12M7 4.5V3.3c0-.44.36-.8.8-.8h2.4c.44 0 .8.36.8.8v1.2M14 4.5l-.56 9.13c-.04.6-.54 1.07-1.14 1.07H5.7c-.6 0-1.1-.47-1.14-1.07L4 4.5M7.3 7.6v4.1M10.7 7.6v4.1" stroke="#D20344" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -551,12 +611,18 @@ export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryI
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
 
+  const brainSources = useBrainSources(true);
+
   const banks = banksQuery.data ?? [];
   const tools = toolsQuery.data ?? [];
   const docs = docsQuery.data ?? [];
 
   // Real, live-derived badge counts - see client/src/lib/sourceCategories.ts.
-  const counts = categoryCounts(banks, tools, docs, TOOL_CATEGORY);
+  const countableBrainSources = useMemo(
+    () => brainSources.map((s) => ({ type: s.type, category: categoryForBrainSource(s) })),
+    [brainSources],
+  );
+  const counts = categoryCounts(banks, tools, docs, TOOL_CATEGORY, countableBrainSources);
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -843,6 +909,18 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const connected = new Set((toolsQuery.data ?? []).map((c) => c.toolId));
 
+  // A provider can also be connected upstream (brain-core's own connector registry).
+  // Those rows may forbid disconnecting, in which case this screen must show the
+  // provider as connected but offer NO "tap to remove" affordance.
+  const brainSources = useBrainSources(true);
+  const undisconnectableTypes = useMemo(
+    () => new Set(brainSources.filter(isDisconnectHidden).map((s) => s.type)),
+    [brainSources],
+  );
+  const brainConnectedTypes = useMemo(() => new Set(brainSources.map((s) => s.type)), [brainSources]);
+  const removeHiddenFor = (providerId: string) =>
+    isProviderRemoveHidden(providerId, connected, undisconnectableTypes);
+
   const stripeConnect = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/integrations/stripe/connect");
@@ -866,6 +944,8 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
 
   const handleClick = (p: Provider) => {
     setError(null);
+    // Upstream forbids severing this one - the row is inert, never a no-op click.
+    if (removeHiddenFor(p.id)) return;
     if (connected.has(p.id)) {
       disconnectTool.mutate(p.id);
       return;
@@ -899,9 +979,10 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
 
       <div className="flex flex-col gap-[12px]">
         {providers.map((p) => {
-          const isConnected = connected.has(p.id);
+          const removeHidden = removeHiddenFor(p.id);
+          const isConnected = connected.has(p.id) || brainConnectedTypes.has(p.id);
           const isConnecting = connecting === p.id;
-          const clickable = isConnected || p.live;
+          const clickable = (isConnected && !removeHidden) || (!isConnected && p.live);
           return (
             <button
               key={p.id}
@@ -927,7 +1008,9 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
                   className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] truncate"
                   style={{ color: isConnected ? "#22c55e" : "#6c779d" }}
                 >
-                  {isConnected ? "Connected · tap to remove" : isConnecting ? "Connecting…" : p.live ? "Tap to connect" : "Coming soon"}
+                  {isConnected
+                    ? removeHidden ? "Connected" : "Connected · tap to remove"
+                    : isConnecting ? "Connecting…" : p.live ? "Tap to connect" : "Coming soon"}
                 </span>
               </div>
               {isConnected ? (

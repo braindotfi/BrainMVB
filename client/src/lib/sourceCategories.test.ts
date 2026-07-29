@@ -66,3 +66,61 @@ describe("source category counts", () => {
     for (const cat of CATEGORY_ORDER) expect(counts[cat]).toBe(0);
   });
 });
+
+/**
+ * brain-core's connector registry (GET /v1/sources) is a fourth surface. It must add to
+ * the badges without double-counting a connector we already know about locally.
+ */
+describe("source category counts - brain-core connector sources", () => {
+  const SEEDED = [
+    { type: "plaid", category: "bank" as CategoryId },
+    { type: "alchemy", category: "crypto" as CategoryId },
+    { type: "merge", category: "accounting" as CategoryId },
+    { type: "finch", category: "payroll" as CategoryId },
+    { type: "stripe", category: "payments" as CategoryId },
+    { type: "email_inbound", category: "tax" as CategoryId },
+  ];
+
+  it("counts the six seeded connectors one per category", () => {
+    const counts = categoryCounts([], [], [], TOOL_CATEGORY, SEEDED);
+    expect(counts).toEqual({ bank: 1, crypto: 1, accounting: 1, payroll: 1, payments: 1, tax: 1, documents: 0 });
+  });
+
+  it("stays backward compatible - omitting the argument changes nothing", () => {
+    expect(categoryCounts([], [{ toolId: "stripe" }], [doc("bank")], TOOL_CATEGORY)).toEqual(
+      categoryCounts([], [{ toolId: "stripe" }], [doc("bank")], TOOL_CATEGORY, []),
+    );
+  });
+
+  it("adds on top of local banks, tools and documents", () => {
+    const counts = categoryCounts(
+      [],
+      [{ toolId: "quickbooks" }],
+      [doc("tax")],
+      TOOL_CATEGORY,
+      [{ type: "finch", category: "payroll" }],
+    );
+    expect(counts.accounting).toBe(1);
+    expect(counts.tax).toBe(1);
+    expect(counts.payroll).toBe(1);
+  });
+
+  it("does not double-count a connector that is already a local tool connection", () => {
+    const counts = categoryCounts([], [{ toolId: "stripe" }], [], TOOL_CATEGORY, [
+      { type: "stripe", category: "payments" },
+    ]);
+    expect(counts.payments).toBe(1);
+  });
+
+  it("does not double-count an upstream plaid source when local bank items exist", () => {
+    const counts = categoryCounts([{ itemId: "item_1" }], [], [], TOOL_CATEGORY, [
+      { type: "plaid", category: "bank" },
+    ]);
+    expect(counts.bank).toBe(1);
+  });
+
+  it("still counts an upstream plaid source when there are no local bank items", () => {
+    const counts = categoryCounts([], [], [], TOOL_CATEGORY, [{ type: "plaid", category: "bank" }]);
+    expect(counts.bank).toBe(1);
+  });
+});

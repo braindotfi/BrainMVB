@@ -552,6 +552,13 @@ export function createBrainProxyRouter(): Router {
 
   const esc = encodeURIComponent;
   const WRITE_ROUTES: BrainWriteRoute[] = [
+    // raw_sources
+    // Disconnect a brain-core connector source. raw:write is an AGENT scope - the member
+    // token does not carry it (verified live: member /raw/ingest → 403 auth_scope_insufficient).
+    // The client only ever calls this for a source whose metadata does NOT hide the control;
+    // core remains the enforcer, so a seeded demo source that reaches here fails upstream
+    // rather than being silently accepted.
+    { method: "delete", mount: "/sources/:id", upstream: (p) => `/sources/${esc(p.id)}`, principal: "agent", scope: "raw:write" },
     // ledger_and_canonical
     { method: "patch", mount: "/ledger/counterparties/:id", upstream: (p) => `/ledger/counterparties/${esc(p.id)}`, principal: "member", scope: "ledger:write" },
     { method: "post", mount: "/ledger/normalize", upstream: () => "/ledger/normalize", principal: "member", scope: "ledger:write" },
