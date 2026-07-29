@@ -73,9 +73,11 @@ const llmLimiter = rateLimit({
 // Fresh-demo creation is DELIBERATELY tighter than ordinary auth: it is unauthenticated,
 // it is now the public "Continue with Demo" button, and every call provisions a real
 // brain-core tenant AND an on-chain audit anchor transaction. Unbounded taps therefore
-// burn real funds from the anchoring wallet, not just database rows. Keep a hard ceiling
-// here until demo-tenant TTL/expiry exists; raise DEMO_RATE_LIMIT_MAX temporarily if a
-// live walkthrough needs more headroom from one venue's IP.
+// burn real funds from the anchoring wallet, not just database rows. The per-IP ceiling
+// here and the 24-hour TTL cleanup (runDemoCleanup below) work together: the limiter
+// caps burst provisioning from one IP, and the cleanup bounds total accumulation over
+// time. Raise DEMO_RATE_LIMIT_MAX temporarily if a live walkthrough needs more headroom
+// from one venue's IP.
 const demoLimiter = rateLimit({
   windowMs: envInt("DEMO_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
   limit: envInt("DEMO_RATE_LIMIT_MAX", 5),
