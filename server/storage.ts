@@ -97,6 +97,11 @@ export interface IStorage {
   /** Remove an identity row — ONLY for rolling back a tombstone after a provably failed create. */
   deleteBrainIdentity(userId: string): Promise<void>;
 
+  // Demo tenant lifecycle
+  /** Delete all demo-fresh-*@brain.fi users (and their data) created before `olderThan`.
+   *  Returns the ids of the purged app users so callers can evict in-memory caches. */
+  cleanupExpiredDemoFreshUsers(olderThan: Date): Promise<string[]>;
+
   // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
@@ -518,6 +523,19 @@ export class MemStorage implements IStorage {
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
     };
+  }
+
+  /** Lazy-cleanup: delete all demo-fresh-*@brain.fi users created before `olderThan`
+   *  and every piece of data owned by them. Returns the ids of the purged users. */
+  async cleanupExpiredDemoFreshUsers(olderThan: Date): Promise<string[]> {
+    const DEMO_FRESH_RE = /^demo-fresh-[0-9a-f-]+@brain\.fi$/i;
+    const expired = Array.from(this.users.values()).filter(
+      (u) => u.email && DEMO_FRESH_RE.test(u.email) && u.createdAt && u.createdAt < olderThan,
+    );
+    for (const u of expired) {
+      await this.deleteUserAccount({ userId: u.id });
+    }
+    return expired.map((u) => u.id);
   }
 
   // ─── Notifications ───
@@ -1070,6 +1088,68 @@ export class DatabaseStorage implements IStorage {
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
     };
+  }
+
+  /** Lazy-cleanup: delete all demo-fresh-*@brain.fi users created before `olderThan`
+   *  and every piece of data owned by them. Uses a single batch transaction for
+   *  efficiency. Returns the ids of the purged users. */
+  async cleanupExpiredDemoFreshUsers(olderThan: Date): Promise<string[]> {
+    const expiredUsers = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          sql`${usersTable.email} LIKE 'demo-fresh-%@brain.fi'`,
+          lt(usersTable.createdAt, olderThan),
+        ),
+      );
+    if (expiredUsers.length === 0) return [];
+    const userIds = expiredUsers.map((u) => u.id);
+
+    // Fetch brain identities so we can also clear orphaned agent tokens.
+    const identities = await db
+      .select()
+      .from(brainIdentitiesTable)
+      .where(inArray(brainIdentitiesTable.userId, userIds));
+    const tenantIds = identities.map((i) => i.tenantId);
+
+    // Revoke any Plaid tokens attached to these users (almost certainly none for demo users).
+    const bankRows = await db
+      .select()
+      .from(bankConnectionsTable)
+      .where(inArray(bankConnectionsTable.userId, userIds));
+    const bankAccessTokens = bankRows.map((row) => readPlaidAccessToken(row.accessToken));
+    await revokePlaidTokens(bankAccessTokens);
+
+    // Batch-delete all related data in one transaction.
+    await db.transaction(async (tx) => {
+      await tx.delete(notificationsTable).where(inArray(notificationsTable.userId, userIds));
+      await tx.delete(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, userIds));
+      await tx.delete(sourceDocumentsTable).where(inArray(sourceDocumentsTable.userId, userIds));
+      await tx.delete(userRulesTable).where(inArray(userRulesTable.userId, userIds));
+      await tx.delete(brainIdentitiesTable).where(inArray(brainIdentitiesTable.userId, userIds));
+      await tx.delete(assistantQuestionsTable).where(inArray(assistantQuestionsTable.userId, userIds));
+      if (tenantIds.length > 0) {
+        // Only delete agent-token rows that are no longer referenced by any identity.
+        const stillLinked = await tx
+          .select({ tenantId: brainIdentitiesTable.tenantId })
+          .from(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.tenantId, tenantIds));
+        const stillLinkedSet = new Set(stillLinked.map((r) => r.tenantId));
+        const orphaned = tenantIds.filter((tid) => !stillLinkedSet.has(tid));
+        if (orphaned.length > 0) {
+          await tx.delete(brainAgentTokensTable).where(inArray(brainAgentTokensTable.tenantId, orphaned));
+        }
+      }
+      await tx.delete(usersTable).where(inArray(usersTable.id, userIds));
+    });
+
+    // In-memory tool connections (no DB table yet) — evict for the deleted users.
+    for (const [key, c] of Array.from(this.toolConns.entries())) {
+      if (userIds.includes(c.userId)) this.toolConns.delete(key);
+    }
+
+    return userIds;
   }
 
   // ─── Notifications ───

@@ -10,6 +10,7 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
 import { isDemoEmail, SHARED_DEMO_EMAIL } from "./demoUsers";
+import { evictBrainSession } from "./brain/auth";
 
 const scryptAsync = promisify(scrypt);
 
@@ -214,6 +215,24 @@ export function setupAuth(app: Express) {
       name: "Demo Business",
     });
     req.session.userId = user.id;
+
+    // Lazy cleanup: on each new provision, purge demo-fresh users older than the TTL.
+    // Fire-and-forget — login is never blocked on this.
+    const ttlHours = Math.max(
+      1,
+      parseInt(process.env.DEMO_TENANT_TTL_HOURS ?? "", 10) || 24,
+    );
+    const olderThan = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
+    void storage.cleanupExpiredDemoFreshUsers(olderThan).then((evictedIds) => {
+      if (evictedIds.length > 0) {
+        // Evict stale brain session cache entries so they don't linger in memory.
+        for (const uid of evictedIds) evictBrainSession(uid);
+        console.log(`[demo-cleanup] purged ${evictedIds.length} expired demo tenant(s) (TTL=${ttlHours}h)`);
+      }
+    }).catch((err) => {
+      console.warn("[demo-cleanup] cleanup pass failed (non-fatal):", (err as Error).message);
+    });
+
     return res.json({ user: publicUser(user) });
   });
 

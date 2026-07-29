@@ -539,3 +539,9 @@ export function clearBrainTokenCache(): void {
   cache.clear();
   inflight.clear();
 }
+
+/** Evict the cached session for a single user (used by demo cleanup). */
+export function evictBrainSession(appUserId: string): void {
+  cache.delete(appUserId);
+  inflight.delete(appUserId);
+}
