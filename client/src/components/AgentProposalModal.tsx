@@ -1462,6 +1462,7 @@ export function LiveProposalModal({
 
   const agentKey = agentKeyForProposalType(proposal.type);
   const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
+  const agentHeaderName = /\bagent$/i.test(agentName.trim()) ? agentName.trim() : `${agentName.trim()} Agent`;
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 
@@ -1607,7 +1608,7 @@ export function LiveProposalModal({
               className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
               data-testid="text-live-proposal-agent-name"
             >
-              {agentName}
+              {agentHeaderName}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label="Close"

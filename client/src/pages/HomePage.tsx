@@ -802,7 +802,7 @@ export function HomePage() {
 
             {/* Middle row: Brain Detected (top/left) + Brain Did (bottom/right).
                 On mobile they stack vertically; on sm+ they sit side-by-side. */}
-            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
+            <div className="flex flex-col sm:flex-row gap-[16px] items-start relative shrink-0 w-full">
               <div className="flex flex-1 min-w-px">
                 <SectionWidget
                   title="Brain Detected"

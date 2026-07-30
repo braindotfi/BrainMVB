@@ -204,10 +204,10 @@ export function ProposalDetail({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="proposal-detail"
         >
-          {/* Header: short agent name centered + close X (matches Figma) */}
+          {/* Header: full agent name centered + close X */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
             <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-              {agent.shortLabel}
+              {agent.label}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-proposal-close"

@@ -562,7 +562,9 @@ export function InboxPage() {
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
     for (const p of needsReviewProposals) {
-      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      const agentKey = agentKeyForProposalType(p.type);
+      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
+      const pillName = agentKey === "payment" ? "Payment" : agentName;
       const decisions = buildDecisionButtons(p.available_decisions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
@@ -570,7 +572,7 @@ export function InboxPage() {
         kind: "proposal",
         tab: "Needs Review",
         title: headerCopy.title,
-        tag: agentName,
+        tag: pillName,
         tagClass: TAG_NEEDS_YOU,
         desc: headerCopy.text,
         time: "",
