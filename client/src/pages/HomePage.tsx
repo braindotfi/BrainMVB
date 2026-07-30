@@ -587,11 +587,11 @@ export function HomePage() {
       .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
       .map((r) => ({
         id: r.id,
-        label: r.summary,
-        subtitle: r.rowSubtitle || undefined,
+        label: formatText(r.summary),
+        subtitle: r.rowSubtitle ? formatText(r.rowSubtitle) : undefined,
         onClick: () => navigate(`/audit-log?record=${r.id}`),
       }));
-  }, [liveAuditRecords, navigate]);
+  }, [liveAuditRecords, navigate, formatText]);
 
   /* Brain Detected. What Brain is advising for review: live brain-core
      PaymentIntents needing approval, plus read-only live Ledger facts
@@ -623,22 +623,22 @@ export function HomePage() {
     // "Why:" line shown in Inbox.
     const queueItems = liveNeedsReview.map((p) => ({
       id: p.id,
-      label: p.title,
-      subtitle: p.rationale || undefined,
+      label: formatText(p.title),
+      subtitle: p.rationale ? formatText(p.rationale) : undefined,
       onClick: () => setSelectedReview(p),
     }));
     // Session-scoped intents — title is specific; description is the "Why:".
     const sessionItems = sessionReviews.map((r) => ({
       id: String(r.intentId ?? r.id),
-      label: r.title,
-      subtitle: r.description || undefined,
+      label: formatText(r.title),
+      subtitle: r.description ? formatText(r.description) : undefined,
       onClick: () => setSelectedLiveIntent(r),
     }));
     // Read-only ledger insights — title is specific; subtitle is secondary context.
     const insightItems = liveInsights.map((i) => ({
       id: i.id,
-      label: i.title,
-      subtitle: i.subtitle || undefined,
+      label: formatText(i.title),
+      subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
       onClick: () => setSelectedInsight(i),
     }));
     // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
@@ -647,13 +647,13 @@ export function HomePage() {
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       return {
         id: p.id,
-        label: p.narrative ?? agentName,
+        label: p.narrative ? formatText(p.narrative) : agentName,
         subtitle: p.narrative ? agentName : undefined,
         onClick: () => setSelectedProposal(p),
       };
     });
     return [...sessionItems, ...queueItems, ...insightItems, ...proposalItems];
-  }, [liveNeedsReview, sessionReviews, liveInsights, needsReviewProposals]);
+  }, [liveNeedsReview, sessionReviews, liveInsights, needsReviewProposals, formatText]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -683,10 +683,12 @@ export function HomePage() {
   const netMonthly = netMonthlyCashflow(brainTx?.transactions);
   // No live transactions → honest placeholder, never a fabricated figure (was "$7,324").
   const cashLabel = netMonthly !== null ? "Net cash flow" : "Monthly spend";
-  const cashValue =
-    netMonthly !== null
-      ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(Math.round(netMonthly)))}`
-      : "-";
+  const cashFormatted = netMonthly !== null
+    ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(netMonthly))}`
+    : "-";
+  const cashParts = cashFormatted.match(/^([+-]?)(.+)\.(\d{2})$/);
+  const cashWhole = cashParts ? `${cashParts[1]}${cashParts[2]}` : cashFormatted;
+  const cashCents = cashParts ? `.${cashParts[3]}` : "";
 
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
   // static (non-dollar) line when brain-core is unreachable/unconfigured; overridden
@@ -781,8 +783,9 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase">{cashLabel}</p>
                   <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
                     <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{cashValue}</span>
-                      <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
+                        <span className="font-medium leading-[36px] text-[32px]">{cashWhole}</span>
+                        <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">{cashCents}</span>
+                        <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
                     </p>
                     <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${insightLine.colorClass}`}>
                       {insightLine.text}
