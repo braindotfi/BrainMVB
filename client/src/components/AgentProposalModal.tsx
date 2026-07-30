@@ -1349,6 +1349,10 @@ const DETAIL_ROW_ICONS: Record<string, LucideIcon> = {
   dot: CircleDot,
 };
 
+/** Agents whose approved action sends a message to someone outside the company
+ *  (today: the dunning reminder Collections mails to a customer). */
+const SENDS_OUTBOUND_MESSAGE = new Set<AgentKey>(["collections"]);
+
 export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   vendor_risk: "Vendor Risk",
   payment: "Payment",
@@ -1376,6 +1380,7 @@ export function LiveProposalModal({
   const { formatText } = useCurrency();
   const [showTechnical, setShowTechnical] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
 
   if (!proposal) return null;
 
@@ -1400,6 +1405,11 @@ export function LiveProposalModal({
     .filter(Boolean)
     .join(" · ");
   const allRows = buildProposalDetailRows(evidence, subjectName, money, headline.code);
+  // Only offer the section on agents whose approved action actually sends
+  // something to a third party. brain-core leaves `action_type` null, so there
+  // is no generic way to detect it — and rendering "message preview" on, say, a
+  // reconciliation proposal would imply an outbound message that never exists.
+  const sendsOutboundMessage = SENDS_OUTBOUND_MESSAGE.has(agentKey);
   const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
   const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
   const narrativeIsLong = (proposal.narrative?.length ?? 0) > 180;
@@ -1553,6 +1563,44 @@ export function LiveProposalModal({
                   >
                     {showNarrative ? "Show less" : "Show more"}
                   </button>
+                )}
+              </div>
+            )}
+
+            {/* Message preview — placeholder only, and deliberately so.
+                TODO(brain-core): show the real outbound text here once brain-core
+                exposes a draft/message field on GET /proposals/{id}, COMPOSED AT
+                PROPOSE-TIME. Today it composes the text at execution time, so both
+                the list row and the by-id read come back with no message content
+                (identical key sets, action_type null) and there is nothing to show.
+                Do NOT compose a draft client-side to fill this in: this sits above
+                an Approve button on a real customer communication, so invented text
+                would be read as the thing that gets sent. The brain-core change is
+                tracked separately — UI depends on the endpoint existing, not the
+                other way around. */}
+            {sendsOutboundMessage && (
+              <div className="flex flex-col gap-[8px] w-full">
+                <button
+                  type="button"
+                  onClick={() => setShowMessage((v) => !v)}
+                  aria-expanded={showMessage}
+                  data-testid="button-live-proposal-message-toggle"
+                  className="flex items-center gap-[4px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                >
+                  <ChevronRight size={14} className={`transition-transform ${showMessage ? "rotate-90" : ""}`} />
+                  Message preview
+                </button>
+                {showMessage && (
+                  <div
+                    className="flex items-start gap-[8px] w-full rounded-[8px] border border-[#1d2132] bg-[#0a0c10] px-[12px] py-[10px]"
+                    data-testid="text-live-proposal-message-unavailable"
+                  >
+                    <Info size={14} className="text-[#6c779d] shrink-0 mt-[2px]" aria-hidden="true" />
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[18px] text-[#6c779d]">
+                      Not available until this proposal is approved — the draft text isn't
+                      generated until execution.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
