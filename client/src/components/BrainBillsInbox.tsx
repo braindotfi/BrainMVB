@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import alertIcon from "@assets/Icons_1783274957589.png";
 

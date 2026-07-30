@@ -26,7 +26,7 @@ import {
 } from "@/lib/rule-suggestions";
 import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useBrainVendors } from "@/lib/brainVendors";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 
 const ACTIVE = "#42bf23";

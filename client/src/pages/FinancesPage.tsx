@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useCurrency } from "@/lib/currencyContext";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";

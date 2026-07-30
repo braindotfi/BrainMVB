@@ -38,7 +38,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { buildProposalDetailRows, buildProposalHeadline, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "@/lib/proposalCards";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";

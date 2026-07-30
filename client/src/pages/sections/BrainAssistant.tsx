@@ -12,7 +12,7 @@ import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
 import { useToast } from "@/hooks/use-toast";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";

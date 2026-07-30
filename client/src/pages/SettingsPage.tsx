@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/authContext";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
 import { usePlanId, setPlanId } from "@/lib/planStore";
 import { useUserContact, setUserEmail, setUserPhone } from "@/lib/userContact";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";

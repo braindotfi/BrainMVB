@@ -7,7 +7,7 @@ import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity } from "@/lib/auditTypes";
 import refreshIcon from "@assets/refresh_1784933925263.png";
 import searchIcon from "@assets/Vector_1784933720094.png";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { statusOverrideToAuditRecord } from "@/lib/brainFeed";

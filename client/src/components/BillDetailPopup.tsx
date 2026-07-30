@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useIntents } from "@/lib/intentsStore";
 import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import arrowIcon from "@assets/arrow_1783201262245.png";

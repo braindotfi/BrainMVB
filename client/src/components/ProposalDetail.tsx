@@ -26,7 +26,7 @@ import {
   ScanSearch,
   type LucideIcon,
 } from "lucide-react";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { resolveRule } from "@/lib/openRuleDetail";
 import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";

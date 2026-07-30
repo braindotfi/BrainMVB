@@ -19,7 +19,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import alertFlagIcon from "@assets/Icons_1783209453304.png";

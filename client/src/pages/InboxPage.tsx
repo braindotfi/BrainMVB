@@ -8,7 +8,7 @@ import { useAppAlert } from "@/components/AppAlert";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import type { Proposal, ProposalStatus } from "@/lib/proposalTypes";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useIntents } from "@/lib/intentsStore";
 import { intentToReview } from "@/lib/intentToReview";
 import { useBrainReviewQueue, useBrainAutoApproved } from "@/lib/brainQueue";

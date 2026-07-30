@@ -16,7 +16,7 @@ const USD_RATES: Record<CurrencyCode, number> = {
   EUR: 0.92,
 };
 
-interface CurrencyContextType {
+export interface CurrencyContextType {
   currency: CurrencyCode;
   symbol: string;
   setCurrency: (c: string) => void;
@@ -29,7 +29,7 @@ interface CurrencyContextType {
   formatText: (text: string) => string;
 }
 
-const CurrencyContext = createContext<CurrencyContextType | null>(null);
+export const CurrencyContext = createContext<CurrencyContextType | null>(null);
 
 /** Parse "+$1,234.56", "-$2,400", "1234.5", 1234 etc. into { sign, value, decimals }.
  * Returns null if no number can be extracted (in which case callers should fall back
@@ -119,8 +119,3 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCurrency(): CurrencyContextType {
-  const ctx = useContext(CurrencyContext);
-  if (!ctx) throw new Error("useCurrency must be used inside CurrencyProvider");
-  return ctx;
-}

@@ -19,7 +19,7 @@ import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel, openDocumentOriginal } from "@/lib/documentTypes";
 import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 
 /* ── Document / Record EVIDENCE Viewer ────────────────────────────────────────
    ONE read only viewer for every kind of evidence Brain surfaces behind a
