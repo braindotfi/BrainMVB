@@ -20,6 +20,7 @@
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
 - [Replit git branch tracking](replit-git-branch-tracking.md) — `checkout -b X origin/main` tracks main, and auto-checkpoints then push your feature work straight onto main; unset upstream first.
+- [GitHub connector write limitation](github-connector-write-limit.md) — PR merges/settings may work while newly created workflow commits cannot move the remote branch ref; verify remote SHA and files.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
 - [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
