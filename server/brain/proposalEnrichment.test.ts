@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   labelForKind,
   daysOverdue,
   resolveEvidenceItem,
   enrichProposal,
+  enrichProposals,
   hydrateMissingRefs,
   type EntityIndex,
 } from "./proposalEnrichment";
@@ -214,5 +215,65 @@ describe("hydrateMissingRefs", () => {
       ),
     ).resolves.toBeUndefined();
     expect(empty.size).toBe(0);
+  });
+});
+
+describe("enrichment time budget", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  it("answers with raw refs instead of hanging when an upstream read never returns", async () => {
+    // The review queue is blocked on enrichment, so a dead upstream socket must
+    // not hold the response open. Abort budget applies; the card degrades.
+    globalThis.fetch = ((_url: unknown, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      })) as unknown as typeof fetch;
+
+    const started = Date.now();
+    const out = await enrichProposals("token", [
+      {
+        id: "prop_1",
+        type: "collections",
+        evidence: [{ kind: "invoice", ref: "inv_01KYSG21MMMHAPE101816VTQNB" }],
+      },
+    ]);
+    const elapsed = Date.now() - started;
+
+    expect(out).toHaveLength(1);
+    expect(out[0].subject).toBeNull();
+    expect(out[0].evidence[0].ref).toBe("inv_01KYSG21MMMHAPE101816VTQNB");
+    expect(out[0].evidence[0].display).toBeNull();
+    // Well inside ENRICHMENT_BUDGET_MS: the per-call abort fires first.
+    expect(elapsed).toBeLessThan(7_000);
+  }, 15_000);
+});
+
+describe("choosing the by-id endpoint", () => {
+  it("prefers the collection the wiki URI names over the kind guess for the same id", async () => {
+    // Same ledger id cited twice: bare with a kind that maps to counterparties,
+    // and as a wiki URI naming invoices. The URI is authoritative.
+    const calls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = ((url: unknown) => {
+      calls.push(String(url));
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as unknown as typeof fetch;
+
+    const empty: EntityIndex = new Map();
+    await hydrateMissingRefs(
+      "token",
+      [
+        { ref: "inv_01KYSG21MMMHAPE101816VTQNB", kind: "counterparty" },
+        { ref: "wiki:/invoices/inv_01KYSG21MMMHAPE101816VTQNB", kind: "wiki" },
+      ],
+      empty,
+    );
+    globalThis.fetch = realFetch;
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain("/ledger/invoices/");
   });
 });

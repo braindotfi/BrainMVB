@@ -238,12 +238,12 @@ function transactionEntity(t: RawTransaction, cpName: string | undefined, now: D
  */
 export async function buildEntityIndex(token: string, now: Date = new Date()): Promise<EntityIndex> {
   const [accounts, cps, invoices, obligations, members, transactions] = await Promise.allSettled([
-    listLedgerAccounts(token, { limit: 100 }),
-    listLedgerCounterparties(token),
-    listLedgerInvoices(token, { limit: 100 }),
-    listObligations(token, { limit: 100 }),
-    listMembers(token),
-    listLedgerTransactions(token, { limit: 200 }),
+    listLedgerAccounts(token, { limit: 100 }, BULK_TIMEOUT_MS),
+    listLedgerCounterparties(token, BULK_TIMEOUT_MS),
+    listLedgerInvoices(token, { limit: 100 }, BULK_TIMEOUT_MS),
+    listObligations(token, { limit: 100 }, BULK_TIMEOUT_MS),
+    listMembers(token, undefined, BULK_TIMEOUT_MS),
+    listLedgerTransactions(token, { limit: 200 }, BULK_TIMEOUT_MS),
   ]);
 
   const index: EntityIndex = new Map();
@@ -353,6 +353,30 @@ const KIND_COLLECTION: Record<string, ByIdCollection> = {
  */
 const MAX_TARGETED_LOOKUPS = 24;
 
+/**
+ * Time budgets. Enrichment is a nice-to-have that runs while the review queue
+ * request is blocked on it, so it must be impossible for a slow upstream to
+ * hold the queue open: each by-id read is aborted at `BY_ID_TIMEOUT_MS`, and
+ * the whole join gives up at `ENRICHMENT_BUDGET_MS` and serves what it has.
+ */
+const BULK_TIMEOUT_MS = 4_000;
+const BY_ID_TIMEOUT_MS = 3_000;
+const ENRICHMENT_BUDGET_MS = 6_000;
+
+/** Resolve to `fallback` if `work` has not settled within `ms`. */
+async function withBudget<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), Math.max(ms, 0));
+  });
+  try {
+    return await Promise.race([work, expiry]);
+  } finally {
+    // Without this the pending timer keeps the event loop busy after we answer.
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /** The ledger id inside a ref, for both spellings (`cp_…`, `wiki:/counterparties/cp_…`). */
 function refId(ref: string): string {
   return ref.split("/").pop() ?? ref;
@@ -366,17 +390,23 @@ function refId(ref: string): string {
  * A ref with neither is left alone rather than brute-forced across every
  * endpoint — see the header note on why prefix tables are not used.
  */
-function collectionForRef(ref: string, kind: string): ByIdCollection | null {
+function wikiCollection(ref: string): ByIdCollection | null {
   const wiki = /^wiki:\/([^/]+)\//.exec(ref);
-  if (wiki && (BY_ID_COLLECTIONS as readonly string[]).includes(wiki[1])) {
-    return wiki[1] as ByIdCollection;
-  }
-  return KIND_COLLECTION[kind?.toLowerCase?.() ?? ""] ?? null;
+  return wiki && (BY_ID_COLLECTIONS as readonly string[]).includes(wiki[1])
+    ? (wiki[1] as ByIdCollection)
+    : null;
+}
+
+function collectionForRef(ref: string, kind: string): ByIdCollection | null {
+  return wikiCollection(ref) ?? KIND_COLLECTION[kind?.toLowerCase?.() ?? ""] ?? null;
 }
 
 async function fetchById(token: string, collection: ByIdCollection, id: string): Promise<Record<string, unknown> | null> {
   try {
-    return await brainRequest<Record<string, unknown>>(`/ledger/${collection}/${encodeURIComponent(id)}`, { token });
+    return await brainRequest<Record<string, unknown>>(`/ledger/${collection}/${encodeURIComponent(id)}`, {
+      token,
+      timeoutMs: BY_ID_TIMEOUT_MS,
+    });
   } catch {
     // A 404 here is ordinary: the kind-derived guess can be wrong, and a ref can
     // point at a record this member's scopes cannot read. Stay raw, never throw.
@@ -402,19 +432,26 @@ export async function hydrateMissingRefs(
 ): Promise<void> {
   // Dedupe by ledger id: the same entity is routinely cited twice per proposal
   // (once bare, once as a wiki URI) and again across sibling proposals.
-  const wanted = new Map<string, ByIdCollection>();
+  const wanted = new Map<string, { collection: ByIdCollection; fromWiki: boolean }>();
   for (const { ref, kind } of refs) {
     if (!ref) continue;
     const id = refId(ref);
-    if (index.has(ref) || index.has(id) || wanted.has(id)) continue;
-    const collection = collectionForRef(ref, kind);
-    if (collection) wanted.set(id, collection);
+    if (index.has(ref) || index.has(id)) continue;
+    const wiki = wikiCollection(ref);
+    const existing = wanted.get(id);
+    // The same id arrives both bare and as a wiki URI. The URI names its own
+    // collection, so it always wins over the `kind` guess — first-seen-wins
+    // would let a mislabelled bare ref send us to the wrong endpoint and
+    // "resolve" to a 404, leaving the ref raw for no reason.
+    if (existing && (existing.fromWiki || !wiki)) continue;
+    const collection = wiki ?? collectionForRef(ref, kind);
+    if (collection) wanted.set(id, { collection, fromWiki: Boolean(wiki) });
   }
   if (wanted.size === 0) return;
 
   const batch = Array.from(wanted).slice(0, MAX_TARGETED_LOOKUPS);
   const fetched = await Promise.all(
-    batch.map(async ([id, collection]) => ({ id, collection, record: await fetchById(token, collection, id) })),
+    batch.map(async ([id, { collection }]) => ({ id, collection, record: await fetchById(token, collection, id) })),
   );
 
   // Second round: an invoice/transaction names its counterparty by id, so fetch
@@ -533,8 +570,19 @@ export async function enrichProposals(
   // Nothing to join against: skip the upstream round-trips entirely.
   if (cited.length === 0) return proposals.map((p) => enrichProposal(p, new Map()));
 
-  const index = await buildEntityIndex(token, now);
+  // Hard deadline across both upstream phases. Whatever is resolved by then is
+  // used; the rest stay raw ids. A degraded card beats a hung review queue.
+  const deadline = Date.now() + ENRICHMENT_BUDGET_MS;
+  const index = await withBudget(
+    buildEntityIndex(token, now).catch(() => new Map() as EntityIndex),
+    ENRICHMENT_BUDGET_MS,
+    new Map() as EntityIndex,
+  );
   // Close the page-cap gap before resolving; failures here leave refs raw.
-  await hydrateMissingRefs(token, cited, index, now).catch(() => {});
+  await withBudget(
+    hydrateMissingRefs(token, cited, index, now).catch(() => {}),
+    deadline - Date.now(),
+    undefined,
+  );
   return proposals.map((p) => enrichProposal(p, index));
 }

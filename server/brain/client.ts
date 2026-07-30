@@ -41,6 +41,13 @@ export interface BrainRequestOptions {
   body?: unknown;
   /** Override the idempotency key (defaults to a uuid for writes). */
   idempotencyKey?: string;
+  /**
+   * Abort the request after this many ms. Use on any call made while a user
+   * request is blocked on it: without it a hung upstream socket holds the
+   * response open indefinitely. Aborting surfaces as a thrown error, so callers
+   * that must degrade gracefully still need their own catch.
+   */
+  timeoutMs?: number;
 }
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -69,6 +76,7 @@ export async function brainRequest<T>(path: string, opts: BrainRequestOptions): 
     method,
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    signal: opts.timeoutMs != null ? AbortSignal.timeout(opts.timeoutMs) : undefined,
   });
 
   const text = await res.text();
@@ -114,8 +122,12 @@ export interface WikiSchemaResponse {
 }
 
 /** GET /ledger/accounts */
-export function listLedgerAccounts(token: string, query?: { status?: string; limit?: number }): Promise<ListAccountsResponse> {
-  return brainRequest<ListAccountsResponse>("/ledger/accounts", { token, query });
+export function listLedgerAccounts(
+  token: string,
+  query?: { status?: string; limit?: number },
+  timeoutMs?: number,
+): Promise<ListAccountsResponse> {
+  return brainRequest<ListAccountsResponse>("/ledger/accounts", { token, query, timeoutMs });
 }
 
 // ─── Ledger transactions (deterministic grounding for the assistant) ──────────
@@ -142,8 +154,9 @@ export interface ListTransactionsResponse {
 export function listLedgerTransactions(
   token: string,
   query?: { limit?: number; direction?: string; status?: string },
+  timeoutMs?: number,
 ): Promise<ListTransactionsResponse> {
-  return brainRequest<ListTransactionsResponse>("/ledger/transactions", { token, query });
+  return brainRequest<ListTransactionsResponse>("/ledger/transactions", { token, query, timeoutMs });
 }
 
 /** GET /ledger/counterparties (minimal slice for name resolution). */
@@ -156,8 +169,8 @@ export interface ListCounterpartiesResponse {
   counterparties: CounterpartyLite[];
 }
 
-export function listLedgerCounterparties(token: string): Promise<ListCounterpartiesResponse> {
-  return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token });
+export function listLedgerCounterparties(token: string, timeoutMs?: number): Promise<ListCounterpartiesResponse> {
+  return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token, timeoutMs });
 }
 
 // ─── Counterparty create (manual "Add vendor"; MEMBER token) ─────────────────
@@ -258,8 +271,9 @@ export interface ListInvoicesResponse {
 export function listLedgerInvoices(
   token: string,
   query?: { status?: string; limit?: number },
+  timeoutMs?: number,
 ): Promise<ListInvoicesResponse> {
-  return brainRequest<ListInvoicesResponse>("/ledger/invoices", { token, query });
+  return brainRequest<ListInvoicesResponse>("/ledger/invoices", { token, query, timeoutMs });
 }
 
 // ─── Policy evaluate (read-only "why" for the §6 decision trace) ─────────────
@@ -406,8 +420,9 @@ export interface ListMembersResponse {
 export function listMembers(
   token: string,
   query?: { role?: string; domain?: string },
+  timeoutMs?: number,
 ): Promise<ListMembersResponse> {
-  return brainRequest<ListMembersResponse>("/members", { token, query });
+  return brainRequest<ListMembersResponse>("/members", { token, query, timeoutMs });
 }
 
 /** GET /members/{id}. MEMBER token. Deactivated members return 200 (history resolution). */
@@ -756,10 +771,12 @@ export interface ListObligationsResponse {
 export async function listObligations(
   token: string,
   query?: { status?: string; limit?: number },
+  timeoutMs?: number,
 ): Promise<ListObligationsResponse> {
   const resp = await brainRequest<Record<string, unknown>>("/ledger/obligations", {
     token,
     query: { status: query?.status, limit: query?.limit },
+    timeoutMs,
   });
   const rawList = Array.isArray((resp as any)?.obligations)
     ? ((resp as any).obligations as unknown[])
