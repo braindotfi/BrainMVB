@@ -18,6 +18,10 @@ import {
   resolveHeadlineText,
   resolveProseText,
   buildRefDisplayMap,
+  buildCollectionsDraft,
+  applyCurrencyToBareAmounts,
+  formatFactDate,
+  formatSourceAmount,
 } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
@@ -540,5 +544,180 @@ describe("resolveProseText", () => {
 
   it("keeps the prose's own capitalisation instead of sentence-casing it", () => {
     expect(resolveProseText("brain flagged this.", refs)).toBe("brain flagged this.");
+  });
+});
+
+describe("buildKeyFactRows number formatting", () => {
+  it("formats a cents-less amount with the fallback currency when the table omits a Currency row", () => {
+    // brain-core writes "70197" as often as "70197.57"; the card must not print
+    // one of them raw beside the other.
+    const { primary } = buildKeyFactRows(
+      [
+        { label: "Available Cash", value: "70197" },
+        { label: "Operating Minimum", value: "25000.00" },
+      ],
+      money,
+      "USD",
+    );
+    expect(primary.map((r) => r.value)).toEqual(["$70,197.00", "$25,000.00"]);
+  });
+
+  it("does NOT read a bare integer under a loose money label as an amount", () => {
+    // "Payment Terms: 30" is a day count. $30.00 would be a fabrication.
+    const { primary } = buildKeyFactRows([{ label: "Payment Terms", value: "30" }], money, "USD");
+    expect(primary[0].value).toBe("30");
+  });
+
+  it("leaves non-money numbers alone but groups their digits", () => {
+    const { primary } = buildKeyFactRows(
+      [
+        { label: "Transactions Reviewed", value: "18422" },
+        { label: "Anomaly Score", value: "0.7" },
+        { label: "Days Overdue", value: "45" },
+      ],
+      money,
+      "USD",
+    );
+    expect(primary.map((r) => r.value)).toEqual(["18,422", "0.7", "45"]);
+  });
+});
+
+describe("buildCollectionsDraft", () => {
+  const facts = [
+    { label: "Customer", value: "Thornebury Imports", icon: "user" },
+    { label: "Amount Outstanding", value: "$42,000.00", icon: "amount" },
+    { label: "Invoice", value: "AR-MIDMARKET-001", icon: "doc" },
+    { label: "Days Past Due", value: "45", icon: "calendar" },
+  ];
+
+  it("composes a draft from the proposal's own facts", () => {
+    const draft = buildCollectionsDraft(facts, null, "Brightline Foods")!;
+    expect(draft.subject).toBe("Invoice AR-MIDMARKET-001 — $42,000.00");
+    expect(draft.body).toContain("Hi Thornebury Imports,");
+    expect(draft.body).toContain(
+      "Our records show invoice AR-MIDMARKET-001 for $42,000.00 is now 45 days past due.",
+    );
+    expect(draft.body.endsWith("Thanks,\nBrightline Foods")).toBe(true);
+  });
+
+  it("prefers the proposal's resolved subject over a fact row", () => {
+    const draft = buildCollectionsDraft(facts, "Thornebury Imports Ltd", null)!;
+    expect(draft.body).toContain("Hi Thornebury Imports Ltd,");
+    expect(draft.body).toContain("Accounts Receivable");
+  });
+
+  it("drops the clauses whose facts are missing instead of inventing them", () => {
+    const draft = buildCollectionsDraft(
+      [{ label: "Amount Outstanding", value: "$1,200.00", icon: "amount" }],
+      "Cedar Lane Co",
+      null,
+    )!;
+    expect(draft.body).toContain("Our records show your account for $1,200.00 is still outstanding.");
+    // The facts sentence carries no invented age, date or invoice number. (The
+    // fixed closing line mentions "the invoice" generically, so scope the check.)
+    const factsLine = draft.body.split("\n").find((l) => l.startsWith("Our records show"))!;
+    expect(factsLine).not.toMatch(/past due|due on|invoice [A-Z0-9]/i);
+    expect(draft.subject).toBe("Outstanding balance — $1,200.00");
+  });
+
+  it("falls back to the due date when no overdue age is known", () => {
+    const draft = buildCollectionsDraft(
+      [
+        { label: "Invoice", value: "INV-7", icon: "doc" },
+        { label: "Due Date", value: "2026-06-01", icon: "calendar" },
+      ],
+      "Cedar Lane Co",
+      null,
+    )!;
+    expect(draft.body).toContain("was due on 2026-06-01");
+  });
+
+  it("withholds the draft entirely when there is nothing concrete to chase", () => {
+    expect(buildCollectionsDraft([{ label: "Severity", value: "High", icon: "dot" }], "Cedar Lane Co", null)).toBeNull();
+    expect(buildCollectionsDraft([], "Cedar Lane Co", null)).toBeNull();
+  });
+});
+
+describe("applyCurrencyToBareAmounts", () => {
+  it("tags a bare ledger amount in core's prose so the currency formatter sees it", () => {
+    expect(
+      applyCurrencyToBareAmounts("Transaction at Harbor for 50000.00 scored 0.70 risk.", "USD"),
+    ).toBe("Transaction at Harbor for USD 50000.00 scored 0.70 risk.");
+  });
+
+  it("leaves scores, percentages and short numbers alone", () => {
+    const s = "Score 0.70, variance 12.50%, 3.25 days, ratio 999.00.";
+    expect(applyCurrencyToBareAmounts(s, "USD")).toBe(s);
+  });
+
+  it("does not double-tag an amount that already carries a symbol or code", () => {
+    const s = "Paid $42,000.00 and USD 8200.00 today.";
+    expect(applyCurrencyToBareAmounts(s, "USD")).toBe(s);
+  });
+
+  it("is a no-op when the proposal cites no currency", () => {
+    expect(applyCurrencyToBareAmounts("for 50000.00", null)).toBe("for 50000.00");
+  });
+});
+
+describe("formatFactDate", () => {
+  it("renders a Postgres timestamp as a date", () => {
+    // Live collections fact: "Due Date": "2026-07-20 00:00:00+00".
+    expect(formatFactDate("2026-07-20 00:00:00+00")).toBe("Jul 20, 2026");
+    expect(formatFactDate("2026-07-20")).toBe("Jul 20, 2026");
+  });
+
+  it("keeps a meaningful UTC time instead of silently dropping it", () => {
+    expect(formatFactDate("2026-07-20T14:05:09Z")).toBe("Jul 20, 2026 14:05 UTC");
+  });
+
+  it("drops a time it cannot place in UTC rather than mislabelling it", () => {
+    expect(formatFactDate("2026-07-20 14:05:09-05")).toBe("Jul 20, 2026");
+  });
+
+  it("ignores anything that is not a date", () => {
+    expect(formatFactDate("INV-2036")).toBeNull();
+    expect(formatFactDate("5460.00")).toBeNull();
+    expect(formatFactDate("2026-13-40")).toBeNull();
+  });
+
+  it("reaches the fact table", () => {
+    const { primary } = buildKeyFactRows(
+      [{ label: "Due Date", value: "2026-07-20 00:00:00+00" }],
+      money,
+      "USD",
+    );
+    expect(primary[0].value).toBe("Jul 20, 2026");
+  });
+});
+
+describe("formatSourceAmount", () => {
+  it("quotes the record's own currency, never the display currency", () => {
+    expect(formatSourceAmount({ value: "5460.00000000", currency: "USD" })).toBe("$5,460.00");
+    expect(formatSourceAmount({ value: "5460.00", currency: "EUR" })).toBe("€5,460.00");
+  });
+
+  it("spells out a currency it has no symbol for", () => {
+    expect(formatSourceAmount({ value: "1200", currency: "CHF" })).toBe("CHF 1,200.00");
+  });
+
+  it("keeps the sign and never rounds a third decimal into the cents", () => {
+    expect(formatSourceAmount({ value: "-42000.999", currency: "USD" })).toBe("-$42,000.99");
+  });
+});
+
+describe("groupDigits (via buildKeyFactRows)", () => {
+  it("never coerces through Number — a value past 2^53 keeps every digit", () => {
+    const { primary } = buildKeyFactRows(
+      [{ label: "Statement Line", value: "9007199254740993" }],
+      money,
+      "USD",
+    );
+    expect(primary[0].value).toBe("9,007,199,254,740,993");
+  });
+
+  it("leaves a leading-zero code alone rather than grouping it as a quantity", () => {
+    const { primary } = buildKeyFactRows([{ label: "Routing", value: "0012345" }], money, "USD");
+    expect(primary[0].value).toBe("0012345");
   });
 });

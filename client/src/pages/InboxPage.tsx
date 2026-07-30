@@ -678,6 +678,21 @@ export function InboxPage() {
 
   const visible = items.filter((it) => it.tab === activeTab);
 
+  /* Proposal queue behind the card's Previous / Next, in the order the rows are
+     listed so paging matches what the user just scrolled past. Only live
+     proposals participate — the other row kinds open different modals. */
+  const pagedProposals = visible
+    .map((it) => it.liveAgentProposal)
+    .filter((p): p is BrainProposal => p != null);
+  const pagedIndex = selectedProposal
+    ? pagedProposals.findIndex((p) => p.id === selectedProposal.id)
+    : -1;
+  const canPage = pagedIndex >= 0 && pagedProposals.length > 1;
+  const stepProposal = (delta: number) => {
+    const next = pagedProposals[pagedIndex + delta];
+    if (next) setSelectedProposal(next);
+  };
+
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
@@ -956,6 +971,11 @@ export function InboxPage() {
         proposal={selectedProposal}
         open={selectedProposal !== null}
         onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
+        onPrev={canPage ? () => stepProposal(-1) : undefined}
+        onNext={canPage ? () => stepProposal(1) : undefined}
+        hasPrev={pagedIndex > 0}
+        hasNext={pagedIndex >= 0 && pagedIndex < pagedProposals.length - 1}
+        position={canPage ? `Proposal ${pagedIndex + 1} of ${pagedProposals.length}` : undefined}
       />
     </div>
   );

@@ -202,6 +202,74 @@ const MONEY_LABEL_RE =
 /** A bare decimal brain-core writes for money ("70197.57", "0.00"). */
 const DECIMAL_RE = /^-?\d+\.\d{2}$/;
 
+/** Labels whose value is unambiguously an amount even when core omits the cents
+ *  ("Available Cash: 70197"). Deliberately NARROWER than MONEY_LABEL_RE: that one
+ *  matches "payment" and "value", which also head non-money facts like
+ *  "Payment Terms: 30" — formatting those as $30.00 would be a lie. */
+const STRICT_MONEY_LABEL_RE = /(amount|balance|cash|outstanding|inflow|outflow|savings|invoice total|total due)/i;
+
+/** A bare integer, with or without cents. */
+const NUMERIC_RE = /^-?\d+(?:\.\d+)?$/;
+
+/* ── Dates in fact tables ────────────────────────────────────────────────────
+   brain-core hands back whatever its column holds, so a due date arrives as
+   "2026-07-20 00:00:00+00". Rendered raw it reads as a database dump. The time
+   is kept ONLY when it is meaningful (not midnight) and unambiguously UTC —
+   dropping a real timestamp would lose information, and labelling an unknown
+   offset as UTC would invent it. */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const TIMESTAMP_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?\s*(Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
+
+export function formatFactDate(raw: string): string | null {
+  const m = TIMESTAMP_RE.exec(raw.trim());
+  if (!m) return null;
+  const [, y, mo, d, hh, mm, ss, offset] = m;
+  const monthIndex = Number(mo) - 1;
+  if (monthIndex < 0 || monthIndex > 11 || Number(d) < 1 || Number(d) > 31) return null;
+  const date = `${MONTHS[monthIndex]} ${Number(d)}, ${y}`;
+  const isUtc = offset === "Z" || /^\+00(?::?00)?$/.test(offset ?? "");
+  const midnight = hh === "00" && mm === "00" && ss === "00";
+  return hh && !midnight && isUtc ? `${date} ${hh}:${mm} UTC` : date;
+}
+
+/** Thousands separators for a bare number that is NOT money — core sends
+ *  "70197" and a human reads "70,197". Values with a symbol, unit or any other
+ *  character are left exactly as they arrived. */
+function groupDigits(raw: string): string {
+  if (!NUMERIC_RE.test(raw)) return raw;
+  const negative = raw.startsWith("-");
+  const [intPart, decPart] = raw.replace(/^-/, "").split(".");
+  /* A leading zero means this is a code, not a quantity ("0012345" is an account
+     number); grouping it would both mislead and drop the zeros. */
+  if (intPart.length < 4 || intPart.startsWith("0")) return raw;
+  /* Grouped as a STRING. Number(intPart).toLocaleString() would round anything
+     past 2^53 — silently changing a value on an approval surface. */
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${negative ? "-" : ""}${grouped}${decPart ? `.${decPart}` : ""}`;
+}
+
+/* ── Source-currency amounts ─────────────────────────────────────────────────
+   The card formats money through the operator's ACTIVE display currency (a USD
+   receivable shows as €5,023 for a EUR user, converted at the app's FX rate).
+   That is right for the card and wrong for anything quoting the amount back to
+   a third party — the customer owes the invoice's own currency. Use this for
+   that case only; everything else goes through useCurrency. */
+const CURRENCY_SYMBOLS: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", JPY: "¥" };
+
+export function formatSourceAmount(amount: { value: string; currency: string }): string {
+  const raw = amount.value.trim();
+  const negative = raw.startsWith("-");
+  const [intPart, decPart = ""] = raw.replace(/^-/, "").split(".");
+  if (!/^\d+$/.test(intPart)) return `${amount.currency} ${raw}`;
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // Core sends "5460.00000000"; quote two decimals, never a truncated third.
+  const cents = decPart.length >= 2 ? decPart.slice(0, 2) : decPart.padEnd(2, "0");
+  const symbol = CURRENCY_SYMBOLS[amount.currency.toUpperCase()];
+  const body = `${grouped}.${cents}`;
+  return symbol ? `${negative ? "-" : ""}${symbol}${body}` : `${negative ? "-" : ""}${amount.currency} ${body}`;
+}
+
 export interface KeyFactRow {
   label: string;
   value: string;
@@ -231,9 +299,16 @@ export interface BuiltKeyFacts {
 export function buildKeyFactRows(
   facts: ResolvedKeyFact[] | null | undefined,
   formatMoney: (amount: ProposalAmount) => string,
+  /** Currency to use when the fact table carries amounts but no Currency row —
+   *  taken from the proposal's own amount. Without it those rows would render as
+   *  bare decimals next to properly formatted ones. */
+  fallbackCurrency?: string | null,
 ): BuiltKeyFacts {
   const rows = facts ?? [];
-  const currency = rows.find((f) => f.label.trim().toLowerCase() === "currency")?.value?.trim();
+  const currency =
+    rows.find((f) => f.label.trim().toLowerCase() === "currency")?.value?.trim() ||
+    fallbackCurrency?.trim() ||
+    undefined;
   const primary: KeyFactRow[] = [];
   const technical: KeyFactRow[] = [];
   /* Resolution can make two facts identical: a fraud finding carries both
@@ -257,10 +332,15 @@ export function buildKeyFactRows(
     if (seenValues.has(raw)) continue;
     seenValues.add(raw);
 
-    const isMoney = Boolean(currency) && MONEY_LABEL_RE.test(label) && DECIMAL_RE.test(raw);
+    const isMoney =
+      Boolean(currency) &&
+      ((MONEY_LABEL_RE.test(label) && DECIMAL_RE.test(raw)) ||
+        (STRICT_MONEY_LABEL_RE.test(label) && NUMERIC_RE.test(raw)));
     primary.push({
       label,
-      value: isMoney ? formatMoney({ value: raw, currency: currency! }) : humanizeEnumValue(raw),
+      value: isMoney
+        ? formatMoney({ value: raw, currency: currency! })
+        : (formatFactDate(raw) ?? groupDigits(humanizeEnumValue(raw))),
       mono: isMoney,
       icon: iconKeyForRow(label),
     });
@@ -680,4 +760,100 @@ export function keyFactsFromPresentation(facts: ProposalKeyFact[] | null | undef
       return { label: f.label, value, technical: isIdentifierLabel(f.label) || isRawIdentifier(value) };
     })
     .filter((f) => f.value.trim() !== "");
+}
+
+/* ── Collections message draft ────────────────────────────────────────────────
+   brain-core composes the outbound text at EXECUTION time, so a pending
+   collections proposal carries no message to show. This composes a draft from
+   the proposal's own resolved facts so the approver can read what the chase
+   note will say before approving.
+
+   Two rules keep it honest:
+     • Every clause is dropped when its fact is missing — nothing here invents an
+       amount, a date or an invoice number.
+     • With no amount AND no invoice reference there is nothing concrete to
+       chase, so the draft is withheld entirely rather than padded with filler.
+   The card labels the result as a draft for review; it is not represented as
+   the exact bytes brain-core will send. */
+
+export interface DraftedMessage {
+  subject: string;
+  body: string;
+}
+
+const DRAFT_DAYS_RE = /(days?\s*(past\s*due|overdue)|overdue|aging|age)/i;
+const DRAFT_DUE_DATE_RE = /(due\s*date|date\s*due)/i;
+const DRAFT_AMOUNT_RE = /(amount|balance|outstanding|total|due)/i;
+const DRAFT_INVOICE_RE = /(invoice|receivable|reference|document)/i;
+const DRAFT_CUSTOMER_RE = /(customer|client|debtor|payer|counterparty|account\s*name|company)/i;
+const HAS_DIGIT_RE = /\d/;
+
+export function buildCollectionsDraft(
+  facts: KeyFactRow[] | null | undefined,
+  subjectName: string | null,
+  senderName: string | null,
+): DraftedMessage | null {
+  let customer = subjectName?.trim() || null;
+  let amount: string | null = null;
+  let invoice: string | null = null;
+  let daysOverdue: string | null = null;
+  let dueDate: string | null = null;
+
+  for (const row of facts ?? []) {
+    const label = row.label?.trim() ?? "";
+    const value = row.value?.trim() ?? "";
+    if (!label || !value) continue;
+
+    /* Order matters: "Days Past Due" and "Due Date" both contain "due", which is
+       also an amount label. The narrower slots claim the row first. */
+    if (!daysOverdue && DRAFT_DAYS_RE.test(label) && HAS_DIGIT_RE.test(value)) daysOverdue = value;
+    else if (!dueDate && DRAFT_DUE_DATE_RE.test(label)) dueDate = value;
+    else if (!amount && DRAFT_AMOUNT_RE.test(label) && HAS_DIGIT_RE.test(value)) amount = value;
+    else if (!invoice && DRAFT_INVOICE_RE.test(label)) invoice = value;
+    else if (!customer && DRAFT_CUSTOMER_RE.test(label)) customer = value;
+  }
+
+  if (!amount && !invoice) return null;
+
+  const reference = invoice ? `invoice ${invoice}` : "your account";
+  const amountClause = amount ? ` for ${amount}` : "";
+  const overdueClause = daysOverdue
+    ? ` is now ${/day/i.test(daysOverdue) ? daysOverdue : `${daysOverdue} days`} past due`
+    : dueDate
+      ? ` was due on ${dueDate}`
+      : " is still outstanding";
+
+  const subject = [invoice ? `Invoice ${invoice}` : "Outstanding balance", amount]
+    .filter(Boolean)
+    .join(" — ");
+
+  const body = [
+    `Hi ${customer ?? "there"},`,
+    "",
+    `Our records show ${reference}${amountClause}${overdueClause}. If payment is already on its way, please ignore this note.`,
+    "",
+    "If there's a problem with the invoice, reply here and we'll get it sorted. Otherwise, could you confirm when we can expect payment?",
+    "",
+    "Thanks,",
+    senderName?.trim() || "Accounts Receivable",
+  ].join("\n");
+
+  return { subject, body };
+}
+
+/* ── Bare amounts in brain-core prose ────────────────────────────────────────
+   Core writes narratives like "…for 50000.00 scored 0.70 fraud anomaly risk":
+   the amount arrives with no symbol, so the currency formatter walks past it and
+   the sentence prints a raw ledger value beside a properly formatted table.
+
+   Only a number with thousands grouping or 4+ integer digits AND exactly two
+   decimals is treated as money. That deliberately excludes scores ("0.70"),
+   percentages ("12.50%"), counts and versions — mislabelling one of those as
+   currency would be worse than leaving an amount unformatted. */
+const BARE_AMOUNT_RE =
+  /(?<![\w$€£¥.,-])(?<!(?:USD|EUR|GBP|JPY|[$€£¥])\s)(\d{1,3}(?:,\d{3})+|\d{4,})\.(\d{2})(?![\d%])/g;
+
+export function applyCurrencyToBareAmounts(text: string, currency: string | null | undefined): string {
+  if (!text || !currency) return text;
+  return text.replace(BARE_AMOUNT_RE, (m) => `${currency} ${m}`);
 }

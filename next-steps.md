@@ -36,7 +36,23 @@ Notes for whoever picks this up:
 - The Inbox gate is now `isDecidableProposal`, so notify-only compliance/fraud rows appear in
   Needs Review (29 items on that tenant) instead of only the Audit Log.
 - `server/auth-security.test.ts > reads and revokes legacy plaintext Plaid tokens` fails whenever
-  `DATABASE_URL` is set. Pre-existing and unrelated: 463 of 464 tests pass.
+  `DATABASE_URL` is set. Pre-existing and unrelated: every other test passes.
+
+### Figma parity pass (same branch, 2026-07-30)
+`LiveProposalModal` now matches Figma frame `5737-65928` (file `cC2lQwC3g9hv96o5Wgy8Ek`). The
+presentational primitives moved to `client/src/components/ProposalCardParts.tsx` so the spacing
+rhythm (32px between sections, 16px heading→body, 8px between stacked rows) is enforced by the
+components rather than repeated per section. Also in that pass: centred header with no avatar,
+risk pill in the hero, "Linked Evidence" rows, the Technical Detail heading as its own
+disclosure control, decision buttons as the last in-content section, and a pinned
+Previous / Next footer driven by the Inbox row order (`Proposal N of M`, disabled at the ends).
+- Evidence rows render **without** a chevron unless they open something. The frame draws one,
+  but no by-id viewer exists for live proposal evidence, and a chevron that does nothing is a
+  worse lie than a missing one. Wire the chevron the day a viewer lands.
+- The reference tenant has **no pending `collections` row** (all 8 are rejected), so the Message
+  Draft section was verified by intercepting `/api/brain/proposals` in the QA browser and
+  flipping one real record to `pending` — the component, BFF enrichment and fact table were all
+  real. Re-verify against a genuinely pending row when one exists.
 
 ## Regressed / pending re-wire — Fork A: propose-only §6 demo
 The June branch once had a "Brain proposes → §6/Policy gate decides" demo with no money movement.

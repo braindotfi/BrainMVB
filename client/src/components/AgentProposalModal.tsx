@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import approveIcon from "@assets/approve_1784154649123.png";
@@ -9,24 +9,18 @@ import {
   ArrowRight,
   ArrowUpRight,
   ArrowDown,
-  ArrowLeftRight,
   AlertTriangle,
   BookCheck,
-  Building2,
-  Calendar,
   Check,
   ChevronRight,
-  CircleDot,
   ClipboardCheck,
   DollarSign,
   FileText,
   HandCoins,
-  Hash,
   HeartPulse,
   Info,
   Landmark,
   LineChart,
-  Mail,
   Pencil,
   PiggyBank,
   Plane,
@@ -35,10 +29,7 @@ import {
   Repeat,
   Scale,
   ShieldAlert,
-  Tag,
   TrendingUp,
-  User,
-  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -60,8 +51,27 @@ import {
   resolveHeadlineText,
   resolveProseText,
   humanizeEnumValue,
+  buildCollectionsDraft,
+  applyCurrencyToBareAmounts,
+  formatSourceAmount,
   type DecisionButton,
 } from "@/lib/proposalCards";
+import {
+  ActionButton,
+  ActionRow,
+  CardBody,
+  CardSection,
+  CardText,
+  CollapsibleSection,
+  ConfidenceMeter,
+  EvidenceLinkRow,
+  HeadingValue,
+  InfoBox,
+  KeyFactsTable,
+  PagerFooter,
+  StatusPill,
+  WarningBox,
+} from "./ProposalCardParts";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
@@ -1361,27 +1371,20 @@ export function AgentProposalModal({
 
 /** Display name per agent, matching the copy already used per-record in
  *  agentProposals.ts's AGENT_PROPOSALS (client-owned presentation, not brain-core data). */
-/** Row-icon key (lib/proposalCards.ts) → component. Kept here because that module
- *  is unit-tested in a node env and must stay free of component imports. */
-const DETAIL_ROW_ICONS: Record<string, LucideIcon> = {
-  amount: DollarSign,
-  calendar: Calendar,
-  alert: AlertTriangle,
-  status: Info,
-  file: FileText,
-  building: Building2,
-  hash: Hash,
-  wallet: Wallet,
-  tag: Tag,
-  arrows: ArrowLeftRight,
-  user: User,
-  mail: Mail,
-  dot: CircleDot,
-};
-
 /** Agents whose approved action sends a message to someone outside the company
  *  (today: the dunning reminder Collections mails to a customer). */
 const SENDS_OUTBOUND_MESSAGE = new Set<AgentKey>(["collections"]);
+
+/* Agents whose approved action moves money. Only these may promise "Brain won't
+   move any funds until you approve" — for the rest the guarantee is the weaker,
+   accurate "won't act". */
+const MOVES_MONEY = new Set<AgentKey>([
+  "payment",
+  "treasury",
+  "cash_forecast",
+  "subscription",
+  "bill_management",
+]);
 
 export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   vendor_risk: "Vendor Risk",
@@ -1415,54 +1418,35 @@ export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
  *  A decision id outside the documented write set renders disabled: brain-core
  *  publishes domain labels ahead of the write verbs that accept them, and a
  *  button that always errors is worse than one that says it is not available. */
-function LiveDecisionButton({
-  decision,
-  pending,
-  onClick,
-}: {
-  decision: DecisionButton;
-  pending: boolean;
-  onClick: () => void;
-}) {
-  const tone =
-    decision.tone === "approve"
-      ? "bg-[#123509] hover:bg-[#0e2a07] text-[#42bf23] focus-visible:ring-[#42bf23]"
-      : decision.tone === "reject"
-        ? "bg-[#350011] hover:bg-[#44001a] text-[#d20344] focus-visible:ring-[#d20344]"
-        : "bg-[#7631ee] hover:bg-[#6528d4] text-white focus-visible:ring-[#7631EE]";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending || !decision.writable}
-      title={decision.writable ? (decision.meaning ?? undefined) : "This decision isn't available yet."}
-      data-testid={`button-live-proposal-${decision.id}`}
-      className={`flex-1 px-[20px] py-[10px] rounded-[100px] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] focus:outline-none focus-visible:ring-2 ${tone}`}
-    >
-      {decision.label}
-    </button>
-  );
-}
-
 export function LiveProposalModal({
   proposal,
   open,
   onOpenChange,
+  onPrev,
+  onNext,
+  hasPrev = false,
+  hasNext = false,
+  position,
 }: {
   proposal: BrainProposal | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Queue paging. Both handlers must be supplied or the pager is not rendered —
+   *  a footer with one live button reads as a broken control. */
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  /** "3 of 12", announced to screen readers only. */
+  position?: string;
 }) {
   const decide = useDecideProposal();
   const { formatText } = useCurrency();
   const [showTechnical, setShowTechnical] = useState(false);
-  const [showNarrative, setShowNarrative] = useState(false);
-  const [showMessage, setShowMessage] = useState(false);
 
   if (!proposal) return null;
 
   const agentKey = agentKeyForProposalType(proposal.type);
-  const AgentIcon = AGENT_ICONS[agentKey];
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 
@@ -1486,26 +1470,27 @@ export function LiveProposalModal({
   // active display currency + FX rate. Never pre-formatted server-side.
   const money = (a: ProposalAmount) => formatText(`${a.currency} ${a.value}`);
   const headline = buildProposalHeadline(evidence);
+  /* Core's own sentences: tag the bare ledger amounts it writes ("… for 50000.00")
+     with the currency its evidence cites, then run the whole line through the
+     active display currency. */
+  const prose = (t: string) => formatText(applyCurrencyToBareAmounts(t, headline.amount?.currency ?? null));
   // "AR-MIDMARKET-001 · $42,000.00" — each half omitted when the cited records
   // don't carry it, rather than shown blank.
   const headlineText = [headline.code, headline.amount ? money(headline.amount) : null]
     .filter(Boolean)
     .join(" · ");
   const allRows = buildProposalDetailRows(evidence, subjectName, money, headline.code);
-  // Only offer the section on agents whose approved action actually sends
-  // something to a third party. brain-core leaves `action_type` null, so there
-  // is no generic way to detect it — and rendering "message preview" on, say, a
-  // reconciliation proposal would imply an outbound message that never exists.
-  const sendsOutboundMessage = SENDS_OUTBOUND_MESSAGE.has(agentKey);
   const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
   const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
 
   /* Key facts: brain-core's own table, with ids already swapped for names by the
      BFF. `keyFactsFromPresentation` is the fallback for a record that reached this
      modal without passing through the enriching route — it applies the same
-     primary/technical split, just without the id→name resolution. */
+     primary/technical split, just without the id→name resolution.
+     The currency cited by the proposal's own evidence backs amounts on tables
+     that omit a Currency row. */
   const resolvedFacts = proposal.key_facts ?? keyFactsFromPresentation(presentation?.key_facts);
-  const keyFacts = buildKeyFactRows(resolvedFacts, money);
+  const keyFacts = buildKeyFactRows(resolvedFacts, money, headline.amount?.currency ?? null);
   /* Evidence the card can NAME. Unresolved refs and wiki context are excluded here
      and appear only in the technical section (buildEvidenceTiles). */
   const evidenceTiles = buildEvidenceTiles(evidence);
@@ -1516,13 +1501,58 @@ export function LiveProposalModal({
      risk is elevated"). Swap in the names we resolved; an id that resolved to
      nothing is dropped rather than shown on the card face. */
   const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
-  const cardHeadline = resolveHeadlineText(presentation?.headline, refDisplays);
+  const resolvedHeadline = resolveHeadlineText(presentation?.headline, refDisplays);
+  // Amounts inside core's prose go through the active display currency too.
+  const cardHeadline = resolvedHeadline ? prose(resolvedHeadline) : null;
   /* Core's narrative names its subject by raw id too. */
   const cardNarrative = resolveProseText(proposal.narrative, refDisplays);
-  const narrativeIsLong = (cardNarrative?.length ?? 0) > 180;
   const recommendation = presentation?.recommendation?.trim()
     ? humanizeEnumValue(presentation.recommendation.trim())
     : null;
+
+  const subline =
+    [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
+    (subjectName
+      ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
+      : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`);
+
+  /* What the card guarantees while the record is pending. Derived from the
+     decisions core actually offers, so an acknowledge-only finding never claims
+     an approval gate it doesn't have. */
+  const canApprove = decisions.some((d) => d.id === "approve" && d.writable);
+  const ackOnly = !canApprove && decisions.some((d) => d.id === "acknowledge" && d.writable);
+  const assurance = !needsReview
+    ? null
+    : canApprove
+      ? MOVES_MONEY.has(agentKey)
+        ? "Brain won't move any funds until you approve."
+        : "Brain won't act on this until you approve."
+      : ackOnly
+        ? "This is a notification. Acknowledging records that you've seen it — nothing is executed either way."
+        : null;
+
+  /* Collections is the only agent whose approved action sends text to a third
+     party, so it is the only one that gets a draft to preview.
+     The draft quotes the amount in the RECORD's currency, not the operator's
+     display currency: the customer owes what the invoice says, and an FX-converted
+     figure in a chase note would be wrong. Everything else on the card stays in
+     the display currency. */
+  const messageDraft = SENDS_OUTBOUND_MESSAGE.has(agentKey)
+    ? buildCollectionsDraft(
+        buildKeyFactRows(resolvedFacts, formatSourceAmount, headline.amount?.currency ?? null).primary,
+        subjectName,
+        null,
+      )
+    : null;
+
+  const hasTechnical =
+    evidence.length > 0 ||
+    Boolean(proposal.payment_intent_id) ||
+    technicalLayers.length > 0 ||
+    keyFacts.technical.length > 0 ||
+    overflowRows.length > 0;
+
+  const showPager = Boolean(onPrev && onNext);
 
   const act = (decision: ProposalDecision) => {
     decide.mutate({ id: proposal.id, decision }, { onSuccess: () => onOpenChange(false) });
@@ -1540,439 +1570,307 @@ export function LiveProposalModal({
           data-testid="live-proposal-modal"
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-between px-[16px]">
-            <div className="flex items-center gap-[8px] min-w-0">
-              <AgentIcon size={18} className="text-[#a8b9f4] shrink-0" />
-              <DialogPrimitive.Title
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate"
-                data-testid="text-live-proposal-agent-name"
-              >
-                {AGENT_DISPLAY_NAME[agentKey]}
-              </DialogPrimitive.Title>
-            </div>
+          {/* Header — agent name centered, close right. No avatar anywhere on the
+              card: the agent is named once, here. */}
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center px-[16px]">
+            <DialogPrimitive.Title
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
+              data-testid="text-live-proposal-agent-name"
+            >
+              {AGENT_DISPLAY_NAME[agentKey]}
+            </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label="Close"
               data-testid="button-live-proposal-close"
-              className="size-[32px] shrink-0 flex items-center justify-center rounded-full hover:bg-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-[#222737] hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <X size={18} className="text-[#6c779d]" />
+              <X size={16} className="text-[#6c779d]" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[16px] p-[24px] w-full overflow-y-auto">
-            {/* Subject — who/what the proposal is about. brain-core sends only ids;
-                `subject` and every `display` below are resolved by the BFF
-                (server/brain/proposalEnrichment.ts), never looked up here. */}
-            <div className="flex items-center gap-[12px] w-full">
-              <div
-                aria-hidden="true"
-                className="size-[40px] shrink-0 rounded-full bg-[#1d2132] border border-[#2a3050] border-solid flex items-center justify-center"
-              >
-                {subjectName ? (
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]">
-                    {initialsOf(subjectName)}
-                  </span>
-                ) : (
-                  <AgentIcon size={18} className="text-[#a8b9f4]" />
-                )}
-              </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                {/* Headline: brain-core's own sentence when it sends one, so every
-                    client names the card identically; the resolved subject is the
-                    fallback for rows that predate the presentation block. */}
+          <div className="flex flex-col items-start w-full overflow-y-auto">
+            {/* Hero — risk pill directly under the header, then the headline group. */}
+            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[24px] items-start p-[24px] shrink-0 w-full">
+              {risk && (
+                <StatusPill
+                  label={risk.label}
+                  color={risk.color}
+                  background={risk.bg}
+                  border={risk.border}
+                  testId="pill-live-proposal-risk"
+                />
+              )}
+              <div className="flex flex-col gap-[8px] items-start w-full">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full"
                   data-testid="text-live-proposal-subject"
                 >
                   {cardHeadline ?? subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
                 </p>
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#6c779d] truncate"
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full"
                   data-testid="text-live-proposal-headline"
                 >
-                  {[cardHeadline && subjectName ? subjectName : null, headlineText]
-                    .filter(Boolean)
-                    .join(" · ") ||
-                    (subjectName
-                      ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
-                      : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`)}
+                  {subline}
                 </p>
               </div>
-              {risk && (
-                <div
-                  className="inline-flex shrink-0 items-center justify-center px-[10px] py-[4px] rounded-[100px]"
-                  style={{ background: risk.bg, border: `1px solid ${risk.border}` }}
-                  data-testid="pill-live-proposal-risk"
-                >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]" style={{ color: risk.color }}>
-                    {risk.label}
-                  </span>
-                </div>
-              )}
             </div>
 
-            {/* Confidence — "High · 47%". The band is brain-core's own, not derived
-                from the percentage: the two legitimately differ (a strong signal the
-                model is only moderately certain about). */}
-            {confidence && (
-              <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-proposal-confidence">
-                <div className="flex items-center justify-between">
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">Confidence</span>
-                  <span
-                    className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]"
-                    data-testid="text-live-proposal-confidence"
-                  >
-                    {confidence.text}
-                  </span>
-                </div>
-                <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidence.pct}%` }} />
-                </div>
-              </div>
-            )}
+            <CardBody>
+              {assurance && <InfoBox testId="box-live-proposal-assurance">{assurance}</InfoBox>}
 
-            {/* Recommended Action — brain-core's `presentation.recommendation`.
-                Same section the Invoice / Cash Agent card uses. */}
-            {recommendation && (
-              <div className="flex flex-col gap-[8px] items-start w-full">
-                <SectionLabel>Recommended Action</SectionLabel>
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[21px] text-[#a8b9f4] text-[15px] w-full"
-                  data-testid="text-live-proposal-recommendation"
-                >
-                  {recommendation}
-                </p>
-              </div>
-            )}
+              {/* Recommended Action — brain-core's `presentation.recommendation`. */}
+              {recommendation && (
+                <CardSection title="Recommended Action">
+                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
+                </CardSection>
+              )}
 
-            {/* Decision-supporting detail, prioritised and capped so the card stays
-                scannable. Everything here is a real ledger field. */}
-            {detailRows.length > 0 && (
-              <div
-                className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
-                data-testid="list-live-proposal-details"
-              >
-                {detailRows.map((r, i) => {
-                  const RowIcon = DETAIL_ROW_ICONS[r.icon] ?? CircleDot;
-                  return (
-                  <div
-                    key={`${r.label}-${i}`}
-                    className={`flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10] ${
-                      i > 0 ? "border-t border-[#1d2132] border-solid" : ""
-                    }`}
-                  >
-                    <span className="flex items-center gap-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
-                      <RowIcon size={14} className="text-[#6c779d] shrink-0" aria-hidden="true" />
-                      {r.label}
-                    </span>
-                    <span
-                      className={`text-[13px] text-[#a8b9f4] text-right truncate ${
-                        r.mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-medium"
-                      }`}
-                      data-testid={`text-live-proposal-detail-${r.label.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      {r.value}
-                    </span>
+              {/* The agent's own reasoning, then the structured facts behind it. */}
+              {(cardNarrative || detailRows.length > 0) && (
+                <CardSection title="Why This Needs Your Call">
+                  {cardNarrative && (
+                    <CardText testId="text-live-proposal-narrative">{prose(cardNarrative)}</CardText>
+                  )}
+                  {detailRows.length > 0 && (
+                    <KeyFactsTable rows={detailRows} testId="list-live-proposal-details" />
+                  )}
+                </CardSection>
+              )}
+
+              {/* Linked Evidence — Wiki-resolved records only. A ref that resolved to
+                  nothing yields NO row: the only thing left to show would be the raw
+                  id this view must not contain, and it is already in Technical Detail. */}
+              {evidenceTiles.length > 0 && (
+                <CardSection title="Linked Evidence">
+                  <div className="flex flex-col gap-[8px] items-start w-full" data-testid="list-live-proposal-evidence">
+                    {evidenceTiles.map((tile, i) => (
+                      <EvidenceLinkRow
+                        key={`${tile.label}-${tile.display}-${i}`}
+                        tag={tile.label}
+                        label={tile.display}
+                        caption={
+                          tile.facts.length > 0
+                            ? tile.facts.map((f) => `${f.label}: ${f.value}`).join(" · ")
+                            : null
+                        }
+                        testId={`tile-live-proposal-evidence-${i}`}
+                      />
+                    ))}
                   </div>
-                  );
-                })}
-              </div>
-            )}
+                </CardSection>
+              )}
 
-            {/* The agent's own message, under the section title the spec names.
-                Clamped when long — approvers scan the structured rows first and read
-                the prose only if they need it. */}
-            {cardNarrative && (
-              <div className="flex flex-col gap-[6px] w-full">
-                <SectionLabel>Why This Needs Your Call</SectionLabel>
-                <p
-                  className={`[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] ${
-                    narrativeIsLong && !showNarrative ? "line-clamp-3" : ""
-                  }`}
-                  data-testid="text-live-proposal-narrative"
+              {/* Confidence — "High · 47%". The band is brain-core's own, not derived
+                  from the percentage: the two legitimately differ (a strong signal the
+                  model is only moderately certain about). */}
+              {confidence && (
+                <CardSection
+                  title="Confidence"
+                  trailing={<HeadingValue testId="text-live-proposal-confidence">{confidence.text}</HeadingValue>}
+                  testId="bar-live-proposal-confidence"
                 >
-                  {formatText(cardNarrative)}
-                </p>
-                {narrativeIsLong && (
-                  <button
-                    type="button"
-                    onClick={() => setShowNarrative((v) => !v)}
-                    data-testid="button-live-proposal-narrative-toggle"
-                    className="self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
-                  >
-                    {showNarrative ? "Show less" : "Show more"}
-                  </button>
-                )}
-              </div>
-            )}
+                  <ConfidenceMeter pct={confidence.pct} />
+                </CardSection>
+              )}
 
-            {/* Evidence — Wiki-resolved records only. A ref that resolved to nothing
-                yields NO tile: the only thing left to show would be the raw id this
-                view must not contain, and it is already in the technical section. */}
-            {evidenceTiles.length > 0 && (
-              <div className="flex flex-col gap-[8px] items-start w-full">
-                <SectionLabel>Evidence</SectionLabel>
-                <div
-                  className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] w-full flex flex-col overflow-hidden"
-                  data-testid="list-live-proposal-evidence"
-                >
-                  {evidenceTiles.map((tile, i) => (
-                    <div
-                      key={`${tile.label}-${tile.display}-${i}`}
-                      className={`flex flex-col gap-[2px] px-[12px] py-[10px] ${
-                        i > 0 ? "border-t border-[#1d2132] border-solid" : ""
-                      }`}
-                      data-testid={`tile-live-proposal-evidence-${i}`}
-                    >
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-[#6c779d] uppercase tracking-[0.04em]">
-                        {tile.label}
-                      </span>
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4]">
-                        {tile.display}
-                      </span>
-                      {tile.facts.length > 0 && (
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-                          {tile.facts.map((f) => `${f.label}: ${f.value}`).join(" · ")}
-                        </span>
-                      )}
-                    </div>
+              {/* What Happens Next / If This Is Wrong — brain-core's own consequence
+                  text per decision. A decision core wrote no consequence for produces
+                  no line, and an empty section is dropped entirely rather than filled
+                  with generic reassurance. */}
+              {consequences.next.length > 0 && (
+                <CardSection title="What Happens Next">
+                  {consequences.next.map((line) => (
+                    <CardText key={line.decisionId} testId={`text-live-proposal-next-${line.decisionId}`}>
+                      <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {prose(line.text)}
+                    </CardText>
                   ))}
-                </div>
-              </div>
-            )}
+                </CardSection>
+              )}
 
-            {/* What Happens Next / If This Is Wrong — brain-core's own consequence
-                text per decision. A decision core wrote no consequence for produces
-                no line, and an empty section is dropped entirely rather than filled
-                with generic reassurance. */}
-            {consequences.next.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
-                <SectionLabel>What Happens Next</SectionLabel>
-                {consequences.next.map((line) => (
-                  <p
-                    key={line.decisionId}
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d] w-full"
-                    data-testid={`text-live-proposal-next-${line.decisionId}`}
-                  >
-                    <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {formatText(line.text)}
-                  </p>
-                ))}
-              </div>
-            )}
+              {(consequences.ifWrong.length > 0 || flaggedBy) && (
+                <CardSection title={consequences.ifWrong.length > 0 ? "If This Is Wrong" : "Attribution"}>
+                  {consequences.ifWrong.map((line) => (
+                    <WarningBox key={line.decisionId} testId={`text-live-proposal-if-wrong-${line.decisionId}`}>
+                      <span className="font-semibold">{line.label}</span> {prose(line.text)}
+                    </WarningBox>
+                  ))}
+                  {/* Flagged by — policy_id, else the matched rule, else the policy's
+                      own content. Omitted outright when the record carries no policy
+                      at all, never rendered as "Flagged by —". */}
+                  {flaggedBy && (
+                    <CardText testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
+                      Flagged by <span className="text-[#a8b9f4]">{flaggedBy.text}</span>
+                    </CardText>
+                  )}
+                </CardSection>
+              )}
 
-            {consequences.ifWrong.length > 0 && (
-              <div className="flex flex-col gap-[12px] items-start w-full">
-                <SectionLabel>If This Is Wrong</SectionLabel>
-                {consequences.ifWrong.map((line) => (
-                  <p
-                    key={line.decisionId}
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d] w-full"
-                    data-testid={`text-live-proposal-if-wrong-${line.decisionId}`}
-                  >
-                    <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {formatText(line.text)}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {/* Flagged by — policy_id, else the matched rule, else the policy's own
-                content. Omitted outright when the record carries no policy at all
-                (buildFlaggedBy returns null), never rendered as "Flagged by —". */}
-            {flaggedBy && (
-              <div
-                className="border border-[#1d2132] rounded-[12px] p-[8px] flex items-start gap-[8px] w-full"
-                data-testid="box-live-proposal-flagged-by"
-              >
-                <Info size={14} className="text-[#6c779d] shrink-0 mt-[2px]" aria-hidden="true" />
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] flex-1 min-w-0"
-                  data-testid={`text-live-proposal-flagged-by-${flaggedBy.source}`}
-                >
-                  <span className="font-semibold text-[#a8b9f4]">Flagged by</span> {flaggedBy.text}
-                </p>
-              </div>
-            )}
-
-            {/* Message preview — placeholder only, and deliberately so.
-                TODO(brain-core): show the real outbound text here once brain-core
-                exposes a draft/message field on GET /proposals/{id}, COMPOSED AT
-                PROPOSE-TIME. Today it composes the text at execution time, so both
-                the list row and the by-id read come back with no message content
-                (identical key sets, action_type null) and there is nothing to show.
-                Do NOT compose a draft client-side to fill this in: this sits above
-                an Approve button on a real customer communication, so invented text
-                would be read as the thing that gets sent. The brain-core change is
-                tracked separately — UI depends on the endpoint existing, not the
-                other way around. */}
-            {sendsOutboundMessage && (
-              <div className="flex flex-col gap-[8px] w-full">
-                <button
-                  type="button"
-                  onClick={() => setShowMessage((v) => !v)}
-                  aria-expanded={showMessage}
-                  data-testid="button-live-proposal-message-toggle"
-                  className="flex items-center gap-[4px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
-                >
-                  <ChevronRight size={14} className={`transition-transform ${showMessage ? "rotate-90" : ""}`} />
-                  Message preview
-                </button>
-                {showMessage && (
-                  <div
-                    className="flex items-start gap-[8px] w-full rounded-[8px] border border-[#1d2132] bg-[#0a0c10] px-[12px] py-[10px]"
-                    data-testid="text-live-proposal-message-unavailable"
-                  >
-                    <Info size={14} className="text-[#6c779d] shrink-0 mt-[2px]" aria-hidden="true" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[18px] text-[#6c779d]">
-                      Not available until this proposal is approved — the draft text isn't
-                      generated until execution.
+              {/* Message Draft — composed from this proposal's own facts so the
+                  approver can read the chase note before approving. brain-core still
+                  generates the text that actually goes out at execution time, which
+                  the caption says plainly. */}
+              {messageDraft && (
+                <CardSection title="Message Draft" testId="section-live-proposal-message-draft">
+                  <div className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[16px] w-full flex flex-col gap-[12px]">
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[20px] text-[#a8b9f4]"
+                      data-testid="text-live-proposal-message-subject"
+                    >
+                      Subject: {messageDraft.subject}
+                    </p>
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-pre-wrap"
+                      data-testid="text-live-proposal-message-body"
+                    >
+                      {messageDraft.body}
                     </p>
                   </div>
-                )}
-              </div>
-            )}
+                  <InfoBox testId="box-live-proposal-message-note">
+                    Draft for review, composed from this proposal's facts. Brain generates the
+                    final wording when the message is sent.
+                  </InfoBox>
+                </CardSection>
+              )}
 
-            {/* Technical reference — raw ids live here, collapsed, so the card reads
-                as names but the underlying refs stay available for support. */}
-            {(evidence.length > 0 ||
-              proposal.payment_intent_id ||
-              technicalLayers.length > 0 ||
-              keyFacts.technical.length > 0) && (
-              <div className="flex flex-col gap-[8px] w-full">
-                <button
-                  type="button"
-                  onClick={() => setShowTechnical((v) => !v)}
-                  aria-expanded={showTechnical}
-                  data-testid="button-live-proposal-technical-toggle"
-                  className="flex items-center gap-[4px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+              {/* Technical reference — raw ids live here, collapsed, so the card reads
+                  as names but the underlying refs stay available for support. */}
+              {hasTechnical && (
+                <CollapsibleSection
+                  title="Technical Detail"
+                  expanded={showTechnical}
+                  onToggle={() => setShowTechnical((v) => !v)}
+                  toggleTestId="button-live-proposal-technical-toggle"
                 >
-                  <ChevronRight size={14} className={`transition-transform ${showTechnical ? "rotate-90" : ""}`} />
-                  Technical Detail
-                </button>
-                {showTechnical && (
                   <div
-                    className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
+                    className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[16px] p-[16px] w-full flex flex-col gap-[16px]"
                     data-testid="list-live-proposal-technical"
                   >
-                    {/* The stored action type the public `type` was derived from —
-                        the first thing to check when a card routes oddly. */}
-                    {proposal.stored_action_type && (
-                      <div className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">
-                          Stored action type
-                        </span>
-                        <span
-                          className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#a8b9f4] text-right truncate"
-                          data-testid="text-live-proposal-stored-action-type"
+                      {/* The stored action type the public `type` was derived from —
+                          the first thing to check when a card routes oddly. */}
+                      {proposal.stored_action_type && (
+                        <TechnicalBlock label="Stored action type">
+                          <span data-testid="text-live-proposal-stored-action-type">
+                            {proposal.stored_action_type}
+                          </span>
+                        </TechnicalBlock>
+                      )}
+                      {/* Identifier facts, kept out of the card face by
+                          buildKeyFactRows but preserved verbatim for support. */}
+                      {keyFacts.technical.map((r, i) => (
+                        <TechnicalBlock key={`tech-fact-${i}`} label={r.label} testId={`row-live-proposal-technical-fact-${i}`}>
+                          {r.value}
+                        </TechnicalBlock>
+                      ))}
+                      {overflowRows.map((r, i) => (
+                        <TechnicalBlock key={`overflow-${i}`} label={r.label}>
+                          {r.value}
+                        </TechnicalBlock>
+                      ))}
+                      {evidence.map((e, i) => (
+                        <TechnicalBlock
+                          key={`ev-${i}`}
+                          label={e.display ? `${e.label ?? e.kind} · ${e.display}` : (e.label ?? e.kind)}
                         >
-                          {proposal.stored_action_type}
-                        </span>
-                      </div>
-                    )}
-                    {/* Identifier facts, kept out of the card face by
-                        buildKeyFactRows but preserved verbatim for support. */}
-                    {keyFacts.technical.map((r, i) => (
-                      <div
-                        key={`tech-fact-${i}`}
-                        className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]"
-                        data-testid={`row-live-proposal-technical-fact-${i}`}
-                      >
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">{r.label}</span>
-                        <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] text-right break-all">{r.value}</span>
-                      </div>
-                    ))}
-                    {overflowRows.map((r, i) => (
-                      <div key={`overflow-${i}`} className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">{r.label}</span>
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#a8b9f4] text-right truncate">{r.value}</span>
-                      </div>
-                    ))}
-                    {evidence.map((e, i) => (
-                      <div key={`ev-${i}`} className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">
-                          {e.display ? `${e.label ?? e.kind} · ${e.display}` : (e.label ?? e.kind)}
-                        </span>
-                        <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] break-all">{e.ref}</span>
-                      </div>
-                    ))}
-                    {/* No live PaymentIntent-by-id detail viewer exists outside ReviewPage's
-                        own local queue state (openProposalDetail.ts only resolves the
-                        fabricated mock catalogue) - reference text, not a link. */}
-                    {proposal.payment_intent_id && (
-                      <div className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">Payment intent</span>
-                        <span
-                          className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] break-all"
-                          data-testid="text-live-proposal-payment-intent"
+                          {e.ref}
+                        </TechnicalBlock>
+                      ))}
+                      {/* No live PaymentIntent-by-id detail viewer exists outside ReviewPage's
+                          own local queue state (openProposalDetail.ts only resolves the
+                          fabricated mock catalogue) - reference text, not a link. */}
+                      {proposal.payment_intent_id && (
+                        <TechnicalBlock label="Payment intent">
+                          <span data-testid="text-live-proposal-payment-intent">{proposal.payment_intent_id}</span>
+                        </TechnicalBlock>
+                      )}
+                      {/* The six pipeline layers, in contract order. Rendered as the
+                          JSON core sent: this is the audit trail, so it is shown
+                          as-is rather than reworded. */}
+                      {technicalLayers.map((layer) => (
+                        <TechnicalBlock
+                          key={layer.key}
+                          label={layer.title}
+                          testId={`layer-live-proposal-technical-${layer.key}`}
                         >
-                          {proposal.payment_intent_id}
-                        </span>
-                      </div>
-                    )}
-                    {/* The six pipeline layers, in contract order. Rendered as the
-                        JSON core sent: this is the audit trail, so it is shown
-                        as-is rather than reworded. */}
-                    {technicalLayers.map((layer) => (
-                      <div
-                        key={layer.key}
-                        className="flex flex-col gap-[4px] px-[12px] py-[8px] bg-[#0a0c10]"
-                        data-testid={`layer-live-proposal-technical-${layer.key}`}
-                      >
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">{layer.title}</span>
-                        <pre className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#414965] whitespace-pre-wrap break-all m-0">
                           {layer.json}
-                        </pre>
-                      </div>
-                    ))}
+                        </TechnicalBlock>
+                      ))}
                   </div>
-                )}
-              </div>
-            )}
+                </CollapsibleSection>
+              )}
 
-            {/* ponytail: edit-at-decide is deferred - the merged decide contract only
-                accepts { decision }, no edit payload, so there's nothing to wire an
-                inline edit flow to yet. */}
+              {/* Decisions close the card, as in the frame. Buttons come from
+                  `available_decisions`, so a compliance finding offers only
+                  Acknowledge, a fraud hold only its own decision, and a treasury
+                  sweep Approve / Reject — without this component knowing anything
+                  about those types. Labels are brain-core's; the wire value stays
+                  the documented write verb (see buildDecisionButtons). */}
+              {needsReview && decisions.length > 0 ? (
+                <ActionRow testId="group-live-proposal-decisions">
+                  {decisions.map((d) => (
+                    <ActionButton
+                      key={d.id}
+                      label={d.label}
+                      tone={d.tone}
+                      disabled={!d.writable || decide.isPending}
+                      title={
+                        d.writable
+                          ? (d.meaning ?? undefined)
+                          : `brain-core offers "${d.id}", which this app cannot submit yet.`
+                      }
+                      onClick={d.writable ? () => act(d.id as ProposalDecision) : undefined}
+                      testId={`button-live-proposal-decision-${d.id}`}
+                    />
+                  ))}
+                </ActionRow>
+              ) : needsReview ? (
+                /* Pending, but core offered no decision this client can write. Say so
+                   rather than showing an Approve button that would 400. */
+                <CardText className="text-center" testId="text-live-proposal-no-decisions">
+                  No decision is available for this proposal.
+                </CardText>
+              ) : (
+                <CardText className="text-center" testId="text-live-proposal-decided">
+                  Decision recorded: {proposal.status}
+                </CardText>
+              )}
+            </CardBody>
           </div>
 
-          <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[24px] w-full shrink-0">
-            {needsReview && decisions.length > 0 ? (
-              /* Buttons come from `available_decisions`, so a compliance finding
-                 offers only Acknowledge, a fraud hold only its own decision, and a
-                 treasury sweep Approve / Reject — without this component knowing
-                 anything about those types. Labels are brain-core's; the wire value
-                 stays the documented write verb (see buildDecisionButtons). */
-              <div className="flex gap-[12px] w-full" data-testid="group-live-proposal-decisions">
-                {decisions.map((d) => (
-                  <LiveDecisionButton
-                    key={d.id}
-                    decision={d}
-                    pending={decide.isPending}
-                    onClick={() => act(d.id as ProposalDecision)}
-                  />
-                ))}
-              </div>
-            ) : needsReview ? (
-              /* Pending, but core offered no decision this client can write. Say so
-                 rather than showing an Approve button that would 400. */
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
-                data-testid="text-live-proposal-no-decisions"
-              >
-                No decision is available for this proposal.
-              </p>
-            ) : (
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
-                data-testid="text-live-proposal-decided"
-              >
-                Decision recorded: {proposal.status}
-              </p>
-            )}
-          </div>
+          {showPager && (
+            <PagerFooter
+              onPrev={onPrev!}
+              onNext={onNext!}
+              hasPrev={hasPrev}
+              hasNext={hasNext}
+              position={position}
+            />
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
+
+/** One labelled block inside the collapsed technical card. */
+const TechnicalBlock = ({
+  label,
+  children,
+  testId,
+}: {
+  label: string;
+  children: ReactNode;
+  testId?: string;
+}) => (
+  <div className="flex flex-col gap-[4px] w-full" data-testid={testId}>
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d]">
+      {label}
+    </span>
+    <pre className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] leading-[16px] text-[#414965] whitespace-pre-wrap break-all m-0">
+      {children}
+    </pre>
+  </div>
+);
 
 /** Compact row for a live proposal, matching LiveInsightRow/ProposalRow's existing
  *  styling. Works off the list SUMMARY shape (no fan-out needed just to render a row). */
