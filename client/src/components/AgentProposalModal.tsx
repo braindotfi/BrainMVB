@@ -1375,17 +1375,6 @@ export function AgentProposalModal({
  *  (today: the dunning reminder Collections mails to a customer). */
 const SENDS_OUTBOUND_MESSAGE = new Set<AgentKey>(["collections"]);
 
-/* Agents whose approved action moves money. Only these may promise "Brain won't
-   move any funds until you approve" — for the rest the guarantee is the weaker,
-   accurate "won't act". */
-const MOVES_MONEY = new Set<AgentKey>([
-  "payment",
-  "treasury",
-  "cash_forecast",
-  "subscription",
-  "bill_management",
-]);
-
 export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   vendor_risk: "Vendor Risk",
   payment: "Payment",
@@ -1516,21 +1505,6 @@ export function LiveProposalModal({
       ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
       : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`);
 
-  /* What the card guarantees while the record is pending. Derived from the
-     decisions core actually offers, so an acknowledge-only finding never claims
-     an approval gate it doesn't have. */
-  const canApprove = decisions.some((d) => d.id === "approve" && d.writable);
-  const ackOnly = !canApprove && decisions.some((d) => d.id === "acknowledge" && d.writable);
-  const assurance = !needsReview
-    ? null
-    : canApprove
-      ? MOVES_MONEY.has(agentKey)
-        ? "Brain won't move any funds until you approve."
-        : "Brain won't act on this until you approve."
-      : ackOnly
-        ? "This is a notification. Acknowledging records that you've seen it — nothing is executed either way."
-        : null;
-
   /* Collections is the only agent whose approved action sends text to a third
      party, so it is the only one that gets a draft to preview.
      The draft quotes the amount in the RECORD's currency, not the operator's
@@ -1617,8 +1591,6 @@ export function LiveProposalModal({
             </div>
 
             <CardBody>
-              {assurance && <InfoBox testId="box-live-proposal-assurance">{assurance}</InfoBox>}
-
               {/* Recommended Action — brain-core's `presentation.recommendation`. */}
               {recommendation && (
                 <CardSection title="Recommended Action">
