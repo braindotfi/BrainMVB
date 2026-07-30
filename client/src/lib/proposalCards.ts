@@ -20,6 +20,7 @@ import type {
   ProposalDecisionOption,
   ProposalConsequences,
   ProposalType,
+  BrainProposal,
 } from "./brainProposals";
 
 /** Keeps the card scannable: the rest moves into "Technical reference". */
@@ -201,6 +202,17 @@ export function titleCaseDecisionLabel(value: string): string {
   return value
     .trim()
     .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word))
+    .join(" ");
+}
+
+/** Capitalize every word in a display label, including labels that already
+ * contain spaces (for example, `Low risk` → `Low Risk`). */
+export function titleCaseLabel(value: string): string {
+  return value
+    .trim()
     .replace(/\s+/g, " ")
     .split(" ")
     .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word))
@@ -446,6 +458,39 @@ export function resolveProseText(
   refs: Map<string, string>,
 ): string | null {
   return resolveHeadlineText(text, refs, { sentenceCase: false });
+}
+
+export interface ProposalHeaderCopy {
+  title: string;
+  text: string;
+}
+
+/** The exact two-line header shared by the detail card and proposal list rows. */
+export function buildProposalHeaderCopy(
+  proposal: BrainProposal,
+  agentName: string,
+  formatText: (text: string) => string,
+): ProposalHeaderCopy {
+  const evidence = proposal.evidence ?? [];
+  const subjectName = proposal.subject?.display ?? null;
+  const headline = buildProposalHeadline(evidence);
+  const headlineText = [
+    headline.code,
+    headline.amount ? formatText(`${headline.amount.currency} ${headline.amount.value}`) : null,
+  ].filter(Boolean).join(" · ");
+  const resolvedFacts = proposal.key_facts ?? keyFactsFromPresentation(proposal.presentation?.key_facts);
+  const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
+  const resolvedHeadline = resolveHeadlineText(proposal.presentation?.headline, refDisplays);
+  const cardHeadline = resolvedHeadline
+    ? formatText(applyCurrencyToBareAmounts(resolvedHeadline, headline.amount?.currency ?? null))
+    : null;
+
+  return {
+    title: cardHeadline ?? subjectName ?? agentName,
+    text:
+      [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
+      (subjectName ? `${proposal.subject!.label} · ${agentName}` : `Proposed by ${agentName}`),
+  };
 }
 
 /* ── "Flagged by …" ─────────────────────────────────────────────────────────── */

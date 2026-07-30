@@ -23,6 +23,8 @@ import {
   formatFactDate,
   formatSourceAmount,
   titleCaseDecisionLabel,
+  titleCaseLabel,
+  buildProposalHeaderCopy,
 } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
@@ -513,6 +515,50 @@ describe("resolveHeadlineText", () => {
     expect(resolveHeadlineText(null, refs)).toBeNull();
     expect(resolveHeadlineText("   ", refs)).toBeNull();
     expect(resolveHeadlineText("tx_01KYS8S1WB61VSWH6YJJ9AKFG9", new Map())).toBeNull();
+  });
+});
+
+describe("buildProposalHeaderCopy", () => {
+  it("matches the detail title/text and preserves title-case display labels", () => {
+    const proposal = {
+      id: "pr_test",
+      type: "vendor_risk",
+      created_at: "2026-07-30T00:00:00.000Z",
+      status: "pending",
+      risk_band: "high",
+      confidence: 0.9,
+      mode: "live",
+      narrative: "Review this vendor.",
+      evidence: [
+        {
+          kind: "invoice",
+          ref: "inv_01KYS8S1WJ3PJ4HHAM9JH4KHZD",
+          resolvable: true,
+          label: "Invoice",
+          display: "INV-001",
+          code: "INV-001",
+          amount: { value: "500.00", currency: "USD" },
+          facts: [],
+        },
+      ],
+      agent: { id: "agent_test", kind: "vendor_risk", display_name: "Vendor Risk" },
+      payment_intent_id: null,
+      action_type: null,
+      subject: { label: "Vendor", display: "Cascade Freight" },
+      presentation: {
+        headline: "inv_01KYS8S1WJ3PJ4HHAM9JH4KHZD vendor risk is elevated.",
+        key_facts: null,
+      },
+      key_facts: null,
+      resolved_refs: { inv_01KYS8S1WJ3PJ4HHAM9JH4KHZD: "INV-001" },
+    } as any;
+
+    const formatText = (value: string) => (value === "USD 500.00" ? "$500.00" : value);
+    expect(buildProposalHeaderCopy(proposal, "Vendor Risk", formatText)).toEqual({
+      title: "INV-001 vendor risk is elevated.",
+      text: "Cascade Freight · INV-001 · $500.00",
+    });
+    expect(titleCaseLabel("high risk")).toBe("High Risk");
   });
 });
 

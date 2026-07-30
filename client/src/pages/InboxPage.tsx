@@ -24,12 +24,10 @@ import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposa
 import {
   isDecidableProposal,
   buildDecisionButtons,
-  buildRefDisplayMap,
-  resolveProseText,
+  buildProposalHeaderCopy,
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
-import { RISK_META } from "@/lib/agentProposals";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -174,7 +172,9 @@ const InboxCard = ({
   const { formatText } = useCurrency();
   /* Second-row text: prefer "Why: …" if the record has it, else desc. Both are
      backend/LLM prose carrying raw amounts, so they go through formatText. */
-  const secondLine = item.why
+  const secondLine = item.liveAgentProposal
+    ? item.desc
+    : item.why
     ? `Why: ${formatText(item.why)}`
     : item.desc
       ? formatText(item.desc)
@@ -271,7 +271,7 @@ const InboxCard = ({
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const { intents, markDeclined, setApprovalState } = useIntents();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -556,21 +556,17 @@ export function InboxPage() {
        narrative — omitted when the record carries none (honest omission). */
     for (const p of needsReviewProposals) {
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
-      const riskLabel = p.risk_band ? RISK_META[p.risk_band].label : null;
-      const confidenceLabel = typeof p.confidence === "number" ? `${Math.round(p.confidence * 100)}% confidence` : null;
       const decisions = buildDecisionButtons(p.available_decisions);
+      const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
         id: p.id,
         kind: "proposal",
         tab: "Needs Review",
-        title: `${agentName} proposal`,
+        title: headerCopy.title,
         tag: agentName,
         tagClass: TAG_NEEDS_YOU,
-        desc: [riskLabel, confidenceLabel].filter(Boolean).join(" · ") || "Awaiting your decision",
+        desc: headerCopy.text,
         time: "",
-        /* Core writes raw ids into its own prose ("… for inv_01KY…"); the list is
-           a primary view, so resolve them exactly as the card does. */
-        why: resolveProseText(p.narrative, buildRefDisplayMap(p.key_facts, p.evidence, p.resolved_refs)) ?? undefined,
         /* Approve/Decline only when core actually offers them. */
         actionable: decisions.some((d) => d.writable && (d.id === "approve" || d.id === "reject")),
         liveAgentProposal: p,

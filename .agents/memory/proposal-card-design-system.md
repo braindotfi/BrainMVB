@@ -29,6 +29,18 @@ visible chevron on a dead row would be misleading.
 **How to apply:** preserve the title-only row. Add new entity kinds to the existing popup routing
 or the honest read-only fallback; never add a subtitle/fact preview back into the row.
 
+## Proposal header copy is shared across surfaces
+
+The detail hero's resolved two-line header is also the source for live proposal records in Inbox
+and Home's Brain Detected widget. The agent pill remains the agent name; Home's second line appends
+`Agent`, while the detail risk pill uses title case.
+
+**Why:** rebuilding from raw narrative or risk metadata caused the list surfaces to disagree with
+the title users saw after opening the recommendation.
+
+**How to apply:** use the shared header builder for title/text. Do not substitute the narrative,
+an agent placeholder, or a risk/confidence summary for live proposal row copy.
+
 ## Display currency vs source currency
 
 Everything on the card renders through `useCurrency().formatText`, which converts to the

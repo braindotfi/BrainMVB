@@ -25,6 +25,7 @@ import {
 import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { buildProposalHeaderCopy } from "@/lib/proposalCards";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -648,10 +649,11 @@ export function HomePage() {
     // the specific "Why:" text shown in Inbox; agent display name is the category.
     const proposalItems = needsReviewProposals.map((p) => {
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       return {
         id: p.id,
-        label: p.narrative ? formatText(p.narrative) : agentName,
-        subtitle: p.narrative ? agentName : undefined,
+        label: headerCopy.title,
+        subtitle: `${agentName} Agent`,
         onClick: () => setSelectedProposal(p),
       };
     });

@@ -52,6 +52,8 @@ import {
   resolveHeadlineText,
   resolveProseText,
   humanizeEnumValue,
+  buildProposalHeaderCopy,
+  titleCaseLabel,
   buildCollectionsDraft,
   applyCurrencyToBareAmounts,
   formatSourceAmount,
@@ -1459,6 +1461,7 @@ export function LiveProposalModal({
   if (!proposal) return null;
 
   const agentKey = agentKeyForProposalType(proposal.type);
+  const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 
@@ -1488,9 +1491,11 @@ export function LiveProposalModal({
   const prose = (t: string) => formatText(applyCurrencyToBareAmounts(t, headline.amount?.currency ?? null));
   // "AR-MIDMARKET-001 · $42,000.00" — each half omitted when the cited records
   // don't carry it, rather than shown blank.
-  const headlineText = [headline.code, headline.amount ? money(headline.amount) : null]
-    .filter(Boolean)
-    .join(" · ");
+  const headerCopy = buildProposalHeaderCopy(
+    proposal,
+    agentName,
+    formatText,
+  );
   const allRows = buildProposalDetailRows(evidence, subjectName, money, headline.code);
   const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
   const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
@@ -1550,20 +1555,11 @@ export function LiveProposalModal({
      risk is elevated"). Swap in the names we resolved; an id that resolved to
      nothing is dropped rather than shown on the card face. */
   const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
-  const resolvedHeadline = resolveHeadlineText(presentation?.headline, refDisplays);
-  // Amounts inside core's prose go through the active display currency too.
-  const cardHeadline = resolvedHeadline ? prose(resolvedHeadline) : null;
   /* Core's narrative names its subject by raw id too. */
   const cardNarrative = resolveProseText(proposal.narrative, refDisplays);
   const recommendation = presentation?.recommendation?.trim()
     ? humanizeEnumValue(presentation.recommendation.trim())
     : null;
-
-  const subline =
-    [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
-    (subjectName
-      ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
-      : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`);
 
   /* Collections is the only agent whose approved action sends text to a third
      party, so it is the only one that gets a draft to preview.
@@ -1611,7 +1607,7 @@ export function LiveProposalModal({
               className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
               data-testid="text-live-proposal-agent-name"
             >
-              {AGENT_DISPLAY_NAME[agentKey]}
+              {agentName}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label="Close"
@@ -1627,7 +1623,7 @@ export function LiveProposalModal({
             <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[24px] items-start p-[24px] shrink-0 w-full">
               {risk && (
                 <StatusPill
-                  label={risk.label}
+                  label={titleCaseLabel(risk.label)}
                   color={risk.color}
                   background={risk.bg}
                   border={risk.border}
@@ -1639,13 +1635,13 @@ export function LiveProposalModal({
                   className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full"
                   data-testid="text-live-proposal-subject"
                 >
-                  {cardHeadline ?? subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
+                  {headerCopy.title}
                 </p>
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full"
                   data-testid="text-live-proposal-headline"
                 >
-                  {subline}
+                  {headerCopy.text}
                 </p>
               </div>
             </div>
