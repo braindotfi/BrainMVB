@@ -657,7 +657,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   // ── Expanded panel ─────────────────────────────────────────────
   return (
-    <div className="relative w-[390px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden flex flex-col">
+    <div className="relative w-full max-w-[390px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden flex flex-col">
       {/* Header: collapse button + session dropdown */}
       <div className="flex items-center gap-[8px] p-[7px]">
         <button
@@ -813,10 +813,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                   }`}
                 >
                   <div
-                    className={`w-fit min-w-0 max-w-[80%] sm:max-w-[75%] break-words whitespace-pre-wrap px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
+                    className={`inline-flex w-auto max-w-[80%] sm:max-w-[75%] min-w-0 break-words whitespace-pre-wrap px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
-                        ? "bg-[#7631ee] text-white text-right"
-                        : "bg-[#222737] text-[#6c779d] text-left"
+                        ? "self-end bg-[#7631ee] text-white text-right"
+                        : "self-start bg-[#222737] text-[#6c779d] text-left"
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
