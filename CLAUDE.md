@@ -598,13 +598,27 @@ no per-agent card:
    the collapsed "Technical reference". Unknown labels sort last rather than being dropped, so
    a new brain-core fact still renders. The row repeating the headline document is suppressed.
 3. **Narrative**, clamped past 180 chars.
-4. **Collapsed "Technical reference"** — overflow rows, every raw ref, payment intent id.
+4. **Collapsed "Message preview"** — only for agents in `SENDS_OUTBOUND_MESSAGE` (today just
+   Collections; `action_type` is null upstream so there is no generic way to detect "this
+   approval sends an email", and offering the section on a reconciliation card would imply a
+   message that never exists). It currently holds a placeholder saying the text is not
+   generated until execution — see below.
+5. **Collapsed "Technical reference"** — overflow rows, every raw ref, payment intent id.
 
-**Do not add a row for a field brain-core does not carry.** Verified absent as of this writing:
-counterparties have **no email**, nothing tracks **reminder history**, and neither
-`GET /proposals` nor `GET /proposals/{id}` carries generated **message/draft content** (their
-key sets are identical, and `/messages`, `/reminders`, `/notifications` are all 404). A
-plausible-looking invented row is worse than a sparse card, because an approver acts on it.
+**Do not render a field brain-core does not carry — not even a plausible one.** This is an
+approval surface: whatever the card shows is what the approver believes they are authorising.
+Verified absent as of this writing:
+- Counterparties have **no email**, so there is no "Recipient" row.
+- Nothing tracks **reminder history** (`/collections/reminders`, `/reminders`, `/messages`,
+  `/notifications`, `/agents/messages` are all 404).
+- Neither `GET /proposals` nor `GET /proposals/{id}` carries **message/draft content** — their
+  key sets are identical and `action_type` is null. brain-core composes the outbound text at
+  *execution* time.
+
+The Message preview section therefore says so out loud rather than composing a draft
+client-side, which would put invented text above an Approve button on a real customer email.
+Replacing the placeholder requires brain-core to expose a draft field composed at **propose**
+time; the UI half must not be built before that endpoint exists.
 
 ## Currency formatting — one formatter, and never pre-format on the server
 Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
