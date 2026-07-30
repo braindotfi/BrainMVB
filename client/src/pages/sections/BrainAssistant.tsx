@@ -807,16 +807,20 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     </span>
                   </div>
                 )}
+                {/* flex-col + items-end/start is the reliable way to get
+                    intrinsic bubble width: when align-items ≠ stretch the
+                    cross-axis (width) resolves to the child's max-content,
+                    capped by max-w. No w-fit / inline-flex needed. */}
                 <div
-                  className={`flex w-full min-w-0 ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
+                  className={`flex flex-col w-full ${
+                    msg.role === "user" ? "items-end" : "items-start"
                   }`}
                 >
                   <div
-                    className={`inline-flex w-auto max-w-[80%] sm:max-w-[75%] min-w-0 break-words whitespace-pre-wrap px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
+                    className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
-                        ? "self-end bg-[#7631ee] text-white text-right"
-                        : "self-start bg-[#222737] text-[#6c779d] text-left"
+                        ? "bg-[#7631ee] text-white text-right"
+                        : "bg-[#222737] text-[#6c779d] text-left"
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
