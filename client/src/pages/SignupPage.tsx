@@ -325,7 +325,7 @@ export function SignupPage() {
               {submitting && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {mode === "login" ? "Sign in" : "Create account"}
+              {mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
 
@@ -354,7 +354,7 @@ export function SignupPage() {
               onClick={() => switchMode(mode === "login" ? "register" : "login")}
               className="text-[#a8b9f4] hover:text-[#7631ee] transition-colors font-medium"
             >
-              {mode === "login" ? "Sign up" : "Sign in"}
+              {mode === "login" ? "Sign Up" : "Sign In"}
             </button>
           </p>
         </div>
