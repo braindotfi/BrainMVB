@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -283,6 +283,98 @@ function renderInlineBold(text: string, keyBase = 0): React.ReactNode {
     }
     return <span key={key}>{part}</span>;
   });
+}
+
+/**
+ * Width of the widest laid-out line inside `el`.
+ *
+ * Rects are grouped by their `top` coordinate so a line split across several
+ * text nodes (e.g. "total is **$4,200** due") is measured as one line rather
+ * than as its separate fragments.
+ */
+function widestLineWidth(el: HTMLElement): number {
+  const range = document.createRange();
+  const lines = new Map<number, { left: number; right: number }>();
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    if (!node.nodeValue || !node.nodeValue.trim()) continue;
+    range.selectNodeContents(node);
+    for (const r of Array.from(range.getClientRects())) {
+      if (r.width === 0) continue;
+      const key = Math.round(r.top);
+      const cur = lines.get(key);
+      if (cur) {
+        cur.left = Math.min(cur.left, r.left);
+        cur.right = Math.max(cur.right, r.right);
+      } else {
+        lines.set(key, { left: r.left, right: r.right });
+      }
+    }
+  }
+  let widest = 0;
+  for (const { left, right } of lines.values()) {
+    widest = Math.max(widest, right - left);
+  }
+  return widest;
+}
+
+/**
+ * Chat bubble that hugs its text the way iMessage does.
+ *
+ * CSS cannot do this on its own: once text wraps, a box with `max-width`
+ * keeps the full max-width even when every laid-out line is shorter, and
+ * `fit-content` / `inline-block` / `display:table` all resolve to
+ * `min(max-content, available)` — the same 75%. So we let the browser wrap
+ * at max-width, measure the resulting line boxes, then pin the box to the
+ * widest one. Pinning to the widest line cannot change where the text
+ * breaks, so this settles in a single pass.
+ */
+function ChatBubble({
+  className,
+  measureKey,
+  measure = true,
+  children,
+}: {
+  className: string;
+  measureKey: string;
+  measure?: boolean;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!measure) {
+      el.style.width = "";
+      return;
+    }
+    const apply = () => {
+      // Release the pin so wrapping is recomputed against max-width.
+      el.style.width = "";
+      const widest = widestLineWidth(el);
+      if (widest <= 0) return;
+      const cs = getComputedStyle(el);
+      const pad =
+        parseFloat(cs.paddingLeft || "0") + parseFloat(cs.paddingRight || "0");
+      // +1px absorbs sub-pixel rounding so the last word can't re-wrap.
+      el.style.width = `${Math.ceil(widest + pad) + 1}px`;
+    };
+    apply();
+    // The panel is resizable, so re-measure when the row width changes.
+    const parent = el.parentElement;
+    if (!parent) return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [measureKey, measure]);
+
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
 }
 
 const CANNED_REPLY =
@@ -807,16 +899,19 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     </span>
                   </div>
                 )}
-                {/* flex-col + items-end/start is the reliable way to get
-                    intrinsic bubble width: when align-items ≠ stretch the
-                    cross-axis (width) resolves to the child's max-content,
-                    capped by max-w. No w-fit / inline-flex needed. */}
+                {/* items-end/start keeps the bubble off full width; max-w-[75%]
+                    caps where the text wraps. ChatBubble then pins the box to
+                    the widest laid-out line so it hugs the text — max-width
+                    alone leaves the box at 75% no matter how short the lines
+                    end up. */}
                 <div
                   className={`flex flex-col w-full ${
                     msg.role === "user" ? "items-end" : "items-start"
                   }`}
                 >
-                  <div
+                  <ChatBubble
+                    measureKey={msg.text}
+                    measure={msg.text !== ""}
                     className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
                         ? "bg-[#7631ee] text-white text-right"
@@ -832,7 +927,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     ) : (
                       renderRichText(msg.text, symbol)
                     )}
-                  </div>
+                  </ChatBubble>
                 </div>
                 {msg.role === "assistant" && msg.ungrounded && (
                   <div className="flex items-center gap-[4px] px-[4px] w-full">
