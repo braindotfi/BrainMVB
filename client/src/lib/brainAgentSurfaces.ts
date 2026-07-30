@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCurrency } from "./currencyContext";
+import { useCurrency } from "./useCurrency";
 
 /* ── Live read-only informational records from brain-core's Ledger ───────────
    The "Your Review" / "Brain Detected" surfaces used to render 11 fabricated

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AutoRule } from "./proposalTypes";
-import { useCurrency } from "./currencyContext";
+import { useCurrency } from "./useCurrency";
 
 /* ── Live brain-core policy → read only rule cards ────────────────────────────
    Surfaces the tenant's ACTUAL signed policy document on the Rules page via

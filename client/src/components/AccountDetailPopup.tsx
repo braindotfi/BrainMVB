@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 

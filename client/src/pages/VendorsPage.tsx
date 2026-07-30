@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";

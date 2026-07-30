@@ -11,7 +11,7 @@ import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";

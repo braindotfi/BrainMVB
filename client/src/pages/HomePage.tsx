@@ -8,7 +8,8 @@ import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
 import { onboardingKey as onboardingKeyFor, isOnboardingComplete, markOnboardingComplete } from "@/lib/onboarding";
 import { useIsDemoData } from "@/lib/demoMode";
-import { useCurrency, type CurrencyCode } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
+import { type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
@@ -257,15 +258,17 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; onClick: () => void };
+type WidgetItem = { id: string; label: string; subtitle?: string; onClick: () => void };
 const ListItem = ({
   icon,
   label,
+  subtitle,
   onClick,
   testId,
 }: {
   icon: React.ReactNode;
   label: string;
+  subtitle?: string;
   onClick: () => void;
   testId: string;
 }) => (
@@ -277,9 +280,10 @@ const ListItem = ({
   >
     {icon}
     <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
-      <div className="flex items-center gap-[8px] w-full min-w-0">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] truncate">{label}</p>
-      </div>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">{label}</p>
+      {subtitle && (
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] truncate w-full">{subtitle}</p>
+      )}
     </div>
   </button>
 );
@@ -326,6 +330,7 @@ const SectionWidget = ({
                 <ListItem
                   icon={icon}
                   label={item.label}
+                  subtitle={item.subtitle}
                   testId={`${testIdPrefix}-${item.id}`}
                   onClick={item.onClick}
                 />
@@ -580,7 +585,12 @@ export function HomePage() {
   const brainDidItems: WidgetItem[] = useMemo(() => {
     return liveAuditRecords
       .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
-      .map((r) => ({ id: r.id, label: r.summary, onClick: () => navigate(`/audit-log?record=${r.id}`) }));
+      .map((r) => ({
+        id: r.id,
+        label: r.summary,
+        subtitle: r.rowSubtitle || undefined,
+        onClick: () => navigate(`/audit-log?record=${r.id}`),
+      }));
   }, [liveAuditRecords, navigate]);
 
   /* Brain Detected. What Brain is advising for review: live brain-core
@@ -608,26 +618,40 @@ export function HomePage() {
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
 
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
+    // PaymentIntents from the live review queue — title is already specific
+    // (e.g. "Quick Pay Solutions scored 1.00 vendor risk…"); rationale is the
+    // "Why:" line shown in Inbox.
     const queueItems = liveNeedsReview.map((p) => ({
       id: p.id,
       label: p.title,
+      subtitle: p.rationale || undefined,
       onClick: () => setSelectedReview(p),
     }));
+    // Session-scoped intents — title is specific; description is the "Why:".
     const sessionItems = sessionReviews.map((r) => ({
       id: String(r.intentId ?? r.id),
       label: r.title,
+      subtitle: r.description || undefined,
       onClick: () => setSelectedLiveIntent(r),
     }));
+    // Read-only ledger insights — title is specific; subtitle is secondary context.
     const insightItems = liveInsights.map((i) => ({
       id: i.id,
       label: i.title,
+      subtitle: i.subtitle || undefined,
       onClick: () => setSelectedInsight(i),
     }));
-    const proposalItems = needsReviewProposals.map((p) => ({
-      id: p.id,
-      label: AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)],
-      onClick: () => setSelectedProposal(p),
-    }));
+    // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
+    // the specific "Why:" text shown in Inbox; agent display name is the category.
+    const proposalItems = needsReviewProposals.map((p) => {
+      const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      return {
+        id: p.id,
+        label: p.narrative ?? agentName,
+        subtitle: p.narrative ? agentName : undefined,
+        onClick: () => setSelectedProposal(p),
+      };
+    });
     return [...sessionItems, ...queueItems, ...insightItems, ...proposalItems];
   }, [liveNeedsReview, sessionReviews, liveInsights, needsReviewProposals]);
 
