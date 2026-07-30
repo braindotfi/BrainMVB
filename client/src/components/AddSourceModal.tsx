@@ -1351,14 +1351,11 @@ export function ReadingScreen({
  * Real obligations from GET /api/brain/ledger/obligations (advisory, conf ≤0.5). No pay path. */
 type FoundTab = "all" | "payable" | "receivable";
 
-async function fetchCounterparties(): Promise<Map<string, string>> {
+async function fetchCounterparties(): Promise<CounterpartyLite[]> {
   const res = await fetch("/api/brain/ledger/counterparties", { credentials: "include" });
-  if (!res.ok) return new Map();
+  if (!res.ok) return [];
   const json = (await res.json()) as CounterpartiesResponse | CounterpartyLite[];
-  const list = Array.isArray(json) ? json : (json.counterparties ?? []);
-  const map = new Map<string, string>();
-  for (const c of list) map.set(c.id, c.display_name ?? c.name ?? c.id);
-  return map;
+  return Array.isArray(json) ? json : (json.counterparties ?? []);
 }
 
 function formatMoney(amount: string, currency: string): string {
@@ -1388,9 +1385,18 @@ export function FoundScreen({ onFinish }: { onFinish: () => void }) {
     queryFn: fetchObligations,
     refetchInterval: (q) => ((q.state.data?.length ?? 0) === 0 ? 15000 : false),
   });
-  const counterpartiesQuery = useQuery<Map<string, string>>({
+  // Cache stores CounterpartyLite[] (consistent with all other consumers of this
+  // query key). `select` transforms to a Map locally so the Map never enters the
+  // shared cache — previously storing a Map caused "map.get is not a function"
+  // when any other consumer had already populated the cache with a plain array.
+  const counterpartiesQuery = useQuery<CounterpartyLite[], Error, Map<string, string>>({
     queryKey: ["/api/brain/ledger/counterparties"],
     queryFn: fetchCounterparties,
+    select: (list) => {
+      const m = new Map<string, string>();
+      for (const c of list) m.set(c.id, c.display_name ?? c.name ?? c.id);
+      return m;
+    },
   });
   /* Upload recency: if the newest document was uploaded within the last few
      minutes, an empty obligations list means "extraction still running", not
