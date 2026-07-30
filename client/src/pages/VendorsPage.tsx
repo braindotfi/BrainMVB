@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
@@ -310,107 +309,104 @@ export function VendorsPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-              The people and businesses you pay.
-            </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-              See vendor activity, payment history, risks, and recommendations.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-              {VENDOR_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#4a2300" : "#06070a" }}
-                    data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <p
-                      className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#ff9400" : "#414965" }}
-                    >
-                      {tab}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tab content */}
-          {isLoading ? (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                Loading vendors from Brain...
-              </p>
-            </div>
-          ) : isError ? (
-            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
-                Couldn't reach Brain to load vendors. Try again shortly.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              {/* Section header with tab name + count + Add Vendor button */}
-              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
-                <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-                  <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
-                  <div className="bg-[#414965] content-stretch flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                    <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] not-italic relative shrink-0 text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{tabVendors.length}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
-                  data-testid="button-add-vendor"
-                  className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
-                  Add Vendor
-                </button>
-              </div>
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {tabVendors.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                      {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
-                      {activeTab === "New" && "No new vendors detected yet."}
-                      {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                      {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {tabVendors.map((vendor, idx) => (
-                      <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                        <VendorRow
-                          vendor={vendor}
-                          format={format}
-                          onClick={() => handleOpenVendor(vendor)}
-                        />
-                        {idx < tabVendors.length - 1 && <Divider />}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          </div>
-
+      {/* Static chrome: header + tab bar — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
+        <div className="flex flex-col items-start gap-[4px] relative shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
+            The people and businesses you pay.
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+            See vendor activity, payment history, risks, and recommendations.
+          </p>
         </div>
-      </ScrollArea>
+        <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+          {VENDOR_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                style={{ background: isActive ? "#4a2300" : "#06070a" }}
+                data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <p
+                  className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
+                  style={{ color: isActive ? "#ff9400" : "#414965" }}
+                >
+                  {tab}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Table area: scrolls as a whole; panel header is sticky */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
+        {isLoading ? (
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              Loading vendors from Brain...
+            </p>
+          </div>
+        ) : isError ? (
+          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
+              Couldn't reach Brain to load vendors. Try again shortly.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
+            {/* Panel header — sticky */}
+            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative sticky top-0 z-10 w-full">
+              <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+                <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
+                <div className="bg-[#414965] content-stretch flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                  <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] not-italic relative shrink-0 text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{tabVendors.length}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                data-testid="button-add-vendor"
+                className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              >
+                <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+                Add Vendor
+              </button>
+            </div>
+            {/* Rows */}
+            <div className="p-[8px]">
+              {tabVendors.length === 0 ? (
+                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                    {activeTab === "New" && "No new vendors detected yet."}
+                    {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                    {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-[8px] items-start w-full">
+                  {tabVendors.map((vendor, idx) => (
+                    <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
+                      <VendorRow
+                        vendor={vendor}
+                        format={format}
+                        onClick={() => handleOpenVendor(vendor)}
+                      />
+                      {idx < tabVendors.length - 1 && <Divider />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <VendorDetailPopup
         vendor={detailVendor}

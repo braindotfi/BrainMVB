@@ -834,11 +834,6 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       {/* Header: text left, env toggle top-right. No bottom padding — root gap handles spacing. */}
       <div className="flex items-start justify-between gap-4 w-full">
         <div className="flex flex-col gap-[4px] min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]" data-testid="text-page-eyebrow">
-            Developers
-            {orgName && <span className="text-[#a8b9f4]">, {orgName}</span>}
-            .
-          </p>
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]" data-testid="text-page-title">
             Build on your Brain ledger.
           </p>
@@ -1155,7 +1150,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         );
       })()}
 
-      <div className="flex flex-col gap-[12px]">
+      <div className="flex flex-col gap-[12px] shrink-0">
         <div className="flex min-h-[36px] items-center justify-between gap-4">
           <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
           <button
@@ -1280,16 +1275,18 @@ function KeysSection({ env }: { env: DevEnv }) {
           </div>
         </PopupShell>
       )}
+      </div>
 
-      {keysUnavailable ? (
-        <KeysUnavailableCard testId="card-keys-unavailable-keys" />
-      ) : (
-      <Card testId="card-keys-list">
-        {keysQ.isLoading ? (
-          <EmptyRow>Loading keys…</EmptyRow>
-        ) : keysQ.isError ? (
-          <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
-        ) : keys.length === 0 ? (
+      <div>
+        {keysUnavailable ? (
+          <KeysUnavailableCard testId="card-keys-unavailable-keys" />
+        ) : (
+          <Card testId="card-keys-list">
+          {keysQ.isLoading ? (
+            <EmptyRow>Loading keys…</EmptyRow>
+          ) : keysQ.isError ? (
+            <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
+          ) : keys.length === 0 ? (
           <div className="p-[16px] flex flex-col gap-[4px]">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]" data-testid="text-no-keys-title">
               No {env} keys yet
@@ -1347,7 +1344,7 @@ function KeysSection({ env }: { env: DevEnv }) {
       </div>
 
       <div
-        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full shrink-0"
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
@@ -1727,8 +1724,8 @@ function UsageSection({ env }: { env: DevEnv }) {
   const trend = priorMonth > 0 ? Math.round(((thisMonth - priorMonth) / priorMonth) * 100) : null;
 
   return (
-    <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[4px]">
+    <div className="flex flex-col flex-1 min-h-0 gap-[16px]">
+      <div className="flex flex-col gap-[4px] shrink-0">
         <SectionLabel testId="text-usage-title">Usage and Limits</SectionLabel>
         <Card testId="card-usage-metrics">
         <div className="flex gap-[16px] items-stretch p-[16px]">
@@ -1789,6 +1786,7 @@ function UsageSection({ env }: { env: DevEnv }) {
         </Card>
       </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Method</SectionLabel>
         <Card testId="card-usage-by-method">
@@ -1928,6 +1926,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           </p>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -2035,8 +2034,10 @@ export function DevelopersPage() {
       </nav>
 
       {/* ── Content area ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="px-[16px] py-5">{SectionContent}</div>
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className={`${section === "usage" ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto"} px-[16px] py-5`}>
+          {SectionContent}
+        </div>
       </div>
     </div>
   );

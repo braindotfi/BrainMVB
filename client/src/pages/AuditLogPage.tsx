@@ -130,206 +130,196 @@ export function AuditLogPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full min-w-0">
 
-          {/* Header — text/title/spacing unchanged per design brief */}
-          <div className="flex items-start justify-between gap-[16px] relative w-full min-w-0">
-            <div className="flex flex-col items-start gap-[4px] relative min-w-px flex-1">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Audit Log</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, verifiable, and anchored on-chain.</p>
-            </div>
-            {/* Refresh button — Figma: bg-[#222737] pill, 12px SemiBold #6c779d */}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              data-testid="button-refresh-audit-log"
-              className="inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-[100px] bg-[#222737] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] transition-colors hover:bg-[#2a3047] disabled:opacity-60 shrink-0"
-            >
-              <img src={refreshIcon} alt="" className={`size-[16px] object-contain shrink-0${refreshing ? " animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
+      {/* Static chrome: header + tab bar + search bar — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
+        <div className="flex items-start justify-between gap-[16px] relative w-full min-w-0">
+          <div className="flex flex-col items-start gap-[4px] relative min-w-px flex-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Audit Log</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your decision history with Brain.</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Every decision is recorded, verifiable, and anchored on-chain.</p>
           </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            data-testid="button-refresh-audit-log"
+            className="inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-[100px] bg-[#222737] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] transition-colors hover:bg-[#2a3047] disabled:opacity-60 shrink-0"
+          >
+            <img src={refreshIcon} alt="" className={`size-[16px] object-contain shrink-0${refreshing ? " animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
-
-            {/* Tab bar — Figma: tabs FIRST, then search below */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-x-auto p-[2px] relative rounded-[400px] shrink-0 w-full">
-              {AUDIT_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#4a2300" : "transparent" }}
-                    data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#ff9500" : "#414965" }}
-                    >
-                      {tab}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search — Figma: bg-[#222737] rounded-[8px] p-[8px] w-full, 24px icon, 16px #6c779d placeholder */}
-            <div className="bg-[#222737] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full gap-[8px]">
-              <img src={searchIcon} alt="" className="size-[24px] object-contain shrink-0" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by any text including title, description, amount, vendor..."
-                data-testid="input-audit-search"
-                className="flex-1 min-w-px bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] placeholder:text-[#6c779d]"
-              />
-              {query && (
+        <div className="flex flex-col gap-[16px] items-start w-full min-w-0">
+          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-x-auto p-[2px] relative rounded-[400px] shrink-0 w-full">
+            {AUDIT_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
                 <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  data-testid="button-clear-audit-search"
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] shrink-0 transition-colors"
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                  style={{ background: isActive ? "#4a2300" : "transparent" }}
+                  data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
                 >
-                  Clear
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                    style={{ color: isActive ? "#ff9500" : "#414965" }}
+                  >
+                    {tab}
+                  </p>
                 </button>
-              )}
-            </div>
-
-            {isLoading && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                  Loading your audit log…
-                </p>
-              </div>
-            )}
-
-            {!isLoading && isError && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                  Couldn't load the audit log from Brain right now.
-                </p>
-              </div>
-            )}
-
-            {!isLoading && !isError && (
-              <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden relative rounded-[16px] shrink-0 w-full min-w-0">
-                {/* Panel header: tab name + count badge */}
-                <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                  <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
-                    <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{filtered.length}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Records list */}
-                <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full min-w-0">
-                  {filtered.length === 0 ? (
-                    <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                        {activeTab === "All" && "No audit records yet."}
-                        {activeTab === "Approvals" && "No approval records yet."}
-                        {activeTab === "Auto-Approved" && "No auto-approval records yet."}
-                        {activeTab === "Rejections" && "No rejected payment records yet."}
-                         {activeTab === "Acknowledged" && "No acknowledged records yet."}
-                        {activeTab === "Rule Changes" && "No rule changes recorded yet."}
-                        {activeTab === "Trusted Changes" && "No trust status changes yet."}
-                        {activeTab === "Flagged" && "No flagged transactions yet."}
-                        {activeTab === "Last 30 Days" && "No events in the last 30 days."}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full min-w-0">
-                      {filtered.map((record, idx) => {
-                        const isAnchored = record.anchor.status === "anchored";
-                        const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
-                        const isRejected = record.eventType === "rejected";
-                        const borderLeft = isFlagged || isRejected ? "3px solid #d20344" : undefined;
-                        const timestampText = new Date(record.occurredAtMs).toLocaleString(undefined, {
-                          month: "short", day: "numeric", year: "numeric",
-                          hour: "numeric", minute: "2-digit",
-                        });
-                        const subtitle =
-                          record.rowSubtitle ??
-                          [
-                            typeof record.amount === "number" ? format(record.amount) : "",
-                            timestampText,
-                          ].filter(Boolean).join(" · ");
-
-                        return (
-                          <div key={record.id} className="flex flex-col gap-[8px] w-full min-w-0">
-                            {/* Row — Figma: bg-[#0a0c10] flex gap-[16px] items-center p-[8px] rounded-[8px] */}
-                            <button
-                              type="button"
-                              data-testid={`row-audit-${record.id.toLowerCase()}`}
-                              onClick={() => setActiveRecord(record)}
-                              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] hover:bg-[#11141b] transition-colors text-left min-w-0"
-                              style={borderLeft ? { borderLeft } : undefined}
-                            >
-                              {/* Left: title+pill row / subtitle */}
-                              <div className="flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center min-w-px">
-                                {/* Title + type pill inline */}
-                                <div className="flex gap-[8px] items-center w-full min-w-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-                                    {formatText(record.summary)}
-                                  </p>
-                                  <span className={`inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] whitespace-nowrap ${auditRecordChipClass(record)}`}>
-                                    {auditRecordLabel(record)}
-                                  </span>
-                                </div>
-                                {subtitle && (
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full truncate">
-                                    {subtitle}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Right: anchor status badge — "Anchored" ONLY with a
-                                  confirmed on-chain tx; a merkle-covered record without
-                                  one reads "Recorded" (amber), never "Anchored". */}
-                              {isAnchored ? (
-                                <div className="bg-[#123509] border border-[rgba(66,191,35,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[14px] text-center whitespace-nowrap">
-                                    Anchored
-                                  </p>
-                                </div>
-                              ) : record.anchor.status === "recorded_pending_anchor" ? (
-                                <div className="bg-[#3a2a05] border border-[rgba(245,158,11,0.25)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#f59e0b] text-[14px] text-center whitespace-nowrap">
-                                    Recorded
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[14px] text-center whitespace-nowrap">
-                                    Pending
-                                  </p>
-                                </div>
-                              )}
-                            </button>
-
-                            {idx < filtered.length - 1 && (
-                              <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
+              );
+            })}
           </div>
+
+          <div className="bg-[#222737] flex items-center p-[8px] relative rounded-[8px] shrink-0 w-full gap-[8px]">
+            <img src={searchIcon} alt="" className="size-[24px] object-contain shrink-0" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by any text including title, description, amount, vendor..."
+              data-testid="input-audit-search"
+              className="flex-1 min-w-px bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] placeholder:text-[#6c779d]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                data-testid="button-clear-audit-search"
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] shrink-0 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {isLoading && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                Loading your audit log…
+              </p>
+            </div>
+          )}
+
+          {!isLoading && isError && (
+            <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                Couldn't load the audit log from Brain right now.
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Table area: scrolls as a whole; panel header is sticky */}
+      {!isLoading && !isError && (
+        <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
+          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0">
+            {/* Panel header — sticky */}
+            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+              <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
+                <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{filtered.length}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Records */}
+            <div className="p-[8px] min-w-0">
+              {filtered.length === 0 ? (
+                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                    {activeTab === "All" && "No audit records yet."}
+                    {activeTab === "Approvals" && "No approval records yet."}
+                    {activeTab === "Auto-Approved" && "No auto-approval records yet."}
+                    {activeTab === "Rejections" && "No rejected payment records yet."}
+                    {activeTab === "Acknowledged" && "No acknowledged records yet."}
+                    {activeTab === "Rule Changes" && "No rule changes recorded yet."}
+                    {activeTab === "Trusted Changes" && "No trust status changes yet."}
+                    {activeTab === "Flagged" && "No flagged transactions yet."}
+                    {activeTab === "Last 30 Days" && "No events in the last 30 days."}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-[8px] items-start w-full min-w-0">
+                  {filtered.map((record, idx) => {
+                    const isAnchored = record.anchor.status === "anchored";
+                    const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
+                    const isRejected = record.eventType === "rejected";
+                    const borderLeft = isFlagged || isRejected ? "3px solid #d20344" : undefined;
+                    const timestampText = new Date(record.occurredAtMs).toLocaleString(undefined, {
+                      month: "short", day: "numeric", year: "numeric",
+                      hour: "numeric", minute: "2-digit",
+                    });
+                    const subtitle =
+                      record.rowSubtitle ??
+                      [
+                        typeof record.amount === "number" ? format(record.amount) : "",
+                        timestampText,
+                      ].filter(Boolean).join(" · ");
+
+                    return (
+                      <div key={record.id} className="flex flex-col gap-[8px] w-full min-w-0">
+                        <button
+                          type="button"
+                          data-testid={`row-audit-${record.id.toLowerCase()}`}
+                          onClick={() => setActiveRecord(record)}
+                          className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] hover:bg-[#11141b] transition-colors text-left min-w-0"
+                          style={borderLeft ? { borderLeft } : undefined}
+                        >
+                          <div className="flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center min-w-px">
+                            <div className="flex gap-[8px] items-center w-full min-w-0">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+                                {formatText(record.summary)}
+                              </p>
+                              <span className={`inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] whitespace-nowrap ${auditRecordChipClass(record)}`}>
+                                {auditRecordLabel(record)}
+                              </span>
+                            </div>
+                            {subtitle && (
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full truncate">
+                                {subtitle}
+                              </p>
+                            )}
+                          </div>
+
+                          {isAnchored ? (
+                            <div className="bg-[#123509] border border-[rgba(66,191,35,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[14px] text-center whitespace-nowrap">
+                                Anchored
+                              </p>
+                            </div>
+                          ) : record.anchor.status === "recorded_pending_anchor" ? (
+                            <div className="bg-[#3a2a05] border border-[rgba(245,158,11,0.25)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#f59e0b] text-[14px] text-center whitespace-nowrap">
+                                Recorded
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[14px] text-center whitespace-nowrap">
+                                Pending
+                              </p>
+                            </div>
+                          )}
+                        </button>
+
+                        {idx < filtered.length - 1 && (
+                          <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <AuditRecordPopup
         record={activeRecord}

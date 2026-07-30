@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Check, X } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
 import { useAppAlert } from "@/components/AppAlert";
@@ -746,109 +745,107 @@ export function InboxPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Inbox</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Everything Brain needs you to see.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
-          </div>
-
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
-            {/* Tab bar — hugs its tabs (matches Vendors/Rules) rather than
-                stretching the section width; wraps when the shell narrows. */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-              {INBOX_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#4a2300" : "transparent" }}
-                    data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+      {/* Static chrome: header + tab bar — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
+        <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Inbox</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Everything Brain needs you to see.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
+        </div>
+        <div className="flex flex-col gap-[16px] items-start w-full min-w-0">
+          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+            {INBOX_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                  style={{ background: isActive ? "#4a2300" : "transparent" }}
+                  data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                    style={{ color: isActive ? "#ff9500" : "#414965" }}
                   >
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#ff9500" : "#414965" }}
-                    >
-                      {tab}
-                    </p>
-                    {counts[tab] > 0 && (
-                      <div className="flex flex-col items-center justify-center min-w-[16px] p-[2px] rounded-[4px] shrink-0" style={{ background: isActive ? "#4a2300" : "#414965" }}>
-                        <p
-                          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[12px] text-center whitespace-nowrap"
-                          style={{ color: isActive ? "#ff9500" : "#a8b9f4" }}
-                        >
-                          {counts[tab]}
-                        </p>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Unified list */}
-            <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-              <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-                <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
-                  <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{counts[activeTab]}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-                {visible.length === 0 ? (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                      {emptyText}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                    {visible.map((item, idx) => (
-                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                        <InboxCard
-                          item={item}
-                          onOpen={openItem}
-                          onApprove={approveItem}
-                          onReject={rejectItem}
-                          onAcknowledge={acknowledgeItem}
-                          acknowledged={item.kind === "detection" && pendingAcknowledgedIds.has(item.id)}
-                          busy={itemBusy(item)}
-                        />
-                        {idx < visible.length - 1 && <Divider />}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Helper banner */}
-            {activeTab === "Needs Review" && (
-              <div
-                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                  Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
-                </p>
-              </div>
-            )}
-
+                    {tab}
+                  </p>
+                  {counts[tab] > 0 && (
+                    <div className="flex flex-col items-center justify-center min-w-[16px] p-[2px] rounded-[4px] shrink-0" style={{ background: isActive ? "#4a2300" : "#414965" }}>
+                      <p
+                        className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[12px] text-center whitespace-nowrap"
+                        style={{ color: isActive ? "#ff9500" : "#a8b9f4" }}
+                      >
+                        {counts[tab]}
+                      </p>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </ScrollArea>
+      </div>
+
+      {/* Table area: scrolls as a whole; panel header is sticky */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[16px]">
+        <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
+          {/* Panel header — sticky */}
+          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+            <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
+              <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{counts[activeTab]}</p>
+              </div>
+            </div>
+          </div>
+          {/* Rows */}
+          <div className="p-[8px]">
+            {visible.length === 0 ? (
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                  {emptyText}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-[8px] items-start w-full">
+                {visible.map((item, idx) => (
+                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                    <InboxCard
+                      item={item}
+                      onOpen={openItem}
+                      onApprove={approveItem}
+                      onReject={rejectItem}
+                      onAcknowledge={acknowledgeItem}
+                      acknowledged={item.kind === "detection" && pendingAcknowledgedIds.has(item.id)}
+                      busy={itemBusy(item)}
+                    />
+                    {idx < visible.length - 1 && <Divider />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Helper banner — below the table, same pattern as Rules page */}
+        {activeTab === "Needs Review" && (
+          <div
+            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+              <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+              <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+            </svg>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+              Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Existing detail surfaces — unchanged components */}
       <ProposalDetail
