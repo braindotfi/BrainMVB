@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
-import { useCurrency } from "@/lib/currencyContext";
+import { useCurrency } from "@/lib/useCurrency";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
    subscription/disputed obligations, cash-flow aggregates) - see

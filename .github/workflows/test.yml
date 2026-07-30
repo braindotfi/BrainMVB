@@ -14,5 +14,15 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: npm ci
+
+      # Node 20 bundles npm 10.x, which can leave this dependency tree
+      # partially installed while still exiting successfully.
+      - name: Use npm 11
+        run: npm install -g npm@^11
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify the install completed
+        run: npx --no-install vitest --version
+
       - run: npm test
