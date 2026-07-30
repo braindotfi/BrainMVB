@@ -321,7 +321,7 @@ describe("buildDecisionButtons", () => {
   it("builds acknowledge-only footers from the record, not from a hardcoded pair", () => {
     const buttons = buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen" }]);
     expect(buttons).toEqual([
-      { id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen", tone: "neutral", writable: true },
+      { id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen", tone: "acknowledge", writable: true },
     ]);
   });
 

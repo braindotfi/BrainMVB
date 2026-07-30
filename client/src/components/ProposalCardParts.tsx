@@ -330,12 +330,13 @@ export const HeadingValue = ({ children, testId }: { children: ReactNode; testId
 /* ── Decision buttons ────────────────────────────────────────────────────────
    Approve / Postpone / Reject in the frame; in the live card the SET comes from
    available_decisions, so only the palette is fixed here. */
-export type ActionTone = "approve" | "reject" | "neutral";
+export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
 const ACTION_TONES: Record<ActionTone, { background: string; color: string }> = {
   approve: { background: "#123509", color: "#42bf23" },
   reject: { background: "#350011", color: "#d20344" },
   neutral: { background: "#222737", color: "#6c779d" },
+  acknowledge: { background: "#240757", color: "#a88afa" },
 };
 
 export const ActionButton = ({

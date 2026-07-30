@@ -179,6 +179,9 @@ export interface Proposal {
   rule?: AutoRule; // the standing rule that authorized it
   /* Link to the source invoice document (if this proposal was generated from one). */
   invoiceId?: string;
+  /** Original Brain PaymentIntent timestamp when this proposal came from the
+   * live payment-intent queue. */
+  sourceCreatedAt?: string;
 }
 
 export interface AccountSummary {

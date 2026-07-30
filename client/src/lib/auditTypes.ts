@@ -116,7 +116,7 @@ export interface AuditRecord {
 /* Filter tabs for the Audit Log page */
 export type AuditLogTab =
   | "All"
-  | "Approvals"
+  | "Approval"
   | "Auto-Approved"
   | "Rejections"
   | "Acknowledged"
@@ -127,7 +127,7 @@ export type AuditLogTab =
 
 export const AUDIT_TABS: AuditLogTab[] = [
   "All",
-  "Approvals",
+  "Approval",
   "Auto-Approved",
   "Rejections",
   "Acknowledged",
@@ -140,15 +140,15 @@ export const AUDIT_TABS: AuditLogTab[] = [
 /* Event-type label / chip style mapping */
 export function auditEventLabel(type: AuditEventType): string {
   switch (type) {
-    case "approved": return "APPROVED";
-    case "auto_approved": return "AUTO-APPROVED";
-    case "rejected": return "REJECTED";
-    case "acknowledged": return "ACKNOWLEDGED";
-    case "postponed": return "POSTPONED";
-    case "rule_change": return "RULE CHANGE";
-    case "trust_granted": return "TRUST GRANTED";
-    case "trust_revoked": return "TRUST REVOKED";
-    case "flagged": return "FLAGGED";
+    case "approved": return "Approved";
+    case "auto_approved": return "Auto-Approved";
+    case "rejected": return "Rejected";
+    case "acknowledged": return "Acknowledged";
+    case "postponed": return "Postponed";
+    case "rule_change": return "Rule Change";
+    case "trust_granted": return "Trust Granted";
+    case "trust_revoked": return "Trust Revoked";
+    case "flagged": return "Flagged";
     case "system_activity": return "System Activity";
   }
 }
@@ -206,9 +206,7 @@ export function auditRecordLabel(
 export function auditRecordChipClass(
   record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
 ): string {
-  return isAssistantActivity(record)
-    ? "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]"
-    : auditEventChipClass(record.eventType);
+  return "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]";
 }
 
 /* Raw internal identifiers (user_01KY…, evt_01KY…, tnt_…, agt_…) must never

@@ -45,8 +45,11 @@ import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
-type InboxTab = "Needs Review" | "Insights" | "Auto-Approved" | "Rejected" | "Rule Changes";
-const INBOX_TABS: InboxTab[] = ["Needs Review", "Insights", "Auto-Approved", "Rejected", "Rule Changes"];
+type InboxTab = "Needs Review" | "Insights" | "Approved" | "Auto-Approved" | "Rejected" | "Rule Changes";
+const INBOX_TAB_GROUPS: InboxTab[][] = [
+  ["Needs Review", "Insights"],
+  ["Approved", "Auto-Approved", "Rejected", "Rule Changes"],
+];
 
 /* Map an audit event type onto its Inbox tab. */
 function auditTab(eventType: AuditEventType): InboxTab {
@@ -59,6 +62,8 @@ function auditTab(eventType: AuditEventType): InboxTab {
     case "trust_granted":
     case "trust_revoked":
       return "Rule Changes";
+    case "approved":
+      return "Approved";
     case "postponed":
     case "flagged":
       return "Needs Review";
@@ -205,12 +210,14 @@ const InboxCard = ({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
             {item.title}
           </p>
-          <span
-            className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
-            data-testid={`tag-inbox-${item.id}`}
-          >
-            {item.tag}
-          </span>
+          {item.tab !== "Auto-Approved" && item.tab !== "Rejected" && (
+            <span
+              className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
+              data-testid={`tag-inbox-${item.id}`}
+            >
+              {item.tag}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-[8px] w-full min-w-0">
           {secondLine && (
@@ -624,7 +631,7 @@ export function InboxPage() {
       push({
         id: `${p.id}--${status}`,
         kind: "proposal",
-        tab: approved ? "Auto-Approved" : status === "rejected" ? "Rejected" : "Needs Review",
+        tab: approved ? "Approved" : status === "rejected" ? "Rejected" : "Needs Review",
         title: p.title,
         tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
         tagClass: approved ? TAG_APPROVED_BY_YOU : status === "rejected" ? TAG_REJECTED : TAG_DETECTED,
@@ -667,7 +674,14 @@ export function InboxPage() {
   }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format]);
 
   const counts: Record<InboxTab, number> = useMemo(() => {
-    const c: Record<InboxTab, number> = { "Needs Review": 0, Insights: 0, "Auto-Approved": 0, Rejected: 0, "Rule Changes": 0 };
+    const c: Record<InboxTab, number> = {
+      "Needs Review": 0,
+      Insights: 0,
+      Approved: 0,
+      "Auto-Approved": 0,
+      Rejected: 0,
+      "Rule Changes": 0,
+    };
     for (const it of items) c[it.tab] += 1;
     return c;
   }, [items]);
@@ -787,6 +801,8 @@ export function InboxPage() {
         : "Nothing needs your attention right now. Brain is keeping things moving."
       : activeTab === "Auto-Approved"
         ? "Nothing was approved automatically recently."
+        : activeTab === "Approved"
+          ? "No approvals recorded yet."
         : activeTab === "Rejected"
           ? "No rejected items yet. Anything you or Brain rejects will appear here."
           : "No rule or trust changes recorded yet.";
@@ -801,9 +817,10 @@ export function InboxPage() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Everything Brain needs you to see.</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
         </div>
-        <div className="flex flex-col gap-[16px] items-start w-full min-w-0">
-          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-            {INBOX_TABS.map((tab) => {
+        <div className="flex items-center gap-[24px] w-full min-w-0">
+          {INBOX_TAB_GROUPS.map((group, groupIndex) => (
+          <div key={groupIndex} className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+            {group.map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -833,6 +850,7 @@ export function InboxPage() {
               );
             })}
           </div>
+          ))}
         </div>
       </div>
 

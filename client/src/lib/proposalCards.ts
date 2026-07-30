@@ -565,7 +565,7 @@ function humanizeRuleId(ruleId: string): string {
  */
 const WRITABLE_DECISIONS = new Set(["approve", "reject", "acknowledge", "undo"]);
 
-export type DecisionTone = "approve" | "reject" | "neutral";
+export type DecisionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
 export interface DecisionButton {
   /** Value sent to /decide. */
@@ -582,6 +582,7 @@ export interface DecisionButton {
 function toneFor(id: string): DecisionTone {
   if (id === "approve") return "approve";
   if (id === "reject") return "reject";
+  if (id === "acknowledge") return "acknowledge";
   return "neutral";
 }
 

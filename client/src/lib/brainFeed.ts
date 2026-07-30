@@ -51,6 +51,46 @@ export function autoHandledToActivity(p: Proposal): ActivityItemData {
   };
 }
 
+/** Convert the same live auto-approved proposal used by Inbox into an Audit
+ * record. Keeping this mapper beside the other cross-surface converters makes
+ * Audit Log's Auto-Approved tab show the identical records without inventing a
+ * second data source. */
+export function autoApprovedToAuditRecord(p: Proposal): AuditRecord {
+  const occurredAtMs = p.sourceCreatedAt ? Date.parse(p.sourceCreatedAt) : Number.NaN;
+  const occurredAtLabel = Number.isFinite(occurredAtMs)
+    ? new Date(occurredAtMs).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      })
+    : "Unknown time";
+  return {
+    id: p.id,
+    eventType: "auto_approved",
+    summary: p.title,
+    counterparty: p.counterparty,
+    amount: p.amount,
+    actor: "system",
+    occurredAtLabel,
+    occurredAtMs: Number.isFinite(occurredAtMs) ? occurredAtMs : 0,
+    lifecycle: [
+      {
+        label: "Approved automatically by policy",
+        timestamp: occurredAtLabel,
+        kind: "ok",
+      },
+    ],
+    linked: [],
+    anchor: { status: "pending_next_batch", auditId: p.id },
+    proposalId: p.id,
+    invoiceId: p.invoiceId,
+    rowSubtitle: p.rowSubtitle,
+  };
+}
+
 /** Map a client-side review-status override (executing / executed / rejected / postponed)
     into an activity item so the Activity page reflects user decisions made on
     the Review surface. The time is always "Just now" because the override is
