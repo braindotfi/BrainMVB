@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
 import { useAuth } from "@/lib/authContext";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
@@ -128,7 +127,7 @@ const Divider = () => (
 );
 
 const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
-  <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+  <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
     <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
       <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
       {typeof count === "number" && (
@@ -141,10 +140,10 @@ const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
 );
 
 const WidgetCard = ({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) => (
-  <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+  <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
     <WidgetHeader title={title} count={count} />
-    <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
-      <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+    <div className="flex flex-col items-start p-[8px] relative w-full overflow-x-hidden">
+      <div className="flex flex-col gap-[8px] items-start w-full">
         {children}
       </div>
     </div>
@@ -564,160 +563,159 @@ export function FinancesPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Finances</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your financial snapshot right now.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
-          </div>
+      {/* Static chrome: header + tab bar — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
+        <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Finances</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your financial snapshot right now.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
+        </div>
+        <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+          {FINANCE_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                style={{ background: isActive ? "#4a2300" : "transparent" }}
+                data-testid={`tab-finance-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                  style={{ color: isActive ? "#ff9500" : "#414965" }}
+                >
+                  {tab}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
+      {/* Table area: scrolls as a whole; panel header is sticky */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
 
-            {/* Tab bar: active tab is ORANGE. Hugs its tabs (matches
-                Vendors/Rules) rather than stretching the section width. */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-              {FINANCE_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#4a2300" : "transparent" }}
-                    data-testid={`tab-finance-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#ff9500" : "#414965" }}
-                    >
-                      {tab}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* ACCOUNTS */}
-            {activeTab === "Accounts" && (
-              <WidgetCard title="Accounts" count={accounts.length}>
-                {accounts.map((acc, idx) => {
-                  const clickable = !!acc.id;
-                  return (
-                  <div key={acc.name} className="flex flex-col gap-[8px] w-full">
-                    <div
-                      data-testid={`row-account-${idx}`}
-                      {...(clickable
-                        ? {
-                            role: "button",
-                            tabIndex: 0,
-                            onClick: () => setOpenAccountId(acc.id!),
-                            onKeyDown: (e: React.KeyboardEvent) => {
-                              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenAccountId(acc.id!); }
-                            },
-                          }
-                        : {})}
-                      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : ""}`}
-                    >
-                      <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
-                        <div className="flex gap-[4px] items-center relative shrink-0">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
-                          {acc.sub2 && (
-                            <>
-                              <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end justify-center relative shrink-0">
-                        <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
-                      </div>
+        {/* ACCOUNTS */}
+        {activeTab === "Accounts" && (
+          <WidgetCard title="Accounts" count={accounts.length}>
+            {accounts.map((acc, idx) => {
+              const clickable = !!acc.id;
+              return (
+              <div key={acc.name} className="flex flex-col gap-[8px] w-full">
+                <div
+                  data-testid={`row-account-${idx}`}
+                  {...(clickable
+                    ? {
+                        role: "button",
+                        tabIndex: 0,
+                        onClick: () => setOpenAccountId(acc.id!),
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenAccountId(acc.id!); }
+                        },
+                      }
+                    : {})}
+                  className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : ""}`}
+                >
+                  <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
+                    <div className="flex gap-[4px] items-center relative shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
+                      {acc.sub2 && (
+                        <>
+                          <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
+                        </>
+                      )}
                     </div>
-                    {idx < accounts.length - 1 && <Divider />}
                   </div>
-                  );
-                })}
-                {accounts.length === 0 && (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                      {accountsLoading
-                        ? "Loading your accounts from the ledger…"
-                        : "No connected accounts yet. Link an account to see your balances here."}
-                    </p>
+                  <div className="flex flex-col items-end justify-center relative shrink-0">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
                   </div>
-                )}
-              </WidgetCard>
-            )}
-
-            {/* RECENT */}
-            {activeTab === "Recent" && (
-              <WidgetCard title="Recent Transactions" count={transactions.length}>
-                {transactions.length > 0 ? (
-                  transactions.map((t, idx) => (
-                    <div key={t.id} className="flex flex-col gap-[8px] w-full">
-                      <div
-                        data-testid={`row-tx-${idx}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setOpenTxId(t.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setOpenTxId(t.id);
-                          }
-                        }}
-                        className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-                      >
-                        <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
-                        </div>
-                        <div className="flex flex-col items-end justify-center relative shrink-0">
-                          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
-                        </div>
-                      </div>
-                      {idx < transactions.length - 1 && <Divider />}
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No transactions yet. Activity will appear here once money starts moving.</p>
-                  </div>
-                )}
-              </WidgetCard>
-            )}
-
-            {/* BILLS */}
-            {activeTab === "Bills" && <BrainBillsInbox />}
-
-            {/* INCOME */}
-            {activeTab === "Income" && (
-              <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-                <OverdueInvoicesBanner format={format} />
-                <WidgetCard title="Income" count={incomeCount}>
-                  <IncomeTxList format={format} onOpen={setOpenTxId} />
-                </WidgetCard>
-                <IncomeSummary format={format} onCount={setIncomeCount} />
+                </div>
+                {idx < accounts.length - 1 && <Divider />}
+              </div>
+              );
+            })}
+            {accounts.length === 0 && (
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                  {accountsLoading
+                    ? "Loading your accounts from the ledger…"
+                    : "No connected accounts yet. Link an account to see your balances here."}
+                </p>
               </div>
             )}
+          </WidgetCard>
+        )}
 
-            {/* EXPENSES */}
-            {activeTab === "Expenses" && <ExpensesWidget format={format} />}
-
-            {/* LIABILITIES */}
-            {activeTab === "Liabilities" && (
-              <WidgetCard title="Liabilities" count={liabilitiesCount}>
-                <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
-              </WidgetCard>
+        {/* RECENT */}
+        {activeTab === "Recent" && (
+          <WidgetCard title="Recent Transactions" count={transactions.length}>
+            {transactions.length > 0 ? (
+              transactions.map((t, idx) => (
+                <div key={t.id} className="flex flex-col gap-[8px] w-full">
+                  <div
+                    data-testid={`row-tx-${idx}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpenTxId(t.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOpenTxId(t.id);
+                      }
+                    }}
+                    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+                  >
+                    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
+                    </div>
+                    <div className="flex flex-col items-end justify-center relative shrink-0">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
+                    </div>
+                  </div>
+                  {idx < transactions.length - 1 && <Divider />}
+                </div>
+              ))
+            ) : (
+              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No transactions yet. Activity will appear here once money starts moving.</p>
+              </div>
             )}
+          </WidgetCard>
+        )}
 
+        {/* BILLS */}
+        {activeTab === "Bills" && (
+          <BrainBillsInbox />
+        )}
+
+        {/* INCOME — multiple stacked components */}
+        {activeTab === "Income" && (
+          <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
+            <OverdueInvoicesBanner format={format} />
+            <WidgetCard title="Income" count={incomeCount}>
+              <IncomeTxList format={format} onOpen={setOpenTxId} />
+            </WidgetCard>
+            <IncomeSummary format={format} onCount={setIncomeCount} />
           </div>
-        </div>
-      </ScrollArea>
+        )}
+
+        {/* EXPENSES */}
+        {activeTab === "Expenses" && <ExpensesWidget format={format} />}
+
+        {/* LIABILITIES */}
+        {activeTab === "Liabilities" && (
+          <WidgetCard title="Liabilities" count={liabilitiesCount}>
+            <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
+          </WidgetCard>
+        )}
+
+      </div>
+
       <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} onSelectTransaction={(id) => setOpenTxId(id)} />
       <AccountDetailPopup
         accountId={openAccountId}

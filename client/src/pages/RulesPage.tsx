@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronRight,
   Plus,
@@ -120,8 +119,8 @@ function Section({
   empty?: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+    <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
           <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -129,7 +128,7 @@ function Section({
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-[8px] items-start p-[8px] relative shrink-0 w-full">
+      <div className="flex flex-col gap-[8px] items-start p-[8px] relative w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             {empty}
@@ -652,41 +651,40 @@ export function RulesPage() {
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
-          <div className="flex flex-col items-start gap-[4px] w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Rules</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-              Manage the rules that guide Brain's reviews, recommendations, and actions.
-            </p>
-          </div>
+      {/* Static chrome: header + tab bar + builder / confirm panel — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
+        <div className="flex flex-col items-start gap-[4px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Rules</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+            Manage the rules that guide Brain's reviews, recommendations, and actions.
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-[16px] items-start w-full">
-            {/* Tab bar: active tab is ORANGE */}
-            <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-              {RULE_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                    style={{ background: isActive ? "#4a2300" : "transparent" }}
-                    data-testid={`tab-rule-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+        <div className="flex flex-col gap-[16px] items-start w-full">
+          {/* Tab bar: active tab is ORANGE */}
+          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
+            {RULE_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+                  style={{ background: isActive ? "#4a2300" : "transparent" }}
+                  data-testid={`tab-rule-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                    style={{ color: isActive ? "#ff9500" : "#414965" }}
                   >
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                      style={{ color: isActive ? "#ff9500" : "#414965" }}
-                    >
-                      {tab}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+                    {tab}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Create-rule confirmation: on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
@@ -940,114 +938,115 @@ export function RulesPage() {
             </div>
           ))}
 
-          {/* Tab content: each tab shows its own section */}
+        </div>{/* end chrome inner flex-col */}
+      </div>{/* end static chrome */}
 
-          {activeTab === "Default" && (
-            <>
-              <PolicySection />
-              {/* Default-specific purple info banner */}
-              <div
-                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                  These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
-                </p>
-              </div>
-            </>
-          )}
+      {/* Table area: only the row body scrolls */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[16px]">
 
-          {activeTab === "Automations" && (
-            <>
-              <Section
-                title="Automations"
-                count={automations.length}
-                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
-              >
-                {automations.map((r, idx) => (
-                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                    <AutomationRow rule={r} />
-                    {idx < automations.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </Section>
-              <div
-                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                  Rules are written in plain English, not code. Brain turns each one into an enforceable
-                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
-                  the evidence behind them.
-                </p>
-              </div>
-            </>
-          )}
-
-          {activeTab === "Guardrails" && (
-            <>
-              <Section
-                title="Guardrails"
-                count={guardrails.length}
-                empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
-              >
-                {guardrails.map((r, idx) => (
-                  <div key={r.id} className="flex flex-col gap-[8px] w-full">
-                    <GuardrailRow rule={r} />
-                    {idx < guardrails.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </Section>
-              <div
-                className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-                style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                  Rules are written in plain English, not code. Brain turns each one into an enforceable
-                  policy for every agent you use, then keeps learning and suggesting new ones, backed by
-                  the evidence behind them.
-                </p>
-              </div>
-            </>
-          )}
-
-          {activeTab === "Suggested" && (
-            <Section
-              title="Suggested"
-              count={suggestions.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Brain suggests policies as it sees patterns in your activity. Nothing yet.</p>}
+        {activeTab === "Default" && (
+          <>
+            <PolicySection />
+            {/* Default-specific purple info banner */}
+            <div
+              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              {suggestions.map((s) => (
-                <SuggestionCard
-                  key={s.id}
-                  suggestion={s}
-                  onAccept={() => onAcceptSuggestion(s)}
-                  onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
-                  onDismiss={() => dismissSuggestion(s.id)}
-                />
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+              </svg>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
+              </p>
+            </div>
+          </>
+        )}
+
+        {activeTab === "Automations" && (
+          <>
+            <Section
+              title="Automations"
+              count={automations.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
+            >
+              {automations.map((r, idx) => (
+                <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                  <AutomationRow rule={r} />
+                  {idx < automations.length - 1 && <Divider />}
+                </div>
               ))}
             </Section>
-          )}
+            <div
+              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+              </svg>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                Rules are written in plain English, not code. Brain turns each one into an enforceable
+                policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                the evidence behind them.
+              </p>
+            </div>
+          </>
+        )}
 
-          </div>
+        {activeTab === "Guardrails" && (
+          <>
+            <Section
+              title="Guardrails"
+              count={guardrails.length}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
+            >
+              {guardrails.map((r, idx) => (
+                <div key={r.id} className="flex flex-col gap-[8px] w-full">
+                  <GuardrailRow rule={r} />
+                  {idx < guardrails.length - 1 && <Divider />}
+                </div>
+              ))}
+            </Section>
+            <div
+              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
+                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
+                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
+                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
+              </svg>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+                Rules are written in plain English, not code. Brain turns each one into an enforceable
+                policy for every agent you use, then keeps learning and suggesting new ones, backed by
+                the evidence behind them.
+              </p>
+            </div>
+          </>
+        )}
 
-        </div>
-      </ScrollArea>
+        {activeTab === "Suggested" && (
+          <Section
+            title="Suggested"
+            count={suggestions.length}
+            empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">Brain suggests policies as it sees patterns in your activity. Nothing yet.</p>}
+          >
+            {suggestions.map((s) => (
+              <SuggestionCard
+                key={s.id}
+                suggestion={s}
+                onAccept={() => onAcceptSuggestion(s)}
+                onTweak={() => { openBuilderPrefilled(s.proposedRule); dismissSuggestion(s.id); }}
+                onDismiss={() => dismissSuggestion(s.id)}
+              />
+            ))}
+          </Section>
+        )}
+
+      </div>{/* end table area */}
     </div>
   );
 }
