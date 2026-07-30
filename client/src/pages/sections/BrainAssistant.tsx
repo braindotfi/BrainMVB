@@ -807,9 +807,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     </span>
                   </div>
                 )}
-                <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`flex w-full min-w-0 ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
                   <div
-                    className={`max-w-[247px] px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
+                    className={`w-fit min-w-0 max-w-[80%] sm:max-w-[75%] break-words whitespace-pre-wrap px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
                         ? "bg-[#7631ee] text-white text-right"
                         : "bg-[#222737] text-[#6c779d] text-left"
