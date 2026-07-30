@@ -717,7 +717,8 @@ Rules:
 Help the user with their finances, accounts, transactions, crypto basics, and how to use the platform.
 Be concise, warm, and practical: default to 1–4 short sentences unless the user asks for more detail.
 Use plain prose (no markdown headings or bullet dumps unless genuinely helpful).
-You can explain concepts and surface general guidance, but do not give regulated or individualized investment advice. Instead point users to their own data and let them decide.`;
+You can explain concepts and surface general guidance, but do not give regulated or individualized investment advice. Instead point users to their own data and let them decide.
+When you mention a money amount, always reproduce it exactly as the grounding data formats it (currency code + grouped digits, e.g. "USD 42,000.00"). Never strip the currency code and never emit a bare unformatted number like "42000.00".`;
 
   const assistantChatSchema = z.object({
     messages: z
@@ -743,6 +744,20 @@ You can explain concepts and surface general guidance, but do not give regulated
    * different (and better) contract than the old fuzzy Wiki Q&A this comment used
    * to warn about, which misread "accounts" and hallucinated balances client-side.
    */
+  /** Amounts must reach BOTH the model and the UI already grouped to 2dp.
+   *  brain-core serves raw ledger strings like "18600.00000000", and the grounding
+   *  used to interpolate them verbatim (and to print bare balances whose currency
+   *  only appeared in an earlier parenthetical) - which is how unformatted values
+   *  such as "42000.00" ended up echoed into the chat transcript. Always keeping the
+   *  ISO code adjacent to the number also gives the client-side formatter the marker
+   *  it needs to convert into the user's active display currency. */
+  function money(amount: string | number | null | undefined, currency: string): string {
+    if (amount === null || amount === undefined || amount === "") return `${currency} n/a`;
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return `${currency} ${amount}`;
+    return `${currency} ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
   async function buildGrounding(token: string, tenantId: string, _question: string): Promise<{ text: string; sources: WikiEvidence[]; available: boolean }> {
     // Fetch ALL tenant data in parallel - the assistant should have the full picture.
     const [accounts, txs, cps, invoices, obligations, members, policy, proposalsPage, auditEvents] = await Promise.allSettled([
@@ -764,15 +779,15 @@ You can explain concepts and surface general guidance, but do not give regulated
     const allAccounts = accounts.status === "fulfilled" ? accounts.value.accounts : [];
     if (allAccounts.length > 0) {
       const lines = allAccounts.map((a) => {
-        const bal = a.current_balance != null ? Number(a.current_balance).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "unknown";
-        return `  • ${a.name} (${a.currency}) - balance ${bal} - status: ${a.status} - id: ${a.id}`;
+        const bal = a.current_balance != null ? money(a.current_balance, a.currency) : "unknown";
+        return `  • ${a.name} - balance ${bal} - status: ${a.status} - id: ${a.id}`;
       });
       const usdTotal = allAccounts
         .filter((a) => a.currency === "USD" && a.current_balance != null)
         .reduce((s, a) => s + (Number(a.current_balance) || 0), 0);
-      text += `Accounts (source of truth):\n${lines.join("\n")}\nTotal USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD.\n\n`;
+      text += `Accounts (source of truth):\n${lines.join("\n")}\nTotal cash ≈ ${money(usdTotal, "USD")}.\n\n`;
       for (const a of allAccounts) {
-        sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} - ${a.currency} ${a.current_balance ?? "n/a"}` });
+        sources.push({ entityId: a.id, entityType: "account", excerpt: `${a.name} - ${money(a.current_balance, a.currency)}` });
       }
     }
 
@@ -782,13 +797,13 @@ You can explain concepts and surface general guidance, but do not give regulated
       const recent = allTxs.slice(0, 10);
       const lines = recent.map((t) => {
         const dir = t.direction;
-        const amt = Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+        const amt = money(t.amount, t.currency);
         const date = t.transaction_date;
-        return `  • ${dir} ${t.currency} ${amt} on ${date}${t.description_normalized ? ` - ${t.description_normalized}` : ""} - id: ${t.id}`;
+        return `  • ${dir} ${amt} on ${date}${t.description_normalized ? ` - ${t.description_normalized}` : ""} - id: ${t.id}`;
       });
       text += `Recent transactions (last ${recent.length}):\n${lines.join("\n")}\n\n`;
       for (const t of recent) {
-        sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${t.currency} ${t.amount}` });
+        sources.push({ entityId: t.id, entityType: "transaction", excerpt: `${t.direction} ${money(t.amount, t.currency)}` });
       }
     }
 
@@ -801,24 +816,24 @@ You can explain concepts and surface general guidance, but do not give regulated
     // ─── Invoices ───
     if (invoices.status === "fulfilled" && invoices.value && invoices.value.invoices.length > 0) {
       const lines = invoices.value.invoices.slice(0, 10).map((inv) => {
-        const amt = Number(inv.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
-        return `  • Invoice #${inv.invoice_number} - ${inv.currency} ${amt} - due ${inv.due_date ?? "unknown"} - status: ${inv.status} - id: ${inv.id}`;
+        const amt = money(inv.amount_due, inv.currency);
+        return `  • Invoice #${inv.invoice_number} - ${amt} - due ${inv.due_date ?? "unknown"} - status: ${inv.status} - id: ${inv.id}`;
       });
       text += `Invoices:\n${lines.join("\n")}\n\n`;
       for (const inv of invoices.value.invoices.slice(0, 10)) {
-        sources.push({ entityId: inv.id, entityType: "invoice", excerpt: `Invoice #${inv.invoice_number} - ${inv.currency} ${inv.amount_due}` });
+        sources.push({ entityId: inv.id, entityType: "invoice", excerpt: `Invoice #${inv.invoice_number} - ${money(inv.amount_due, inv.currency)}` });
       }
     }
 
     // ─── Obligations ───
     if (obligations.status === "fulfilled" && obligations.value && obligations.value.obligations.length > 0) {
       const lines = obligations.value.obligations.slice(0, 10).map((o) => {
-        const amt = Number(o.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 });
-        return `  • ${o.direction} ${o.currency} ${amt} - due ${o.due_date ?? "unknown"} - status: ${o.status} - id: ${o.id}`;
+        const amt = money(o.amount_due, o.currency);
+        return `  • ${o.direction} ${amt} - due ${o.due_date ?? "unknown"} - status: ${o.status} - id: ${o.id}`;
       });
       text += `Upcoming obligations:\n${lines.join("\n")}\n\n`;
       for (const o of obligations.value.obligations.slice(0, 10)) {
-        sources.push({ entityId: o.id, entityType: "obligation", excerpt: `${o.direction} ${o.currency} ${o.amount_due}` });
+        sources.push({ entityId: o.id, entityType: "obligation", excerpt: `${o.direction} ${money(o.amount_due, o.currency)}` });
       }
     }
 
@@ -871,11 +886,11 @@ You can explain concepts and surface general guidance, but do not give regulated
         if (pending.length > 0) {
           const piLines: string[] = [];
           for (const p of pending) {
-            const amt = Number(p.amount).toLocaleString("en-US", { minimumFractionDigits: 2 });
+            const amt = money(p.amount, p.currency);
             const cpNote = p.destination_counterparty_id ? ` to counterparty ${p.destination_counterparty_id}` : "";
             const invNote = p.invoice_id ? ` (invoice ${p.invoice_id})` : "";
-            piLines.push(`  • PaymentIntent ${p.id} - ${p.action_type} - ${p.currency} ${amt}${cpNote}${invNote} - status: ${p.status}`);
-            sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${p.currency} ${p.amount} - ${p.status}` });
+            piLines.push(`  • PaymentIntent ${p.id} - ${p.action_type} - ${amt}${cpNote}${invNote} - status: ${p.status}`);
+            sources.push({ entityId: p.id, entityType: "payment_intent", excerpt: `${p.action_type} ${money(p.amount, p.currency)} - ${p.status}` });
           }
           text += `Pending approvals (${pending.length} items in review queue):\n${piLines.join("\n")}\n\n`;
         }

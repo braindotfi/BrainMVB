@@ -175,7 +175,7 @@ export function ProposalDetail({
   /* Routine pending proposal. Promote into a standing rule via the create flow */
   onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const [showTrace, setShowTrace] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
@@ -267,7 +267,7 @@ export function ProposalDetail({
                 id="proposal-detail-rationale"
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
               >
-                {proposal.rationale}
+                {formatText(proposal.rationale)}
               </p>
               {proposal.bullets && proposal.bullets.length > 0 && (
                 <div className="flex flex-col gap-[8px] w-full pl-[4px]">
@@ -275,7 +275,7 @@ export function ProposalDetail({
                     <div key={i} className="flex gap-[10px] items-start">
                       <span className="shrink-0 w-[5px] h-[5px] rounded-full bg-[#414965] mt-[7px]" />
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-                        {bullet}
+                        {formatText(bullet)}
                       </p>
                     </div>
                   ))}
@@ -626,6 +626,7 @@ function AutoHandledReceipt({
   onReviewRule?: (proposal: Proposal) => void;
   onReportProblem?: (proposal: Proposal, report: { reason: string; note: string; pause: boolean }) => void;
 }) {
+  const { formatText } = useCurrency();
   const rule = proposal.rule;
   const paused = rulePaused ?? (rule ? !rule.active : false);
   // The link resolves only while the rule still exists in the store; a deleted
@@ -693,7 +694,7 @@ function AutoHandledReceipt({
           id="proposal-detail-rationale"
           className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
         >
-          {proposal.rationale}
+          {formatText(proposal.rationale)}
         </p>
         {proposal.bullets && proposal.bullets.length > 0 && (
           <div className="flex flex-col gap-[8px] w-full pl-[4px]">
@@ -701,7 +702,7 @@ function AutoHandledReceipt({
               <div key={i} className="flex gap-[10px] items-start">
                 <span className="shrink-0 w-[5px] h-[5px] rounded-full bg-[#414965] mt-[7px]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
-                  {bullet}
+                  {formatText(bullet)}
                 </p>
               </div>
             ))}

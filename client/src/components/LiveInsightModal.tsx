@@ -1,6 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
+import { useCurrency } from "@/lib/currencyContext";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
    subscription/disputed obligations, cash-flow aggregates) - see
@@ -19,6 +20,7 @@ export function LiveInsightModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { formatText } = useCurrency();
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
 
@@ -83,7 +85,7 @@ export function LiveInsightModal({
                 id="live-insight-description"
                 className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]"
               >
-                {insight.explanation}
+                {formatText(insight.explanation)}
               </p>
             )}
 
@@ -95,7 +97,7 @@ export function LiveInsightModal({
                       {f.label}
                     </span>
                     <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right truncate">
-                      {f.value}
+                      {formatText(f.value)}
                     </span>
                   </div>
                 ))}

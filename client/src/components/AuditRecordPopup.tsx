@@ -37,7 +37,7 @@ export function AuditRecordPopup({
   onNext?: () => void;
   pagerDisabled?: boolean;
 }) {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const [, navigate] = useLocation();
   useMembersCache();
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
@@ -174,7 +174,7 @@ export function AuditRecordPopup({
               <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
                 {statusPill()}
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-                  {record.summary}
+                  {formatText(record.summary)}
                 </p>
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   {record.occurredAtLabel}
@@ -220,10 +220,10 @@ export function AuditRecordPopup({
                                         data-testid={`link-actor-member-${idx}`}
                                         className="text-[#a8b9f4] underline decoration-[#414965] underline-offset-2 hover:decoration-[#a8b9f4] transition-colors"
                                       >
-                                        {step.label}
+                                        {formatText(step.label)}
                                       </button>
                                     ) : (
-                                      step.label
+                                      formatText(step.label)
                                     )}
                                     {actorRole && (
                                       <span data-testid={`text-actor-role-${idx}`} className="text-[#6c779d]">

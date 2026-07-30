@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
+import { buildProposalDetailRows, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "@/lib/proposalCards";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
@@ -1344,6 +1345,9 @@ export function LiveProposalModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const decide = useDecideProposal();
+  const { formatText } = useCurrency();
+  const [showTechnical, setShowTechnical] = useState(false);
+  const [showNarrative, setShowNarrative] = useState(false);
 
   if (!proposal) return null;
 
@@ -1353,6 +1357,17 @@ export function LiveProposalModal({
   const confidencePct = typeof proposal.confidence === "number" ? Math.round(proposal.confidence * 100) : null;
   const needsReview = isNeedsReview(proposal);
   const notifyOnly = proposal.mode === "notify_only";
+
+  // `evidence` is defensive: this record can arrive from any cached /proposals
+  // read, and the enriching route is not the only way one reaches this modal.
+  const evidence = proposal.evidence ?? [];
+  const subjectName = proposal.subject?.display ?? null;
+  // Amounts are structured {value, currency}; formatText applies the user's
+  // active display currency + FX rate. Never pre-formatted server-side.
+  const allRows = buildProposalDetailRows(evidence, subjectName, (a) => formatText(`${a.currency} ${a.value}`));
+  const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
+  const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
+  const narrativeIsLong = (proposal.narrative?.length ?? 0) > 180;
 
   const act = (decision: ProposalDecision) => {
     decide.mutate({ id: proposal.id, decision }, { onSuccess: () => onOpenChange(false) });
@@ -1390,17 +1405,47 @@ export function LiveProposalModal({
           </div>
 
           <div className="flex flex-col gap-[16px] p-[24px] w-full overflow-y-auto">
-            {risk && (
+            {/* Subject — who/what the proposal is about. brain-core sends only ids;
+                `subject` and every `display` below are resolved by the BFF
+                (server/brain/proposalEnrichment.ts), never looked up here. */}
+            <div className="flex items-center gap-[12px] w-full">
               <div
-                className="inline-flex items-center justify-center px-[12px] py-[5px] rounded-[100px]"
-                style={{ background: risk.bg, border: `1px solid ${risk.border}` }}
-                data-testid="pill-live-proposal-risk"
+                aria-hidden="true"
+                className="size-[40px] shrink-0 rounded-full bg-[#1d2132] border border-[#2a3050] border-solid flex items-center justify-center"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px]" style={{ color: risk.color }}>
-                  {risk.label}
-                </span>
+                {subjectName ? (
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]">
+                    {initialsOf(subjectName)}
+                  </span>
+                ) : (
+                  <AgentIcon size={18} className="text-[#a8b9f4]" />
+                )}
               </div>
-            )}
+              <div className="flex flex-col min-w-0 flex-1">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate"
+                  data-testid="text-live-proposal-subject"
+                >
+                  {subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
+                </p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#6c779d] truncate">
+                  {subjectName
+                    ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
+                    : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`}
+                </p>
+              </div>
+              {risk && (
+                <div
+                  className="inline-flex shrink-0 items-center justify-center px-[10px] py-[4px] rounded-[100px]"
+                  style={{ background: risk.bg, border: `1px solid ${risk.border}` }}
+                  data-testid="pill-live-proposal-risk"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]" style={{ color: risk.color }}>
+                    {risk.label}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {confidencePct !== null && (
               <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-proposal-confidence">
@@ -1414,33 +1459,106 @@ export function LiveProposalModal({
               </div>
             )}
 
-            {proposal.narrative && (
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]"
-                data-testid="text-live-proposal-narrative"
+            {/* Decision-supporting detail, prioritised and capped so the card stays
+                scannable. Everything here is a real ledger field. */}
+            {visibleRows.length > 0 && (
+              <div
+                className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
+                data-testid="list-live-proposal-details"
               >
-                {proposal.narrative}
-              </p>
-            )}
-
-            {proposal.evidence.length > 0 && (
-              <div className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]" data-testid="list-live-proposal-evidence">
-                {proposal.evidence.map((e, i) => (
-                  <div key={i} className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">{e.kind}</span>
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#a8b9f4] truncate">{e.ref}</span>
+                {visibleRows.map((r, i) => (
+                  <div key={`${r.label}-${i}`} className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
+                      {r.label}
+                    </span>
+                    <span
+                      className={`text-[13px] text-[#a8b9f4] text-right truncate ${
+                        r.mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-medium"
+                      }`}
+                      data-testid={`text-live-proposal-detail-${r.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {r.value}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* No live PaymentIntent-by-id detail viewer exists outside ReviewPage's own
-                local queue state (verified: openProposalDetail.ts only resolves the
-                fabricated mock catalogue) - muted reference text, not a link. */}
-            {proposal.payment_intent_id && (
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] truncate" data-testid="text-live-proposal-payment-intent">
-                {proposal.payment_intent_id}
-              </p>
+            {/* The agent's own message. Clamped when long — approvers scan the
+                structured rows first and read the prose only if they need it. */}
+            {proposal.narrative && (
+              <div className="flex flex-col gap-[6px] w-full">
+                <p
+                  className={`[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] ${
+                    narrativeIsLong && !showNarrative ? "line-clamp-3" : ""
+                  }`}
+                  data-testid="text-live-proposal-narrative"
+                >
+                  {formatText(proposal.narrative)}
+                </p>
+                {narrativeIsLong && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNarrative((v) => !v)}
+                    data-testid="button-live-proposal-narrative-toggle"
+                    className="self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#a8b9f4] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                  >
+                    {showNarrative ? "Show less" : "Show more"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Technical reference — raw ids live here, collapsed, so the card reads
+                as names but the underlying refs stay available for support. */}
+            {(evidence.length > 0 || proposal.payment_intent_id) && (
+              <div className="flex flex-col gap-[8px] w-full">
+                <button
+                  type="button"
+                  onClick={() => setShowTechnical((v) => !v)}
+                  aria-expanded={showTechnical}
+                  data-testid="button-live-proposal-technical-toggle"
+                  className="flex items-center gap-[4px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                >
+                  <ChevronRight size={14} className={`transition-transform ${showTechnical ? "rotate-90" : ""}`} />
+                  Technical reference
+                </button>
+                {showTechnical && (
+                  <div
+                    className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
+                    data-testid="list-live-proposal-technical"
+                  >
+                    {overflowRows.map((r, i) => (
+                      <div key={`overflow-${i}`} className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">{r.label}</span>
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#a8b9f4] text-right truncate">{r.value}</span>
+                      </div>
+                    ))}
+                    {evidence.map((e, i) => (
+                      <div key={`ev-${i}`} className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">
+                          {e.display ? `${e.label ?? e.kind} · ${e.display}` : (e.label ?? e.kind)}
+                        </span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] break-all">{e.ref}</span>
+                      </div>
+                    ))}
+                    {/* No live PaymentIntent-by-id detail viewer exists outside ReviewPage's
+                        own local queue state (openProposalDetail.ts only resolves the
+                        fabricated mock catalogue) - reference text, not a link. */}
+                    {proposal.payment_intent_id && (
+                      <div className="flex flex-col gap-[2px] px-[12px] py-[8px] bg-[#0a0c10]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">Payment intent</span>
+                        <span
+                          className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] break-all"
+                          data-testid="text-live-proposal-payment-intent"
+                        >
+                          {proposal.payment_intent_id}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ponytail: edit-at-decide is deferred - the merged decide contract only

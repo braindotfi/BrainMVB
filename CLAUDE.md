@@ -534,6 +534,71 @@ agents_execution_payments_members, audit_proof_tenant):
   to `/v1/execution/agents/{id}`, the runtime registry, which resolves them and returns
   `display_name`. The emitted lookup path is upstream-wrong; flag it to brain-core owners.
 
+## Proposal cards: resolve names on the BFF, not in the client
+brain-core proposals cite entities as bare ids (`inv_01KY…`), so an unenriched card is a wall
+of ULIDs. `GET /api/brain/proposals` is an **exact-path route in `proxy.ts`** (registered
+before the write allowlist and well before the generic GET passthrough) that runs
+`enrichProposals` over the page. `/proposals/:id` still falls through untouched.
+
+`server/brain/proposalEnrichment.ts` builds one id → entity index from counterparties,
+invoices, obligations, accounts, members and **transactions**, then adds to each evidence
+item — all fields OPTIONAL on the client type:
+- `label` — human caption for `kind` ("Invoice", "Counterparty").
+- `display` — resolved name, or `null` when nothing matched.
+- `amount` — `{ value, currency }`, **structured, never a formatted string** (see below).
+- `facts[]` — `{label, value}` rows derived from REAL ledger fields (due date, days overdue,
+  status, PO, direction). Never invent a fact the backend does not have.
+- `context` — `true` for background citations; see the wiki rule below.
+
+Plus a proposal-level `subject: {label, display} | null` — the entity a human would name the
+card by, preferring a resolved party over the first resolved entity.
+
+Rules learned the hard way, all pinned by `proposalEnrichment.test.ts`:
+- **Resolve by direct id lookup, never by ULID prefix.** Ids are `^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}$`
+  with no published prefix→entity registry, so a prefix table silently stops resolving the
+  day core adds a type. `kind` only captions the row.
+- **Refs come in two spellings.** The same entity is cited both bare (`cp_01KY…`) and as a
+  wiki URI (`wiki:/counterparties/cp_01KY…`). Look up the ref, then its trailing path
+  segment. Bare-id-only lookup left more than half of live evidence unresolved.
+- **`wiki:` refs are `context`, not the subject.** A collections proposal cites the whole
+  counterparty book as background while naming one customer, so letting them win renamed a
+  StartupX card after an unrelated customer. Context items never caption the card and never
+  produce detail rows — they stay in "Technical reference" with their resolved name.
+- **Index transactions.** Reconciliation proposals cite `tx_` refs and nothing else; without
+  that leg every reconciliation card was a subject-less wall of ids.
+- **Every leg is `Promise.allSettled`.** A reference-data outage must serve the raw page, not
+  502 the review queue. Enrichment is best-effort and the UI must render without it.
+
+Card layout lives in `client/src/lib/proposalCards.ts` (pure, unit-tested — kept out of the
+`.tsx` because the suite runs in a node environment): `buildProposalDetailRows` de-duplicates,
+drops the row that merely repeats the subject, and sorts by decision relevance
+(Amount → Overdue by → Due → Status → …). The first `MAX_VISIBLE_DETAIL_ROWS` (4) show; the
+rest move into the collapsed "Technical reference" alongside raw refs. Unknown labels sort
+last rather than being dropped, so a new brain-core fact still renders.
+
+## Currency formatting — one formatter, and never pre-format on the server
+Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
+same helper: BrainAssistant's matched a `USD 18600` prefix but never applied the FX rate,
+HomePage's was the exact reverse. Both are deleted.
+
+`client/src/lib/formatAmounts.ts` is now the single formatter, exposed as `formatText` on
+`useCurrency()`. It handles symbol-prefix, code-prefix, code-suffix and ETH (native units, no
+FX), and normalises amounts already in the active currency without re-applying the rate.
+Every surface that renders backend or LLM prose goes through it: proposal cards, inbox,
+assistant chat + citation excerpts, insights, audit records, ProposalDetail rationale and
+bullets. When adding a surface that prints server text, wire `formatText` — do not re-derive.
+
+- **Never pre-format money server-side.** Amounts travel as `{ value, currency }` so the
+  client can apply the active display currency and FX rate. Emitting `"$18,600.00"` from the
+  BFF hard-codes USD and breaks the currency switcher.
+- **Bare numbers are deliberately NOT auto-formatted.** `42000.00` with no marker is
+  indistinguishable from a date, count, confidence score or id fragment. Producers must emit
+  a currency marker; `server/routes.ts` has a `money()` helper and `ASSISTANT_SYSTEM` carries
+  an explicit instruction. Format numbers BEFORE interpolation rather than asking the LLM to.
+- **A minus binds tightly to the marker.** `-$2,400` is negative; `Invoice #A1 - USD 18,600`
+  is a separator. Do not let the sign group swallow surrounding whitespace, or
+  `Paid €500` renders as `Paid€500.00`.
+
 ## CI gate
 `.github/workflows/test.yml` runs `npm test` (the vitest suite) on every pull request and
 on push to `main` (Node 20, npm cache). The workflow is green only when the suite passes,
