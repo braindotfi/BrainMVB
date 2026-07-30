@@ -93,7 +93,7 @@ export const ReviewModal = ({
   rejection?: { title: string; detail: string; reason: string } | null;
 }) => {
   const [auto, setAuto] = useState(false);
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const swap = (s: string) => s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
@@ -150,7 +150,7 @@ export const ReviewModal = ({
                   id="review-modal-description"
                   className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]"
                 >
-                  {item.description}
+                  {formatText(item.description)}
                 </DialogPrimitive.Description>
               </div>
             </div>

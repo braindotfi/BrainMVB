@@ -154,7 +154,13 @@ function titleCase(v: string): string {
  *
  * Every leg is allSettled: a proposal card that shows resolved names for the
  * entities we could read plus raw ids for the rest is strictly better than a
- * 502, and these are five independent upstream calls.
+ * 502, and these are independent upstream calls.
+ *
+ * The page limits are a deliberate latency cap, not an assumption of tenant
+ * size. A ref that lives beyond the first page simply stays unresolved and
+ * renders as a raw id under "Technical reference" — the same graceful
+ * degradation as an upstream outage. If large tenants start showing raw ids,
+ * switch to targeted lookup-by-ref rather than raising these numbers.
  */
 export async function buildEntityIndex(token: string, now: Date = new Date()): Promise<EntityIndex> {
   const [accounts, cps, invoices, obligations, members, transactions] = await Promise.allSettled([

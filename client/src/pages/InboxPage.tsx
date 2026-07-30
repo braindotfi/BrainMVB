@@ -157,8 +157,14 @@ const InboxCard = ({
   busy?: boolean;
 }) => {
   const rejected = item.tab === "Rejected";
-  /* Second-row text: prefer "Why: …" if the record has it, else desc. */
-  const secondLine = item.why ? `Why: ${item.why}` : item.desc;
+  const { formatText } = useCurrency();
+  /* Second-row text: prefer "Why: …" if the record has it, else desc. Both are
+     backend/LLM prose carrying raw amounts, so they go through formatText. */
+  const secondLine = item.why
+    ? `Why: ${formatText(item.why)}`
+    : item.desc
+      ? formatText(item.desc)
+      : item.desc;
 
   return (
     <div

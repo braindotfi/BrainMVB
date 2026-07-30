@@ -659,7 +659,7 @@ export function AgentProposalModal({
   onNext?: () => void;
   pagerDisabled?: boolean;
 }) {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const decisions = useAgentDecisions();
   const [viewingEvidence, setViewingEvidence] = useState<EvidenceLine | null>(null);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
@@ -1111,7 +1111,7 @@ export function AgentProposalModal({
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d]">
                         <span className="font-semibold text-[#a8b9f4]">{step.label}</span>
                         {" "}
-                        {step.text}
+                        {formatText(step.text)}
                       </p>
                     </div>
                   ))}
