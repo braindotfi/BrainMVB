@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildProposalDetailRows, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "./proposalCards";
+import { buildProposalDetailRows, buildProposalHeadline, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
 const money = (a: { value: string; currency: string }) =>
@@ -98,5 +98,54 @@ describe("buildProposalDetailRows", () => {
   it("keeps overflow rows available rather than dropping them", () => {
     const rows = buildProposalDetailRows([invoice, counterparty], null, money);
     expect(rows.length).toBeGreaterThan(MAX_VISIBLE_DETAIL_ROWS);
+  });
+});
+
+describe("buildProposalHeadline", () => {
+  it("quotes the document number and its own amount", () => {
+    const withCode = { ...invoice, code: "AR-MIDMARKET-001" };
+    const h = buildProposalHeadline([counterparty, withCode]);
+    expect(h.code).toBe("AR-MIDMARKET-001");
+    expect(h.amount).toEqual({ value: "18600.00000000", currency: "USD" });
+  });
+
+  it("ignores background citations, which describe the book the agent read", () => {
+    const noise: ProposalEvidenceItem = {
+      kind: "wiki",
+      ref: "wiki:/invoices/inv_other",
+      resolvable: false,
+      label: "Invoice",
+      display: "Invoice #INV-9999",
+      code: "INV-9999",
+      amount: { value: "1.00", currency: "USD" },
+      facts: [],
+      context: true,
+    };
+    expect(buildProposalHeadline([noise]).code).toBeNull();
+  });
+
+  it("still reports an amount when no cited record carries a document number", () => {
+    const h = buildProposalHeadline([counterparty, { ...invoice, code: null }]);
+    expect(h.code).toBeNull();
+    expect(h.amount).toEqual({ value: "18600.00000000", currency: "USD" });
+  });
+
+  it("returns nothing rather than inventing a headline for an id-only proposal", () => {
+    const bare: ProposalEvidenceItem = { kind: "policy_decision", ref: "pd_1", resolvable: false };
+    expect(buildProposalHeadline([bare])).toEqual({ code: null, amount: null });
+  });
+});
+
+describe("detail row icons", () => {
+  it("gives every row an icon key so no row renders iconless", () => {
+    const rows = buildProposalDetailRows([invoice, counterparty], null, money);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => typeof r.icon === "string" && r.icon.length > 0)).toBe(true);
+  });
+
+  it("does not repeat the headline document as a row", () => {
+    const withCode = { ...invoice, code: "INV-1042" };
+    const rows = buildProposalDetailRows([withCode], null, money, "INV-1042");
+    expect(rows.some((r) => r.value === "Invoice #INV-1042")).toBe(false);
   });
 });

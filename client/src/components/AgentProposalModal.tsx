@@ -9,28 +9,37 @@ import {
   ArrowRight,
   ArrowUpRight,
   ArrowDown,
+  ArrowLeftRight,
   AlertTriangle,
   BookCheck,
+  Building2,
+  Calendar,
   Check,
   ChevronRight,
+  CircleDot,
   ClipboardCheck,
   DollarSign,
   FileText,
   HandCoins,
+  Hash,
   Info,
   Landmark,
   LineChart,
+  Mail,
   Pencil,
   Receipt,
   Repeat,
   Scale,
   ShieldAlert,
+  Tag,
   TrendingUp,
+  User,
+  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/currencyContext";
-import { buildProposalDetailRows, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "@/lib/proposalCards";
+import { buildProposalDetailRows, buildProposalHeadline, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "@/lib/proposalCards";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
@@ -56,6 +65,7 @@ import {
   isNeedsReview,
   useDecideProposal,
   type BrainProposal,
+  type ProposalAmount,
   type ProposalDecision,
 } from "@/lib/brainProposals";
 
@@ -1321,6 +1331,24 @@ export function AgentProposalModal({
 
 /** Display name per agent, matching the copy already used per-record in
  *  agentProposals.ts's AGENT_PROPOSALS (client-owned presentation, not brain-core data). */
+/** Row-icon key (lib/proposalCards.ts) → component. Kept here because that module
+ *  is unit-tested in a node env and must stay free of component imports. */
+const DETAIL_ROW_ICONS: Record<string, LucideIcon> = {
+  amount: DollarSign,
+  calendar: Calendar,
+  alert: AlertTriangle,
+  status: Info,
+  file: FileText,
+  building: Building2,
+  hash: Hash,
+  wallet: Wallet,
+  tag: Tag,
+  arrows: ArrowLeftRight,
+  user: User,
+  mail: Mail,
+  dot: CircleDot,
+};
+
 export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   vendor_risk: "Vendor Risk",
   payment: "Payment",
@@ -1364,7 +1392,14 @@ export function LiveProposalModal({
   const subjectName = proposal.subject?.display ?? null;
   // Amounts are structured {value, currency}; formatText applies the user's
   // active display currency + FX rate. Never pre-formatted server-side.
-  const allRows = buildProposalDetailRows(evidence, subjectName, (a) => formatText(`${a.currency} ${a.value}`));
+  const money = (a: ProposalAmount) => formatText(`${a.currency} ${a.value}`);
+  const headline = buildProposalHeadline(evidence);
+  // "AR-MIDMARKET-001 · $42,000.00" — each half omitted when the cited records
+  // don't carry it, rather than shown blank.
+  const headlineText = [headline.code, headline.amount ? money(headline.amount) : null]
+    .filter(Boolean)
+    .join(" · ");
+  const allRows = buildProposalDetailRows(evidence, subjectName, money, headline.code);
   const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
   const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
   const narrativeIsLong = (proposal.narrative?.length ?? 0) > 180;
@@ -1428,10 +1463,14 @@ export function LiveProposalModal({
                 >
                   {subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
                 </p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#6c779d] truncate">
-                  {subjectName
-                    ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
-                    : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`}
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#6c779d] truncate"
+                  data-testid="text-live-proposal-headline"
+                >
+                  {headlineText ||
+                    (subjectName
+                      ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
+                      : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`)}
                 </p>
               </div>
               {risk && (
@@ -1466,9 +1505,17 @@ export function LiveProposalModal({
                 className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
                 data-testid="list-live-proposal-details"
               >
-                {visibleRows.map((r, i) => (
-                  <div key={`${r.label}-${i}`} className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
+                {visibleRows.map((r, i) => {
+                  const RowIcon = DETAIL_ROW_ICONS[r.icon] ?? CircleDot;
+                  return (
+                  <div
+                    key={`${r.label}-${i}`}
+                    className={`flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10] ${
+                      i > 0 ? "border-t border-[#1d2132] border-solid" : ""
+                    }`}
+                  >
+                    <span className="flex items-center gap-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
+                      <RowIcon size={14} className="text-[#6c779d] shrink-0" aria-hidden="true" />
                       {r.label}
                     </span>
                     <span
@@ -1480,7 +1527,8 @@ export function LiveProposalModal({
                       {r.value}
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

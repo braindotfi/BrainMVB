@@ -4,19 +4,21 @@ import {
   daysOverdue,
   resolveEvidenceItem,
   enrichProposal,
+  hydrateMissingRefs,
   type EntityIndex,
 } from "./proposalEnrichment";
 
 const index: EntityIndex = new Map([
   [
     "cp_01KYSF0QJ0N18YGNS4JR9EZPHM",
-    { label: "Counterparty", display: "Midmarket Co", amount: null, facts: [] },
+    { label: "Counterparty", display: "Midmarket Co", code: null, amount: null, facts: [] },
   ],
   [
     "inv_01KYSG21MMMHAPE101816VTQNB",
     {
       label: "Invoice",
       display: "Invoice #INV-1042",
+      code: "INV-1042",
       amount: { value: "18600.00000000", currency: "USD" },
       facts: [{ label: "Due", value: "Jul 17, 2026" }],
     },
@@ -161,5 +163,56 @@ describe("enrichProposal", () => {
     const out = enrichProposal({ id: "prop_x" }, index);
     expect(out.evidence).toEqual([]);
     expect(out.subject).toBeNull();
+  });
+});
+
+describe("code propagation", () => {
+  it("carries the invoice number through as `code` for the card headline", () => {
+    const out = resolveEvidenceItem({ kind: "invoice", ref: "inv_01KYSG21MMMHAPE101816VTQNB" }, index);
+    expect(out.code).toBe("INV-1042");
+  });
+
+  it("leaves `code` null for records that have no document number", () => {
+    const out = resolveEvidenceItem({ kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }, index);
+    expect(out.code).toBeNull();
+  });
+});
+
+describe("hydrateMissingRefs", () => {
+  // A network call from any of these would reject the promise: the token is
+  // nonsense and there is no fetch mock. Staying silent proves no call was made.
+  const NO_TOKEN = "";
+
+  it("makes no upstream call when every ref is already indexed", async () => {
+    const before = new Map(index);
+    await expect(
+      hydrateMissingRefs(
+        NO_TOKEN,
+        [
+          { ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM", kind: "counterparty" },
+          { ref: "inv_01KYSG21MMMHAPE101816VTQNB", kind: "invoice" },
+        ],
+        index,
+      ),
+    ).resolves.toBeUndefined();
+    expect(index.size).toBe(before.size);
+  });
+
+  it("skips refs whose collection cannot be named, rather than guessing from the id prefix", async () => {
+    // `pd_`/`evt_` are not ledger entities and no wiki URI names their
+    // collection, so there is no endpoint to try. Must not brute-force.
+    const empty: EntityIndex = new Map();
+    await expect(
+      hydrateMissingRefs(
+        NO_TOKEN,
+        [
+          { ref: "pd_01KYSF0QJ0N18YGNS4JR9EZPHM", kind: "policy_decision" },
+          { ref: "evt_01KYSF0QJ0N18YGNS4JR9EZPHM", kind: "audit_event" },
+          { ref: "wiki:/monthly-summaries/2026-07", kind: "wiki" },
+        ],
+        empty,
+      ),
+    ).resolves.toBeUndefined();
+    expect(empty.size).toBe(0);
   });
 });

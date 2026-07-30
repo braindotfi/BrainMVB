@@ -26,6 +26,7 @@
  */
 
 import {
+  brainRequest,
   listLedgerAccounts,
   listLedgerCounterparties,
   listLedgerInvoices,
@@ -54,6 +55,10 @@ export interface EnrichedEvidenceItem {
   label: string;
   /** Resolved human name, or null when the ref matched nothing we can read. */
   display: string | null;
+  /** The bare business identifier ("AR-MIDMARKET-001"), when the record has one
+   *  distinct from its display name. Lets the card headline read as the document
+   *  number a human would quote, without re-parsing `display`. */
+  code: string | null;
   /** Structured, NOT a formatted string — the client applies display currency. */
   amount: ResolvedAmount | null;
   /** Extra decision-supporting rows, all derived from real ledger fields. */
@@ -76,6 +81,7 @@ export interface EnrichedProposal {
 interface IndexedEntity {
   label: string;
   display: string;
+  code: string | null;
   amount: ResolvedAmount | null;
   facts: EvidenceFact[];
 }
@@ -147,6 +153,74 @@ function titleCase(v: string): string {
   return v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, " ");
 }
 
+/* ── Entity mappers ───────────────────────────────────────────────────────────
+ *
+ * Shared by BOTH index paths: the bulk list pass below and the targeted by-id
+ * hydration further down. They are deliberately loose about their input shape so
+ * the same mapper can take either the client's parsed list row or the raw record
+ * a `/ledger/<collection>/{id}` read returns.
+ */
+
+interface RawCounterparty { id?: unknown; name?: unknown; display_name?: unknown }
+interface RawInvoice {
+  id?: unknown; invoice_number?: unknown; counterparty_id?: unknown;
+  amount_due?: unknown; currency?: unknown; due_date?: unknown; status?: unknown;
+  metadata?: { po?: unknown } | null;
+}
+interface RawTransaction {
+  id?: unknown; counterparty_id?: unknown; direction?: unknown; transaction_date?: unknown;
+  status?: unknown; description_normalized?: unknown; description_raw?: unknown;
+  amount?: unknown; currency?: unknown;
+}
+
+const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+
+function counterpartyEntity(c: RawCounterparty): IndexedEntity | null {
+  const name = str(c.display_name) ?? str(c.name);
+  if (!name) return null;
+  return { label: "Counterparty", display: name, code: null, amount: null, facts: [] };
+}
+
+function invoiceEntity(inv: RawInvoice, cpName: string | undefined, now: Date): IndexedEntity | null {
+  const number = str(inv.invoice_number);
+  const facts: EvidenceFact[] = [];
+  if (cpName) facts.push({ label: "Counterparty", value: cpName });
+  facts.push(...dueFacts(str(inv.due_date), now));
+  const status = str(inv.status);
+  if (status) facts.push({ label: "Status", value: titleCase(status) });
+  if (inv.metadata?.po != null) facts.push({ label: "PO", value: String(inv.metadata.po) });
+  const currency = str(inv.currency);
+  return {
+    label: "Invoice",
+    display: number ? `Invoice #${number}` : "Invoice",
+    code: number,
+    amount: inv.amount_due != null && currency ? { value: String(inv.amount_due), currency } : null,
+    facts,
+  };
+}
+
+function transactionEntity(t: RawTransaction, cpName: string | undefined, now: Date): IndexedEntity | null {
+  void now;
+  const facts: EvidenceFact[] = [];
+  if (cpName) facts.push({ label: "Counterparty", value: cpName });
+  const direction = str(t.direction);
+  if (direction) facts.push({ label: "Direction", value: titleCase(direction) });
+  const dated = formatDate(str(t.transaction_date));
+  if (dated) facts.push({ label: "Date", value: dated });
+  const status = str(t.status);
+  if (status) facts.push({ label: "Status", value: titleCase(status) });
+  const desc = str(t.description_normalized) ?? str(t.description_raw);
+  const currency = str(t.currency);
+  return {
+    label: "Transaction",
+    // Fall back to the party + direction rather than echoing the raw id.
+    display: desc ?? (cpName ? `${cpName} ${direction ?? ""}`.trim() : titleCase(String(direction ?? "Transaction"))),
+    code: null,
+    amount: t.amount != null && currency ? { value: String(t.amount), currency } : null,
+    facts,
+  };
+}
+
 /* ── Index construction ───────────────────────────────────────────────────── */
 
 /**
@@ -156,11 +230,11 @@ function titleCase(v: string): string {
  * entities we could read plus raw ids for the rest is strictly better than a
  * 502, and these are independent upstream calls.
  *
- * The page limits are a deliberate latency cap, not an assumption of tenant
- * size. A ref that lives beyond the first page simply stays unresolved and
- * renders as a raw id under "Technical reference" — the same graceful
- * degradation as an upstream outage. If large tenants start showing raw ids,
- * switch to targeted lookup-by-ref rather than raising these numbers.
+ * This bulk pass is an OPTIMISTIC PREFETCH, not the guarantee of resolution.
+ * brain-core caps these collections server-side (`/ledger/counterparties`
+ * returns 20 rows however large `limit` is), so on a tenant with more records
+ * than one page the cited entity may simply not be here. `hydrateMissingRefs`
+ * below closes that gap by fetching the specific refs that missed.
  */
 export async function buildEntityIndex(token: string, now: Date = new Date()): Promise<EntityIndex> {
   const [accounts, cps, invoices, obligations, members, transactions] = await Promise.allSettled([
@@ -179,8 +253,10 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
   if (cps.status === "fulfilled") {
     for (const c of cps.value.counterparties ?? []) {
       if (!c?.id) continue;
-      cpNames.set(c.id, c.name);
-      index.set(c.id, { label: "Counterparty", display: c.name, amount: null, facts: [] });
+      const entity = counterpartyEntity(c);
+      if (!entity) continue;
+      cpNames.set(c.id, entity.display);
+      index.set(c.id, entity);
     }
   }
 
@@ -194,6 +270,7 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
       index.set(a.id, {
         label: "Account",
         display: a.name,
+        code: null,
         amount: a.current_balance != null ? { value: String(a.current_balance), currency: a.currency } : null,
         facts,
       });
@@ -203,18 +280,8 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
   if (invoices.status === "fulfilled") {
     for (const inv of invoices.value.invoices ?? []) {
       if (!inv?.id) continue;
-      const facts: EvidenceFact[] = [];
-      const cpName = inv.counterparty_id ? cpNames.get(inv.counterparty_id) : undefined;
-      if (cpName) facts.push({ label: "Counterparty", value: cpName });
-      facts.push(...dueFacts(inv.due_date, now));
-      if (inv.status) facts.push({ label: "Status", value: titleCase(inv.status) });
-      if (inv.metadata?.po) facts.push({ label: "PO", value: String(inv.metadata.po) });
-      index.set(inv.id, {
-        label: "Invoice",
-        display: `Invoice #${inv.invoice_number}`,
-        amount: { value: String(inv.amount_due), currency: inv.currency },
-        facts,
-      });
+      const entity = invoiceEntity(inv, inv.counterparty_id ? cpNames.get(inv.counterparty_id) : undefined, now);
+      if (entity) index.set(inv.id, entity);
     }
   }
 
@@ -229,6 +296,7 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
       index.set(o.id, {
         label: o.direction === "receivable" ? "Receivable" : "Payable",
         display: cpName ? `${cpName} ${o.direction}` : titleCase(String(o.direction)),
+        code: null,
         amount: { value: String(o.amount_due), currency: o.currency },
         facts,
       });
@@ -240,21 +308,8 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
   if (transactions.status === "fulfilled") {
     for (const t of transactions.value.transactions ?? []) {
       if (!t?.id) continue;
-      const facts: EvidenceFact[] = [];
-      const cpName = t.counterparty_id ? cpNames.get(t.counterparty_id) : undefined;
-      if (cpName) facts.push({ label: "Counterparty", value: cpName });
-      if (t.direction) facts.push({ label: "Direction", value: titleCase(t.direction) });
-      const dated = formatDate(t.transaction_date);
-      if (dated) facts.push({ label: "Date", value: dated });
-      if (t.status) facts.push({ label: "Status", value: titleCase(t.status) });
-      const desc = t.description_normalized || t.description_raw;
-      index.set(t.id, {
-        label: "Transaction",
-        // Fall back to the party + direction rather than echoing the raw id.
-        display: desc || (cpName ? `${cpName} ${t.direction}` : titleCase(String(t.direction))),
-        amount: { value: String(t.amount), currency: t.currency },
-        facts,
-      });
+      const entity = transactionEntity(t, t.counterparty_id ? cpNames.get(t.counterparty_id) : undefined, now);
+      if (entity) index.set(t.id, entity);
     }
   }
 
@@ -264,11 +319,140 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
       const facts: EvidenceFact[] = [];
       if (m.role) facts.push({ label: "Role", value: titleCase(m.role) });
       if (m.email) facts.push({ label: "Email", value: m.email });
-      index.set(m.id, { label: "Team member", display: m.displayName, amount: null, facts });
+      index.set(m.id, { label: "Team member", display: m.displayName, code: null, amount: null, facts });
     }
   }
 
   return index;
+}
+
+/* ── Targeted hydration of refs the bulk pass missed ──────────────────────── */
+
+/**
+ * Collections a ref can be fetched from individually. brain-core exposes
+ * `GET /ledger/<collection>/{id}` for these three; `/ledger/obligations/{id}` is
+ * NOT routed (404), so obligations resolve only via the bulk pass above.
+ */
+const BY_ID_COLLECTIONS = ["counterparties", "invoices", "transactions"] as const;
+type ByIdCollection = (typeof BY_ID_COLLECTIONS)[number];
+
+/** `kind` → collection. Only used to choose an endpoint for a bare ref; a wrong
+ *  guess costs one 404 and the ref stays raw, exactly as before. */
+const KIND_COLLECTION: Record<string, ByIdCollection> = {
+  counterparty: "counterparties",
+  customer: "counterparties",
+  vendor: "counterparties",
+  invoice: "invoices",
+  transaction: "transactions",
+};
+
+/**
+ * Bound on individual reads per proposals page. A page of cards citing hundreds
+ * of unresolved refs must not turn one review-queue load into hundreds of
+ * upstream round-trips; past this cap the remainder stay raw ids.
+ */
+const MAX_TARGETED_LOOKUPS = 24;
+
+/** The ledger id inside a ref, for both spellings (`cp_…`, `wiki:/counterparties/cp_…`). */
+function refId(ref: string): string {
+  return ref.split("/").pop() ?? ref;
+}
+
+/**
+ * Which collection to fetch a ref from, WITHOUT parsing the ULID prefix.
+ *
+ * Two honest sources, in order: the wiki URI names its own collection
+ * (`wiki:/counterparties/cp_…`), and failing that brain-core's declared `kind`.
+ * A ref with neither is left alone rather than brute-forced across every
+ * endpoint — see the header note on why prefix tables are not used.
+ */
+function collectionForRef(ref: string, kind: string): ByIdCollection | null {
+  const wiki = /^wiki:\/([^/]+)\//.exec(ref);
+  if (wiki && (BY_ID_COLLECTIONS as readonly string[]).includes(wiki[1])) {
+    return wiki[1] as ByIdCollection;
+  }
+  return KIND_COLLECTION[kind?.toLowerCase?.() ?? ""] ?? null;
+}
+
+async function fetchById(token: string, collection: ByIdCollection, id: string): Promise<Record<string, unknown> | null> {
+  try {
+    return await brainRequest<Record<string, unknown>>(`/ledger/${collection}/${encodeURIComponent(id)}`, { token });
+  } catch {
+    // A 404 here is ordinary: the kind-derived guess can be wrong, and a ref can
+    // point at a record this member's scopes cannot read. Stay raw, never throw.
+    return null;
+  }
+}
+
+/**
+ * Fill in the refs the bulk index missed by reading them individually.
+ *
+ * This is what makes resolution independent of brain-core's page caps: before
+ * it, a tenant whose cited invoice sat outside the first 20 counterparties /
+ * first page of invoices rendered a card with no subject, no detail rows, and
+ * nothing but raw ids under "Technical reference".
+ *
+ * Mutates `index` in place. Never throws — every failure leaves the ref raw.
+ */
+export async function hydrateMissingRefs(
+  token: string,
+  refs: { ref: string; kind: string }[],
+  index: EntityIndex,
+  now: Date = new Date(),
+): Promise<void> {
+  // Dedupe by ledger id: the same entity is routinely cited twice per proposal
+  // (once bare, once as a wiki URI) and again across sibling proposals.
+  const wanted = new Map<string, ByIdCollection>();
+  for (const { ref, kind } of refs) {
+    if (!ref) continue;
+    const id = refId(ref);
+    if (index.has(ref) || index.has(id) || wanted.has(id)) continue;
+    const collection = collectionForRef(ref, kind);
+    if (collection) wanted.set(id, collection);
+  }
+  if (wanted.size === 0) return;
+
+  const batch = Array.from(wanted).slice(0, MAX_TARGETED_LOOKUPS);
+  const fetched = await Promise.all(
+    batch.map(async ([id, collection]) => ({ id, collection, record: await fetchById(token, collection, id) })),
+  );
+
+  // Second round: an invoice/transaction names its counterparty by id, so fetch
+  // any of those we still cannot name. Bounded by the same cap.
+  const missingCps = new Set<string>();
+  for (const { collection, record } of fetched) {
+    if (!record || collection === "counterparties") continue;
+    const cpId = str((record as RawInvoice).counterparty_id);
+    if (cpId && !index.has(cpId)) missingCps.add(cpId);
+  }
+  const cpRecords = await Promise.all(
+    Array.from(missingCps)
+      .slice(0, MAX_TARGETED_LOOKUPS)
+      .map(async (id) => ({ id, record: await fetchById(token, "counterparties", id) })),
+  );
+  for (const { id, record } of cpRecords) {
+    if (!record) continue;
+    const entity = counterpartyEntity(record as RawCounterparty);
+    if (entity) index.set(id, entity);
+  }
+
+  const cpNameFor = (cpId: string | null): string | undefined =>
+    cpId ? index.get(cpId)?.display : undefined;
+
+  for (const { id, collection, record } of fetched) {
+    if (!record) continue;
+    let entity: IndexedEntity | null = null;
+    if (collection === "counterparties") {
+      entity = counterpartyEntity(record as RawCounterparty);
+    } else if (collection === "invoices") {
+      const inv = record as RawInvoice;
+      entity = invoiceEntity(inv, cpNameFor(str(inv.counterparty_id)), now);
+    } else {
+      const t = record as RawTransaction;
+      entity = transactionEntity(t, cpNameFor(str(t.counterparty_id)), now);
+    }
+    if (entity) index.set(id, entity);
+  }
 }
 
 /* ── Enrichment ───────────────────────────────────────────────────────────── */
@@ -308,6 +492,7 @@ export function resolveEvidenceItem(raw: RawEvidence, index: EntityIndex): Enric
     // can disagree with the record (it labels customers "counterparty" too).
     label: hit?.label ?? labelForKind(kind),
     display: hit?.display ?? null,
+    code: hit?.code ?? null,
     amount: hit?.amount ?? null,
     facts: hit?.facts ?? [],
   };
@@ -336,10 +521,20 @@ export async function enrichProposals(
   proposals: Record<string, unknown>[],
   now: Date = new Date(),
 ): Promise<EnrichedProposal[]> {
-  const hasRefs = proposals.some(
-    (p) => Array.isArray(p.evidence) && (p.evidence as RawEvidence[]).some((e) => typeof e?.ref === "string" && e.ref),
-  );
-  // Nothing to join against: skip five upstream round-trips entirely.
-  const index: EntityIndex = hasRefs ? await buildEntityIndex(token, now) : new Map();
+  const cited: { ref: string; kind: string }[] = [];
+  for (const p of proposals) {
+    if (!Array.isArray(p.evidence)) continue;
+    for (const e of p.evidence as RawEvidence[]) {
+      if (typeof e?.ref === "string" && e.ref) {
+        cited.push({ ref: e.ref, kind: typeof e.kind === "string" ? e.kind : "" });
+      }
+    }
+  }
+  // Nothing to join against: skip the upstream round-trips entirely.
+  if (cited.length === 0) return proposals.map((p) => enrichProposal(p, new Map()));
+
+  const index = await buildEntityIndex(token, now);
+  // Close the page-cap gap before resolving; failures here leave refs raw.
+  await hydrateMissingRefs(token, cited, index, now).catch(() => {});
   return proposals.map((p) => enrichProposal(p, index));
 }

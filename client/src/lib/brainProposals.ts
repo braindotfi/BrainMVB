@@ -51,6 +51,9 @@ export interface ProposalEvidenceItem {
   label?: string;
   /** Resolved name, e.g. "Thornebury Imports". Null when the ref matched nothing. */
   display?: string | null;
+  /** Bare business identifier ("AR-MIDMARKET-001") when the record has one, so
+   *  the card headline can quote the document number without parsing `display`. */
+  code?: string | null;
   amount?: ProposalAmount | null;
   /** Decision-supporting rows derived from real ledger fields (due date, days
    *  overdue, status, PO, …) — never fabricated. */

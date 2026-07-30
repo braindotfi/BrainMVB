@@ -545,6 +545,8 @@ invoices, obligations, accounts, members and **transactions**, then adds to each
 item — all fields OPTIONAL on the client type:
 - `label` — human caption for `kind` ("Invoice", "Counterparty").
 - `display` — resolved name, or `null` when nothing matched.
+- `code` — the bare business identifier (`"AR-MIDMARKET-001"`) when the record has one distinct
+  from its name, so the card headline can quote the document number without re-parsing `display`.
 - `amount` — `{ value, currency }`, **structured, never a formatted string** (see below).
 - `facts[]` — `{label, value}` rows derived from REAL ledger fields (due date, days overdue,
   status, PO, direction). Never invent a fact the backend does not have.
@@ -568,13 +570,41 @@ Rules learned the hard way, all pinned by `proposalEnrichment.test.ts`:
   that leg every reconciliation card was a subject-less wall of ids.
 - **Every leg is `Promise.allSettled`.** A reference-data outage must serve the raw page, not
   502 the review queue. Enrichment is best-effort and the UI must render without it.
+- **The bulk list pass is a prefetch, not the guarantee.** brain-core caps these collections
+  server-side — `/ledger/counterparties` returns 20 rows however large `limit` is, and the
+  cap is silent. On a tenant with more records than one page the cited entity is simply
+  absent, which is why cards rendered with no subject and no detail rows.
+  `hydrateMissingRefs` closes that gap by reading the specific refs that missed via
+  `GET /ledger/<collection>/{id}` (routed for counterparties, invoices and transactions —
+  **`/ledger/obligations/{id}` is a 404**, so obligations resolve only via the bulk pass).
+  It picks the endpoint from the **wiki URI's own collection segment** or brain-core's
+  declared `kind` — never from the id prefix — caps itself at `MAX_TARGETED_LOOKUPS`, and
+  swallows every failure so a ref just stays raw.
 
-Card layout lives in `client/src/lib/proposalCards.ts` (pure, unit-tested — kept out of the
-`.tsx` because the suite runs in a node environment): `buildProposalDetailRows` de-duplicates,
-drops the row that merely repeats the subject, and sorts by decision relevance
-(Amount → Overdue by → Due → Status → …). The first `MAX_VISIBLE_DETAIL_ROWS` (4) show; the
-rest move into the collapsed "Technical reference" alongside raw refs. Unknown labels sort
-last rather than being dropped, so a new brain-core fact still renders.
+### Card layout
+Pure, unit-tested logic lives in `client/src/lib/proposalCards.ts` — kept out of the `.tsx`
+because the suite runs in a node environment. The card body renders in this fixed order, and
+the same component serves **every** agent type (Collections, Invoice, Cash, Close, …); there is
+no per-agent card:
+
+1. **Resolved-entity header** — initials avatar (`initialsOf`) + `subject.display` as the
+   primary line, with `buildProposalHeadline` producing `"AR-MIDMARKET-001 · $42,000.00"`
+   underneath. Both halves are independent and omitted when the cited records lack them;
+   with neither, it falls back to the agent line.
+2. **Detail rows** — `buildProposalDetailRows`, de-duplicated, sorted by decision relevance
+   (Amount → Overdue by → Due → Status → …), each with a `label`, right-aligned value, and an
+   `icon` **key** (a string, so this module stays free of component imports — the modal maps
+   it via `DETAIL_ROW_ICONS`). The first `MAX_VISIBLE_DETAIL_ROWS` (4) show; the rest move into
+   the collapsed "Technical reference". Unknown labels sort last rather than being dropped, so
+   a new brain-core fact still renders. The row repeating the headline document is suppressed.
+3. **Narrative**, clamped past 180 chars.
+4. **Collapsed "Technical reference"** — overflow rows, every raw ref, payment intent id.
+
+**Do not add a row for a field brain-core does not carry.** Verified absent as of this writing:
+counterparties have **no email**, nothing tracks **reminder history**, and neither
+`GET /proposals` nor `GET /proposals/{id}` carries generated **message/draft content** (their
+key sets are identical, and `/messages`, `/reminders`, `/notifications` are all 404). A
+plausible-looking invented row is worse than a sparse card, because an approver acts on it.
 
 ## Currency formatting — one formatter, and never pre-format on the server
 Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
