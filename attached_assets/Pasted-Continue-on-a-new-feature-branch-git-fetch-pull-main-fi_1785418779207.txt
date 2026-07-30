@@ -1,0 +1,50 @@
+Continue on a new feature branch (git fetch && pull main first): e.g.
+feature/table-scroll-containment
+
+TASK — Contain long tables to their own scroll area, keep page chrome static
+
+On the Finance, Inbox, Vendors, Rules, and Audit Log pages, any table that can
+grow to many rows currently scrolls the whole page. Fix this so that only the
+table's record rows scroll internally, while everything above and around the
+table stays fixed in place: page kicker (e.g. "Your Inbox"), page title (e.g.
+"Everything Brain needs you to see"), the description text below it, the tab
+bar (e.g. "Needs Review / Insights / Auto-Approval / Rejected / Rule Changes"),
+and the table's own column header row.
+
+Implementation:
+
+1. Identify the shared table component(s) used across these five pages (or
+   fix each page's table if they're not shared).
+
+2. Wrap the table body (rows only, not the header row) in its own scrollable
+   container with a bounded max-height (e.g. `max-height: calc(100vh - X)`,
+   where X accounts for the fixed header/nav/tabs above it — pick a value
+   that fits the current layout, or use a flex layout with `flex: 1;
+   overflow-y: auto` on the row container so it naturally fills remaining
+   viewport height).
+
+3. The table header row (column labels) must stay pinned at the top of the
+   table and not scroll with the body. Use `position: sticky; top: 0` on the
+   header row within the scroll container, or split header and body into
+   separate elements with the header outside the scrolling div — whichever
+   fits the existing table markup with the least restructuring.
+
+4. Everything above the table (kicker, title, description, tab bar) must
+   remain in normal document flow and not scroll at all — the outer page
+   should not scroll; only the table's internal row container should.
+
+5. Apply this consistently to all five pages: Finance, Inbox, Vendors, Rules,
+   Audit Log. If any of these use a different table component or layout
+   pattern than the others, note that and handle each accordingly rather than
+   skipping it.
+
+6. Preserve existing row styling, hover states, click behavior, and any
+   existing pagination/infinite-scroll logic — this is a layout/scroll
+   containment change only, not a data-fetching change.
+
+7. Test with a table that has enough rows to overflow the viewport to confirm:
+   header row stays visible while scrolling, page title/tabs never move, and
+   scrolling only happens within the table's row area.
+
+Update the running done/pending notes as you work. Open a PR against main
+when done; don't merge directly.
