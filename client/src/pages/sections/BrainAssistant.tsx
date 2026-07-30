@@ -327,8 +327,12 @@ function widestLineWidth(el: HTMLElement): number {
  * `fit-content` / `inline-block` / `display:table` all resolve to
  * `min(max-content, available)` — the same 75%. So we let the browser wrap
  * at max-width, measure the resulting line boxes, then pin the box to the
- * widest one. Pinning to the widest line cannot change where the text
- * breaks, so this settles in a single pass.
+ * widest one. Pinning to the widest line does not move the break points in
+ * normal prose (every line still fits), so this settles in one pass.
+ *
+ * `measureKey` must change whenever the *rendered* content changes, not just
+ * when the raw message text does — the currency symbol is interpolated during
+ * render, so it belongs in the key too.
  */
 function ChatBubble({
   className,
@@ -350,7 +354,14 @@ function ChatBubble({
       el.style.width = "";
       return;
     }
+    const parent = el.parentElement;
+    if (!parent) return;
+
+    let lastParentWidth = -1;
+    let disposed = false;
+
     const apply = () => {
+      if (disposed) return;
       // Release the pin so wrapping is recomputed against max-width.
       el.style.width = "";
       const widest = widestLineWidth(el);
@@ -360,14 +371,31 @@ function ChatBubble({
         parseFloat(cs.paddingLeft || "0") + parseFloat(cs.paddingRight || "0");
       // +1px absorbs sub-pixel rounding so the last word can't re-wrap.
       el.style.width = `${Math.ceil(widest + pad) + 1}px`;
+      lastParentWidth = parent.getBoundingClientRect().width;
     };
+
     apply();
-    // The panel is resizable, so re-measure when the row width changes.
-    const parent = el.parentElement;
-    if (!parent) return;
-    const ro = new ResizeObserver(apply);
+
+    // Re-measure when the panel is resized. The observer also fires on height
+    // changes — which re-wrapping itself causes — so ignore anything that
+    // didn't actually change the available width, otherwise each measurement
+    // schedules another one.
+    const ro = new ResizeObserver(() => {
+      if (parent.getBoundingClientRect().width === lastParentWidth) return;
+      apply();
+    });
     ro.observe(parent);
-    return () => ro.disconnect();
+
+    // Gilroy is a webfont: text measured with the fallback face has different
+    // metrics, so anything measured before it swaps in is stale.
+    if (typeof document !== "undefined" && document.fonts?.status !== "loaded") {
+      document.fonts?.ready.then(apply).catch(() => {});
+    }
+
+    return () => {
+      disposed = true;
+      ro.disconnect();
+    };
   }, [measureKey, measure]);
 
   return (
@@ -910,7 +938,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                   }`}
                 >
                   <ChatBubble
-                    measureKey={msg.text}
+                    measureKey={`${symbol}${msg.text}`}
                     measure={msg.text !== ""}
                     className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
