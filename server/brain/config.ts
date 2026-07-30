@@ -103,11 +103,15 @@ export function brainAuthConfigured(): boolean {
  * AND the platform service credential is present; anything else stays on the demo
  * strategies above, so the demo/playground build is byte-for-byte unaffected.
  */
-export type BrainTenancyMode = "production" | "demo";
+export type BrainTenancyMode = "production" | "durable" | "demo";
 
 export function brainTenancyMode(): BrainTenancyMode {
-  if (env("BRAIN_TENANCY_MODE") === "production" && brainConfig.platformServiceSecret !== undefined) {
-    return "production";
+  if (brainConfig.platformServiceSecret !== undefined) {
+    if (env("BRAIN_TENANCY_MODE") === "production") return "production";
+    // Durable tenants are real, persistent brain-core PRODUCTION tenants. Reporting
+    // them as "demo" told clients their data was ephemeral session scratch, which is
+    // the opposite of the truth — see brainDurableTenancy() below.
+    if (env("BRAIN_TENANCY_MODE") === "durable") return "durable";
   }
   return "demo";
 }
@@ -122,18 +126,17 @@ export function brainTenancyMode(): BrainTenancyMode {
  * This is deliberately distinct from "production" mode, whose contract FORBIDS
  * auto-provisioning (explicit company signup / invite only). Durable mode auto-creates
  * exactly once per user, then never again (tenant creation is not idempotent upstream).
- * To the client this still reports as demo tenancy (no company-setup gate).
+ * This reports to the client as its own mode ("durable"), NOT as "demo": the tenant
+ * is a genuine production tenant upstream (kind=production, sandbox=false) and
+ * persists indefinitely. It is still not "production" mode, so the company-setup
+ * gate stays off — that gate keys on mode === "production" alone.
  *
  * Verified live 2026-07-24: brain-core's demo fence cannot re-attach to an existing
  * demo tenant (provision-run always creates a fresh one; the platform agent-token
  * route rejects demo tenants), so durable data REQUIRES the production tenant path.
  */
 export function brainDurableTenancy(): boolean {
-  return (
-    env("BRAIN_TENANCY_MODE") === "durable" &&
-    brainConfig.platformServiceSecret !== undefined &&
-    brainTenancyMode() !== "production"
-  );
+  return brainTenancyMode() === "durable";
 }
 
 /** True when the platform service credential is configured (signup/invite consume need it

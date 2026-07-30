@@ -21,7 +21,7 @@ import {
 
 /** Production-tenancy gate for the invite UI (mode + linked flag from the BFF). */
 interface TenancyStatus {
-  mode: "production" | "demo";
+  mode: "production" | "durable" | "demo";
   linked: boolean;
   tenantId?: string;
 }

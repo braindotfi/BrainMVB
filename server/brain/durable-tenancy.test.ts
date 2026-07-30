@@ -311,4 +311,35 @@ describe("durable tenancy invariants", () => {
     // The non-idempotent create must NOT run again.
     expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(0);
   });
+
+  it('I: /tenancy reports the real persistent tenant as "durable", never "demo"', async () => {
+    const userId = "durable-user-tenancy";
+    sessionUserId = userId;
+
+    // Pre-first-use: the durable tenant is created lazily, so nothing is linked yet.
+    const before = await realFetch(`${signupBaseUrl}/api/brain/tenancy`);
+    expect(before.status).toBe(200);
+    expect(await before.json()).toMatchObject({ mode: "durable", linked: false });
+
+    await getBrainSession(userId);
+
+    const after = await realFetch(`${signupBaseUrl}/api/brain/tenancy`);
+    const body = (await after.json()) as { mode: string; linked: boolean; tenantId?: string };
+    // A durable tenant is a genuine brain-core PRODUCTION tenant (kind=production,
+    // sandbox=false) that persists indefinitely. Reporting "demo" told the client
+    // its data was throwaway per-session scratch — the opposite of the truth.
+    expect(body.mode).toBe("durable");
+    expect(body.linked).toBe(true);
+    expect(body.tenantId).toBe(TENANT_ID);
+  });
+
+  it("I: durable mode never triggers the production company-setup gate", async () => {
+    // The gate keys on mode === "production" alone (App.tsx TenancyGate), so
+    // renaming demo→durable must not start gating durable users behind
+    // "Create a company". Guard the exact predicate the client uses.
+    sessionUserId = "durable-user-gate";
+    const res = await realFetch(`${signupBaseUrl}/api/brain/tenancy`);
+    const body = (await res.json()) as { mode: string; linked: boolean };
+    expect(body.mode).not.toBe("production");
+  });
 });

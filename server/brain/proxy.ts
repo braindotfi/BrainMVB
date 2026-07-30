@@ -207,10 +207,16 @@ export function createBrainProxyRouter(): Router {
   // invite link" gate after login). Cheap: one local DB read, no brain-core call.
   router.get("/tenancy", async (req: Request, res: Response) => {
     const mode = brainTenancyMode();
-    if (mode !== "production") return res.json({ mode, linked: true });
+    // Demo is the only genuinely ephemeral mode. Production and durable both back
+    // the user with a real, persistent brain-core tenant recorded in brain_identities,
+    // so both report that tenant honestly instead of a bare linked:true.
+    if (mode === "demo") return res.json({ mode, linked: true });
     const identity = await storage.getBrainIdentity(req.session.userId!);
     return res.json({
       mode,
+      // Durable auto-creates the tenant on first brain-core use, so an unlinked
+      // durable user is simply pre-first-use — it never gates the UI (the
+      // company-setup gate keys on mode === "production").
       linked: !!identity,
       tenantId: identity?.tenantId,
       companyName: identity?.companyName ?? undefined,

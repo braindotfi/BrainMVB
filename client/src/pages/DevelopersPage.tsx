@@ -59,7 +59,7 @@ const isKeysApiUnavailable = (e: unknown): boolean =>
   e instanceof Error && e.message.startsWith("503") && e.message.includes("keys_api_unavailable");
 
 interface TenantsResponse {
-  mode: "demo" | "production";
+  mode: "demo" | "durable" | "production";
   canCreate: boolean;
   /** Server-computed readiness signal — matches the gate on POST /keys exactly. */
   liveKeysAvailable: boolean;
@@ -1183,7 +1183,9 @@ function KeysSection({ env }: { env: DevEnv }) {
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
                 {tenantsQ.data?.mode === "production"
                   ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
-                  : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
+                  : tenantsQ.data?.mode === "durable"
+                    ? "This workspace runs in durable tenancy mode: your tenant is persistent, but live keys are issued only in production tenancy mode."
+                    : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
               </p>
             </div>
             <button
@@ -1575,6 +1577,11 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
             onClick={() => {
               if (data?.canCreate) {
                 setShowCreate((v) => !v);
+              } else if (data?.mode === "durable") {
+                alert.info(
+                  "Durable mode: your tenant is provisioned automatically",
+                  "This workspace runs in durable tenancy mode: your persistent tenant is created automatically on first use and can't be created manually. Production tenant creation unlocks when the platform runs in production tenancy mode.",
+                );
               } else if (data?.mode === "demo") {
                 alert.info(
                   "Demo mode: tenants are provisioned automatically",

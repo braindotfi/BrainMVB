@@ -90,8 +90,12 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   demo mode `agentToken` === member token, so demo behavior is unchanged).
 - brain-core does NOT project uploaded docs into ledger entities — extraction is advisory,
   so a seeded tenant's ledger endpoints return empty; the UI renders that honestly.
-- `/api/brain/tenancy` still reports demo/linked (TenancyGate unaffected); Developers →
-  Tenants reports the identity tenant with `ephemeral:false` (no expiry countdown).
+- `/api/brain/tenancy` reports `mode:"durable"` with the real `tenantId`/`companyName`
+  (it previously claimed `mode:"demo"`, telling clients a persistent production tenant
+  was throwaway session scratch). TenancyGate is unaffected — the company-setup gate
+  keys on `mode === "production"` alone. `linked` is false only before first brain-core
+  use, since the tenant is created lazily. Developers → Tenants reports the identity
+  tenant with `ephemeral:false` (no expiry countdown).
 - Pinned by `server/brain/durable-tenancy.test.ts` (one create; re-attach via /sessions;
   demo fence never called; failed create writes no identity; seed uses agent token).
 
