@@ -365,27 +365,6 @@ const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", 
 /** Locale for dates: USD → en-US ("Apr 15, 2025"), EUR → en-GB ("15 Apr 2025"). */
 const DATE_LOCALE: Record<CurrencyCode, string> = { USD: "en-US", EUR: "en-GB" };
 
-/** Re-format raw amounts in a sentence like "$432", "$1234.56" or "48000.00 USD"
-  into comma-formatted equivalents (respecting the active currency's symbol + FX rate).
-  Matches: symbol-prefixed ($/€) OR plain number + currency code (USD/EUR/GBP). */
-function formatAmountsInText(text: string, formatFn: (amount: string | number) => string): string {
-  // Pattern 1: symbol-prefixed amounts ($123, $1,234.56, -€432)
-  const symbolPattern = /(?:\+?-?)(?:\$|€)\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?/g;
-  // Pattern 2: plain number + currency code (48000.00 USD, 1,234.56 EUR)
-  const codePattern = /(?:\b\d{1,3}(?:,\d{3})*|\b\d+)(?:\.\d+)?\s*(?:USD|EUR|GBP)\b/g;
-
-  const reformat = (match: string) => {
-    const raw = match.replace(/[$,€\s]|USD|EUR|GBP/gi, "");
-    const sign = match.startsWith("-") ? "-" : match.startsWith("+") ? "+" : "";
-    const num = Number(raw);
-    if (!Number.isFinite(num)) return match;
-    const formatted = formatFn(num);
-    return sign && !formatted.startsWith(sign) ? sign + formatted : formatted;
-  };
-
-  return text.replace(symbolPattern, reformat).replace(codePattern, reformat);
-}
-
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
   const diffSec = Math.round(diffMs / 1000);
@@ -497,7 +476,7 @@ export function HomePage() {
     return () => window.clearInterval(id);
   }, []);
   const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
-  const { format, currency } = useCurrency();
+  const { format, currency, formatText } = useCurrency();
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -700,8 +679,8 @@ export function HomePage() {
      The fallback line is also formatted so static text stays consistent. */
   const rawText = brainRec?.text?.trim() ?? "";
   const processedText = rawText
-    ? formatDatesInText(formatAmountsInText(rawText, format), currency)
-    : formatAmountsInText(SPENDING_INSIGHT_FALLBACK.text, format);
+    ? formatDatesInText(formatText(rawText), currency)
+    : formatText(SPENDING_INSIGHT_FALLBACK.text);
   const insightLine =
     netMonthly === null
       ? { text: "Connect accounts to see monthly spend.", colorClass: "text-[#6c779d]" }

@@ -85,8 +85,10 @@ function balanceLabel(a: BrainAccountDTO, format: (n: string | number) => string
   const raw = a.current_balance != null ? Number(a.current_balance) : 0;
   const value = Number.isFinite(raw) ? raw : 0;
   if (a.currency === "USD") return format(value);
+  // Non-USD (ETH, EUR…) keeps native precision, but must still carry its
+  // currency: a bare "42000.00" is indistinguishable from a count or a date.
   const trimmed = Number(value.toFixed(6)).toString();
-  return trimmed;
+  return `${trimmed} ${a.currency}`;
 }
 
 function formatDate(iso?: string | null): string {

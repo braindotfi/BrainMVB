@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
+import { formatAmountsInText } from "./formatAmounts";
 
 const STORAGE_KEY = "brain_default_currency";
 
@@ -22,6 +23,10 @@ interface CurrencyContextType {
   /** Convert a USD amount (number or string like "$1,234.56" / "-$2,400") into the
    * active currency, returning a symbol-prefixed string with the same decimal places. */
   format: (amount: string | number) => string;
+  /** Re-format every amount embedded in a SENTENCE of backend/LLM prose. Use this
+   *  (never a local regex) for narratives, explanations, summaries and excerpts —
+   *  see lib/formatAmounts.ts for why the duplicate copies were removed. */
+  formatText: (text: string) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | null>(null);
@@ -97,11 +102,13 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CurrencyContextType>(() => {
     const symbol = SYMBOLS[currency];
     const rate = USD_RATES[currency];
+    const format = (amount: string | number) => reformat(amount, symbol, rate);
     return {
       currency,
       symbol,
       setCurrency,
-      format: (amount) => reformat(amount, symbol, rate),
+      format,
+      formatText: (text: string) => formatAmountsInText(text, { format, symbol }),
     };
   }, [currency, setCurrency]);
 

@@ -27,7 +27,7 @@ const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
 };
 
 export function AuditLogPage() {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
   const { user } = useAuth();
@@ -278,7 +278,7 @@ export function AuditLogPage() {
                                 {/* Title + type pill inline */}
                                 <div className="flex gap-[8px] items-center w-full min-w-0">
                                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-                                    {record.summary}
+                                    {formatText(record.summary)}
                                   </p>
                                   <span className={`inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] whitespace-nowrap ${auditRecordChipClass(record)}`}>
                                     {auditRecordLabel(record)}

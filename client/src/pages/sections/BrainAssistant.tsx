@@ -87,58 +87,6 @@ const DEVELOPER_QUESTIONS = [
   "Show my usage this month",
 ];
 
-/** Post-process text so amounts get thousands separators and the active currency symbol.
- *  Matches:
- *    - $-prefixed or €-prefixed numbers (strips trailing .00000000 garbage)
- *    - "USD " or "EUR " + number (common in ledger excerpts)
- *    - "ETH " + number (native crypto units, trailing zeros stripped)
- *  Always fiat with exactly 2 decimal places; ETH left in native units. */
-function formatAmountsInText(text: string, symbol: string): string {
-  // 1. $/€-prefixed amounts (no \b - consume all trailing decimal digits).
-  const prefixPattern = /(?:\$|€)(?:\d+(?:,\d{3})*|\d+)(?:\.\d+)?/g;
-
-  let out = text.replace(prefixPattern, (match) => {
-    // Already comma-formatted and clean - leave it alone.
-    if (match.includes(",")) return match;
-    const raw = match.slice(1); // strip leading $ or €
-    const num = Number(raw);
-    if (!Number.isFinite(num)) return match;
-    const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `${symbol}${formatted}`;
-  });
-
-  // 2. USD / EUR code amounts → convert to active symbol.
-  const fiatCodePattern = /(?:USD|EUR)\s+(\d+(?:,\d{3})*\.?\d*)/g;
-  out = out.replace(fiatCodePattern, (_, rawNum: string) => {
-    if (rawNum.includes(",")) return `${symbol}${rawNum}`;
-    const num = Number(rawNum);
-    if (!Number.isFinite(num)) return `${symbol}${rawNum}`;
-    const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `${symbol}${formatted}`;
-  });
-
-  // 3. ETH amounts → strip trailing zeros, keep as ETH (native units).
-  const ethPattern = /ETH\s+(\d+\.?\d*)/g;
-  out = out.replace(ethPattern, (_, rawNum: string) => {
-    const num = Number(rawNum);
-    if (!Number.isFinite(num)) return `ETH ${rawNum}`;
-    // Trim trailing zeros beyond 2 places, keep at least 2 if there's a decimal
-    const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: rawNum.includes(".") ? 2 : 0,
-      maximumFractionDigits: 8,
-    });
-    return `ETH ${formatted}`;
-  });
-
-  return out;
-}
-
 /**
  * Lightweight markdown-to-JSX for assistant replies.
  * Handles:
@@ -150,8 +98,8 @@ function formatAmountsInText(text: string, symbol: string): string {
  *   - paragraph breaks and single-newline line-breaks
  *   - currency amount formatting
  */
-function renderRichText(text: string, symbol: string): React.ReactNode {
-  const formatted = formatAmountsInText(text, symbol);
+function renderRichText(text: string, formatText: (t: string) => string): React.ReactNode {
+  const formatted = formatText(text);
   const lines = formatted.split("\n");
 
   const elements: React.ReactNode[] = [];
@@ -459,7 +407,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { symbol } = useCurrency();
+  const { symbol, formatText } = useCurrency();
 
   const uploadDoc = useMutation({
     mutationFn: async (file: File) => {
@@ -953,7 +901,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                         <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
                       </span>
                     ) : (
-                      renderRichText(msg.text, symbol)
+                      renderRichText(msg.text, formatText)
                     )}
                   </ChatBubble>
                 </div>
@@ -984,7 +932,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     {openEvidenceFor === msg.id && (
                       <div className="flex flex-col gap-[4px] w-full pl-[4px]">
                         {msg.sources.map((s, i) => {
-                          const text = formatAmountsInText(s.excerpt ?? s.entityId, symbol);
+                          const text = formatText(s.excerpt ?? s.entityId);
                           /* Brain-core wiki/question returns a variety of entityType values.
                              Normalize aliases (user → member, vendor → counterparty) and,
                              when the type is missing entirely, infer it from the id by

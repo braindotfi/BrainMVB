@@ -39,6 +39,7 @@ import {
   type CreateCounterpartyBody,
 } from "./client";
 
+import { enrichProposals } from "./proposalEnrichment";
 import { RECOMMENDATION_PROMPT } from "@shared/cannedPrompts";
 
 export function createBrainProxyRouter(): Router {
@@ -517,6 +518,38 @@ export function createBrainProxyRouter(): Router {
         body,
       });
       return res.json(result);
+    } catch (err) {
+      return relayError(res, err);
+    }
+  });
+
+  // GET /api/brain/proposals - the review queue, with evidence refs resolved to
+  // human-readable names server-side (see proposalEnrichment.ts for why the join
+  // lives here and not in the browser).
+  //
+  // MUST stay registered ahead of the generic GET passthrough at the bottom of
+  // this router, which would otherwise forward /proposals verbatim and strip the
+  // enrichment. Deliberately an EXACT path: `/proposals/:id` still falls through
+  // to the passthrough unchanged.
+  router.get("/proposals", async (req: Request, res: Response) => {
+    if (!brainAuthConfigured()) return unconfigured(res);
+    try {
+      const { token } = await getBrainSession(req.session.userId!);
+      const query: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.query)) {
+        if (typeof v === "string") query[k] = v;
+      }
+      const page = await brainRequest<Record<string, unknown>>("/proposals", { token, query });
+      const rows = Array.isArray(page?.proposals) ? (page.proposals as Record<string, unknown>[]) : null;
+      if (!rows) return res.json(page); // Unexpected shape - relay verbatim rather than guess.
+      try {
+        return res.json({ ...page, proposals: await enrichProposals(token, rows) });
+      } catch (enrichErr) {
+        // Never let a reference-data outage take down the review queue: an
+        // un-enriched card still lists and still decides.
+        console.error("[brain-proxy] proposal enrichment failed, serving raw:", enrichErr);
+        return res.json(page);
+      }
     } catch (err) {
       return relayError(res, err);
     }

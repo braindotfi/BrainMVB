@@ -29,10 +29,39 @@ export type ProposalRiskBand = "low" | "standard" | "elevated" | "high";
 export type ProposalMode = "propose" | "notify_only";
 export type ProposalDecision = "approve" | "reject" | "acknowledge" | "undo";
 
+/** A ledger amount as it leaves the BFF: structured, never a formatted string,
+ *  so the active display currency + FX rate are applied at render time. */
+export interface ProposalAmount {
+  value: string;
+  currency: string;
+}
+
+/** brain-core sends only `{kind, ref, resolvable}`. Everything below it is added
+ *  by the BFF (server/brain/proposalEnrichment.ts), which joins each `ref` against
+ *  the tenant's counterparties/invoices/accounts/obligations/members.
+ *
+ *  All resolved fields are OPTIONAL on purpose: enrichment degrades to the raw
+ *  triple if reference data can't be read, and a proposal fetched by any path that
+ *  bypasses the enriching route still type-checks. Render `display ?? ref`. */
 export interface ProposalEvidenceItem {
   kind: string;
   ref: string;
   resolvable: boolean;
+  /** Human caption for the row, e.g. "Customer", "Invoice". */
+  label?: string;
+  /** Resolved name, e.g. "Thornebury Imports". Null when the ref matched nothing. */
+  display?: string | null;
+  /** Bare business identifier ("AR-MIDMARKET-001") when the record has one, so
+   *  the card headline can quote the document number without parsing `display`. */
+  code?: string | null;
+  amount?: ProposalAmount | null;
+  /** Decision-supporting rows derived from real ledger fields (due date, days
+   *  overdue, status, PO, …) — never fabricated. */
+  facts?: { label: string; value: string }[];
+  /** True for broad background citations (brain-core `wiki:` refs) rather than
+   *  the record the proposal is about. These belong in the technical section
+   *  only — a collections proposal cites the whole counterparty book. */
+  context?: boolean;
 }
 
 /** GET /proposals row = GET /proposals/{id} detail - identical shape, no extra
@@ -50,6 +79,8 @@ export interface BrainProposal {
   agent: { id: string; kind: string; display_name: string } | null;
   payment_intent_id: string | null;
   action_type: string | null;
+  /** BFF-added: the headline entity to name this card by, when one resolved. */
+  subject?: { label: string; display: string } | null;
 }
 
 interface ListProposalsResponse {

@@ -534,6 +534,115 @@ agents_execution_payments_members, audit_proof_tenant):
   to `/v1/execution/agents/{id}`, the runtime registry, which resolves them and returns
   `display_name`. The emitted lookup path is upstream-wrong; flag it to brain-core owners.
 
+## Proposal cards: resolve names on the BFF, not in the client
+brain-core proposals cite entities as bare ids (`inv_01KY…`), so an unenriched card is a wall
+of ULIDs. `GET /api/brain/proposals` is an **exact-path route in `proxy.ts`** (registered
+before the write allowlist and well before the generic GET passthrough) that runs
+`enrichProposals` over the page. `/proposals/:id` still falls through untouched.
+
+`server/brain/proposalEnrichment.ts` builds one id → entity index from counterparties,
+invoices, obligations, accounts, members and **transactions**, then adds to each evidence
+item — all fields OPTIONAL on the client type:
+- `label` — human caption for `kind` ("Invoice", "Counterparty").
+- `display` — resolved name, or `null` when nothing matched.
+- `code` — the bare business identifier (`"AR-MIDMARKET-001"`) when the record has one distinct
+  from its name, so the card headline can quote the document number without re-parsing `display`.
+- `amount` — `{ value, currency }`, **structured, never a formatted string** (see below).
+- `facts[]` — `{label, value}` rows derived from REAL ledger fields (due date, days overdue,
+  status, PO, direction). Never invent a fact the backend does not have.
+- `context` — `true` for background citations; see the wiki rule below.
+
+Plus a proposal-level `subject: {label, display} | null` — the entity a human would name the
+card by, preferring a resolved party over the first resolved entity.
+
+Rules learned the hard way, all pinned by `proposalEnrichment.test.ts`:
+- **Resolve by direct id lookup, never by ULID prefix.** Ids are `^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}$`
+  with no published prefix→entity registry, so a prefix table silently stops resolving the
+  day core adds a type. `kind` only captions the row.
+- **Refs come in two spellings.** The same entity is cited both bare (`cp_01KY…`) and as a
+  wiki URI (`wiki:/counterparties/cp_01KY…`). Look up the ref, then its trailing path
+  segment. Bare-id-only lookup left more than half of live evidence unresolved.
+- **`wiki:` refs are `context`, not the subject.** A collections proposal cites the whole
+  counterparty book as background while naming one customer, so letting them win renamed a
+  StartupX card after an unrelated customer. Context items never caption the card and never
+  produce detail rows — they stay in "Technical reference" with their resolved name.
+- **Index transactions.** Reconciliation proposals cite `tx_` refs and nothing else; without
+  that leg every reconciliation card was a subject-less wall of ids.
+- **Every leg is `Promise.allSettled`.** A reference-data outage must serve the raw page, not
+  502 the review queue. Enrichment is best-effort and the UI must render without it.
+- **The bulk list pass is a prefetch, not the guarantee.** brain-core caps these collections
+  server-side — `/ledger/counterparties` returns 20 rows however large `limit` is, and the
+  cap is silent. On a tenant with more records than one page the cited entity is simply
+  absent, which is why cards rendered with no subject and no detail rows.
+  `hydrateMissingRefs` closes that gap by reading the specific refs that missed via
+  `GET /ledger/<collection>/{id}` (routed for counterparties, invoices and transactions —
+  **`/ledger/obligations/{id}` is a 404**, so obligations resolve only via the bulk pass).
+  It picks the endpoint from the **wiki URI's own collection segment** or brain-core's
+  declared `kind` — never from the id prefix — caps itself at `MAX_TARGETED_LOOKUPS`, and
+  swallows every failure so a ref just stays raw.
+
+### Card layout
+Pure, unit-tested logic lives in `client/src/lib/proposalCards.ts` — kept out of the `.tsx`
+because the suite runs in a node environment. The card body renders in this fixed order, and
+the same component serves **every** agent type (Collections, Invoice, Cash, Close, …); there is
+no per-agent card:
+
+1. **Resolved-entity header** — initials avatar (`initialsOf`) + `subject.display` as the
+   primary line, with `buildProposalHeadline` producing `"AR-MIDMARKET-001 · $42,000.00"`
+   underneath. Both halves are independent and omitted when the cited records lack them;
+   with neither, it falls back to the agent line.
+2. **Detail rows** — `buildProposalDetailRows`, de-duplicated, sorted by decision relevance
+   (Amount → Overdue by → Due → Status → …), each with a `label`, right-aligned value, and an
+   `icon` **key** (a string, so this module stays free of component imports — the modal maps
+   it via `DETAIL_ROW_ICONS`). The first `MAX_VISIBLE_DETAIL_ROWS` (4) show; the rest move into
+   the collapsed "Technical reference". Unknown labels sort last rather than being dropped, so
+   a new brain-core fact still renders. The row repeating the headline document is suppressed.
+3. **Narrative**, clamped past 180 chars.
+4. **Collapsed "Message preview"** — only for agents in `SENDS_OUTBOUND_MESSAGE` (today just
+   Collections; `action_type` is null upstream so there is no generic way to detect "this
+   approval sends an email", and offering the section on a reconciliation card would imply a
+   message that never exists). It currently holds a placeholder saying the text is not
+   generated until execution — see below.
+5. **Collapsed "Technical reference"** — overflow rows, every raw ref, payment intent id.
+
+**Do not render a field brain-core does not carry — not even a plausible one.** This is an
+approval surface: whatever the card shows is what the approver believes they are authorising.
+Verified absent as of this writing:
+- Counterparties have **no email**, so there is no "Recipient" row.
+- Nothing tracks **reminder history** (`/collections/reminders`, `/reminders`, `/messages`,
+  `/notifications`, `/agents/messages` are all 404).
+- Neither `GET /proposals` nor `GET /proposals/{id}` carries **message/draft content** — their
+  key sets are identical and `action_type` is null. brain-core composes the outbound text at
+  *execution* time.
+
+The Message preview section therefore says so out loud rather than composing a draft
+client-side, which would put invented text above an Approve button on a real customer email.
+Replacing the placeholder requires brain-core to expose a draft field composed at **propose**
+time; the UI half must not be built before that endpoint exists.
+
+## Currency formatting — one formatter, and never pre-format on the server
+Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
+same helper: BrainAssistant's matched a `USD 18600` prefix but never applied the FX rate,
+HomePage's was the exact reverse. Both are deleted.
+
+`client/src/lib/formatAmounts.ts` is now the single formatter, exposed as `formatText` on
+`useCurrency()`. It handles symbol-prefix, code-prefix, code-suffix and ETH (native units, no
+FX), and normalises amounts already in the active currency without re-applying the rate.
+Every surface that renders backend or LLM prose goes through it: proposal cards, inbox,
+assistant chat + citation excerpts, insights, audit records, ProposalDetail rationale and
+bullets. When adding a surface that prints server text, wire `formatText` — do not re-derive.
+
+- **Never pre-format money server-side.** Amounts travel as `{ value, currency }` so the
+  client can apply the active display currency and FX rate. Emitting `"$18,600.00"` from the
+  BFF hard-codes USD and breaks the currency switcher.
+- **Bare numbers are deliberately NOT auto-formatted.** `42000.00` with no marker is
+  indistinguishable from a date, count, confidence score or id fragment. Producers must emit
+  a currency marker; `server/routes.ts` has a `money()` helper and `ASSISTANT_SYSTEM` carries
+  an explicit instruction. Format numbers BEFORE interpolation rather than asking the LLM to.
+- **A minus binds tightly to the marker.** `-$2,400` is negative; `Invoice #A1 - USD 18,600`
+  is a separator. Do not let the sign group swallow surrounding whitespace, or
+  `Paid €500` renders as `Paid€500.00`.
+
 ## CI gate
 `.github/workflows/test.yml` runs `npm test` (the vitest suite) on every pull request and
 on push to `main` (Node 20, npm cache). The workflow is green only when the suite passes,
