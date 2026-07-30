@@ -1351,12 +1351,6 @@ export function ReadingScreen({
  * Real obligations from GET /api/brain/ledger/obligations (advisory, conf ≤0.5). No pay path. */
 type FoundTab = "all" | "payable" | "receivable";
 
-async function fetchCounterparties(): Promise<CounterpartyLite[]> {
-  const res = await fetch("/api/brain/ledger/counterparties", { credentials: "include" });
-  if (!res.ok) return [];
-  const json = (await res.json()) as CounterpartiesResponse | CounterpartyLite[];
-  return Array.isArray(json) ? json : (json.counterparties ?? []);
-}
 
 function formatMoney(amount: string, currency: string): string {
   const n = Number(amount);
@@ -1385,18 +1379,12 @@ export function FoundScreen({ onFinish }: { onFinish: () => void }) {
     queryFn: fetchObligations,
     refetchInterval: (q) => ((q.state.data?.length ?? 0) === 0 ? 15000 : false),
   });
-  // Cache stores CounterpartyLite[] (consistent with all other consumers of this
-  // query key). `select` transforms to a Map locally so the Map never enters the
-  // shared cache — previously storing a Map caused "map.get is not a function"
-  // when any other consumer had already populated the cache with a plain array.
-  const counterpartiesQuery = useQuery<CounterpartyLite[], Error, Map<string, string>>({
+  // No queryFn — consistent with every other consumer of this key (FinancesPage,
+  // brainQueue, brainVendors, etc.), which all rely on the default fetcher and
+  // access .counterparties on the result.  The Map is built defensively in a
+  // useMemo below so it is always a real Map regardless of cache shape.
+  const counterpartiesQuery = useQuery<CounterpartiesResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
-    queryFn: fetchCounterparties,
-    select: (list) => {
-      const m = new Map<string, string>();
-      for (const c of list) m.set(c.id, c.display_name ?? c.name ?? c.id);
-      return m;
-    },
   });
   /* Upload recency: if the newest document was uploaded within the last few
      minutes, an empty obligations list means "extraction still running", not
@@ -1420,7 +1408,17 @@ export function FoundScreen({ onFinish }: { onFinish: () => void }) {
   const recentlyUploaded = latestUploadMs > 0 && now - latestUploadMs < EXTRACTING_WINDOW_MS;
 
   const obligations = obligationsQuery.data ?? [];
-  const cpMap = counterpartiesQuery.data ?? new Map<string, string>();
+  // Build a Map defensively: the raw cache can be either CounterpartyLite[] or
+  // { counterparties: CounterpartyLite[] } depending on which consumer populated it.
+  const cpMap = useMemo(() => {
+    const raw = counterpartiesQuery.data;
+    const list: CounterpartyLite[] = Array.isArray(raw)
+      ? raw
+      : (raw?.counterparties ?? []);
+    const m = new Map<string, string>();
+    for (const c of list) m.set(c.id, c.display_name ?? c.name ?? c.id);
+    return m;
+  }, [counterpartiesQuery.data]);
 
   const payables = useMemo(() => obligations.filter((o) => !isReceivable(o)), [obligations]);
   const receivables = useMemo(() => obligations.filter((o) => isReceivable(o)), [obligations]);
