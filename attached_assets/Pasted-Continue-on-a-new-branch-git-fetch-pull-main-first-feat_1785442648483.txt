@@ -1,0 +1,64 @@
+Continue on a new branch (git fetch && pull main first):
+feature/proposal-cards-full-parity
+
+CONTEXT
+brain-core PR #384 (merged, confirmed deployed) expanded GET /v1/proposals
+with additive fields: details, policy, presentation, available_decisions,
+and stored_action_type — available across all proposal types, including
+previously-minimal ones (vendor_risk, compliance, fraud_anomaly,
+reconciliation, subscription, dispute, revenue_intel, collections,
+treasury, cash_forecast, payment/payment-intent types) and newly-promoted
+advisory domains (personal_budget, financial_health, purchase_advisor,
+tax_prep, travel_finance, bill_management, debt_optimization, savings).
+Reference docs: docs/contracts/proposals-read-model.md in brain-core, and
+the updated docs.brain.fi Wiki/Policy API pages.
+
+TASK
+
+1. Read docs/contracts/proposals-read-model.md and the updated API docs
+   first to get the exact shape of details, policy, presentation, and
+   available_decisions per proposal type — don't guess field names from
+   the UI alone.
+
+2. Extend the shared proposal card component (already used for Invoice
+   Agent and Cash Agent, and already applied to Collections) to every
+   proposal_type, binding each section to the new fields:
+   - Headline recommendation + subline — from presentation
+   - "Why This Needs Your Call" narrative — from details/narrative
+   - Structured key-facts table — from details, styled like Invoice's
+     Vendor/Trailing Avg/This Invoice/Variance rows
+   - Evidence tiles — resolved via Wiki page_types referenced in
+     evidence/evidence_refs, never raw wiki:/ URIs or cp_/inv_/obl_/etc.
+     IDs in the primary view
+   - Confidence bar — "High/Medium/Low · XX%" format
+   - "What Happens Next" / "If This Is Wrong" — from presentation/policy
+     if present; omit the section (don't fabricate) if a given type's
+     policy/presentation payload doesn't include it
+   - "Flagged by <policy_id> - <explanation>" — from policy
+   - Action buttons — driven by available_decisions per proposal, not a
+     hardcoded Reject/Approve pair. Render whatever decisions the API
+     actually returns for that proposal (Hold/Clear, Hold/Review/Dismiss,
+     Accept Match/Reject Match/Mark Reviewed, Acknowledge-only, etc.)
+   - Collapsed "Technical Detail" — six-layer JSON, now sourced from the
+     richer response instead of the old compact shape
+
+3. Visual styling must literally reuse the Invoice/Cash Agent component
+   markup and CSS — same typography, spacing, card treatment, section
+   dividers, button styling — across every proposal type. This is one
+   shared component rendering different data, not per-type variants.
+
+4. For the newly-promoted advisory types (personal_budget, tax_prep,
+   travel_finance, etc.), route them into the Inbox alongside existing
+   proposal types using stored_action_type / type as the routing key, and
+   confirm they render through the same shared card rather than falling
+   through to a default/fallback view.
+
+5. Verify in the live preview: pick one real proposal of each proposal_type
+   (or a synthetic one if a type has no live example yet) and confirm every
+   section renders with real data, correct action buttons per
+   available_decisions, and no raw IDs or placeholder text anywhere in the
+   primary view.
+
+Update done/pending notes and CLAUDE.md with the final shared card
+component's full field contract and the complete proposal_type list, so any
+future proposal_type is built against this pattern from day one.
