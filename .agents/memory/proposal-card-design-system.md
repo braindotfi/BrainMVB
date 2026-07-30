@@ -17,6 +17,18 @@ structural instead of a review item.
 **How to apply:** adding a section means adding a `CardSection`, never a bare `div` with its own
 padding. If a new section needs a shape that does not exist, add the primitive.
 
+## Linked evidence is a record link
+
+Evidence rows show only the resolved record title and a chevron. They are tappable: transactions,
+accounts, counterparties, and invoices open their existing detail popups; evidence types without
+a dedicated by-id surface open a read-only facts popup using only facts carried by the proposal.
+
+**Why:** evidence is useful for verification only if the approver can inspect the record, and a
+visible chevron on a dead row would be misleading.
+
+**How to apply:** preserve the title-only row. Add new entity kinds to the existing popup routing
+or the honest read-only fallback; never add a subtitle/fact preview back into the row.
+
 ## Display currency vs source currency
 
 Everything on the card renders through `useCurrency().formatText`, which converts to the

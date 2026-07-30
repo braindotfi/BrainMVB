@@ -22,6 +22,7 @@ import {
   applyCurrencyToBareAmounts,
   formatFactDate,
   formatSourceAmount,
+  titleCaseDecisionLabel,
 } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
@@ -332,8 +333,21 @@ describe("buildDecisionButtons", () => {
 
   it("keeps brain-core's domain label but marks an unwritable id disabled", () => {
     const [button] = buildDecisionButtons([{ id: "hold_transaction", label: "Hold transaction" }]);
-    expect(button.label).toBe("Hold transaction");
+    expect(button.label).toBe("Hold Transaction");
     expect(button.writable).toBe(false);
+  });
+
+  it("capitalizes multi-word action labels without changing the API id", () => {
+    const buttons = buildDecisionButtons([
+      { id: "hold_vendor", label: "Hold vendor" },
+      { id: "clear_vendor", label: "clear vendor" },
+      { id: "reject", label: "reject" },
+    ]);
+    expect(buttons.map((button) => [button.id, button.label])).toEqual([
+      ["reject", "Reject"],
+      ["hold_vendor", "Hold Vendor"],
+      ["clear_vendor", "Clear Vendor"],
+    ]);
   });
 
   it("falls back to presentation.actions, then to nothing", () => {
@@ -397,7 +411,12 @@ describe("buildEvidenceTiles", () => {
       { kind: "policy_decision", ref: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8", resolvable: false, label: "Policy Decision", display: null, amount: null, facts: [], context: false },
     ] as ProposalEvidenceItem[]);
     expect(tiles).toHaveLength(1);
-    expect(tiles[0]).toMatchObject({ label: "Transaction", display: "WIRE Transfer Out" });
+    expect(tiles[0]).toMatchObject({
+      label: "Transaction",
+      display: "WIRE Transfer Out",
+      kind: "transaction",
+      ref: "tx_01KYS8S1WJF9WKTPQ9YBXFAHYP",
+    });
   });
 
   it("never emits a tile whose display is itself an id", () => {

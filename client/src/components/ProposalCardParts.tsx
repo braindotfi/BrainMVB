@@ -269,56 +269,40 @@ export const KeyFactsTable = ({
 );
 
 /* ── Linked evidence row ─────────────────────────────────────────────────────
-   Type tag, resolved name, chevron. Rendered as a button only when it opens
-   something — a non-interactive row must not look tappable. */
+   The resolved record title and chevron are the only visible content. Every row
+   is a button because every live evidence item has a record surface behind it. */
 export const EvidenceLinkRow = ({
-  tag,
   label,
-  caption,
   onClick,
   testId,
 }: {
-  tag: string;
   label: string;
-  caption?: string | null;
-  onClick?: () => void;
+  onClick: () => void;
   testId?: string;
 }) => {
   const inner = (
     <>
-      <div className="flex flex-1 gap-[16px] items-center min-w-px">
-        <TypeTag label={tag} />
-        <div className="flex flex-col min-w-px">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
-            {label}
-          </p>
-          {caption && (
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d] truncate">
-              {caption}
-            </p>
-          )}
-        </div>
+      <div className="flex flex-1 items-center min-w-px">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
+          {label}
+        </p>
       </div>
-      {onClick && <ChevronRight size={16} className="text-[#6c779d] shrink-0" aria-hidden="true" />}
+      <ChevronRight size={16} className="text-[#6c779d] shrink-0" aria-hidden="true" />
     </>
   );
 
   const shell =
     "bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] px-[16px] py-[12px] flex gap-[16px] items-center w-full text-left";
 
-  return onClick ? (
+  return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`${shell} transition-colors hover:border-[#2a3050] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]`}
+      className={`${shell} transition-colors hover:border-[#2a3050] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]`}
     >
       {inner}
     </button>
-  ) : (
-    <div className={shell} data-testid={testId}>
-      {inner}
-    </div>
   );
 };
 

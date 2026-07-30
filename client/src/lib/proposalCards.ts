@@ -194,6 +194,19 @@ export function humanizeEnumValue(value: string): string {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? " " + words.slice(1).join(" ") : "");
 }
 
+/** Customer-facing decision button copy. API ids remain unchanged, while labels
+ * such as `hold_vendor` and `Clear vendor` consistently become `Hold Vendor`
+ * and `Clear Vendor`. */
+export function titleCaseDecisionLabel(value: string): string {
+  return value
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word))
+    .join(" ");
+}
+
 /** Money-ish fact labels. Their values are bare decimals that read as raw data
  *  until the active display currency is applied. */
 const MONEY_LABEL_RE =
@@ -545,7 +558,7 @@ export function buildDecisionButtons(
     .filter((d) => typeof d?.id === "string" && d.id.trim())
     .map((d) => ({
       id: d.id.trim(),
-      label: d.label?.trim() || humanizeEnumValue(d.id.trim()),
+      label: titleCaseDecisionLabel(d.label?.trim() || humanizeEnumValue(d.id.trim())),
       meaning: d.meaning?.trim() || null,
       tone: toneFor(d.id.trim()),
       writable: WRITABLE_DECISIONS.has(d.id.trim()),
@@ -634,6 +647,9 @@ export interface EvidenceTile {
   label: string;
   /** The resolved NAME. Never an id — an unresolved ref produces no tile. */
   display: string;
+  /** Original evidence identity, used to open the matching record popup. */
+  kind: string;
+  ref: string;
   facts: { label: string; value: string }[];
 }
 
@@ -658,7 +674,13 @@ export function buildEvidenceTiles(evidence: ProposalEvidenceItem[] | null | und
     const key = `${label}|${display}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    tiles.push({ label, display, facts: (e.facts ?? []).filter((f) => f?.label && f?.value) });
+    tiles.push({
+      label,
+      display,
+      kind: e.kind,
+      ref: e.ref,
+      facts: (e.facts ?? []).filter((f) => f?.label && f?.value),
+    });
   }
   return tiles;
 }

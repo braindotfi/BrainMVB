@@ -46,9 +46,10 @@ components rather than repeated per section. Also in that pass: centred header w
 risk pill in the hero, "Linked Evidence" rows, the Technical Detail heading as its own
 disclosure control, decision buttons as the last in-content section, and a pinned
 Previous / Next footer driven by the Inbox row order (`Proposal N of M`, disabled at the ends).
-- Evidence rows render **without** a chevron unless they open something. The frame draws one,
-  but no by-id viewer exists for live proposal evidence, and a chevron that does nothing is a
-  worse lie than a missing one. Wire the chevron the day a viewer lands.
+- Linked Evidence rows are title-only, tappable, and open the matching record surface. Transactions,
+  accounts, counterparties, and invoices use their existing detail popups. Evidence kinds without
+  a dedicated by-id surface (such as obligations) use a read-only facts popup and show only facts
+  carried by the proposal.
 - The reference tenant has **no pending `collections` row** (all 8 are rejected), so the Message
   Draft section was verified by intercepting `/api/brain/proposals` in the QA browser and
   flipping one real record to `pending` — the component, BFF enrichment and fact table were all

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useQuery } from "@tanstack/react-query";
 import closeIcon from "@assets/Close_1783293571882.png";
 import approveIcon from "@assets/approve_1784154649123.png";
 import editIcon from "@assets/edit_1784154649123.png";
@@ -55,6 +56,7 @@ import {
   applyCurrencyToBareAmounts,
   formatSourceAmount,
   type DecisionButton,
+  type EvidenceTile,
 } from "@/lib/proposalCards";
 import {
   ActionButton,
@@ -76,6 +78,12 @@ import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
+import { TransactionDetailPopup } from "./TransactionDetailPopup";
+import { AccountDetailPopup } from "./AccountDetailPopup";
+import { VendorDetailPopup } from "./VendorDetailPopup";
+import { BillDetailPopup, type BrainInvoiceDTO } from "./BillDetailPopup";
+import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
+import { LiveEvidenceRecordPopup } from "./LiveEvidenceRecordPopup";
 import {
   Select,
   SelectContent,
@@ -1432,6 +1440,21 @@ export function LiveProposalModal({
   const decide = useDecideProposal();
   const { formatText } = useCurrency();
   const [showTechnical, setShowTechnical] = useState(false);
+  const [openTransactionId, setOpenTransactionId] = useState<string | null>(null);
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
+  const [openVendorId, setOpenVendorId] = useState<string | null>(null);
+  const [openInvoiceId, setOpenInvoiceId] = useState<string | null>(null);
+  const [fallbackEvidence, setFallbackEvidence] = useState<EvidenceTile | null>(null);
+  const { vendors } = useBrainVendors();
+  const vendorBase = vendors.find((vendor) => vendor.id === openVendorId) ?? null;
+  const vendorDetail = useBrainVendorDetail(vendorBase);
+  const { data: invoiceResponse } = useQuery<{ invoices: BrainInvoiceDTO[] }>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    enabled: openInvoiceId !== null,
+    retry: false,
+  });
+  const invoices = invoiceResponse?.invoices ?? [];
+  const openInvoice = invoices.find((invoice) => invoice.id === openInvoiceId) ?? null;
 
   if (!proposal) return null;
 
@@ -1483,6 +1506,43 @@ export function LiveProposalModal({
   /* Evidence the card can NAME. Unresolved refs and wiki context are excluded here
      and appear only in the technical section (buildEvidenceTiles). */
   const evidenceTiles = buildEvidenceTiles(evidence);
+
+  const openEvidenceRecord = (tile: EvidenceTile) => {
+    const ref = tile.ref.replace(/^wiki:\/*/, "").split("/").pop() || tile.ref;
+    const kind = tile.kind.toLowerCase();
+
+    if (kind === "transaction" || kind === "payment") {
+      setFallbackEvidence(null);
+      setOpenTransactionId(ref);
+      return;
+    }
+    if (kind === "account" || kind === "balance") {
+      setFallbackEvidence(null);
+      setOpenAccountId(ref);
+      return;
+    }
+    if (kind === "counterparty" || kind === "vendor" || kind === "customer") {
+      setFallbackEvidence(null);
+      setOpenVendorId(ref);
+      return;
+    }
+    if (kind === "invoice") {
+      setFallbackEvidence(null);
+      setOpenInvoiceId(ref);
+      return;
+    }
+    /* Obligations/payables do not have a by-id endpoint or a dedicated popup.
+       Keep the row tappable and show the facts the proposal actually carries. */
+    setFallbackEvidence(tile);
+  };
+
+  const closeEvidenceRecord = () => {
+    setOpenTransactionId(null);
+    setOpenAccountId(null);
+    setOpenVendorId(null);
+    setOpenInvoiceId(null);
+    setFallbackEvidence(null);
+  };
   /* The structured table brain-core sends supersedes the rows we derive from
      evidence — same job, but authored upstream and type-aware. */
   const detailRows = keyFacts.primary.length > 0 ? keyFacts.primary : visibleRows;
@@ -1619,13 +1679,8 @@ export function LiveProposalModal({
                     {evidenceTiles.map((tile, i) => (
                       <EvidenceLinkRow
                         key={`${tile.label}-${tile.display}-${i}`}
-                        tag={tile.label}
                         label={tile.display}
-                        caption={
-                          tile.facts.length > 0
-                            ? tile.facts.map((f) => `${f.label}: ${f.value}`).join(" · ")
-                            : null
-                        }
+                        onClick={() => openEvidenceRecord(tile)}
                         testId={`tile-live-proposal-evidence-${i}`}
                       />
                     ))}
@@ -1818,6 +1873,50 @@ export function LiveProposalModal({
               position={position}
             />
           )}
+
+          {/* Linked evidence opens the same record surfaces used elsewhere in the
+              app. These are nested over the proposal card so closing the record
+              returns the user to the exact review card they were reading. */}
+          <TransactionDetailPopup
+            txId={openTransactionId}
+            onClose={closeEvidenceRecord}
+            hidePager
+          />
+          <AccountDetailPopup
+            accountId={openAccountId}
+            onClose={closeEvidenceRecord}
+            onOpenTransaction={(id) => {
+              setOpenAccountId(null);
+              setOpenTransactionId(id);
+            }}
+            hidePager
+          />
+          <VendorDetailPopup
+            vendor={vendorDetail}
+            open={openVendorId !== null && vendorDetail !== null}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) closeEvidenceRecord();
+            }}
+            pagerDisabled
+          />
+          <BillDetailPopup
+            bill={openInvoice}
+            vendorName={
+              vendors.find((vendor) => vendor.id === openInvoice?.counterparty_id)?.name ??
+              "Unknown counterparty"
+            }
+            bills={invoices}
+            onClose={closeEvidenceRecord}
+            onSelectBill={(nextBill) => setOpenInvoiceId(nextBill.id)}
+            hidePager
+          />
+          <LiveEvidenceRecordPopup
+            evidence={fallbackEvidence}
+            open={fallbackEvidence !== null}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) closeEvidenceRecord();
+            }}
+          />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
