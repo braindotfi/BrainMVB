@@ -217,12 +217,12 @@ export function AuditLogPage() {
         </div>
       </div>
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
+      {/* Table area: the panel stays in place while only its records scroll. */}
       {!isLoading && !isError && (
-        <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
-          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0">
-            {/* Panel header — sticky */}
-            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+        <div className="flex-1 min-h-0 overflow-hidden px-[16px] pb-[16px]">
+          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0 h-full">
+            {/* Panel header — static */}
+            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
               <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
                 <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -231,8 +231,8 @@ export function AuditLogPage() {
               </div>
             </div>
 
-            {/* Records */}
-            <div className="p-[8px] min-w-0">
+            {/* Records — this is the only scrolling region. */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-[8px]">
               {filtered.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">

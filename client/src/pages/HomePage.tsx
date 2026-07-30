@@ -297,21 +297,18 @@ const SectionWidget = ({
   icon,
   testIdPrefix,
   emptyMessage,
-  fitContentWhenShort = false,
 }: {
   title: string;
   items: WidgetItem[];
   icon: React.ReactNode;
   testIdPrefix: string;
   emptyMessage?: string;
-  fitContentWhenShort?: boolean;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasMore = items.length > DEFAULT_VISIBLE;
   const visible = expanded ? items : items.slice(0, DEFAULT_VISIBLE);
-  const shouldFitContent = fitContentWhenShort && items.length < DEFAULT_VISIBLE;
   return (
-    <div className={`bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full ${shouldFitContent ? "h-fit self-start" : "h-full"}`}>
+    <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden relative rounded-[16px] shrink-0 w-full h-full min-h-0">
       <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
@@ -320,7 +317,7 @@ const SectionWidget = ({
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-start p-[8px] relative w-full">
         {visible.length === 0 ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -762,7 +759,7 @@ export function HomePage() {
 
           {/* Stat cards row */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
+            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full h-[360px] min-h-0">
               <div
                 className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px] cursor-pointer transition-colors hover:bg-[#11141b] border border-transparent hover:border-[#1d2132]"
                 role="button"
@@ -822,7 +819,6 @@ export function HomePage() {
                   icon={<GreenCheckIcon />}
                   testIdPrefix="row-brain-did"
                   emptyMessage="Brain hasn't taken any actions yet."
-                  fitContentWhenShort
                 />
               </div>
             </div>
