@@ -1,0 +1,64 @@
+Read-only diagnostic request — NOT a fix request. No code changes.
+
+Tenant: tnt_01KYS8R54VDRSW6ND3GN2649T0 (created via a real, non-demo signup — the account
+holder did NOT click "Continue with Demo" — with the real Solstice Harbor Trading Co. 3-document
+test set uploaded: bank statement, AR aging, payroll register).
+
+This tenant is downstream of all 5 policy-gate/ingestion fixes (tickets 1-5, live since PR #368,
+#369, #370) plus the ops cleanup tool (PR #371, live as of today). This is the real end-to-end
+retest those fixes were meant to produce. Please investigate:
+
+1. TENANCY MODE ANOMALY — highest priority, may explain other findings below.
+   The /tenancy endpoint for this tenant/user returns {mode: "demo", linked: true} despite this
+   being a genuine non-demo signup. Please check:
+   - What determines the `mode` field on the tenancy response — is there a default that's
+     incorrectly applying to regular signups, or is this tenant somehow actually flagged/created
+     as demo despite the signup flow used?
+   - Does "demo" mode trigger any different behavior in ingestion, policy evaluation, obligations
+     handling, or data retention/TTL for this tenant that could explain any of the findings below?
+   - Pull the tenant's actual row/creation metadata (created_via, kind, sandbox flag — same
+     fields checked on prior tenants in this investigation) to confirm whether this tenant is
+     really tagged as demo in the DB, not just in this one API response.
+
+2. PROPOSAL STATUS — does ticket 1's fix actually work end-to-end here?
+   SELECT type, status, COUNT(*) FROM proposals WHERE tenant_id =
+   'tnt_01KYS8R54VDRSW6ND3GN2649T0' GROUP BY type, status;
+   Specifically confirm: did the Vantage Point duplicate wire (fraud_anomaly) and the Harbor
+   Reserve $50K wire / new-vendor risk (vendor_risk) generate real proposals, and did they land
+   as `pending` this time? The UI's Needs Review tab only shows 1 item (a subscription proposal)
+   — confirm whether that matches the DB or whether pending fraud/vendor proposals exist but
+   aren't surfacing in that UI tab (a different bug from ticket 1 itself).
+
+3. AR/OBLIGATIONS CONFLATION — real bug, not part of the original 5 tickets.
+   Asking the Assistant "what's my total outstanding accounts receivable" returned $133,438
+   (wrong — should be $64,530) by summing ALL obligations records indiscriminately, including
+   payroll net-pay ($33,204, counted twice) and the $2,500 tax remittance. Please find where the
+   Assistant's AR-total query/tool pulls from the obligations table and confirm there's no type
+   filter distinguishing AR receivables from payroll obligations from tax obligations. Fix
+   direction: the query backing "accounts receivable" questions should filter to
+   receivable/invoice-type obligations only.
+
+4. RAW JSON LEAKING TO USER — response rendering bug.
+   Some Assistant answers render as unformatted {"answer": ..., "evidence_ids": [...]} instead of
+   natural language (screenshot: the AR total question returned exactly this raw shape). Find
+   where this response type isn't going through whatever normally formats Assistant replies into
+   prose, and why it's inconsistent (other questions in the same session got proper natural-
+   language answers).
+
+5. GENERIC NON-ANSWER ON RECONCILIATION, GROUNDED IN IRRELEVANT RECORDS.
+   "Are there any unreconciled transactions right now?" returned a vague non-answer ("there are
+   currently some unreconciled transactions... worth taking a look") grounded in the exact same
+   12 obligation IDs that a separate, unrelated AR-total question was also grounded in. This
+   suggests retrieval for this question type may not be query-specific — investigate whether the
+   reconciliation question is actually running reconciliation-specific logic/grounding or just
+   dumping the same generic obligations set regardless of question.
+
+6. 404 ON GROUNDED LEDGER CITATION.
+   Clicking the citation link under a grounded Assistant answer (e.g. the Thornebury match
+   answer, citation "invoice due 2026-07-17 amount 18600.00000000 USD status=due
+   cp=cp_01KYS6AA8VKW3YRVW0K7EHEHGS") leads to a 404 page. Find what URL/route that citation
+   link is generating and why it doesn't resolve to a real page.
+
+Report back plainly on each of the 6 items — root cause where you can find one, and clearly flag
+anything you can't fully diagnose read-only so we know what needs deeper investigation. Do not
+make any code changes — this is confirmation only.
