@@ -59,7 +59,7 @@ export function AnchorStatus({
     ? "Anchored · tamper-evident"
     : isRecorded
       ? "Recorded & verifiable — on-chain anchor pending."
-      : "Proof incomplete. Anchoring usually completes within a few hours.";
+      : "Proof incomplete. This record hasn't been anchored on-chain yet.";
 
   const statusColor = isAnchored ? "text-[#42bf23]" : isRecorded ? "text-[#f59e0b]" : "text-[#a8b9f4]";
 
