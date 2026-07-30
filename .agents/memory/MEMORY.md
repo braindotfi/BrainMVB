@@ -4,6 +4,7 @@
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
 - [Members authority integration](members-authority-integration.md) — Members/approval surface is core-only (GREEN 2026-07-04); member token backs all non-propose calls, agent token propose-only; int64-max limit = unlimited.
 - [BFF vitest setup](bff-vitest-setup.md) — `npm test` pins 5 BFF invariants; dedicated vitest.config (don't extend vite.config, re-declare @/@shared aliases); vitest 2.x is firewall-blocked, use 4.x.
+- [Shrink-wrapping wrapped text](chat-bubble-shrink-to-fit.md) — no CSS makes a wrapped box hug its longest line; measure line boxes and pin, watch RO height feedback + webfont swap.
 - [Chip border convention](chip-border-convention.md) — TAG_*/chip constants carry border COLOR only; the element must add `border border-solid` or the stroke silently renders as nothing.
 - [Previewing auth-gated UI](previewing-auth-gated-ui.md) — screenshot login-only pages via a harness in client/public (not the Vite root) with a hand-written React refresh preamble.
 - [Figma panel pattern](figma-panel-pattern.md) — reusable "list panel" shape (header+counter badge, divider rows, pill actions) now used by AuditLogPage and RuleDetail; reuse it for future Figma-matching restyles.
