@@ -1462,7 +1462,9 @@ export function LiveProposalModal({
 
   const agentKey = agentKeyForProposalType(proposal.type);
   const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
-  const agentHeaderName = /\bagent$/i.test(agentName.trim()) ? agentName.trim() : `${agentName.trim()} Agent`;
+  const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
+  const normalizedAgentName = isPaymentAgent ? "Payment Agent" : agentName.trim();
+  const agentHeaderName = /\bagent$/i.test(normalizedAgentName) ? normalizedAgentName : `${normalizedAgentName} Agent`;
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 

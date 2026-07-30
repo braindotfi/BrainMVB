@@ -759,7 +759,7 @@ export function HomePage() {
 
           {/* Stat cards row */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex flex-col sm:flex-row gap-[16px] items-start relative shrink-0 w-full">
+            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
               <div
                 className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px] cursor-pointer transition-colors hover:bg-[#11141b] border border-transparent hover:border-[#1d2132]"
                 role="button"

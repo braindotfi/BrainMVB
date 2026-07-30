@@ -564,7 +564,8 @@ export function InboxPage() {
     for (const p of needsReviewProposals) {
       const agentKey = agentKeyForProposalType(p.type);
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
-      const pillName = agentKey === "payment" ? "Payment" : agentName;
+      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
+      const pillName = isPaymentAgent ? "Payment" : agentName;
       const decisions = buildDecisionButtons(p.available_decisions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
