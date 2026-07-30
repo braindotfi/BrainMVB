@@ -60,6 +60,19 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
   for the cost: each fresh tenant provisions upstream AND emits an on-chain audit anchor, so
   a public unauthenticated create path needs its own tight rate limit (separate from ordinary
   auth limits) and a TTL/expiry story, or demo traffic quietly spends real funds.
+- **Tenancy `mode` is global env-derived, never a per-user/per-session classification.**
+  It comes from BRAIN_TENANCY_MODE + the platform secret alone — not from user records,
+  email patterns, or brain-core tenant metadata. `isDemoEmail()` (which drives `user.isDemo`
+  and demo seeding) is a SEPARATE axis. **How to apply:** a report that "signups are being
+  misclassified as demo" is not a classification bug — every user in the deployment gets the
+  same mode. Check the env var before hunting for per-session logic.
+- Durable now reports its own mode string `"durable"` (was `"demo"`), and /tenancy returns
+  the real tenantId/companyName. **Why:** durable tenants are genuine brain-core PRODUCTION
+  tenants (kind=production, sandbox=false) that persist forever; labeling them "demo" told
+  clients their real data was throwaway session scratch and made UI copy claim a fake ~30min
+  expiry. **How to apply:** the company-setup gate keys on `mode === "production"` ONLY, so a
+  third value is safe there — but audit anything doing `!== "production"` and inferring "demo",
+  and any `mode === "demo"` branch that now falls through to an else meant for production.
 - Suites in server/brain/*.test.ts read env at module-eval: any workspace-set
   BRAIN_TENANCY_MODE / BRAIN_PLATFORM_SERVICE_SECRET leaks into vitest and flips code
   paths — demo-path suites must explicitly `delete` those vars at the top.

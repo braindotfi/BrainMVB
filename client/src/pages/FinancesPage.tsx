@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/currencyContext";
@@ -534,6 +534,25 @@ export function FinancesPage() {
     const t = sp.get("tab");
     return (t && FINANCE_TABS.includes(t as FinanceTab)) ? (t as FinanceTab) : "Accounts";
   });
+  const [, navigate] = useLocation();
+
+  /* Deep-link: ?tab=<name> selects that tab, then the param is CONSUMED (dropped via
+     replace). The initializer above only runs on mount, so a link arriving while this
+     page is already mounted — the Brain Assistant panel is open across routes and
+     obligation citations open /finances?tab=Bills — would otherwise do nothing.
+     Clearing the param also means re-clicking the same citation is a real URL change,
+     so it still re-selects the tab after the user has manually switched away. */
+  useEffect(() => {
+    const sp = new URLSearchParams(search);
+    const t = sp.get("tab");
+    if (t === null) return;
+    if (FINANCE_TABS.includes(t as FinanceTab)) setActiveTab(t as FinanceTab);
+    sp.delete("tab");
+    const qs = sp.toString();
+    navigate(`/finances${qs ? `?${qs}` : ""}`, { replace: true });
+    // FINANCE_TABS is a stable literal; re-running on `search` is the whole point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());

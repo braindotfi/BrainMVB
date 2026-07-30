@@ -24,4 +24,5 @@
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
 - [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
 - [brain-core sources registry](brain-sources-registry.md) — /v1/sources is a 4th source surface (empty upstream today); demo rows hide disconnect; type-keyed rows must not inherit per-record restrictions.
+- [Client route integrity](client-route-integrity.md) — wouter sends unregistered navigate() targets to NotFound silently; deep-link params need a consuming effect, not a mount-only initializer.
 - [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); read facts back via PDF /Keywords; avoid tautological asserts.
