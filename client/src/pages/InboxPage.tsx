@@ -210,7 +210,7 @@ const InboxCard = ({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
             {item.title}
           </p>
-          {item.tab !== "Auto-Approved" && item.tab !== "Rejected" && (
+          {item.tab !== "Approved" && item.tab !== "Auto-Approved" && item.tab !== "Rejected" && (
             <span
               className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
               data-testid={`tag-inbox-${item.id}`}
@@ -854,11 +854,11 @@ export function InboxPage() {
         </div>
       </div>
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
+      {/* Table area: the panel header is static; long record lists scroll inside. */}
       <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[16px]">
         <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-          {/* Panel header — sticky */}
-          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+          {/* Panel header — static */}
+          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
             <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
               <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -867,7 +867,7 @@ export function InboxPage() {
             </div>
           </div>
           {/* Rows */}
-          <div className="p-[8px]">
+          <div className="max-h-[480px] overflow-y-auto p-[8px]">
             {visible.length === 0 ? (
               <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                 <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">

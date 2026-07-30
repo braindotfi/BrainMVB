@@ -217,10 +217,10 @@ export function AuditLogPage() {
         </div>
       </div>
 
-      {/* Table area: the panel stays in place while only its records scroll. */}
+      {/* Table area: the panel stays in place while only long record lists scroll. */}
       {!isLoading && !isError && (
-        <div className="flex-1 min-h-0 overflow-hidden px-[16px] pb-[16px]">
-          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0 h-full">
+        <div className="px-[16px] pb-[16px]">
+          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0">
             {/* Panel header — static */}
             <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
               <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
@@ -231,8 +231,8 @@ export function AuditLogPage() {
               </div>
             </div>
 
-            {/* Records — this is the only scrolling region. */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-[8px]">
+            {/* Records — short lists stay natural-height; long lists scroll here. */}
+            <div className="max-h-[480px] overflow-y-auto p-[8px]">
               {filtered.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
