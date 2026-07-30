@@ -22,12 +22,16 @@ import {
   FileText,
   HandCoins,
   Hash,
+  HeartPulse,
   Info,
   Landmark,
   LineChart,
   Mail,
   Pencil,
+  PiggyBank,
+  Plane,
   Receipt,
+  ShoppingCart,
   Repeat,
   Scale,
   ShieldAlert,
@@ -39,7 +43,25 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCurrency } from "@/lib/useCurrency";
-import { buildProposalDetailRows, buildProposalHeadline, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "@/lib/proposalCards";
+import {
+  buildProposalDetailRows,
+  buildProposalHeadline,
+  initialsOf,
+  MAX_VISIBLE_DETAIL_ROWS,
+  buildKeyFactRows,
+  keyFactsFromPresentation,
+  buildFlaggedBy,
+  buildDecisionButtons,
+  buildConsequences,
+  buildConfidence,
+  buildEvidenceTiles,
+  buildTechnicalLayers,
+  buildRefDisplayMap,
+  resolveHeadlineText,
+  resolveProseText,
+  humanizeEnumValue,
+  type DecisionButton,
+} from "@/lib/proposalCards";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel } from "@/lib/documentTypes";
@@ -93,6 +115,14 @@ const AGENT_ICONS: Record<AgentKey, LucideIcon> = {
   reconciliation: BookCheck,
   subscription: Repeat,
   fraud_anomaly: AlertTriangle,
+  bill_management: Receipt,
+  debt_optimization: Landmark,
+  financial_health: HeartPulse,
+  personal_budget: PiggyBank,
+  purchase_advisor: ShoppingCart,
+  savings: PiggyBank,
+  tax_prep: FileText,
+  travel_finance: Plane,
 };
 
 const SectionLabel = ({
@@ -1365,7 +1395,54 @@ export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   reconciliation: "Reconciliation",
   subscription: "Subscription",
   fraud_anomaly: "Fraud and Anomaly",
+  bill_management: "Bill Management",
+  debt_optimization: "Debt Optimization",
+  financial_health: "Financial Health",
+  personal_budget: "Personal Budget",
+  purchase_advisor: "Purchase Advisor",
+  savings: "Savings",
+  tax_prep: "Tax Prep",
+  travel_finance: "Travel Finance",
 };
+
+/** Footer button for one entry of `available_decisions`.
+ *
+ *  Colour follows the decision's TONE (approve green / reject red / neutral
+ *  purple) rather than its position, so a card offering only Acknowledge gets the
+ *  single full-width purple button the Invoice / Cash Agent card uses, and one
+ *  offering Approve + Reject gets that pair in the same colours as before.
+ *
+ *  A decision id outside the documented write set renders disabled: brain-core
+ *  publishes domain labels ahead of the write verbs that accept them, and a
+ *  button that always errors is worse than one that says it is not available. */
+function LiveDecisionButton({
+  decision,
+  pending,
+  onClick,
+}: {
+  decision: DecisionButton;
+  pending: boolean;
+  onClick: () => void;
+}) {
+  const tone =
+    decision.tone === "approve"
+      ? "bg-[#123509] hover:bg-[#0e2a07] text-[#42bf23] focus-visible:ring-[#42bf23]"
+      : decision.tone === "reject"
+        ? "bg-[#350011] hover:bg-[#44001a] text-[#d20344] focus-visible:ring-[#d20344]"
+        : "bg-[#7631ee] hover:bg-[#6528d4] text-white focus-visible:ring-[#7631EE]";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending || !decision.writable}
+      title={decision.writable ? (decision.meaning ?? undefined) : "This decision isn't available yet."}
+      data-testid={`button-live-proposal-${decision.id}`}
+      className={`flex-1 px-[20px] py-[10px] rounded-[100px] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] focus:outline-none focus-visible:ring-2 ${tone}`}
+    >
+      {decision.label}
+    </button>
+  );
+}
 
 export function LiveProposalModal({
   proposal,
@@ -1387,9 +1464,19 @@ export function LiveProposalModal({
   const agentKey = agentKeyForProposalType(proposal.type);
   const AgentIcon = AGENT_ICONS[agentKey];
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
-  const confidencePct = typeof proposal.confidence === "number" ? Math.round(proposal.confidence * 100) : null;
   const needsReview = isNeedsReview(proposal);
-  const notifyOnly = proposal.mode === "notify_only";
+
+  /* ── Rich card fields (brain-core #384) ──────────────────────────────────────
+     Each is OPTIONAL on the wire, and every section below renders only when its
+     own data survived. A record from before the contract shipped still produces
+     the original compact card rather than a page of empty headings. */
+  const presentation = proposal.presentation ?? null;
+  const policy = proposal.policy ?? presentation?.policy ?? null;
+  const confidence = buildConfidence(proposal.confidence, presentation?.confidence_band);
+  const flaggedBy = buildFlaggedBy(policy);
+  const decisions = buildDecisionButtons(proposal.available_decisions, presentation?.actions);
+  const consequences = buildConsequences(presentation?.consequences, decisions);
+  const technicalLayers = buildTechnicalLayers(presentation?.technical_detail);
 
   // `evidence` is defensive: this record can arrive from any cached /proposals
   // read, and the enriching route is not the only way one reaches this modal.
@@ -1412,7 +1499,30 @@ export function LiveProposalModal({
   const sendsOutboundMessage = SENDS_OUTBOUND_MESSAGE.has(agentKey);
   const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
   const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
-  const narrativeIsLong = (proposal.narrative?.length ?? 0) > 180;
+
+  /* Key facts: brain-core's own table, with ids already swapped for names by the
+     BFF. `keyFactsFromPresentation` is the fallback for a record that reached this
+     modal without passing through the enriching route — it applies the same
+     primary/technical split, just without the id→name resolution. */
+  const resolvedFacts = proposal.key_facts ?? keyFactsFromPresentation(presentation?.key_facts);
+  const keyFacts = buildKeyFactRows(resolvedFacts, money);
+  /* Evidence the card can NAME. Unresolved refs and wiki context are excluded here
+     and appear only in the technical section (buildEvidenceTiles). */
+  const evidenceTiles = buildEvidenceTiles(evidence);
+  /* The structured table brain-core sends supersedes the rows we derive from
+     evidence — same job, but authored upstream and type-aware. */
+  const detailRows = keyFacts.primary.length > 0 ? keyFacts.primary : visibleRows;
+  /* brain-core's headline names its subject by raw id ("tx_01KY… fraud anomaly
+     risk is elevated"). Swap in the names we resolved; an id that resolved to
+     nothing is dropped rather than shown on the card face. */
+  const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
+  const cardHeadline = resolveHeadlineText(presentation?.headline, refDisplays);
+  /* Core's narrative names its subject by raw id too. */
+  const cardNarrative = resolveProseText(proposal.narrative, refDisplays);
+  const narrativeIsLong = (cardNarrative?.length ?? 0) > 180;
+  const recommendation = presentation?.recommendation?.trim()
+    ? humanizeEnumValue(presentation.recommendation.trim())
+    : null;
 
   const act = (decision: ProposalDecision) => {
     decide.mutate({ id: proposal.id, decision }, { onSuccess: () => onOpenChange(false) });
@@ -1467,17 +1577,22 @@ export function LiveProposalModal({
                 )}
               </div>
               <div className="flex flex-col min-w-0 flex-1">
+                {/* Headline: brain-core's own sentence when it sends one, so every
+                    client names the card identically; the resolved subject is the
+                    fallback for rows that predate the presentation block. */}
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]"
                   data-testid="text-live-proposal-subject"
                 >
-                  {subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
+                  {cardHeadline ?? subjectName ?? AGENT_DISPLAY_NAME[agentKey]}
                 </p>
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#6c779d] truncate"
                   data-testid="text-live-proposal-headline"
                 >
-                  {headlineText ||
+                  {[cardHeadline && subjectName ? subjectName : null, headlineText]
+                    .filter(Boolean)
+                    .join(" · ") ||
                     (subjectName
                       ? `${proposal.subject!.label} · ${AGENT_DISPLAY_NAME[agentKey]}`
                       : `Proposed by ${AGENT_DISPLAY_NAME[agentKey]}`)}
@@ -1496,26 +1611,48 @@ export function LiveProposalModal({
               )}
             </div>
 
-            {confidencePct !== null && (
+            {/* Confidence — "High · 47%". The band is brain-core's own, not derived
+                from the percentage: the two legitimately differ (a strong signal the
+                model is only moderately certain about). */}
+            {confidence && (
               <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-proposal-confidence">
                 <div className="flex items-center justify-between">
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">Confidence</span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]">{confidencePct}%</span>
+                  <span
+                    className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]"
+                    data-testid="text-live-proposal-confidence"
+                  >
+                    {confidence.text}
+                  </span>
                 </div>
                 <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidencePct}%` }} />
+                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidence.pct}%` }} />
                 </div>
+              </div>
+            )}
+
+            {/* Recommended Action — brain-core's `presentation.recommendation`.
+                Same section the Invoice / Cash Agent card uses. */}
+            {recommendation && (
+              <div className="flex flex-col gap-[8px] items-start w-full">
+                <SectionLabel>Recommended Action</SectionLabel>
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[21px] text-[#a8b9f4] text-[15px] w-full"
+                  data-testid="text-live-proposal-recommendation"
+                >
+                  {recommendation}
+                </p>
               </div>
             )}
 
             {/* Decision-supporting detail, prioritised and capped so the card stays
                 scannable. Everything here is a real ledger field. */}
-            {visibleRows.length > 0 && (
+            {detailRows.length > 0 && (
               <div
                 className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
                 data-testid="list-live-proposal-details"
               >
-                {visibleRows.map((r, i) => {
+                {detailRows.map((r, i) => {
                   const RowIcon = DETAIL_ROW_ICONS[r.icon] ?? CircleDot;
                   return (
                   <div
@@ -1542,17 +1679,19 @@ export function LiveProposalModal({
               </div>
             )}
 
-            {/* The agent's own message. Clamped when long — approvers scan the
-                structured rows first and read the prose only if they need it. */}
-            {proposal.narrative && (
+            {/* The agent's own message, under the section title the spec names.
+                Clamped when long — approvers scan the structured rows first and read
+                the prose only if they need it. */}
+            {cardNarrative && (
               <div className="flex flex-col gap-[6px] w-full">
+                <SectionLabel>Why This Needs Your Call</SectionLabel>
                 <p
                   className={`[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4] ${
                     narrativeIsLong && !showNarrative ? "line-clamp-3" : ""
                   }`}
                   data-testid="text-live-proposal-narrative"
                 >
-                  {formatText(proposal.narrative)}
+                  {formatText(cardNarrative)}
                 </p>
                 {narrativeIsLong && (
                   <button
@@ -1564,6 +1703,93 @@ export function LiveProposalModal({
                     {showNarrative ? "Show less" : "Show more"}
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Evidence — Wiki-resolved records only. A ref that resolved to nothing
+                yields NO tile: the only thing left to show would be the raw id this
+                view must not contain, and it is already in the technical section. */}
+            {evidenceTiles.length > 0 && (
+              <div className="flex flex-col gap-[8px] items-start w-full">
+                <SectionLabel>Evidence</SectionLabel>
+                <div
+                  className="bg-[#0a0c10] border border-[#1d2132] rounded-[12px] w-full flex flex-col overflow-hidden"
+                  data-testid="list-live-proposal-evidence"
+                >
+                  {evidenceTiles.map((tile, i) => (
+                    <div
+                      key={`${tile.label}-${tile.display}-${i}`}
+                      className={`flex flex-col gap-[2px] px-[12px] py-[10px] ${
+                        i > 0 ? "border-t border-[#1d2132] border-solid" : ""
+                      }`}
+                      data-testid={`tile-live-proposal-evidence-${i}`}
+                    >
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-[#6c779d] uppercase tracking-[0.04em]">
+                        {tile.label}
+                      </span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4]">
+                        {tile.display}
+                      </span>
+                      {tile.facts.length > 0 && (
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                          {tile.facts.map((f) => `${f.label}: ${f.value}`).join(" · ")}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* What Happens Next / If This Is Wrong — brain-core's own consequence
+                text per decision. A decision core wrote no consequence for produces
+                no line, and an empty section is dropped entirely rather than filled
+                with generic reassurance. */}
+            {consequences.next.length > 0 && (
+              <div className="flex flex-col gap-[12px] items-start w-full">
+                <SectionLabel>What Happens Next</SectionLabel>
+                {consequences.next.map((line) => (
+                  <p
+                    key={line.decisionId}
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d] w-full"
+                    data-testid={`text-live-proposal-next-${line.decisionId}`}
+                  >
+                    <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {formatText(line.text)}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {consequences.ifWrong.length > 0 && (
+              <div className="flex flex-col gap-[12px] items-start w-full">
+                <SectionLabel>If This Is Wrong</SectionLabel>
+                {consequences.ifWrong.map((line) => (
+                  <p
+                    key={line.decisionId}
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[19px] text-[13px] text-[#6c779d] w-full"
+                    data-testid={`text-live-proposal-if-wrong-${line.decisionId}`}
+                  >
+                    <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {formatText(line.text)}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Flagged by — policy_id, else the matched rule, else the policy's own
+                content. Omitted outright when the record carries no policy at all
+                (buildFlaggedBy returns null), never rendered as "Flagged by —". */}
+            {flaggedBy && (
+              <div
+                className="border border-[#1d2132] rounded-[12px] p-[8px] flex items-start gap-[8px] w-full"
+                data-testid="box-live-proposal-flagged-by"
+              >
+                <Info size={14} className="text-[#6c779d] shrink-0 mt-[2px]" aria-hidden="true" />
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] flex-1 min-w-0"
+                  data-testid={`text-live-proposal-flagged-by-${flaggedBy.source}`}
+                >
+                  <span className="font-semibold text-[#a8b9f4]">Flagged by</span> {flaggedBy.text}
+                </p>
               </div>
             )}
 
@@ -1607,7 +1833,10 @@ export function LiveProposalModal({
 
             {/* Technical reference — raw ids live here, collapsed, so the card reads
                 as names but the underlying refs stay available for support. */}
-            {(evidence.length > 0 || proposal.payment_intent_id) && (
+            {(evidence.length > 0 ||
+              proposal.payment_intent_id ||
+              technicalLayers.length > 0 ||
+              keyFacts.technical.length > 0) && (
               <div className="flex flex-col gap-[8px] w-full">
                 <button
                   type="button"
@@ -1617,13 +1846,40 @@ export function LiveProposalModal({
                   className="flex items-center gap-[4px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
                 >
                   <ChevronRight size={14} className={`transition-transform ${showTechnical ? "rotate-90" : ""}`} />
-                  Technical reference
+                  Technical Detail
                 </button>
                 {showTechnical && (
                   <div
                     className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]"
                     data-testid="list-live-proposal-technical"
                   >
+                    {/* The stored action type the public `type` was derived from —
+                        the first thing to check when a card routes oddly. */}
+                    {proposal.stored_action_type && (
+                      <div className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">
+                          Stored action type
+                        </span>
+                        <span
+                          className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#a8b9f4] text-right truncate"
+                          data-testid="text-live-proposal-stored-action-type"
+                        >
+                          {proposal.stored_action_type}
+                        </span>
+                      </div>
+                    )}
+                    {/* Identifier facts, kept out of the card face by
+                        buildKeyFactRows but preserved verbatim for support. */}
+                    {keyFacts.technical.map((r, i) => (
+                      <div
+                        key={`tech-fact-${i}`}
+                        className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]"
+                        data-testid={`row-live-proposal-technical-fact-${i}`}
+                      >
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">{r.label}</span>
+                        <span className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#414965] text-right break-all">{r.value}</span>
+                      </div>
+                    ))}
                     {overflowRows.map((r, i) => (
                       <div key={`overflow-${i}`} className="flex items-center justify-between gap-[12px] px-[12px] py-[8px] bg-[#0a0c10]">
                         <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d] shrink-0">{r.label}</span>
@@ -1652,6 +1908,21 @@ export function LiveProposalModal({
                         </span>
                       </div>
                     )}
+                    {/* The six pipeline layers, in contract order. Rendered as the
+                        JSON core sent: this is the audit trail, so it is shown
+                        as-is rather than reworded. */}
+                    {technicalLayers.map((layer) => (
+                      <div
+                        key={layer.key}
+                        className="flex flex-col gap-[4px] px-[12px] py-[8px] bg-[#0a0c10]"
+                        data-testid={`layer-live-proposal-technical-${layer.key}`}
+                      >
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">{layer.title}</span>
+                        <pre className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#414965] whitespace-pre-wrap break-all m-0">
+                          {layer.json}
+                        </pre>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1663,37 +1934,31 @@ export function LiveProposalModal({
           </div>
 
           <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] backdrop-blur-[10px] p-[24px] w-full shrink-0">
-            {notifyOnly && needsReview ? (
-              <button
-                type="button"
-                onClick={() => act("acknowledge")}
-                disabled={decide.isPending}
-                data-testid="button-live-proposal-acknowledge"
-                className="w-full px-[20px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#6528d4] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11141b]"
-              >
-                Acknowledge
-              </button>
-            ) : needsReview ? (
-              <div className="flex gap-[12px] w-full">
-                <button
-                  type="button"
-                  onClick={() => act("reject")}
-                  disabled={decide.isPending}
-                  data-testid="button-live-proposal-reject"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#44001a] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
-                >
-                  Reject
-                </button>
-                <button
-                  type="button"
-                  onClick={() => act("approve")}
-                  disabled={decide.isPending}
-                  data-testid="button-live-proposal-approve"
-                  className="flex-1 px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#0e2a07] transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
-                >
-                  Approve
-                </button>
+            {needsReview && decisions.length > 0 ? (
+              /* Buttons come from `available_decisions`, so a compliance finding
+                 offers only Acknowledge, a fraud hold only its own decision, and a
+                 treasury sweep Approve / Reject — without this component knowing
+                 anything about those types. Labels are brain-core's; the wire value
+                 stays the documented write verb (see buildDecisionButtons). */
+              <div className="flex gap-[12px] w-full" data-testid="group-live-proposal-decisions">
+                {decisions.map((d) => (
+                  <LiveDecisionButton
+                    key={d.id}
+                    decision={d}
+                    pending={decide.isPending}
+                    onClick={() => act(d.id as ProposalDecision)}
+                  />
+                ))}
               </div>
+            ) : needsReview ? (
+              /* Pending, but core offered no decision this client can write. Say so
+                 rather than showing an Approve button that would 400. */
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"
+                data-testid="text-live-proposal-no-decisions"
+              >
+                No decision is available for this proposal.
+              </p>
             ) : (
               <p
                 className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center w-full"

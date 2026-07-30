@@ -21,6 +21,13 @@ import {
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import {
+  isDecidableProposal,
+  buildDecisionButtons,
+  buildRefDisplayMap,
+  resolveProseText,
+  type DecisionButton,
+} from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { RISK_META } from "@/lib/agentProposals";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
@@ -127,6 +134,14 @@ type InboxItem = {
   insight?: LiveInsight;
   record?: AuditRecord;
   liveAgentProposal?: BrainProposal;
+  /* Decisions brain-core will actually accept for this row. Row buttons are
+     driven by this, never by a hardcoded Approve/Reject pair — a notify-only
+     compliance or fraud finding offers `acknowledge` ONLY, and firing approve
+     at it is a write the API rejects. */
+  liveDecisions?: DecisionButton[];
+  /* Core offers acknowledge and nothing else: render a single Acknowledge button
+     instead of an Approve/Decline pair the API would reject. */
+  acknowledgeOnly?: boolean;
 };
 
 const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
@@ -234,7 +249,7 @@ const InboxCard = ({
             Decline
           </button>
         </div>
-      ) : item.kind === "detection" ? (
+      ) : item.kind === "detection" || item.acknowledgeOnly ? (
         /* Acknowledge row: starts active, then turns orange once acknowledged. */
         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
@@ -303,12 +318,16 @@ export function InboxPage() {
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
   const { proposals: liveProposals } = useBrainProposals();
-  /* Decidable agent proposals only: notify_only records are informational agent
-     insights — nothing to approve or reject — so they stay out of Needs Review
-     (same pattern as isSystemActivity/isAssistantActivity) and surface through
-     the Audit Log feed instead. */
+  /* Decidable agent proposals only — but decidability is now read from the
+     record's own `available_decisions`, not from `mode`.
+     
+     The old rule dropped every notify_only record here, which stranded the types
+     brain-core's read model promoted into this queue: a compliance finding and a
+     fraud hold are notify_only YET carry a real `acknowledge` decision a human has
+     to record. They appeared in the Audit Log with no way to act on them. Rows
+     with no writable decision are still informational and still stay out. */
   const needsReviewProposals = useMemo(
-    () => liveProposals.filter((p) => isNeedsReview(p) && p.mode !== "notify_only"),
+    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
     [liveProposals],
   );
   const decideProposal = useDecideProposal();
@@ -425,6 +444,13 @@ export function InboxPage() {
   };
 
   const acknowledgeItem = (item: InboxItem) => {
+    /* An acknowledge-only live proposal (compliance finding, fraud hold) is a real
+       brain-core decision, not the local insight store. */
+    if (item.liveAgentProposal) {
+      if (!item.liveDecisions?.some((d) => d.id === "acknowledge" && d.writable)) return;
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "acknowledge" });
+      return;
+    }
     if (item.kind !== "detection" || !item.insight) return;
     if (pendingAcknowledgedIds.has(item.id) || acknowledgedIds.has(item.id)) return;
     setPendingAcknowledgedIds((current) => new Set(current).add(item.id));
@@ -532,6 +558,7 @@ export function InboxPage() {
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const riskLabel = p.risk_band ? RISK_META[p.risk_band].label : null;
       const confidenceLabel = typeof p.confidence === "number" ? `${Math.round(p.confidence * 100)}% confidence` : null;
+      const decisions = buildDecisionButtons(p.available_decisions);
       push({
         id: p.id,
         kind: "proposal",
@@ -541,9 +568,16 @@ export function InboxPage() {
         tagClass: TAG_NEEDS_YOU,
         desc: [riskLabel, confidenceLabel].filter(Boolean).join(" · ") || "Awaiting your decision",
         time: "",
-        why: p.narrative ?? undefined,
-        actionable: true,
+        /* Core writes raw ids into its own prose ("… for inv_01KY…"); the list is
+           a primary view, so resolve them exactly as the card does. */
+        why: resolveProseText(p.narrative, buildRefDisplayMap(p.key_facts, p.evidence, p.resolved_refs)) ?? undefined,
+        /* Approve/Decline only when core actually offers them. */
+        actionable: decisions.some((d) => d.writable && (d.id === "approve" || d.id === "reject")),
         liveAgentProposal: p,
+        liveDecisions: decisions,
+        acknowledgeOnly:
+          decisions.some((d) => d.id === "acknowledge" && d.writable) &&
+          !decisions.some((d) => d.id === "approve" || d.id === "reject"),
       });
     }
 
@@ -672,6 +706,8 @@ export function InboxPage() {
 
   const approveItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
+      // Never send a decision core did not offer for this proposal.
+      if (!item.liveDecisions?.some((d) => d.id === "approve" && d.writable)) return;
       decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "approve" });
       return;
     }
@@ -693,6 +729,7 @@ export function InboxPage() {
 
   const rejectItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
+      if (!item.liveDecisions?.some((d) => d.id === "reject" && d.writable)) return;
       decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "reject" });
       return;
     }

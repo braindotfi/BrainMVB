@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { buildProposalDetailRows, buildProposalHeadline, initialsOf, MAX_VISIBLE_DETAIL_ROWS } from "./proposalCards";
+import {
+  buildProposalDetailRows,
+  buildProposalHeadline,
+  initialsOf,
+  MAX_VISIBLE_DETAIL_ROWS,
+  isRawIdentifier,
+  humanizeEnumValue,
+  buildKeyFactRows,
+  buildFlaggedBy,
+  buildDecisionButtons,
+  buildConsequences,
+  buildConfidence,
+  buildEvidenceTiles,
+  isDecidableProposal,
+  buildTechnicalLayers,
+  keyFactsFromPresentation,
+  resolveHeadlineText,
+  resolveProseText,
+  buildRefDisplayMap,
+} from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
 const money = (a: { value: string; currency: string }) =>
@@ -147,5 +166,379 @@ describe("detail row icons", () => {
     const withCode = { ...invoice, code: "INV-1042" };
     const rows = buildProposalDetailRows([withCode], null, money, "INV-1042");
     expect(rows.some((r) => r.value === "Invoice #INV-1042")).toBe(false);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Rich card logic (brain-core #384).
+
+   The fixtures below are TRIMMED COPIES OF LIVE ROWS from the reference tenant
+   (tnt_01KYS8R54VDRSW6ND3GN2649T0), not invented shapes — including the two
+   things the written contract does not prepare you for: `policy_id` is null on
+   every row, and key facts carry bare ledger ids.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+describe("isRawIdentifier", () => {
+  it("catches prefixed and bare ULIDs and wiki URIs", () => {
+    expect(isRawIdentifier("cp_01KYSF0QJ0N18YGNS4JR9EZPHM")).toBe(true);
+    expect(isRawIdentifier("tx_01KYS8S1WJF9WKTPQ9YBXFAHYP")).toBe(true);
+    expect(isRawIdentifier("01KYS8S1WJF9WKTPQ9YBXFAHYP")).toBe(true);
+    expect(isRawIdentifier("wiki:/counterparties/cp_01KY")).toBe(true);
+  });
+  it("leaves real content alone", () => {
+    expect(isRawIdentifier("Harbor Reserve Investment Acct")).toBe(false);
+    expect(isRawIdentifier("cmp_policy_violation")).toBe(false);
+    expect(isRawIdentifier("70197.57")).toBe(false);
+    expect(isRawIdentifier("")).toBe(false);
+  });
+});
+
+describe("humanizeEnumValue", () => {
+  it("turns snake_case enums into prose", () => {
+    expect(humanizeEnumValue("create_liquidity_plan")).toBe("Create liquidity plan");
+    expect(humanizeEnumValue("unusual_amount")).toBe("Unusual amount");
+  });
+  it("leaves names, sentences and numbers untouched", () => {
+    expect(humanizeEnumValue("Harbor Reserve")).toBe("Harbor Reserve");
+    expect(humanizeEnumValue("70197.57")).toBe("70197.57");
+    expect(humanizeEnumValue("Review the rejected decision.")).toBe("Review the rejected decision.");
+  });
+});
+
+describe("buildKeyFactRows", () => {
+  it("keeps identifier rows out of the primary view", () => {
+    // Live compliance row: two id facts the card face must never show.
+    const { primary, technical } = buildKeyFactRows(
+      [
+        { label: "Finding Type", value: "policy_violation" },
+        { label: "Severity", value: "high" },
+        { label: "Policy Decision Id", value: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8" },
+        { label: "Audit Event Id", value: "evt_01KYS8SGWKFAE5Q0EJDPWQ6XNP" },
+      ],
+      money,
+    );
+    expect(primary.map((r) => r.label)).toEqual(["Finding Type", "Severity"]);
+    expect(primary.map((r) => r.value)).toEqual(["Policy violation", "High"]);
+    expect(technical.map((r) => r.label)).toEqual(["Policy Decision Id", "Audit Event Id"]);
+  });
+
+  it("demotes a value that is still a raw id even when the label looks human", () => {
+    // Live subscription row: "Merchant" is a bare cp_ id when nothing resolved it.
+    const { primary, technical } = buildKeyFactRows(
+      [{ label: "Merchant", value: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }],
+      money,
+    );
+    expect(primary).toEqual([]);
+    expect(technical[0].value).toBe("cp_01KYSF0QJ0N18YGNS4JR9EZPHM");
+  });
+
+  it("promotes a resolved id back onto the card face", () => {
+    const { primary, technical } = buildKeyFactRows(
+      [{ label: "Merchant", value: "Fernbridge Wholesale", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }],
+      money,
+    );
+    expect(primary).toEqual([{ label: "Merchant", value: "Fernbridge Wholesale", mono: false, icon: expect.any(String) }]);
+    expect(technical).toEqual([]);
+  });
+
+  it("formats money through the caller's currency formatter and drops the Currency row", () => {
+    // Live treasury row.
+    const { primary } = buildKeyFactRows(
+      [
+        { label: "Available Cash", value: "70197.57" },
+        { label: "Operating Minimum", value: "25000.00" },
+        { label: "Currency", value: "USD" },
+        { label: "Anomaly Score", value: "0.7" },
+      ],
+      money,
+    );
+    expect(primary.find((r) => r.label === "Available Cash")!.value).toBe("$70,197.57");
+    expect(primary.some((r) => r.label === "Currency")).toBe(false);
+    // Not money: a bare score keeps its own value rather than being dollarised.
+    expect(primary.find((r) => r.label === "Anomaly Score")!.value).toBe("0.7");
+  });
+
+  it("skips empty values instead of rendering blank rows", () => {
+    expect(buildKeyFactRows([{ label: "Merchant", value: "" }, { label: "", value: "x" }], money).primary).toEqual([]);
+  });
+});
+
+describe("buildFlaggedBy", () => {
+  it("prefers policy_id when core sends one", () => {
+    expect(buildFlaggedBy({ policy_id: "pol_ap_v2", policy_version: 3 })).toEqual({
+      text: "policy pol_ap_v2 (v3)",
+      source: "policy_id",
+    });
+  });
+
+  it("falls back to matched_rule_id — the live compliance case", () => {
+    const flagged = buildFlaggedBy({ policy_id: null, matched_rule_id: "cmp_policy_violation" });
+    expect(flagged).toEqual({ text: "rule cmp_policy_violation", source: "matched_rule_id" });
+  });
+
+  it("falls back to policy CONTENT when both ids are null — the majority live case", () => {
+    // Live treasury / cash_forecast / subscription / fraud_anomaly shape.
+    const flagged = buildFlaggedBy({
+      decision: "confirm",
+      policy_id: null,
+      matched_rule_id: null,
+      explanation: null,
+      required_approvers: ["signer"],
+      trace: [
+        { rule_id: "default-agent-action-requires-review", matched: true },
+        { rule_id: "auto-approve-under-limit", matched: false },
+      ],
+    });
+    expect(flagged?.source).toBe("policy_content");
+    expect(flagged?.text).toBe('the "default agent action requires review" rule · requires Signer approval');
+  });
+
+  it("prefers a written explanation over the trace", () => {
+    expect(
+      buildFlaggedBy({ policy_id: null, matched_rule_id: null, explanation: "Vendor is on the watchlist." })?.text,
+    ).toBe("Vendor is on the watchlist.");
+  });
+
+  it("describes the bare decision when there is nothing else", () => {
+    expect(buildFlaggedBy({ decision: "confirm" })?.text).toBe("a policy confirm decision");
+  });
+
+  it("omits the line entirely rather than inventing one", () => {
+    expect(buildFlaggedBy(null)).toBeNull();
+    expect(buildFlaggedBy({})).toBeNull();
+    expect(buildFlaggedBy({ policy_id: null, matched_rule_id: null, trace: [] })).toBeNull();
+  });
+});
+
+describe("buildDecisionButtons", () => {
+  it("builds acknowledge-only footers from the record, not from a hardcoded pair", () => {
+    const buttons = buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen" }]);
+    expect(buttons).toEqual([
+      { id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen", tone: "neutral", writable: true },
+    ]);
+  });
+
+  it("orders reject before approve to match the existing footer", () => {
+    const buttons = buildDecisionButtons([
+      { id: "approve", label: "Approve" },
+      { id: "reject", label: "Reject" },
+    ]);
+    expect(buttons.map((b) => b.id)).toEqual(["reject", "approve"]);
+  });
+
+  it("keeps brain-core's domain label but marks an unwritable id disabled", () => {
+    const [button] = buildDecisionButtons([{ id: "hold_transaction", label: "Hold transaction" }]);
+    expect(button.label).toBe("Hold transaction");
+    expect(button.writable).toBe(false);
+  });
+
+  it("falls back to presentation.actions, then to nothing", () => {
+    expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual(["approve"]);
+    expect(buildDecisionButtons(null, null)).toEqual([]);
+  });
+});
+
+describe("buildConsequences", () => {
+  const decisions = buildDecisionButtons([
+    { id: "approve", label: "Approve" },
+    { id: "reject", label: "Reject" },
+  ]);
+
+  it("splits the reject path into If This Is Wrong", () => {
+    const { next, ifWrong } = buildConsequences(
+      { approve: "Transfer is queued.", reject: "Nothing moves.", acknowledge: null },
+      decisions,
+    );
+    expect(next.map((l) => l.decisionId)).toEqual(["approve"]);
+    expect(ifWrong.map((l) => l.text)).toEqual(["Nothing moves."]);
+  });
+
+  it("writes no line for a consequence core left null", () => {
+    const { next, ifWrong } = buildConsequences({ approve: null, reject: null }, decisions);
+    expect(next).toEqual([]);
+    expect(ifWrong).toEqual([]);
+  });
+
+  it("ignores consequences for decisions the proposal does not offer", () => {
+    const ackOnly = buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge" }]);
+    const { next } = buildConsequences({ approve: "unused", acknowledge: "Finding is filed." }, ackOnly);
+    expect(next.map((l) => l.text)).toEqual(["Finding is filed."]);
+  });
+});
+
+describe("buildConfidence", () => {
+  it("renders High/Medium/Low · XX%", () => {
+    expect(buildConfidence(0.94, "high")?.text).toBe("High · 94%");
+  });
+  it("keeps core's band even when it disagrees with the percentage", () => {
+    // Live fraud_anomaly row: band "high" at 47%.
+    expect(buildConfidence(0.471, "high")?.text).toBe("High · 47%");
+  });
+  it("derives a band only when core sends none", () => {
+    expect(buildConfidence(0.42, null)?.text).toBe("Low · 42%");
+  });
+  it("omits the section when there is no confidence at all", () => {
+    expect(buildConfidence(null, "high")).toBeNull();
+  });
+});
+
+describe("buildEvidenceTiles", () => {
+  it("drops wiki context and unresolved refs, and dedupes repeats", () => {
+    // Live fraud_anomaly / subscription evidence: wiki context, one resolvable
+    // transaction, and the same transaction cited twice.
+    const tiles = buildEvidenceTiles([
+      { kind: "wiki", ref: "wiki:/transactions", resolvable: false, label: "Transaction", display: null, amount: null, facts: [], context: true },
+      { kind: "transaction", ref: "tx_01KYS8S1WJF9WKTPQ9YBXFAHYP", resolvable: true, label: "Transaction", display: "WIRE Transfer Out", amount: null, facts: [{ label: "Posted", value: "Jul 28, 2026" }], context: false },
+      { kind: "transaction", ref: "tx_01KYS8S1WJF9WKTPQ9YBXFAHYP", resolvable: true, label: "Transaction", display: "WIRE Transfer Out", amount: null, facts: [], context: false },
+      { kind: "policy_decision", ref: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8", resolvable: false, label: "Policy Decision", display: null, amount: null, facts: [], context: false },
+    ] as ProposalEvidenceItem[]);
+    expect(tiles).toHaveLength(1);
+    expect(tiles[0]).toMatchObject({ label: "Transaction", display: "WIRE Transfer Out" });
+  });
+
+  it("never emits a tile whose display is itself an id", () => {
+    expect(
+      buildEvidenceTiles([
+        { kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM", resolvable: true, label: "Counterparty", display: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM", amount: null, facts: [], context: false },
+      ] as ProposalEvidenceItem[]),
+    ).toEqual([]);
+  });
+});
+
+describe("isDecidableProposal", () => {
+  it("routes a notify_only record WITH an acknowledge decision into the queue", () => {
+    // This is the compliance / fraud_anomaly case the old mode-only gate stranded.
+    expect(
+      isDecidableProposal({ mode: "notify_only", available_decisions: [{ id: "acknowledge", label: "Acknowledge" }] }),
+    ).toBe(true);
+  });
+
+  it("keeps a record with no writable decision out", () => {
+    expect(isDecidableProposal({ mode: "notify_only", available_decisions: [] })).toBe(false);
+    expect(isDecidableProposal({ mode: "propose", available_decisions: [{ id: "hold_transaction", label: "Hold" }] })).toBe(false);
+  });
+
+  it("falls back to the old mode rule for rows that predate available_decisions", () => {
+    expect(isDecidableProposal({ mode: "propose" })).toBe(true);
+    expect(isDecidableProposal({ mode: "notify_only" })).toBe(false);
+  });
+});
+
+describe("buildTechnicalLayers", () => {
+  it("emits the six layers in contract order, skipping the ones core omitted", () => {
+    const layers = buildTechnicalLayers({
+      "6_propose": { action: "flag" },
+      "1_ingest": { source: "plaid" },
+      "4_score": null,
+      extra_layer: { x: 1 },
+    });
+    expect(layers.map((l) => l.key)).toEqual(["1_ingest", "6_propose", "extra_layer"]);
+    expect(layers[0].title).toBe("1 · Ingest");
+    expect(layers[0].json).toContain("plaid");
+  });
+  it("returns nothing when core sent no technical detail", () => {
+    expect(buildTechnicalLayers(null)).toEqual([]);
+  });
+});
+
+describe("keyFactsFromPresentation", () => {
+  it("applies the same primary/technical split without server resolution", () => {
+    const facts = keyFactsFromPresentation([
+      { label: "Severity", value: "high" },
+      { label: "Transaction Id", value: "tx_01KYS8S1WJF9WKTPQ9YBXFAHYP" },
+      { label: "Amount", value: 50000 },
+    ]);
+    expect(facts).toEqual([
+      { label: "Severity", value: "high", technical: false },
+      { label: "Transaction Id", value: "tx_01KYS8S1WJF9WKTPQ9YBXFAHYP", technical: true },
+      { label: "Amount", value: "50000", technical: false },
+    ]);
+  });
+});
+
+describe("resolveHeadlineText", () => {
+  const refs = new Map([["tx_01KYS8S1WJ3PJ4HHAM9JH4KHZD", "WIRE Transfer Out - Harbor Reserve"]]);
+
+  it("replaces the raw id core puts at the front of a fraud headline", () => {
+    // Verbatim live fraud_anomaly headline.
+    expect(
+      resolveHeadlineText("tx_01KYS8S1WJ3PJ4HHAM9JH4KHZD fraud anomaly risk is elevated; recommend review.", refs),
+    ).toBe("WIRE Transfer Out - Harbor Reserve fraud anomaly risk is elevated; recommend review.");
+  });
+
+  it("removes an id that resolved to nothing rather than showing it", () => {
+    expect(resolveHeadlineText("tx_01KYS8S1WB61VSWH6YJJ9AKFG9 fraud anomaly risk is high.", new Map())).toBe(
+      "Fraud anomaly risk is high.",
+    );
+  });
+
+  it("spaces out snake_case enums and sentence-cases the result", () => {
+    // Verbatim live treasury / subscription headlines.
+    expect(resolveHeadlineText("create_liquidity_plan for USD balance 70197.57.", refs)).toBe(
+      "Create liquidity plan for USD balance 70197.57.",
+    );
+    expect(resolveHeadlineText("Subscription detection not_matched.", refs)).toBe("Subscription detection not matched.");
+  });
+
+  it("leaves an already-human headline alone", () => {
+    expect(resolveHeadlineText("Compliance finding policy violation severity high.", refs)).toBe(
+      "Compliance finding policy violation severity high.",
+    );
+  });
+
+  it("returns null when there is nothing to show", () => {
+    expect(resolveHeadlineText(null, refs)).toBeNull();
+    expect(resolveHeadlineText("   ", refs)).toBeNull();
+    expect(resolveHeadlineText("tx_01KYS8S1WB61VSWH6YJJ9AKFG9", new Map())).toBeNull();
+  });
+});
+
+describe("buildRefDisplayMap", () => {
+  it("indexes resolved names from both evidence and key facts, bare and wiki-suffixed", () => {
+    const map = buildRefDisplayMap(
+      [{ label: "Merchant", value: "Cascade Freight", ref: "cp_01KYS8S1V2HXCRN0GGFEJ8VAY1" }],
+      [
+        { kind: "transaction", ref: "wiki:/transactions/tx_01KYS8S1WJ3PJ4HHAM9JH4KHZD", resolvable: true, label: "Transaction", display: "WIRE Transfer Out", amount: null, facts: [], context: true },
+      ] as ProposalEvidenceItem[],
+    );
+    expect(map.get("cp_01KYS8S1V2HXCRN0GGFEJ8VAY1")).toBe("Cascade Freight");
+    expect(map.get("tx_01KYS8S1WJ3PJ4HHAM9JH4KHZD")).toBe("WIRE Transfer Out");
+  });
+
+  it("never indexes an id as its own display", () => {
+    const map = buildRefDisplayMap([{ label: "Merchant", value: "cp_01KYS8S1V2HXCRN0GGFEJ8VAY1", ref: "cp_01KYS8S1V2HXCRN0GGFEJ8VAY1", technical: true }], []);
+    expect(map.size).toBe(0);
+  });
+});
+
+describe("buildKeyFactRows — de-duplication", () => {
+  it("shows a value once when resolution makes two facts identical", () => {
+    // Live fraud row: "Transaction Id" resolves to the same string as "Counterparty Name".
+    const { primary } = buildKeyFactRows(
+      [
+        { label: "Transaction", value: "WIRE Transfer Out - Harbor Reserve", ref: "tx_01KYS8S1WJ3PJ4HHAM9JH4KHZD" },
+        { label: "Counterparty Name", value: "WIRE Transfer Out - Harbor Reserve" },
+        { label: "Anomaly Type", value: "unusual_amount" },
+      ],
+      money,
+    );
+    expect(primary.map((r) => r.label)).toEqual(["Transaction", "Anomaly Type"]);
+  });
+});
+
+describe("resolveProseText", () => {
+  const refs = new Map([["inv_01KYS8RK94M7CED84B00QM9TNQ", "Invoice #INV-1042"]]);
+
+  it("names the id core buries in the compliance narrative", () => {
+    expect(
+      resolveProseText(
+        "Compliance review for inv_01KYS8RK94M7CED84B00QM9TNQ found policy_violation with high severity.",
+        refs,
+      ),
+    ).toBe("Compliance review for Invoice #INV-1042 found policy violation with high severity.");
+  });
+
+  it("keeps the prose's own capitalisation instead of sentence-casing it", () => {
+    expect(resolveProseText("brain flagged this.", refs)).toBe("brain flagged this.");
   });
 });

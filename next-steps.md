@@ -13,6 +13,31 @@ brain-core **read integration** across 5 surfaces, all on the demo path, server-
 Accounts + Recent transactions (FinancesPage), "Money in all accounts" total (HomePage),
 grounded BrainAssistant (`/v1/wiki/question`) + evidence trail. `npm run brain:smoke` PASSES.
 
+## Done ✅ — `feature/proposal-cards-full-parity` (2026-07-30, branch not pushed)
+The rich proposal card now serves **all 19 `proposal_type` values** (11 core + 8 advisory), driven
+by `presentation` / `details` / `policy` / `available_decisions` rather than per-agent branches.
+Field contract, the fallback chains and the live-vs-doc divergences are documented in `CLAUDE.md`
+§"Full-parity proposal cards". Verified in the **running preview** against the 5 live pending
+proposals on `tnt_01KYS8R54VDRSW6ND3GN2649T0` (read-only — no decision was ever submitted):
+
+| Type | Renders |
+| --- | --- |
+| `compliance` | headline, Confidence `High · 94%`, 3 key facts, narrative naming *Invoice #INV-2033*, What Happens Next, "Flagged by rule cmp_policy_violation · requires Signer approval", 6 technical layers, single **Acknowledge** |
+| `fraud_anomaly` | subject + `$50,000.00` subline, Confidence `Low · 47%`, Recommended Action *Review*, 4 key facts, evidence tile, "Flagged by a policy confirm decision", **Acknowledge** |
+| `subscription` | resolved merchant, Confidence `High · 90%`, *Monitor*, 4 key facts, evidence tile, What Happens Next + If This Is Wrong, **Approve / Reject** |
+| `treasury` | *Create liquidity plan*, 5 key facts (money formatted), account evidence, **Approve / Reject** |
+| `cash_forecast` | *Sweep surplus*, balance facts, account + 4 payable evidence tiles, **Approve / Reject** |
+
+Notes for whoever picks this up:
+- Advisory types (`personal_budget`, `tax_prep`, `bill_management`, `debt_optimization`,
+  `financial_health`, `purchase_advisor`, `savings`, `travel_finance`) compile and route through
+  the same card, but the reference tenant has **no live rows** for them — unverified against real
+  data. Same for `dispute`, `revenue_intel` and `vendor_risk`.
+- The Inbox gate is now `isDecidableProposal`, so notify-only compliance/fraud rows appear in
+  Needs Review (29 items on that tenant) instead of only the Audit Log.
+- `server/auth-security.test.ts > reads and revokes legacy plaintext Plaid tokens` fails whenever
+  `DATABASE_URL` is set. Pre-existing and unrelated: 463 of 464 tests pass.
+
 ## Regressed / pending re-wire — Fork A: propose-only §6 demo
 The June branch once had a "Brain proposes → §6/Policy gate decides" demo with no money movement.
 Current `main` no longer has the UI part of that flow. `BrainBillsInbox` lists AP invoices and opens

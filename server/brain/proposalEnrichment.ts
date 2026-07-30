@@ -71,10 +71,24 @@ export interface EnrichedEvidenceItem {
   context: boolean;
 }
 
+/** A `presentation.key_facts` row after id resolution. */
+export interface ResolvedKeyFact {
+  label: string;
+  value: string;
+  /** True when the primary card view must NOT show this row: it is an identifier
+   *  column, or a raw id nothing in the index could name. */
+  technical?: boolean;
+  /** The original id, when `value` is the name we resolved it to. */
+  ref?: string | null;
+}
+
 export interface EnrichedProposal {
   evidence: EnrichedEvidenceItem[];
   /** The headline entity a human would name this card by, if one resolved. */
   subject: { label: string; display: string } | null;
+  /** `presentation.key_facts` with ids resolved to names. Absent when the record
+   *  carries no key facts — never an empty-but-present contract. */
+  key_facts?: ResolvedKeyFact[];
   [key: string]: unknown;
 }
 
@@ -535,10 +549,116 @@ export function resolveEvidenceItem(raw: RawEvidence, index: EntityIndex): Enric
   };
 }
 
+/* ── presentation.key_facts ───────────────────────────────────────────────────
+   brain-core writes ids straight into the card's fact table: a subscription's
+   "Merchant" is a bare `cp_…`, a fraud finding's "Transaction Id" a bare `tx_…`.
+   Rendering those verbatim is exactly the failure the evidence resolver above
+   exists to prevent, so the same index is applied to the fact values. */
+
+/** Shape-matched, not prefix-matched — see the module header. */
+const RAW_ID_RE = /^(?:[a-z][a-z0-9]{0,11}_)?[0-9A-HJKMNP-TV-Z]{26}$/i;
+
+function isRawId(value: string): boolean {
+  return value.startsWith("wiki:") || RAW_ID_RE.test(value);
+}
+
+/** A label naming an identifier column: "Transaction Id", "Policy Decision Id". */
+function isIdLabel(label: string): boolean {
+  return /\bids?\b/i.test(label);
+}
+
+/** Drop the trailing "Id" once the value is a NAME: "Transaction Id" captioning
+ *  "WIRE Transfer Out" reads as a mistake. */
+function labelWithoutId(label: string): string {
+  return label.replace(/\s*\bids?\b\s*$/i, "").trim() || label;
+}
+
+/** Ids cited by a record's key facts, so targeted hydration can fetch the ones the
+ *  bulk index missed (a merchant outside the first counterparty page, say). */
+export function keyFactRefs(raw: Record<string, unknown>): { ref: string; kind: string }[] {
+  const presentation = raw.presentation as Record<string, unknown> | undefined;
+  const facts = Array.isArray(presentation?.key_facts) ? (presentation!.key_facts as Record<string, unknown>[]) : [];
+  const refs: { ref: string; kind: string }[] = [];
+  for (const fact of facts) {
+    const value = typeof fact?.value === "string" ? fact.value.trim() : "";
+    if (value && isRawId(value)) {
+      // No kind is available here; collectionForRef falls back to the wiki path
+      // when the value is a URI, and to nothing otherwise — the id still gets a
+      // chance through the bulk index.
+      refs.push({ ref: value, kind: typeof fact?.label === "string" ? String(fact.label).toLowerCase() : "" });
+    }
+  }
+  return refs;
+}
+
+/**
+ * Ids embedded in the record's PROSE (`narrative`, `presentation.headline`).
+ *
+ * brain-core writes these sentences straight off the record, so they read
+ * "Compliance review for inv_01KYS8RK94… found policy_violation" — a raw id in the
+ * exact place a human reads first. The ids are collected here so the same index
+ * that captions evidence can name them, and so targeted hydration fetches the ones
+ * the bulk index missed.
+ */
+export function textRefs(raw: Record<string, unknown>): { ref: string; kind: string }[] {
+  const presentation = raw.presentation as Record<string, unknown> | undefined;
+  const sources = [raw.narrative, presentation?.headline].filter((s): s is string => typeof s === "string");
+  const refs: { ref: string; kind: string }[] = [];
+  for (const text of sources) {
+    for (const token of text.split(/[\s,;:.!?()[\]]+/)) {
+      if (token && isRawId(token)) refs.push({ ref: token, kind: "" });
+    }
+  }
+  return refs;
+}
+
+/** Pure: name every id the record's prose mentions, for the client to substitute.
+ *  Only ids that RESOLVED appear here; the client drops the rest rather than
+ *  printing them. Absent when the prose cites nothing. */
+export function resolveTextRefs(raw: Record<string, unknown>, index: EntityIndex): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const { ref } of textRefs(raw)) {
+    if (out[ref]) continue;
+    const hit = lookup(ref, index);
+    if (hit?.display) out[ref] = hit.display;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** Pure: resolve one proposal's key facts against the index. Unit-tested. */
+export function resolveKeyFacts(raw: Record<string, unknown>, index: EntityIndex): ResolvedKeyFact[] | undefined {
+  const presentation = raw.presentation as Record<string, unknown> | undefined;
+  if (!presentation || !Array.isArray(presentation.key_facts)) return undefined;
+
+  const resolved: ResolvedKeyFact[] = [];
+  for (const fact of presentation.key_facts as Record<string, unknown>[]) {
+    const label = typeof fact?.label === "string" ? fact.label.trim() : "";
+    if (!label) continue;
+    const rawValue = fact?.value == null ? "" : String(fact.value).trim();
+    if (!rawValue) continue;
+
+    if (isRawId(rawValue)) {
+      const hit = lookup(rawValue, index);
+      if (hit?.display) {
+        // Resolved: it is now a fact a human reads, so it earns the card face.
+        resolved.push({ label: labelWithoutId(label), value: hit.display, ref: rawValue });
+      } else {
+        // Unresolved id — keep it, but only for the technical section.
+        resolved.push({ label, value: rawValue, technical: true, ref: rawValue });
+      }
+      continue;
+    }
+    resolved.push({ label, value: rawValue, technical: isIdLabel(label) || undefined });
+  }
+  return resolved;
+}
+
 /** Pure: enrich one proposal record. Unknown top-level fields pass through. */
 export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex): EnrichedProposal {
   const rawEvidence = Array.isArray(raw.evidence) ? (raw.evidence as RawEvidence[]) : [];
   const evidence = rawEvidence.map((e) => resolveEvidenceItem(e, index));
+  const keyFacts = resolveKeyFacts(raw, index);
+  const textRefMap = resolveTextRefs(raw, index);
   // Headline: the named party if one resolved, else the first resolved entity.
   // Background citations are excluded — they describe what the agent READ, not
   // what it is proposing about.
@@ -549,6 +669,8 @@ export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex)
     ...raw,
     evidence,
     subject: subject?.display ? { label: subject.label, display: subject.display } : null,
+    ...(keyFacts ? { key_facts: keyFacts } : {}),
+    ...(textRefMap ? { resolved_refs: textRefMap } : {}),
   };
 }
 
@@ -560,6 +682,9 @@ export async function enrichProposals(
 ): Promise<EnrichedProposal[]> {
   const cited: { ref: string; kind: string }[] = [];
   for (const p of proposals) {
+    // Key facts cite ids the evidence list does not always repeat (a subscription
+    // names its merchant only in the fact table), so both are hydrated.
+    cited.push(...keyFactRefs(p), ...textRefs(p));
     if (!Array.isArray(p.evidence)) continue;
     for (const e of p.evidence as RawEvidence[]) {
       if (typeof e?.ref === "string" && e.ref) {

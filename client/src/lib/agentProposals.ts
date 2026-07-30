@@ -6,6 +6,11 @@
 
 import { useSyncExternalStore } from "react";
 
+/** Kept identical to brainProposals.ts's ProposalType: agentKeyForProposalType is
+ *  the identity function, so every public proposal type must have an icon and a
+ *  display name. The eight advisory domains after `fraud_anomaly` carry no
+ *  fabricated MOCK_PROPOSALS entry — they exist here purely so a live proposal of
+ *  that type renders through the shared card instead of a fallback view. */
 export type AgentKey =
   | "vendor_risk"
   | "payment"
@@ -17,7 +22,15 @@ export type AgentKey =
   | "revenue_intel"
   | "reconciliation"
   | "subscription"
-  | "fraud_anomaly";
+  | "fraud_anomaly"
+  | "bill_management"
+  | "debt_optimization"
+  | "financial_health"
+  | "personal_budget"
+  | "purchase_advisor"
+  | "savings"
+  | "tax_prep"
+  | "travel_finance";
 
 export type AgentCategory = "business" | "agnostic";
 export type ExecutionMode = "propose" | "notify_only";

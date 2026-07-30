@@ -6,6 +6,10 @@ import {
   enrichProposal,
   enrichProposals,
   hydrateMissingRefs,
+  keyFactRefs,
+  resolveKeyFacts,
+  textRefs,
+  resolveTextRefs,
   type EntityIndex,
 } from "./proposalEnrichment";
 
@@ -275,5 +279,148 @@ describe("choosing the by-id endpoint", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain("/ledger/invoices/");
+  });
+});
+
+/* ── presentation.key_facts resolution ─────────────────────────────────────────
+   brain-core writes bare ledger ids into the card's own fact table. These are
+   trimmed copies of live rows from the reference tenant. */
+
+describe("keyFactRefs", () => {
+  it("collects the ids a record cites ONLY in its fact table", () => {
+    // Live subscription row: the merchant appears nowhere in `evidence`.
+    const refs = keyFactRefs({
+      presentation: {
+        key_facts: [
+          { label: "Merchant", value: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" },
+          { label: "Recurring Amount", value: "8200.00" },
+        ],
+      },
+    });
+    expect(refs.map((r) => r.ref)).toEqual(["cp_01KYSF0QJ0N18YGNS4JR9EZPHM"]);
+  });
+
+  it("returns nothing for a record with no presentation block", () => {
+    expect(keyFactRefs({})).toEqual([]);
+    expect(keyFactRefs({ presentation: {} })).toEqual([]);
+  });
+});
+
+describe("resolveKeyFacts", () => {
+  it("swaps a cited id for the entity's name and drops the now-wrong Id caption", () => {
+    const facts = resolveKeyFacts(
+      { presentation: { key_facts: [{ label: "Counterparty Id", value: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }] } },
+      index,
+    );
+    expect(facts).toEqual([
+      { label: "Counterparty", value: "Midmarket Co", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" },
+    ]);
+  });
+
+  it("marks an unresolvable id technical instead of putting it on the card face", () => {
+    // Live compliance row: pd_/evt_ refs resolve against nothing.
+    const facts = resolveKeyFacts(
+      { presentation: { key_facts: [{ label: "Policy Decision Id", value: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8" }] } },
+      index,
+    );
+    expect(facts).toEqual([
+      {
+        label: "Policy Decision Id",
+        value: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8",
+        technical: true,
+        ref: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8",
+      },
+    ]);
+  });
+
+  it("passes ordinary facts through untouched and skips empty ones", () => {
+    const facts = resolveKeyFacts(
+      {
+        presentation: {
+          key_facts: [
+            { label: "Severity", value: "high" },
+            { label: "Anomaly Score", value: 0.7 },
+            { label: "Nothing", value: "" },
+          ],
+        },
+      },
+      index,
+    );
+    expect(facts).toEqual([
+      { label: "Severity", value: "high", technical: undefined },
+      { label: "Anomaly Score", value: "0.7", technical: undefined },
+    ]);
+  });
+
+  it("is absent, not empty, when the record carries no key facts", () => {
+    expect(resolveKeyFacts({}, index)).toBeUndefined();
+  });
+});
+
+describe("enrichProposal — rich card fields", () => {
+  it("attaches resolved key facts and passes every new field through untouched", () => {
+    const enriched = enrichProposal(
+      {
+        id: "prop_1",
+        type: "subscription",
+        stored_action_type: "flag_subscription",
+        details: { recurring_amount: "8200.00" },
+        policy: { decision: "confirm", policy_id: null, matched_rule_id: null },
+        available_decisions: [{ id: "approve", label: "Approve" }],
+        presentation: {
+          headline: "Recurring charge detected",
+          key_facts: [{ label: "Merchant", value: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }],
+          technical_detail: { "1_ingest": { source: "plaid" } },
+        },
+        evidence: [],
+      },
+      index,
+    );
+    expect(enriched.key_facts).toEqual([
+      { label: "Merchant", value: "Midmarket Co", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" },
+    ]);
+    // The additive contract survives enrichment byte-for-byte.
+    expect(enriched.stored_action_type).toBe("flag_subscription");
+    expect(enriched.details).toEqual({ recurring_amount: "8200.00" });
+    expect(enriched.policy).toEqual({ decision: "confirm", policy_id: null, matched_rule_id: null });
+    expect(enriched.available_decisions).toEqual([{ id: "approve", label: "Approve" }]);
+    expect((enriched.presentation as Record<string, unknown>).technical_detail).toEqual({ "1_ingest": { source: "plaid" } });
+  });
+
+  it("adds no key_facts key at all to a record that has none", () => {
+    const enriched = enrichProposal({ id: "prop_2", evidence: [] }, index);
+    expect("key_facts" in enriched).toBe(false);
+  });
+});
+
+describe("textRefs / resolveTextRefs", () => {
+  const raw = {
+    // Verbatim live compliance narrative + fraud headline shapes.
+    narrative: "Compliance review for inv_01KYSG21MMMHAPE101816VTQNB found policy_violation with high severity.",
+    presentation: { headline: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM fraud anomaly risk is elevated." },
+  };
+
+  it("finds the ids buried in narrative and headline prose", () => {
+    expect(textRefs(raw).map((r) => r.ref).sort()).toEqual([
+      "cp_01KYSF0QJ0N18YGNS4JR9EZPHM",
+      "inv_01KYSG21MMMHAPE101816VTQNB",
+    ]);
+  });
+
+  it("ignores ordinary words and punctuation", () => {
+    expect(textRefs({ narrative: "Review the rejected policy decision, then keep it blocked." })).toEqual([]);
+    expect(textRefs({})).toEqual([]);
+  });
+
+  it("names only the ids the index knows, so the client can drop the rest", () => {
+    const resolved = resolveTextRefs(
+      { narrative: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM and pd_01KYS8SGWK6D66Z3T7QYQBBNK8 were cited." },
+      index,
+    );
+    expect(resolved).toEqual({ cp_01KYSF0QJ0N18YGNS4JR9EZPHM: "Midmarket Co" });
+  });
+
+  it("is absent when the prose cites nothing resolvable", () => {
+    expect(resolveTextRefs({ narrative: "No ids here." }, index)).toBeUndefined();
   });
 });

@@ -620,6 +620,63 @@ client-side, which would put invented text above an Approve button on a real cus
 Replacing the placeholder requires brain-core to expose a draft field composed at **propose**
 time; the UI half must not be built before that endpoint exists.
 
+## Full-parity proposal cards: one card for every proposal_type
+The rich card is no longer Invoice/Cash-only. `LiveProposalModal` renders the **same markup and
+CSS** for all 19 types, driven entirely by what the record carries. Pure builders live in
+`client/src/lib/proposalCards.ts` (node-environment suite, no component imports).
+
+**The 19 `proposal_type` values** (verbatim from the read-model contract's domain table — do not
+paraphrase them from memory). Core ledger/agent types: `payment`, `collections`, `reconciliation`,
+`treasury`, `cash_forecast`, `subscription`, `compliance`, `fraud_anomaly`, `dispute`,
+`revenue_intel`, `vendor_risk`. Advisory types promoted into the Inbox: `personal_budget`,
+`tax_prep`, `travel_finance`, `bill_management`, `debt_optimization`, `financial_health`,
+`purchase_advisor`, `savings`. `ProposalType`, `AgentKey`, `AGENT_ICONS` and
+`AGENT_DISPLAY_NAME` all cover the full set — the two `Record<AgentKey, …>` maps are
+compiler-enforced, so adding a type upstream breaks the build instead of falling back.
+
+**Field contract (every field OPTIONAL — the card omits, never fabricates):**
+| Section | Source | Behaviour when absent |
+| --- | --- | --- |
+| Headline / subline | `presentation.headline`, resolved subject | falls back to subject line, then agent line |
+| Confidence | `presentation.confidence_band` + `confidence` | band alone, or pct alone, or omitted |
+| Recommended Action | `presentation.recommendation` | section omitted |
+| Key facts table | `key_facts` (BFF-resolved) → `presentation.key_facts` | falls back to evidence-derived rows |
+| Why This Needs Your Call | `narrative` / `details` | section omitted |
+| Evidence tiles | resolved `evidence[]` | section omitted |
+| What Happens Next / If This Is Wrong | `presentation.consequences`, else per-decision copy | **omitted, never invented** |
+| Flagged by | `policy.policy_id` → `matched_rule_id` → trace rule + approvers | line omitted |
+| Actions | `available_decisions[]` | falls back to the record's `mode` |
+| Technical Detail | `stored_action_type`, technical facts, `presentation.technical_detail` | six layers, whichever exist |
+
+**Rules the live tenant forced, all pinned by `proposalCards.test.ts`:**
+- **Buttons come from `available_decisions`, not a hardcoded Approve/Reject pair.** Live data:
+  compliance *and* `fraud_anomaly` offer only `[acknowledge]`; treasury, `cash_forecast` and
+  `subscription` offer `[approve, reject]`. The read-model doc's per-domain action-label table is
+  **aspirational** — bind to the array. A decision id outside the documented write set
+  (`approve`/`reject`/`acknowledge`/`undo`) renders **disabled** rather than firing a call the
+  API rejects.
+- **`policy.policy_id` is null on every live row**, so the "Flagged by" fallback chain matters:
+  `matched_rule_id` is set only for compliance (`cmp_policy_violation`); the other four fall
+  through to the policy trace rule and `required_approvers` ("Flagged by a policy confirm
+  decision · requires Signer approval"). Nothing to say → the line is omitted.
+- **Never recompute the confidence band from the percentage.** Core's band and pct legitimately
+  disagree (a live row bands `standard` at 47%). Render `"High · 94%"` from what arrived.
+- **No raw id may appear in the primary view** — not in key facts, and not in prose. Core writes
+  ids straight into both (`"tx_01KY… fraud anomaly risk is elevated"`, `"Compliance review for
+  inv_01KY… found policy_violation"`). The BFF emits `resolved_refs` (id → name, for ids the
+  index knows) alongside `key_facts`; `resolveHeadlineText`/`resolveProseText` substitute names,
+  **drop** ids that resolved to nothing, and space out `lower_snake_case` enums. Ids remain
+  visible in Technical Detail, which is where they belong.
+- **Unresolved ids and `…Id`-labelled facts are demoted, not dropped** — they move to the
+  collapsed technical section so nothing is silently lost.
+- **De-duplicate after resolution.** A fraud row carries both `Transaction Id` and
+  `Counterparty Name`; once the id becomes a name they are the same string.
+
+**Inbox routing is by decidability, not by `mode`.** `isDecidableProposal` replaced the old
+`mode !== "notify_only"` gate: notify-only compliance and fraud rows carry a real `acknowledge`
+decision and were being stranded in the Audit Log. Advisory types route through the same shared
+card — there is no fallback view.
+
 ## Currency formatting — one formatter, and never pre-format on the server
 Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
 same helper: BrainAssistant's matched a `USD 18600` prefix but never applied the FX rate,

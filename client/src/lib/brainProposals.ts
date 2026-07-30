@@ -11,6 +11,10 @@ import type { AgentKey } from "./agentProposals";
    verified against brain-core source: services/execution/src/proposals/
    read-model.ts + decision-service.ts on main. */
 
+/** Every public type in brain-core's read model (docs/contracts/proposals-read-model.md,
+ *  "Public Types"). The eight advisory domains after `fraud_anomaly` were promoted by
+ *  the same contract; they reach this client through the identical row shape, so they
+ *  render through the shared card rather than a fallback view. */
 export type ProposalType =
   | "vendor_risk"
   | "payment"
@@ -22,7 +26,15 @@ export type ProposalType =
   | "revenue_intel"
   | "reconciliation"
   | "subscription"
-  | "fraud_anomaly";
+  | "fraud_anomaly"
+  | "bill_management"
+  | "debt_optimization"
+  | "financial_health"
+  | "personal_budget"
+  | "purchase_advisor"
+  | "savings"
+  | "tax_prep"
+  | "travel_finance";
 
 export type ProposalStatus = "pending" | "approved" | "acknowledged" | "rejected" | "undone" | (string & {});
 export type ProposalRiskBand = "low" | "standard" | "elevated" | "high";
@@ -64,6 +76,101 @@ export interface ProposalEvidenceItem {
   context?: boolean;
 }
 
+/* ── Rich card fields (brain-core #384, docs/contracts/proposals-read-model.md) ──
+   Additive on every row: `stored_action_type`, `details`, `policy`, `presentation`,
+   and `available_decisions`. Verified live against tnt_01KYS8R54VDRSW6ND3GN2649T0
+   across fraud_anomaly, cash_forecast, treasury, subscription and compliance.
+
+   Every one is OPTIONAL here on purpose: a row cached from before the contract
+   shipped, or fetched by a path that bypasses the enriching route, must still
+   type-check and render the compact card. */
+
+/** Pass-through of the stored action fields (or PaymentIntent ledger columns shaped
+ *  as action details). Per-type keys — `risk_score`, `ranked_signals`, `finding_type`,
+ *  `match_basis`, `recurring_amount`, … — so it stays an open record rather than a
+ *  fabricated per-type interface the contract does not guarantee. */
+export type ProposalDetails = Record<string, unknown>;
+
+/** One entry of `policy.trace`: the rules the engine walked and what they checked. */
+export interface ProposalPolicyTraceEntry {
+  rule_id?: string | null;
+  matched?: boolean;
+  checks?: { key?: string; detail?: string; passed?: boolean }[];
+}
+
+/** The policy summary. NOTE: `policy_id` is null on most live rows even when the rest
+ *  of the object is populated, which is why the "Flagged by" line resolves through
+ *  buildFlaggedBy()'s fallback chain rather than reading `policy_id` directly. */
+export interface ProposalPolicy {
+  decision?: string | null;
+  policy_id?: string | null;
+  policy_version?: number | null;
+  matched_rule_id?: string | null;
+  explanation?: string | null;
+  required_approvers?: string[] | null;
+  trace?: ProposalPolicyTraceEntry[] | null;
+}
+
+/** A `presentation.key_facts` row. Values arrive as strings or numbers. */
+export interface ProposalKeyFact {
+  label: string;
+  value: string | number | null;
+}
+
+/** What each decision would do, keyed by decision id. Null where it does not apply. */
+export interface ProposalConsequences {
+  approve?: string | null;
+  reject?: string | null;
+  acknowledge?: string | null;
+  [decisionId: string]: string | null | undefined;
+}
+
+/** A semantic decision the API will accept at POST /proposals/{id}/decide. The card's
+ *  buttons are built from this list — never from a hardcoded Approve/Reject pair. */
+export interface ProposalDecisionOption {
+  id: string;
+  label: string;
+  meaning?: string | null;
+}
+
+/** Six-layer technical breakdown. Keys are stable per the contract. */
+export interface ProposalTechnicalDetail {
+  "1_ingest"?: unknown;
+  "2_extract"?: unknown;
+  "3_classify"?: unknown;
+  "4_score"?: unknown;
+  "5_policy"?: unknown;
+  "6_propose"?: unknown;
+  [layer: string]: unknown;
+}
+
+/** Normalized card data brain-core computes so every client renders the same words. */
+export interface ProposalPresentation {
+  headline?: string | null;
+  recommendation?: string | null;
+  key_facts?: ProposalKeyFact[] | null;
+  confidence_band?: string | null;
+  policy?: ProposalPolicy | null;
+  consequences?: ProposalConsequences | null;
+  actions?: ProposalDecisionOption[] | null;
+  technical_detail?: ProposalTechnicalDetail | null;
+}
+
+/** BFF-resolved key fact (server/brain/proposalEnrichment.ts).
+ *
+ *  `value` has had raw ledger ids swapped for the entity's name wherever the
+ *  enrichment index could resolve one. `technical` marks a row the primary view must
+ *  NOT show — an identifier column, or an id nothing resolved — so raw ULIDs stay in
+ *  the collapsed technical section instead of the card face. */
+export interface ResolvedKeyFact {
+  label: string;
+  value: string;
+  /** True when this row is an identifier rather than a fact a human reads. */
+  technical?: boolean;
+  /** Set when the original value was an id we replaced with a name. */
+  ref?: string | null;
+}
+
 /** GET /proposals row = GET /proposals/{id} detail - identical shape, no extra
  *  detail-only fields (read-model.ts's `ProposalReadItem`). */
 export interface BrainProposal {
@@ -81,6 +188,22 @@ export interface BrainProposal {
   action_type: string | null;
   /** BFF-added: the headline entity to name this card by, when one resolved. */
   subject?: { label: string; display: string } | null;
+
+  /* Rich card fields — see the block above. Optional: pre-#384 rows omit them. */
+  /** Original stored action type (`flag_transaction`, `notify`, `block_payment`, …).
+   *  The public `type` is DERIVED from this; both are shown in the technical layers. */
+  stored_action_type?: string | null;
+  details?: ProposalDetails | null;
+  policy?: ProposalPolicy | null;
+  presentation?: ProposalPresentation | null;
+  available_decisions?: ProposalDecisionOption[] | null;
+  /** BFF-added: `presentation.key_facts` with ids resolved to names and identifier
+   *  rows flagged `technical` (server/brain/proposalEnrichment.ts). */
+  key_facts?: ResolvedKeyFact[] | null;
+  /** BFF-added: id → name for every raw id the record's prose mentions. Ids the
+   *  server could not resolve are absent, and the client drops those rather than
+   *  showing them. */
+  resolved_refs?: Record<string, string> | null;
 }
 
 interface ListProposalsResponse {
