@@ -27,6 +27,7 @@ import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainPr
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import {
   deriveProposalTier,
+  thresholdsFromRules,
   tierForPaymentIntent,
   tierForReadOnlyInsight,
   TIER_META,
@@ -43,6 +44,7 @@ import type { Proposal } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
 import {
   useRules,
+  hydrateUserRules,
   pauseRule as storePauseRule,
   reportProblem as storeReportProblem,
   sendFeedback as storeSendFeedback,
@@ -610,6 +612,19 @@ export function HomePage() {
     return r ? !r.active : p.rule ? !p.rule.active : false;
   };
 
+  /* Overview needs the tenant's rules for more than the paused-rule badge: their
+     configured limits are what promote an `elevated` proposal into Urgent. Without
+     this the store stays empty here (only RulesPage hydrated it) and no proposal
+     would ever be judged material. */
+  useEffect(() => {
+    void hydrateUserRules();
+  }, []);
+
+  /* proposal type → the tenant's own limit for it. Derived from real configured
+     rules only; there is no built-in default, so on a tenant with no rules this is
+     empty and nothing is promoted on materiality. */
+  const tierThresholds = useMemo(() => thresholdsFromRules(rules), [rules]);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const invalidateLiveQueue = () => {
@@ -734,11 +749,11 @@ export function HomePage() {
      steps onto a row the user can't see reads as a bug. */
   const tieredProposals = useMemo(() => {
     const withTier = needsReviewProposals.flatMap((p) => {
-      const tier = deriveProposalTier(p);
+      const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       return tier ? [{ proposal: p, tier }] : [];
     });
     return TIER_ORDER.flatMap((tier) => withTier.filter((e) => e.tier === tier).map((e) => e.proposal));
-  }, [needsReviewProposals]);
+  }, [needsReviewProposals, tierThresholds]);
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
 
   const cycleRecord = <T extends { id: string | number }>(
@@ -809,7 +824,9 @@ export function HomePage() {
        app can submit is dropped rather than shown under a tier that promises an
        action Overview can't deliver. */
     const proposalItems = tieredProposals.flatMap((p) => {
-      const tier = deriveProposalTier(p);
+      /* Same thresholds the `tieredProposals` memo used — if these two disagreed,
+         a row's heading and its position in the pager would come apart. */
+      const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (!tier) return [];
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
