@@ -39,11 +39,27 @@ describe("parseBrainSources", () => {
       id: "src_1",
       type: "plaid",
       status: "connected",
+      lastSyncedAt: null,
+      freshness: null,
       metadata: { disconnect_hidden: true },
     });
     // type and status are normalised to lowercase so callers can match reliably.
     expect(out[1].type).toBe("stripe");
     expect(out[1].status).toBe("connected");
+  });
+
+  it("keeps the sync timestamp and upstream's freshness verdict", () => {
+    const [s] = parseBrainSources({
+      data: [{ id: "src_1", type: "stripe", last_synced_at: "2026-07-30T19:46:59.591Z", freshness: "STALE" }],
+    });
+    expect(s.lastSyncedAt).toBe("2026-07-30T19:46:59.591Z");
+    expect(s.freshness).toBe("stale");
+  });
+
+  it("reports an absent sync timestamp as absent rather than as never-synced", () => {
+    const [s] = parseBrainSources({ data: [{ id: "src_1", type: "plaid" }] });
+    expect(s.lastSyncedAt).toBeNull();
+    expect(s.freshness).toBeNull();
   });
 
   it("also accepts a bare array", () => {

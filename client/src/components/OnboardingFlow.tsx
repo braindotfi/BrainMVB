@@ -9,7 +9,7 @@ import {
   ProviderPicker,
   DocumentUpload,
   type CategoryId,
-} from "./AddSourceModal";
+} from "./sources/SourceConnectScreens";
 
 const TOTAL_STEPS = 4;
 

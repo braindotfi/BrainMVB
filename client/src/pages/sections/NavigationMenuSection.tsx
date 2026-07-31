@@ -7,7 +7,6 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onLogout?: () => void;
-  onAddSource?: () => void;
 }
 
 const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCancel: () => void; onConfirm: () => void }) => {
@@ -236,13 +235,7 @@ const OTHER_NAV: NavItem[] = [
   },
 ];
 
-const AddSourceIcon = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.add_source_icon} />
-  </div>
-);
-
-export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSource }: Props): JSX.Element => {
+export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props): JSX.Element => {
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Live intents needing review only - never inflate the badge with mock proposals.
@@ -338,16 +331,6 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
             </div>
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            {onAddSource && (
-              <button
-                title="Add Source"
-                data-testid="nav-collapsed-add-source"
-                onClick={onAddSource}
-                className="flex items-center justify-center w-9 h-9 bg-[#4a2300] rounded-full hover:opacity-80 transition-opacity"
-              >
-                <img className="w-5 h-5" alt="Add Source" src={ICONS.add_source_icon} />
-              </button>
-            )}
             <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
               <img className="w-5 h-5" alt="Logout" src={ICONS.logout} />
             </button>
@@ -439,19 +422,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
           </div>
         </div>
 
-        {/* Bottom buttons - Add Source + Logout */}
+        {/* Bottom button - Logout. Adding a source lives in Settings → Sources:
+            a sidebar shortcut into a modal wizard was the only way to reach it,
+            which made "what Brain reads from" feel like a flow rather than a
+            place. */}
         <div className="flex flex-col gap-[8px] mx-[7px] mb-[7px] shrink-0">
-          {onAddSource && (
-            <button
-              data-testid="button-add-source"
-              onClick={onAddSource}
-              className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] w-full rounded-[100px] hover:opacity-80 transition-opacity"
-              style={{ background: "#4a2300" }}
-            >
-              <AddSourceIcon />
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">Add Source</p>
-            </button>
-          )}
           <button
             data-testid="button-logout"
             onClick={() => setShowLogoutConfirm(true)}

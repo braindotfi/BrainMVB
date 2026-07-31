@@ -1,7 +1,7 @@
 /**
  * Obligations Brain derived from ingested documents (GET /ledger/obligations).
  *
- * This lives in lib/ rather than inside AddSourceModal because the wire shape has to be
+ * This lives in lib/ rather than inside the connect screens because the wire shape has to be
  * normalized before anything renders it, and that normalization is worth testing on its own.
  */
 
