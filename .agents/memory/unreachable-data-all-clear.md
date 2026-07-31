@@ -32,6 +32,14 @@ apart, so the fix belongs in the hook (surface `isError`) before the page. Check
 the hook's return shape first — some already expose it and the page just ignores
 it, which is a one-line fix.
 
+**Fan-out is the sneakiest instance.** A hook that lists ids then fetches each
+one has *two* failure modes, and the second is easy to miss: the list succeeds,
+one detail call fails, and that row is filtered out of the result with no error
+flag. The row is known to exist — its id came back on the list — so this is a
+confirmed record silently disappearing, and always downwards. Treat a failed
+detail fetch as incomplete. Lookups that only decorate a row (a display name)
+are the exception: losing one costs a label, not a record.
+
 **A partial list needs saying too.** When one of several feeds fails but rows
 still render, a row count implies completeness. Warn above the list; don't rely
 on the empty state alone, which by definition never fires.
