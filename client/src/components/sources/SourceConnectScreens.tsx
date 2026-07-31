@@ -593,10 +593,12 @@ export function ProviderPicker({ category, variant = "modal" }: { category: Cate
         })}
       </div>
 
-      <InfoNotice
-        title="Read-only by Default"
-        body="Connecting a tool lets Brain mirror its data into your ledger. Disconnect any source any time from here or Settings."
-      />
+      {!inline && (
+        <InfoNotice
+          title="Read-only by Default"
+          body="Connecting a tool lets Brain mirror its data into your ledger. Disconnect any source any time from here or Settings."
+        />
+      )}
     </div>
   );
 }
@@ -717,7 +719,7 @@ export function DocumentUpload({ category, onDone, variant = "modal" }: { catego
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Uploading…</span>
             </div>
           )}
-          {docs.map((d) => (
+          {!inline && docs.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]" data-testid={`doc-row-${d.id}`}>
               <div className="flex flex-col gap-[2px] flex-1 min-w-0">
                 <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate">{d.name}</span>

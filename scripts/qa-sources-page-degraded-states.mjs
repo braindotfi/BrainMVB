@@ -151,10 +151,62 @@ for (const [category, mechanism] of MECHANISMS) {
     (await count(`[data-testid="add-source-mechanism-${mechanism}"]`)) === 1,
   );
 }
+/* The screens carry their own reassurance copy for the modal path. Inline, the
+   page says it once below the form; twice reads as a warning. */
+await page.selectOption('[data-testid="select-source-category"]', "payments");
+await page.waitForTimeout(900);
+const formCopy = await text('[data-testid="form-add-source"]');
+check(
+  "the inline form does not repeat the page's reassurance copy",
+  !/Read-only by Default|Secure by Default|Brain Reads but Doesn't Share/.test(formCopy),
+  formCopy.replace(/\s+/g, " ").slice(0, 100),
+);
+
 await page.selectOption('[data-testid="select-source-category"]', "documents");
 await page.waitForTimeout(900);
 check("the document mechanism is a real file picker", (await count('[data-testid="input-add-source-file"]')) === 1);
 check("the inline form does not repeat the document list above the page's own", (await count(`[data-testid="form-add-source"] [data-testid^="doc-row-"]`)) === 0);
+
+/* An upload in flight is the one thing the inline form SHOULD report. It must
+   report only that: the persisted rows belong to the list below, and rendering
+   them here duplicates every row and every test id on the page. */
+if (docs.length > 0) {
+  /* The upload is intercepted and left hanging: the file must never reach the
+     tenant. If the interception ever misses, the check below catches it and the
+     cleanup at the end removes what landed. */
+  let ingestHits = 0;
+  await page.route("**/api/integrations/documents/ingest**", () => {
+    ingestHits += 1;
+    return new Promise(() => {});
+  });
+  await page.locator('[data-testid="input-add-source-file"]').setInputFiles({
+    name: "qa-upload-probe.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("date,amount\n2026-01-01,1.00\n"),
+  });
+  await page.waitForTimeout(1500);
+  const firstDocId = docs[0].id;
+  check(
+    "an in-flight upload is reported inline",
+    /Uploading/i.test(await text('[data-testid="form-add-source"]')),
+  );
+  check(
+    "an in-flight upload does not drag the document list into the form",
+    (await count(`[data-testid="form-add-source"] [data-testid^="doc-row-"]`)) === 0,
+  );
+  check(
+    "no document's remove control is rendered twice",
+    (await count(`[data-testid="button-remove-doc-${firstDocId}"]`)) === 1,
+  );
+  check(
+    "no document's extract status is rendered twice",
+    (await count(`[data-testid="doc-status-${firstDocId}"]`)) === 1,
+  );
+  await page.unroute("**/api/integrations/documents/ingest**");
+  await go();
+  await page.locator('[data-testid="button-add-source"]').click();
+  await page.waitForTimeout(900);
+}
 
 await page.locator('[data-testid="button-add-source"]').click();
 await page.waitForTimeout(800);
@@ -279,6 +331,15 @@ for (const [name, pattern] of [["brain sources", FEEDS["brain sources"]], ["docu
     body.replace(/\s+/g, " ").slice(0, 100),
   );
   await page.unroute(pattern);
+}
+
+/* ── the probe left nothing behind ────────────────────────────────────────── */
+const afterDocs = (await api("/api/integrations/documents")) ?? [];
+const strays = afterDocs.filter((d) => String(d?.name ?? "").startsWith("qa-upload-probe"));
+check("the probe upload never reached the tenant", strays.length === 0, `${strays.length} stray file(s)`);
+for (const stray of strays) {
+  await page.request.post(`${BASE}/api/integrations/documents/${stray.id}/delete`);
+  console.log(`      cleaned up ${stray.name} (${stray.id})`);
 }
 
 /* ── the retired wizard is unreachable ────────────────────────────────────── */
