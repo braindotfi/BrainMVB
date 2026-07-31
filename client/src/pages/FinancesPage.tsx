@@ -28,6 +28,11 @@ import { RulesPanel } from "@/pages/RulesPanel";
 import { Divider, WidgetCard } from "@/components/LedgerWidgets";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import {
+  ACCOUNT_KIND_LABEL as KIND_LABEL,
+  type BrainAccountDTO,
+  type BrainAccountsResponse,
+} from "@/lib/brainAccounts";
 import { ICONS } from "@/assets/figma-icons";
 
 const IMG_DOT = ICONS.activity_dot;
@@ -102,30 +107,6 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
 
 // ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
 // Shape mirrors brain-core's Account schema (subset we render).
-type AccountKind = "bank_checking" | "bank_savings" | "card" | "loan" | "line_of_credit" | "onchain" | "payment_processor";
-interface BrainAccountDTO {
-  id: string;
-  name: string;
-  account_type: AccountKind;
-  currency: string;
-  institution?: string | null;
-  current_balance?: string | null;
-}
-interface BrainAccountsResponse {
-  accounts: BrainAccountDTO[];
-  next_cursor?: string | null;
-}
-
-const KIND_LABEL: Record<AccountKind, string> = {
-  bank_checking: "Bank checking",
-  bank_savings: "Savings",
-  card: "Card",
-  loan: "Loan",
-  line_of_credit: "Line of credit",
-  onchain: "On-chain balance",
-  payment_processor: "Payment processor",
-};
-
 type AccountRow = { id?: string; name: string; sub: string; sub2: string; balance: string | number; currency?: string };
 
 /** Render a balance honestly: USD (and other fiat) through the currency
@@ -213,6 +194,26 @@ export function FinancesPage() {
   // Which transaction / account the detail popup is showing (null = closed).
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
+
+  /* `?account=` lets another surface (global search) open a specific account.
+     Read on every `search` change rather than seeded once at mount: searching
+     twice in a row without leaving the page changes only the query string, and
+     a mount-only initializer would ignore the second one. */
+  const accountParam = new URLSearchParams(search).get("account");
+  useEffect(() => {
+    if (accountParam) setOpenAccountId(accountParam);
+  }, [accountParam]);
+
+  /* Closing has to drop the param too, or the effect above immediately reopens
+     the popup the user just dismissed. */
+  const closeAccount = () => {
+    setOpenAccountId(null);
+    if (!accountParam) return;
+    const params = new URLSearchParams(search);
+    params.delete("account");
+    const qs = params.toString();
+    navigate(`/ledger${qs ? `?${qs}` : ""}`, { replace: true });
+  };
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
@@ -340,8 +341,8 @@ export function FinancesPage() {
       <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} onSelectTransaction={(id) => setOpenTxId(id)} />
       <AccountDetailPopup
         accountId={openAccountId}
-        onClose={() => setOpenAccountId(null)}
-        onOpenTransaction={(id) => { setOpenAccountId(null); setOpenTxId(id); }}
+        onClose={closeAccount}
+        onOpenTransaction={(id) => { closeAccount(); setOpenTxId(id); }}
         onSelectAccount={(id) => setOpenAccountId(id)}
       />
     </div>
