@@ -164,9 +164,12 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
         <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
           <Switch>
             <Route path="/" component={HomePage} />
+            {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}
+            <Route path="/decisions" component={InboxPage} />
+            <Route path="/ledger" component={FinancesPage} />
+            {/* Legacy deep-link aliases - still routed so existing links keep working */}
             <Route path="/finances" component={FinancesPage} />
             <Route path="/inbox" component={InboxPage} />
-            {/* Legacy deep-link aliases for the merged Inbox page */}
             <Route path="/review" component={InboxPage} />
             <Route path="/rules/:id" component={RuleDetail} />
             <Route path="/rules" component={RulesPage} />

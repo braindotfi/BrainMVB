@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
-import vendorsActiveIcon from "@assets/VendorsActive_1782953370194.png";
-import vendorsInactiveIcon from "@assets/VendorsInactive_1782953370194.png";
-import auditLogActiveIcon from "@assets/AuditLogActive_1782953603161.png";
-import auditLogInactiveIcon from "@assets/AuditLogInactive_1782953603162.png";
-import devActiveIcon from "@assets/dev_active_1784836119565.png";
-import devInactiveIcon from "@assets/dev_inactive_1784836119564.png";
 import { useIntents } from "@/lib/intentsStore";
 
 interface Props {
@@ -151,28 +145,6 @@ const ReviewIconInactive = () => (
   </div>
 );
 
-/* Rules icon - Figma 4062:44620 (inactive) / 4062:44617 (active) */
-const RulesIconActive = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_active_vec} />
-    </div>
-    <div className="absolute bottom-[33.33%] left-[29.17%] right-1/4 top-[20.83%]">
-      <div className="absolute inset-[-10.23%_-20.45%_-30.68%_-20.45%]">
-        <img alt="" className="block max-w-none size-full" src={ICONS.rules_active_vec1} />
-      </div>
-    </div>
-  </div>
-);
-
-const RulesIconInactive = () => (
-  <div className="relative shrink-0 size-[24px]">
-    <div className="absolute inset-[4.17%_8.33%]">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.rules_inactive} />
-    </div>
-  </div>
-);
-
 const SettingsIconActive = () => (
   <div className="relative shrink-0 size-[24px]">
     <div className="absolute inset-[4.17%]">
@@ -228,47 +200,41 @@ type NavItem = {
   label: string;
   ActiveIcon: () => JSX.Element;
   InactiveIcon: () => JSX.Element;
+  /* Legacy/aliased paths that should still light this item up. The canonical
+     `path` is always included implicitly. */
+  match?: string[];
 };
 
-/* Vendors icon - Figma-matched PNG assets (active/inactive) */
-const VendorsIconActive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={vendorsActiveIcon} />
-);
-
-const VendorsIconInactive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={vendorsInactiveIcon} />
-);
-
+/* Primary IA: Overview, Decisions, Ledger (Settings sits apart, below).
+   Pages still reachable by URL but no longer in the sidebar - Vendors and Rules
+   become Ledger tabs, Audit Log folds into Decisions, Developers nests under
+   Settings. Those moves are separate phases; only the nav collapses here. */
 const MAIN_NAV: NavItem[] = [
-  { path: "/", label: "Home", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
-  { path: "/finances", label: "Finances", ActiveIcon: FinancesIconActive, InactiveIcon: FinancesIconInactive },
-  { path: "/inbox", label: "Inbox", ActiveIcon: ReviewIconActive, InactiveIcon: ReviewIconInactive },
-  { path: "/vendors", label: "Vendors", ActiveIcon: VendorsIconActive, InactiveIcon: VendorsIconInactive },
-  { path: "/rules", label: "Rules", ActiveIcon: RulesIconActive, InactiveIcon: RulesIconInactive },
+  { path: "/", label: "Overview", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
+  {
+    path: "/decisions",
+    label: "Decisions",
+    ActiveIcon: ReviewIconActive,
+    InactiveIcon: ReviewIconInactive,
+    match: ["/inbox", "/review", "/activity", "/audit-log"],
+  },
+  {
+    path: "/ledger",
+    label: "Ledger",
+    ActiveIcon: FinancesIconActive,
+    InactiveIcon: FinancesIconInactive,
+    match: ["/finances", "/vendors", "/rules"],
+  },
 ];
 
-/* Audit Log icon - Figma-matched PNG assets (active/inactive) */
-const AuditLogIconActive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={auditLogActiveIcon} />
-);
-
-const AuditLogIconInactive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={auditLogInactiveIcon} />
-);
-
-/* Developers icon — Figma-matched PNG assets (active/inactive) */
-const DevelopersIconActive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={devActiveIcon} />
-);
-
-const DevelopersIconInactive = () => (
-  <img alt="" className="shrink-0 size-[24px]" src={devInactiveIcon} />
-);
-
 const OTHER_NAV: NavItem[] = [
-  { path: "/audit-log", label: "Audit Log", ActiveIcon: AuditLogIconActive, InactiveIcon: AuditLogIconInactive },
-  { path: "/developers", label: "Developers", ActiveIcon: DevelopersIconActive, InactiveIcon: DevelopersIconInactive },
-  { path: "/settings", label: "Settings", ActiveIcon: SettingsIconActive, InactiveIcon: SettingsIconInactive },
+  {
+    path: "/settings",
+    label: "Settings",
+    ActiveIcon: SettingsIconActive,
+    InactiveIcon: SettingsIconInactive,
+    match: ["/developers"],
+  },
 ];
 
 const AddSourceIcon = () => (
@@ -283,14 +249,17 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
   // Live intents needing review only - never inflate the badge with mock proposals.
   const reviewItemsCount = useIntents().intents.filter((i) => i.outcome === "confirm" && !i.declined).length;
 
-  const isActive = (path: string) => {
-    if (path === "/") return location === "/";
-    return location.startsWith(path);
+  const isActive = (item: NavItem) => {
+    /* Overview owns the root path exactly - never prefix-match it. */
+    if (item.path === "/") return location === "/";
+    return [item.path, ...(item.match ?? [])].some(
+      (p) => location === p || location.startsWith(`${p}/`),
+    );
   };
 
   /** Returns the badge count for a nav item by path, or 0 if no badge applies. */
   const getNavCount = (path: string) => {
-    if (path === "/inbox") return reviewItemsCount;
+    if (path === "/decisions") return reviewItemsCount;
     return 0;
   };
 
@@ -316,16 +285,18 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               </div>
 
               <div className="flex flex-col gap-1 items-center">
-                {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                {MAIN_NAV.map((item) => {
+                  const { path, label, ActiveIcon, InactiveIcon } = item;
+                  const active = isActive(item);
                   const count = getNavCount(path);
                   return (
                     <Link key={path} href={path} className="outline-none focus:outline-none">
                       <button
                         title={count > 0 ? `${label} (${count} new)` : label}
                         data-testid={`nav-collapsed-${label.toLowerCase()}`}
-                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
                       >
-                        {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                        {active ? <ActiveIcon /> : <InactiveIcon />}
                         {count > 0 && (
                           <span
                             data-testid={`badge-collapsed-${label.toLowerCase()}`}
@@ -338,20 +309,22 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
                 })}
               </div>
 
-              {/* Divider between Activity and the items below it */}
+              {/* Divider between the primary sections and Settings */}
               <div className="w-full h-px bg-[#1d2132]" />
 
               <div className="flex flex-col gap-1 items-center">
-                {OTHER_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
+                {OTHER_NAV.map((item) => {
+                  const { path, label, ActiveIcon, InactiveIcon } = item;
+                  const active = isActive(item);
                   const count = getNavCount(path);
                   return (
                     <Link key={path} href={path} className="outline-none focus:outline-none">
                       <button
                         title={count > 0 ? `${label} (${count} new)` : label}
                         data-testid={`nav-collapsed-${label.toLowerCase()}`}
-                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${isActive(path) ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
                       >
-                        {isActive(path) ? <ActiveIcon /> : <InactiveIcon />}
+                        {active ? <ActiveIcon /> : <InactiveIcon />}
                         {count > 0 && (
                           <span
                             data-testid={`badge-collapsed-${label.toLowerCase()}`}
@@ -403,8 +376,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Menu</p>
             </div>
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
-              {MAIN_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
-                const active = isActive(path);
+              {MAIN_NAV.map((item) => {
+                const { path, label, ActiveIcon, InactiveIcon } = item;
+                const active = isActive(item);
                 const count = getNavCount(path);
                 return (
                   <Link key={path} href={path} className="w-full outline-none focus:outline-none">
@@ -441,8 +415,9 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout, onAddSour
               <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Other</p>
             </div>
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
-              {OTHER_NAV.map(({ path, label, ActiveIcon, InactiveIcon }) => {
-                const active = isActive(path);
+              {OTHER_NAV.map((item) => {
+                const { path, label, ActiveIcon, InactiveIcon } = item;
+                const active = isActive(item);
                 return (
                   <Link key={path} href={path} className="w-full outline-none focus:outline-none">
                     <button
