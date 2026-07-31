@@ -108,6 +108,11 @@ export function useBrainReviewQueue() {
 
   return {
     isLoading: list.isLoading || details.some((d) => d.isLoading),
+    /* The list call is the one that decides whether this queue is knowable at
+       all. A single detail fan-out failing drops one row; the list failing
+       means we have no idea what is pending, which must never render as "all
+       clear" on an approvals surface. */
+    isError: list.isError,
     proposals: intents.map((i) => mapIntentToProposal(i, nameOf(i.destination_counterparty_id))),
   };
 }

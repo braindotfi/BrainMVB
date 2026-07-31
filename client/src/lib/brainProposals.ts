@@ -244,7 +244,7 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
 /** All proposals. The list already returns full detail records (no extra
  *  fields live on GET /proposals/{id} that aren't on the list row), so no
  *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
-export function useBrainProposals(): { isLoading: boolean; proposals: BrainProposal[] } {
+export function useBrainProposals(): { isLoading: boolean; isError: boolean; proposals: BrainProposal[] } {
   const list = useQuery<ListProposalsResponse>({
     // ponytail: caps at 100 rows; add next_cursor paging when a non-payment
     // proposal producer ships and volume can exceed one page
@@ -253,6 +253,11 @@ export function useBrainProposals(): { isLoading: boolean; proposals: BrainPropo
   });
   return {
     isLoading: list.isLoading,
+    /* Surfaced so callers can tell "nothing to approve" from "couldn't ask".
+       `retry: false` + `?? []` below means an unreachable core is otherwise
+       indistinguishable from an empty queue, and on an approvals surface that
+       reads as an all-clear. */
+    isError: list.isError,
     // Money-path rows (payment_intent_id != null) are excluded here - see
     // selectNonFinancialProposals for why approving them on this surface
     // would be a blind second approval path that executes a real payment.

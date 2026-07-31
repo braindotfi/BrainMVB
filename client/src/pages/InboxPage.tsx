@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Check, X } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
@@ -43,34 +42,83 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
+import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
+import {
+  applyDecisionFilters,
+  buildSearchText,
+  decisionTypeLabel,
+  hasActiveFilter,
+  typeOptions,
+  EMPTY_FILTERS,
+  PRIORITY_OPTIONS,
+  STATUS_OPTIONS,
+  type DecisionFacets,
+  type DecisionFilterState,
+  type DecisionStatus,
+  type RowTier,
+} from "@/lib/decisionFilters";
+import {
+  deriveProposalTier,
+  thresholdsFromRules,
+  tierForPaymentIntent,
+  tierForReadOnlyInsight,
+} from "@/lib/proposalTiers";
 
-/* ── Tabs ─────────────────────────────────────────────────────────────────── */
-type InboxTab = "Needs Review" | "Insights" | "Approved" | "Auto-Approved" | "Rejected" | "Rule Changes";
-const INBOX_TAB_GROUPS: InboxTab[][] = [
-  ["Needs Review", "Insights"],
-  ["Approved", "Auto-Approved", "Rejected", "Rule Changes"],
-];
+/* ── Audit records → timeline facets ──────────────────────────────────────────
+   The six tabs are gone. Where a tab used to answer "which list does this belong
+   in", the row now carries independent facets and the toolbar filters on them.
+   The old tab mapping collapsed distinctions the filters need to keep apart —
+   `acknowledged` was filed under "Auto-Approved", for instance, which is not what
+   happened to it. */
 
-/* Map an audit event type onto its Inbox tab. */
-function auditTab(eventType: AuditEventType): InboxTab {
+/** Is this record settled history, or does it still want attention? */
+function auditTier(eventType: AuditEventType): RowTier {
+  /* Postponed and flagged are unfinished business: parked or singled out, but not
+     decided. They keep their place in the attention tiers even though this surface
+     offers no button for them — the detail sheet is where they get resolved. */
+  return eventType === "postponed" || eventType === "flagged" ? "waiting" : "decided";
+}
+
+function auditStatus(eventType: AuditEventType): DecisionStatus {
   switch (eventType) {
     case "rejected":
-      return "Rejected" as InboxTab;
+      return "declined";
+    case "approved":
+      return "approved";
+    case "auto_approved":
+      return "auto-approved";
     case "acknowledged":
-      return "Auto-Approved" as InboxTab;
+    case "system_activity":
+      return "informational";
     case "rule_change":
     case "trust_granted":
     case "trust_revoked":
-      return "Rule Changes";
-    case "approved":
-      return "Approved";
+      /* A rule change is a change that took effect, so it reads as approved —
+         which is also how the prototype files it. */
+      return "approved";
     case "postponed":
     case "flagged":
-      return "Needs Review";
-    default:
-      /* approved / auto_approved — history of things that were cleared. */
-      return "Auto-Approved";
+      return "pending";
   }
+}
+
+/**
+ * The record's type facet.
+ *
+ * Audit records carry no proposal type — `subtype` is brain-core's raw action
+ * string (e.g. `payment_intent.approved`), not a type key. Rule and trust events
+ * are unambiguous; for everything else we look for a known type token in the raw
+ * action and fall back to `payment`, which is what the audit feed is built from
+ * (`brainAudit.ts` maps the payment-intent lifecycle). The fallback is a stated
+ * assumption, not a guess dressed up as data — if core starts emitting other
+ * lifecycles the token match picks them up.
+ */
+const AUDIT_TYPE_TOKENS = ["collections", "treasury", "fraud", "compliance", "subscription", "dispute", "reconciliation", "vendor_risk"] as const;
+
+function auditDecisionType(r: AuditRecord): string {
+  if (r.eventType === "rule_change" || r.eventType === "trust_granted" || r.eventType === "trust_revoked") return "rule";
+  const raw = (r.subtype ?? "").toLowerCase();
+  return AUDIT_TYPE_TOKENS.find((t) => raw.includes(t)) ?? "payment";
 }
 
 /* One-line "Why" for an audit-log record: prefer the first lifecycle note
@@ -110,10 +158,9 @@ function auditWhy(r: AuditRecord): string {
   }
 }
 
-/* ── Unified inbox item ───────────────────────────────────────────────────── */
-type InboxItem = {
+/* ── Unified timeline item ────────────────────────────────────────────────── */
+type InboxItem = DecisionFacets & {
   id: string;
-  tab: InboxTab;
   title: string;
   /* Status tag pill */
   tag: string;
@@ -153,137 +200,10 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
-
-/* ── Card ─────────────────────────────────────────────────────────────────── */
-const InboxCard = ({
-  item,
-  onOpen,
-  onApprove,
-  onReject,
-  onAcknowledge,
-  acknowledged,
-  busy,
-}: {
-  item: InboxItem;
-  onOpen: (item: InboxItem) => void;
-  onApprove?: (item: InboxItem) => void;
-  onReject?: (item: InboxItem) => void;
-  onAcknowledge?: (item: InboxItem) => void;
-  acknowledged?: boolean;
-  busy?: boolean;
-}) => {
-  const rejected = item.tab === "Rejected";
-  const { formatText } = useCurrency();
-  /* Second-row text: prefer "Why: …" if the record has it, else desc. Both are
-     backend/LLM prose carrying raw amounts, so they go through formatText. */
-  const secondLine = item.liveAgentProposal
-    ? item.desc
-    : item.why
-    ? `Why: ${formatText(item.why)}`
-    : item.desc
-      ? formatText(item.desc)
-      : item.desc;
-
-  return (
-    <div
-      data-testid={`card-inbox-${item.id}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(item)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen(item);
-        }
-      }}
-      className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] ${
-        rejected ? "border-l-[3px] border-l-[#d20344]" : ""
-      }`}
-    >
-      {/* Left column: title + tag on the first line, then the supporting detail. */}
-      <div className="flex flex-1 flex-col gap-[4px] items-start min-w-px">
-        {/* Title and tag sit together: the tag hugs the end of the title rather
-            than being pushed to the far edge of the column. A long title
-            truncates so the tag stays visible beside it. */}
-        <div className="flex items-center gap-[8px] max-w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-            {formatText(item.title)}
-          </p>
-          {item.tab !== "Approved" && item.tab !== "Auto-Approved" && item.tab !== "Rejected" && (
-            <span
-              className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
-              data-testid={`tag-inbox-${item.id}`}
-            >
-              {item.tag}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-[8px] w-full min-w-0">
-          {secondLine && (
-            <p
-              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] truncate min-w-0"
-              data-testid={`why-inbox-${item.id}`}
-            >
-              {secondLine}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Right column: formatted amount + action buttons stacked */}
-      {(item.amountDisplay || item.actionable || item.kind === "detection" || item.acknowledgeOnly) && (
-        <div className="flex flex-col items-end gap-[6px] shrink-0">
-          {item.amountDisplay && (
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
-              {item.amountDisplay}
-            </p>
-          )}
-          {item.actionable ? (
-            /* Approval row: Approve + Decline */
-            <div className="flex gap-[8px] items-center" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onApprove?.(item)}
-                data-testid={`button-approve-${item.id}`}
-                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
-              >
-                <Check className="size-[16px] shrink-0" />
-                Approve
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onReject?.(item)}
-                data-testid={`button-decline-${item.id}`}
-                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
-              >
-                <X className="size-[16px] shrink-0" />
-                Decline
-              </button>
-            </div>
-          ) : item.kind === "detection" || item.acknowledgeOnly ? (
-            /* Acknowledge row: starts active, then turns orange once acknowledged. */
-            <div onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                onClick={() => onAcknowledge?.(item)}
-                data-testid={`button-acknowledge-${item.id}`}
-                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0 ${
-                  acknowledged ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#7631ee]"
-                }`}
-              >
-                <Check className="size-[16px] shrink-0" />
-                {acknowledged ? "Acknowledged" : "Acknowledge"}
-              </button>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-};
+/* Toolbar control. One class for selects and the search box so the four sit on a
+   single visual line regardless of which wraps. */
+const CONTROL =
+  "w-full min-w-0 bg-[#06070a] border border-solid border-[#1d2132] rounded-[10px] px-[12px] py-[9px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -294,7 +214,9 @@ export function InboxPage() {
   const alert = useAppAlert();
 
   const statuses = useReviewStatuses();
-  const [activeTab, setActiveTab] = useState<InboxTab>("Needs Review");
+  const [filters, setFilters] = useState<DecisionFilterState>(EMPTY_FILTERS);
+  const setFilter = <K extends keyof DecisionFilterState>(key: K, value: DecisionFilterState[K]) =>
+    setFilters((f) => ({ ...f, [key]: value }));
 
   /* Detail surfaces (all pre-existing components — unchanged). */
   const [active, setActive] = useState<Proposal | null>(null);
@@ -308,7 +230,7 @@ export function InboxPage() {
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
 
   /* ── Data sources (same as the former Review + Activity pages) ─────────── */
-  const { proposals: liveQueue, isLoading: liveQueueLoading } = useBrainReviewQueue();
+  const { proposals: liveQueue, isLoading: liveQueueLoading, isError: liveQueueError } = useBrainReviewQueue();
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
   const { proposals: liveAutoApproved } = useBrainAutoApproved();
@@ -333,7 +255,7 @@ export function InboxPage() {
   /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
-  const { proposals: liveProposals } = useBrainProposals();
+  const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
   /* Decidable agent proposals only — but decidability is now read from the
      record's own `available_decisions`, not from `mode`.
      
@@ -356,7 +278,7 @@ export function InboxPage() {
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
     .map((r) => intentToReview(r, format));
 
-  const { records: auditRecords } = useBrainAuditRecords();
+  const { records: auditRecords, isError: auditError } = useBrainAuditRecords();
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
@@ -480,8 +402,11 @@ export function InboxPage() {
     }, 250);
   };
 
-  /* Rule plumbing for the ProposalDetail sheet. */
+  /* Rule plumbing for the ProposalDetail sheet — and the tenant's own configured
+     limits, which decide whether an `elevated` proposal is material enough to be
+     Urgent. No rules configured means no promotion, never an invented default. */
   const rules = useRules();
+  const thresholds = useMemo(() => thresholdsFromRules(rules), [rules]);
   const ruleOf = (p: Proposal) =>
     p.rule ? rules.find((r) => r.id === p.rule!.id || r.policyId === p.rule!.policyId) : undefined;
   const pauseRule = (p: Proposal) => {
@@ -534,7 +459,10 @@ export function InboxPage() {
       push({
         id: String(item.id),
         kind: "proposal",
-        tab: "Needs Review",
+        tier: tierForPaymentIntent(),
+        status: "pending",
+        type: "payment",
+        search: buildSearchText(item.title, item.vendor, item.due, item.amount),
         title: item.title,
         tag: "Needs approval",
         tagClass: TAG_NEEDS_YOU,
@@ -552,7 +480,10 @@ export function InboxPage() {
       push({
         id: p.id,
         kind: "proposal",
-        tab: "Needs Review",
+        tier: tierForPaymentIntent(),
+        status: "pending",
+        type: "payment",
+        search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
         tag: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
         tagClass: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
@@ -580,7 +511,13 @@ export function InboxPage() {
       push({
         id: p.id,
         kind: "proposal",
-        tab: "Needs Review",
+        /* Tier is the record's own, derived from available_decisions + materiality
+           — the same call Overview makes, so a row cannot be Urgent on one surface
+           and Waiting on the other. */
+        tier: deriveProposalTier(p, { thresholds }) ?? "waiting",
+        status: "pending",
+        type: p.type ?? "payment",
+        search: buildSearchText(headerCopy.title, headerCopy.text, agentName, p.type),
         title: headerCopy.title,
         tag: pillName,
         tagClass: TAG_NEEDS_YOU,
@@ -602,7 +539,10 @@ export function InboxPage() {
       push({
         id: i.id,
         kind: "detection",
-        tab: "Insights",
+        tier: tierForReadOnlyInsight(),
+        status: "informational",
+        type: i.kind,
+        search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
         tag: i.badge || "Detected",
         tagClass: TAG_DETECTED,
@@ -620,7 +560,10 @@ export function InboxPage() {
       push({
         id: p.id,
         kind: "proposal",
-        tab: "Auto-Approved",
+        tier: "decided",
+        status: "auto-approved",
+        type: "payment",
+        search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
         tag: "Auto-Approved",
         tagClass: TAG_AUTO,
@@ -643,7 +586,11 @@ export function InboxPage() {
       push({
         id: `${p.id}--${status}`,
         kind: "proposal",
-        tab: approved ? "Approved" : status === "rejected" ? "Rejected" : "Needs Review",
+        /* Postponed is parked, not settled — it stays in the attention tiers. */
+        tier: status === "postponed" ? "waiting" : "decided",
+        status: approved ? "approved" : status === "rejected" ? "declined" : "pending",
+        type: p.agent ?? "payment",
+        search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay, p.agent),
         title: p.title,
         tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
         tagClass: approved ? TAG_APPROVED_BY_YOU : status === "rejected" ? TAG_REJECTED : TAG_DETECTED,
@@ -669,7 +616,10 @@ export function InboxPage() {
       push({
         id: r.id,
         kind: "proposal",
-        tab: auditTab(r.eventType),
+        tier: auditTier(r.eventType),
+        status: auditStatus(r.eventType),
+        type: auditDecisionType(r),
+        search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
         tag: auditEventLabel(r.eventType),
         tagClass: auditEventChipClass(r.eventType),
@@ -683,27 +633,24 @@ export function InboxPage() {
     }
 
     return out;
-  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format]);
+  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format, formatText, thresholds]);
 
-  const counts: Record<InboxTab, number> = useMemo(() => {
-    const c: Record<InboxTab, number> = {
-      "Needs Review": 0,
-      Insights: 0,
-      Approved: 0,
-      "Auto-Approved": 0,
-      Rejected: 0,
-      "Rule Changes": 0,
-    };
-    for (const it of items) c[it.tab] += 1;
-    return c;
-  }, [items]);
+  /* Any of the three feeds failing means this timeline is incomplete. It must
+     never be presented as an all-clear: every hook here reads `data?.x ?? []`
+     with `retry: false`, so an unreachable core produces exactly the same empty
+     array as a genuinely clear queue. On an approvals surface those two states
+     have opposite meanings — one says "nothing to do", the other says "you
+     cannot see what you owe". */
+  const decisionsUnreachable = liveQueueError || liveProposalsError || auditError;
 
-  const visible = items.filter((it) => it.tab === activeTab);
+  const visibleItems = useMemo(() => applyDecisionFilters(items, filters), [items, filters]);
+  const availableTypes = useMemo(() => typeOptions(items), [items]);
+  const filtering = hasActiveFilter(filters);
 
   /* Proposal queue behind the card's Previous / Next, in the order the rows are
      listed so paging matches what the user just scrolled past. Only live
      proposals participate — the other row kinds open different modals. */
-  const pagedProposals = visible
+  const pagedProposals = visibleItems
     .map((it) => it.liveAgentProposal)
     .filter((p): p is BrainProposal => p != null);
   const pagedIndex = selectedProposal
@@ -806,109 +753,188 @@ export function InboxPage() {
     setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
   };
 
-  const emptyText =
-    activeTab === "Needs Review"
-      ? liveQueueLoading
-        ? "Checking for anything that needs your attention…"
-        : "Nothing needs your attention right now. Brain is keeping things moving."
-      : activeTab === "Auto-Approved"
-        ? "Nothing was approved automatically recently."
-        : activeTab === "Approved"
-          ? "No approvals recorded yet."
-        : activeTab === "Rejected"
-          ? "No rejected items yet. Anything you or Brain rejects will appear here."
-          : "No rule or trust changes recorded yet.";
+  /* One timeline row from a unified item.
+     Actions come from what the record can actually accept, never a hardcoded
+     Approve/Decline pair — a notify-only finding offers `acknowledge` and nothing
+     else, and firing approve at it is a write brain-core rejects. */
+  const toRow = (item: InboxItem): TierRowModel => {
+    const busy = itemBusy(item);
+    const actions: TierRowAction[] = [];
+    if (item.actionable) {
+      actions.push({ id: "approve", label: "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
+      actions.push({ id: "reject", label: "Decline", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+    } else if (item.kind === "detection" || item.acknowledgeOnly) {
+      const done = pendingAcknowledgedIds.has(item.id);
+      actions.push({
+        id: "acknowledge",
+        label: done ? "Acknowledged" : "Acknowledge",
+        tone: "acknowledge",
+        disabled: done || busy,
+        onClick: () => acknowledgeItem(item),
+      });
+    }
+
+    /* Second line: real recorded reasoning when the record carries it, otherwise
+       its own description. Both are backend prose carrying raw amounts, so both
+       go through formatText. */
+    const detail = item.liveAgentProposal
+      ? item.desc
+      : item.why
+        ? `Why: ${formatText(item.why)}`
+        : item.desc
+          ? formatText(item.desc)
+          : "";
+
+    return {
+      id: item.id,
+      tier: item.tier,
+      title: formatText(item.title),
+      badge: item.tag ? { label: item.tag, className: item.tagClass } : undefined,
+      subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
+      note: item.time || undefined,
+      actions,
+      onOpenDetail: () => openItem(item),
+      testIdPrefix: "row-decision",
+    };
+  };
+
+  /* Three different silences, three different sentences. "No decisions match this
+     filter" after the user narrowed the list is information; the same words on an
+     unfiltered empty queue would read as a fault. */
+  const emptyText = decisionsUnreachable
+    ? "Brain couldn\u2019t load your decisions. This is a connection problem, not an empty queue \u2014 don\u2019t read it as \u201cnothing to approve\u201d."
+    : filtering
+    ? "No decisions match this filter."
+    : liveQueueLoading
+      ? "Checking for anything that needs your attention\u2026"
+      : "Nothing needs your attention right now. Brain is keeping things moving.";
 
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
 
-      {/* Static chrome: header + tab bar — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
+      {/* Static chrome: header + filter toolbar — never scrolls */}
+      <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Inbox</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Everything Brain needs you to see.</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Decisions</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Every decision, one timeline.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+            Every agent in one place. Open any item to see why Brain suggested it before you decide.
+          </p>
         </div>
-        <div className="flex items-center gap-[24px] w-full min-w-0">
-          {INBOX_TAB_GROUPS.map((group, groupIndex) => (
-          <div key={groupIndex} className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-            {group.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                  style={{ background: isActive ? "#4a2300" : "transparent" }}
-                  data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                    style={{ color: isActive ? "#ff9500" : "#414965" }}
-                  >
-                    {tab}
-                  </p>
-                  {counts[tab] > 0 && (
-                    <div className="flex flex-col items-center justify-center min-w-[16px] p-[2px] rounded-[4px] shrink-0" style={{ background: isActive ? "#4a2300" : "#414965" }}>
-                      <p
-                        className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[12px] text-center whitespace-nowrap"
-                        style={{ color: isActive ? "#ff9500" : "#a8b9f4" }}
-                      >
-                        {counts[tab]}
-                      </p>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          ))}
+
+        {/* Filter toolbar. Auto-fit rather than fixed columns: this column is
+            ~420px between the nav and the chat panel, and fixed columns clip.
+            Search sits on its own full-width row below the three selects \u2014 left in
+            the same grid it wrapped to a ragged fourth cell. */}
+        <div className="flex flex-col gap-[8px] w-full">
+        <div
+          className="grid gap-[8px] w-full"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
+        >
+          <select
+            className={CONTROL}
+            value={filters.priority}
+            onChange={(e) => setFilter("priority", e.target.value as DecisionFilterState["priority"])}
+            aria-label="Filter by priority"
+            data-testid="filter-priority"
+          >
+            <option value="all">All priority</option>
+            {PRIORITY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <select
+            className={CONTROL}
+            value={filters.status}
+            onChange={(e) => setFilter("status", e.target.value as DecisionFilterState["status"])}
+            aria-label="Filter by status"
+            data-testid="filter-status"
+          >
+            <option value="all">All statuses</option>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {/* Types come from the rows actually present — an option that can only
+              return "no results" teaches the user the filter is broken. */}
+          <select
+            className={CONTROL}
+            value={filters.type}
+            onChange={(e) => setFilter("type", e.target.value)}
+            aria-label="Filter by type"
+            data-testid="filter-type"
+          >
+            <option value="all">All types</option>
+            {availableTypes.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <input
+          type="text"
+          className={CONTROL}
+          value={filters.query}
+          onChange={(e) => setFilter("query", e.target.value)}
+          placeholder="Search vendor, amount or description"
+          aria-label="Search decisions"
+          data-testid="filter-search"
+        />
         </div>
       </div>
 
-      {/* Table area: the panel header is static; long record lists scroll inside. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[16px]">
-        <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-          {/* Panel header — static */}
-          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-            <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
-              <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{counts[activeTab]}</p>
-              </div>
-            </div>
-          </div>
-          {/* Rows */}
-          <div className="max-h-[480px] overflow-y-auto p-[8px]">
-            {visible.length === 0 ? (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                  {emptyText}
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-[8px] items-start w-full">
-                {visible.map((item, idx) => (
-                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                    <InboxCard
-                      item={item}
-                      onOpen={openItem}
-                      onApprove={approveItem}
-                      onReject={rejectItem}
-                      onAcknowledge={acknowledgeItem}
-                      acknowledged={item.kind === "detection" && pendingAcknowledgedIds.has(item.id)}
-                      busy={itemBusy(item)}
-                    />
-                    {idx < visible.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* The timeline itself — one list, scrolls. */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[12px]">
+        <div className="flex items-center gap-[8px] w-full min-h-[20px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[13px]" data-testid="text-decision-count">
+            {visibleItems.length === items.length
+              ? `${items.length} ${items.length === 1 ? "decision" : "decisions"}`
+              : `${visibleItems.length} of ${items.length} decisions`}
+          </p>
+          {filtering && (
+            <button
+              type="button"
+              onClick={() => setFilters(EMPTY_FILTERS)}
+              data-testid="button-clear-filters"
+              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
-        {/* Helper banner — below the table, same pattern as Rules page */}
-        {activeTab === "Needs Review" && (
+        {/* A partial list is as misleading as a wrongly-empty one — say so above
+            the rows rather than letting the count imply completeness. */}
+        {decisionsUnreachable && visibleItems.length > 0 && (
+          <div
+            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+            style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
+            data-testid="banner-decisions-incomplete"
+          >
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
+              Some decisions couldn’t be loaded, so this list may be incomplete.
+            </p>
+          </div>
+        )}
+
+        {visibleItems.length === 0 ? (
+          <div
+            className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
+            data-testid="text-decisions-empty"
+          >
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+              {emptyText}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] overflow-hidden divide-y divide-[#1d2132]">
+            {visibleItems.map((item) => (
+              <TierRow key={item.id} row={toRow(item)} />
+            ))}
+          </div>
+        )}
+
+        {/* Helper banner — shown while anything is still awaiting a decision. */}
+        {visibleItems.some((it) => it.actionable) && (
           <div
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
