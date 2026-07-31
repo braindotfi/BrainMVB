@@ -36,6 +36,17 @@ Note that tab-switching needs explicit clicks — most list screens default to a
 tab that is empty even when the other tabs are full, so a single screenshot per route will
 under-report the data that exists.
 
+## A freshly provisioned demo tenant seeds asynchronously
+
+`POST /api/auth/demo-fresh` returns 200 long before the tenant's records exist. A
+screenshot taken immediately after it under-reports the data — one pass showed two
+proposals, a later pass on the same tenant showed three. Do not read a missing row
+as a bug in the code you just wrote; re-shoot once seeding has settled and compare
+counts against the API directly.
+
+**How to apply:** when a before/after pair disagrees on row counts, check the
+timestamps before you go hunting for a regression.
+
 ## Nix chromium is safe to install mid-session
 
 Installing a system dependency reboots workflows. Sessions here are Postgres-backed whenever

@@ -339,9 +339,20 @@ const ACTION_TONES: Record<ActionTone, { background: string; color: string }> = 
   acknowledge: { background: "#240757", color: "#a88afa" },
 };
 
+/* `full` fills the card footer (the detail sheets); `compact` sits inline at the
+   end of a list row, where a flex-1 button would eat the row. Same palette either
+   way — a row's Approve must not read as a different control from the sheet's. */
+export type ActionSize = "full" | "compact";
+
+const ACTION_SIZES: Record<ActionSize, string> = {
+  full: "flex-1 min-w-px px-[20px] py-[10px] text-[16px] leading-[20px]",
+  compact: "shrink-0 px-[14px] py-[6px] text-[13px] leading-[16px]",
+};
+
 export const ActionButton = ({
   label,
   tone,
+  size = "full",
   onClick,
   disabled,
   title,
@@ -349,6 +360,7 @@ export const ActionButton = ({
 }: {
   label: string;
   tone: ActionTone;
+  size?: ActionSize;
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
@@ -363,7 +375,7 @@ export const ActionButton = ({
       title={title}
       data-testid={testId}
       style={{ background: palette.background, color: palette.color }}
-      className="flex flex-1 min-w-px items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className={`flex items-center justify-center rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${ACTION_SIZES[size]}`}
     >
       {label}
     </button>

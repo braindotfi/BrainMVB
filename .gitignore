@@ -7,3 +7,9 @@ vite.config.ts.*
 # Demo seed documents are generated at seed time (server/brain/demo-seed/).
 # scripts/generate-demo-seed.ts writes here only as a local debugging aid.
 server/assets/demo-seed/
+
+# UX vision prototype + pasted briefs: reference material, never tracked.
+# The v6 prototype was deliberately removed from the repo; auto-checkpoints
+# will otherwise re-add anything dropped into attached_assets/.
+attached_assets/brain-ux-vision-v6_*.html
+attached_assets/Pasted-*.txt
