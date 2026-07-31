@@ -44,7 +44,30 @@ are the exception: losing one costs a label, not a record.
 still render, a row count implies completeness. Warn above the list; don't rely
 on the empty state alone, which by definition never fires.
 
-Confirmed instances found and fixed: the Ledger's liabilities summary, and the
+**A warning banner is the worst case, because it leaves nothing on screen.** The
+usual instance renders a misleading sentence you can at least read and doubt. A
+banner that only mounts when it has something to warn about renders *nothing* when
+its source fails — there is no element to be suspicious of, and the screen is
+pixel-identical to the healthy all-clear. Any conditional warning needs an explicit
+"couldn't check" branch; returning `null` on failure is never right.
+
+**A child running its own copy of the parent's query cannot participate in the
+parent's reachability handling.** When a parent already derives null-vs-empty for a
+feed, a child that re-queries the same key re-introduces the bug locally no matter
+how careful the parent is — and it is easy to miss, because the parent looks
+correct in isolation. Pass the parent's `data` plus its failure flag down as props
+instead of re-reading the key.
+
+**Beware asserting only the happy path in headless checks.** These states are
+invisible to normal QA and to screenshots, because the broken state is the one that
+looks fine. Force each feed to 503 (`ctx.route(...)` fulfilling 503) and assert on
+the rendered sentence. `npm run qa:degraded` does this for the Ledger; extend it
+rather than re-deriving the setup.
+
+Confirmed instances found and fixed: the Ledger's liabilities summary; the
 Decisions timeline (an unreachable approval queue rendered "Nothing needs your
-attention right now"). The user has asked for this pattern to be actively looked
-for on other surfaces, not just fixed where it was first spotted.
+attention right now"); the Ledger Accounts tab ("No connected accounts yet"); the
+overdue-receivables banner (vanished entirely); the rule builder's vendor picker
+("No trusted vendors yet" offered as fact). The user has asked for this pattern to
+be actively looked for on other surfaces, not just fixed where it was first
+spotted.
