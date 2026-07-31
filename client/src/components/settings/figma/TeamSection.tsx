@@ -3,6 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import {
+  BACKUP_APPROVER_NOTE,
+  setBackupApprover,
+  useBackupApprovers,
+} from "@/lib/backupApprover";
 import { openMemberDetail, primeMembers } from "@/lib/membersStore";
 import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
@@ -59,6 +64,8 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
   const { toast } = useToast();
   const [busy, setBusy] = useState<null | "resend" | "revoke">(null);
   const invited = isInvitedPending(member);
+  const backups = useBackupApprovers();
+  const isBackup = backups.has(member.id);
 
   const inviteCall = async (action: "resend" | "revoke") => {
     setBusy(action);
@@ -118,6 +125,16 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
                 Invited - awaiting signup
               </span>
             )}
+            {isBackup && (
+              <span
+                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                style={{ background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }}
+                title={BACKUP_APPROVER_NOTE}
+                data-testid={`pill-backup-${member.id}`}
+              >
+                backup approver
+              </span>
+            )}
             {!member.active && (
               <span
                 className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
@@ -136,29 +153,47 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
         </div>
       </button>
-      {invited && inviteActions && (
-        <div className="flex gap-[8px] items-center pl-[48px]">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => inviteCall("resend")}
-            data-testid={`button-resend-invite-${member.id}`}
-            className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
-          >
-            {busy === "resend" ? "Resending…" : "Resend invite"}
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => inviteCall("revoke")}
-            data-testid={`button-revoke-invite-${member.id}`}
-            className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40 flex items-center justify-center"
-            style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
-          >
-            {busy === "revoke" ? "Revoking…" : "Revoke invite"}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-[8px] items-center pl-[48px]">
+        {invited && inviteActions && (
+          <>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => inviteCall("resend")}
+              data-testid={`button-resend-invite-${member.id}`}
+              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
+            >
+              {busy === "resend" ? "Resending…" : "Resend invite"}
+            </button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => inviteCall("revoke")}
+              data-testid={`button-revoke-invite-${member.id}`}
+              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40 flex items-center justify-center"
+              style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
+            >
+              {busy === "revoke" ? "Revoking…" : "Revoke invite"}
+            </button>
+          </>
+        )}
+        {/* UI-only mark; the label below the list says so once for the whole card. */}
+        <button
+          type="button"
+          onClick={() => setBackupApprover(member.id, !isBackup)}
+          data-testid={`button-backup-${member.id}`}
+          aria-pressed={isBackup}
+          title={BACKUP_APPROVER_NOTE}
+          className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors flex items-center justify-center"
+          style={
+            isBackup
+              ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
+              : { background: "#0c0f14", color: "#414965", border: "1px solid #1d2132" }
+          }
+        >
+          {isBackup ? "Remove backup mark" : "Mark as backup approver"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -170,13 +205,14 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
   const [role, setRole] = useState<MemberRole>("approver");
   const [domains, setDomains] = useState<ApprovalDomain[]>(["ap"]);
   const [limit, setLimit] = useState("10000");
+  const [backup, setBackup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setDisplayName(""); setEmail(""); setRole("approver");
-      setDomains(["ap"]); setLimit("10000"); setBusy(false); setError(null);
+      setDomains(["ap"]); setLimit("10000"); setBackup(false); setBusy(false); setError(null);
     }
   }, [open]);
 
@@ -211,10 +247,13 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
         setError(mapApprovalRejection(parseCoreError(body)).detail);
         return;
       }
+      const memberId: string | undefined = (body as { member?: { id?: string } })?.member?.id;
+      /* The member exists from here on, so record the (UI-only) backup mark before
+         the invite step below, which has its own early return. */
+      if (backup && memberId) setBackupApprover(memberId, true);
       // Production tenancy: issue the invite link for the new member. If this second
       // call fails, the member exists but has no invite - say exactly that, loudly.
       if (production) {
-        const memberId: string | undefined = (body as { member?: { id?: string } })?.member?.id;
         if (memberId) {
           const inviteRes = await fetch(`/api/brain/members/${encodeURIComponent(memberId)}/invites`, {
             method: "POST",
@@ -343,6 +382,37 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                     data-testid="input-member-limit"
                   />
                 </div>
+                {/* Backup approver — UI-only, and the helper text below says so
+                    rather than letting the control imply authority it lacks. */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {inputLabel("Backup Approver?")}
+                  <div className="content-stretch flex gap-[8px] items-center overflow-clip relative shrink-0 w-full">
+                    {[
+                      { v: false, label: "No" },
+                      { v: true, label: "Yes" },
+                    ].map(({ v, label }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setBackup(v)}
+                        data-testid={`select-backup-${label.toLowerCase()}`}
+                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+                        style={{
+                          background: backup === v ? "#240757" : "#0c0f14",
+                          color: backup === v ? "#7631ee" : "#414965",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px]"
+                    data-testid="text-backup-unenforced"
+                  >
+                    {BACKUP_APPROVER_NOTE}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -431,6 +501,77 @@ export default function TeamSection() {
       >
         {production ? "+ Invite member" : "+ Add member"}
       </button>
+
+      {/* Escalation — shown for shape, inert in substance.
+          Two reasons it cannot be wired: there is no scheduler or notification
+          channel to fire on a timer, and the backup approver it would notify is
+          itself a UI-only mark. Rendering working-looking dropdowns here would
+          promise an escalation that nobody would ever receive, on the exact
+          surface where an operator decides whether an item is covered. */}
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex items-center min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            Escalation
+          </p>
+        </div>
+
+        <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px] w-full">
+          <div
+            className="rounded-[10px] px-[12px] py-[10px]"
+            style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
+            data-testid="text-escalation-unavailable"
+          >
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#ff9500] text-[13px]">
+              Escalation timers are not active.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] mt-[2px]">
+              Brain is propose-only: if the primary approver does not act, nothing ships
+              and nothing is escalated. Backup-approver marks are recorded in this
+              browser only, so no reminder is sent to anyone today.
+            </p>
+          </div>
+
+          {[
+            {
+              id: "urgent",
+              title: "Escalate urgent items after",
+              detail: "Fraud anomalies and similarly time-sensitive flags.",
+              value: "1 hour",
+            },
+            {
+              id: "action-needed",
+              title: "Escalate action-needed items after",
+              detail: "Payments, collections, treasury, close.",
+              value: "4 hours",
+            },
+          ].map((row, i) => (
+            <div key={row.id} className="flex flex-col gap-[16px]">
+              {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
+              <div
+                className="flex gap-[16px] items-center opacity-40"
+                data-testid={`row-escalation-${row.id}`}
+                aria-disabled="true"
+              >
+                <div className="flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    {row.title}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                    {row.detail}
+                  </p>
+                </div>
+                <div
+                  className="shrink-0 rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]"
+                  style={{ background: "#222737" }}
+                  aria-hidden="true"
+                >
+                  {row.value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} production={production} />
     </div>

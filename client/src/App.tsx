@@ -190,6 +190,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
     <NavContext.Provider value={{
       navCollapsed,
       toggleNav: () => setNavCollapsed((v) => !v),
+      openAddSource: () => setAddSourceOpen(true),
     }}>
     <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex flex-col overflow-hidden">
 

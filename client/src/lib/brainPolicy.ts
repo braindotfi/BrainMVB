@@ -139,6 +139,50 @@ export function mapPolicyToRuleCards(facts: ApprovalPolicyFacts | undefined, fmt
   return (facts?.rules ?? []).map((r) => mapPolicyRuleToCard(r, fmt));
 }
 
+/** Group a brain-core amount string ("50000.00") without going through a float.
+ *  Parsing to Number and re-formatting can round a value that is being shown as
+ *  an authorization limit, so the digits are grouped as text. */
+export function groupPolicyAmount(value: string): string {
+  const [int, frac] = value.split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac ? `${grouped}.${frac}` : grouped;
+}
+
+export type AutoApproveLimit =
+  /** One unconditional "runs automatically up to X" line. */
+  | { kind: "limit"; value: string; currency: string }
+  /** Auto-execution exists, but only under conditions beyond a plain amount cap. */
+  | { kind: "conditional" }
+  /** Nothing in the policy runs automatically. */
+  | { kind: "none" };
+
+/** Derive the auto-approve line from an activated policy.
+ *
+ *  Deliberately narrow: only a rule whose ONLY condition is `amount.lte` counts
+ *  as "the auto-approve limit". A rule that auto-executes up to $5k *for a named
+ *  counterparty*, or above a confidence floor, is not a blanket limit, and
+ *  showing its number as one would tell an operator that more is automated than
+ *  actually is. Those collapse to "conditional" so the screen can say so.
+ *
+ *  `undefined` facts (loading, unreachable, or no policy) are the caller's to
+ *  distinguish — this returns nothing for them rather than a reassuring "none".
+ */
+export function autoApproveLimitFromPolicy(facts: ApprovalPolicyFacts | undefined): AutoApproveLimit | null {
+  if (!facts) return null;
+  const autoRules = (facts.rules ?? []).filter((r) => r.execute === "auto");
+  if (autoRules.length === 0) return { kind: "none" };
+
+  for (const rule of autoRules) {
+    const when = rule.when ?? {};
+    const keys = Object.keys(when);
+    if (keys.length !== 1 || keys[0] !== "amount.lte") continue;
+    const lte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
+    if (!lte?.value) continue;
+    return { kind: "limit", value: lte.value, currency: lte.currency ?? "USD" };
+  }
+  return { kind: "conditional" };
+}
+
 /** brain-core returns 404 `policy_not_found` for a tenant with no policy document
  *  activated yet (e.g. fresh production tenant) — that's an honest empty set, not a
  *  load failure. Real network/5xx errors still surface as errors. */

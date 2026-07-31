@@ -1,24 +1,103 @@
 import { useUserContact } from "@/lib/userContact";
+import { Switch } from "./FigmaPrimitives";
+
+/* Settings → Notifications.
+ *
+ * There is no notification backend: no routes, no preference store, nothing
+ * that could receive a value if this page sent one. The design mock shows three
+ * live-looking toggles, and wiring them to local state would produce a screen
+ * that remembers your choice, shows it back to you, and silently never acts on
+ * it — a worse lie than an empty page, because it invites you to rely on it.
+ *
+ * So the channels render in their real shape and are visibly, explicitly
+ * inert: non-interactive controls, `aria-disabled`, dimmed, under a heading
+ * that says plainly that none of it is connected yet. The structure is honest
+ * about what is coming; the state is honest about what exists.
+ *
+ * The mock's channel copy also carries invented specifics — a "#finance-approvals"
+ * Slack channel and an SMS threshold of "$100,000". Neither is configured
+ * anywhere in this product. The descriptions below say what each channel is
+ * FOR without quoting a number or a destination that nothing would honour.
+ */
+
+const CHANNELS: { id: string; title: string; detail: string }[] = [
+  {
+    id: "slack",
+    title: "Slack",
+    detail: "Urgent and big-ticket items, in the channel your team already watches.",
+  },
+  {
+    id: "email-digest",
+    title: "Email digest",
+    detail: "A daily summary of everything Brain did overnight.",
+  },
+  {
+    id: "sms-urgent",
+    title: "SMS for urgent items",
+    detail: "Fraud anomalies and other time-sensitive flags.",
+  },
+];
 
 export default function NotificationsSection() {
   const { email, phone } = useUserContact();
+
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-[20px] w-full">
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
-      <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-        <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
-          Notifications
-        </p>
+        <div className="flex items-center min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+            Notifications
+          </p>
+        </div>
+
+        <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px] w-full">
+          {/* Said once, at the top, rather than repeated on every row. */}
+          <div
+            className="rounded-[10px] px-[12px] py-[10px]"
+            style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
+            data-testid="text-notifications-unavailable"
+          >
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#ff9500] text-[13px]">
+              Notification delivery is not connected yet.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] mt-[2px]">
+              These channels are shown so you can see what Brain will support. None of
+              them can be switched on today, and nothing here is being sent.
+            </p>
+          </div>
+
+          {CHANNELS.map((c, i) => (
+            <div key={c.id} className="flex flex-col gap-[16px]">
+              {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
+              <div
+                className="flex gap-[16px] items-center opacity-40"
+                data-testid={`row-notification-${c.id}`}
+                aria-disabled="true"
+              >
+                <div className="flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    {c.title}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                    {c.detail}
+                  </p>
+                </div>
+                {/* Presentational only — deliberately not a button and not focusable. */}
+                <div className="shrink-0" aria-hidden="true">
+                  <Switch active={false} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[8px] items-start p-[16px] relative rounded-[16px] shrink-0 w-full">
-        <p className="font-['Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] w-full">
-          Notification preferences are not yet available.
-        </p>
-        <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#6c779d] text-[14px] w-full">
-          Once notification channels are wired up, Brain will reach you at {email} (email) and {phone} (SMS).
-        </p>
-      </div>
-      </div>
+
+      <p
+        className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
+        data-testid="text-notifications-contact"
+      >
+        When channels are wired up, Brain will reach you at {email} (email) and {phone} (SMS).
+      </p>
     </div>
   );
 }
