@@ -39,3 +39,4 @@
 - [Unreachable data ≠ all clear](unreachable-data-all-clear.md) — `data?.x ?? []` + `retry:false` hooks expose no isError, so a failed read renders a reassuring empty state; fix at the hook.
 - [Bulk-approve threshold source](bulk-approve-threshold-source.md) — gate on the second-approver line, never the auto-approve line; unknown amount or unreachable policy = no checkbox.
 - [Narrow centre column](narrow-centre-column-layout.md) — the 3-panel shell leaves ~420px for content; use auto-fit/minmax grids, never viewport breakpoints, or figures clip.
+- [Policy rule order](policy-rule-order.md) — the VM short-circuits on first match; a UI "runs automatically up to X" claim must respect rule ORDER and applies_to, not just execute:"auto".
