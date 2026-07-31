@@ -1,8 +1,23 @@
 name: auto-merge
 
+# Opt-IN, not opt-out.
+#
+# This workflow used to run on every non-draft PR: it waited for checks and then
+# squash-merged, with no label gate, no reviewer gate, and no branch protection on
+# main. The only thing holding PRs open was that CI happened to be failing. That
+# meant repairing CI - a routine, unrelated chore - would have merged every open PR
+# at once, unreviewed. A green build should never be the thing that decides a merge.
+#
+# Now a PR is only auto-merged when someone deliberately applies the `auto-merge`
+# label. Branch protection on main independently requires an approving review, so
+# the label alone cannot merge anything; the two gates are deliberately redundant.
+#
+# NOTE `ready_for_review` is a trigger: taking a labelled PR out of draft will start
+# this. If you are drafting a PR to control its merge timing, remove the label too.
+
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
 
 permissions:
   contents: write
@@ -11,7 +26,9 @@ permissions:
 
 jobs:
   enable-auto-merge:
-    if: github.event.pull_request.draft == false
+    if: >-
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'auto-merge')
     runs-on: ubuntu-latest
     steps:
       - name: Wait for required checks and merge
