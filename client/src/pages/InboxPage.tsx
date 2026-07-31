@@ -63,6 +63,17 @@ import {
   tierForPaymentIntent,
   tierForReadOnlyInsight,
 } from "@/lib/proposalTiers";
+import { useBrainPolicy } from "@/lib/brainPolicy";
+import {
+  bulkCandidateFrom,
+  bulkLimitFor,
+  elevatedThresholdsFromPolicy,
+  isBlockedByType,
+  isBulkEligible,
+  resolveBulkSelection,
+  runBulkApprove,
+  type BulkCandidate,
+} from "@/lib/bulkApprove";
 
 /* ── Audit records → timeline facets ──────────────────────────────────────────
    The six tabs are gone. Where a tab used to answer "which list does this belong
@@ -656,6 +667,107 @@ export function InboxPage() {
   const availableTypes = useMemo(() => typeOptions(items), [items]);
   const filtering = hasActiveFilter(filters);
 
+  /* ── Bulk approve ───────────────────────────────────────────────────────────
+     A checkbox appears only on rows a batch may legally cover. `bulkApprove.ts`
+     owns that rule and, importantly, the reasoning for WHICH threshold it reads —
+     the tenant's second-approver line, not the auto-approve line, because an item
+     under the auto-approve line that is still sitting in the queue is one that
+     FAILED that clause.
+
+     Note what happens when the policy cannot be read: `facts` is undefined, every
+     limit resolves to null, and no row is selectable. That is deliberate. An
+     approval shortcut offered on the strength of a limit we could not load is the
+     same failure as an empty queue that is really a failed fetch — it just costs
+     more when it is wrong. */
+  const policy = useBrainPolicy();
+  const policyLimits = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
+
+  const candidates = useMemo<BulkCandidate[]>(
+    () =>
+      visibleItems.map((item) => {
+        const proposal = item.liveAgentProposal;
+        /* Only an `approve` core actually offered for THIS record counts. An
+           acknowledge-only finding is not batch material — the write is rejected. */
+        const approvable =
+          item.actionable && (item.liveDecisions?.some((d) => d.id === "approve" && d.writable) ?? false);
+        return proposal
+          ? bulkCandidateFrom(item.id, proposal, approvable)
+          : { id: item.id, type: null, category: null, amount: null, approvable: false };
+      }),
+    [visibleItems],
+  );
+
+  const limitOf = useMemo(
+    () => (c: BulkCandidate) => bulkLimitFor(c.type, c.category, policyLimits, thresholds),
+    [policyLimits, thresholds],
+  );
+  const eligible = useMemo(() => candidates.filter((c) => isBulkEligible(c, limitOf(c))), [candidates, limitOf]);
+  const candidateById = useMemo(() => new Map(eligible.map((c) => [c.id, c])), [eligible]);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const selection = useMemo(
+    () => resolveBulkSelection(eligible, selectedIds, limitOf),
+    [eligible, selectedIds, limitOf],
+  );
+
+  /* Row id → the proposal id the approve endpoint takes. They are not always the
+     same string, and sending the row id would 404 against core. */
+  const proposalIdOf = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of visibleItems) if (item.liveAgentProposal) map.set(item.id, item.liveAgentProposal.id);
+    return map;
+  }, [visibleItems]);
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const selectionLabel = selection.type ? decisionTypeLabel(selection.type).toLowerCase() : "";
+
+  const approveSelected = async () => {
+    if (selection.count < 2 || bulkRunning) return;
+    setBulkRunning(true);
+    const attempted = [...selection.ids];
+    const outcome = await runBulkApprove(attempted, async (rowId) => {
+      const proposalId = proposalIdOf.get(rowId);
+      if (!proposalId) throw new Error("This item is no longer on screen.");
+      await decideProposal.mutateAsync({ id: proposalId, decision: "approve" });
+    });
+    /* Clear only what actually went through. A failed item stays selected so the
+       user can retry it without hunting for it again. */
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const id of outcome.approved) next.delete(id);
+      return next;
+    });
+    setBulkRunning(false);
+
+    /* Say exactly what happened. "Approved 6" when four went through is the same
+       class of untruth as a wrongly-empty queue. */
+    if (outcome.failed.length === 0) {
+      toast({
+        title: `Approved ${outcome.approved.length} ${selectionLabel} items`,
+        description: "Each one was approved individually and recorded in the audit log.",
+      });
+    } else if (outcome.approved.length === 0) {
+      toast({
+        title: "Nothing was approved",
+        description: outcome.failed[0].message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: `Approved ${outcome.approved.length} of ${attempted.length}`,
+        description: `${outcome.failed.length} couldn\u2019t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   /* Proposal queue behind the card's Previous / Next, in the order the rows are
      listed so paging matches what the user just scrolled past. Only live
      proposals participate — the other row kinds open different modals. */
@@ -794,6 +906,13 @@ export function InboxPage() {
           ? formatText(item.desc)
           : "";
 
+    /* Checkbox only where a batch may legally reach. Rows of another type stay
+       visible but disabled while a batch is open — bulk approval covers one type
+       at a time, and a checkbox that vanishes as you select elsewhere makes the
+       list jump under the cursor. */
+    const candidate = candidateById.get(item.id);
+    const blocked = candidate ? isBlockedByType(candidate, selection.type) : false;
+
     return {
       id: item.id,
       tier: item.tier,
@@ -802,6 +921,17 @@ export function InboxPage() {
       subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
       note: item.time || undefined,
       actions,
+      select: candidate
+        ? {
+            checked: selectedIds.has(item.id),
+            disabled: bulkRunning || blocked,
+            title: blocked
+              ? `Bulk approval covers one type at a time. Clear the selection to choose ${decisionTypeLabel(candidate.type ?? "").toLowerCase()} items instead.`
+              : undefined,
+            label: `Select for bulk approval: ${item.title}`,
+            onChange: () => toggleSelect(item.id),
+          }
+        : undefined,
       onOpenDetail: () => openItem(item),
       testIdPrefix: "row-decision",
     };
@@ -922,6 +1052,49 @@ export function InboxPage() {
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
               Some decisions couldn’t be loaded, so this list may be incomplete.
             </p>
+          </div>
+        )}
+
+        {/* Bulk bar. Appears at two, matching the prototype — one selected item is
+            just the row's own Approve button with extra steps. The sentence names
+            the real limit and where it came from, so nobody has to guess what
+            "eligible" meant. */}
+        {selection.count >= 2 && selection.limit && (
+          <div
+            className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] rounded-[12px] w-full"
+            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+            data-testid="bulk-bar"
+          >
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
+              data-testid="bulk-bar-summary"
+            >
+              <b className="font-semibold text-[#a8b9f4]">{selection.count} selected</b>
+              {` \u00b7 all ${selectionLabel}, each under the ${format(selection.limit.value)} `}
+              {selection.limit.source === "rule"
+                ? "limit from your own rule."
+                : "limit above which Brain needs a second approver."}
+            </p>
+            <div className="flex gap-[8px] items-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={bulkRunning}
+                data-testid="button-bulk-clear"
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => void approveSelected()}
+                disabled={bulkRunning}
+                data-testid="button-bulk-approve"
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              >
+                {bulkRunning ? "Approving\u2026" : "Approve selected"}
+              </button>
+            </div>
           </div>
         )}
 

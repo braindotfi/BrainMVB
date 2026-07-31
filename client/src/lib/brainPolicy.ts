@@ -157,6 +157,12 @@ export function useBrainPolicy() {
     isLoading: query.isLoading,
     isError: query.isError && !notFound,
     rules: notFound ? [] : mapPolicyToRuleCards(query.data, format),
+    /* The raw document as well as the rendered cards. `mapPolicyRuleToCard` throws
+       away the numbers — it renders `when` to prose — and bulk approve has to
+       COMPARE against them, so it reads the facts rather than re-parsing a
+       sentence. Undefined while loading or unreachable, which callers must treat
+       as "no thresholds known", never as "no thresholds apply". */
+    facts: notFound ? undefined : query.data,
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
   };
