@@ -19,20 +19,26 @@ followed by a wall of `Invalid: lock file's X does not satisfy Y`.
 `npm install` does. Regenerating the lock fixes CI but is a dependency change in its
 own right — treat it as its own PR, not as a drive-by inside a feature branch.
 
-## Turning CI green auto-merges the PR
+## Auto-merge is gated now — keep it that way
 
-`auto-merge.yml` runs on every non-draft PR and does
-`gh pr checks --watch --fail-fast` then `gh pr merge --squash --delete-branch`.
-There is no label gate, no reviewer gate, and no branch protection on main — the
-repo returns "Branch not protected".
+`auto-merge.yml` used to run on every non-draft PR (`gh pr checks --watch
+--fail-fast` then `gh pr merge --squash --delete-branch`) with no label gate, no
+reviewer gate, and no branch protection. The red CI was the *only* thing holding
+PRs open, so repairing the lock file would have merged everything open at once,
+unreviewed.
 
-So the red CI is currently the *only* thing holding PRs open. **Fixing the lock file
-merges every open PR that is otherwise passing, immediately, with no human
-approval.** If someone is waiting to decide merge order, mark the PR draft or say so
-before making CI pass.
+Two independent gates now exist: the workflow requires an explicit `auto-merge`
+label, and branch protection on main requires one approving review (stale reviews
+dismissed, force-push and deletion blocked, `enforce_admins: false` so a human admin
+keeps an escape hatch).
 
-**How to apply:** before any change that could turn checks green, check what is open
-and confirm the merge is actually wanted now.
+**Why:** a green build should never be the thing that decides a merge. Restoring
+either gate's absence re-arms the trap for whoever next touches `package.json`.
+
+**How to apply:** `ready_for_review` is a trigger — taking a *labelled* PR out of
+draft starts auto-merge. Drafting a PR to control its timing only works if the label
+is off too. Required status checks are deliberately NOT configured while CI is red;
+adding them before the lock file is fixed would block the very PR that fixes it.
 
 ## Checks that are referenced but do not exist
 
