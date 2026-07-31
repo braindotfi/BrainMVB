@@ -587,23 +587,24 @@ because the suite runs in a node environment. The card body renders in this fixe
 the same component serves **every** agent type (Collections, Invoice, Cash, Close, …); there is
 no per-agent card:
 
-1. **Resolved-entity header** — initials avatar (`initialsOf`) + `subject.display` as the
-   primary line, with `buildProposalHeadline` producing `"AR-MIDMARKET-001 · $42,000.00"`
-   underneath. Both halves are independent and omitted when the cited records lack them;
-   with neither, it falls back to the agent line.
+1. **Header + hero** — a centred agent name in the sticky header, then a hero block holding
+   the risk pill, `presentation.headline` (or `subject.display`) and a subline from
+   `buildProposalHeadline` (`"AR-MIDMARKET-001 · $42,000.00"`). Both subline halves are
+   independent and omitted when the cited records lack them; with neither, it falls back to the
+   agent line. **No avatar** — the agent is named once, in the header.
 2. **Detail rows** — `buildProposalDetailRows`, de-duplicated, sorted by decision relevance
    (Amount → Overdue by → Due → Status → …), each with a `label`, right-aligned value, and an
    `icon` **key** (a string, so this module stays free of component imports — the modal maps
    it via `DETAIL_ROW_ICONS`). The first `MAX_VISIBLE_DETAIL_ROWS` (4) show; the rest move into
    the collapsed "Technical reference". Unknown labels sort last rather than being dropped, so
    a new brain-core fact still renders. The row repeating the headline document is suppressed.
-3. **Narrative**, clamped past 180 chars.
-4. **Collapsed "Message preview"** — only for agents in `SENDS_OUTBOUND_MESSAGE` (today just
-   Collections; `action_type` is null upstream so there is no generic way to detect "this
-   approval sends an email", and offering the section on a reconciliation card would imply a
-   message that never exists). It currently holds a placeholder saying the text is not
-   generated until execution — see below.
-5. **Collapsed "Technical reference"** — overflow rows, every raw ref, payment intent id.
+3. **Narrative**, rendered in full (the frame shows the whole paragraph; no clamp).
+4. **"Message Draft"** — Collections only (`SENDS_OUTBOUND_MESSAGE`; `action_type` is null
+   upstream so there is no generic way to detect "this approval sends an email", and offering
+   the section on a reconciliation card would imply a message that never exists). See below for
+   what the draft may and may not claim.
+5. **Collapsed "Technical Detail"** — overflow rows, every raw ref, payment intent id. The
+   section heading itself is the disclosure control.
 
 **Do not render a field brain-core does not carry — not even a plausible one.** This is an
 approval surface: whatever the card shows is what the approver believes they are authorising.
@@ -615,10 +616,73 @@ Verified absent as of this writing:
   key sets are identical and `action_type` is null. brain-core composes the outbound text at
   *execution* time.
 
-The Message preview section therefore says so out loud rather than composing a draft
-client-side, which would put invented text above an Approve button on a real customer email.
-Replacing the placeholder requires brain-core to expose a draft field composed at **propose**
-time; the UI half must not be built before that endpoint exists.
+**"Message Draft" is composed client-side, and every word of it is either boilerplate or a
+fact off this proposal.** `buildCollectionsDraft` fills one fixed template from the resolved
+key facts (customer, amount, invoice code, days overdue / due date) and **drops** any clause
+whose fact is missing; with neither an amount nor an invoice reference there is nothing
+concrete to chase, so the whole section is withheld rather than padded. A caption under the
+draft says plainly that brain-core generates the final wording at execution. Do not extend the
+template with anything the record does not carry — this is text sitting above an Approve
+button on a real customer email. When core exposes a propose-time draft field, bind to it and
+delete the template.
+
+## Full-parity proposal cards: one card for every proposal_type
+The rich card is no longer Invoice/Cash-only. `LiveProposalModal` renders the **same markup and
+CSS** for all 19 types, driven entirely by what the record carries. Pure builders live in
+`client/src/lib/proposalCards.ts` (node-environment suite, no component imports).
+
+**The 19 `proposal_type` values** (verbatim from the read-model contract's domain table — do not
+paraphrase them from memory). Core ledger/agent types: `payment`, `collections`, `reconciliation`,
+`treasury`, `cash_forecast`, `subscription`, `compliance`, `fraud_anomaly`, `dispute`,
+`revenue_intel`, `vendor_risk`. Advisory types promoted into the Inbox: `personal_budget`,
+`tax_prep`, `travel_finance`, `bill_management`, `debt_optimization`, `financial_health`,
+`purchase_advisor`, `savings`. `ProposalType`, `AgentKey`, `AGENT_ICONS` and
+`AGENT_DISPLAY_NAME` all cover the full set — the two `Record<AgentKey, …>` maps are
+compiler-enforced, so adding a type upstream breaks the build instead of falling back.
+
+**Field contract (every field OPTIONAL — the card omits, never fabricates):**
+| Section | Source | Behaviour when absent |
+| --- | --- | --- |
+| Headline / subline | `presentation.headline`, resolved subject | falls back to subject line, then agent line |
+| Confidence | `presentation.confidence_band` + `confidence` | band alone, or pct alone, or omitted |
+| Recommended Action | `presentation.recommendation` | section omitted |
+| Key facts table | `key_facts` (BFF-resolved) → `presentation.key_facts` | falls back to evidence-derived rows |
+| Why This Needs Your Call | `narrative` / `details` | section omitted |
+| Linked Evidence | resolved `evidence[]` | section omitted |
+| What Happens Next / If This Is Wrong | `presentation.consequences`, else per-decision copy | **omitted, never invented** |
+| Flagged by | `policy.policy_id` → `matched_rule_id` → trace rule + approvers | line omitted |
+| Actions | `available_decisions[]` | falls back to the record's `mode` |
+| Message Draft | `buildCollectionsDraft` over resolved key facts (Collections only) | section omitted |
+| Technical Detail | `stored_action_type`, technical facts, `presentation.technical_detail` | six layers, whichever exist |
+
+**Rules the live tenant forced, all pinned by `proposalCards.test.ts`:**
+- **Buttons come from `available_decisions`, not a hardcoded Approve/Reject pair.** Live data:
+  compliance *and* `fraud_anomaly` offer only `[acknowledge]`; treasury, `cash_forecast` and
+  `subscription` offer `[approve, reject]`. The read-model doc's per-domain action-label table is
+  **aspirational** — bind to the array. A decision id outside the documented write set
+  (`approve`/`reject`/`acknowledge`/`undo`) renders **disabled** rather than firing a call the
+  API rejects.
+- **`policy.policy_id` is null on every live row**, so the "Flagged by" fallback chain matters:
+  `matched_rule_id` is set only for compliance (`cmp_policy_violation`); the other four fall
+  through to the policy trace rule and `required_approvers` ("Flagged by a policy confirm
+  decision · requires Signer approval"). Nothing to say → the line is omitted.
+- **Never recompute the confidence band from the percentage.** Core's band and pct legitimately
+  disagree (a live row bands `standard` at 47%). Render `"High · 94%"` from what arrived.
+- **No raw id may appear in the primary view** — not in key facts, and not in prose. Core writes
+  ids straight into both (`"tx_01KY… fraud anomaly risk is elevated"`, `"Compliance review for
+  inv_01KY… found policy_violation"`). The BFF emits `resolved_refs` (id → name, for ids the
+  index knows) alongside `key_facts`; `resolveHeadlineText`/`resolveProseText` substitute names,
+  **drop** ids that resolved to nothing, and space out `lower_snake_case` enums. Ids remain
+  visible in Technical Detail, which is where they belong.
+- **Unresolved ids and `…Id`-labelled facts are demoted, not dropped** — they move to the
+  collapsed technical section so nothing is silently lost.
+- **De-duplicate after resolution.** A fraud row carries both `Transaction Id` and
+  `Counterparty Name`; once the id becomes a name they are the same string.
+
+**Inbox routing is by decidability, not by `mode`.** `isDecidableProposal` replaced the old
+`mode !== "notify_only"` gate: notify-only compliance and fraud rows carry a real `acknowledge`
+decision and were being stranded in the Audit Log. Advisory types route through the same shared
+card — there is no fallback view.
 
 ## Currency formatting — one formatter, and never pre-format on the server
 Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
@@ -639,6 +703,20 @@ bullets. When adding a surface that prints server text, wire `formatText` — do
   indistinguishable from a date, count, confidence score or id fragment. Producers must emit
   a currency marker; `server/routes.ts` has a `money()` helper and `ASSISTANT_SYSTEM` carries
   an explicit instruction. Format numbers BEFORE interpolation rather than asking the LLM to.
+  Two **narrowly guarded** exceptions exist on proposal cards, where the record itself states
+  its currency and core sends unmarked values anyway — both live in `proposalCards.ts` and are
+  pinned by tests. Do not widen either, and do not copy the pattern to prose whose currency is
+  unknown:
+  1. A fact row is treated as money only when its label is a strict money noun
+     (`STRICT_MONEY_LABEL_RE` — deliberately excludes `payment` and `value`, which head
+     "Payment Terms: 30"), or when the value already carries two decimals under the looser
+     label set. Everything else only gets thousands separators.
+  2. `applyCurrencyToBareAmounts` tags an amount in **core's own narrative** with the currency
+     the record's evidence cites, and only for 4+ integer digits with exactly two decimals —
+     so `"… for 50000.00 scored 0.70"` formats the amount and leaves the score alone.
+- **Fact values that are timestamps render as dates.** Core returns raw columns
+  (`"2026-07-20 00:00:00+00"`); `formatFactDate` renders `Jul 20, 2026`, keeping the time only
+  when it is non-midnight AND unambiguously UTC.
 - **A minus binds tightly to the marker.** `-$2,400` is negative; `Invoice #A1 - USD 18,600`
   is a separator. Do not let the sign group swallow surrounding whitespace, or
   `Paid €500` renders as `Paid€500.00`.

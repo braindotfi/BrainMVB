@@ -1,5 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
 import { useCurrency } from "@/lib/useCurrency";
 
@@ -15,14 +15,21 @@ export function LiveInsightModal({
   insight,
   open,
   onOpenChange,
+  onPrev,
+  onNext,
+  pagerDisabled = false,
 }: {
   insight: LiveInsight | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
 }) {
   const { formatText } = useCurrency();
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
+  const hasPager = Boolean(onPrev && onNext);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -151,6 +158,35 @@ export function LiveInsightModal({
               decision workflow (/v1/proposals) for this record type yet.
             </p>
           </div>
+
+          {hasPager && (
+            <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] px-[24px] py-[16px] w-full shrink-0">
+              <div className="flex items-center gap-[16px] w-full">
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  disabled={pagerDisabled}
+                  aria-label="Previous record"
+                  data-testid="button-live-insight-prev"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <ChevronLeft size={18} />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={pagerDisabled}
+                  aria-label="Next record"
+                  data-testid="button-live-insight-next"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  Next
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

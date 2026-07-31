@@ -738,16 +738,28 @@ export function RulesPage() {
                 setBuilderOpen(true);
               }}
               data-testid="button-new-rule"
-              className="w-full rounded-[16px] border border-dashed border-[#414965] bg-[#11141b] p-[16px] flex items-center justify-between cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="w-full rounded-[16px] bg-[#11141b] p-[16px] flex items-center justify-between cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] relative"
             >
+              {/* SVG dashed border — stroke-weight 1, wider gap, exact Figma match */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden focusable="false">
+                <rect
+                  x="0.5" y="0.5"
+                  style={{ width: "calc(100% - 1px)", height: "calc(100% - 1px)" }}
+                  rx="15.5" ry="15.5"
+                  fill="none"
+                  stroke="#414965"
+                  strokeWidth="1"
+                  strokeDasharray="6 8"
+                />
+              </svg>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
                   Write a new rule in plain English
                 </p>
               </div>
               <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
-                <Plus size={16} className="text-[#ff9500]" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px]">
+                <Plus size={16} className="text-[#ff9400]" />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[12px]">
                   New Rule
                 </span>
               </div>

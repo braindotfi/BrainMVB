@@ -52,36 +52,40 @@ import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 /**
- * True if `s` is a JSON object/array, not prose. Used to catch brain-core
- * wiki/question answers that come back as structured data (e.g. forecasts)
- * instead of a written answer, so they can be humanized before being shown
- * to the user.
+ * True if `s` looks like a structured object/array response from brain-core,
+ * even when it is not strictly valid JSON (e.g. arithmetic expressions in
+ * values like "48000 + 96000 + …"). Anything that opens with `{` or `[` is
+ * treated as structured content that should be humanized rather than surfaced
+ * raw to the user.
  */
 export function looksLikeStructuredJson(s: string): boolean {
   const trimmed = s.trim();
-  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return false;
-  try {
-    const parsed = JSON.parse(trimmed);
-    return typeof parsed === "object" && parsed !== null;
-  } catch {
-    return false;
-  }
+  return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
 /**
  * brain-core's wiki/question sometimes answers a question with structured
- * JSON (e.g. a cash-flow forecast) instead of prose. Turn that into a short
- * written answer, keeping every number/date exactly as given. Falls back to
- * the raw JSON on any failure so this step can never make the response worse
- * than today.
+ * data (e.g. a cash-flow forecast) instead of prose. Turn that into a short
+ * written answer. Falls back to the raw string on any failure so this step
+ * can never make the response worse than today.
+ *
+ * Two payload shapes are handled:
+ *  1. Valid JSON   — the answer field is extracted, degenerate-checked, then
+ *                    sent to Anthropic as before.
+ *  2. Pseudo-JSON  — not parseable (e.g. arithmetic in values). The raw text
+ *                    plus the user's question are sent directly to Anthropic
+ *                    so it can evaluate the expressions and return prose.
  */
 async function humanizeWikiAnswer(raw: string, lastUserMessage?: string): Promise<string> {
   if (!looksLikeStructuredJson(raw)) return raw;
   if (!process.env.ANTHROPIC_API_KEY) return raw;
 
+  let payload = raw.trim();
+  let parsedSuccessfully = false;
+
   try {
-    const parsed = JSON.parse(raw.trim());
-    let payload = raw;
+    const parsed = JSON.parse(payload);
+    parsedSuccessfully = true;
     if (parsed && typeof parsed === "object" && "answer" in parsed) {
       const answer = (parsed as Record<string, unknown>).answer;
       /* A bare primitive answer (e.g. {"answer": 0}) would stringify to "0" —
@@ -105,14 +109,27 @@ async function humanizeWikiAnswer(raw: string, lastUserMessage?: string): Promis
     if (isDegenerateWikiPayload(payload)) {
       return "";
     }
+  } catch {
+    /* Not valid JSON — brain-core sometimes returns pseudo-JSON where numeric
+       values are written as arithmetic expressions (e.g. "48000 + 96000 + …").
+       Include the user's question as context so the LLM can evaluate the
+       expressions and produce a meaningful prose answer. */
+    payload = lastUserMessage
+      ? `Question: ${lastUserMessage}\n\nData: ${raw.trim()}`
+      : raw.trim();
+  }
+
+  try {
     const message = await anthropic.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 512,
       system:
-        "You turn a structured financial result (JSON) into a concise, warm prose answer for a business owner. " +
-        "Keep every number and date EXACTLY as given in the JSON — do not round, recompute, or drop any. " +
-        "Format currency with a $ and thousands separators. No JSON, no code fences. " +
-        "Write about 1-4 sentences, plus a short list only if it genuinely helps readability.",
+        "You turn a structured financial result into a concise, warm prose answer for a business owner. " +
+        (parsedSuccessfully
+          ? "Keep every number and date EXACTLY as given — do not round, recompute, or drop any. "
+          : "The data may contain arithmetic expressions (like '48000 + 96000') — evaluate them to give the correct totals. ") +
+        "Format all currency with a $ sign and thousands separators (e.g. $144,000). No JSON, no code fences. " +
+        "Write about 1–4 sentences, plus a short list only if it genuinely helps readability.",
       messages: [{ role: "user", content: payload }],
     });
     const text = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim();

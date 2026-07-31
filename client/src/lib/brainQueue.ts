@@ -200,6 +200,7 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     },
     status,
     invoiceId: intent.invoice_id ?? undefined,
+    sourceCreatedAt: intent.created_at,
   };
 }
 

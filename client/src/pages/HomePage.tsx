@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +25,8 @@ import {
 import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { AuditRecordPopup } from "@/components/AuditRecordPopup";
+import { buildProposalHeaderCopy } from "@/lib/proposalCards";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -296,22 +298,40 @@ const SectionWidget = ({
   icon,
   testIdPrefix,
   emptyMessage,
-  fitContentWhenShort = false,
 }: {
   title: string;
   items: WidgetItem[];
   icon: React.ReactNode;
   testIdPrefix: string;
   emptyMessage?: string;
-  fitContentWhenShort?: boolean;
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [scrollMaxH, setScrollMaxH] = useState<number | null>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const hasMore = items.length > DEFAULT_VISIBLE;
   const visible = expanded ? items : items.slice(0, DEFAULT_VISIBLE);
-  const shouldFitContent = fitContentWhenShort && items.length < DEFAULT_VISIBLE;
+
+  /* When expanded, measure the pixel distance from the bottom of the header
+     to the bottom of the viewport so the scroll area fills exactly to the
+     page edge with a small breathing gap. Recalculates on resize. */
+  useEffect(() => {
+    if (!expanded) { setScrollMaxH(null); return; }
+    const measure = () => {
+      if (!headerRef.current) return;
+      const { bottom } = headerRef.current.getBoundingClientRect();
+      setScrollMaxH(Math.max(window.innerHeight - bottom - 16, 80));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [expanded]);
+
   return (
-    <div className={`bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full ${shouldFitContent ? "h-fit self-start" : "h-full"}`}>
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
+    <div className={`bg-[#0a0c10] flex flex-col items-start relative rounded-[16px] shrink-0 w-full h-full ${expanded ? "" : "overflow-hidden"}`}>
+      <div
+        ref={headerRef}
+        className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full"
+      >
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
           <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -319,7 +339,10 @@ const SectionWidget = ({
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-start p-[8px] relative shrink-0 w-full">
+      <div
+        className={`${expanded ? "overflow-y-auto" : "max-h-[280px] overflow-y-auto"} flex flex-col items-start p-[8px] relative w-full`}
+        style={expanded && scrollMaxH ? { maxHeight: scrollMaxH } : undefined}
+      >
         {visible.length === 0 ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -488,10 +511,11 @@ export function HomePage() {
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  /* Record opened directly from a Home widget. The proposal sheet (Brain
-     Detected), opened in place, mirroring the Review page surface. (Brain Did
-     rows deep-link straight to /audit-log; they carry no Proposal object.) */
+  /* Records opened directly from Home widgets. Each popup keeps its own
+     section-specific sibling queue so Previous/Next stays within the card
+     type the user tapped. */
   const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
+  const [selectedAuditRecord, setSelectedAuditRecord] = useState<ReturnType<typeof useBrainAuditRecords>["records"][number] | null>(null);
   const reviewStatuses = useReviewStatuses();
 
   const rules = useRules();
@@ -585,16 +609,19 @@ export function HomePage() {
 
   /* Brain Did — live brain-core audit events only. */
   const { records: liveAuditRecords } = useBrainAuditRecords();
+  const brainDidRecords = useMemo(
+    () => liveAuditRecords.filter((r) => r.eventType === "approved" || r.eventType === "auto_approved"),
+    [liveAuditRecords],
+  );
   const brainDidItems: WidgetItem[] = useMemo(() => {
-    return liveAuditRecords
-      .filter((r) => r.eventType === "approved" || r.eventType === "auto_approved")
+    return brainDidRecords
       .map((r) => ({
         id: r.id,
         label: formatText(r.summary),
         subtitle: r.rowSubtitle ? formatText(r.rowSubtitle) : undefined,
-        onClick: () => navigate(`/audit-log?record=${r.id}`),
+        onClick: () => setSelectedAuditRecord(r),
       }));
-  }, [liveAuditRecords, navigate, formatText]);
+  }, [brainDidRecords, formatText]);
 
   /* Brain Detected. What Brain is advising for review: live brain-core
      PaymentIntents needing approval, plus read-only live Ledger facts
@@ -619,6 +646,40 @@ export function HomePage() {
   const { proposals: liveProposals } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+
+  const cycleRecord = <T extends { id: string | number }>(
+    records: T[],
+    selected: T | null,
+    setSelected: (record: T) => void,
+    delta: 1 | -1,
+  ) => {
+    if (!selected || records.length < 2) return;
+    const index = records.findIndex((record) => record.id === selected.id);
+    if (index < 0) return;
+    setSelected(records[(index + delta + records.length) % records.length]);
+  };
+
+  const selectedReviewIndex = selectedReview
+    ? liveNeedsReview.findIndex((record) => record.id === selectedReview.id)
+    : -1;
+  const selectedLiveIntentIndex = selectedLiveIntent
+    ? sessionReviews.findIndex((record) => record.id === selectedLiveIntent.id)
+    : -1;
+  const selectedInsightIndex = selectedInsight
+    ? liveInsights.findIndex((record) => record.id === selectedInsight.id)
+    : -1;
+  const selectedProposalIndex = selectedProposal
+    ? needsReviewProposals.findIndex((record) => record.id === selectedProposal.id)
+    : -1;
+  const selectedAuditRecordIndex = selectedAuditRecord
+    ? brainDidRecords.findIndex((record) => record.id === selectedAuditRecord.id)
+    : -1;
+
+  const reviewPagerDisabled = selectedReviewIndex < 0 || liveNeedsReview.length < 2;
+  const liveIntentPagerDisabled = selectedLiveIntentIndex < 0 || sessionReviews.length < 2;
+  const insightPagerDisabled = selectedInsightIndex < 0 || liveInsights.length < 2;
+  const proposalPagerDisabled = selectedProposalIndex < 0 || needsReviewProposals.length < 2;
+  const auditRecordPagerDisabled = selectedAuditRecordIndex < 0 || brainDidRecords.length < 2;
 
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
     // PaymentIntents from the live review queue — title is already specific
@@ -648,10 +709,11 @@ export function HomePage() {
     // the specific "Why:" text shown in Inbox; agent display name is the category.
     const proposalItems = needsReviewProposals.map((p) => {
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       return {
         id: p.id,
-        label: p.narrative ? formatText(p.narrative) : agentName,
-        subtitle: p.narrative ? agentName : undefined,
+        label: headerCopy.title,
+        subtitle: `${agentName} Agent`,
         onClick: () => setSelectedProposal(p),
       };
     });
@@ -804,7 +866,7 @@ export function HomePage() {
             {/* Middle row: Brain Detected (top/left) + Brain Did (bottom/right).
                 On mobile they stack vertically; on sm+ they sit side-by-side. */}
             <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
-              <div className="flex flex-1 min-w-px">
+              <div className="flex flex-1 min-w-px h-full">
                 <SectionWidget
                   title="Brain Detected"
                   items={brainDetectedItems}
@@ -813,14 +875,13 @@ export function HomePage() {
                   emptyMessage="Brain hasn't detected any items that require your review yet."
                 />
               </div>
-              <div className="flex flex-1 min-w-px">
+              <div className="flex flex-1 min-w-px h-full">
                 <SectionWidget
                   title="Brain Did"
                   items={brainDidItems}
                   icon={<GreenCheckIcon />}
                   testIdPrefix="row-brain-did"
                   emptyMessage="Brain hasn't taken any actions yet."
-                  fitContentWhenShort
                 />
               </div>
             </div>
@@ -842,6 +903,9 @@ export function HomePage() {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+        onPrev={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, -1)}
+        onNext={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, 1)}
+        pagerDisabled={insightPagerDisabled}
       />
 
       {/* Brain Detected - live brain-core agent proposal */}
@@ -849,6 +913,15 @@ export function HomePage() {
         proposal={selectedProposal}
         open={selectedProposal !== null}
         onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
+        onPrev={() => cycleRecord(needsReviewProposals, selectedProposal, setSelectedProposal, -1)}
+        onNext={() => cycleRecord(needsReviewProposals, selectedProposal, setSelectedProposal, 1)}
+        hasPrev={!proposalPagerDisabled}
+        hasNext={!proposalPagerDisabled}
+        position={
+          !proposalPagerDisabled
+            ? `Proposal ${selectedProposalIndex + 1} of ${needsReviewProposals.length}`
+            : undefined
+        }
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}
@@ -857,6 +930,9 @@ export function HomePage() {
         currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
         open={selectedReview !== null}
         onOpenChange={(o) => { if (!o) setSelectedReview(null); }}
+        onPrev={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, -1)}
+        onNext={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, 1)}
+        pagerDisabled={reviewPagerDisabled}
         onAction={handleReviewAction}
         rulePaused={selectedReview ? isRulePaused(selectedReview) : undefined}
         onPauseRule={(p) => { const r = ruleOf(p); if (r) storePauseRule(r.id); }}
@@ -906,8 +982,21 @@ export function HomePage() {
           setSelectedLiveIntent(null);
           setLiveRejection(null);
         }}
+        onPrev={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, -1)}
+        onNext={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, 1)}
+        pagerDisabled={liveIntentPagerDisabled}
         busy={approvingIntentId !== null}
         rejection={liveRejection}
+      />
+
+      {/* Brain Did - approved and auto-approved audit records */}
+      <AuditRecordPopup
+        record={selectedAuditRecord}
+        open={selectedAuditRecord !== null}
+        onOpenChange={(o) => { if (!o) setSelectedAuditRecord(null); }}
+        onPrev={() => cycleRecord(brainDidRecords, selectedAuditRecord, setSelectedAuditRecord, -1)}
+        onNext={() => cycleRecord(brainDidRecords, selectedAuditRecord, setSelectedAuditRecord, 1)}
+        pagerDisabled={auditRecordPagerDisabled}
       />
     </div>
   );

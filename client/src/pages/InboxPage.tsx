@@ -21,8 +21,13 @@ import {
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import {
+  isDecidableProposal,
+  buildDecisionButtons,
+  buildProposalHeaderCopy,
+  type DecisionButton,
+} from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
-import { RISK_META } from "@/lib/agentProposals";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -40,8 +45,11 @@ import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
-type InboxTab = "Needs Review" | "Insights" | "Auto-Approved" | "Rejected" | "Rule Changes";
-const INBOX_TABS: InboxTab[] = ["Needs Review", "Insights", "Auto-Approved", "Rejected", "Rule Changes"];
+type InboxTab = "Needs Review" | "Insights" | "Approved" | "Auto-Approved" | "Rejected" | "Rule Changes";
+const INBOX_TAB_GROUPS: InboxTab[][] = [
+  ["Needs Review", "Insights"],
+  ["Approved", "Auto-Approved", "Rejected", "Rule Changes"],
+];
 
 /* Map an audit event type onto its Inbox tab. */
 function auditTab(eventType: AuditEventType): InboxTab {
@@ -54,6 +62,8 @@ function auditTab(eventType: AuditEventType): InboxTab {
     case "trust_granted":
     case "trust_revoked":
       return "Rule Changes";
+    case "approved":
+      return "Approved";
     case "postponed":
     case "flagged":
       return "Needs Review";
@@ -127,6 +137,14 @@ type InboxItem = {
   insight?: LiveInsight;
   record?: AuditRecord;
   liveAgentProposal?: BrainProposal;
+  /* Decisions brain-core will actually accept for this row. Row buttons are
+     driven by this, never by a hardcoded Approve/Reject pair — a notify-only
+     compliance or fraud finding offers `acknowledge` ONLY, and firing approve
+     at it is a write the API rejects. */
+  liveDecisions?: DecisionButton[];
+  /* Core offers acknowledge and nothing else: render a single Acknowledge button
+     instead of an Approve/Decline pair the API would reject. */
+  acknowledgeOnly?: boolean;
 };
 
 const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
@@ -159,7 +177,9 @@ const InboxCard = ({
   const { formatText } = useCurrency();
   /* Second-row text: prefer "Why: …" if the record has it, else desc. Both are
      backend/LLM prose carrying raw amounts, so they go through formatText. */
-  const secondLine = item.why
+  const secondLine = item.liveAgentProposal
+    ? item.desc
+    : item.why
     ? `Why: ${formatText(item.why)}`
     : item.desc
       ? formatText(item.desc)
@@ -188,14 +208,16 @@ const InboxCard = ({
             truncates so the tag stays visible beside it. */}
         <div className="flex items-center gap-[8px] max-w-full min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
-            {item.title}
+            {formatText(item.title)}
           </p>
-          <span
-            className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
-            data-testid={`tag-inbox-${item.id}`}
-          >
-            {item.tag}
-          </span>
+          {item.tab !== "Approved" && item.tab !== "Auto-Approved" && item.tab !== "Rejected" && (
+            <span
+              className={`${item.tagClass} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
+              data-testid={`tag-inbox-${item.id}`}
+            >
+              {item.tag}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-[8px] w-full min-w-0">
           {secondLine && (
@@ -209,54 +231,63 @@ const InboxCard = ({
         </div>
       </div>
 
-      {/* Right column: action buttons (approval or acknowledge) or nothing */}
-      {item.actionable ? (
-        /* Approval row: Approve + Decline */
-        <div className="flex gap-[8px] items-start shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onApprove?.(item)}
-            data-testid={`button-approve-${item.id}`}
-            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
-          >
-            <Check className="size-[16px] shrink-0" />
-            Approve
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onReject?.(item)}
-            data-testid={`button-decline-${item.id}`}
-            className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
-          >
-            <X className="size-[16px] shrink-0" />
-            Decline
-          </button>
+      {/* Right column: formatted amount + action buttons stacked */}
+      {(item.amountDisplay || item.actionable || item.kind === "detection" || item.acknowledgeOnly) && (
+        <div className="flex flex-col items-end gap-[6px] shrink-0">
+          {item.amountDisplay && (
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
+              {item.amountDisplay}
+            </p>
+          )}
+          {item.actionable ? (
+            /* Approval row: Approve + Decline */
+            <div className="flex gap-[8px] items-center" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onApprove?.(item)}
+                data-testid={`button-approve-${item.id}`}
+                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#123509] text-[#42bf23] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
+              >
+                <Check className="size-[16px] shrink-0" />
+                Approve
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onReject?.(item)}
+                data-testid={`button-decline-${item.id}`}
+                className="flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
+              >
+                <X className="size-[16px] shrink-0" />
+                Decline
+              </button>
+            </div>
+          ) : item.kind === "detection" || item.acknowledgeOnly ? (
+            /* Acknowledge row: starts active, then turns orange once acknowledged. */
+            <div onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => onAcknowledge?.(item)}
+                data-testid={`button-acknowledge-${item.id}`}
+                className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0 ${
+                  acknowledged ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#7631ee]"
+                }`}
+              >
+                <Check className="size-[16px] shrink-0" />
+                {acknowledged ? "Acknowledged" : "Acknowledge"}
+              </button>
+            </div>
+          ) : null}
         </div>
-      ) : item.kind === "detection" ? (
-        /* Acknowledge row: starts active, then turns orange once acknowledged. */
-        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => onAcknowledge?.(item)}
-            data-testid={`button-acknowledge-${item.id}`}
-            className={`flex items-center gap-[4px] px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap transition-opacity hover:opacity-90 shrink-0 ${
-              acknowledged ? "bg-[#4a2300] text-[#ff9500]" : "bg-[#240757] text-[#7631ee]"
-            }`}
-          >
-            <Check className="size-[16px] shrink-0" />
-            {acknowledged ? "Acknowledged" : "Acknowledge"}
-          </button>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 };
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
-  const { format } = useCurrency();
+  const { format, formatText } = useCurrency();
   const { intents, markDeclined, setApprovalState } = useIntents();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -303,12 +334,16 @@ export function InboxPage() {
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
   const { proposals: liveProposals } = useBrainProposals();
-  /* Decidable agent proposals only: notify_only records are informational agent
-     insights — nothing to approve or reject — so they stay out of Needs Review
-     (same pattern as isSystemActivity/isAssistantActivity) and surface through
-     the Audit Log feed instead. */
+  /* Decidable agent proposals only — but decidability is now read from the
+     record's own `available_decisions`, not from `mode`.
+     
+     The old rule dropped every notify_only record here, which stranded the types
+     brain-core's read model promoted into this queue: a compliance finding and a
+     fraud hold are notify_only YET carry a real `acknowledge` decision a human has
+     to record. They appeared in the Audit Log with no way to act on them. Rows
+     with no writable decision are still informational and still stay out. */
   const needsReviewProposals = useMemo(
-    () => liveProposals.filter((p) => isNeedsReview(p) && p.mode !== "notify_only"),
+    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
     [liveProposals],
   );
   const decideProposal = useDecideProposal();
@@ -425,6 +460,13 @@ export function InboxPage() {
   };
 
   const acknowledgeItem = (item: InboxItem) => {
+    /* An acknowledge-only live proposal (compliance finding, fraud hold) is a real
+       brain-core decision, not the local insight store. */
+    if (item.liveAgentProposal) {
+      if (!item.liveDecisions?.some((d) => d.id === "acknowledge" && d.writable)) return;
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "acknowledge" });
+      return;
+    }
     if (item.kind !== "detection" || !item.insight) return;
     if (pendingAcknowledgedIds.has(item.id) || acknowledgedIds.has(item.id)) return;
     setPendingAcknowledgedIds((current) => new Set(current).add(item.id));
@@ -529,21 +571,28 @@ export function InboxPage() {
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
     for (const p of needsReviewProposals) {
-      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
-      const riskLabel = p.risk_band ? RISK_META[p.risk_band].label : null;
-      const confidenceLabel = typeof p.confidence === "number" ? `${Math.round(p.confidence * 100)}% confidence` : null;
+      const agentKey = agentKeyForProposalType(p.type);
+      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
+      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
+      const pillName = isPaymentAgent ? "Payment" : agentName;
+      const decisions = buildDecisionButtons(p.available_decisions);
+      const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
         id: p.id,
         kind: "proposal",
         tab: "Needs Review",
-        title: `${agentName} proposal`,
-        tag: agentName,
+        title: headerCopy.title,
+        tag: pillName,
         tagClass: TAG_NEEDS_YOU,
-        desc: [riskLabel, confidenceLabel].filter(Boolean).join(" · ") || "Awaiting your decision",
+        desc: headerCopy.text,
         time: "",
-        why: p.narrative ?? undefined,
-        actionable: true,
+        /* Approve/Decline only when core actually offers them. */
+        actionable: decisions.some((d) => d.writable && (d.id === "approve" || d.id === "reject")),
         liveAgentProposal: p,
+        liveDecisions: decisions,
+        acknowledgeOnly:
+          decisions.some((d) => d.id === "acknowledge" && d.writable) &&
+          !decisions.some((d) => d.id === "approve" || d.id === "reject"),
       });
     }
 
@@ -594,7 +643,7 @@ export function InboxPage() {
       push({
         id: `${p.id}--${status}`,
         kind: "proposal",
-        tab: approved ? "Auto-Approved" : status === "rejected" ? "Rejected" : "Needs Review",
+        tab: approved ? "Approved" : status === "rejected" ? "Rejected" : "Needs Review",
         title: p.title,
         tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
         tagClass: approved ? TAG_APPROVED_BY_YOU : status === "rejected" ? TAG_REJECTED : TAG_DETECTED,
@@ -637,12 +686,34 @@ export function InboxPage() {
   }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format]);
 
   const counts: Record<InboxTab, number> = useMemo(() => {
-    const c: Record<InboxTab, number> = { "Needs Review": 0, Insights: 0, "Auto-Approved": 0, Rejected: 0, "Rule Changes": 0 };
+    const c: Record<InboxTab, number> = {
+      "Needs Review": 0,
+      Insights: 0,
+      Approved: 0,
+      "Auto-Approved": 0,
+      Rejected: 0,
+      "Rule Changes": 0,
+    };
     for (const it of items) c[it.tab] += 1;
     return c;
   }, [items]);
 
   const visible = items.filter((it) => it.tab === activeTab);
+
+  /* Proposal queue behind the card's Previous / Next, in the order the rows are
+     listed so paging matches what the user just scrolled past. Only live
+     proposals participate — the other row kinds open different modals. */
+  const pagedProposals = visible
+    .map((it) => it.liveAgentProposal)
+    .filter((p): p is BrainProposal => p != null);
+  const pagedIndex = selectedProposal
+    ? pagedProposals.findIndex((p) => p.id === selectedProposal.id)
+    : -1;
+  const canPage = pagedIndex >= 0 && pagedProposals.length > 1;
+  const stepProposal = (delta: number) => {
+    const next = pagedProposals[pagedIndex + delta];
+    if (next) setSelectedProposal(next);
+  };
 
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
@@ -672,6 +743,8 @@ export function InboxPage() {
 
   const approveItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
+      // Never send a decision core did not offer for this proposal.
+      if (!item.liveDecisions?.some((d) => d.id === "approve" && d.writable)) return;
       decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "approve" });
       return;
     }
@@ -693,6 +766,7 @@ export function InboxPage() {
 
   const rejectItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
+      if (!item.liveDecisions?.some((d) => d.id === "reject" && d.writable)) return;
       decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "reject" });
       return;
     }
@@ -739,6 +813,8 @@ export function InboxPage() {
         : "Nothing needs your attention right now. Brain is keeping things moving."
       : activeTab === "Auto-Approved"
         ? "Nothing was approved automatically recently."
+        : activeTab === "Approved"
+          ? "No approvals recorded yet."
         : activeTab === "Rejected"
           ? "No rejected items yet. Anything you or Brain rejects will appear here."
           : "No rule or trust changes recorded yet.";
@@ -753,9 +829,10 @@ export function InboxPage() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Everything Brain needs you to see.</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Decisions waiting on you, and everything Brain already handled.</p>
         </div>
-        <div className="flex flex-col gap-[16px] items-start w-full min-w-0">
-          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-            {INBOX_TABS.map((tab) => {
+        <div className="flex items-center gap-[24px] w-full min-w-0">
+          {INBOX_TAB_GROUPS.map((group, groupIndex) => (
+          <div key={groupIndex} className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+            {group.map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -785,14 +862,15 @@ export function InboxPage() {
               );
             })}
           </div>
+          ))}
         </div>
       </div>
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
+      {/* Table area: the panel header is static; long record lists scroll inside. */}
       <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[16px]">
         <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-          {/* Panel header — sticky */}
-          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+          {/* Panel header — static */}
+          <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
             <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
               <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -801,7 +879,7 @@ export function InboxPage() {
             </div>
           </div>
           {/* Rows */}
-          <div className="p-[8px]">
+          <div className="max-h-[480px] overflow-y-auto p-[8px]">
             {visible.length === 0 ? (
               <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                 <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -919,6 +997,11 @@ export function InboxPage() {
         proposal={selectedProposal}
         open={selectedProposal !== null}
         onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
+        onPrev={canPage ? () => stepProposal(-1) : undefined}
+        onNext={canPage ? () => stepProposal(1) : undefined}
+        hasPrev={pagedIndex > 0}
+        hasNext={pagedIndex >= 0 && pagedIndex < pagedProposals.length - 1}
+        position={canPage ? `Proposal ${pagedIndex + 1} of ${pagedProposals.length}` : undefined}
       />
     </div>
   );

@@ -75,7 +75,7 @@ describe("selectNonFinancialProposals", () => {
 });
 
 describe("agentKeyForProposalType", () => {
-  it("maps every one of the 11 wire types to the identical AgentKey string", () => {
+  it("maps every one of the 19 wire types to the identical AgentKey string", () => {
     const types: ProposalType[] = [
       "vendor_risk",
       "payment",
@@ -87,6 +87,14 @@ describe("agentKeyForProposalType", () => {
       "revenue_intel",
       "reconciliation",
       "subscription",
+      "bill_management",
+      "debt_optimization",
+      "financial_health",
+      "personal_budget",
+      "purchase_advisor",
+      "savings",
+      "tax_prep",
+      "travel_finance",
       "fraud_anomaly",
     ];
     for (const type of types) {

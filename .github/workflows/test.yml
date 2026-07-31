@@ -8,21 +8,32 @@ on:
 jobs:
   vitest:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
 
-      # Node 20 bundles npm 10.x, which can leave this dependency tree
-      # partially installed while still exiting successfully.
       - name: Use npm 11
         run: npm install -g npm@^11
 
-      - run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: |
+          for attempt in 1 2 3; do
+            npm ci --no-audit --no-fund && exit 0
 
-      - name: Verify the install completed
+            if [ "$attempt" -lt 3 ]; then
+              echo "npm ci failed; retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+
+          exit 1
+
+      - name: Verify the install actually completed
         run: npx --no-install vitest --version
 
       - run: npm test

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { useBrainAutoApproved } from "@/lib/brainQueue";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { AUDIT_TABS, auditRecordLabel, auditRecordChipClass, isAssistantActivity } from "@/lib/auditTypes";
@@ -10,14 +11,14 @@ import searchIcon from "@assets/Vector_1784933720094.png";
 import { useCurrency } from "@/lib/useCurrency";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
 import { resolveProposal } from "@/lib/openProposalDetail";
-import { statusOverrideToAuditRecord } from "@/lib/brainFeed";
+import { statusOverrideToAuditRecord, autoApprovedToAuditRecord } from "@/lib/brainFeed";
 import { useAuth } from "@/lib/authContext";
 import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 
 type Tab = (typeof AUDIT_TABS)[number];
 
 const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
-  Approvals: "approved",
+  Approval: "approved",
   "Auto-Approved": "auto_approved",
   Rejections: "rejected",
   Acknowledged: "acknowledged",
@@ -30,6 +31,7 @@ export function AuditLogPage() {
   const { format, formatText } = useCurrency();
   const { isLoading, isError, records: brainRecords } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
+  const { proposals: autoApprovedProposals } = useBrainAutoApproved();
   const { user } = useAuth();
   const reviewStatuses = useReviewStatuses();
   const queryClient = useQueryClient();
@@ -62,6 +64,7 @@ export function AuditLogPage() {
       if (!seen.has(r.id)) { seen.add(r.id); merged.push(r); }
     };
     brainRecords.forEach(add);
+    autoApprovedProposals.map(autoApprovedToAuditRecord).forEach(add);
     acknowledgedRecords.forEach(add);
     for (const [id, status] of Object.entries(reviewStatuses)) {
       if (status !== "executing" && status !== "executed" && status !== "rejected") continue;
@@ -70,7 +73,7 @@ export function AuditLogPage() {
       add(statusOverrideToAuditRecord(p, status, user?.email ?? user?.username ?? "operator"));
     }
     return merged;
-  }, [acknowledgedRecords, brainRecords, reviewStatuses, user]);
+  }, [acknowledgedRecords, autoApprovedProposals, brainRecords, reviewStatuses, user]);
 
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
@@ -214,12 +217,12 @@ export function AuditLogPage() {
         </div>
       </div>
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
+      {/* Table area: the panel stays in place while only long record lists scroll. */}
       {!isLoading && !isError && (
-        <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
+        <div className="px-[16px] pb-[16px]">
           <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] min-w-0">
-            {/* Panel header — sticky */}
-            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
+            {/* Panel header — static */}
+            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
               <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{activeTab}</p>
                 <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
@@ -228,13 +231,13 @@ export function AuditLogPage() {
               </div>
             </div>
 
-            {/* Records */}
-            <div className="p-[8px] min-w-0">
+            {/* Records — short lists stay natural-height; long lists scroll here. */}
+            <div className="max-h-[480px] overflow-y-auto p-[8px]">
               {filtered.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                     {activeTab === "All" && "No audit records yet."}
-                    {activeTab === "Approvals" && "No approval records yet."}
+                    {activeTab === "Approval" && "No approval records yet."}
                     {activeTab === "Auto-Approved" && "No auto-approval records yet."}
                     {activeTab === "Rejections" && "No rejected payment records yet."}
                     {activeTab === "Acknowledged" && "No acknowledged records yet."}

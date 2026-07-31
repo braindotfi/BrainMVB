@@ -98,39 +98,13 @@ export function AuditRecordPopup({
 
   const statusPill = () => {
     const label = auditRecordLabel(record);
-    const isAssistant = isAssistantActivity(record);
-    const isApproved = record.eventType === "approved";
-    const isAuto = record.eventType === "auto_approved";
-    const isRejected = record.eventType === "rejected";
-    const isPostponed = record.eventType === "postponed";
     return (
       <div
-        className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid ${isAssistant ? "bg-[#222737] border-[rgba(108,119,157,0.2)]" : ""}`}
-        style={
-          isAssistant
-            ? undefined
-            : isApproved || isAuto
-              ? { background: "#123509", borderColor: "rgba(66,191,35,0.2)" }
-              : isFlagged || isRejected
-                ? { background: "#350011", borderColor: "rgba(210,3,68,0.2)" }
-                : isPostponed
-                  ? { background: "#1a1c24", borderColor: "rgba(108,119,157,0.2)" }
-                  : { background: "#222737", borderColor: "rgba(108,119,157,0.2)" }
-        }
+        className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#222737] border-[rgba(108,119,157,0.2)]"
       >
         <p
           className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-          style={
-            isAssistant
-              ? { color: "#6c779d" }
-              : isApproved || isAuto
-                ? { color: "#42bf23" }
-                : isFlagged || isRejected
-                  ? { color: "#d20344" }
-                  : isPostponed
-                    ? { color: "#6c779d" }
-                    : { color: "#6c779d" }
-          }
+          style={{ color: "#6c779d" }}
         >
           {label}
         </p>

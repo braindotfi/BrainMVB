@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ICONS } from "@/assets/figma-icons";
 import { useCurrency } from "@/lib/useCurrency";
@@ -79,6 +80,9 @@ export const ReviewModal = ({
   onOpenChange,
   onConfirm,
   onReject,
+  onPrev,
+  onNext,
+  pagerDisabled = false,
   busy = false,
   rejection = null,
 }: {
@@ -87,6 +91,9 @@ export const ReviewModal = ({
   onOpenChange: (open: boolean) => void;
   onConfirm: (auto: boolean) => void;
   onReject: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  pagerDisabled?: boolean;
   /** True while a real approve/decline call to brain-core is in flight. */
   busy?: boolean;
   /** brain-core's refusal, mapped to user copy. Rendered inline (danger tone). */
@@ -95,6 +102,7 @@ export const ReviewModal = ({
   const [auto, setAuto] = useState(false);
   const { format, formatText } = useCurrency();
   const swap = (s: string) => s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
+  const hasPager = Boolean(onPrev && onNext);
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
   // or whenever it closes, so prior state doesn't leak between reviews.
@@ -224,6 +232,33 @@ export const ReviewModal = ({
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Decline</span>
               </button>
             </div>
+
+            {hasPager && (
+              <div className="border-t border-[#1d2132] pt-[16px] flex gap-[16px] items-center w-full">
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  disabled={pagerDisabled}
+                  aria-label="Previous record"
+                  data-testid="button-review-prev"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <ArrowLeft size={18} />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={pagerDisabled}
+                  aria-label="Next record"
+                  data-testid="button-review-next"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  Next
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
