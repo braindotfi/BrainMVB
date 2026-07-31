@@ -156,31 +156,57 @@ export type AutoApproveLimit =
   /** Nothing in the policy runs automatically. */
   | { kind: "none" };
 
-/** Derive the auto-approve line from an activated policy.
+/** Rules that can match an outbound payment. An absent/empty `applies_to` is
+ *  "any action" (the same reading `mapPolicyRuleToCard` uses), which includes
+ *  payments. Anything scoped only to ledger writes or inbound money cannot
+ *  decide what a payment does, in either direction. */
+const PAYMENT_SCOPES = new Set(["outbound_payment", "any"]);
+function coversPayments(rule: PolicyContentRule): boolean {
+  const applies = rule.applies_to ?? [];
+  return applies.length === 0 || applies.some((a) => PAYMENT_SCOPES.has(a));
+}
+
+/** Derive the auto-approve line for OUTBOUND PAYMENTS from an activated policy.
  *
- *  Deliberately narrow: only a rule whose ONLY condition is `amount.lte` counts
- *  as "the auto-approve limit". A rule that auto-executes up to $5k *for a named
- *  counterparty*, or above a confidence floor, is not a blanket limit, and
- *  showing its number as one would tell an operator that more is automated than
- *  actually is. Those collapse to "conditional" so the screen can say so.
+ *  Two things make this narrower than "find an auto rule with an amount cap",
+ *  and both exist because overstating here tells a finance lead that a payment
+ *  will go out untouched when it will not, or the reverse:
+ *
+ *  1. ORDER. brain-core's VM evaluates rules in order and short-circuits on the
+ *     first match, so an auto rule is only the effective answer if no earlier
+ *     payment-scoped rule can claim the same payment first. Rather than
+ *     re-implementing the DSL's matching to prove non-overlap, only the FIRST
+ *     payment-scoped rule may be reported as the payment-wide line. A qualifying
+ *     auto rule sitting behind another payment rule reports as "conditional" —
+ *     vague, but never false.
+ *  2. SCOPE. A rule that auto-executes ledger writes is not a payment limit and
+ *     is not counted as one, in either direction.
+ *
+ *  The condition itself must also be a bare `amount.lte`. "Auto up to $5k for a
+ *  named counterparty" is not a blanket limit, and rendering its number as one
+ *  would claim automation that most payments do not get.
  *
  *  `undefined` facts (loading, unreachable, or no policy) are the caller's to
  *  distinguish — this returns nothing for them rather than a reassuring "none".
  */
 export function autoApproveLimitFromPolicy(facts: ApprovalPolicyFacts | undefined): AutoApproveLimit | null {
   if (!facts) return null;
-  const autoRules = (facts.rules ?? []).filter((r) => r.execute === "auto");
-  if (autoRules.length === 0) return { kind: "none" };
+  const paymentRules = (facts.rules ?? []).filter(coversPayments);
 
-  for (const rule of autoRules) {
-    const when = rule.when ?? {};
-    const keys = Object.keys(when);
-    if (keys.length !== 1 || keys[0] !== "amount.lte") continue;
-    const lte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
-    if (!lte?.value) continue;
-    return { kind: "limit", value: lte.value, currency: lte.currency ?? "USD" };
-  }
-  return { kind: "conditional" };
+  /* No rule that can touch a payment executes automatically: nothing about
+     payments is automated, whatever the rest of the policy does. */
+  if (!paymentRules.some((r) => r.execute === "auto")) return { kind: "none" };
+
+  const first = paymentRules[0];
+  if (first.execute !== "auto") return { kind: "conditional" };
+
+  const when = first.when ?? {};
+  const keys = Object.keys(when);
+  if (keys.length !== 1 || keys[0] !== "amount.lte") return { kind: "conditional" };
+  const lte = when["amount.lte"] as { value?: string; currency?: string } | undefined;
+  if (!lte?.value) return { kind: "conditional" };
+
+  return { kind: "limit", value: lte.value, currency: lte.currency ?? "USD" };
 }
 
 /** brain-core returns 404 `policy_not_found` for a tenant with no policy document

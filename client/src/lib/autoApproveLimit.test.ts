@@ -58,14 +58,95 @@ describe("autoApproveLimitFromPolicy", () => {
     expect(result).toEqual({ kind: "conditional" });
   });
 
-  it("prefers the unconditional rule when both kinds are present", () => {
+  it("reads a payment-scoped flat cap as the limit", () => {
+    const result = autoApproveLimitFromPolicy(
+      facts([
+        {
+          id: "r1",
+          applies_to: ["outbound_payment"],
+          execute: "auto",
+          when: { "amount.lte": { value: "250.00", currency: "EUR" } },
+        },
+      ]),
+    );
+    expect(result).toEqual({ kind: "limit", value: "250.00", currency: "EUR" });
+  });
+
+  /* The VM evaluates in order and stops at the first match, so a flat auto rule
+     sitting behind another payment rule is not what actually happens to a
+     payment. Reporting its number would be a false assurance. */
+  it("does not report a flat cap that an earlier payment rule can pre-empt", () => {
+    const result = autoApproveLimitFromPolicy(
+      facts([
+        {
+          id: "big-ones-need-a-human",
+          applies_to: ["outbound_payment"],
+          execute: "confirm",
+          when: { "amount.gt": { value: "50000.00", currency: "USD" } },
+        },
+        {
+          id: "small-ones-auto",
+          applies_to: ["outbound_payment"],
+          execute: "auto",
+          when: { "amount.lte": { value: "5000.00", currency: "USD" } },
+        },
+      ]),
+    );
+    expect(result).toEqual({ kind: "conditional" });
+  });
+
+  it("does not let an earlier conditional auto rule be reported as the flat line", () => {
     const result = autoApproveLimitFromPolicy(
       facts([
         { id: "conditional", execute: "auto", when: { "agent.confidence.gte": 0.9 } },
         { id: "flat", execute: "auto", when: { "amount.lte": { value: "250.00", currency: "EUR" } } },
       ]),
     );
-    expect(result).toEqual({ kind: "limit", value: "250.00", currency: "EUR" });
+    expect(result).toEqual({ kind: "conditional" });
+  });
+
+  it("does not present a ledger-write auto rule as a payment limit", () => {
+    const result = autoApproveLimitFromPolicy(
+      facts([
+        {
+          id: "ledger",
+          applies_to: ["ledger_write"],
+          execute: "auto",
+          when: { "amount.lte": { value: "5000.00", currency: "USD" } },
+        },
+      ]),
+    );
+    expect(result).toEqual({ kind: "none" });
+  });
+
+  it("is not blocked by an earlier rule that cannot match a payment", () => {
+    const result = autoApproveLimitFromPolicy(
+      facts([
+        { id: "inbound", applies_to: ["inbound_payment"], execute: "confirm", when: {} },
+        {
+          id: "flat",
+          applies_to: ["outbound_payment"],
+          execute: "auto",
+          when: { "amount.lte": { value: "5000.00", currency: "USD" } },
+        },
+      ]),
+    );
+    expect(result).toEqual({ kind: "limit", value: "5000.00", currency: "USD" });
+  });
+
+  it("treats an `any` rule as covering payments", () => {
+    const result = autoApproveLimitFromPolicy(
+      facts([
+        { id: "catch-all", applies_to: ["any"], execute: "reject", when: {} },
+        {
+          id: "flat",
+          applies_to: ["outbound_payment"],
+          execute: "auto",
+          when: { "amount.lte": { value: "5000.00", currency: "USD" } },
+        },
+      ]),
+    );
+    expect(result).toEqual({ kind: "conditional" });
   });
 });
 
