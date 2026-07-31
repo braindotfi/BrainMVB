@@ -71,3 +71,31 @@ overdue-receivables banner (vanished entirely); the rule builder's vendor picker
 ("No trusted vendors yet" offered as fact). The user has asked for this pattern to
 be actively looked for on other surfaces, not just fixed where it was first
 spotted.
+
+## Pending is not "answered with nothing"
+
+Splitting a feed into up/down is not enough. Three conditions matter: **down**,
+**still answering**, **answered** — and only the last one entitles a surface to
+make a claim about what does or does not exist.
+
+A search bar that says "No matches" while one feed is still in flight is making
+the same false all-clear as one that says it during an outage. It is *harder* to
+catch, because it is true again a second later: it never survives to a
+screenshot, and any QA script that settles for a couple of seconds after
+navigation will always find every feed already answered.
+
+**Why:** shipped exactly this in a global search bar; review caught it, the
+degraded-state QA did not, because the QA waited 2600ms before typing.
+
+**How to apply:** when an empty state is a *claim* ("no matches", "no vendors",
+"you're all caught up"), gate it on every source having resolved, and name only
+the sources that actually replied. Pin it by delaying a route (`route.continue()`
+behind a timer), not just failing it — and assert both that the pending copy
+shows AND that the honest conclusion returns once the feed lands.
+
+## Empty-state copy must scope itself to what was asked
+
+"No matches in decisions and accounts" is a different sentence from "No matches".
+When a surface aggregates several feeds, the empty message should enumerate the
+ones it actually searched, so a partial outage cannot masquerade as a complete
+answer.
