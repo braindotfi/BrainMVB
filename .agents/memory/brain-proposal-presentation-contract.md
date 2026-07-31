@@ -23,6 +23,13 @@ keep the wire value inside the documented write set (`approve`/`reject`/`acknowl
 an id outside it should render disabled rather than fire. This applies to **list rows as much as
 detail views**; the quick-action buttons on a list are the easiest place to reintroduce the bug.
 
+### An empty `available_decisions` is not the same as an absent one
+
+Empty means core is stating the record accepts no decision. Absent means core never sent the
+field (pre-#384 rows), and only *that* may fall back to the mirrored `presentation.actions`.
+Treating both as "falsy, use the fallback" lets the fallback resurrect an Approve button on a
+record whose authoritative list was explicitly empty — the exact write the API refuses.
+
 ## `policy.policy_id` is null in practice, so the fallback chain IS the path
 
 `matched_rule_id` is populated only for compliance findings. For everything else both id fields
