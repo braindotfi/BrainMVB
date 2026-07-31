@@ -356,6 +356,23 @@ describe("buildDecisionButtons", () => {
     expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual(["approve"]);
     expect(buildDecisionButtons(null, null)).toEqual([]);
   });
+
+  it("treats an EMPTY available_decisions as authoritative and never falls back", () => {
+    /* An empty list is core stating this record accepts no decision at all. That is a
+       different fact from the field being absent, and only absence may fall back.
+       Collapsing the two let the mirrored presentation.actions resurrect an Approve
+       button on a record the API refuses to approve. */
+    expect(buildDecisionButtons([], [{ id: "approve", label: "Approve" }])).toEqual([]);
+    expect(buildDecisionButtons([], [{ id: "acknowledge", label: "Acknowledge" }])).toEqual([]);
+    expect(buildDecisionButtons([], null)).toEqual([]);
+  });
+
+  it("still falls back when the field is absent rather than empty", () => {
+    /* Guards the other direction: the fix must not silence a legitimate fallback. */
+    expect(buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual([
+      "approve",
+    ]);
+  });
 });
 
 describe("buildConsequences", () => {

@@ -594,12 +594,19 @@ function toneFor(id: string): DecisionTone {
  * Reject sits on the left. Falls back to `presentation.actions` (the same list,
  * mirrored) and finally to an empty list, which tells the caller to render the
  * read-only footer rather than inventing an Approve button.
+ *
+ * `available_decisions` is AUTHORITATIVE whenever core sent the field at all —
+ * including when it sent an empty list. An empty list is core stating this record
+ * accepts no decision, which is a different fact from the field being absent, and
+ * only the latter may fall back to `presentation.actions`. Collapsing the two let a
+ * mirrored presentation list resurrect an Approve button on a record whose
+ * authoritative decision list was explicitly empty, and the API rejects that write.
  */
 export function buildDecisionButtons(
   available: ProposalDecisionOption[] | null | undefined,
   fallback?: ProposalDecisionOption[] | null,
 ): DecisionButton[] {
-  const source = (available?.length ? available : fallback) ?? [];
+  const source = (available ?? fallback) ?? [];
   const buttons = source
     .filter((d) => typeof d?.id === "string" && d.id.trim())
     .map((d) => ({
