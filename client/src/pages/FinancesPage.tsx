@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
+import { unpaidApInvoices } from "@/lib/liabilities";
 import { BrainBillsInbox } from "@/components/BrainBillsInbox";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
@@ -459,7 +460,9 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
     retry: false,
   });
 
-  const ap = (invData?.invoices ?? []).filter((i) => i.metadata?.scenario === "ap" && i.status !== "paid");
+  /* Same helper the Overview "Liabilities" metric card uses, so the headline
+     figure and this list can never disagree about what counts as owed. */
+  const ap = unpaidApInvoices(invData?.invoices);
   const count = ap.length;
   const text = (() => {
     if (ap.length === 0) return LIABILITIES_FALLBACK;

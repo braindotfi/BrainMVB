@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { INLINE_FIGMA } from "@/assets/inline-figma-icons";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
 import { useAuth } from "@/lib/authContext";
@@ -12,7 +11,6 @@ import { useCurrency } from "@/lib/useCurrency";
 import { type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
-import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { useIntents } from "@/lib/intentsStore";
 import { intentToReview } from "@/lib/intentToReview";
 import {
@@ -23,19 +21,25 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import {
+  useBrainProposals,
+  useDecideProposal,
+  isNeedsReview,
+  agentKeyForProposalType,
+  type BrainProposal,
+  type ProposalDecision,
+} from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import {
   deriveProposalTier,
   thresholdsFromRules,
   tierForPaymentIntent,
   tierForReadOnlyInsight,
-  TIER_META,
   TIER_ORDER,
-  type ProposalTier,
 } from "@/lib/proposalTiers";
-import { AuditRecordPopup } from "@/components/AuditRecordPopup";
-import { buildProposalHeaderCopy } from "@/lib/proposalCards";
+import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
+import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
+import { liabilitiesTotal, type ApInvoiceLike } from "@/lib/liabilities";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -51,15 +55,6 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
-
-/* Brain Did widget icons (Figma 3839:43693), green circle with checkmark */
-const IMG_CHECK_ELLIPSE = INLINE_FIGMA.homeCheckEllipse;
-const IMG_CHECK_VECTOR  = INLINE_FIGMA.homeCheckVector;
-
-/* Brain Detected widget icons (Figma 3839:43709), orange circle with "i" */
-const IMG_INFO_ELLIPSE = INLINE_FIGMA.homeInfoEllipse;
-const IMG_INFO_VEC1    = INLINE_FIGMA.homeInfoVec1;
-const IMG_INFO_VEC2    = INLINE_FIGMA.homeInfoVec2;
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
 type GoalRow = {
@@ -235,240 +230,66 @@ const GoalsSection = () => {
   );
 };
 
-const GreenCheckIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[24px]">
-    <div className="absolute left-0 size-[24px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_CHECK_ELLIPSE} />
-    </div>
-    <div className="absolute left-[4px] size-[16px] top-[4px]">
-      <div className="absolute inset-[16.65%_12.5%_16.68%_12.5%]">
-        <div className="absolute inset-[-7.03%_-6.25%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_CHECK_VECTOR} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
-const OrangeInfoIcon = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[24px]">
-    <div className="absolute left-0 size-[24px] top-0">
-      <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_INFO_ELLIPSE} />
-    </div>
-    <div className="absolute left-[4px] size-[16px] top-[4px]">
-      <div className="absolute inset-[12.5%]">
-        <div className="absolute inset-[-6.25%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_INFO_VEC1} />
-        </div>
-      </div>
-      <div className="absolute inset-[30.18%_46.88%_63.57%_46.88%]">
-        <div className="absolute inset-[-25%]">
-          <img alt="" className="block max-w-none size-full" src={IMG_INFO_VEC2} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-type WidgetItem = {
-  id: string;
-  label: string;
-  subtitle?: string;
-  onClick: () => void;
-  /** Set on "Brain Detected" rows, which render grouped into priority tiers.
-   *  Absent on widgets that are a plain list (e.g. "Brain Did"). */
-  tier?: ProposalTier;
-};
-
-/* Tier accents, taken from the palette already used for Inbox status tags:
-   red = Urgent, amber = Waiting on you, periwinkle = Insights. The tier a row
-   lands in is decided in proposalTiers.ts — never here. */
-const TIER_STYLE: Record<ProposalTier, { dot: string; text: string }> = {
-  urgent: { dot: "bg-[#d20344]", text: "text-[#d20344]" },
-  waiting: { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
-  insight: { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
-};
-
-/** Tier heading inside the Brain Detected widget. */
-const TierHeading = ({ tier, count }: { tier: ProposalTier; count: number }) => {
-  const style = TIER_STYLE[tier];
-  const meta = TIER_META[tier];
-  return (
-    <div className="flex gap-[6px] items-center px-[8px] pt-[8px] pb-[2px] w-full" data-testid={`tier-heading-${tier}`}>
-      <div className={`size-[6px] rounded-full shrink-0 ${style.dot}`} />
-      <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[13px] whitespace-nowrap ${style.text}`}>
-        {meta.title}
-      </p>
-      {meta.note && (
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] truncate">
-          — {meta.note}
-        </p>
-      )}
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] ml-auto shrink-0">
-        {count}
-      </p>
-    </div>
-  );
-};
-const ListItem = ({
-  icon,
+/**
+ * One figure in the Overview metrics grid.
+ *
+ * `whole` / `cents` are pre-split so the cents render smaller, matching the
+ * treatment the two original cards used. A card with no `onClick` is inert — it
+ * gets no hover affordance, because a card that looks clickable and isn't is worse
+ * than a plain one.
+ */
+const MetricCard = ({
   label,
-  subtitle,
+  whole,
+  cents,
+  suffix,
+  caption,
+  captionClass,
   onClick,
   testId,
 }: {
-  icon: React.ReactNode;
   label: string;
-  subtitle?: string;
-  onClick: () => void;
+  whole: string;
+  cents?: string;
+  suffix?: string;
+  caption?: string;
+  captionClass?: string;
+  onClick?: () => void;
   testId: string;
 }) => (
-  <button
-    type="button"
-    onClick={onClick}
+  <div
+    className={`bg-[#0a0c10] flex flex-col gap-[8px] items-start justify-start p-[16px] relative rounded-[16px] border border-transparent ${
+      onClick ? "cursor-pointer transition-colors hover:bg-[#11141b] hover:border-[#1d2132]" : ""
+    }`}
     data-testid={testId}
-    className="flex gap-[8px] items-start p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132] text-left"
+    {...(onClick
+      ? {
+          role: "button",
+          tabIndex: 0,
+          onClick,
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClick();
+            }
+          },
+        }
+      : {})}
   >
-    {icon}
-    <div className="flex flex-1 flex-col items-start min-w-px relative gap-[2px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate w-full">{label}</p>
-      {subtitle && (
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] truncate w-full">{subtitle}</p>
-      )}
-    </div>
-  </button>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
+      <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
+      {cents && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{cents}</span>}
+      {suffix && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{suffix}</span>}
+    </p>
+    {caption && (
+      <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[13px] w-full ${captionClass ?? "text-[#414965]"}`}>
+        {caption}
+      </p>
+    )}
+  </div>
 );
-
-const DEFAULT_VISIBLE = 3;
-
-const SectionWidget = ({
-  title,
-  items,
-  icon,
-  testIdPrefix,
-  emptyMessage,
-}: {
-  title: string;
-  items: WidgetItem[];
-  icon: React.ReactNode;
-  testIdPrefix: string;
-  emptyMessage?: string;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const [scrollMaxH, setScrollMaxH] = useState<number | null>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const tiered = items.some((i) => i.tier);
-  /* Collapsed, a tiered widget still shows every Urgent row: the promise is that
-     urgent items always show and only the smaller approvals are filtered down. */
-  const collapsed = useMemo(() => {
-    if (!tiered) return items.slice(0, DEFAULT_VISIBLE);
-    const urgent = items.filter((i) => i.tier === "urgent");
-    const rest = items.filter((i) => i.tier !== "urgent");
-    return [...urgent, ...rest.slice(0, Math.max(DEFAULT_VISIBLE - urgent.length, 0))];
-  }, [items, tiered]);
-  const visible = expanded ? items : collapsed;
-  const hasMore = items.length > visible.length;
-  /* Rows grouped into their tiers, in fixed order, empty tiers dropped. */
-  const groups = useMemo(
-    () =>
-      TIER_ORDER.map((tier) => ({ tier, rows: visible.filter((i) => i.tier === tier) })).filter(
-        (g) => g.rows.length > 0,
-      ),
-    [visible],
-  );
-
-  /* When expanded, measure the pixel distance from the bottom of the header
-     to the bottom of the viewport so the scroll area fills exactly to the
-     page edge with a small breathing gap. Recalculates on resize. */
-  useEffect(() => {
-    if (!expanded) { setScrollMaxH(null); return; }
-    const measure = () => {
-      if (!headerRef.current) return;
-      const { bottom } = headerRef.current.getBoundingClientRect();
-      setScrollMaxH(Math.max(window.innerHeight - bottom - 16, 80));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [expanded]);
-
-  return (
-    <div className={`bg-[#0a0c10] flex flex-col items-start relative rounded-[16px] shrink-0 w-full h-full ${expanded ? "" : "overflow-hidden"}`}>
-      <div
-        ref={headerRef}
-        className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full"
-      >
-        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{title}</p>
-          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{items.length}</p>
-          </div>
-        </div>
-      </div>
-      <div
-        className={`${expanded ? "overflow-y-auto" : "max-h-[280px] overflow-y-auto"} flex flex-col items-start p-[8px] relative w-full`}
-        style={expanded && scrollMaxH ? { maxHeight: scrollMaxH } : undefined}
-      >
-        {visible.length === 0 ? (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              {emptyMessage ?? "Nothing here today."}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-            {tiered
-              ? groups.map((group) => (
-                  <div key={group.tier} className="flex flex-col gap-[8px] w-full">
-                    <TierHeading tier={group.tier} count={group.rows.length} />
-                    {group.rows.map((item, idx) => (
-                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                        <ListItem
-                          icon={icon}
-                          label={item.label}
-                          subtitle={item.subtitle}
-                          testId={`${testIdPrefix}-${item.id}`}
-                          onClick={item.onClick}
-                        />
-                        {idx < group.rows.length - 1 && (
-                          <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))
-              : visible.map((item, idx) => (
-                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                    <ListItem
-                      icon={icon}
-                      label={item.label}
-                      subtitle={item.subtitle}
-                      testId={`${testIdPrefix}-${item.id}`}
-                      onClick={item.onClick}
-                    />
-                    {idx < visible.length - 1 && (
-                      <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-                    )}
-                  </div>
-                ))}
-          </div>
-        )}
-        {hasMore && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            data-testid={`button-${testIdPrefix}-view-more`}
-            className="mt-[8px] self-start flex items-center gap-[4px] px-[10px] py-[6px] rounded-[8px] transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-          >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[13px] whitespace-nowrap">
-              {expanded ? "View less" : `View ${items.length - visible.length} more`}
-            </span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // Shown when brain-core's ledger-grounded recommendation is unavailable — neutral,
 // no invented figures (was a hardcoded "$432 less than last month. Nice.").
@@ -601,7 +422,6 @@ export function HomePage() {
      section-specific sibling queue so Previous/Next stays within the card
      type the user tapped. */
   const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
-  const [selectedAuditRecord, setSelectedAuditRecord] = useState<ReturnType<typeof useBrainAuditRecords>["records"][number] | null>(null);
   const reviewStatuses = useReviewStatuses();
 
   const rules = useRules();
@@ -706,23 +526,13 @@ export function HomePage() {
     }
   };
 
-  /* Brain Did — live brain-core audit events only. */
-  const { records: liveAuditRecords } = useBrainAuditRecords();
-  const brainDidRecords = useMemo(
-    () => liveAuditRecords.filter((r) => r.eventType === "approved" || r.eventType === "auto_approved"),
-    [liveAuditRecords],
-  );
-  const brainDidItems: WidgetItem[] = useMemo(() => {
-    return brainDidRecords
-      .map((r) => ({
-        id: r.id,
-        label: formatText(r.summary),
-        subtitle: r.rowSubtitle ? formatText(r.rowSubtitle) : undefined,
-        onClick: () => setSelectedAuditRecord(r),
-      }));
-  }, [brainDidRecords, formatText]);
+  /* "Brain Did" (approved + auto-approved audit events) is deliberately NOT on
+     Overview any more. Overview is what Brain is *waiting on*; a record that has
+     already been decided needs nothing from the user and only competes with the
+     rows that do. Nothing is lost — those same records are on Decisions under the
+     Approved / Auto-approved statuses, and in full on the Audit Log. */
 
-  /* Brain Detected. What Brain is advising for review: live brain-core
+  /* What Brain is advising for review: live brain-core
      PaymentIntents needing approval, plus read-only live Ledger facts
      (reconciliation matches, subscription/disputed obligations, cash flow -
      see brainAgentSurfaces.ts) that have no proposal lifecycle of their own
@@ -780,66 +590,135 @@ export function HomePage() {
   const selectedProposalIndex = selectedProposal
     ? tieredProposals.findIndex((record) => record.id === selectedProposal.id)
     : -1;
-  const selectedAuditRecordIndex = selectedAuditRecord
-    ? brainDidRecords.findIndex((record) => record.id === selectedAuditRecord.id)
-    : -1;
-
   const reviewPagerDisabled = selectedReviewIndex < 0 || liveNeedsReview.length < 2;
   const liveIntentPagerDisabled = selectedLiveIntentIndex < 0 || sessionReviews.length < 2;
   const insightPagerDisabled = selectedInsightIndex < 0 || liveInsights.length < 2;
   const proposalPagerDisabled = selectedProposalIndex < 0 || tieredProposals.length < 2;
-  const auditRecordPagerDisabled = selectedAuditRecordIndex < 0 || brainDidRecords.length < 2;
 
-  const brainDetectedItems: WidgetItem[] = useMemo(() => {
+  const decideProposal = useDecideProposal();
+
+  /* Every row Overview shows, as ONE list. Tier decides which section it lands in
+     (proposalTiers.ts); the record's own decisions decide its buttons. The rows
+     carry their actions INLINE so an item can be cleared without opening anything —
+     that is the whole point of the screen. `View full detail` still opens the same
+     sheet as before for anyone who wants the evidence first. */
+  const overviewRows: TierRowModel[] = useMemo(() => {
+    const testIdPrefix = "row-overview";
+
+    // Session-scoped intents — title is specific; description is the "Why:".
+    const sessionRows: TierRowModel[] = sessionReviews.map((r) => {
+      const intentId = r.live ? r.intentId ?? null : null;
+      return {
+        id: String(r.intentId ?? r.id),
+        tier: tierForPaymentIntent(),
+        title: formatText(r.title),
+        subtitle: r.description ? formatText(r.description) : undefined,
+        testIdPrefix,
+        onOpenDetail: () => setSelectedLiveIntent(r),
+        /* No intent id means there is nothing to POST to. The row still opens its
+           sheet; it just doesn't offer buttons that would silently do nothing. */
+        actions: intentId
+          ? [
+              {
+                id: "approve",
+                label: "Approve",
+                tone: "approve" as const,
+                disabled: approvingIntentId !== null,
+                onClick: () => void approveIntent(intentId, false),
+              },
+              {
+                id: "reject",
+                label: "Reject",
+                tone: "reject" as const,
+                disabled: approvingIntentId !== null || rejectIntent.isPending,
+                onClick: () => rejectIntent.mutate(intentId),
+              },
+            ]
+          : [],
+      };
+    });
+
     // PaymentIntents from the live review queue — title is already specific
     // (e.g. "Quick Pay Solutions scored 1.00 vendor risk…"); rationale is the
     // "Why:" line shown in Inbox.
-    const queueItems = liveNeedsReview.map((p) => ({
+    const queueBusy = approveLive.isPending || rejectLive.isPending;
+    const queueRows: TierRowModel[] = liveNeedsReview.map((p) => ({
       id: p.id,
-      label: formatText(p.title),
+      tier: tierForPaymentIntent(),
+      title: formatText(p.title),
       subtitle: p.rationale ? formatText(p.rationale) : undefined,
-      onClick: () => setSelectedReview(p),
-      tier: tierForPaymentIntent(),
+      testIdPrefix,
+      onOpenDetail: () => setSelectedReview(p),
+      actions: [
+        { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
+        { id: "reject", label: "Reject", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
+      ],
     }));
-    // Session-scoped intents — title is specific; description is the "Why:".
-    const sessionItems = sessionReviews.map((r) => ({
-      id: String(r.intentId ?? r.id),
-      label: formatText(r.title),
-      subtitle: r.description ? formatText(r.description) : undefined,
-      onClick: () => setSelectedLiveIntent(r),
-      tier: tierForPaymentIntent(),
-    }));
-    // Read-only ledger insights — title is specific; subtitle is secondary context.
-    const insightItems = liveInsights.map((i) => ({
+
+    /* Read-only ledger insights. No actions by design: they have no proposal
+       lifecycle and nothing to decide, so a button here would be theatre. */
+    const insightRows: TierRowModel[] = liveInsights.map((i) => ({
       id: i.id,
-      label: formatText(i.title),
-      subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
-      onClick: () => setSelectedInsight(i),
       tier: tierForReadOnlyInsight(),
+      title: formatText(i.title),
+      subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
+      testIdPrefix,
+      onOpenDetail: () => setSelectedInsight(i),
+      actions: [],
     }));
+
     // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
     // the specific "Why:" text shown in Inbox; agent display name is the category.
     /* Tier comes from each record's own `available_decisions` + `risk_band`
        (proposalTiers.ts), never from its type. A record offering no decision this
        app can submit is dropped rather than shown under a tier that promises an
        action Overview can't deliver. */
-    const proposalItems = tieredProposals.flatMap((p) => {
+    const proposalRows: TierRowModel[] = tieredProposals.flatMap((p) => {
       /* Same thresholds the `tieredProposals` memo used — if these two disagreed,
          a row's heading and its position in the pager would come apart. */
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (!tier) return [];
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
+      /* Exactly the decision set the detail sheet renders, from the same builder.
+         A decision brain-core won't accept is shown DISABLED rather than dropped,
+         so the row never looks like it offers fewer options than the sheet does. */
+      const actions: TierRowAction[] = buildDecisionButtons(
+        p.available_decisions,
+        p.presentation?.actions ?? null,
+      ).map((d) => ({
+        id: d.id,
+        label: d.label,
+        tone: d.tone,
+        disabled: !d.writable || decideProposal.isPending,
+        title: d.writable ? d.meaning ?? undefined : "Brain core can't accept this decision yet.",
+        onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
+      }));
       return [{
         id: p.id,
-        label: headerCopy.title,
-        subtitle: `${agentName} Agent`,
-        onClick: () => setSelectedProposal(p),
         tier,
+        title: headerCopy.title,
+        subtitle: `${agentName} Agent`,
+        testIdPrefix,
+        onOpenDetail: () => setSelectedProposal(p),
+        actions,
       }];
     });
-    return [...sessionItems, ...queueItems, ...insightItems, ...proposalItems];
-  }, [liveNeedsReview, sessionReviews, liveInsights, tieredProposals, formatText]);
+
+    return [...sessionRows, ...queueRows, ...insightRows, ...proposalRows];
+  }, [
+    liveNeedsReview,
+    sessionReviews,
+    liveInsights,
+    tieredProposals,
+    tierThresholds,
+    formatText,
+    approvingIntentId,
+    approveLive.isPending,
+    rejectLive.isPending,
+    rejectIntent.isPending,
+    decideProposal.isPending,
+  ]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -900,6 +779,32 @@ export function HomePage() {
         ? { text: processedText, colorClass: detectSentimentColor(processedText) }
         : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
+  /* Liabilities — outstanding accounts-payable, the same figure and the same
+     filter the Ledger's Liabilities view quotes (lib/liabilities.ts owns it so the
+     two can't drift). null, rendered "-", when no invoice data is reachable: zero
+     would be a claim that nothing is owed. */
+  const { data: brainInvoices } = useQuery<{ invoices?: ApInvoiceLike[] }>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    retry: false,
+  });
+  const liabilities = liabilitiesTotal(brainInvoices?.invoices ?? null);
+  const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
+  const liabParts = liabilitiesFormatted.match(/^(.+)\.(\d{2})$/);
+  const liabWhole = liabParts ? liabParts[1] : liabilitiesFormatted;
+  const liabCents = liabParts ? `.${liabParts[2]}` : "";
+
+  /* Runway — how long the cash lasts at the current net burn.
+     Only defined while money is actually going out. A non-negative net flow has no
+     burn to divide by, so the card says that in words rather than printing "∞", a
+     huge meaningless number, or a figure that silently flips sign. */
+  const runway = useMemo(() => {
+    if (liveTotal === null || netMonthly === null) return { value: "-", caption: "Connect accounts to see runway." };
+    if (netMonthly >= 0) return { value: "-", caption: "No net burn — cash flow is positive." };
+    const months = liveTotal / Math.abs(netMonthly);
+    if (!Number.isFinite(months) || months < 0) return { value: "-", caption: "Not enough data yet." };
+    return { value: `${Math.floor(months)} mo`, caption: "At the current net burn." };
+  }, [liveTotal, netMonthly]);
+
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = onboardingKeyFor(user?.id);
   useEffect(() => {
@@ -941,71 +846,64 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Stat cards row */}
+          {/* Metrics */}
           <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
-              <div
-                className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px] cursor-pointer transition-colors hover:bg-[#11141b] border border-transparent hover:border-[#1d2132]"
-                role="button"
-                tabIndex={0}
+            {/* Auto-fit, not fixed breakpoints. Overview sits in a narrow centre
+                column between the nav and the chat panel, so viewport-based
+                `lg:grid-cols-4` puts four cards in ~420px and clips the figures.
+                Sizing off the CONTAINER gives 2x2 here and four across once the
+                chat panel is collapsed. */}
+            <div className="grid gap-[16px] w-full" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+              <MetricCard
+                label="Money in all accounts"
+                whole={totalWhole}
+                cents={totalCents}
+                caption="Across bank, digital, and agent accounts."
                 onClick={() => navigate("/finances?tab=Accounts")}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/finances?tab=Accounts"); } }}
-              >
-                <div className="flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase">Money in all accounts</p>
-                  <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                      <span className="font-medium leading-[36px] text-[32px]">{totalWhole}</span>
-                      <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">{totalCents}</span>
-                    </p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[#414965] text-[18px] w-full">
-                      Across bank, digital, and agent accounts.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-[#0a0c10] flex flex-1 flex-col items-start min-w-px p-[16px] relative rounded-[16px]">
-                <div className="flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[16px] uppercase">{cashLabel}</p>
-                  <div className="flex flex-col gap-[8px] items-start not-italic relative shrink-0 w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full">
-                        <span className="font-medium leading-[36px] text-[32px]">{cashWhole}</span>
-                        <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">{cashCents}</span>
-                        <span className="font-medium leading-[36px] text-[#6c779d] text-[20px]">/mo</span>
-                    </p>
-                    <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] relative shrink-0 text-[18px] w-full ${insightLine.colorClass}`}>
-                      {insightLine.text}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                testId="card-metric-accounts"
+              />
+              <MetricCard
+                label={cashLabel}
+                whole={cashWhole}
+                cents={cashCents}
+                suffix="/mo"
+                caption="Trailing monthly average."
+                testId="card-metric-cashflow"
+              />
+              <MetricCard
+                label="Runway"
+                whole={runway.value}
+                caption={runway.caption}
+                testId="card-metric-runway"
+              />
+              <MetricCard
+                label="Liabilities"
+                whole={liabWhole}
+                cents={liabCents}
+                caption="Unpaid bills you still owe."
+                onClick={() => navigate("/finances?tab=Liabilities")}
+                testId="card-metric-liabilities"
+              />
             </div>
+
+            {/* brain-core's ledger-grounded read, deliberately OUTSIDE the cash-flow
+                card. Sat inside it, its month-to-date figure read as a contradiction
+                of the card's trailing monthly average rather than a second fact about
+                a different period. Both numbers are real; only the framing was wrong. */}
+            <p
+              className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] text-[16px] w-full ${insightLine.colorClass}`}
+              data-testid="text-home-cash-insight"
+            >
+              {insightLine.text}
+            </p>
 
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* Middle row: Brain Detected (top/left) + Brain Did (bottom/right).
-                On mobile they stack vertically; on sm+ they sit side-by-side. */}
-            <div className="flex flex-col sm:flex-row gap-[16px] items-stretch relative shrink-0 w-full">
-              <div className="flex flex-1 min-w-px h-full">
-                <SectionWidget
-                  title="Brain Detected"
-                  items={brainDetectedItems}
-                  icon={<OrangeInfoIcon />}
-                  testIdPrefix="row-brain-detected"
-                  emptyMessage="Brain hasn't detected any items that require your review yet."
-                />
-              </div>
-              <div className="flex flex-1 min-w-px h-full">
-                <SectionWidget
-                  title="Brain Did"
-                  items={brainDidItems}
-                  icon={<GreenCheckIcon />}
-                  testIdPrefix="row-brain-did"
-                  emptyMessage="Brain hasn't taken any actions yet."
-                />
-              </div>
-            </div>
+            {/* The decision queue: ONE single-column list split into Urgent /
+                Waiting on you / Insights, with each row's own actions inline.
+                Replaces the "Brain Detected" / "Brain Did" two-panel split. */}
+            <TierSections rows={overviewRows} emptyMessage="Nothing needs your review right now." />
 
             {/* Your Goals - hidden for now */}
             {/* <GoalsSection /> */}
@@ -1110,15 +1008,6 @@ export function HomePage() {
         rejection={liveRejection}
       />
 
-      {/* Brain Did - approved and auto-approved audit records */}
-      <AuditRecordPopup
-        record={selectedAuditRecord}
-        open={selectedAuditRecord !== null}
-        onOpenChange={(o) => { if (!o) setSelectedAuditRecord(null); }}
-        onPrev={() => cycleRecord(brainDidRecords, selectedAuditRecord, setSelectedAuditRecord, -1)}
-        onNext={() => cycleRecord(brainDidRecords, selectedAuditRecord, setSelectedAuditRecord, 1)}
-        pagerDisabled={auditRecordPagerDisabled}
-      />
     </div>
   );
 }
