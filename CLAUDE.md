@@ -3,56 +3,55 @@
 Working notes for agents. The full project overview lives in `replit.md`; this file
 captures contracts that are easy to break silently. Keep it short and current.
 
-## IA restructure — Phase 1 status (verified against code 2026-07-31)
+## IA restructure — Phase 1 status (verified against code and open PRs 2026-07-31)
 
 Brief: `attached_assets/Pasted-We-re-restructuring-BrainMVB-s-IA-to-3-primary-sections_1785505306555.txt`.
 Prototype `brain-ux-vision-v6.html` is a **structure/copy** reference only — never a
 styling reference, and its `$25k`/`$50k` figures are invented copy, not configuration.
 The file is deliberately **not** in the repo; ask the design owner for a copy.
 
-Status is what the code does, not what was discussed. Re-verify before trusting.
+**None of this is on `main` yet.** All ten items are committed, pushed and open as
+PRs #36–#47, each stacked on the one before it. Read `main` and you are reading the
+pre-restructure app; read the tip of `feat/ia-item9-audit-system-activity` and you are
+reading all ten. "Shipped" below means *shipped as an open PR*, not merged — verify
+with `git log origin/main` before treating any of it as the state of the product.
 
-| # | Item | Status |
-|---|------|--------|
-| 1 | Nav collapsed to Overview / Decisions / Ledger / Settings | **Done** |
-| 2 | Overview priority tiers (Urgent / Waiting on you / Insights) | **Done** |
-| 3 | Decisions: one filterable list (priority/status/type/search) | **Partial** |
-| 3a | Detail modal | **Done** (pre-existing, verified) |
-| 3b | Bulk approve on same-type sub-threshold items | **Not started** |
-| 3c | Inline expand for informational rows | **Not started** |
-| 4 | Ledger: collapse Bills/Income/Expenses/Liabilities into Cash Flow | **Not started** |
-| 5 | Global search across Decisions / Vendors / Accounts | **Not started** |
-| 6 | Sources: wizard modal → persistent Settings page | **Not started** |
-| 7 | Settings reorg (+ Developers nested, Team fields) | **Partial** |
-| 8 | First-run 3-step rule walkthrough | **Not started** (different flow exists) |
-| 9 | Audit Log: decisions by default, system behind a toggle | **Not started** |
+| # | Item | PR | Branch (base) |
+|---|------|----|---------------|
+| 1 | Nav collapsed to Overview / Decisions / Ledger / Settings | — | already on `main` |
+| 2 | Overview rebuilt as one tiered decision queue | #36 | `feat/ia-item2-overview` (`main`) |
+| 3 | Decisions: tab bar replaced by one filtered timeline | #37 | `feat/ia-item3-decisions` (#36) |
+| 3a | Detail modal | — | pre-existing on `main` |
+| 3B | Bulk approve, gated on the policy's real second-approver line | #38 | `feat/ia-item3b-bulk-approve` (#37) |
+| 4 | Ledger: five money tabs collapsed into one Cash Flow view | #39 | `feat/ia-item4-ledger-tabs` (#38) |
+| — | Fail-open feed read becomes a build failure, not a review finding | #40 | `chore/feed-guard` (#39) |
+| 5 | One search bar over decisions, vendors and accounts | #41 | `feat/ia-item5-global-search` (#40) |
+| 7A | Settings: mock tab set, honest Notifications/Escalation surfaces | #42 | `feat/ia-item7a-settings-tabs` (#41) |
+| 7B | Developers nested inside Settings | #43 | `feat/ia-item7b-developers-nested` (#42) |
+| 6 | Sources becomes a place in Settings, not a wizard | #44 | `feat/ia-item6-sources-settings` (#43) |
+| — | QA scripts deny writes by default | #45 | `chore/qa-write-guard` (#44) |
+| 8 | Onboarding explains rules, not source connection | #46 | `feat/ia-item8-rule-walkthrough` (#45) |
+| 9 | Audit Log: decisions by default, system activity behind a toggle | #47 | `feat/ia-item9-audit-system-activity` (#46) |
 
-### What "partial" means, precisely
+3c (inline expand for informational rows) was never in scope for Phase 1 and is **not started**.
 
-**3 — Decisions.** `/decisions` routes to the existing `InboxPage`, which already
-unifies decidable items and settled history (Needs Review, Insights, Approved,
-Auto-Approved, Rejected, Rule Changes). That unification is **pre-existing**, and it
-is **six tabs, not the brief's single filterable list** — there is no search input and
-no priority/type filter. `AuditLogPage` also still exists separately at `/audit-log`.
+### What `main` still looks like until the stack lands
 
-**7 — Settings.** Sections are profile, billing, security, notifications, team, legal,
-account. Profile/Notifications/Team/Billing predate the brief. Still missing: a
-**Sources** section; **Developers nested as sub-tabs** (it remains top-level at
-`/developers`, with its own overview/keys/tenants/usage sub-nav); Team's **per-member
-limit and backup-approver** fields; and **Usage & Limits is not scoped** to exclude
-internal pipeline events from "Requests by Method".
+`/decisions` routes to `InboxPage` with **six tabs and no search**; `AuditLogPage` shows
+every pipeline event; Ledger still has Bills/Income/Expenses/Liabilities; Developers is
+top-level at `/developers`; Settings has no Sources section; Team still lacks per-member
+limit and backup-approver fields; onboarding is the 4-step source-connection flow. An
+agent debugging a bug report against production is looking at that app, not this table.
 
-**8 — Onboarding.** `OnboardingFlow` is a 4-step *source-connection* flow (Welcome →
-Connect a source → Reading → Everything Brain Found), not the 3-step rule walkthrough.
-The first-visit plumbing is reusable and must be: `lib/onboarding.ts` owns the storage
-key, and "Continue with Demo" pre-marks it complete. Do not add a second detector.
+### Constraints these items depend on, which outlive them
 
-### Routes that survive outside the four nav items
-
-`/vendors`, `/rules`, `/audit-log`, `/developers`, `/finances`, `/inbox`, `/review`,
-`/activity` are all still registered and directly reachable — collapsing the nav hid
-them, it did not retire them. Removing a route needs its inbound links audited first;
-wouter sends unregistered `navigate()` targets to NotFound silently.
+- **Onboarding first-visit plumbing:** `lib/onboarding.ts` owns the storage key and
+  "Continue with Demo" pre-marks it complete. Never add a second detector.
+- **No client-side role signal exists.** `AuthUser` carries no role and nothing links a
+  session to a member row, so nothing may gate visibility or defaults on role yet —
+  item 9's toggle is off for everyone for exactly this reason.
+- **Deferred for want of a real signal:** Team's backup-approver field, and item 9's
+  admin-specific default.
 
 ### Deliberately not built
 
