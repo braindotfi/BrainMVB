@@ -17,9 +17,7 @@ import { CompanySetupPage } from "@/pages/CompanySetupPage";
 import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
 import { InboxPage } from "@/pages/InboxPage";
-import { RulesPage } from "@/pages/RulesPage";
 import { RuleDetail } from "@/pages/RuleDetail";
-import { VendorsPage } from "@/pages/VendorsPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
 import { DevelopersPage } from "@/pages/DevelopersPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
@@ -31,6 +29,38 @@ import { IntentsProvider } from "@/lib/intentsStore";
 import { MemberDetailHost } from "@/components/MemberDetailPopup";
 import { hydrateDocuments } from "@/lib/documentsStore";
 import { useBrainProjectionRefresh } from "@/lib/brainRefresh";
+import { useSearch } from "wouter";
+
+/**
+ * Vendors and Rules are Ledger tabs now, not pages.
+ *
+ * These two routes stay registered rather than being deleted: bookmarks, the
+ * assistant's citations and anything already in a user's history still point at
+ * `/vendors` and `/rules`, and wouter answers an unregistered path with the
+ * NotFound catch-all silently — no error, no log, just the wrong screen. They
+ * rewrite to the canonical Ledger URL and carry their query across, so a
+ * `?vendor=` deep link still opens the right vendor. `/rules?tab=` becomes
+ * `?rules=` because `tab` now names the Ledger tab.
+ */
+function LegacyLedgerRedirect({ tab }: { tab: "vendors" | "rules" }) {
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    const incoming = new URLSearchParams(search);
+    const legacySubTab = incoming.get("tab");
+    incoming.delete("tab");
+    // Rebuilt with `tab` first so the canonical URL reads the way it is written
+    // everywhere else: /ledger?tab=rules&rules=guardrails
+    const sp = new URLSearchParams({ tab });
+    if (tab === "rules" && legacySubTab) sp.set("rules", legacySubTab);
+    for (const [k, v] of incoming) if (!sp.has(k)) sp.set(k, v);
+    navigate(`/ledger?${sp.toString()}`, { replace: true });
+  }, [search, tab, navigate]);
+  return null;
+}
+
+const VendorsRedirect = () => <LegacyLedgerRedirect tab="vendors" />;
+const RulesRedirect = () => <LegacyLedgerRedirect tab="rules" />;
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -172,8 +202,8 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
             <Route path="/inbox" component={InboxPage} />
             <Route path="/review" component={InboxPage} />
             <Route path="/rules/:id" component={RuleDetail} />
-            <Route path="/rules" component={RulesPage} />
-            <Route path="/vendors" component={VendorsPage} />
+            <Route path="/rules" component={RulesRedirect} />
+            <Route path="/vendors" component={VendorsRedirect} />
             <Route path="/activity" component={InboxPage} />
             <Route path="/audit-log" component={AuditLogPage} />
             <Route path="/developers" component={DevelopersPage} />

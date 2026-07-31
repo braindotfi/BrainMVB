@@ -973,7 +973,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
                                 /* Obligations surface in the Finances "Bills" tab; there is no
                                    /bills route (navigating there hit the NotFound catch-all). */
-                                else if (resolvedType === "obligation") navigate("/finances?tab=Bills");
+                                else if (resolvedType === "obligation") navigate("/ledger?tab=cash-flow");
                                 else if (resolvedType === "payment_intent") navigate("/review");
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}

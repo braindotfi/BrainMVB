@@ -8,6 +8,7 @@ import {
   Pencil,
   Flag,
 } from "lucide-react";
+import { FilterChipRow } from "@/components/FilterChipRow";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -496,7 +497,17 @@ const TAB_PARAM_MAP: Record<string, RuleTab> = {
   suggested: "Suggested",
 };
 
-export function RulesPage() {
+/**
+ * Rules — a Ledger tab, no longer a top-level page.
+ *
+ * The full builder, the policy sections and the suggestion flow are unchanged.
+ * Its four sub-tabs became a filter row so the Ledger's pill bar stays the only
+ * control that changes page, and its filter moved from `?tab=` to `?rules=`
+ * because `?tab=` now names the Ledger tab. `/rules/:id` is untouched — it is a
+ * real route of its own, and wouter sends unregistered targets to NotFound in
+ * silence.
+ */
+export function RulesPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
   const search = useSearch();
@@ -516,13 +527,15 @@ export function RulesPage() {
 
   const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
     const sp = new URLSearchParams(search);
-    const t = sp.get("tab");
+    const t = sp.get("rules");
     return t ? (TAB_PARAM_MAP[t] ?? "Default") : "Default";
   });
   const setActiveTab = (tab: RuleTab) => {
     setActiveTabState(tab);
-    const slug = tab.toLowerCase().replace(/\s+/g, "-");
-    navigate(`/rules?tab=${slug}`, { replace: true });
+    const sp = new URLSearchParams(search);
+    sp.set("tab", "rules");
+    sp.set("rules", tab.toLowerCase().replace(/\s+/g, "-"));
+    navigate(`/ledger?${sp.toString()}`, { replace: true });
   };
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
@@ -563,7 +576,22 @@ export function RulesPage() {
       const draft = consumeRuleDraft();
       if (draft) openBuilderPrefilled(draft);
       else setBuilderOpen(true);
-      navigate("/rules", { replace: true });
+
+      /* Select a filter that actually draws the builder. It only renders under
+         Automations and Guardrails, but `?create=1` carries no filter of its own,
+         so the handoff used to land on Default — builder state set, builder never
+         mounted, and the "Always handle this" button on Overview and Decisions
+         appeared to do nothing at all. */
+      const requested = params.get("rules");
+      const target: RuleTab =
+        requested && TAB_PARAM_MAP[requested] === "Guardrails" ? "Guardrails" : "Automations";
+      setActiveTabState(target);
+
+      const next = new URLSearchParams(search);
+      next.delete("create");
+      next.set("tab", "rules");
+      next.set("rules", target.toLowerCase());
+      navigate(`/ledger?${next.toString()}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -650,41 +678,16 @@ export function RulesPage() {
   // tab counts removed. Shown in table header instead
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-
-      {/* Static chrome: header + tab bar + builder / confirm panel — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
-        <div className="flex flex-col items-start gap-[4px] w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Rules</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-            Manage the rules that guide Brain's reviews, recommendations, and actions.
-          </p>
-        </div>
+    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
 
         <div className="flex flex-col gap-[16px] items-start w-full">
-          {/* Tab bar: active tab is ORANGE */}
-          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-            {RULE_TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                  style={{ background: isActive ? "#4a2300" : "transparent" }}
-                  data-testid={`tab-rule-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                    style={{ color: isActive ? "#ff9500" : "#414965" }}
-                  >
-                    {tab}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+          <FilterChipRow
+            chips={RULE_TABS.map((tab) => ({ value: tab, label: tab }))}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as RuleTab)}
+            label="Filter rules"
+            testIdPrefix="tab-rule"
+          />
 
           {/* Create-rule confirmation: on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
@@ -950,11 +953,9 @@ export function RulesPage() {
             </div>
           ))}
 
-        </div>{/* end chrome inner flex-col */}
-      </div>{/* end static chrome */}
+        </div>{/* end filter row + builder block */}
 
-      {/* Table area: only the row body scrolls */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[16px]">
+      <div className="w-full flex flex-col gap-[16px]">
 
         {activeTab === "Default" && (
           <>

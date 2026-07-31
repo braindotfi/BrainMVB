@@ -884,7 +884,7 @@ export function HomePage() {
                 whole={totalWhole}
                 cents={totalCents}
                 caption="Across bank, digital, and agent accounts."
-                onClick={() => navigate("/finances?tab=Accounts")}
+                onClick={() => navigate("/ledger?tab=accounts")}
                 testId="card-metric-accounts"
               />
               <MetricCard
@@ -906,7 +906,7 @@ export function HomePage() {
                 whole={liabWhole}
                 cents={liabCents}
                 caption="Unpaid bills you still owe."
-                onClick={() => navigate("/finances?tab=Liabilities")}
+                onClick={() => navigate("/ledger?tab=cash-flow")}
                 testId="card-metric-liabilities"
               />
             </div>
@@ -1014,7 +1014,7 @@ export function HomePage() {
             allowlist: p.counterparty ? [p.counterparty] : [],
           });
           setSelectedReview(null);
-          navigate("/rules?create=1");
+          navigate("/ledger?tab=rules&create=1");
         }}
         onReportProblem={(p, report) => {
           const r = ruleOf(p);

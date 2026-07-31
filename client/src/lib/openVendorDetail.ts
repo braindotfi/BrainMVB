@@ -38,6 +38,7 @@ export function openVendorDetail(
   // closing the vendor detail returns to where it came from, mirroring the
   // stacked invoice-viewer experience. VendorsPage reads `?from=` on close.
   const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
-  navigate(`/vendors?vendor=${vendor.id}${suffix}`);
+  // Vendors is a Ledger tab; VendorsPanel reads ?vendor= and ?from= from there.
+  navigate(`/ledger?tab=vendors&vendor=${vendor.id}${suffix}`);
   return true;
 }

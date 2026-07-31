@@ -1167,7 +1167,7 @@ export function InboxPage() {
             allowlist: p.counterparty ? [p.counterparty] : [],
           });
           setActive(null);
-          navigate("/rules?create=1");
+          navigate("/ledger?tab=rules&create=1");
         }}
         onReportProblem={(p, report) => {
           const r = ruleOf(p);
