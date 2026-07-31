@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus,
@@ -361,7 +361,11 @@ const nextId = () => `m${++idCounter}`;
 
 export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [location, navigate] = useLocation();
-  const onDevelopersPage = location.startsWith("/developers");
+  /* Developers is a Settings section now, not its own page — the old
+     pathname check would silently go quiet there. */
+  const devSearch = useSearch();
+  const onDevelopersPage =
+    location.startsWith("/settings") && new URLSearchParams(devSearch).get("section") === "developers";
   const { user, isLoading: authLoading } = useAuth();
   const storageKey = `brain.chat.${user?.id ?? "anon"}`;
   const [sessions, setSessions] = useState<ChatSession[]>([]);

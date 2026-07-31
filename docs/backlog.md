@@ -90,3 +90,25 @@ functions in the first place. The question is not "should we add jsdom" but
 "which of these two gaps is actually costing us": untested render branches, or the
 slow hand-verification loop. Worth answering with a couple of concrete examples
 before installing anything.
+
+---
+
+## Settings → Team: member row subtitle overlaps the chevron
+
+**Why this is here:** noticed while shooting item 7A's before/after screenshots
+(`docs/ia-restructure/item7a-settings-team-*.png`). It is visible in the *before*
+shot too, so it predates the item-7 work and is not a regression from it.
+
+The member row renders its permission summary — "AP + AR + Treasury + Payroll +
+Reconciliation · no per-item limit" — as a single unconstrained line. In the
+~594–754px centre column it runs under the row's chevron and the tail of the
+text collides with it, so the row reads as garbled rather than truncated.
+
+Deliberately not fixed mid-sequence: it is pre-existing, cosmetic, and touching
+row layout during an IA restructure would blur what each PR is responsible for.
+
+Worth noting when it is picked up: the right fix is probably a `min-w-0` +
+`truncate` on the text column rather than shortening the string, because the
+string is generated from the member's real domains and limit — shortening it
+would drop authorization detail, which is the one thing this row exists to show.
+The full value should stay available (title attribute or the member detail view).
