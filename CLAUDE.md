@@ -8,6 +8,7 @@ captures contracts that are easy to break silently. Keep it short and current.
 Brief: `attached_assets/Pasted-We-re-restructuring-BrainMVB-s-IA-to-3-primary-sections_1785505306555.txt`.
 Prototype `brain-ux-vision-v6.html` is a **structure/copy** reference only — never a
 styling reference, and its `$25k`/`$50k` figures are invented copy, not configuration.
+The file is deliberately **not** in the repo; ask the design owner for a copy.
 
 Status is what the code does, not what was discussed. Re-verify before trusting.
 
