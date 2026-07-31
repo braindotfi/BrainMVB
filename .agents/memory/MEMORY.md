@@ -33,4 +33,5 @@
 - [brain-core list caps & by-id](brain-list-endpoint-caps.md) — list reads cap silently (20 rows, no cursor) so bulk prefetch needs a by-id fallback; obligations by-id is 404; no email/reminder/message data exists.
 - [Proposal card design system](proposal-card-design-system.md) — card built only from shared primitives; display vs source currency for anything quoted to a third party; never round a shown value through Number().
 - [Auto-approved cross-surface records](auto-approved-cross-surface.md) — Inbox and Audit Log project the same live PaymentIntent source and preserve Brain's original creation time.
-- [Overview priority tiers](overview-priority-tiers.md) — tier derives from available_decisions not proposal_type; risk_band high+elevated = Urgent; a missing band never escalates.
+- [Overview priority tiers](overview-priority-tiers.md) — tier derives from available_decisions not proposal_type; high = Urgent, elevated only if over a configured rule threshold; a missing band never escalates.
+- [Lockfile proxy URLs](lockfile-replit-proxy-urls.md) — regenerating a lock in Replit bakes in package-firewall.replit.local, which no GitHub runner resolves; rewrite to registry.npmjs.org.
