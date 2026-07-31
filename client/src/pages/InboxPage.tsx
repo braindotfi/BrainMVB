@@ -675,12 +675,13 @@ export function InboxPage() {
      FAILED that clause.
 
      Note what happens when the policy cannot be read: `facts` is undefined, every
-     limit resolves to null, and no row is selectable. That is deliberate. An
-     approval shortcut offered on the strength of a limit we could not load is the
-     same failure as an empty queue that is really a failed fetch — it just costs
-     more when it is wrong. */
+     limit resolves to null, and no row is selectable — not even one covered by a
+     rule the tenant wrote, because a rule cap may only tighten a policy line, never
+     stand in for one. That is deliberate. An approval shortcut offered on the
+     strength of a limit we could not load is the same failure as an empty queue
+     that is really a failed fetch — it just costs more when it is wrong. */
   const policy = useBrainPolicy();
-  const policyLimits = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
+  const policyElevation = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
 
   const candidates = useMemo<BulkCandidate[]>(
     () =>
@@ -698,8 +699,8 @@ export function InboxPage() {
   );
 
   const limitOf = useMemo(
-    () => (c: BulkCandidate) => bulkLimitFor(c.type, c.category, policyLimits, thresholds),
-    [policyLimits, thresholds],
+    () => (c: BulkCandidate) => bulkLimitFor(c.type, c.category, policyElevation, thresholds),
+    [policyElevation, thresholds],
   );
   const eligible = useMemo(() => candidates.filter((c) => isBulkEligible(c, limitOf(c))), [candidates, limitOf]);
   const candidateById = useMemo(() => new Map(eligible.map((c) => [c.id, c])), [eligible]);

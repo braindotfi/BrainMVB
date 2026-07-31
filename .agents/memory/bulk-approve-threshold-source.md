@@ -23,7 +23,21 @@ widens anyone's authority.
 single-signer value, take their `amount.gt` per `applies_to` category, lowest
 wins. Treat an unrecognised `require` as elevated — an allowlist of safe values,
 not a denylist of dangerous ones, so a clause added to the DSL later fails
-closed. A user-authored rule cap can only ever *tighten* the resulting line.
+closed.
+
+Two corollaries that are easy to get wrong, both caught in review:
+
+- **A policy line is mandatory; a user rule may only tighten one.** A rule `cap`
+  is an auto-clear ceiling — the same *kind* of number as the auto-approve
+  clause rejected above — and asserts nothing about how many people must sign.
+  Letting a cap stand alone as the gate reintroduces the exact semantics you
+  rejected, and does it in the worst case: when the policy could not be read.
+- **An elevated clause with no parseable amount suppresses its whole category.**
+  "Outbound payments require owner and CFO", full stop, means *every* one needs
+  two signers. Skipping it for having no number lets a sibling amount-gated
+  clause set a limit and authorise batches the policy forbids outright. An
+  unparsed comparator lands here too: unparsed is unknown, and unknown fails
+  closed.
 
 Two related rules that fall out of the same reasoning:
 

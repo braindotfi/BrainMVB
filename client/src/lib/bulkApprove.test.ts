@@ -8,6 +8,7 @@ import {
   resolveBulkSelection,
   isBlockedByType,
   runBulkApprove,
+  NO_POLICY_ELEVATION,
   type BulkCandidate,
   type BulkLimit,
 } from "./bulkApprove";
@@ -73,13 +74,13 @@ const candidate = (over: Partial<BulkCandidate> = {}): BulkCandidate => ({
   ...over,
 });
 
+const policyOf = (...rules: ApprovalPolicyFacts["rules"]): ApprovalPolicyFacts => ({ ...LIVE_POLICY, rules });
+
 describe("elevatedThresholdsFromPolicy", () => {
   it("reads the real per-category second-approver lines out of the live policy", () => {
-    expect(elevatedThresholdsFromPolicy(LIVE_POLICY)).toEqual({
-      outbound_payment: 50_000,
-      onchain_tx: 250_000,
-      agent_action: 500_000,
-    });
+    const e = elevatedThresholdsFromPolicy(LIVE_POLICY);
+    expect(e.limits).toEqual({ outbound_payment: 50_000, onchain_tx: 250_000, agent_action: 500_000 });
+    expect([...e.unconditional]).toEqual([]);
   });
 
   it("ignores the auto-approve clause entirely", () => {
@@ -87,48 +88,72 @@ describe("elevatedThresholdsFromPolicy", () => {
        under-$50k payment in the queue failed its counterparty check. It must never
        become a bulk threshold. Here the only outbound number comes from the
        `confirm` clause — same figure, entirely different meaning. */
-    const autoOnly: ApprovalPolicyFacts = {
-      ...LIVE_POLICY,
-      rules: LIVE_POLICY.rules.filter((r) => r.execute === "auto"),
-    };
-    expect(elevatedThresholdsFromPolicy(autoOnly)).toEqual({});
+    const e = elevatedThresholdsFromPolicy(policyOf(...LIVE_POLICY.rules.filter((r) => r.execute === "auto")));
+    expect(e.limits).toEqual({});
+    expect([...e.unconditional]).toEqual([]);
   });
 
   it("ignores confirm clauses that only need a single signer", () => {
-    const singleOnly: ApprovalPolicyFacts = {
-      ...LIVE_POLICY,
-      rules: [
-        { id: "x", execute: "confirm", require: "single_signer", when: { "amount.gt": { value: "10.00", currency: "USD" } }, applies_to: ["agent_action"] },
-      ],
-    };
-    expect(elevatedThresholdsFromPolicy(singleOnly)).toEqual({});
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "x", execute: "confirm", require: "single_signer", when: { "amount.gt": { value: "10.00", currency: "USD" } }, applies_to: ["agent_action"] },
+    ));
+    expect(e.limits).toEqual({});
+    expect([...e.unconditional]).toEqual([]);
   });
 
   it("treats an unrecognised requirement as elevated, not as harmless", () => {
-    const future: ApprovalPolicyFacts = {
-      ...LIVE_POLICY,
-      rules: [
-        { id: "x", execute: "confirm", require: "board_vote", when: { "amount.gt": 900 }, applies_to: ["agent_action"] },
-      ],
-    };
-    expect(elevatedThresholdsFromPolicy(future)).toEqual({ agent_action: 900 });
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "x", execute: "confirm", require: "board_vote", when: { "amount.gt": 900 }, applies_to: ["agent_action"] },
+    ));
+    expect(e.limits).toEqual({ agent_action: 900 });
   });
 
   it("takes the lowest line when several clauses cover one category", () => {
-    const many: ApprovalPolicyFacts = {
-      ...LIVE_POLICY,
-      rules: [
-        { id: "a", execute: "confirm", require: "owner_approval", when: { "amount.gt": 90_000 }, applies_to: ["agent_action"] },
-        { id: "b", execute: "confirm", require: "owner_approval", when: { "amount.gt": 20_000 }, applies_to: ["agent_action"] },
-      ],
-    };
-    expect(elevatedThresholdsFromPolicy(many)).toEqual({ agent_action: 20_000 });
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "a", execute: "confirm", require: "owner_approval", when: { "amount.gt": 90_000 }, applies_to: ["agent_action"] },
+      { id: "b", execute: "confirm", require: "owner_approval", when: { "amount.gt": 20_000 }, applies_to: ["agent_action"] },
+    ));
+    expect(e.limits).toEqual({ agent_action: 20_000 });
+  });
+
+  it("marks a category unconditional when it needs two signers with no amount condition", () => {
+    /* "outbound payments require owner and CFO", full stop. Every one of them needs
+       two signers, so none may be batched — the absence of a number is the STRICTEST
+       reading, not a missing one. */
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "x", execute: "confirm", require: "owner_and_cfo", applies_to: ["outbound_payment"] },
+    ));
+    expect(e.limits).toEqual({});
+    expect([...e.unconditional]).toEqual(["outbound_payment"]);
+  });
+
+  it("marks a category unconditional when the amount uses a comparator it cannot parse", () => {
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "x", execute: "confirm", require: "owner_approval", when: { "amount.gte": 1_000 }, applies_to: ["agent_action"] },
+    ));
+    expect([...e.unconditional]).toEqual(["agent_action"]);
+  });
+
+  it("lets an unconditional clause override a sibling clause's number", () => {
+    /* The dangerous shape: one clause says "over $20k needs two signers", another
+       says "these always need two signers". Reading only the first would authorise
+       batches the second forbids outright. */
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "a", execute: "confirm", require: "owner_approval", when: { "amount.gt": 20_000 }, applies_to: ["agent_action"] },
+      { id: "b", execute: "confirm", require: "owner_approval", applies_to: ["agent_action"] },
+    ));
+    expect(e.limits).toEqual({ agent_action: 20_000 });
+    expect([...e.unconditional]).toEqual(["agent_action"]);
+    /* and the gate must refuse despite the number being present */
+    expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
   });
 
   it("is empty for a missing or unreadable policy", () => {
-    expect(elevatedThresholdsFromPolicy(undefined)).toEqual({});
-    expect(elevatedThresholdsFromPolicy(null)).toEqual({});
-    expect(elevatedThresholdsFromPolicy({ ...LIVE_POLICY, rules: [] })).toEqual({});
+    for (const empty of [undefined, null, policyOf()]) {
+      const e = elevatedThresholdsFromPolicy(empty);
+      expect(e.limits).toEqual({});
+      expect([...e.unconditional]).toEqual([]);
+    }
   });
 });
 
@@ -161,20 +186,39 @@ describe("bulkLimitFor", () => {
       .toEqual({ value: 500_000, source: "policy" });
   });
 
-  it("still works from a user rule alone when the category has no policy line", () => {
-    expect(bulkLimitFor("collections", "ledger_write", policy, { collections: 25_000 }))
-      .toEqual({ value: 25_000, source: "rule" });
+  it("keeps the policy line when the two are equal, reporting it as the policy's", () => {
+    expect(bulkLimitFor("collections", "agent_action", policy, { collections: 500_000 }))
+      .toEqual({ value: 500_000, source: "policy" });
   });
 
-  it("honours the revenue_intel ⟷ revenue_intelligence alias", () => {
-    expect(bulkLimitFor("revenue_intel", "ledger_write", policy, { revenue_intelligence: 4_000 }))
+  it("REFUSES on a user rule alone when the category has no policy line", () => {
+    /* A rule `cap` is an auto-clear ceiling. It says nothing about how many people
+       must sign, so it cannot establish that one approver suffices — it can only
+       pull an established line lower. Letting it stand alone would reintroduce the
+       auto-approve semantics this module exists to reject. */
+    expect(bulkLimitFor("collections", "ledger_write", policy, { collections: 25_000 })).toBeNull();
+  });
+
+  it("REFUSES everything when the policy could not be read, rules or not", () => {
+    /* The failure that matters. An unreachable policy must not leave a
+       user-authored cap as the only thing standing between a click and a batch. */
+    expect(bulkLimitFor("collections", "agent_action", NO_POLICY_ELEVATION, { collections: 25_000 })).toBeNull();
+    expect(bulkLimitFor("collections", "agent_action", NO_POLICY_ELEVATION, {})).toBeNull();
+  });
+
+  it("honours the revenue_intel ⟷ revenue_intelligence alias to tighten", () => {
+    expect(bulkLimitFor("revenue_intel", "agent_action", policy, { revenue_intelligence: 4_000 }))
       .toEqual({ value: 4_000, source: "rule" });
   });
 
-  it("is null when neither source has a number", () => {
-    expect(bulkLimitFor("collections", "ledger_write", policy, {})).toBeNull();
+  it("is null without a category to look the policy line up by", () => {
     expect(bulkLimitFor("collections", null, policy, {})).toBeNull();
-    expect(bulkLimitFor(null, "agent_action", {}, {})).toBeNull();
+    expect(bulkLimitFor("collections", "ledger_write", policy, {})).toBeNull();
+  });
+
+  it("still returns the policy line when the record has no type for a rule to scope to", () => {
+    expect(bulkLimitFor(null, "agent_action", policy, { collections: 10 }))
+      .toEqual({ value: 500_000, source: "policy" });
   });
 });
 

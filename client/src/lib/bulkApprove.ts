@@ -38,9 +38,15 @@
  * This never widens what one user may approve. It only batches approvals that were
  * already theirs to make.
  *
- * A user-authored rule (source 1) still counts, and can only ever tighten the line:
- * where both apply the lower wins, matching `thresholdsFromRules`' existing
- * "lowest limit wins" convention.
+ * A user-authored rule (source 1) can only ever TIGHTEN that line — never establish
+ * one. This distinction is the whole safety property, so it is worth spelling out:
+ * a rule's `cap` is an auto-clear ceiling, which is the same *kind* of number as the
+ * auto-approve clause rejected above, and it carries no claim about how many people
+ * must sign. Letting a cap stand alone as the gate would quietly reintroduce exactly
+ * the semantics this module exists to avoid, and would do it in the worst case —
+ * when the policy could not be read at all. So a policy line is mandatory: no
+ * evaluable policy threshold for a record's category means no checkbox, whatever
+ * rules the tenant has authored.
  */
 
 import type { ApprovalPolicyFacts, PolicyContentRule } from "./brainPolicy";
@@ -77,11 +83,28 @@ function isElevatedConfirm(rule: PolicyContentRule): boolean {
   return rule.execute === "confirm" && rule.require !== SINGLE_SIGNER_REQUIREMENT;
 }
 
+export interface PolicyElevation {
+  /** category → the amount above which more than one approver is required. */
+  limits: Readonly<Record<string, number>>;
+  /**
+   * Categories that demand more than one approver with no amount condition this
+   * code can evaluate. Nothing in them is ever bulk-eligible.
+   *
+   * A clause like "outbound payments require owner and CFO", with no `amount.gt` at
+   * all, means EVERY outbound payment needs two signers — the strictest possible
+   * reading, not an absent one. Skipping such a clause because it has no number
+   * would let a different, amount-gated clause on the same category set a limit and
+   * silently authorise batches the policy forbids outright. A clause phrased with a
+   * comparator this code does not parse lands here for the same reason: unparsed is
+   * not unconditional-safe, it is unknown, and unknown fails closed.
+   */
+  unconditional: ReadonlySet<string>;
+}
+
 /**
- * policy category (`applies_to`) → the amount above which more than one approver
- * is required.
+ * Read the tenant's elevated-approval structure out of the signed policy.
  *
- * On the reference tenant this resolves to roughly
+ * On the reference tenant the limits resolve to
  * `{ outbound_payment: 50000, onchain_tx: 250000, agent_action: 500000 }`,
  * read from the signed document rather than written down here.
  *
@@ -90,20 +113,29 @@ function isElevatedConfirm(rule: PolicyContentRule): boolean {
  */
 export function elevatedThresholdsFromPolicy(
   facts: ApprovalPolicyFacts | null | undefined,
-): Readonly<Record<string, number>> {
-  const out: Record<string, number> = {};
+): PolicyElevation {
+  const limits: Record<string, number> = {};
+  const unconditional = new Set<string>();
+
   for (const rule of facts?.rules ?? []) {
     if (!rule || !isElevatedConfirm(rule)) continue;
     const limit = policyAmount(rule.when?.["amount.gt"]);
-    if (limit == null || limit <= 0) continue;
     for (const category of rule.applies_to ?? []) {
       if (typeof category !== "string" || !category.trim()) continue;
       const key = category.trim();
-      out[key] = out[key] == null ? limit : Math.min(out[key], limit);
+      if (limit == null || limit <= 0) {
+        unconditional.add(key);
+        continue;
+      }
+      limits[key] = limits[key] == null ? limit : Math.min(limits[key], limit);
     }
   }
-  return out;
+  return { limits, unconditional };
 }
+
+/** Nothing known. What an unreachable or absent policy resolves to — and, because
+ *  a policy line is mandatory below, what suppresses every checkbox. */
+export const NO_POLICY_ELEVATION: PolicyElevation = { limits: {}, unconditional: new Set() };
 
 /** Which policy category a record falls under. brain-core puts it on
  *  `details.kind` ("agent_action", "outbound_payment", …). */
@@ -122,31 +154,35 @@ export interface BulkLimit {
 }
 
 /**
- * The binding limit for one record: the lower of its policy category's
- * second-approver line and any active user rule scoped to its type.
+ * The binding limit for one record.
  *
- * Null when neither source has a number — no limit means no checkbox, never an
- * assumed one.
+ * A policy line for the record's category is REQUIRED. Only once one exists may an
+ * active user rule pull it lower. See the header: a rule cap is an auto-clear
+ * ceiling and asserts nothing about how many people must sign, so on its own it is
+ * not evidence that a single approver suffices — and "on its own" is precisely the
+ * case where the policy could not be read.
+ *
+ * Null whenever the answer is not positively known: no category, a category the
+ * policy escalates unconditionally, or no evaluable policy threshold.
  */
 export function bulkLimitFor(
   type: string | null | undefined,
   category: string | null | undefined,
-  policyLimits: Readonly<Record<string, number>>,
+  elevation: PolicyElevation,
   userThresholds: MaterialityThresholds | undefined,
 ): BulkLimit | null {
-  const policy = category ? policyLimits[category] : undefined;
+  if (!category) return null;
+  if (elevation.unconditional.has(category)) return null;
+
+  const policy = elevation.limits[category];
+  if (typeof policy !== "number" || !Number.isFinite(policy) || policy <= 0) return null;
+
   const cleanType = typeof type === "string" ? type.trim() : "";
   const rule = cleanType ? userThresholds?.[ruleAgentForProposalType(cleanType)] : undefined;
-
-  const candidates: BulkLimit[] = [];
-  if (typeof policy === "number" && Number.isFinite(policy) && policy > 0) {
-    candidates.push({ value: policy, source: "policy" });
+  if (typeof rule === "number" && Number.isFinite(rule) && rule > 0 && rule < policy) {
+    return { value: rule, source: "rule" };
   }
-  if (typeof rule === "number" && Number.isFinite(rule) && rule > 0) {
-    candidates.push({ value: rule, source: "rule" });
-  }
-  if (candidates.length === 0) return null;
-  return candidates.reduce((lowest, c) => (c.value < lowest.value ? c : lowest));
+  return { value: policy, source: "policy" };
 }
 
 /** The subset of a decision row bulk approval reads. Structural so the rules below
