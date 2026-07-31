@@ -3,6 +3,61 @@
 Working notes for agents. The full project overview lives in `replit.md`; this file
 captures contracts that are easy to break silently. Keep it short and current.
 
+## IA restructure — Phase 1 status (verified against code 2026-07-31)
+
+Brief: `attached_assets/Pasted-We-re-restructuring-BrainMVB-s-IA-to-3-primary-sections_1785505306555.txt`.
+Prototype `brain-ux-vision-v6.html` is a **structure/copy** reference only — never a
+styling reference, and its `$25k`/`$50k` figures are invented copy, not configuration.
+
+Status is what the code does, not what was discussed. Re-verify before trusting.
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Nav collapsed to Overview / Decisions / Ledger / Settings | **Done** |
+| 2 | Overview priority tiers (Urgent / Waiting on you / Insights) | **Done** |
+| 3 | Decisions: one filterable list (priority/status/type/search) | **Partial** |
+| 3a | Detail modal | **Done** (pre-existing, verified) |
+| 3b | Bulk approve on same-type sub-threshold items | **Not started** |
+| 3c | Inline expand for informational rows | **Not started** |
+| 4 | Ledger: collapse Bills/Income/Expenses/Liabilities into Cash Flow | **Not started** |
+| 5 | Global search across Decisions / Vendors / Accounts | **Not started** |
+| 6 | Sources: wizard modal → persistent Settings page | **Not started** |
+| 7 | Settings reorg (+ Developers nested, Team fields) | **Partial** |
+| 8 | First-run 3-step rule walkthrough | **Not started** (different flow exists) |
+| 9 | Audit Log: decisions by default, system behind a toggle | **Not started** |
+
+### What "partial" means, precisely
+
+**3 — Decisions.** `/decisions` routes to the existing `InboxPage`, which already
+unifies decidable items and settled history (Needs Review, Insights, Approved,
+Auto-Approved, Rejected, Rule Changes). That unification is **pre-existing**, and it
+is **six tabs, not the brief's single filterable list** — there is no search input and
+no priority/type filter. `AuditLogPage` also still exists separately at `/audit-log`.
+
+**7 — Settings.** Sections are profile, billing, security, notifications, team, legal,
+account. Profile/Notifications/Team/Billing predate the brief. Still missing: a
+**Sources** section; **Developers nested as sub-tabs** (it remains top-level at
+`/developers`, with its own overview/keys/tenants/usage sub-nav); Team's **per-member
+limit and backup-approver** fields; and **Usage & Limits is not scoped** to exclude
+internal pipeline events from "Requests by Method".
+
+**8 — Onboarding.** `OnboardingFlow` is a 4-step *source-connection* flow (Welcome →
+Connect a source → Reading → Everything Brain Found), not the 3-step rule walkthrough.
+The first-visit plumbing is reusable and must be: `lib/onboarding.ts` owns the storage
+key, and "Continue with Demo" pre-marks it complete. Do not add a second detector.
+
+### Routes that survive outside the four nav items
+
+`/vendors`, `/rules`, `/audit-log`, `/developers`, `/finances`, `/inbox`, `/review`,
+`/activity` are all still registered and directly reachable — collapsing the nav hid
+them, it did not retire them. Removing a route needs its inbound links audited first;
+wouter sends unregistered `navigate()` targets to NotFound silently.
+
+### Deliberately not built
+
+Payment-intent tiering, and any `$` materiality default. Both need a real signal that
+does not exist yet — see the tier module's own comments before adding either.
+
 ## Demo vs real accounts — synthetic data fence
 
 Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
