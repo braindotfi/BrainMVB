@@ -79,6 +79,17 @@ const breakFeed = async (name) => {
   broken.set(name, handler);
   await page.route(FEEDS[name], handler);
 };
+/* A feed that is merely slow is the nastiest version of this bug: the wrong
+   sentence is on screen for a second and then corrects itself, so it never
+   survives to a screenshot and no happy-path test is patient enough to miss it. */
+const slowFeed = async (name, ms) => {
+  const handler = async (route) => {
+    await new Promise((r) => setTimeout(r, ms));
+    await route.continue();
+  };
+  broken.set(name, handler);
+  await page.route(FEEDS[name], handler);
+};
 const healAll = async () => {
   for (const [name, handler] of broken) await page.unroute(FEEDS[name], handler);
   broken.clear();
@@ -196,6 +207,31 @@ await search(NONSENSE);
 check(
   "…including for a term that would genuinely have no matches",
   (await count(UNAVAILABLE)) === 1 && (await count(NO_MATCHES)) === 0,
+);
+
+/* ── state 4: still answering ────────────────────────────────────────────── */
+await healAll();
+await slowFeed("vendors", 7000);
+await page.goto(`${BASE}/ledger`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(1200); // deliberately short — vendors is still in flight
+await search(NONSENSE, 400);
+check(
+  "a feed that is still loading reads as 'searching', not 'no matches'",
+  (await count('[data-testid="text-search-pending"]')) === 1 && (await count(NO_MATCHES)) === 0,
+  (await text('[data-testid="text-search-pending"]')) || (await text(NO_MATCHES)),
+);
+check(
+  "…and a pending feed is not misreported as an outage",
+  (await count(PARTIAL)) === 0 && (await count(UNAVAILABLE)) === 0,
+);
+
+/* …and once it lands, the honest conclusion is allowed. */
+await page.waitForTimeout(7000);
+await search(NONSENSE, 600);
+check(
+  "once every feed has answered, 'no matches' is permitted again",
+  (await count(NO_MATCHES)) === 1 && (await count('[data-testid="text-search-pending"]')) === 0,
+  await text(NO_MATCHES),
 );
 
 await healAll();

@@ -91,30 +91,45 @@ export function GlobalSearch() {
 
   const results = useMemo(() => rankResults(candidates, query), [candidates, query]);
 
-  /* Which sources could not be asked. Naming them is the whole point: "no matches"
-     while the vendor feed is down is not a statement about your vendors. */
+  /* Three conditions, not two. A source is either down, still answering, or has
+     answered — and only the last one entitles this bar to say anything about
+     what does or does not exist.
+       - down     → say so, and name it
+       - pending  → say nothing yet; "no matches" during a slow read is the same
+                    false all-clear as during an outage, just harder to catch,
+                    because it is true again a second later
+       - answered → safe to draw a conclusion from */
+  const SOURCES = ["decisions", "vendors", "accounts"] as const;
+
   const down: string[] = [];
   if (decisionsQ.isError) down.push("decisions");
   if (vendorsQ.isError) down.push("vendors");
   if (accountsFeed.unavailable) down.push("accounts");
-  const allDown = down.length === 3;
-  const downLabel =
-    down.length === 0
-      ? ""
-      : down.length === 1
-        ? down[0]
-        : `${down.slice(0, -1).join(", ")} and ${down[down.length - 1]}`;
 
-  const searched = (["decisions", "vendors", "accounts"] as const).filter((s) => !down.includes(s));
-  const searchedLabel =
-    searched.length === 0
+  const pending: string[] = [];
+  if (decisionsQ.isLoading) pending.push("decisions");
+  if (vendorsQ.isLoading) pending.push("vendors");
+  if (accountsFeed.status === "pending") pending.push("accounts");
+
+  const answered = SOURCES.filter((s) => !down.includes(s) && !pending.includes(s));
+  const allDown = down.length === SOURCES.length;
+  const stillSearching = pending.length > 0;
+
+  const listOf = (names: readonly string[]): string =>
+    names.length === 0
       ? ""
-      : searched.length === 1
-        ? searched[0]
-        : `${searched.slice(0, -1).join(", ")} and ${searched[searched.length - 1]}`;
+      : names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
   const hasQuery = query.trim() !== "";
   const showPanel = open && hasQuery;
+
+  /* Results change without the query changing — a feed resolves, an outage
+     clears — so the highlighted row must be clamped to what is actually on
+     screen. An index left pointing past the end silently unsets
+     aria-activedescendant and makes Enter do nothing. */
+  const activeIndex = results.length === 0 ? 0 : Math.min(active, results.length - 1);
 
   useEffect(() => setActive(0), [query]);
 
@@ -148,13 +163,13 @@ export function GlobalSearch() {
     if (!showPanel || results.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((i) => (i + 1) % results.length);
+      setActive((activeIndex + 1) % results.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActive((i) => (i - 1 + results.length) % results.length);
+      setActive((activeIndex - 1 + results.length) % results.length);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const r = results[active];
+      const r = results[activeIndex];
       if (r) go(r);
     }
   };
@@ -166,7 +181,9 @@ export function GlobalSearch() {
         role="combobox"
         aria-expanded={showPanel}
         aria-controls="global-search-results"
-        aria-activedescendant={showPanel && results[active] ? `gs-${results[active].key}` : undefined}
+        aria-activedescendant={
+          showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
+        }
         aria-autocomplete="list"
         aria-label="Search decisions, vendors and accounts"
         className={INPUT}
@@ -200,26 +217,34 @@ export function GlobalSearch() {
             </p>
           ) : (
             <>
-              {results.length === 0 && (
-                <p
-                  className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]"
-                  data-testid="text-search-no-matches"
-                >
-                  No matches in {searchedLabel}.
-                </p>
-              )}
+              {results.length === 0 &&
+                (stillSearching ? (
+                  <p
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]"
+                    data-testid="text-search-pending"
+                  >
+                    Searching…
+                  </p>
+                ) : (
+                  <p
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]"
+                    data-testid="text-search-no-matches"
+                  >
+                    No matches in {listOf(answered)}.
+                  </p>
+                ))}
 
               {results.map((r, i) => (
                 <div
                   key={r.key}
                   id={`gs-${r.key}`}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={i === activeIndex}
                   tabIndex={-1}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(r)}
                   className="flex cursor-pointer items-center justify-between gap-[10px] border-b border-solid border-[#1d2132] px-[14px] py-[10px] last:border-b-0"
-                  style={{ background: i === active ? "#151926" : "transparent" }}
+                  style={{ background: i === activeIndex ? "#151926" : "transparent" }}
                   data-testid={`search-result-${r.kind}`}
                 >
                   <span className="flex min-w-px flex-1 flex-col">
@@ -245,7 +270,7 @@ export function GlobalSearch() {
                   className="border-t border-solid border-[#1d2132] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#ff9400]"
                   data-testid="text-search-partial"
                 >
-                  {downLabel} could not be searched, so matches there are missing.
+                  {listOf(down)} could not be searched, so matches there are missing.
                 </p>
               )}
             </>
