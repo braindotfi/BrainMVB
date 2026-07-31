@@ -188,8 +188,9 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 const FEEDS = {
   tenants: "**/api/developers/tenants**",
   keys: "**/api/developers/keys**",
+  activity: "**/api/brain/audit/events**",
 };
-const hits = { tenants: 0, keys: 0 };
+const hits = { tenants: 0, keys: 0, activity: 0 };
 const broken = new Map();
 const breakFeed = async (name) => {
   const handler = (route) => {
@@ -284,6 +285,26 @@ check(
   keysBody.slice(0, 90),
 );
 
+/* The tenant detail modal reports an active-key count. Zero is a claim. */
+await go("?section=developers&tab=tenants");
+const firstTenantRow = page.locator('[data-testid^="row-tenant-"]').first();
+if ((await firstTenantRow.count()) > 0) {
+  await firstTenantRow.click();
+  await page.waitForTimeout(1200);
+  const keyCount = await settle(
+    async () => (await text('[data-testid="text-tenant-key-count"]')).trim(),
+    (v) => v === "…" || v === "",
+  );
+  check(
+    "keys unreachable: the tenant modal does not claim zero keys",
+    keyCount !== "0" && /unavailable/i.test(keyCount),
+    `shows "${keyCount}"`,
+  );
+  await page.keyboard.press("Escape");
+} else {
+  check("keys unreachable: a tenant row exists to open", false, "no tenant rows to click");
+}
+
 await go("?section=developers&tab=usage");
 const usageBody = await settle(
   async () => (await text(PANEL)).replace(/\s+/g, " "),
@@ -301,6 +322,25 @@ check(
 check(
   "keys unreachable: per-key usage does NOT claim there are no keys",
   !/no sandbox api keys yet|no live api keys yet/i.test(usageBody),
+);
+await healAll();
+
+/* ── activity: a failed audit read is not an empty audit log ──────────────── */
+await breakFeed("activity");
+await go("?section=developers");
+check("the activity feed was actually intercepted", hits.activity > 0, `${hits.activity} request(s)`);
+const activityBody = await settle(
+  async () => (await text(PANEL)).replace(/\s+/g, " "),
+  (b) => /loading activity…/i.test(b),
+);
+check(
+  "activity unreachable: it says so",
+  await visible('[data-testid="row-activity-unavailable"]'),
+  (await text('[data-testid="row-activity-unavailable"]')).trim().slice(0, 90),
+);
+check(
+  "activity unreachable: it does NOT claim there was no activity",
+  !/no recorded activity yet/i.test(activityBody),
 );
 await healAll();
 

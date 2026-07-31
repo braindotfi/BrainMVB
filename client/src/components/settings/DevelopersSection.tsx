@@ -228,8 +228,8 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
   </Card>
 );
 
-const EmptyRow = ({ children }: { children: ReactNode }) => (
-  <div className="p-4">
+const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
+  <div className="p-4" data-testid={testId}>
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
   </div>
 );
@@ -1003,7 +1003,13 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
-          ) : activityQ.isError || !activityQ.data?.events?.length ? (
+          ) : activityQ.isError ? (
+            /* "We could not read the log" is not "nothing happened". The second
+               claim is the one a developer acts on when a call seems to vanish. */
+            <EmptyRow testId="row-activity-unavailable">
+              Couldn't load activity. brain-core may be unavailable — this is not the same as no activity.
+            </EmptyRow>
+          ) : !activityQ.data?.events?.length ? (
             <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
@@ -1523,7 +1529,13 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Active Keys</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-key-count">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full">{keysQ.isLoading ? "…" : String(tenantKeyCount)}</p>
+                    {/* A failed keys read must not render as "this tenant has 0 keys". */}
+                    <p
+                      className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full"
+                      data-testid="text-tenant-key-count"
+                    >
+                      {keysQ.isLoading ? "…" : keysQ.isError ? "Unavailable" : String(tenantKeyCount)}
+                    </p>
                   </div>
                 </div>
                 {/* Created */}
