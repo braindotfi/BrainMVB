@@ -195,7 +195,11 @@ export function FinancesPage() {
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT. The BFF mints it server-side.
-  const { data: brainData, isLoading: accountsLoading } = useQuery<BrainAccountsResponse>({
+  const {
+    data: brainData,
+    isLoading: accountsLoading,
+    isError: accountsFailed,
+  } = useQuery<BrainAccountsResponse>({
     queryKey: ["/api/brain/ledger/accounts"],
     retry: false,
   });
@@ -300,10 +304,25 @@ export function FinancesPage() {
             })}
             {accounts.length === 0 && (
               <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                {/* Three states, not two. An unreachable ledger used to render the
+                    same "No connected accounts yet" as a genuinely empty one, which
+                    tells someone with accounts that they have none. */}
+                <p
+                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px]"
+                  style={{ color: accountsFailed ? "#ff9400" : "#6c779d" }}
+                  data-testid={
+                    accountsLoading
+                      ? "text-accounts-loading"
+                      : accountsFailed
+                        ? "text-accounts-unavailable"
+                        : "text-accounts-empty"
+                  }
+                >
                   {accountsLoading
                     ? "Loading your accounts from the ledger…"
-                    : "No connected accounts yet. Link an account to see your balances here."}
+                    : accountsFailed
+                      ? "Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts."
+                      : "No connected accounts yet. Link an account to see your balances here."}
                 </p>
               </div>
             )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
   ChevronRight,
@@ -513,7 +513,7 @@ export function RulesPanel() {
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
-  const { vendors } = useBrainVendors();
+  const { vendors, isError: vendorsFailed } = useBrainVendors();
   // Live counterparties carry no allowlist/trust-tier concept of their own —
   // "trusted" is the one real trustStatus brain-core-derived vendors can hit
   // (see brainVendors.ts's deriveTrustStatus). There's no live "untrusted"
@@ -525,13 +525,17 @@ export function RulesPanel() {
   const trustedVendors = vendors.filter((v) => v.trustStatus === "trusted").map((v) => v.name);
   const untrustedVendors: string[] = [];
 
-  const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
-    const sp = new URLSearchParams(search);
-    const t = sp.get("rules");
+  /* Derived from the URL every render rather than copied into state at mount.
+     A mirrored copy only agrees with the URL until something else changes it —
+     a link from another panel, the back button, the `?create=1` handoff below —
+     and then the pills and the address bar disagree with no way to tell which
+     one is right. The URL is the single source of truth; `setActiveTab` only
+     navigates. */
+  const activeTab: RuleTab = (() => {
+    const t = new URLSearchParams(search).get("rules");
     return t ? (TAB_PARAM_MAP[t] ?? "Default") : "Default";
-  });
+  })();
   const setActiveTab = (tab: RuleTab) => {
-    setActiveTabState(tab);
     const sp = new URLSearchParams(search);
     sp.set("tab", "rules");
     sp.set("rules", tab.toLowerCase().replace(/\s+/g, "-"));
@@ -569,32 +573,36 @@ export function RulesPanel() {
     void hydrateSuggestions();
   }, []);
 
-  /* "Always handle this" handoff: consume the draft + open the builder pre-filled. */
+  /* "Always handle this" handoff: consume the draft + open the builder pre-filled.
+     Keyed on `search` rather than mount, so arriving at `?create=1` from a link
+     while this panel is already mounted still opens the builder. `consumeRuleDraft`
+     is destructive, so a ref makes it strictly one-shot. */
+  const createHandled = useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(search);
-    if (params.get("create") === "1") {
-      const draft = consumeRuleDraft();
-      if (draft) openBuilderPrefilled(draft);
-      else setBuilderOpen(true);
+    if (params.get("create") !== "1" || createHandled.current) return;
+    createHandled.current = true;
 
-      /* Select a filter that actually draws the builder. It only renders under
-         Automations and Guardrails, but `?create=1` carries no filter of its own,
-         so the handoff used to land on Default — builder state set, builder never
-         mounted, and the "Always handle this" button on Overview and Decisions
-         appeared to do nothing at all. */
-      const requested = params.get("rules");
-      const target: RuleTab =
-        requested && TAB_PARAM_MAP[requested] === "Guardrails" ? "Guardrails" : "Automations";
-      setActiveTabState(target);
+    const draft = consumeRuleDraft();
+    if (draft) openBuilderPrefilled(draft);
+    else setBuilderOpen(true);
 
-      const next = new URLSearchParams(search);
-      next.delete("create");
-      next.set("tab", "rules");
-      next.set("rules", target.toLowerCase());
-      navigate(`/ledger?${next.toString()}`, { replace: true });
-    }
+    /* Land on a filter that actually draws the builder. It only renders under
+       Automations and Guardrails, but `?create=1` carries no filter of its own,
+       so the handoff used to sit on Default — builder state set, builder never
+       mounted, and the "Always handle this" button on Overview and Decisions
+       appeared to do nothing at all. */
+    const requested = params.get("rules");
+    const target: RuleTab =
+      requested && TAB_PARAM_MAP[requested] === "Guardrails" ? "Guardrails" : "Automations";
+
+    const next = new URLSearchParams(search);
+    next.delete("create");
+    next.set("tab", "rules");
+    next.set("rules", target.toLowerCase());
+    navigate(`/ledger?${next.toString()}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search]);
 
   const amountNum = Number(builder.amount.replace(/[^0-9.]/g, ""));
   const isAuto = builder.action === "auto" || builder.action === "queue";
@@ -821,9 +829,18 @@ export function RulesPanel() {
                         <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Trusted vendors
                         </p>
+                        {/* An unreachable vendor list is not an empty vendor list.
+                            Saying "none yet" here would invite someone to build a
+                            rule around a vendor set that simply failed to load. */}
                         {trustedVendors.length === 0 && (
-                          <p className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">
-                            No trusted vendors yet.
+                          <p
+                            className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px]"
+                            style={{ color: vendorsFailed ? "#ff9400" : "#6c779d" }}
+                            data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
+                          >
+                            {vendorsFailed
+                              ? "Vendors couldn't be loaded, so this list is empty for the wrong reason."
+                              : "No trusted vendors yet."}
                           </p>
                         )}
                         {trustedVendors.map((v) => {

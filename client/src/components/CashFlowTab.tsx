@@ -25,6 +25,7 @@ import {
 import {
   Divider,
   WidgetCard,
+  type InvoiceLite,
   type InvoicesLiteResponse,
   type CounterpartiesLiteResponse,
 } from "@/components/LedgerWidgets";
@@ -155,26 +156,51 @@ function daysLate(due?: string | null): number {
   return Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
 }
 
-const OverdueInvoicesBanner = ({ format }: { format: Format }) => {
-  const { data: invData } = useQuery<InvoicesLiteResponse>({
-    queryKey: ["/api/brain/ledger/invoices"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
+const OverdueInvoicesBanner = ({
+  format,
+  invoices,
+  failed,
+  nameOf,
+}: {
+  format: Format;
+  /** null = not read yet. Distinct from `[]`, which means genuinely none. */
+  invoices: readonly InvoiceLite[] | null;
+  failed: boolean;
+  nameOf: (id: string | null | undefined) => string | null;
+}) => {
+  let headline: string;
+  let detail: string;
 
-  const overdue = (invData?.invoices ?? []).filter(
-    (i) => i.status === "overdue" && i.metadata?.scenario !== "ap",
-  );
-  if (overdue.length === 0) return null;
-
-  const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
-  const detail = overdue
-    .slice(0, 3)
-    .map((i) => `${format(Number(i.amount_due))} from ${nameOf(i.counterparty_id)} (${daysLate(i.due_date)} days late)`)
-    .join(" and ");
+  if (failed) {
+    /* This banner is a warning, and a warning that disappears when its source
+       breaks is worse than no warning at all: the screen looks the same as a
+       tenant with nothing overdue. It previously ran its own query and read
+       `data?.invoices ?? []`, so an outage silently produced zero overdue rows.
+       It now shares the parent's read and says so when that read failed. */
+    headline = "Overdue invoices couldn't be checked";
+    detail =
+      "The invoice feed is unavailable. That is not the same as nothing being overdue — treat this as unknown, not clear.";
+  } else {
+    if (invoices == null) return null; // still loading; the parent shows the settling state
+    const overdue = invoices.filter(
+      (i) => i.status === "overdue" && i.metadata?.scenario !== "ap",
+    );
+    if (overdue.length === 0) return null;
+    /* "Customer" is doing real work here. This counts receivables — money owed TO
+       you — but it now sits directly above the liabilities card and a list of bills
+       you owe. On the old split tabs the two piles never shared a screen; here, an
+       unqualified "6 invoices overdue" over "3 bills" reads as one number
+       contradicting the other. */
+    headline = `${overdue.length} customer invoice${overdue.length === 1 ? "" : "s"} overdue!`;
+    detail =
+      overdue
+        .slice(0, 3)
+        .map(
+          (i) =>
+            `${format(Number(i.amount_due))} from ${nameOf(i.counterparty_id) ?? "a customer"} (${daysLate(i.due_date)} days late)`,
+        )
+        .join(" and ") + ".";
+  }
 
   return (
     <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
@@ -184,16 +210,12 @@ const OverdueInvoicesBanner = ({ format }: { format: Format }) => {
           <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
           <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
         </svg>
-        <div className="[word-break:break-word] flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px text-[#ff9400] text-[14px]">
-          {/* "Customer" is doing real work here. This banner counts receivables —
-              money owed TO you — but it now sits directly above the liabilities
-              card and a list of bills you owe. On the old split tabs the two piles
-              never shared a screen; here, an unqualified "6 invoices overdue" over
-              "3 bills" reads as one number contradicting the other. */}
-          <p className="[font-family:'Gilroy',sans-serif] font-bold shrink-0 uppercase w-full">
-            {overdue.length} customer invoice{overdue.length === 1 ? "" : "s"} overdue!
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium shrink-0 w-full">{detail}.</p>
+        <div
+          className="[word-break:break-word] flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px text-[#ff9400] text-[14px]"
+          data-testid={failed ? "banner-overdue-unavailable" : "banner-overdue"}
+        >
+          <p className="[font-family:'Gilroy',sans-serif] font-bold shrink-0 uppercase w-full">{headline}</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium shrink-0 w-full">{detail}</p>
         </div>
       </div>
     </div>
@@ -297,7 +319,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
 
   return (
     <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
-      <OverdueInvoicesBanner format={format} />
+      <OverdueInvoicesBanner format={format} invoices={invs} failed={invFailed} nameOf={nameOf} />
 
       {/* A source that failed must say so even though the rest of the tab still
           renders. Silence here is the difference between "no expenses" and
