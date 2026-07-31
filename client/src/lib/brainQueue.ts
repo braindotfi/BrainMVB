@@ -91,7 +91,7 @@ export function useBrainReviewQueue() {
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
     })),
-  }) as { data?: BrainPaymentIntent; isLoading: boolean }[];
+  }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
   const counterparties = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
@@ -108,11 +108,13 @@ export function useBrainReviewQueue() {
 
   return {
     isLoading: list.isLoading || details.some((d) => d.isLoading),
-    /* The list call is the one that decides whether this queue is knowable at
-       all. A single detail fan-out failing drops one row; the list failing
-       means we have no idea what is pending, which must never render as "all
-       clear" on an approvals surface. */
-    isError: list.isError,
+    /* Incomplete if EITHER call fails. The list failing means we have no idea
+       what is pending. But a detail fan-out failing is just as dishonest: the
+       id came back on the list, so we know a pending approval exists, and
+       dropping it from `intents` below removes a row the operator is on the
+       hook for — silently, and only ever downwards. Counterparty lookup is
+       excluded on purpose: losing it costs a display name, not a row. */
+    isError: list.isError || details.some((d) => d.isError),
     proposals: intents.map((i) => mapIntentToProposal(i, nameOf(i.destination_counterparty_id))),
   };
 }
@@ -138,7 +140,7 @@ export function useBrainAutoApproved() {
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
     })),
-  }) as { data?: BrainPaymentIntent; isLoading: boolean }[];
+  }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
   const counterparties = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
@@ -155,6 +157,9 @@ export function useBrainAutoApproved() {
 
   return {
     isLoading: list.isLoading || details.some((d) => d.isLoading),
+    /* Same contract as the review queue above: a dropped row here understates
+       what Brain has already cleared, which is the operator's audit trail. */
+    isError: list.isError || details.some((d) => d.isError),
     proposals: intents.map((i) => mapIntentToAutoApprovedProposal(i, nameOf(i.destination_counterparty_id))),
   };
 }

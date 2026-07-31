@@ -233,12 +233,12 @@ export function InboxPage() {
   const { proposals: liveQueue, isLoading: liveQueueLoading, isError: liveQueueError } = useBrainReviewQueue();
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
-  const { proposals: liveAutoApproved } = useBrainAutoApproved();
+  const { proposals: liveAutoApproved, isError: liveAutoApprovedError } = useBrainAutoApproved();
 
-  const { insights: reconInsights } = useBrainReconciliationInsights();
-  const { insights: subscriptionInsights } = useBrainSubscriptionInsights();
-  const { insights: disputeInsights } = useBrainDisputeInsights();
-  const { insight: cashFlowInsight } = useBrainCashFlowInsight();
+  const { insights: reconInsights, isError: reconError } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isError: subscriptionError } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
   const liveInsights: LiveInsight[] = [
     ...reconInsights,
     ...subscriptionInsights,
@@ -635,13 +635,22 @@ export function InboxPage() {
     return out;
   }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format, formatText, thresholds]);
 
-  /* Any of the three feeds failing means this timeline is incomplete. It must
-     never be presented as an all-clear: every hook here reads `data?.x ?? []`
-     with `retry: false`, so an unreachable core produces exactly the same empty
-     array as a genuinely clear queue. On an approvals surface those two states
-     have opposite meanings — one says "nothing to do", the other says "you
-     cannot see what you owe". */
-  const decisionsUnreachable = liveQueueError || liveProposalsError || auditError;
+  /* EVERY feed that contributes a row, not just the obvious ones. If any of them
+     failed, this timeline is incomplete and must not be presented as an
+     all-clear: each hook reads `data?.x ?? []` with `retry: false`, so an
+     unreachable core produces exactly the same empty array as a genuinely clear
+     queue. On an approvals surface those two states have opposite meanings —
+     one says "nothing to do", the other says "you cannot see what you owe".
+     Adding a source to `items` below means adding its error flag here. */
+  const decisionsUnreachable =
+    liveQueueError ||
+    liveProposalsError ||
+    auditError ||
+    liveAutoApprovedError ||
+    reconError ||
+    subscriptionError ||
+    disputeError ||
+    cashFlowError;
 
   const visibleItems = useMemo(() => applyDecisionFilters(items, filters), [items, filters]);
   const availableTypes = useMemo(() => typeOptions(items), [items]);
