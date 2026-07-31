@@ -25,6 +25,14 @@ import {
 import { LiveInsightModal } from "@/components/LiveInsightModal";
 import { useBrainProposals, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import {
+  deriveProposalTier,
+  tierForPaymentIntent,
+  tierForReadOnlyInsight,
+  TIER_META,
+  TIER_ORDER,
+  type ProposalTier,
+} from "@/lib/proposalTiers";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { buildProposalHeaderCopy } from "@/lib/proposalCards";
 import { apiRequest } from "@/lib/queryClient";
@@ -260,7 +268,46 @@ const OrangeInfoIcon = () => (
   </div>
 );
 
-type WidgetItem = { id: string; label: string; subtitle?: string; onClick: () => void };
+type WidgetItem = {
+  id: string;
+  label: string;
+  subtitle?: string;
+  onClick: () => void;
+  /** Set on "Brain Detected" rows, which render grouped into priority tiers.
+   *  Absent on widgets that are a plain list (e.g. "Brain Did"). */
+  tier?: ProposalTier;
+};
+
+/* Tier accents, taken from the palette already used for Inbox status tags:
+   red = Urgent, amber = Waiting on you, periwinkle = Insights. The tier a row
+   lands in is decided in proposalTiers.ts — never here. */
+const TIER_STYLE: Record<ProposalTier, { dot: string; text: string }> = {
+  urgent: { dot: "bg-[#d20344]", text: "text-[#d20344]" },
+  waiting: { dot: "bg-[#ff9500]", text: "text-[#ff9500]" },
+  insight: { dot: "bg-[#a8b9f4]", text: "text-[#a8b9f4]" },
+};
+
+/** Tier heading inside the Brain Detected widget. */
+const TierHeading = ({ tier, count }: { tier: ProposalTier; count: number }) => {
+  const style = TIER_STYLE[tier];
+  const meta = TIER_META[tier];
+  return (
+    <div className="flex gap-[6px] items-center px-[8px] pt-[8px] pb-[2px] w-full" data-testid={`tier-heading-${tier}`}>
+      <div className={`size-[6px] rounded-full shrink-0 ${style.dot}`} />
+      <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[13px] whitespace-nowrap ${style.text}`}>
+        {meta.title}
+      </p>
+      {meta.note && (
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] truncate">
+          — {meta.note}
+        </p>
+      )}
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px] ml-auto shrink-0">
+        {count}
+      </p>
+    </div>
+  );
+};
 const ListItem = ({
   icon,
   label,
@@ -308,8 +355,25 @@ const SectionWidget = ({
   const [expanded, setExpanded] = useState(false);
   const [scrollMaxH, setScrollMaxH] = useState<number | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const hasMore = items.length > DEFAULT_VISIBLE;
-  const visible = expanded ? items : items.slice(0, DEFAULT_VISIBLE);
+  const tiered = items.some((i) => i.tier);
+  /* Collapsed, a tiered widget still shows every Urgent row: the promise is that
+     urgent items always show and only the smaller approvals are filtered down. */
+  const collapsed = useMemo(() => {
+    if (!tiered) return items.slice(0, DEFAULT_VISIBLE);
+    const urgent = items.filter((i) => i.tier === "urgent");
+    const rest = items.filter((i) => i.tier !== "urgent");
+    return [...urgent, ...rest.slice(0, Math.max(DEFAULT_VISIBLE - urgent.length, 0))];
+  }, [items, tiered]);
+  const visible = expanded ? items : collapsed;
+  const hasMore = items.length > visible.length;
+  /* Rows grouped into their tiers, in fixed order, empty tiers dropped. */
+  const groups = useMemo(
+    () =>
+      TIER_ORDER.map((tier) => ({ tier, rows: visible.filter((i) => i.tier === tier) })).filter(
+        (g) => g.rows.length > 0,
+      ),
+    [visible],
+  );
 
   /* When expanded, measure the pixel distance from the bottom of the header
      to the bottom of the viewport so the scroll area fills exactly to the
@@ -351,20 +415,40 @@ const SectionWidget = ({
           </div>
         ) : (
           <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-            {visible.map((item, idx) => (
-              <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                <ListItem
-                  icon={icon}
-                  label={item.label}
-                  subtitle={item.subtitle}
-                  testId={`${testIdPrefix}-${item.id}`}
-                  onClick={item.onClick}
-                />
-                {idx < visible.length - 1 && (
-                  <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
-                )}
-              </div>
-            ))}
+            {tiered
+              ? groups.map((group) => (
+                  <div key={group.tier} className="flex flex-col gap-[8px] w-full">
+                    <TierHeading tier={group.tier} count={group.rows.length} />
+                    {group.rows.map((item, idx) => (
+                      <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                        <ListItem
+                          icon={icon}
+                          label={item.label}
+                          subtitle={item.subtitle}
+                          testId={`${testIdPrefix}-${item.id}`}
+                          onClick={item.onClick}
+                        />
+                        {idx < group.rows.length - 1 && (
+                          <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              : visible.map((item, idx) => (
+                  <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                    <ListItem
+                      icon={icon}
+                      label={item.label}
+                      subtitle={item.subtitle}
+                      testId={`${testIdPrefix}-${item.id}`}
+                      onClick={item.onClick}
+                    />
+                    {idx < visible.length - 1 && (
+                      <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+                    )}
+                  </div>
+                ))}
           </div>
         )}
         {hasMore && (
@@ -375,7 +459,7 @@ const SectionWidget = ({
             className="mt-[8px] self-start flex items-center gap-[4px] px-[10px] py-[6px] rounded-[8px] transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[13px] whitespace-nowrap">
-              {expanded ? "View less" : `View ${items.length - DEFAULT_VISIBLE} more`}
+              {expanded ? "View less" : `View ${items.length - visible.length} more`}
             </span>
           </button>
         )}
@@ -645,6 +729,16 @@ export function HomePage() {
      and read-only insights above. */
   const { proposals: liveProposals } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
+  /* The proposals Overview actually shows, in the order the tiers render them, so
+     the detail modal's Previous/Next walks exactly what's on screen — a pager that
+     steps onto a row the user can't see reads as a bug. */
+  const tieredProposals = useMemo(() => {
+    const withTier = needsReviewProposals.flatMap((p) => {
+      const tier = deriveProposalTier(p);
+      return tier ? [{ proposal: p, tier }] : [];
+    });
+    return TIER_ORDER.flatMap((tier) => withTier.filter((e) => e.tier === tier).map((e) => e.proposal));
+  }, [needsReviewProposals]);
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
 
   const cycleRecord = <T extends { id: string | number }>(
@@ -669,7 +763,7 @@ export function HomePage() {
     ? liveInsights.findIndex((record) => record.id === selectedInsight.id)
     : -1;
   const selectedProposalIndex = selectedProposal
-    ? needsReviewProposals.findIndex((record) => record.id === selectedProposal.id)
+    ? tieredProposals.findIndex((record) => record.id === selectedProposal.id)
     : -1;
   const selectedAuditRecordIndex = selectedAuditRecord
     ? brainDidRecords.findIndex((record) => record.id === selectedAuditRecord.id)
@@ -678,7 +772,7 @@ export function HomePage() {
   const reviewPagerDisabled = selectedReviewIndex < 0 || liveNeedsReview.length < 2;
   const liveIntentPagerDisabled = selectedLiveIntentIndex < 0 || sessionReviews.length < 2;
   const insightPagerDisabled = selectedInsightIndex < 0 || liveInsights.length < 2;
-  const proposalPagerDisabled = selectedProposalIndex < 0 || needsReviewProposals.length < 2;
+  const proposalPagerDisabled = selectedProposalIndex < 0 || tieredProposals.length < 2;
   const auditRecordPagerDisabled = selectedAuditRecordIndex < 0 || brainDidRecords.length < 2;
 
   const brainDetectedItems: WidgetItem[] = useMemo(() => {
@@ -690,6 +784,7 @@ export function HomePage() {
       label: formatText(p.title),
       subtitle: p.rationale ? formatText(p.rationale) : undefined,
       onClick: () => setSelectedReview(p),
+      tier: tierForPaymentIntent(),
     }));
     // Session-scoped intents — title is specific; description is the "Why:".
     const sessionItems = sessionReviews.map((r) => ({
@@ -697,6 +792,7 @@ export function HomePage() {
       label: formatText(r.title),
       subtitle: r.description ? formatText(r.description) : undefined,
       onClick: () => setSelectedLiveIntent(r),
+      tier: tierForPaymentIntent(),
     }));
     // Read-only ledger insights — title is specific; subtitle is secondary context.
     const insightItems = liveInsights.map((i) => ({
@@ -704,21 +800,29 @@ export function HomePage() {
       label: formatText(i.title),
       subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
       onClick: () => setSelectedInsight(i),
+      tier: tierForReadOnlyInsight(),
     }));
     // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
     // the specific "Why:" text shown in Inbox; agent display name is the category.
-    const proposalItems = needsReviewProposals.map((p) => {
+    /* Tier comes from each record's own `available_decisions` + `risk_band`
+       (proposalTiers.ts), never from its type. A record offering no decision this
+       app can submit is dropped rather than shown under a tier that promises an
+       action Overview can't deliver. */
+    const proposalItems = tieredProposals.flatMap((p) => {
+      const tier = deriveProposalTier(p);
+      if (!tier) return [];
       const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
-      return {
+      return [{
         id: p.id,
         label: headerCopy.title,
         subtitle: `${agentName} Agent`,
         onClick: () => setSelectedProposal(p),
-      };
+        tier,
+      }];
     });
     return [...sessionItems, ...queueItems, ...insightItems, ...proposalItems];
-  }, [liveNeedsReview, sessionReviews, liveInsights, needsReviewProposals, formatText]);
+  }, [liveNeedsReview, sessionReviews, liveInsights, tieredProposals, formatText]);
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -913,13 +1017,13 @@ export function HomePage() {
         proposal={selectedProposal}
         open={selectedProposal !== null}
         onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onPrev={() => cycleRecord(needsReviewProposals, selectedProposal, setSelectedProposal, -1)}
-        onNext={() => cycleRecord(needsReviewProposals, selectedProposal, setSelectedProposal, 1)}
+        onPrev={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, -1)}
+        onNext={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, 1)}
         hasPrev={!proposalPagerDisabled}
         hasNext={!proposalPagerDisabled}
         position={
           !proposalPagerDisabled
-            ? `Proposal ${selectedProposalIndex + 1} of ${needsReviewProposals.length}`
+            ? `Proposal ${selectedProposalIndex + 1} of ${tieredProposals.length}`
             : undefined
         }
       />
