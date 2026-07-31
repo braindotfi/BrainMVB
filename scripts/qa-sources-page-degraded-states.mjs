@@ -28,6 +28,8 @@
  * commit one.
  */
 
+import { createQaSession } from "./qa-harness.mjs";
+
 const BASE = process.env.QA_BASE ?? "http://127.0.0.1:5000";
 const USER = process.env.QA_USER_ID;
 const COOKIE = process.env.QA_COOKIE;
@@ -39,26 +41,10 @@ if (!USER || !COOKIE) {
   process.exit(2);
 }
 
-const { chromium } = await import(PLAYWRIGHT);
-
-const browser = await chromium.launch({
-  ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
-  args: ["--no-sandbox"],
-});
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-await ctx.addCookies([
-  { name: "brain.sid", value: COOKIE, domain: new URL(BASE).hostname, path: "/" },
-]);
-await ctx.addInitScript((u) => {
-  localStorage.setItem(`brain_onboarding_complete_${u}`, "true");
-}, USER);
-
-const page = await ctx.newPage();
-const failures = [];
-const check = (label, pass, detail = "") => {
-  console.log(`${pass ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
-  if (!pass) failures.push(label);
-};
+/* One shared session for every QA script: signed in as the target tenant, with
+   writes denied by default — an interception a script forgets to install turns
+   into a failed check, not a live write. See scripts/qa-harness.mjs. */
+const { ctx, page, api, check, permitWrite, expectBlocked, stubWrite, finish } = await createQaSession();
 
 const count = async (sel) => await page.locator(sel).count();
 const text = async (sel) => (await page.locator(sel).first().textContent().catch(() => "")) ?? "";
@@ -79,26 +65,32 @@ const settle = async (read, isProvisional, timeout = 20000) => {
   return value;
 };
 
+/* Opening the bank mechanism asks the server for a Plaid link token, which
+   calls Plaid for real. Harmless-looking, but it is a live side effect fired by
+   a test, so it is denied and the screen is expected to say so rather than
+   present a button that cannot work. */
+expectBlocked("/api/integrations/plaid/link-token", "Plaid link-token creation (live side effect)");
+
 const COUNT = '[data-testid="text-source-count"]';
 const ACCOUNTS = '[data-testid="list-connected-accounts"]';
 const DOCUMENTS = '[data-testid="list-documents"]';
 const NOTICE = '[data-testid="notice-sources-unavailable"]';
 
 /* ── what the tenant actually has, straight from the feeds ────────────────── */
-const api = async (path) => {
-  const res = await page.request.get(`${BASE}${path}`);
+const readJson = async (path) => {
+  const res = await api.get(`${BASE}${path}`);
   return res.ok() ? await res.json().catch(() => null) : null;
 };
 
 await go();
 
-const brainRaw = await api("/api/brain/sources");
+const brainRaw = await readJson("/api/brain/sources");
 const brainRows = Array.isArray(brainRaw?.data) ? brainRaw.data : Array.isArray(brainRaw) ? brainRaw : [];
 const liveBrain = brainRows.filter((r) => !["disconnected", "revoked", "deleted"].includes(String(r?.status ?? "").toLowerCase()));
 const withSyncTime = liveBrain.filter((r) => typeof r?.last_synced_at === "string" && r.last_synced_at !== "");
-const banks = (await api("/api/integrations/plaid/connections")) ?? [];
-const tools = (await api("/api/integrations/connections")) ?? [];
-const docs = (await api("/api/integrations/documents")) ?? [];
+const banks = (await readJson("/api/integrations/plaid/connections")) ?? [];
+const tools = (await readJson("/api/integrations/connections")) ?? [];
+const docs = (await readJson("/api/integrations/documents")) ?? [];
 const expectedAccounts = liveBrain.length + banks.length + tools.length;
 
 console.log(
@@ -143,6 +135,21 @@ const MECHANISMS = [
   ["tax", "documents"],
   ["accounting", "providers"],
 ];
+const bankScreenCopes = async () => {
+  await page.selectOption('[data-testid="select-source-category"]', "bank");
+  await page.waitForTimeout(2500);
+  const body = await text('[data-testid="add-source-mechanism-bank"]');
+  const connect = page.locator('[data-testid="button-plaid-connect"]');
+  const disabled = (await connect.count()) === 0 || (await connect.first().isDisabled().catch(() => false));
+  return { body, disabled };
+};
+const coped = await bankScreenCopes();
+check(
+  "with no link token, the bank screen says so instead of offering a dead button",
+  /couldn't|could not|unavailable|not configured|try again/i.test(coped.body) || coped.disabled,
+  coped.body.replace(/\s+/g, " ").slice(0, 120),
+);
+
 for (const [category, mechanism] of MECHANISMS) {
   await page.selectOption('[data-testid="select-source-category"]', category);
   await page.waitForTimeout(900);
@@ -171,14 +178,11 @@ check("the inline form does not repeat the document list above the page's own", 
    report only that: the persisted rows belong to the list below, and rendering
    them here duplicates every row and every test id on the page. */
 if (docs.length > 0) {
-  /* The upload is intercepted and left hanging: the file must never reach the
-     tenant. If the interception ever misses, the check below catches it and the
-     cleanup at the end removes what landed. */
-  let ingestHits = 0;
-  await page.route("**/api/integrations/documents/ingest**", () => {
-    ingestHits += 1;
-    return new Promise(() => {});
-  });
+  /* The upload is intercepted and left hanging. The harness denies writes by
+     default, so a pattern that stops matching cannot reach the tenant — but the
+     stub still counts its hits, because a probe that never fired would make the
+     checks below pass for the wrong reason. */
+  const ingestStub = await stubWrite("**/api/integrations/documents/ingest**", () => new Promise(() => {}));
   await page.locator('[data-testid="input-add-source-file"]').setInputFiles({
     name: "qa-upload-probe.csv",
     mimeType: "text/csv",
@@ -202,7 +206,8 @@ if (docs.length > 0) {
     "no document's extract status is rendered twice",
     (await count(`[data-testid="doc-status-${firstDocId}"]`)) === 1,
   );
-  await page.unroute("**/api/integrations/documents/ingest**");
+  check("the upload probe was intercepted, not sent", ingestStub.hits === 1, `${ingestStub.hits} hit(s)`);
+  await ingestStub.release();
   await go();
   await page.locator('[data-testid="button-add-source"]').click();
   await page.waitForTimeout(900);
@@ -240,11 +245,7 @@ if (seeded > 0) {
 
 /* ── removing asks first, and says what removal does not undo ─────────────── */
 if (docs.length > 0) {
-  let deleteAttempts = 0;
-  await page.route("**/api/integrations/documents/*/delete", (route) => {
-    deleteAttempts += 1;
-    return route.abort();
-  });
+  const deleteStub = await stubWrite("**/api/integrations/documents/*/delete", (route) => route.abort());
   const firstDoc = docs[0].id;
   await page.locator(`[data-testid="button-remove-doc-${firstDoc}"]`).click();
   await page.waitForTimeout(700);
@@ -255,10 +256,10 @@ if (docs.length > 0) {
     /not undone/i.test(confirmText),
     confirmText.replace(/\s+/g, " ").slice(0, 120),
   );
-  check("nothing was deleted by opening the confirmation", deleteAttempts === 0);
+  check("nothing was deleted by opening the confirmation", deleteStub.hits === 0);
   await page.locator(`[data-testid="source-doc-${firstDoc}"] button`, { hasText: "Cancel" }).first().click().catch(() => {});
   await page.waitForTimeout(500);
-  await page.unroute("**/api/integrations/documents/*/delete");
+  await deleteStub.release();
 }
 
 /* Upstream-restricted connections are not ours to sever: no dead control. */
@@ -334,11 +335,15 @@ for (const [name, pattern] of [["brain sources", FEEDS["brain sources"]], ["docu
 }
 
 /* ── the probe left nothing behind ────────────────────────────────────────── */
-const afterDocs = (await api("/api/integrations/documents")) ?? [];
+const afterDocs = (await readJson("/api/integrations/documents")) ?? [];
 const strays = afterDocs.filter((d) => String(d?.name ?? "").startsWith("qa-upload-probe"));
 check("the probe upload never reached the tenant", strays.length === 0, `${strays.length} stray file(s)`);
 for (const stray of strays) {
-  await page.request.post(`${BASE}/api/integrations/documents/${stray.id}/delete`);
+  await permitWrite(
+    `/api/integrations/documents/${stray.id}/delete`,
+    "cleanup of a probe file this script created",
+    async () => await api.post(`${BASE}/api/integrations/documents/${stray.id}/delete`),
+  );
   console.log(`      cleaned up ${stray.name} (${stray.id})`);
 }
 
@@ -350,6 +355,4 @@ const wizardMarkers = await page.evaluate(() =>
 );
 check("the wizard's home screen is gone from the app", !wizardMarkers);
 
-console.log(`\n${failures.length === 0 ? "ALL CHECKS PASSED" : `${failures.length} FAILED:\n  - ${failures.join("\n  - ")}`}`);
-await browser.close();
-process.exit(failures.length === 0 ? 0 : 1);
+await finish();
