@@ -450,6 +450,12 @@ function shortDate(iso?: string | null): string {
 const LIABILITIES_FALLBACK =
   "No outstanding liabilities. You're all caught up.";
 
+/* Not the same statement as LIABILITIES_FALLBACK. "All caught up" is a claim
+   that nothing is owed; if the invoice read never landed we cannot make that
+   claim, and a false all-clear here is the worst possible failure mode. */
+const LIABILITIES_UNAVAILABLE =
+  "Liabilities are unavailable right now. Reconnect or refresh to see what you owe.";
+
 const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
   const { data: invData } = useQuery<InvoicesLiteResponse>({
     queryKey: ["/api/brain/ledger/invoices"],
@@ -462,9 +468,11 @@ const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) 
 
   /* Same helper the Overview "Liabilities" metric card uses, so the headline
      figure and this list can never disagree about what counts as owed. */
+  const invoicesReachable = invData?.invoices != null;
   const ap = unpaidApInvoices(invData?.invoices);
   const count = ap.length;
   const text = (() => {
+    if (!invoicesReachable) return LIABILITIES_UNAVAILABLE;
     if (ap.length === 0) return LIABILITIES_FALLBACK;
     const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
     const total = ap.reduce((s, i) => s + (Number(i.amount_due) || 0), 0);

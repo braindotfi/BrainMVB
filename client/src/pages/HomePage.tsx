@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -494,7 +494,17 @@ export function HomePage() {
       const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
       return res.json();
     },
-    onSuccess: (_d, intentId) => markDeclined(intentId),
+    /* Announce the RESULT, not the click. The modal used to toast "Rejected"
+       before the request was even sent, so a failed reject still reported
+       success. Both the modal and the inline row action share this path now, so
+       a failure has to say so in one place. */
+    onSuccess: (_d, intentId) => {
+      markDeclined(intentId);
+      toast({ title: "Rejected", description: "The payment has been rejected.", variant: "default" });
+    },
+    onError: (err) => {
+      toast({ title: "Couldn't reject the payment", description: err.message, variant: "destructive" });
+    },
   });
   const approveIntent = async (intentId: string, surfaceRejection: boolean) => {
     setApprovingIntentId(intentId);
@@ -609,7 +619,10 @@ export function HomePage() {
     const sessionRows: TierRowModel[] = sessionReviews.map((r) => {
       const intentId = r.live ? r.intentId ?? null : null;
       return {
-        id: String(r.intentId ?? r.id),
+        /* Source-scoped. A session intent and a review-queue PaymentIntent can
+           carry the SAME underlying id, and all four sources share one React key
+           space and one test-id namespace in this list. */
+        id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
         title: formatText(r.title),
         subtitle: r.description ? formatText(r.description) : undefined,
@@ -643,7 +656,7 @@ export function HomePage() {
     // "Why:" line shown in Inbox.
     const queueBusy = approveLive.isPending || rejectLive.isPending;
     const queueRows: TierRowModel[] = liveNeedsReview.map((p) => ({
-      id: p.id,
+      id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
       title: formatText(p.title),
       subtitle: p.rationale ? formatText(p.rationale) : undefined,
@@ -658,7 +671,7 @@ export function HomePage() {
     /* Read-only ledger insights. No actions by design: they have no proposal
        lifecycle and nothing to decide, so a button here would be theatre. */
     const insightRows: TierRowModel[] = liveInsights.map((i) => ({
-      id: i.id,
+      id: `insight-${i.id}`,
       tier: tierForReadOnlyInsight(),
       title: formatText(i.title),
       subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
@@ -695,7 +708,7 @@ export function HomePage() {
         onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
       }));
       return [{
-        id: p.id,
+        id: `proposal-${p.id}`,
         tier,
         title: headerCopy.title,
         subtitle: `${agentName} Agent`,
@@ -995,7 +1008,7 @@ export function HomePage() {
         }}
         onReject={() => {
           if (selectedLiveIntent?.live && selectedLiveIntent.intentId) {
-            toast({ title: "Rejected", description: "The payment has been rejected.", variant: "default" });
+            // The toast now comes from the mutation's own onSuccess/onError.
             rejectIntent.mutate(selectedLiveIntent.intentId);
           }
           setSelectedLiveIntent(null);
