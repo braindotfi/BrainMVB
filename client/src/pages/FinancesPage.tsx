@@ -283,7 +283,7 @@ export function FinancesPage() {
                         },
                       }
                     : {})}
-                  className={`flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
+                  className={`flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
@@ -305,7 +305,7 @@ export function FinancesPage() {
               );
             })}
             {accounts.length === 0 && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                 {/* Three states, not two. An unreachable ledger used to render the
                     same "No connected accounts yet" as a genuinely empty one, which
                     tells someone with accounts that they have none. */}

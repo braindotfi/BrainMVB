@@ -1,56 +1,65 @@
 ---
-name: Row-record type ramp and height
-description: The Security settings table is the canonical typography AND geometry for row records; the 40px stack that makes heights match, and why line-height is load-bearing.
+name: Row-record type ramp and row chrome
+description: Two settings surfaces are the reference for every row record — Security for the 40px text stack, Profile for the 64px row box; why line-height is load-bearing and only baseline rows are pinned.
 ---
 
-## The rule
+## There are TWO references, and they disagree about padding
 
-The table on the Security settings subpage is the reference for every row record
-in the app (Overview, Inbox, Ledger tabs, Sources, Audit Log). A record is:
+Treating either one as "the row spec" gets you the wrong answer:
 
-- title:   `font-medium` `16px` `#a8b9f4` `leading-[20px]`
-- gap:     `4px`
-- subtext: `font-medium` `14px` `#6c779d` `leading-[16px]`
+- **Text stack → the Security settings table.** 16px/20 title + 4px gap +
+  14px/16 subtext = a **40px stack**.
+- **Row chrome → the Profile settings rows (Identity card).** That same 40px
+  stack in 12px vertical / 16px horizontal padding, 12px gap between the row's
+  columns = a **64px row box**.
 
-which makes the text stack exactly **40px**. Titles are **medium, never
-semibold** — several surfaces drifted to `font-semibold` independently, and that
-is the most common way the ramp breaks.
+Security's own rows have **zero** padding — their breathing room comes from the
+parent card's gaps — so Security is never the chrome reference. Overview, Inbox
+and all four Ledger tabs follow the Profile chrome over the Security stack.
 
-**Why:** the row surfaces were built at different times from different Figma
-frames and drifted apart (13/14/15/16px titles, two greys, both weights). The
-Security table was picked as the single reference so "which one is right?" has
-an answer.
+**Why:** these surfaces were built at different times from different Figma
+frames and drifted apart (13/14/15/16px titles, two greys, both weights, three
+paddings). Naming one reference per concern gives "which one is right?" an
+answer.
+
+## Titles are medium, never semibold
+
+The single most common way the ramp breaks: a surface drifts to `font-semibold`
+on the title. Every row title is medium.
 
 ## Line-height is load-bearing, not cosmetic
 
-Do not "improve" the subtext leading to 18–20px because wrapped text looks
-tight. 20 + 4 + 16 is what produces the 40px stack; changing it silently breaks
-height parity with the reference everywhere.
+Do not relax the subtext leading to 18–20px because wrapped text looks tight.
+20 + 4 + 16 is precisely what produces the 40px stack, and changing it silently
+breaks height parity everywhere.
 
-**Why:** this was learned the hard way — the leading was relaxed to 18/20px in a
-typography pass for exactly that readability reason, and it had to be reverted
-one step later when the heights were asked to match. The cramped-wrapping
-complaint is real but it is the cost of the reference geometry.
+**Why:** learned the hard way — the leading was relaxed for exactly that
+readability reason in one pass and had to be reverted in the next when the
+heights were asked to match. The cramped-wrapping complaint is real; it is the
+cost of the reference geometry.
 
-## Matching "height" means matching the stack, not the outer box
+**How to apply:** also watch for anything in the *title row* taller than 20px.
+An inline pill with `py-[3px]` plus a 1px border is 22px and quietly inflates
+the whole stack to 42.
 
-The Security row's outer box is 40px with **zero** padding; its breathing room
-comes from the parent card's `p-16` + `gap-16`, so each row occupies a 56px slot.
-The other lists use `p-[8px]` + a bottom border instead. Give them the 40px
-stack and they land on the same 56px slot automatically.
-
-Do **not** force their outer box to a literal 40px — that needs zero vertical
-padding and makes bordered rows collide.
-
-**How to apply:** watch for anything in the title row taller than 20px. An
-inline pill with `py-[3px]` plus a 1px border is 22px and quietly inflates the
-whole stack to 42; `py-[2px]` brings it back to 20.
-
-## Only the baseline row is 40px
+## Only the baseline row is pinned
 
 Rows grow on purpose: a wrapping title, a third "note" line, the Rules tab's
-paused-rule banner. Pin the *shortest* row of a surface, never all of them —
-asserting a fixed height on every row is asserting the UI must clip its content.
-`scripts/qa-measure-row-heights.mjs` enforces exactly this and stubs the
-proposals GET, because Overview/Inbox have no proposals in the demo tenant and
-measuring an empty state proves nothing.
+paused-rule banner. Assert the **shortest** row of a surface, never all of them
+— pinning a fixed height on every row asserts the UI must clip its own content.
+
+Subtract borders before comparing: these lists separate rows with a 1px
+`border-b` on the row itself, whereas Profile uses a separate divider element,
+so raw bounding boxes read 65 vs 64 for rows that genuinely match.
+
+`scripts/qa-measure-row-heights.mjs` enforces all of the above, and stubs the
+proposals GET because Overview/Inbox have none in the demo tenant — measuring an
+empty state would prove nothing about the rows it is meant to check.
+
+## What is deliberately NOT copied from Profile
+
+- **The 40px circle icon and chevron button.** Those are content and affordance,
+  not spacing. Giving a ledger transaction an icon would be inventing meaning.
+- **The inset divider.** Profile insets its divider 16px; the lists run a
+  full-width `border-b`. This is a known, accepted difference — changing it is
+  structural (it interacts with `last:border-b-0`), not a spacing tweak.

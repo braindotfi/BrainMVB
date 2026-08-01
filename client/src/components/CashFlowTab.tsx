@@ -394,13 +394,13 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
 
       <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
-          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px] w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
               Loading…
             </p>
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex gap-[16px] items-center p-[8px] rounded-[8px] w-full bg-[#0a0c10]" data-testid="text-cashflow-empty">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]" data-testid="text-cashflow-empty">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
               {txFailed && invFailed
                 ? "Nothing could be loaded, so there is nothing to show here yet."
@@ -433,7 +433,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       : undefined
                   }
                   className={[
-                    "flex gap-[16px] items-center p-[8px] w-full bg-[#0a0c10] transition-colors",
+                    "flex gap-[12px] items-center px-[16px] py-[12px] w-full bg-[#0a0c10] transition-colors",
                     "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
                     "border-b border-solid border-[#1d2132] last:border-b-0",
                     open ? "hover:bg-[#11141b] cursor-pointer" : "",

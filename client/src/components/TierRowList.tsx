@@ -91,7 +91,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   const accent = ROW_ACCENT[row.tier];
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[8px] py-[8px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-b border-solid border-[#1d2132] last:border-b-0 ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-b border-solid border-[#1d2132] last:border-b-0 ${
         accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={accent ? { borderLeftColor: accent } : undefined}
