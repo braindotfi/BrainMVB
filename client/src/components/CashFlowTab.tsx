@@ -358,7 +358,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
           same breathing room between the metric block and the section label below. */}
       <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
 
-      <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
+      <WidgetCard title="Transactions" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
@@ -412,10 +412,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       </p>
                       <KindBadge kind={row.kind} />
                       {row.flagged && (
-                        <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[4px] px-[6px] py-[3px]">
+                        <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[22px] px-[10px] py-[4px]">
                           <img src={alertIcon} alt="" className="size-[12px]" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#d20344] text-[11px]">
-                            anomaly
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#d20344] text-[12px]">
+                            Anomaly
                           </span>
                         </span>
                       )}
