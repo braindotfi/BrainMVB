@@ -1012,7 +1012,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative text-[#a8b9f4] text-[32px]">
-                Here's where your money stands today.
+                Here's your financial snapshot for today.
               </p>
             </div>
             <div className="flex items-center relative shrink-0 w-full">
