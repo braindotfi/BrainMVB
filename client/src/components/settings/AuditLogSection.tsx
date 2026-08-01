@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronDown } from "lucide-react";
 import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
 import { partitionSystemActivity } from "@/lib/auditVisibility";
-import {
-  auditRecordLabel,
-  humanReadableActor,
-  isAssistantActivity,
-} from "@/lib/auditTypes";
+import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { AlertCallout } from "@/components/Callout";
@@ -57,7 +53,7 @@ type Category = "decision" | "assistant" | "system";
 const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
   decision:  { label: "Decision",        bg: "#1d2132", color: "#a8b9f4", border: "1px solid rgba(168,185,244,0.2)" },
   assistant: { label: "Assistant",       bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
-  system:    { label: "System activity", bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
+  system:    { label: "System",          bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
 };
 
 function categorise(record: AuditRecord, systemIds: ReadonlySet<string>): Category {
@@ -254,28 +250,14 @@ export function AuditLogSection() {
           )}
         </div>
 
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] pb-[8px]"
-          data-testid="text-audit-scope"
-        >
-          {feedUnavailable ? (
-            "Brain's audit feed could not be read, so this page cannot say what your history contains."
-          ) : (
-            <>
-              Every recorded event on this tenant — decisions people made and the pipeline
-              activity behind them. Nothing is filtered out unless you filter it.
-              {atEventLimit && (
-                <>
-                  {" "}
-                  <span data-testid="text-audit-cap">
-                    This is the most recent {AUDIT_EVENTS_LIMIT}; older events exist but are not
-                    loaded here.
-                  </span>
-                </>
-              )}
-            </>
-          )}
-        </p>
+        {feedUnavailable && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] pb-[8px]"
+            data-testid="text-audit-scope"
+          >
+            Brain's audit feed could not be read, so this page cannot say what your history contains.
+          </p>
+        )}
 
         {/* The read can fail and still leave rows on screen: assistant questions
             are recorded locally and merge in from a separate query. Without this
@@ -402,14 +384,14 @@ export function AuditLogSection() {
                       </span>
                       <span
                         data-testid={`badge-audit-category-${record.id}`}
-                        className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase tracking-[0.04em] shrink-0"
+                        className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] shrink-0"
                         style={{ background: badge.bg, color: badge.color, border: badge.border }}
                       >
                         {badge.label}
                       </span>
                     </div>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
-                      {[auditRecordLabel(record), actor, record.occurredAtLabel]
+                      {[actor, record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>

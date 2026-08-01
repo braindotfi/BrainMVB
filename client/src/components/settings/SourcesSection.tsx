@@ -410,7 +410,7 @@ export function SourcesSection() {
           aria-expanded={formOpen}
           className="shrink-0 rounded-full px-[16px] py-[8px] bg-[#4a2300] hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap"
         >
-          {formOpen ? "Cancel" : "+ Add source"}
+          {formOpen ? "Cancel" : "+ Add Source"}
         </button>
       </div>
 

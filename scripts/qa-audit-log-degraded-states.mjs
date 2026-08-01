@@ -185,8 +185,8 @@ check(
 check("the filter starts on All types", (await textOf(FILTER)) === "All types", await textOf(FILTER));
 check("every row is badged with its category", (await page.locator(BADGES).count()) === SYSTEM_COUNT);
 check(
-  "pipeline events are badged as system activity",
-  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system activity"),
+  "pipeline events are badged as System",
+  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system"),
   [...(await badgeKinds())].join(", "),
 );
 
@@ -215,7 +215,7 @@ check(
 const mixedKinds = await badgeKinds();
 check(
   "all three categories are represented",
-  ["decision", "assistant", "system activity"].every((k) => mixedKinds.has(k)),
+  ["decision", "assistant", "system"].every((k) => mixedKinds.has(k)),
   [...mixedKinds].join(", "),
 );
 
@@ -238,8 +238,8 @@ check(
   `${await rowCount()} rows, expected ${MIXED_SYSTEM_COUNT}`,
 );
 check(
-  "…and every remaining row is badged system activity",
-  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system activity"),
+  "…and every remaining row is badged System",
+  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system"),
   [...(await badgeKinds())].join(", "),
 );
 await pick("all");
