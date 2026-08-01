@@ -1166,12 +1166,9 @@ function titleCaseDropdownLabel(label: string): string {
           </div>
         ) : (
           <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
-            <div className="flex flex-col gap-[8px] p-[8px] w-full">
-              {visibleItems.map((item, idx) => (
-                <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                  <TierRow row={toRow(item)} />
-                  {idx < visibleItems.length - 1 && <Divider />}
-                </div>
+            <div className="flex flex-col w-full">
+              {visibleItems.map((item) => (
+                <TierRow key={item.id} row={toRow(item)} />
               ))}
             </div>
           </div>
