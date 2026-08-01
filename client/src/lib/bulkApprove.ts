@@ -105,10 +105,18 @@ export interface PolicyElevation {
    * {@link elevatedThresholdsFromPolicy}. Null when the policy has no such clause.
    */
   universal: number | null;
-  /** A category-less clause escalates with no amount this code can evaluate, so
+  /** A wildcard clause escalates with no amount this code can evaluate, so
    *  nothing at all is bulk-eligible. The `unconditional` set, applied to every
    *  category at once. */
   universalUnconditional: boolean;
+  /**
+   * An elevated clause carries no readable scope — `applies_to` absent, empty, or
+   * holding nothing usable. brain-core's schema does not accept that as a valid
+   * clause, and it is NOT the explicit `"any"` wildcard, so it grants no coverage.
+   * But something in the signed document demands a second approver and this code
+   * cannot tell what, so nothing is bulk-eligible while it is present.
+   */
+  invalidScope: boolean;
 }
 
 /** The DSL's explicit "every kind of action" scope. `APPLIES_TO_LABEL` renders it
@@ -125,23 +133,27 @@ const ANY_SCOPE = "any";
  * Where several clauses cover one category the LOWEST wins: it is the first line an
  * amount crosses, so it is the one that governs.
  *
- * SCOPE. A clause's `applies_to` is a list of categories, but three shapes mean
- * "every category" rather than a named one, and all three are collected as
- * `universal` instead of as map keys:
+ * SCOPE. A clause's `applies_to` names the categories it governs, and exactly one
+ * shape is a wildcard: a list containing `"any"`. That is the DSL's own wildcard,
+ * which brain-core's policy VM matches against every `action.kind`, so this code
+ * mirrors the VM rather than inventing a stricter rule of its own. Such a clause
+ * is collected as `universal` and binds every category — including one the policy
+ * never names, so a new `details.kind` cannot walk out from under a blanket rule.
+ * Storing it under the literal key `"any"` would file it where no record can ever
+ * match, because a record's category comes from `details.kind` ("agent_action", …)
+ * and is never the string "any".
  *
- *   - absent or empty — the same reading `mapPolicyRuleToCard` and
- *     `coversPayments` use: an unscoped rule constrains any action.
- *   - containing `"any"` — the DSL's explicit wildcard. Storing it under the
- *     literal key `"any"` would file it where no record can ever match, because a
- *     record's category comes from `details.kind` ("agent_action", …) and is never
- *     the string "any".
- *   - present but with no usable entry — scope this code cannot read. Unparsed is
- *     unknown, and unknown fails closed, exactly as for an unrecognised `require`.
+ * Absent, empty, or unreadable `applies_to` is NOT a wildcard. brain-core's schema
+ * treats it as invalid — a clause that governs everything says so explicitly — so
+ * reading it as blanket coverage would grant eligibility the policy never gave.
+ * Nor may it simply be dropped: an elevated clause is in the signed document and
+ * this code cannot tell what it governs. It therefore sets `invalidScope`, which
+ * suppresses every checkbox instead of contributing a limit.
  *
- * Dropping any of these would not merely lose a limit: a two-approver line covering
- * everything would go missing while a laxer per-category clause still set a limit,
- * so a batch would be offered under a ceiling the policy does not actually grant.
- * That is the one direction this file must never fail in.
+ * That asymmetry is the point. A wildcard may EXPAND what is eligible; a clause we
+ * cannot read may only REMOVE. Dropping either would offer a batch under a ceiling
+ * the policy does not actually grant, which is the one direction this file must
+ * never fail in.
  */
 export function elevatedThresholdsFromPolicy(
   facts: ApprovalPolicyFacts | null | undefined,
@@ -150,6 +162,7 @@ export function elevatedThresholdsFromPolicy(
   const unconditional = new Set<string>();
   let universal: number | null = null;
   let universalUnconditional = false;
+  let invalidScope = false;
 
   for (const rule of facts?.rules ?? []) {
     if (!rule || !isElevatedConfirm(rule)) continue;
@@ -159,15 +172,20 @@ export function elevatedThresholdsFromPolicy(
     const named = declared
       .filter((c): c is string => typeof c === "string" && !!c.trim())
       .map((c) => c.trim());
-    /* Unscoped, wildcard, or unreadable — all three bind every category. */
-    const coversEverything = named.length === 0 || named.includes(ANY_SCOPE);
-
-    if (coversEverything) {
+    /* The DSL's explicit wildcard: binds every category, as the VM matches it. */
+    if (named.includes(ANY_SCOPE)) {
       if (limit == null || limit <= 0) {
         universalUnconditional = true;
         continue;
       }
       universal = universal == null ? limit : Math.min(universal, limit);
+      continue;
+    }
+
+    /* Absent, empty, or nothing readable: an invalid scope, not a wildcard. It
+       grants nothing; it only takes the whole gate down. */
+    if (named.length === 0) {
+      invalidScope = true;
       continue;
     }
 
@@ -179,7 +197,7 @@ export function elevatedThresholdsFromPolicy(
       limits[key] = limits[key] == null ? limit : Math.min(limits[key], limit);
     }
   }
-  return { limits, unconditional, universal, universalUnconditional };
+  return { limits, unconditional, universal, universalUnconditional, invalidScope };
 }
 
 /** Nothing known. What an unreachable or absent policy resolves to — and, because
@@ -189,6 +207,7 @@ export const NO_POLICY_ELEVATION: PolicyElevation = {
   unconditional: new Set(),
   universal: null,
   universalUnconditional: false,
+  invalidScope: false,
 };
 
 /** Which policy category a record falls under. brain-core puts it on
@@ -219,9 +238,13 @@ export interface BulkLimit {
  * Null whenever the answer is not positively known: no category, a category the
  * policy escalates unconditionally, or no evaluable policy threshold.
  *
- * A category-less clause (`universal`) is a policy line for EVERY category, so it
- * both satisfies the requirement above on its own and competes with a named
- * clause — lowest wins, for the same reason it does within one category.
+ * A wildcard clause (`universal`) is a policy line for EVERY category, so it both
+ * satisfies the requirement above on its own and competes with a named clause —
+ * lowest wins, for the same reason it does within one category.
+ *
+ * An unreadable clause (`invalidScope`) does the opposite: it is not a line for
+ * any category, and because it governs something this code cannot identify, it
+ * withdraws the answer everywhere rather than narrowing it anywhere.
  */
 export function bulkLimitFor(
   type: string | null | undefined,
@@ -231,6 +254,7 @@ export function bulkLimitFor(
 ): BulkLimit | null {
   if (!category) return null;
   if (elevation.universalUnconditional) return null;
+  if (elevation.invalidScope) return null;
   if (elevation.unconditional.has(category)) return null;
 
   const evaluable = (v: unknown): v is number =>

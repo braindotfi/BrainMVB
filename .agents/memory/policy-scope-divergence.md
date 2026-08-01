@@ -1,41 +1,46 @@
 ---
 name: Policy clause scope, read two ways
-description: Why a clause that names no category must bind every category in the bulk-approve gate, and why the coverage-describing reader may legitimately disagree
+description: Why explicit "any" binds every category in the bulk-approve gate while absent/empty scope fails closed instead, and why the coverage-describing reader may disagree
 ---
 
-# A clause that names no category
+# Wildcard, invalid, and the gap between them
 
-In the bulk-approve gate, a policy clause whose scope names no category binds
-**every** category. Four shapes count as naming no category:
+`applies_to` has exactly one wildcard shape, and the gate must not confuse the
+others with it.
 
-- the scope key is absent
-- the scope list is empty
-- the scope is an explicit wildcard
-- entries are present but none of them is readable
+**Explicit `"any"`** is the DSL's wildcard. brain-core's policy VM matches it
+against every `action.kind`, so the gate mirrors the VM: the clause binds every
+category, competes with named clauses under lowest-wins, and satisfies the
+"this category needs a policy line" requirement even for a category the policy
+never names. It may therefore *expand* eligibility — that is correct, and is
+what stops a newly added `details.kind` from escaping a blanket rule. Do not
+invent a stricter category-explicitness rule the VM itself does not apply.
 
-Such a line competes with named lines under the same lowest-wins rule. A
-category-less clause with no evaluable amount suppresses selection everywhere.
-It also satisfies the "this category must have a policy line" requirement for a
-category the policy never names.
+**Absent, empty, or unreadable `applies_to`** is not a wildcard. brain-core's
+schema treats it as invalid — a clause governing everything says so explicitly —
+so reading it as blanket coverage grants eligibility nobody signed. It must not
+simply be dropped either: an elevated clause sits in the signed document and the
+gate cannot tell what it governs. So it fails closed, suppressing the whole gate
+rather than contributing or lowering any limit.
+
+The asymmetry is the rule worth remembering: **a wildcard may expand what is
+eligible; a clause we cannot read may only remove.**
 
 **Why:** the same field is read by two functions with different jobs — one
 describes what a policy covers, one gates a money-moving checkbox. Iterating the
-scope list literally means a blanket clause contributes no limit at all, so a
-two-approver line that applies to everything silently vanishes while a laxer
-per-category clause still sets one. The failure is in the over-permissive
-direction, which is the direction that matters here. Confirmed against a live
-tenant by injecting a blanket "always two approvers" clause into the policy
-response while leaving proposals and rules real: the unfixed gate offered nine
-single-approver rows for a policy that permits none.
+scope list literally drops a blanket clause entirely, so a two-approver line that
+applies to everything silently vanishes while a laxer per-category clause still
+sets a limit. Treating every category-less shape as a wildcard fixes that but
+overshoots in the other direction, granting coverage for a shape the schema
+rejects. Both failures were confirmed live by injecting clauses into the policy
+response while leaving proposals and rules real: dropping them offered nine
+single-approver rows under a policy that permits none; over-granting made a
+policy whose only clause was unscoped behave exactly like a signed wildcard.
 
-**How to apply:** any new reader of clause scope must decide *explicitly* what an
-unnamed or unreadable scope means for its own purpose. For a gate, unknown binds
-everything — fail closed. For a describer, the safe direction can be the
-opposite. These two readings are not required to agree on every input, and
-forcing them to agree is itself a bug; what is required is that each one is
-wrong in the safe direction for its own job.
-
-**Not settled:** extending a wildcard line's coverage to a category the policy
-never names is the one part of this that *adds* eligibility rather than removing
-it. It is under external review. Do not build further behaviour on that specific
-property until it is confirmed.
+**How to apply:** any new reader of clause scope must decide *explicitly* what
+each shape means for its own purpose, and must check the shape against
+brain-core's schema rather than against what the DSL happens to tolerate. For a
+gate, mirror the VM where the VM is clear and fail closed where the document is
+invalid. The describer and the gate are not required to agree on every input —
+forcing them to agree is itself a bug; each must be wrong in the safe direction
+for its own job.

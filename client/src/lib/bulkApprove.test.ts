@@ -159,12 +159,20 @@ describe("elevatedThresholdsFromPolicy", () => {
 
 describe("elevatedThresholdsFromPolicy: clauses that name no category", () => {
   /* No live tenant policy reaches any of these: every rule in the reference
-     document names exactly one category. They are synthetic deliberately. The DSL
-     permits the shape, `coversPayments` in brainPolicy.ts already reads it as
-     "covers everything", and this file used to drop it — a blanket two-approver
-     line would vanish while a laxer named clause still set a limit, so a batch was
-     offered under a ceiling the policy never granted. With no production rule of
-     this shape, these cases are the only thing keeping that caught. */
+     document names exactly one category. They are synthetic deliberately, and the
+     two halves below are NOT interchangeable.
+
+     An explicit "any" is the DSL's wildcard, which brain-core's policy VM matches
+     against every action.kind. The gate mirrors the VM rather than inventing a
+     stricter rule, so that clause binds every category — including one the policy
+     never names.
+
+     Absent, empty or unreadable scope is a different animal: brain-core's schema
+     does not accept it as a valid clause at all. Reading it as a wildcard would
+     invent coverage nobody signed. Dropping it would be worse — a blanket
+     two-approver line would vanish while a laxer named clause still set a limit —
+     so it fails closed instead. With no production rule of either shape, these
+     cases are the only thing holding the distinction in place. */
   const twoSigners = { execute: "confirm", require: "owner_and_cfo" } as const;
   const over = (v: number) => ({ "amount.gt": { value: `${v}.00`, currency: "USD" } });
   /* The live agent_action line, kept alongside to show which one wins. */
@@ -172,22 +180,87 @@ describe("elevatedThresholdsFromPolicy: clauses that name no category", () => {
   const wide = (applies_to?: string[]) =>
     policyOf({ id: "wide", ...twoSigners, when: over(10_000), ...(applies_to ? { applies_to } : {}) });
 
-  const everyCategoryShapes: Array<[string, string[] | undefined]> = [
+  it("binds a category it never names, on the explicit \"any\" wildcard", () => {
+    const e = elevatedThresholdsFromPolicy(wide(["any"]));
+    expect(e.universal).toBe(10_000);
+    expect(e.invalidScope).toBe(false);
+    /* never filed under a literal key, which no record's details.kind can match */
+    expect(e.limits).toEqual({});
+    expect(bulkLimitFor("collections", "agent_action", e, {}))
+      .toEqual({ value: 10_000, source: "policy" });
+  });
+
+  const invalidShapes: Array<[string, string[] | undefined]> = [
     ["absent applies_to", undefined],
     ["empty applies_to", []],
-    ["the explicit \"any\" wildcard", ["any"]],
     ["a scope it cannot read", ["", "   "]],
   ];
-  for (const [label, applies_to] of everyCategoryShapes) {
-    it(`binds a category it never names: ${label}`, () => {
+  for (const [label, applies_to] of invalidShapes) {
+    it(`is not a wildcard, and fails closed instead: ${label}`, () => {
       const e = elevatedThresholdsFromPolicy(wide(applies_to));
-      expect(e.universal).toBe(10_000);
-      /* never filed under a literal key, which no record's details.kind can match */
+      expect(e.invalidScope).toBe(true);
+      /* grants nothing: no universal line, no named line */
+      expect(e.universal).toBeNull();
       expect(e.limits).toEqual({});
-      expect(bulkLimitFor("collections", "agent_action", e, {}))
-        .toEqual({ value: 10_000, source: "policy" });
+      expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
     });
   }
+
+  /* `applies_to` is typed string[], but the policy arrives as JSON off the wire and
+     the type is a claim, not a guarantee. The bare string "any" is the tempting
+     one: it reads like the wildcard, and granting it blanket coverage would mean
+     honouring a shape brain-core's schema rejects. */
+  const malformedShapes: Array<[string, unknown]> = [
+    ["the bare string \"any\" rather than a list", "any"],
+    ["an object rather than a list", { any: true }],
+    ["null", null],
+  ];
+  for (const [label, applies_to] of malformedShapes) {
+    it(`fails closed when the scope is not a list at all: ${label}`, () => {
+      const e = elevatedThresholdsFromPolicy(policyOf(
+        AGENT_500K,
+        { id: "wide", ...twoSigners, when: over(10_000), applies_to } as unknown as ApprovalPolicyFacts["rules"][number],
+      ));
+      expect(e.invalidScope).toBe(true);
+      expect(e.universal).toBeNull();
+      expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
+    });
+  }
+
+  it("only lets the real wildcard reach a category the policy never names", () => {
+    /* The correction in one pair. Same clause, same amount; one names the DSL
+       wildcard, one names nothing. Only the first may make an unnamed category
+       bulk-eligible — the second must not expand eligibility at all. */
+    const wildcard = elevatedThresholdsFromPolicy(wide(["any"]));
+    const unreadable = elevatedThresholdsFromPolicy(wide(undefined));
+    expect(bulkLimitFor("collections", "future_kind", wildcard, {}))
+      .toEqual({ value: 10_000, source: "policy" });
+    expect(bulkLimitFor("collections", "future_kind", unreadable, {})).toBeNull();
+  });
+
+  it("takes the gate down rather than dropping an unreadable clause", () => {
+    /* The over-permissive failure this must never regress to: the $10k line goes
+       missing and a $42,000 agent_action is offered under the $500k line. */
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      AGENT_500K,
+      { id: "wide", ...twoSigners, when: over(10_000) },
+    ));
+    expect(e.limits).toEqual({ agent_action: 500_000 });
+    expect(e.invalidScope).toBe(true);
+    expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
+  });
+
+  it("ignores an unscoped clause that only needs a single signer", () => {
+    /* Not an elevated clause at all, so it neither binds nor suppresses. A policy
+       carrying ordinary single-signer lines must not disable bulk approval. */
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      AGENT_500K,
+      { id: "wide", execute: "confirm", require: "single_signer", when: over(10_000) },
+    ));
+    expect(e.invalidScope).toBe(false);
+    expect(bulkLimitFor("collections", "agent_action", e, {}))
+      .toEqual({ value: 500_000, source: "policy" });
+  });
 
   it("takes the wildcard line when it is lower than the named one", () => {
     /* The gap, end to end: before this, the $10k line was dropped and a $42,000
@@ -213,10 +286,23 @@ describe("elevatedThresholdsFromPolicy: clauses that name no category", () => {
       .toEqual({ value: 20_000, source: "policy" });
   });
 
-  it("suppresses every category when a category-less clause has no evaluable amount", () => {
-    const e = elevatedThresholdsFromPolicy(policyOf(AGENT_500K, { id: "wide", ...twoSigners }));
+  it("suppresses every category when a wildcard clause has no evaluable amount", () => {
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      AGENT_500K,
+      { id: "wide", ...twoSigners, applies_to: ["any"] },
+    ));
     expect(e.universalUnconditional).toBe(true);
     expect(e.limits).toEqual({ agent_action: 500_000 });
+    expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
+    expect(bulkLimitFor("collections", "outbound_payment", e, {})).toBeNull();
+  });
+
+  it("suppresses every category for an unscoped clause with no amount either", () => {
+    /* Same outcome as the wildcard above, reached by the other route: this one is
+       an invalid clause rather than a blanket one, and both fail closed. */
+    const e = elevatedThresholdsFromPolicy(policyOf(AGENT_500K, { id: "wide", ...twoSigners }));
+    expect(e.invalidScope).toBe(true);
+    expect(e.universalUnconditional).toBe(false);
     expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
     expect(bulkLimitFor("collections", "outbound_payment", e, {})).toBeNull();
   });
@@ -250,6 +336,7 @@ describe("elevatedThresholdsFromPolicy: clauses that name no category", () => {
     const e = elevatedThresholdsFromPolicy(LIVE_POLICY);
     expect(e.universal).toBeNull();
     expect(e.universalUnconditional).toBe(false);
+    expect(e.invalidScope).toBe(false);
     expect(e.limits).toEqual({ outbound_payment: 50_000, onchain_tx: 250_000, agent_action: 500_000 });
   });
 });
