@@ -108,6 +108,23 @@ check("total outage says nothing could be loaded", /could(n't| not)? be loaded/i
 await healFeed(TRANSACTIONS);
 await healFeed(INVOICES);
 
+/* Account drill-down: "no recent activity" must not be an outage. */
+await breakFeed(TRANSACTIONS);
+await go("/ledger?tab=accounts");
+const firstAccount = page.locator('[data-testid="row-account-0"]');
+if (await firstAccount.count()) {
+  await firstAccount.click();
+  await page.waitForTimeout(900);
+  check(
+    "transactions 503 does not render the account popup as 'no activity'",
+    (await count('[data-testid="text-activity-unavailable"]')) === 1 &&
+      (await count('[data-testid="text-activity-empty"]')) === 0,
+  );
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+}
+await healFeed(TRANSACTIONS);
+
 /* Vendor list feeding the rule builder. */
 await breakFeed("**/api/brain/ledger/counterparties*");
 await go("/ledger?tab=rules&rules=automations");

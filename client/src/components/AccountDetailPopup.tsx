@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useFeed } from "@/lib/feed";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/useCurrency";
 import arrowIcon from "@assets/arrow_1783201262245.png";
@@ -146,18 +146,18 @@ export function AccountDetailPopup({
   hidePager?: boolean;
 }) {
   const { format } = useCurrency();
-  const { data: acctData } = useQuery<BrainAccountsResponse>({
-    queryKey: ["/api/brain/ledger/accounts"],
-    enabled: accountId != null,
-    retry: false,
-  });
-  const { data: txData } = useQuery<BrainTransactionsResponse>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    enabled: accountId != null,
-    retry: false,
-  });
+  const accountsFeed = useFeed(
+    ["/api/brain/ledger/accounts"],
+    (d: BrainAccountsResponse) => d.accounts,
+    { enabled: accountId != null },
+  );
+  const txFeed = useFeed(
+    ["/api/brain/ledger/transactions"],
+    (d: BrainTransactionsResponse) => d.transactions,
+    { enabled: accountId != null },
+  );
 
-  const allAccounts = acctData?.accounts ?? [];
+  const allAccounts = accountsFeed.status === "ready" ? accountsFeed.rows : [];
   const account = allAccounts.find((a) => a.id === accountId) ?? null;
   const open = accountId != null;
 
@@ -165,7 +165,7 @@ export function AccountDetailPopup({
   const prevAccount = currentIdx > 0 ? allAccounts[currentIdx - 1] : null;
   const nextAccount = currentIdx >= 0 && currentIdx < allAccounts.length - 1 ? allAccounts[currentIdx + 1] : null;
 
-  const activity = (txData?.transactions ?? [])
+  const activity = (txFeed.status === "ready" ? txFeed.rows : [])
     .filter((t) => t.account_id === accountId)
     .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
     .slice(0, 5);
@@ -267,8 +267,22 @@ export function AccountDetailPopup({
                       })}
                     </div>
                   ) : (
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
-                      No recent activity on this account yet.
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full"
+                      style={{ color: txFeed.unavailable ? "#ff9400" : "#6c779d" }}
+                      data-testid={
+                        txFeed.unavailable
+                          ? "text-activity-unavailable"
+                          : txFeed.pending
+                            ? "text-activity-loading"
+                            : "text-activity-empty"
+                      }
+                    >
+                      {txFeed.unavailable
+                        ? "Recent activity couldn't be loaded, so none is shown. That is not a record of an account with no activity."
+                        : txFeed.pending
+                          ? "Loading recent activity…"
+                          : "No recent activity on this account yet."}
                     </p>
                   )}
                 </div>
@@ -321,8 +335,25 @@ export function AccountDetailPopup({
             </>
           ) : (
             <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
-                This account isn't in your current ledger.
+              {/* "Isn't in your ledger" is a strong claim about the account. When the
+                  read failed we have no basis for it — the account may be perfectly
+                  fine and simply unreadable this second. */}
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px]"
+                style={{ color: accountsFeed.unavailable ? "#ff9400" : "#6c779d" }}
+                data-testid={
+                  accountsFeed.unavailable
+                    ? "text-account-unavailable"
+                    : accountsFeed.pending
+                      ? "text-account-loading"
+                      : "text-account-missing"
+                }
+              >
+                {accountsFeed.unavailable
+                  ? "Your accounts couldn't be loaded, so this one can't be shown. It hasn't been removed from your ledger."
+                  : accountsFeed.pending
+                    ? "Loading account…"
+                    : "This account isn't in your current ledger."}
               </p>
             </div>
           )}
