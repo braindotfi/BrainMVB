@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
@@ -16,6 +17,9 @@ import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import { ContactUpdateModal } from "@/components/ContactUpdateModal";
+import { ConnectedSources } from "@/components/AddSourceModal";
+import { useNav } from "@/lib/navContext";
+import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import TeamFigma from "@/components/settings/figma/TeamSection";
@@ -29,6 +33,7 @@ type Section =
   | "security"
   | "notifications"
   | "team"
+  | "sources"
   | "legal"
   | "account";
 
@@ -126,12 +131,37 @@ const TeamNavIcon = ({ active }: { active: boolean }) => (
   <img alt="" className="shrink-0 size-[24px]" src={active ? teamActiveIcon : teamInactiveIcon} />
 );
 
+/* No Figma export exists for a Sources nav item, so this is drawn inline at the
+   same 24px box and stroke weight as the exported icons rather than borrowing an
+   unrelated asset. */
+const SourcesNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+    <ellipse cx="12" cy="6.5" rx="7" ry="3" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" />
+    <path
+      d="M5 6.5v11c0 1.66 3.13 3 7 3s7-1.34 7-3v-11"
+      stroke={active ? "#ffffff" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M5 12c0 1.66 3.13 3 7 3s7-1.34 7-3"
+      stroke={active ? "#ffffff" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+/* Order follows the design's tab sequence. The tabs themselves are the design's;
+   the vertical layout is not — nine horizontal tabs do not fit the centre column
+   at the widths this shell actually renders (see the item-7 notes). */
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
-  { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
-  { id: "security",      label: "Security",          Icon: SecurityNavIcon },
   { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
   { id: "team",          label: "Team",              Icon: TeamNavIcon     },
+  { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
+  { id: "sources",       label: "Sources",           Icon: SourcesNavIcon  },
+  { id: "security",      label: "Security",          Icon: SecurityNavIcon },
   { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
   { id: "account",       label: "Account",           Icon: AccountNavIcon  },
 ];
@@ -361,6 +391,13 @@ function ProfileSection() {
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef<HTMLDivElement>(null);
 
+  /* Auto-approve limit. This is a money-authorization figure, so the three
+     states below are kept apart on purpose: an unreachable policy must never
+     render as "no limit configured", which reads as "nothing is automated" and
+     is the most dangerous thing this row could get wrong. */
+  const policy = useBrainPolicy();
+  const autoLimit = autoApproveLimitFromPolicy(policy.facts);
+
   useEffect(() => {
     if (!currencyOpen) return;
     const handler = (e: MouseEvent) => {
@@ -589,6 +626,74 @@ function ProfileSection() {
         </div>
       </div>
 
+      {/* Approvals — read from the live policy, and read-only.
+          Changing it needs `policy/compose` + `policy/sign`, scopes this app's
+          token does not hold, so there is no control here pretending otherwise. */}
+      <div className="flex flex-col gap-[4px]">
+        <SectionLabel>Approvals</SectionLabel>
+        <Card noBorder>
+          <SettingRow
+            icon={
+              <RowIcon>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3.5l7 3v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-5l7-3z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M9 12l2.2 2.2L15.5 10" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </RowIcon>
+            }
+            label="Auto-Approve Limit"
+            sublabel={
+              policy.isLoading
+                ? "Reading your approval policy…"
+                : policy.isError
+                  ? "Brain could not read your approval policy — this limit is unknown, not absent."
+                  : autoLimit === null
+                    ? "No approval policy is active on this tenant yet."
+                    : autoLimit.kind === "limit"
+                      ? "Payments at or below this run without waiting for a person."
+                      : autoLimit.kind === "conditional"
+                        ? "Automatic approval applies only under specific conditions, not a flat amount."
+                        : "Nothing runs automatically — every payment waits for an approver."
+            }
+            testId="setting-row-auto-approve-limit"
+            right={
+              <div
+                className="shrink-0 rounded-[8px] px-[12px] py-[8px]"
+                style={{
+                  background: policy.isError ? "rgba(255,149,0,0.1)" : "#222737",
+                  border: policy.isError ? "1px solid rgba(255,149,0,0.3)" : "1px solid transparent",
+                }}
+                data-testid="text-auto-approve-limit"
+              >
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap"
+                  style={{ color: policy.isError ? "#ff9500" : policy.isLoading ? "#6c779d" : "#ffffff" }}
+                >
+                  {policy.isLoading
+                    ? "Checking…"
+                    : policy.isError
+                      ? "Unknown"
+                      : autoLimit === null
+                        ? "No policy"
+                        : autoLimit.kind === "limit"
+                          ? `${groupPolicyAmount(autoLimit.value)} ${autoLimit.currency}`
+                          : autoLimit.kind === "conditional"
+                            ? "Conditional"
+                            : "None"}
+                </p>
+              </div>
+            }
+          />
+        </Card>
+        <p
+          className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] px-1"
+          data-testid="text-auto-approve-readonly"
+        >
+          Shown as your Brain policy has it. Editing an approval limit requires a signed
+          policy change, which cannot be made from this screen yet.
+        </p>
+      </div>
+
     </div>
   );
 }
@@ -798,7 +903,15 @@ function BillingSection() {
 }
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
-const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "legal", "account"];
+const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "legal", "account"];
+
+/* Settings → Sources. The wizard itself stays mounted on the shell; this tab
+   shows the same connected-sources list the modal opens with, so there is one
+   implementation of "what Brain reads from" rather than two that can drift. */
+function SourcesSection() {
+  const { openAddSource } = useNav();
+  return <ConnectedSources open onAddNew={openAddSource} />;
+}
 
 export function SettingsPage() {
   // Deep-link support: /settings?section=billing opens that section directly.
@@ -806,6 +919,17 @@ export function SettingsPage() {
     const s = new URLSearchParams(window.location.search).get("section");
     return VALID_SECTIONS.includes(s as Section) ? (s as Section) : "profile";
   });
+  const search = useSearch();
+
+  /* Re-read on every change to the query string, not just on mount. Settings is
+     already mounted when an in-app link points at another tab, and a mount-only
+     initializer swallows that navigation with no error - the URL changes and the
+     page does not. */
+  useEffect(() => {
+    const s = new URLSearchParams(search).get("section");
+    if (s && VALID_SECTIONS.includes(s as Section)) setSection(s as Section);
+  }, [search]);
+
   const { toast } = useToast();
 
   const SectionContent = {
@@ -814,6 +938,7 @@ export function SettingsPage() {
     security:      <SecurityFigma />,
     notifications: <NotificationsFigma />,
     team:          <TeamFigma />,
+    sources:       <SourcesSection />,
     legal:         <LegalFigma />,
     account:       <AccountFigma />,
   }[section];

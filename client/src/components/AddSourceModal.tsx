@@ -117,9 +117,12 @@ type SourceDocument = {
  * An upstream failure (unconfigured token source, no tenant) must never blank the
  * Sources screen, so an errored query simply yields an empty list.
  */
-function useBrainSources(enabled: boolean): BrainSource[] {
+/** Returns the read's state alongside its rows: a failed sources read must not be
+    indistinguishable from a tenant that has connected nothing. */
+function useBrainSources(enabled: boolean): { sources: BrainSource[]; isLoading: boolean; isError: boolean } {
   const query = useQuery<unknown>({ queryKey: ["/api/brain/sources"], enabled });
-  return useMemo(() => parseBrainSources(query.data).filter(isConnectedBrainSource), [query.data]);
+  const sources = useMemo(() => parseBrainSources(query.data).filter(isConnectedBrainSource), [query.data]);
+  return { sources, isLoading: query.isLoading, isError: query.isError };
 }
 
 type CounterpartyLite = { id: string; display_name?: string; name?: string };
@@ -360,7 +363,7 @@ export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
 }
 
 /* ───────────────────────────── Screen: Connected sources ───────────────────────────── */
-function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => void }) {
+export function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => void }) {
   const banksQuery = useQuery<BankConnectionInfo[]>({
     queryKey: ["/api/integrations/plaid/connections"],
     enabled: open,
@@ -374,11 +377,24 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
     enabled: open,
   });
 
-  const brainSources = useBrainSources(open);
+  const brain = useBrainSources(open);
+  const brainSources = brain.sources;
 
   const banks = banksQuery.data ?? [];
   const tools = toolsQuery.data ?? [];
   const docs = docsQuery.data ?? [];
+
+  /* Four independent reads back this list. `?? []` turns any one of them failing
+     into an absence, and an absence here reads as "that source is not connected"
+     - which on this screen is an invitation to reconnect something that is
+     already connected, or to assume Brain is reading a bank it cannot see. Name
+     the feeds that did not answer instead. */
+  const unavailable = [
+    banksQuery.isError ? "bank connections" : null,
+    toolsQuery.isError ? "tool connections" : null,
+    docsQuery.isError ? "uploaded documents" : null,
+    brain.isError ? "Brain's own source list" : null,
+  ].filter((v): v is string => v !== null);
 
   const disconnectSource = useMutation({
     mutationFn: async (sourceId: string) => {
@@ -409,7 +425,7 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] }),
   });
 
-  const isLoading = banksQuery.isLoading || toolsQuery.isLoading || docsQuery.isLoading;
+  const isLoading = banksQuery.isLoading || toolsQuery.isLoading || docsQuery.isLoading || brain.isLoading;
   const total = banks.length + tools.length + docs.length + brainSources.length;
 
   return (
@@ -427,15 +443,34 @@ function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => v
         <div className="flex items-center justify-center py-[32px]">
           <span className="size-[20px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin" aria-hidden />
         </div>
-      ) : total === 0 ? (
-        <div className="bg-[#0a0c10] rounded-[16px] p-[20px]" data-testid="empty-connected-sources">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px]">No sources yet</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
-            Connect a bank, your tools, or upload documents to give Brain its first look at your business.
-          </p>
-        </div>
       ) : (
         <div className="flex flex-col gap-[16px]">
+          {unavailable.length > 0 && (
+            <div
+              className="rounded-[16px] p-[16px]"
+              style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
+              data-testid="notice-sources-unavailable"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[15px]">
+                This list is incomplete
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
+                Brain could not load {unavailable.length === 1
+                  ? unavailable[0]
+                  : `${unavailable.slice(0, -1).join(", ")} and ${unavailable[unavailable.length - 1]}`}
+                . Anything connected there is missing from this list — it has not been
+                disconnected. Try again in a moment.
+              </p>
+            </div>
+          )}
+          {total === 0 && unavailable.length === 0 && (
+            <div className="bg-[#0a0c10] rounded-[16px] p-[20px]" data-testid="empty-connected-sources">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px]">No sources yet</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
+                Connect a bank, your tools, or upload documents to give Brain its first look at your business.
+              </p>
+            </div>
+          )}
           {banks.length > 0 && (
             <SourceGroup label="Banks">
               {banks.map((b) => (
@@ -628,7 +663,7 @@ export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryI
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
 
-  const brainSources = useBrainSources(true);
+  const brainSources = useBrainSources(true).sources;
 
   const banks = banksQuery.data ?? [];
   const tools = toolsQuery.data ?? [];
@@ -912,7 +947,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
   // A provider can also be connected upstream (brain-core's own connector registry).
   // Those rows may forbid disconnecting, in which case this screen must show the
   // provider as connected but offer NO "tap to remove" affordance.
-  const brainSources = useBrainSources(true);
+  const brainSources = useBrainSources(true).sources;
   const undisconnectableTypes = useMemo(
     () => new Set(brainSources.filter(isDisconnectHidden).map((s) => s.type)),
     [brainSources],

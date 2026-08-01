@@ -3,6 +3,7 @@ import { queryClient } from "./queryClient";
 import { clearMembers } from "./membersStore";
 import { setDemoDataEnabled } from "./demoMode";
 import { resetAcknowledgedStore } from "./acknowledgedStore";
+import { setBackupApproverScope } from "./backupApprover";
 import { markOnboardingComplete } from "./onboarding";
 
 export interface AuthUser {
@@ -46,6 +47,11 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function applyUserScopedResets(u: AuthUser | null): void {
   setDemoDataEnabled(!!u?.isDemo);
   resetAcknowledgedStore();
+  /* Member ids are tenant-scoped, so backup-approver marks are re-pointed at the
+     new account rather than carried over. Re-pointing (not clearing) because this
+     funnel also runs on session bootstrap, where clearing would wipe the marks on
+     every page load. */
+  setBackupApproverScope(u?.id ?? null);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
