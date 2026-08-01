@@ -49,6 +49,24 @@ export interface TierRowBadge {
   className: string;
 }
 
+/**
+ * Bulk-selection checkbox, shown only on rows a batch approval may legally cover
+ * (`bulkApprove.ts` decides which — never this component).
+ *
+ * `disabled` with a `title` is used for a row that IS eligible but sits outside the
+ * batch already started, because bulk approval covers one type at a time. Hiding
+ * its checkbox instead would make rows appear and vanish as the selection changes;
+ * a disabled box that explains itself on hover keeps the list still.
+ */
+export interface TierRowSelect {
+  checked: boolean;
+  disabled?: boolean;
+  title?: string;
+  /** Accessible name — the row title alone is not in the label. */
+  label: string;
+  onChange: () => void;
+}
+
 export interface TierRowModel {
   id: string;
   tier: RowTier;
@@ -62,6 +80,8 @@ export interface TierRowModel {
   /** Opens the record's full detail sheet. Omitted when it has none. */
   onOpenDetail?: () => void;
   detailLabel?: string;
+  /** Bulk-approve checkbox. Omitted on every row that cannot be batch-approved. */
+  select?: TierRowSelect;
   /** Stable prefix for this row's test ids, e.g. `row-overview`. */
   testIdPrefix: string;
 }
@@ -77,6 +97,18 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
       data-testid={`${row.testIdPrefix}-${row.id}`}
       data-tier={row.tier}
     >
+      {row.select && (
+        <input
+          type="checkbox"
+          checked={row.select.checked}
+          disabled={row.select.disabled}
+          onChange={row.select.onChange}
+          title={row.select.title}
+          aria-label={row.select.label}
+          data-testid={`${row.testIdPrefix}-${row.id}-select`}
+          className="mt-[3px] sm:mt-0 size-[16px] shrink-0 accent-[#7631ee] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[3px]"
+        />
+      )}
       <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
         {/* Wraps rather than truncates. These titles carry the amount and the
             counterparty; an ellipsis in a ~420px column hides exactly the part
