@@ -104,6 +104,7 @@ export function VendorDetailPopup({
   onPrev,
   onNext,
   pagerDisabled,
+  onDeleteVendor,
 }: {
   vendor: Vendor | null;
   open: boolean;
@@ -111,17 +112,20 @@ export function VendorDetailPopup({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  onDeleteVendor?: (vendorId: string, vendorName: string) => void;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [confirmingGrant, setConfirmingGrant] = useState(false);
   const [reviewed, setReviewed] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     setConfirmingRevoke(false);
     setConfirmingGrant(false);
     setReviewed(false);
+    setConfirmingDelete(false);
   }, [vendor?.id]);
 
   if (!vendor) return null;
@@ -384,47 +388,95 @@ export function VendorDetailPopup({
 
             {/* Action buttons */}
             <div className="flex flex-col gap-[12px] w-full">
-              {/* Trusted → Revoke */}
+              {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
-                  {confirmingRevoke ? (
-                    <div className="flex flex-col gap-[12px] p-[16px] rounded-[12px] w-full" style={{ background: "rgba(210,3,68,0.06)", border: "1px solid rgba(210,3,68,0.15)" }}>
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344]">
-                        Revoke trust for {vendor.name}?
+                  {confirmingDelete ? (
+                    /* ── Delete confirmation (Figma: bg-[#0a0c10], p-[40px] body style) ── */
+                    <div className="flex flex-col gap-[24px] items-start w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px] w-full">
+                        Deleting removes this vendor entirely. Are you sure you want to delete this vendor? This can't be undone.
                       </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        This vendor will move to <strong className="text-[#a8b9f4]">Known</strong> and will no longer be auto-paid by rules. Future payments will require manual approval.
-                      </p>
-                      <div className="flex gap-[8px] w-full">
+                      <div className="flex gap-[16px] items-center w-full">
                         <button
                           type="button"
-                          onClick={() => setConfirmingRevoke(false)}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d]"
+                          onClick={() => setConfirmingDelete(false)}
+                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                           style={{ background: "#222737" }}
+                          data-testid="button-delete-vendor-cancel"
                         >
-                          Cancel
+                          Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => { setConfirmingRevoke(false); onOpenChange(false); }}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#d20344]"
+                          onClick={() => {
+                            setConfirmingDelete(false);
+                            onOpenChange(false);
+                            onDeleteVendor?.(vendor.id, vendor.name);
+                          }}
+                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                           style={{ background: "#350011" }}
-                          data-testid="button-confirm-revoke-trust"
+                          data-testid="button-confirm-delete-vendor"
                         >
-                          Revoke trust
+                          Delete
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingRevoke(true)}
-                      className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] w-full"
-                      style={{ background: "#350011" }}
-                      data-testid="button-revoke-trust"
-                    >
-                      Revoke Trust
-                    </button>
+                    <>
+                      {confirmingRevoke ? (
+                        <div className="flex flex-col gap-[12px] p-[16px] rounded-[12px] w-full" style={{ background: "rgba(210,3,68,0.06)", border: "1px solid rgba(210,3,68,0.15)" }}>
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344]">
+                            Revoke trust for {vendor.name}?
+                          </p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                            This vendor will move to <strong className="text-[#a8b9f4]">Known</strong> and will no longer be auto-paid by rules. Future payments will require manual approval.
+                          </p>
+                          <div className="flex gap-[8px] w-full">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmingRevoke(false)}
+                              className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d]"
+                              style={{ background: "#222737" }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setConfirmingRevoke(false); onOpenChange(false); }}
+                              className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#d20344]"
+                              style={{ background: "#350011" }}
+                              data-testid="button-confirm-revoke-trust"
+                            >
+                              Revoke trust
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingRevoke(true)}
+                          className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] w-full"
+                          style={{ background: "#350011" }}
+                          data-testid="button-revoke-trust"
+                        >
+                          Revoke Trust
+                        </button>
+                      )}
+
+                      {/* Delete Vendor — shown when not mid-revoke confirmation */}
+                      {!confirmingRevoke && (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(true)}
+                          className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                          style={{ background: "#1d2132" }}
+                          data-testid="button-delete-vendor"
+                        >
+                          Delete Vendor
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation, useSearch } from "wouter";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
@@ -7,14 +8,31 @@ import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
-import { Plus } from "lucide-react";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { Plus, ChevronDown } from "lucide-react";
+import { AlertCallout } from "@/components/Callout";
+import closeIcon from "@assets/Close_1783293571882.png";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
-/* ── Vendor row ──────────────────────────────────────────────────────────────── */
+/* ── Vendor categories (from Figma dropdown) ─────────────────────────────── */
+const VENDOR_CATEGORIES = [
+  "Supplier",
+  "Contractor",
+  "Software",
+  "Services",
+  "Hardware",
+  "Facilities",
+  "Logistics",
+  "Marketing",
+  "Utilities",
+  "Legal",
+  "Finance",
+  "Other",
+];
+
+/* ── Vendor row ──────────────────────────────────────────────────────────── */
 function VendorRow({
   vendor,
   onClick,
@@ -50,16 +68,143 @@ function VendorRow({
   );
 }
 
-/* ── Main page ─────────────────────────────────────────────────────────────────── */
-/**
- * Vendors — a Ledger tab, no longer a top-level page.
- *
- * Everything it had is intact: the detail popup, the wrap-around pager, `?vendor=`
- * deep links and `?from=` return targets. What changed is the chrome. Its own
- * header is gone (the Ledger supplies one) and its four sub-tabs render as a
- * filter row, because two stacked pill bars would make "which page am I on" and
- * "which slice of one list am I looking at" look like the same control.
- */
+/* ── Submit confirmation dialog ──────────────────────────────────────────── */
+function SubmitConfirmDialog({
+  open,
+  vendorName,
+  category,
+  onCancel,
+  onConfirm,
+  busy,
+}: {
+  open: boolean;
+  vendorName: string;
+  category: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  busy: boolean;
+}) {
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-[374px] max-w-[calc(100vw-32px)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          style={{
+            background: "#11141b",
+            border: "1px solid #1d2132",
+            borderRadius: "16px",
+            boxShadow: "0px 68px 27px rgba(0,0,0,0.06), 0px 38px 23px rgba(0,0,0,0.2), 0px 17px 17px rgba(0,0,0,0.34), 0px 4px 9px rgba(0,0,0,0.39)",
+            overflow: "hidden",
+          }}
+        >
+          <DialogPrimitive.Title asChild>
+            <div className="flex flex-col gap-[8px] items-center px-[8px] pt-[24px] pb-[16px] text-center">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
+                Submit Vendor for Review
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
+                Add vendor <span className="text-[#a8b9f4]">{vendorName}</span> as a{" "}
+                <span className="text-[#a8b9f4]">{category || "supplier"}</span> for review.
+              </p>
+            </div>
+          </DialogPrimitive.Title>
+
+          <div className="flex gap-[8px] items-center p-[8px]">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              style={{ background: "#222737" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={busy}
+              data-testid="button-confirm-submit-vendor"
+              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+              style={{ background: "#123509" }}
+            >
+              {busy ? "Submitting…" : "Confirm"}
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+/* ── Category dropdown ───────────────────────────────────────────────────── */
+function CategoryDropdown({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        data-testid="button-vendor-category-dropdown"
+        className="flex gap-[8px] items-center p-[8px] rounded-[8px] hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        style={{ background: "#222737" }}
+      >
+        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap" style={{ color: value ? "#a8b9f4" : "#6c779d" }}>
+          {value || "category"}
+        </span>
+        <ChevronDown
+          className="size-[16px] shrink-0 transition-transform"
+          style={{ color: "#6c779d", transform: open ? "rotate(180deg)" : "none" }}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-[4px] z-50 flex flex-col items-start p-[8px] rounded-[12px] min-w-[160px]"
+          style={{
+            background: "#0a0c10",
+            border: "1px solid #1d2132",
+            boxShadow: "0px 68px 13.5px rgba(0,0,0,0.06), 0px 38px 11.5px rgba(0,0,0,0.2), 0px 17px 8.5px rgba(0,0,0,0.34), 0px 4px 4.5px rgba(0,0,0,0.39)",
+          }}
+        >
+          {VENDOR_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => { onChange(cat); setOpen(false); }}
+              className="flex items-start p-[8px] rounded-[8px] w-full text-left hover:bg-[#222737] transition-colors focus:outline-none focus-visible:bg-[#222737]"
+            >
+              <span
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap"
+                style={{ color: cat === value ? "#a8b9f4" : "#6c779d" }}
+              >
+                {cat}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main page ───────────────────────────────────────────────────────────── */
 export function VendorsPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -67,30 +212,25 @@ export function VendorsPanel() {
   const { vendors, isLoading, isError } = useBrainVendors();
   const { toast } = useToast();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
-  // Enrich the OPEN vendor with live payment history + refined trust (the list
-  // carries neither). Identity/pager logic stays on `activeVendor`; only the
-  // popup renders the enriched copy.
   const detailVendor = useBrainVendorDetail(activeVendor);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
 
-  /* ── Inline add-vendor form state ── */
+  /* ── Add vendor state ── */
   const [addOpen, setAddOpen] = useState(false);
   const [vendorName, setVendorName] = useState("");
   const [category, setCategory] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [notes, setNotes] = useState("");
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetAddVendor = () => {
+  const resetAddVendor = useCallback(() => {
     setAddOpen(false);
     setVendorName("");
     setCategory("");
-    setContactEmail("");
-    setNotes("");
+    setConfirmSubmit(false);
     setBusy(false);
     setError(null);
-  };
+  }, []);
 
   const submitVendor = async () => {
     if (!vendorName.trim()) {
@@ -107,8 +247,6 @@ export function VendorsPanel() {
         body: JSON.stringify({
           name: vendorName.trim(),
           category: category.trim() || undefined,
-          contact_email: contactEmail.trim() || undefined,
-          ...(notes.trim() ? { description: notes.trim() } : {}),
         }),
       });
       const body = await res.json().catch(() => undefined);
@@ -121,7 +259,7 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      toast({ title: "Vendor added", description: `${vendorName.trim()} is now in your vendor list.` });
+      toast({ title: "Vendor submitted", description: `${vendorName.trim()} has been added and queued for verification.` });
       resetAddVendor();
     } catch {
       setError("Couldn't reach Brain core. Nothing was changed.");
@@ -130,30 +268,43 @@ export function VendorsPanel() {
     }
   };
 
-  /* Deep-link: ?vendor=<id> opens that vendor automatically */
+  /* ── Delete vendor handler ── */
+  const handleDeleteVendor = async (vendorId: string, vendorNameLabel: string) => {
+    try {
+      const res = await fetch(`/api/brain/ledger/counterparties/${vendorId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok && res.status !== 404) {
+        toast({ title: "Couldn't delete vendor", description: "Brain core rejected the request. The vendor was not removed.", variant: "destructive" });
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+      toast({ title: "Vendor deleted", description: `${vendorNameLabel} has been removed.` });
+      setActiveVendor(null);
+      const params = new URLSearchParams(search);
+      params.delete("vendor");
+      params.set("tab", "vendors");
+      navigate(`/ledger?${params.toString()}`, { replace: true });
+    } catch {
+      toast({ title: "Couldn't delete vendor", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+    }
+  };
+
+  /* Deep-link: ?vendor=<id> */
   useEffect(() => {
     const params = new URLSearchParams(search);
     const vendorId = params.get("vendor");
-    if (!vendorId) {
-      setActiveVendor(null);
-      return;
-    }
+    if (!vendorId) { setActiveVendor(null); return; }
     const found = vendors.find((v) => v.id === vendorId);
     if (found) setActiveVendor(found);
   }, [search, vendors]);
 
   const handleCloseDetail = () => {
     setActiveVendor(null);
-    // If we arrived here via a deep-link that carried a `?from=` return target
-    // (e.g. from the Audit Log record popup), go back there so that surface
-    // re-opens, mirroring the stacked invoice-viewer experience. Otherwise
-    // just drop the ?vendor= param.
     const params = new URLSearchParams(search);
     const from = params.get("from");
-    if (from) {
-      navigate(from, { replace: true });
-      return;
-    }
+    if (from) { navigate(from, { replace: true }); return; }
     params.delete("vendor");
     params.set("tab", "vendors");
     navigate(`/ledger?${params.toString()}`, { replace: true });
@@ -167,7 +318,6 @@ export function VendorsPanel() {
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
-  /* Group vendors by trust status */
   const grouped = useMemo(() => {
     const trusted = vendors.filter((v) => v.trustStatus === "trusted");
     const underReview = vendors.filter((v) => v.trustStatus === "under_review");
@@ -177,31 +327,23 @@ export function VendorsPanel() {
   }, [vendors]);
 
   const tabVendors: Vendor[] = useMemo(() => {
-    let list: Vendor[];
-    if (activeTab === "Needs Review") list = grouped.underReview;
-    else if (activeTab === "New") list = grouped.newVendors;
-    else if (activeTab === "Trusted") list = grouped.trusted;
-    else list = grouped.known;
-    return list;
+    if (activeTab === "Needs Review") return grouped.underReview;
+    if (activeTab === "New") return grouped.newVendors;
+    if (activeTab === "Trusted") return grouped.trusted;
+    return grouped.known;
   }, [activeTab, grouped]);
 
-  /* Header pager - cycle (wrap-around) through the vendors in the active tab.
-     Paging navigates the ?vendor= param so the deep-link effect stays in sync. */
   const vendorIdx = activeVendor ? tabVendors.findIndex((v) => v.id === activeVendor.id) : -1;
   const vendorPagerDisabled = vendorIdx < 0 || tabVendors.length <= 1;
   const pageVendor = (dir: 1 | -1) => {
     if (vendorPagerDisabled) return;
     const next = tabVendors[(vendorIdx + dir + tabVendors.length) % tabVendors.length];
-    // Preserve any existing params (e.g. `from` return-to-audit target). Only
-    // swap the vendor, so closing after paging still returns to the origin.
     const params = new URLSearchParams(search);
     params.set("tab", "vendors");
     params.set("vendor", next.id);
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
-  /* Counts are omitted, not zeroed, while the list is loading or unreachable:
-     "Needs Review 0" is a statement that nothing needs review. */
   const countsKnown = !isLoading && !isError;
   const vendorFilters = [
     { value: "Needs Review", label: "Needs Review", count: countsKnown ? grouped.underReview.length : undefined, variant: "amber" as const },
@@ -209,10 +351,6 @@ export function VendorsPanel() {
     { value: "Trusted", label: "Trusted", count: countsKnown ? grouped.trusted.length : undefined },
     { value: "Suggested", label: "Suggested", count: countsKnown ? grouped.known.length : undefined },
   ];
-
-  /* Shared input class — matches the rules builder's form field style */
-  const inputCls =
-    "w-full rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] text-white placeholder:text-[#414965] outline-none focus-visible:border-[rgba(118,49,238,0.5)] transition-colors";
 
   return (
     <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
@@ -225,8 +363,6 @@ export function VendorsPanel() {
         testIdPrefix="tab-vendor"
       />
 
-      {/* Backlog notice: shown on every sub-tab except "New" so the count is
-          never invisible. Presentation-only — no new data source needed. */}
       {countsKnown && grouped.newVendors.length > 0 && activeTab !== "New" && (
         <AlertCallout testId="notice-new-vendors">
           {grouped.newVendors.length} new {grouped.newVendors.length === 1 ? "vendor hasn't" : "vendors haven't"} been reviewed yet.
@@ -249,149 +385,112 @@ export function VendorsPanel() {
         ) : (
           <div className="flex flex-col gap-[10px] w-full">
 
-            {/* ── Table header row ── */}
-            <div className="flex items-center justify-between min-h-[16px] w-full">
-              <div className="flex items-center gap-[8px]">
-                <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Vendors</p>
-                <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{tabVendors.length}</p>
-                </div>
+            {/* ── Table header ── */}
+            <div className="flex items-center gap-[8px] min-h-[16px] w-full">
+              <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+                Vendors
+              </p>
+              <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
+                  {tabVendors.length}
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => addOpen ? resetAddVendor() : setAddOpen(true)}
-                data-testid="button-add-vendor"
-                className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                {!addOpen && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
-                {addOpen ? "Cancel" : "Add Vendor"}
-              </button>
             </div>
 
-            {/* ── Inline add-vendor form — same shell as the Rules builder panel ── */}
-            {addOpen && (
+            {/* ── Idle frame / Expanded form ── */}
+            {!addOpen ? (
+              /* Idle: dashed-border card with prompt + Add Vendor button */
               <div
-                className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]"
+                className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full"
+                style={{ background: "#11141b", border: "1px dashed #414965" }}
+                data-testid="panel-add-vendor-idle"
+              >
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px">
+                  Create a new vendor in plain English
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  data-testid="button-add-vendor"
+                  className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  style={{ background: "#4a2300" }}
+                >
+                  <Plus className="size-[16px] shrink-0" />
+                  Add Vendor
+                </button>
+              </div>
+            ) : (
+              /* Expanded: sentence-style form */
+              <div
+                className="rounded-[16px] overflow-hidden w-full"
+                style={{ background: "#0a0c10" }}
                 data-testid="panel-add-vendor"
               >
-                <div className="flex flex-col gap-[10px]">
+                <div className="flex flex-col gap-[12px] p-[16px]">
+                  {/* Sentence row */}
+                  <div className="flex flex-wrap gap-[12px] items-center">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                      Add vendor
+                    </span>
 
-                  {/* Vendor name — required */}
-                  <div className="flex flex-col gap-[6px]">
-                    <label
-                      htmlFor="vendor-name-inline"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                    {/* Vendor name input */}
+                    <div
+                      className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
+                      style={{ background: "#222737" }}
                     >
-                      Vendor name
-                    </label>
-                    <input
-                      id="vendor-name-inline"
-                      data-testid="input-vendor-name"
-                      value={vendorName}
-                      onChange={(e) => setVendorName(e.target.value)}
-                      placeholder="e.g. Acme Supplies Inc."
-                      autoFocus
-                      className={inputCls}
-                    />
+                      <input
+                        type="text"
+                        id="vendor-name-inline"
+                        data-testid="input-vendor-name"
+                        placeholder="vendor name"
+                        value={vendorName}
+                        onChange={(e) => setVendorName(e.target.value)}
+                        autoFocus
+                        className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
+                        style={{ minWidth: "140px" }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
+                      />
+                    </div>
+
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                      as a
+                    </span>
+
+                    {/* Category dropdown */}
+                    <CategoryDropdown value={category} onChange={setCategory} />
                   </div>
 
-                  {/* Category — optional */}
-                  <div className="flex flex-col gap-[6px]">
-                    <label
-                      htmlFor="vendor-category-inline"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                  {error && (
+                    <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-[8px] items-center">
+                    <button
+                      type="button"
+                      onClick={resetAddVendor}
+                      data-testid="button-add-vendor-cancel"
+                      className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      style={{ background: "#222737" }}
                     >
-                      Category
-                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional</span>
-                    </label>
-                    <input
-                      id="vendor-category-inline"
-                      data-testid="input-vendor-category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="e.g. Software, Facilities, Professional services"
-                      className={inputCls}
-                    />
-                  </div>
-
-                  {/* Contact email — optional, for verification correspondence */}
-                  <div className="flex flex-col gap-[6px]">
-                    <label
-                      htmlFor="vendor-email-inline"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!vendorName.trim()) { setError("Vendor name is required."); return; }
+                        setError(null);
+                        setConfirmSubmit(true);
+                      }}
+                      disabled={!vendorName.trim()}
+                      data-testid="button-submit-vendor"
+                      className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      style={{ background: "#4a2300" }}
                     >
-                      Contact email
-                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional — for correspondence during verification, not for payments</span>
-                    </label>
-                    <input
-                      id="vendor-email-inline"
-                      data-testid="input-vendor-contact-email"
-                      type="email"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder="e.g. billing@acme.com"
-                      className={inputCls}
-                    />
+                      Submit for Verification
+                    </button>
                   </div>
-
-                  {/* Why are you adding this vendor? — optional context for the verification queue */}
-                  <div className="flex flex-col gap-[6px]">
-                    <label
-                      htmlFor="vendor-notes-inline"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
-                    >
-                      Why are you adding this vendor?
-                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional</span>
-                    </label>
-                    <textarea
-                      id="vendor-notes-inline"
-                      data-testid="input-vendor-notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Give the verification queue some context — what this vendor does, how you found them, why they're being added now."
-                      rows={3}
-                      className={`${inputCls} resize-none`}
-                    />
-                  </div>
-                </div>
-
-                {/* Info banner — same style used throughout the design system */}
-                <div
-                  className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-                  style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-                >
-                  <InfoIcon className="mt-[2px]" />
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
-                    New vendors are added as unverified. Brain will queue a verification check before the first payment is payable.
-                  </p>
-                </div>
-
-                {error && (
-                  <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
-                )}
-
-                <div className="h-px w-full bg-[#1d2132]" />
-
-                {/* Button pair — Cancel / Add Vendor, matches the Rules builder exactly */}
-                <div className="flex gap-[10px] items-stretch w-full">
-                  <button
-                    type="button"
-                    onClick={resetAddVendor}
-                    data-testid="button-add-vendor-cancel"
-                    className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submitVendor}
-                    disabled={!vendorName.trim() || busy}
-                    data-testid="button-submit-vendor"
-                    className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  >
-                    {busy ? "Adding…" : "Add Vendor"}
-                  </button>
                 </div>
               </div>
             )}
@@ -427,6 +526,16 @@ export function VendorsPanel() {
         )}
       </div>
 
+      {/* Submit confirmation popup */}
+      <SubmitConfirmDialog
+        open={confirmSubmit}
+        vendorName={vendorName}
+        category={category}
+        onCancel={() => setConfirmSubmit(false)}
+        onConfirm={() => { setConfirmSubmit(false); submitVendor(); }}
+        busy={busy}
+      />
+
       <VendorDetailPopup
         vendor={detailVendor}
         open={activeVendor !== null}
@@ -434,6 +543,7 @@ export function VendorsPanel() {
         onPrev={() => pageVendor(-1)}
         onNext={() => pageVendor(1)}
         pagerDisabled={vendorPagerDisabled}
+        onDeleteVendor={(id, name) => handleDeleteVendor(id, name)}
       />
 
     </div>
