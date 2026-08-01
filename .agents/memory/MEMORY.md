@@ -14,6 +14,7 @@
 - [Dev DB schema drift](dev-db-schema-drift.md) — "column does not exist"/ON CONFLICT errors usually mean dev Postgres lags schema.ts (db:push hangs); fix via psql, use uniqueIndex() for upsert targets.
 - [Section label spacing](section-label-spacing.md) — subpage labels need a 36px-tall row (like button-bearing headers), not gap tweaks; 4px gap to card stays.
 - [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
+- [PostgreSQL pool error handling](postgres-pool-error-handling.md) — every pg Pool needs an error listener so managed idle-client termination cannot crash Node.
 - [Durable brain tenancy](durable-tenancy.md) — "Continue with Demo" provisions a PRODUCTION tenant, never /demo/provision-run; create is non-idempotent + founder-email-unique; agent token for raw:write.
 - [Demo tenant TTL cleanup](demo-tenant-ttl.md) — expires demo-fresh users via email pattern + createdAt age; no schema change; brain-core tenant deletion impossible (no API).
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
