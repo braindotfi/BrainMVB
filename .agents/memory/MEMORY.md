@@ -51,3 +51,4 @@
 - [Onboarding walkthrough copy](onboarding-walkthrough-copy.md) — explainer reads the live policy; pending/failed/404/known are four different sentences; copy freezes per step.
 - [Nested scroll layout](inbox-scroll-layout.md) — bounded route surfaces need grid chrome/list rows and overflow on the actual records panel.
 - [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.
+- [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.

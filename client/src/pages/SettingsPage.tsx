@@ -24,6 +24,7 @@ import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import { ContactUpdateModal } from "@/components/ContactUpdateModal";
 import { SourcesSection } from "@/components/settings/SourcesSection";
 import { DevelopersSection } from "@/components/settings/DevelopersSection";
+import { AuditLogSection } from "@/components/settings/AuditLogSection";
 import { useNav } from "@/lib/navContext";
 import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
@@ -41,6 +42,7 @@ type Section =
   | "team"
   | "sources"
   | "developers"
+  | "audit"
   | "legal"
   | "account";
 
@@ -159,6 +161,28 @@ const DevelopersNavIcon = ({ active }: { active: boolean }) => (
   />
 );
 
+/* No Figma export exists for an Audit Log nav item either — drawn inline at the
+   same 24px box and 1.5 stroke weight as the exported icons. */
+const AuditNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+    <path
+      d="M6.5 3.5h7L18 8v12.5H6.5V3.5z"
+      stroke={active ? "#ffffff" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+    <path d="M13.25 3.5V8H18" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" />
+    <path
+      d="M9 12.75l1.75 1.75L14.75 10.5"
+      stroke={active ? "#ffffff" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M9 17.25h6" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 /* Order follows the design's tab sequence. The tabs themselves are the design's;
    the vertical layout is not — nine horizontal tabs do not fit the centre column
    at the widths this shell actually renders (see the item-7 notes). */
@@ -170,6 +194,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
   { id: "sources",       label: "Sources",           Icon: SourcesNavIcon  },
   { id: "developers",    label: "Developers",        Icon: DevelopersNavIcon },
   { id: "security",      label: "Security",          Icon: SecurityNavIcon },
+  { id: "audit",         label: "Audit Log",         Icon: AuditNavIcon    },
   { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
   { id: "account",       label: "Account",           Icon: AccountNavIcon  },
 ];
@@ -947,7 +972,7 @@ function BillingSection() {
 }
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
-const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "developers", "legal", "account"];
+const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "developers", "audit", "legal", "account"];
 
 export function SettingsPage() {
   // Deep-link support: /settings?section=billing opens that section directly.
@@ -991,6 +1016,7 @@ export function SettingsPage() {
     team:          <TeamFigma />,
     sources:       <SourcesSection />,
     developers:    <DevelopersSection />,
+    audit:         <AuditLogSection />,
     legal:         <LegalFigma />,
     account:       <AccountFigma />,
   }[section];
