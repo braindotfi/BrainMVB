@@ -576,6 +576,16 @@ export function HomePage() {
   }, [needsReviewProposals, tierThresholds]);
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
 
+  /* Bulk-selection state for Overview rows. Mirrors InboxPage's pattern so rows
+     carry a working checkbox; the approve-all bar is a follow-on feature. */
+  const [selectedOverviewIds, setSelectedOverviewIds] = useState<Set<string>>(new Set());
+  const toggleOverviewSelect = (id: string) =>
+    setSelectedOverviewIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
   const cycleRecord = <T extends { id: string | number }>(
     records: T[],
     selected: T | null,
@@ -645,6 +655,13 @@ export function HomePage() {
         title: formatText(r.title),
         badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
         subtitle: r.description ? formatText(r.description) : undefined,
+        select: intentId
+          ? {
+              checked: selectedOverviewIds.has(`session-${String(r.intentId ?? r.id)}`),
+              label: `Select for bulk approval: ${r.title}`,
+              onChange: () => toggleOverviewSelect(`session-${String(r.intentId ?? r.id)}`),
+            }
+          : undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedLiveIntent(r),
         /* No intent id means there is nothing to POST to. The row still opens its
@@ -660,7 +677,7 @@ export function HomePage() {
               },
               {
                 id: "reject",
-                label: "Decline",
+                label: "Reject",
                 tone: "reject" as const,
                 disabled: approvingIntentId !== null || rejectIntent.isPending,
                 onClick: () => rejectIntent.mutate(intentId),
@@ -680,11 +697,16 @@ export function HomePage() {
       title: formatText(p.title),
       badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
       subtitle: p.rationale ? formatText(p.rationale) : undefined,
+      select: {
+        checked: selectedOverviewIds.has(`queue-${p.id}`),
+        label: `Select for bulk approval: ${p.title}`,
+        onChange: () => toggleOverviewSelect(`queue-${p.id}`),
+      },
       testIdPrefix,
       onOpenDetail: () => setSelectedReview(p),
       actions: [
+        { id: "reject", label: "Reject", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
         { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
-        { id: "reject", label: "Decline", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
       ],
     }));
 
@@ -732,12 +754,20 @@ export function HomePage() {
         tier === "urgent"  ? { label: "High risk",    className: TAG_REJECTED   } :
         tier === "waiting" ? { label: "Needs review", className: TAG_NEEDS_YOU  } :
                              { label: "Insight",      className: TAG_DETECTED   };
+      const rowId = `proposal-${p.id}`;
       return [{
-        id: `proposal-${p.id}`,
+        id: rowId,
         tier,
         title: headerCopy.title,
         badge: proposalBadge,
         subtitle: `${agentName} Agent`,
+        select: actions.some((a) => a.id === "approve")
+          ? {
+              checked: selectedOverviewIds.has(rowId),
+              label: `Select for bulk approval: ${headerCopy.title}`,
+              onChange: () => toggleOverviewSelect(rowId),
+            }
+          : undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedProposal(p),
         actions,

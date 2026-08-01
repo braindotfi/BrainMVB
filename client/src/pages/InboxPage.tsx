@@ -212,10 +212,9 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-/* Toolbar control. One class for selects and the search box so the four sit on a
-   single visual line regardless of which wraps. */
+/* Compact pill-style filter selects — fit content, not full-width. */
 const CONTROL =
-  "w-full min-w-0 bg-[#06070a] border border-solid border-[#1d2132] rounded-[10px] px-[12px] py-[9px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
+  "bg-[#1d2132] border border-solid border-[#2a3050] rounded-[20px] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] cursor-pointer appearance-none pr-[32px]";
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -891,8 +890,9 @@ export function InboxPage() {
     const busy = itemBusy(item);
     const actions: TierRowAction[] = [];
     if (item.actionable) {
-      actions.push({ id: "approve", label: "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
-      actions.push({ id: "reject", label: "Decline", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      const isVendorRisk = item.liveAgentProposal?.type === "vendor_risk";
+      actions.push({ id: "reject", label: isVendorRisk ? "Hold Vendor" : "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      actions.push({ id: "approve", label: isVendorRisk ? "Clear Vendor" : "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
     } else if (item.kind === "detection" || item.acknowledgeOnly) {
       const done = pendingAcknowledgedIds.has(item.id);
       actions.push({
@@ -970,63 +970,48 @@ export function InboxPage() {
           </p>
         </div>
 
-        {/* Filter toolbar. Auto-fit rather than fixed columns: this column is
-            ~420px between the nav and the chat panel, and fixed columns clip.
-            Search sits on its own full-width row below the three selects \u2014 left in
-            the same grid it wrapped to a ragged fourth cell. */}
-        <div className="flex flex-col gap-[8px] w-full">
-        <div
-          className="grid gap-[8px] w-full"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
-        >
-          <select
-            className={CONTROL}
-            value={filters.priority}
-            onChange={(e) => setFilter("priority", e.target.value as DecisionFilterState["priority"])}
-            aria-label="Filter by priority"
-            data-testid="filter-priority"
-          >
-            <option value="all">All Priority</option>
-            {PRIORITY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <select
-            className={CONTROL}
-            value={filters.status}
-            onChange={(e) => setFilter("status", e.target.value as DecisionFilterState["status"])}
-            aria-label="Filter by status"
-            data-testid="filter-status"
-          >
-            <option value="all">All Status</option>
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          {/* Types come from the rows actually present — an option that can only
-              return "no results" teaches the user the filter is broken. */}
-          <select
-            className={CONTROL}
-            value={filters.type}
-            onChange={(e) => setFilter("type", e.target.value)}
-            aria-label="Filter by type"
-            data-testid="filter-type"
-          >
-            <option value="all">All Types</option>
-            {availableTypes.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-        <input
-          type="text"
-          className={CONTROL}
-          value={filters.query}
-          onChange={(e) => setFilter("query", e.target.value)}
-          placeholder="Search by any text including title, description, amount, vendor..."
-          aria-label="Search decisions"
-          data-testid="filter-search"
-        />
+        {/* Filter toolbar — compact content-width pills, no search bar. */}
+        <div className="flex flex-row flex-wrap gap-[8px]">
+          {[
+            {
+              value: filters.priority,
+              onChange: (v: string) => setFilter("priority", v as DecisionFilterState["priority"]),
+              label: "Filter by priority",
+              testId: "filter-priority",
+              options: [{ value: "all", label: "All Priority" }, ...PRIORITY_OPTIONS],
+            },
+            {
+              value: filters.status,
+              onChange: (v: string) => setFilter("status", v as DecisionFilterState["status"]),
+              label: "Filter by status",
+              testId: "filter-status",
+              options: [{ value: "all", label: "All Status" }, ...STATUS_OPTIONS],
+            },
+            {
+              value: filters.type,
+              onChange: (v: string) => setFilter("type", v),
+              label: "Filter by type",
+              testId: "filter-type",
+              /* Types come from rows actually present — an option that can only
+                 return "no results" teaches the user the filter is broken. */
+              options: [{ value: "all", label: "All Types" }, ...availableTypes],
+            },
+          ].map(({ value, onChange, label, testId, options }) => (
+            <div key={testId} className="relative inline-flex items-center">
+              <select
+                className={CONTROL}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                aria-label={label}
+                data-testid={testId}
+              >
+                {options.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-[12px] text-[#6c779d] text-[11px] leading-none select-none">&#9662;</span>
+            </div>
+          ))}
         </div>
       </div>
 
