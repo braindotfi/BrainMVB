@@ -237,23 +237,25 @@ export function FinancesPage() {
             {copy.sub ?? `Updated ${updatedLabel}`}
           </p>
         </div>
-        <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+        <div role="tablist" aria-label="Ledger" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132] w-full">
           {LEDGER_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => selectTab(tab)}
-                className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                style={{ background: isActive ? "#4a2300" : "transparent" }}
+                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-t-[4px]"
+                style={{
+                  fontFamily: "'Gilroy', sans-serif",
+                  fontWeight: 500,
+                  color: isActive ? "#ffffff" : "#6c779d",
+                  borderBottom: isActive ? "2px solid #7631ee" : "2px solid transparent",
+                }}
                 data-testid={`tab-finance-${ledgerTabSlug(tab)}`}
               >
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                  style={{ color: isActive ? "#ff9500" : "#414965" }}
-                >
-                  {tab}
-                </p>
+                {tab}
               </button>
             );
           })}
